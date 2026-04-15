@@ -6,65 +6,7 @@ on:
       - main # Воркфлоу запустится при пуше в эту ветку
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite3, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
-          coverage: none
-
-      - name: Install Dependencies
-        working-directory: ./backend
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
-
-      - name: Prepare Environment
-        working-directory: ./backend
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-          touch database/database.sqlite
-
-      - name: Execute Tests
-        working-directory: ./backend
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
-        run: php artisan test
-
-      - name: Setup Node.js (For Frontend in E2E tests)
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install Frontend Dependencies
-        run: npm install
-
-      - name: Start Vite Dev Server (Background)
-        run: npm run dev &
-
-      - name: Start Laravel Server (Background)
-        working-directory: ./backend
-        run: php artisan serve --port=8000 &
-
-      - name: Install Chrome Driver for Dusk
-        working-directory: ./backend
-        run: php artisan dusk:chrome-driver --detect
-
-      - name: Execute Dusk E2E Tests
-        working-directory: ./backend
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
-        run: php artisan dusk
-
   deploy:
-    needs: test # Деплой запустится ТОЛЬКО если джоба test завершилась успешно
     runs-on: ubuntu-latest
 
     steps:

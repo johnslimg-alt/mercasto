@@ -1,13 +1,24 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mercasto</title>
+    <meta name="theme-color" content="#84CC16">
+    <link rel="manifest" href="/manifest.json">
+    <title>Mercasto | Compra, Vende y Renta en Todo México</title>
+    <script async src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
   </head>
-  <body>
+  <body class="antialiased bg-[#F8FAFC]">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW ref error', err));
+        });
+      }
+    </script>
   </body>
 </html>
