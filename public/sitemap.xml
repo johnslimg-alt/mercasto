@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+   <url>
+      <loc>https://mercasto.com/</loc>
+      <lastmod>2026-04-15</lastmod>
+      <changefreq>always</changefreq>
+      <priority>1.0</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/?cat=motor</loc>
+      <changefreq>hourly</changefreq>
+      <priority>0.8</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/?cat=inmobiliaria</loc>
+      <changefreq>hourly</changefreq>
+      <priority>0.8</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/?cat=empleo</loc>
+      <changefreq>hourly</changefreq>
+      <priority>0.8</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/?cat=servicios</loc>
+      <changefreq>hourly</changefreq>
+      <priority>0.8</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/?cat=informatica</loc>
+      <changefreq>hourly</changefreq>
+      <priority>0.8</priority>
+   </url>
+</urlset>

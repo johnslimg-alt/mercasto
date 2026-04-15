@@ -1,0 +1,53 @@
+"A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+
+"Can be used to handle file uploads."
+scalar Upload @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Upload")
+
+type Query {
+    users: [User!]! @paginate(defaultCount: 10)
+    user(id: ID @eq): User @find
+
+    ads: [Ad!]! @paginate(defaultCount: 16)
+    ad(id: ID @eq): Ad @find
+    
+    # Пример фильтрации активных объявлений
+    activeAds: [Ad!]! @all(model: "Ad", scopes: ["active"])
+}
+
+type Mutation {
+    # Автоматическое создание записи с помощью директивы @create
+    createAd(title: String!, description: String!, price: Float!, category: String!, condition: String, location: String, user_id: ID!): Ad! @create
+    
+    # Автоматическое обновление записи с помощью директивы @update
+    updateAd(id: ID!, status: String, price: Float): Ad! @update
+    
+    # Автоматическое удаление записи с помощью директивы @delete
+    deleteAd(id: ID!): Ad @delete
+
+    # Кастомная мутация для загрузки картинки к объявлению
+    uploadAdImage(ad_id: ID!, image: Upload!): String! @field(resolver: "App\\GraphQL\\Mutations\\UploadAdImage")
+}
+
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    role: String!
+    created_at: DateTime!
+    updated_at: DateTime!
+    ads: [Ad!]! @hasMany
+}
+
+type Ad {
+    id: ID!
+    title: String!
+    description: String!
+    price: Float!
+    category: String!
+    status: String!
+    location: String
+    created_at: DateTime!
+    updated_at: DateTime!
+    user: User! @belongsTo
+}

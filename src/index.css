@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Сброс стандартных отступов для чистоты */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
