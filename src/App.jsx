@@ -2496,7 +2496,8 @@ export default function App() {
                     </div>
                   </form>
                 </div>
-              ) : (
+          ) : (
+            <>
               <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex-1">
                 <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                   <h2 className="text-[18px] font-bold text-slate-900">
@@ -2601,6 +2602,8 @@ export default function App() {
                   </button>
                 </div>
               )}
+            </>
+          )}
             </div>
           </div>
         </div>
@@ -2693,7 +2696,7 @@ export default function App() {
               </div>
             </section>
 
-            <!-- 3. TRENDING NOW -->
+            {/* 3. TRENDING NOW */}
             <section className="col-span-12 mt-2">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -2717,7 +2720,7 @@ export default function App() {
               </div>
             </section>
 
-            <!-- 4. DEALS OF THE DAY -->
+            {/* 4. DEALS OF THE DAY */}
             <section className="col-span-12">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="relative overflow-hidden rounded-3xl p-[1px] group">
@@ -2943,7 +2946,7 @@ export default function App() {
               </div>
             </section>
 
-            <!-- 10. FOR BUSINESS -->
+            {/* 10. FOR BUSINESS */}
             <section className="col-span-12 mt-4">
               <div className="grid lg:grid-cols-3 gap-4">
                 <div className="bg-white border border-slate-200 rounded-3xl p-6 card">
@@ -2984,7 +2987,7 @@ export default function App() {
               </div>
             </section>
 
-            <!-- 11. HOW IT WORKS -->
+            {/* 11. HOW IT WORKS */}
             <section className="col-span-12 mt-6">
               <div className="bg-white border border-slate-200 rounded-3xl p-6 lg:p-8">
                 <h2 className="text-[22px] font-bold tracking-tight text-center">How Mercasto works</h2>
