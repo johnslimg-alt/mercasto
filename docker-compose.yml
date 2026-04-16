@@ -15,7 +15,7 @@ services:
   mercasto-frontend:
     build:
       context: .
-      file: ./Dockerfile
+      dockerfile: Dockerfile
     container_name: mercasto_frontend_container
     ports:
       - "80:80"
@@ -38,7 +38,7 @@ services:
   mercasto-backend:
     build:
       context: ./backend
-      file: ./backend/Dockerfile
+      dockerfile: Dockerfile
     container_name: mercasto_backend_container
     volumes:
       - ./backend:/var/www
