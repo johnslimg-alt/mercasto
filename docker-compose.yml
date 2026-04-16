@@ -21,8 +21,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - /etc/letsencrypt # Для SSL сертификатов
+      - ./default.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt:/etc/letsencrypt
       - ./backend:/var/www # Для раздачи статики Laravel (storage) и доступа к index.php
     restart: unless-stopped
     depends_on:
@@ -42,6 +42,7 @@ services:
     container_name: mercasto_backend_container
     volumes:
       - ./backend:/var/www
+      - /var/www/vendor # Защищаем системные библиотеки от перезаписи
     environment:
       - "DB_HOST=mysql" # Указываем, что БД находится в другом контейнере
       - "REDIS_HOST=redis" # Связываем с контейнером Redis
