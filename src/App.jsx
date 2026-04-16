@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { 
   Search, Home, PlusCircle, User, Users, Settings, Shield, 
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
-  CheckCircle, XCircle, BarChart3, LogOut, Globe, Sparkles, Loader2, Play, Youtube, Video, Phone, AlertTriangle, Activity,
+  CheckCircle, XCircle, BarChart3, LogOut, Globe, Sparkles, Loader2, Play, Video, Phone, AlertTriangle, Activity,
   Car, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Pencil, Moon, Sun, BadgeCheck,
   Star, Zap, Building2, Crown, Store, TrendingUp, UploadCloud, Cpu, ShieldCheck, Camera, Trash2, Download, PieChart as PieChartIcon, QrCode, Share2, Bell
 } from 'lucide-react';
