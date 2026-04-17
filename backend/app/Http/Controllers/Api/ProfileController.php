@@ -108,7 +108,7 @@ class ProfileController extends Controller
         $user->email_verification_token = Hash::make($token);
         $user->save();
 
-        $confirmUrl = env('FRONTEND_URL', 'http://localhost:5173') . "/?email_token={$token}";
+        $confirmUrl = env('FRONTEND_URL', 'https://mercasto.com') . "/?email_token={$token}";
 
         Mail::raw("Para confirmar tu nuevo correo electrónico, haz clic en el siguiente enlace:\n\n$confirmUrl\n\nSi no solicitaste este cambio, puedes ignorar este mensaje.", function($message) use ($request) {
             $message->to($request->new_email)->subject('Confirmar nuevo correo - Mercasto');

@@ -195,7 +195,7 @@ class AuthController extends Controller
             ['token' => Hash::make($token), 'created_at' => now()]
         );
 
-        $resetUrl = env('FRONTEND_URL', 'http://localhost:5173') . "/?reset_token={$token}&email=" . urlencode($request->email);
+        $resetUrl = env('FRONTEND_URL', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($request->email);
 
         Mail::raw("Para restablecer tu contraseña, haz clic en el siguiente enlace:\n\n$resetUrl\n\nSi no solicitaste este cambio, puedes ignorar este correo.", function($message) use ($request) {
             $message->to($request->email)->subject('Restablecer contraseña - Mercasto');
@@ -285,10 +285,10 @@ class AuthController extends Controller
             }
 
             $token = $user->createToken('auth_token')->plainTextToken;
-            return redirect()->away(env('FRONTEND_URL', 'http://localhost:5173') . '/?token=' . $token);
-        } catch (\Exception $e) {
+        return redirect()->away(env('FRONTEND_URL', 'https://mercasto.com') . '/?token=' . $token);
+    } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error(ucfirst($provider) . ' OAuth Error: ' . $e->getMessage());
-            return redirect()->away(env('FRONTEND_URL', 'http://localhost:5173') . '/?error=oauth_failed');
+        return redirect()->away(env('FRONTEND_URL', 'https://mercasto.com') . '/?error=oauth_failed');
         }
     }
 }
