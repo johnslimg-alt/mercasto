@@ -1678,9 +1678,7 @@ export default function App() {
         <div className="relative">
           <img src={safeImage} loading="lazy" className="w-full h-[160px] md:h-[180px] object-cover group-hover:scale-105 transition-transform duration-500" alt={ad.title}/>
           <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white z-10">
-            <svg className={`w-4 h-4 ${isFav ? 'text-red-500' : 'text-slate-700'}`} fill={isFav ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 0 00-6.364-6.364L12 7.636l-1.318a4.5 0 00-6.364 0z"/>
-            </svg>
+            <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700'}`} />
           </button>
           {isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}
           {!isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
@@ -2119,14 +2117,14 @@ export default function App() {
     const activeAds = userAds.filter(ad => ad.status === 'active' || ad.status === 'pending');
     const inactiveAds = userAds.filter(ad => ad.status === 'inactive' || ad.status === 'rejected');
     const displayedAds = dashboardTab === 'my_ads' ? (adStatusFilter === 'active' ? activeAds : inactiveAds) : favoriteAds;
-    const totalContactClicks = useMemo(() => userAds.reduce((sum, ad) => sum + (ad.whatsapp_clicks || 0), 0), [userAds]);
-    const totalViews = useMemo(() => userAds.reduce((sum, ad) => sum + (ad.views || 0), 0), [userAds]);
-    const conversionRate = useMemo(() => {
+    const totalContactClicks = userAds.reduce((sum, ad) => sum + (ad.whatsapp_clicks || 0), 0);
+    const totalViews = userAds.reduce((sum, ad) => sum + (ad.views || 0), 0);
+    const conversionRate = (() => {
       if (totalViews === 0) return "0.0";
       return ((totalContactClicks / totalViews) * 100).toFixed(1);
-    }, [totalViews, totalContactClicks]);
+    })();
     
-    const categoryStats = useMemo(() => {
+    const categoryStats = (() => {
       const stats = {};
       userAds.forEach(ad => {
         const cat = ad.category || 'general';
@@ -2137,7 +2135,7 @@ export default function App() {
         const name = catObj ? (catObj.name[lang] || catObj.name['es']) : slug;
         return { name, value: count };
       }).sort((a, b) => b.value - a.value);
-    }, [userAds, categoriesData, lang]);
+    })();
     
     const itemsPerPage = 5;
     const totalPages = Math.ceil(displayedAds.length / itemsPerPage);
@@ -2950,7 +2948,7 @@ export default function App() {
             <section className="col-span-12 mt-4">
               <div className="grid lg:grid-cols-3 gap-4">
                 <div className="bg-white border border-slate-200 rounded-3xl p-6 card">
-                  <div className="w-10 h-10 rounded-xl bg-[#84CC16]/15 flex items-center justify-center mb-3"><svg className="w-5 h-5 text-[#65A30D]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+                  <div className="w-10 h-10 rounded-xl bg-[#84CC16]/15 flex items-center justify-center mb-3"><Zap className="w-5 h-5 text-[#65A30D]" /></div>
                   <h3 className="text-[18px] font-bold">Mercasto Starter</h3>
                   <p className="text-[14px] text-slate-600 mt-1">Perfect for individuals selling occasionally</p>
                   <ul className="mt-4 space-y-2 text-[13px] text-slate-700">
@@ -2962,7 +2960,7 @@ export default function App() {
                 </div>
                 <div className="bg-slate-900 text-white rounded-3xl p-6 card relative overflow-hidden ring-2 ring-[#84CC16]">
                   <span className="absolute top-4 right-4 badge bg-[#84CC16] text-white">POPULAR</span>
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3"><svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3"><ShieldCheck className="w-5 h-5 text-white" /></div>
                   <h3 className="text-[18px] font-bold">Mercasto Pro</h3>
                   <p className="text-[14px] text-white/70 mt-1">For power sellers and small businesses</p>
                   <ul className="mt-4 space-y-2 text-[13px] text-white/90">
@@ -2974,7 +2972,7 @@ export default function App() {
                   <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#84CC16] text-white hover:bg-[#65A30D]">See pricing</button>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-3xl p-6 card">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-3"><svg className="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg></div>
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-3"><Building2 className="w-5 h-5 text-slate-700" /></div>
                   <h3 className="text-[18px] font-bold">Enterprise</h3>
                   <p className="text-[14px] text-slate-600 mt-1">Dealerships, real estate, recruitment</p>
                   <ul className="mt-4 space-y-2 text-[13px] text-slate-700">
