@@ -771,21 +771,6 @@ export default function App() {
     }
 }, [user]);
 
-  // --- ОБРАБОТКА КНОПКИ "НАЗАД" БРАУЗЕРА (ПРАВИЛЬНЫЙ ROUTING SPA) ---
-  useEffect(() => {
-    const handlePopState = () => {
-      const hash = window.location.hash;
-      if (!hash) {
-        setViewedAd(null);
-        setViewedCompany(null);
-        setShowAuthModal(false);
-        setShowPricingModal(false);
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
   // --- WEB PUSH API SUBSCRIPTION LOGIC ---
   const subscribeToPush = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
