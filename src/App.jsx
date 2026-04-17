@@ -1595,25 +1595,6 @@ export default function App() {
       }
   };
 
-  // --- ЗАГРУЗКА ПУБЛИЧНОГО ПРОФИЛЯ ПРОДАВЦА ---
-  const handleViewCompany = (seller) => {
-    if (!seller) return;
-    setViewedCompany(seller);
-    setLoadingCompanyAds(true);
-    
-    Promise.all([
-      fetch(`${API_URL}/ads?user_id=${seller.id}`).then(res => res.ok ? res.json() : { data: [] }),
-      fetch(`${API_URL}/users/${seller.id}/reviews`).then(res => res.ok ? res.json() : { reviews: [], average: 0, total: 0 })
-    ])
-      .then(([adsData, reviewsData]) => {
-        setCompanyAds(adsData.data || (Array.isArray(adsData) ? adsData : []));
-        setCompanyReviews(reviewsData.reviews || []);
-        setCompanyRatingStats({ average: reviewsData.average || 0, total: reviewsData.total || 0 });
-      })
-      .catch(err => console.error("Error fetching company details", err))
-      .finally(() => setLoadingCompanyAds(false));
-  };
-
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     setSubmittingReview(true);
@@ -1821,7 +1802,7 @@ export default function App() {
       .catch(err => console.error("Error recording view", err));
   };
 
-  // --- ПРОСМОТР ПРОФИЛЯ ПРОДАВЦА ---
+  // --- ПРОСМОТР ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
   const handleViewCompany = (seller) => {
     if (!seller) return;
     window.history.pushState({ popup: 'company' }, '', `#company-${seller.id}`);
