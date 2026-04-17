@@ -675,7 +675,7 @@ export default function App() {
 
   // --- WEBSOCKETS LISTENER ---
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && echo) {
         const channel = echo.private(`App.Models.User.${user.id}`);
         
         channel.listen('.NewNotification', (e) => {
