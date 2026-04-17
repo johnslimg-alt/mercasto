@@ -61,7 +61,7 @@ class AuthController extends Controller
             'message' => 'Пользователь успешно зарегистрирован',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user->load('wallet') // Сразу подгружаем информацию о кошельке
+            'user' => $user
         ], 201);
     }
 
@@ -94,7 +94,7 @@ class AuthController extends Controller
             'message' => 'Успешный вход',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user->load('wallet') // Возвращаем пользователя вместе с его кошельком
+            'user' => $user
         ]);
     }
 
@@ -119,7 +119,7 @@ class AuthController extends Controller
                 'message' => 'Успешный вход',
                 'access_token' => $token,
                 'token_type' => 'Bearer',
-                'user' => $user->load('wallet')
+                'user' => $user
             ]);
         }
 
@@ -128,7 +128,7 @@ class AuthController extends Controller
             if (hash_equals($recoveryCode, $request->code)) {
                 // Можно добавить логику для удаления использованного кода
                 $token = $user->createToken('auth_token')->plainTextToken;
-                return response()->json(['access_token' => $token, 'token_type' => 'Bearer', 'user' => $user->load('wallet')]);
+                return response()->json(['access_token' => $token, 'token_type' => 'Bearer', 'user' => $user]);
             }
         }
 
@@ -166,18 +166,19 @@ class AuthController extends Controller
         }
         Cache::forget('phone_auth_' . $request->phone_number);
 
-        $user = User::firstOrCreate(
-            ['phone_number' => $request->phone_number],
-            [
-                'name' => 'Usuario ' . substr($request->phone_number, -4),
-                'email' => $request->phone_number . '@mercasto.local',
-                'password' => Hash::make(Str::random(16)),
-                'role' => 'individual',
-                'ip_address' => $request->ip(),
-            ]
-        );
+        $user = User::where('phone_number', $request->phone_number)->first();
+        if (!$user) {
+            $user = new User();
+            $user->phone_number = $request->phone_number;
+            $user->name = 'Usuario ' . substr($request->phone_number, -4);
+            $user->email = $request->phone_number . '@mercasto.local';
+            $user->password = Hash::make(Str::random(16));
+            $user->role = 'individual';
+            $user->ip_address = $request->ip();
+            $user->save();
+        }
 
-        return response()->json(['message' => 'Успешный вход', 'access_token' => $user->createToken('auth_token')->plainTextToken, 'token_type' => 'Bearer', 'user' => $user->load('wallet')]);
+        return response()->json(['message' => 'Успешный вход', 'access_token' => $user->createToken('auth_token')->plainTextToken, 'token_type' => 'Bearer', 'user' => $user]);
     }
 
     /**

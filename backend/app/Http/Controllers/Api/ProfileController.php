@@ -33,8 +33,8 @@ class ProfileController extends Controller
 
     public function show(Request $request)
     {
-        // Возвращаем пользователя с его кошельком
-        return response()->json($request->user()->load('wallet'));
+        // Возвращаем пользователя
+        return response()->json($request->user());
     }
 
     public function update(Request $request)
@@ -59,7 +59,7 @@ class ProfileController extends Controller
 
         $user->save();
 
-        return response()->json($user->load('wallet'));
+        return response()->json($user);
     }
 
     public function changePassword(Request $request)
@@ -132,7 +132,7 @@ class ProfileController extends Controller
         $user->email_verification_token = null;
         $user->save();
 
-        return response()->json(['message' => 'Correo actualizado con éxito.', 'user' => $user->load('wallet')]);
+        return response()->json(['message' => 'Correo actualizado con éxito.', 'user' => $user]);
     }
 
     public function createNotification(Request $request)
@@ -208,7 +208,7 @@ class ProfileController extends Controller
         ];
         $user->save();
 
-        return response()->json(['message' => 'Preferencias actualizadas.', 'user' => $user->load('wallet')]);
+        return response()->json(['message' => 'Preferencias actualizadas.', 'user' => $user]);
     }
 
     public function verifyUser(Request $request, $id)
