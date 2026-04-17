@@ -70,19 +70,10 @@ return new class extends Migration
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
-
-        // 4. ТАБЛИЦА АНАЛИТИКИ (Клики в мессенджеры)
-        Schema::create('ad_clicks', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('ad_id')->constrained()->onDelete('cascade');
-            $table->enum('channel', ['whatsapp', 'telegram', 'phone']);
-            $table->timestamp('created_at')->useCurrent();
-        });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('ad_clicks');
         Schema::dropIfExists('ad_promotions');
         Schema::dropIfExists('ads');
         Schema::dropIfExists('sessions');
