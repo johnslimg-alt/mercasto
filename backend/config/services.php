@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('APP_URL') . '/api/auth/google/callback',
+    ],
+
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID'),
+        'client_secret' => env('APPLE_CLIENT_SECRET'),
+        'redirect' => env('APP_URL') . '/api/auth/apple/callback',
+    ],
+
+    'telegram' => [
+        'client_id' => env('TELEGRAM_CLIENT_ID'),
+        'client_secret' => env('TELEGRAM_CLIENT_SECRET'),
+        'redirect' => env('APP_URL') . '/api/auth/telegram/callback',
+    ],
 ];
