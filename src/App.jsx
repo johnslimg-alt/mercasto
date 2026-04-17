@@ -474,7 +474,7 @@ const AdSenseBanner = () => (
 export default function App() {
   const [currentTab, setCurrentTab] = useState('home');
   const [lang, setLang] = useState(localStorage.getItem('lang') || 'es');
-  const t = translations[lang];
+  const t = translations[lang] || translations['es'];
 
   const [serverAds, setServerAds] = useState([]);
   const [loadingAds, setLoadingAds] = useState(true);
@@ -856,6 +856,35 @@ export default function App() {
     
   }, [user]);
 
+  const loadUserAds = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_URL}/user/ads`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setUserAds(Array.isArray(data) ? data : (data.data || []));
+      }
+    } catch (err) { console.error("Error fetching user ads", err); }
+  }, [user]);
+
+  const loadFavoriteAds = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_URL}/user/favorite-ads`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setFavoriteAds(Array.isArray(data) ? data : (data.data || []));
+      }
+    } catch (err) { console.error("Error fetching favorite ads", err); }
+  }, [user]);
+
+  useEffect(() => {
+    loadUserAds();
+    loadFavoriteAds();
+  }, [loadUserAds, loadFavoriteAds]);
+
   // --- ЗАГРУЗКА УВЕДОМЛЕНИЙ ---
   const loadNotifications = useCallback(async () => {
     if (!user) return;
@@ -1023,7 +1052,7 @@ export default function App() {
       const res = await fetch(`${API_URL}/admin/ads/pending`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setAdminPendingAds(data);
+        setAdminPendingAds(Array.isArray(data) ? data : (data.data || []));
       }
     } catch (err) { console.error("Error fetching pending ads", err); }
     finally { setLoadingPendingAds(false); }
@@ -1050,9 +1079,15 @@ export default function App() {
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/reports`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) setAdminReports(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setAdminReports(Array.isArray(data) ? data : (data.data || []));
+      }
       const res2 = await fetch(`${API_URL}/admin/user-reports`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res2.ok) setAdminUserReports(await res2.json());
+      if (res2.ok) {
+        const data2 = await res2.json();
+        setAdminUserReports(Array.isArray(data2) ? data2 : (data2.data || []));
+      }
     } catch (err) { console.error("Error fetching reports", err); }
     finally { setLoadingReports(false); }
   }, []);
@@ -1081,7 +1116,10 @@ export default function App() {
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/coupons`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) setAdminCoupons(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setAdminCoupons(Array.isArray(data) ? data : (data.data || []));
+      }
     } catch (err) { console.error("Error fetching coupons", err); }
     finally { setLoadingCoupons(false); }
   }, []);
@@ -1135,7 +1173,7 @@ export default function App() {
   useEffect(() => {
     fetch(`${API_URL}/categories`)
       .then(res => res.json())
-      .then(data => setCategoriesData(data))
+      .then(data => setCategoriesData(Array.isArray(data) ? data : (data.data || [])))
       .catch(err => console.error("Error fetching categories", err));
   }, []);
 
