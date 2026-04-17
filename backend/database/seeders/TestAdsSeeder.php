@@ -39,11 +39,20 @@ class TestAdsSeeder extends Seeder
             'boletos' => ['Boleto Concierto VIP', 'Abono festival 3 días', 'Entrada teatro 2 personas', 'Pase anual museo']
         ];
 
-        $images = [
-            'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
-            'https://images.unsplash.com/photo-1558981282-6f5f7d5a2b8f?w=800',
-            'https://images.unsplash.com/photo-1542291026-797186bcca9e?w=800'
+        // Utilizamos imágenes específicas por categoría que se cachean en el navegador para evitar el bloqueo por límite de peticiones (Rate Limit) de Unsplash
+        $categoryImages = [
+            'motor' => 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80',
+            'inmobiliaria' => 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80',
+            'empleo' => 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80',
+            'servicios' => 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80',
+            'informatica' => 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80',
+            'telefonia' => 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80',
+            'hogar' => 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80',
+            'moda' => 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&q=80',
+            'bebes' => 'https://images.unsplash.com/photo-1519689680058-324335c77eba?w=800&q=80',
+            'mascotas' => 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800&q=80',
+            'ocio' => 'https://images.unsplash.com/photo-1511886929837-354d827aae26?w=800&q=80',
+            'boletos' => 'https://images.unsplash.com/photo-1540039155733-d7696d4eb98b?w=800&q=80'
         ];
 
         foreach ($categories as $categorySlug => $items) {
@@ -57,7 +66,7 @@ class TestAdsSeeder extends Seeder
                     'location' => 'Ciudad de México, CDMX',
                     'category' => $categorySlug,
                     'condition' => (rand(0, 1) ? 'nuevo' : 'usado'),
-                    'image_url' => json_encode([$images[array_rand($images)]]),
+                    'image_url' => json_encode([$categoryImages[$categorySlug] ?? 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800']),
                     'status' => 'active',
                     'views' => rand(15, 2500),
                     'promoted' => rand(0, 10) > 8 ? 'destacado' : (rand(0, 10) > 8 ? 'urgente' : null),

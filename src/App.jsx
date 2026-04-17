@@ -267,7 +267,8 @@ const API_URL = 'https://mercasto.com/api';
 
 // --- ФУНКЦИЯ ДЛЯ ПУТЕЙ КАРТИНОК ---
 const getImageUrl = (url, fallbackUrl) => {
-  if (!url) return fallbackUrl || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop';
+  const defaultImg = fallbackUrl || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop';
+  if (!url) return defaultImg;
   let cleanUrl = url;
   if (typeof url === 'string' && url.startsWith('[')) {
     try {
@@ -275,6 +276,10 @@ const getImageUrl = (url, fallbackUrl) => {
       if (Array.isArray(parsed) && parsed.length > 0) cleanUrl = parsed[0];
     } catch(e) {}
   }
+  if (Array.isArray(cleanUrl) && cleanUrl.length > 0) {
+    cleanUrl = cleanUrl[0];
+  }
+  if (typeof cleanUrl !== 'string') return defaultImg;
   if (cleanUrl.startsWith('http')) return cleanUrl;
   cleanUrl = cleanUrl.startsWith('/') ? cleanUrl.slice(1) : cleanUrl;
   return `https://mercasto.com/storage/${cleanUrl}`;
@@ -288,12 +293,15 @@ const getImageUrls = (url, fallbackUrl) => {
   if (typeof url === 'string' && url.startsWith('[')) {
     try {
       const parsed = JSON.parse(url);
-      if (Array.isArray(parsed) && parsed.length > 0) urls = parsed;
+      if (Array.isArray(parsed)) urls = parsed;
     } catch(e) {}
+  } else if (Array.isArray(url)) {
+    urls = url;
   }
-  if (urls.length === 0) urls = [url];
+  if (urls.length === 0) urls = typeof url === 'string' ? [url] : [defaultImg];
   
   return urls.map(u => {
+    if (typeof u !== 'string') return defaultImg;
     if (u.startsWith('http')) return u;
     const cleanUrl = u.startsWith('/') ? u.slice(1) : u;
     return `https://mercasto.com/storage/${cleanUrl}`;
