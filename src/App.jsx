@@ -1042,6 +1042,41 @@ export default function App() {
       .catch(err => console.error("Error fetching categories", err));
   }, []);
 
+  // --- ПАНЕЛЬ АДМИНИСТРАТОРА: КАТЕГОРИИ ---
+  const handleSaveCategory = async (e) => {
+    e.preventDefault();
+    setAdminLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const method = editingCatId ? 'PUT' : 'POST';
+      const url = editingCatId ? `${API_URL}/categories/${editingCatId}` : `${API_URL}/categories`;
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(adminCatForm)
+      });
+      
+      if (res.ok) {
+        const catRes = await fetch(`${API_URL}/categories`);
+        setCategoriesData(await catRes.json());
+        cancelCatEdit();
+        alert('Categoría guardada exitosamente');
+      } else alert('Error al guardar la categoría');
+    } catch (err) { console.error(err); alert('Error de conexión'); }
+    finally { setAdminLoading(false); }
+  };
+
+  const handleEditCategory = (cat) => {
+    setEditingCatId(cat.id || cat.slug);
+    setAdminCatForm({ slug: cat.slug, name_es: cat.name?.es || '', name_en: cat.name?.en || '', icon: cat.icon || 'Star', sort_order: cat.sort_order || 100 });
+  };
+
+  const cancelCatEdit = () => {
+    setEditingCatId(null);
+    setAdminCatForm({ slug: '', name_es: '', name_en: '', icon: 'Star', sort_order: 100 });
+  };
+
   const allAds = useMemo(() => [...serverAds, ...mockAds], [serverAds]);
 
   // --- ЛОГИКА АВТОРИЗАЦИИ (API) ---
