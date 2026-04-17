@@ -36,7 +36,7 @@ if (reverbKey) {
         },
     });
 } else {
-    console.warn("Pusher/Reverb key not found. Real-time features are disabled.");
+    // Уведомление скрыто: Real-time features disabled (no key provided).
 }
 
 export default echo;
