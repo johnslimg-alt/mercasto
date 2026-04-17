@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y \
 # Устанавливаем расширения PHP (добавили zip)
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
+# Устанавливаем и включаем расширение Redis
+RUN pecl install redis \
+    && docker-php-ext-enable redis
+
 # Устанавливаем Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
