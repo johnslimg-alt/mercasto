@@ -39,21 +39,53 @@ const IconMap = { Car, Home, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt
 
 // --- ДАННЫЕ И ПЕРЕВОДЫ ---
 const mexicoLocations = {
-  'Ciudad de México': ['Ciudad de México', 'Polanco', 'Coyoacán', 'Condesa'],
-  'Jalisco': ['Guadalajara', 'Zapopan', 'Puerto Vallarta', 'Tlaquepaque'],
-  'Nuevo León': ['Monterrey', 'San Pedro Garza García'],
-  'Quintana Roo': ['Cancún', 'Playa del Carmen', 'Tulum'],
-  'Yucatán': ['Mérida', 'Progreso'],
-  'Puebla': ['Puebla'],
-  'Baja California': ['Tijuana'],
-  'Querétaro': ['Querétaro'],
-  'Guanajuato': ['León'],
-  'Sinaloa': ['Culiacán'],
-  'Sonora': ['Hermosillo'],
-  'Chihuahua': ['Chihuahua'],
-  'Aguascalientes': ['Aguascalientes'],
-  'San Luis Potosí': ['San Luis Potosí'],
-  'Baja California Sur': ['Cabo San Lucas']
+  'Aguascalientes': ['Aguascalientes', 'Jesús María', 'Calvillo'],
+  'Baja California': ['Tijuana', 'Mexicali', 'Ensenada', 'Playas de Rosarito', 'Tecate'],
+  'Baja California Sur': ['La Paz', 'Los Cabos', 'San José del Cabo', 'Loreto'],
+  'Campeche': ['Campeche', 'Ciudad del Carmen', 'Champotón'],
+  'Chiapas': ['Tuxtla Gutiérrez', 'Tapachula', 'San Cristóbal de las Casas', 'Comitán'],
+  'Chihuahua': ['Chihuahua', 'Ciudad Juárez', 'Delicias', 'Hidalgo del Parral'],
+  'Ciudad de México': ['Álvaro Obregón', 'Coyoacán', 'Cuauhtémoc', 'Miguel Hidalgo', 'Tlalpan', 'Benito Juárez'],
+  'Coahuila': ['Saltillo', 'Torreón', 'Monclova', 'Piedras Negras'],
+  'Colima': ['Colima', 'Manzanillo', 'Tecomán'],
+  'Durango': ['Durango', 'Gómez Palacio', 'Lerdo'],
+  'Estado de México': ['Toluca', 'Ecatepec', 'Nezahualcóyotl', 'Naucalpan', 'Tlalnepantla'],
+  'Guanajuato': ['León', 'Irapuato', 'Celaya', 'Salamanca', 'Guanajuato'],
+  'Guerrero': ['Acapulco', 'Chilpancingo', 'Iguala', 'Zihuatanejo'],
+  'Hidalgo': ['Pachuca', 'Tulancingo', 'Tula'],
+  'Jalisco': ['Guadalajara', 'Zapopan', 'Tlaquepaque', 'Tlajomulco', 'Puerto Vallarta'],
+  'Michoacán': ['Morelia', 'Uruapan', 'Zamora', 'Lázaro Cárdenas'],
+  'Morelos': ['Cuernavaca', 'Jiutepec', 'Cuautla'],
+  'Nayarit': ['Tepic', 'Bahía de Banderas', 'Nuevo Vallarta'],
+  'Nuevo León': ['Monterrey', 'San Pedro Garza García', 'Guadalupe', 'Apodaca', 'San Nicolás'],
+  'Oaxaca': ['Oaxaca', 'Salina Cruz', 'Puerto Escondido', 'Huatulco'],
+  'Puebla': ['Puebla', 'Tehuacán', 'Atlixco', 'Cholula'],
+  'Querétaro': ['Querétaro', 'San Juan del Río', 'Corregidora'],
+  'Quintana Roo': ['Cancún', 'Playa del Carmen', 'Tulum', 'Chetumal', 'Cozumel'],
+  'San Luis Potosí': ['San Luis Potosí', 'Ciudad Valles', 'Matehuala'],
+  'Sinaloa': ['Culiacán', 'Mazatlán', 'Los Mochis', 'Guasave'],
+  'Sonora': ['Hermosillo', 'Ciudad Obregón', 'Nogales', 'Guaymas'],
+  'Tabasco': ['Villahermosa', 'Cárdenas', 'Comalcalco'],
+  'Tamaulipas': ['Tampico', 'Reynosa', 'Matamoros', 'Ciudad Victoria', 'Nuevo Laredo'],
+  'Tlaxcala': ['Tlaxcala', 'Apizaco', 'Huamantla'],
+  'Veracruz': ['Veracruz', 'Xalapa', 'Coatzacoalcos', 'Poza Rica', 'Boca del Río'],
+  'Yucatán': ['Mérida', 'Valladolid', 'Progreso'],
+  'Zacatecas': ['Zacatecas', 'Fresnillo', 'Guadalupe']
+};
+
+const subcategoriesMap = {
+  'motor': ['Autos Compactos', 'Camionetas y SUV', 'Motos', 'Autopartes'],
+  'inmobiliaria': ['Casas en Venta', 'Departamentos en Renta', 'Terrenos', 'Locales Comerciales'],
+  'empleo': ['Tecnología', 'Ventas', 'Atención al Cliente', 'Administración'],
+  'servicios': ['Reparaciones y Hogar', 'Clases y Cursos', 'Belleza y Salud', 'Eventos'],
+  'informatica': ['Laptops', 'Componentes', 'Accesorios', 'Tablets'],
+  'telefonia': ['Smartphones', 'Fundas y Micas', 'Wearables', 'Cargadores'],
+  'hogar': ['Muebles', 'Electrodomésticos', 'Decoración', 'Jardín'],
+  'moda': ['Hombre', 'Mujer', 'Relojes', 'Accesorios'],
+  'bebes': ['Paseo', 'Habitación', 'Ropa', 'Juguetes'],
+  'mascotas': ['Perros', 'Gatos', 'Aves y Peces', 'Higiene'],
+  'ocio': ['Deportes', 'Música', 'Libros', 'Juegos'],
+  'boletos': ['Conciertos', 'Deportes', 'Teatro y Cultura', 'Viajes']
 };
 
 const mockAds = [
