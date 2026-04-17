@@ -876,7 +876,10 @@ export default function App() {
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/user/notifications/list`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) setNotifications(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(Array.isArray(data) ? data : (data.data || []));
+      }
     } catch (err) { console.error("Error fetching notifications", err); }
   }, [user]);
 
@@ -913,7 +916,7 @@ export default function App() {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       })
       .then(res => res.ok ? res.json() : [])
-      .then(data => setAnalyticsData(data))
+      .then(data => setAnalyticsData(Array.isArray(data) ? data : (data.data || [])))
       .catch(err => console.error("Error fetching analytics", err));
     }
   }, [currentTab, accountType, user, analyticsDays]);
@@ -950,9 +953,10 @@ export default function App() {
       const res = await fetch(`${API_URL}/ads?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setServerAds(prev => page === 1 ? data.data : [...prev, ...data.data]);
-        setCurrentPage(data.current_page);
-        setHasMore(data.current_page < data.last_page);
+        const items = Array.isArray(data) ? data : (data.data || []);
+        setServerAds(prev => page === 1 ? items : [...prev, ...items]);
+        setCurrentPage(data.current_page || 1);
+        setHasMore(data.last_page ? data.current_page < data.last_page : false);
       }
     } catch (err) { console.error("Error fetching ads", err); } 
     finally { setLoadingAds(false); setLoadingMore(false); }
@@ -2285,7 +2289,7 @@ export default function App() {
       });
       return Object.entries(stats).map(([slug, count]) => {
         const catObj = categoriesData.find(c => c.slug === slug);
-        const name = catObj ? (catObj.name[lang] || catObj.name['es']) : slug;
+        const name = catObj ? (catObj.name?.[lang] || catObj.name?.['es'] || catObj.name) : slug;
         return { name, value: count };
       }).sort((a, b) => b.value - a.value);
     })();
@@ -2839,7 +2843,7 @@ export default function App() {
                         </div>
                         <span className="text-[11px] text-slate-500 font-medium">{Math.floor(Math.random() * 100) + 10}k</span>
                       </div>
-                      <h3 className="font-semibold mt-3 text-[14px] line-clamp-1">{cat.name[lang] || cat.name['es']}</h3>
+              <h3 className="font-semibold mt-3 text-[14px] line-clamp-1">{cat.name?.[lang] || cat.name?.['es'] || cat.name}</h3>
                       <span className="text-[12px] text-[#65A30D] font-medium group-hover:underline">View all →</span>
                     </div>
                   );
