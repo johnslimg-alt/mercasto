@@ -86,7 +86,35 @@ const translations = {
     card1: "COMPRA SEGURA", card2: "VENDE RÁPIDO", card3: "SOPORTE 24/7",
     cardDesc1: "Moderación activa y protección contra fraudes.",
     cardDesc2: "Miles de compradores visitan Mercasto buscando ofertas.",
-    cardDesc3: "Estamos aquí para ayudarte en cada paso de tu venta."
+    cardDesc3: "Estamos aquí para ayudarte en cada paso de tu venta.",
+    back_to_list: 'Volver al listado', back: 'Volver',
+    category_stats: 'Estadísticas de Categorías', personal_info: 'Información Personal', 
+    update_photo: 'Actualiza tu foto de perfil...', edit_profile: 'Editar Perfil', security: 'Seguridad', 
+    update_password: 'Actualiza tu contraseña...', curr_password: 'Contraseña actual', new_password: 'Nueva contraseña', 
+    conf_password: 'Confirmar nueva contraseña', update_pass_btn: 'Actualizar Contraseña', email_settings: 'Correo Electrónico', 
+    update_email: 'Actualiza la dirección...', new_email: 'Nuevo correo electrónico', req_change: 'Solicitar Cambio', 
+    notifications: 'Notificaciones', choose_alerts: 'Elige qué tipo de alertas quieres...', email_alerts: 'Alertas por correo', 
+    push_alerts: 'Notificaciones Push', marketing_alerts: 'Promociones y boletín', save_prefs: 'Guardar Preferencias', 
+    interface: 'Interfaz', customize_app: 'Personaliza la apariencia...', autoplay: 'Autoplay en carrusel', danger_zone: 'Zona de Peligro',
+    del_warning: 'Una vez que elimines tu cuenta perderás todo...', del_account: 'Eliminar Cuenta', export_json: 'Exportar JSON', 
+    cover_photo: 'Foto de Portada', upload_cover: 'Subir portada', comp_name: 'Nombre de la Empresa', comp_desc: 'Descripción del Negocio',
+    website: 'Sitio Web', phone: 'Teléfono de Contacto', address: 'Dirección Comercial', save_changes: 'Guardar Cambios',
+    cat_tab: 'Categorías', users_tab: 'Usuarios', mod_tab: 'Moderación', coupons_tab: 'Cupones', reports_tab: 'Reportes', 
+    add_cat: 'Añadir Nueva Categoría', edit_cat: 'Editar Categoría', slug: 'Slug (identificador único)', icon: 'Icono', 
+    name_es: 'Nombre en Español', name_en: 'Nombre en Inglés', sort_order: 'Orden', save_cat: 'Guardar Categoría', cancel: 'Cancelar', 
+    existing_cats: 'Categorías Existentes', pending_ads: 'Anuncios Pendientes', no_pending: 'No hay anuncios para moderar', 
+    approve: 'Aprobar', reject: 'Rechazar', coupon_gen: 'Generador de Cupones', code: 'Código', credits: 'Créditos', 
+    max_uses: 'Usos Máx.', create: 'Crear', no_coupons: 'No hay cupones activos', report_center: 'Centro de Reportes', 
+    reported_ad: 'Anuncio', reason: 'Motivo', comments: 'Comentarios', reported_by: 'Reportado por', action: 'Acción', 
+    no_reports: 'No hay reportes', reported_user: 'Usuario Reportado', user_mgmt: 'Gestión de Usuarios', search_users: 'Buscar nombre o email...',
+    role: 'Rol', hidden_ip: 'IP oculta', no_users: 'No se encontraron usuarios', ad_photos: 'Fotos del anuncio', 
+    drag_photos: 'Arrastra tus fotos aquí o', browse: 'explora', max_photos: 'Máximo 10 fotos', category: 'Categoría', 
+    select: 'Seleccionar...', condition: 'Estado', new: 'Nuevo', used: 'Usado', location: 'Ubicación', loc_placeholder: 'Escribe tu ciudad...', 
+    video_opt: 'Video (Opcional)', report_ad: 'Reportar este anuncio', verified_seller: 'Vendedor Verificado', id_confirmed: 'Identidad confirmada',
+    show_qr: 'Mostrar QR de Contacto', similar_ads: 'Anuncios similares', client_reviews: 'Reseñas de clientes', leave_review: 'Deja tu opinión', 
+    publish_review: 'Publicar reseña', no_reviews: 'Este vendedor aún no tiene reseñas', scan_qr: 'Escanear QR', report_seller: 'Reportar a este vendedor', 
+    verified_id: 'Identidad verificada', high_rep: 'Alta reputación', product_desc: 'Descripción del producto', no_desc: 'El vendedor no ha proporcionado una descripción.',
+    download_pdf: 'Descargar Ficha PDF'
   },
   en: {
     home: 'Home', search: 'Search', post: 'Post Ad', profile: 'Profile', categories: 'Categories', recent_ads: 'Recent Ads',
@@ -111,7 +139,30 @@ const translations = {
     card1: "SECURE BUYING", card2: "FAST SELLING", card3: "24/7 SUPPORT",
     cardDesc1: "Active moderation and fraud protection.",
     cardDesc2: "Thousands of buyers visit Mercasto daily.",
-    cardDesc3: "We are here to help you every step of the way."
+    cardDesc3: "We are here to help you every step of the way.",
+    back_to_list: 'Back to list', back: 'Back', category_stats: 'Category Statistics', personal_info: 'Personal Information', 
+    update_photo: 'Update your profile photo...', edit_profile: 'Edit Profile', security: 'Security', update_password: 'Update your password...', 
+    curr_password: 'Current password', new_password: 'New password', conf_password: 'Confirm new password', update_pass_btn: 'Update Password', 
+    email_settings: 'Email Settings', update_email: 'Update your email...', new_email: 'New email address', req_change: 'Request Change', 
+    notifications: 'Notifications', choose_alerts: 'Choose what alerts to receive...', email_alerts: 'Email alerts', push_alerts: 'Push notifications', 
+    marketing_alerts: 'Promotions and newsletter', save_prefs: 'Save Preferences', interface: 'Interface', customize_app: 'Customize appearance...', 
+    autoplay: 'Carousel autoplay', danger_zone: 'Danger Zone', del_warning: 'Once you delete your account...', del_account: 'Delete Account', 
+    export_json: 'Export JSON', cover_photo: 'Cover Photo', upload_cover: 'Upload cover', comp_name: 'Company Name', comp_desc: 'Business Description', 
+    website: 'Website', phone: 'Contact Phone', address: 'Business Address', save_changes: 'Save Changes', cat_tab: 'Categories', 
+    users_tab: 'Users', mod_tab: 'Moderation', coupons_tab: 'Coupons', reports_tab: 'Reports', add_cat: 'Add New Category', 
+    edit_cat: 'Edit Category', slug: 'Slug (unique identifier)', icon: 'Icon', name_es: 'Spanish Name', name_en: 'English Name', 
+    sort_order: 'Order', save_cat: 'Save Category', cancel: 'Cancel', existing_cats: 'Existing Categories', pending_ads: 'Pending Ads', 
+    no_pending: 'No ads to moderate', approve: 'Approve', reject: 'Reject', coupon_gen: 'Coupon Generator', code: 'Code', 
+    credits: 'Credits', max_uses: 'Max Uses', create: 'Create', no_coupons: 'No active coupons', report_center: 'Report Center', 
+    reported_ad: 'Ad', reason: 'Reason', comments: 'Comments', reported_by: 'Reported by', action: 'Action', no_reports: 'No reports', 
+    reported_user: 'Reported User', user_mgmt: 'User Management', search_users: 'Search name or email...', role: 'Role', hidden_ip: 'Hidden IP', 
+    no_users: 'No users found', ad_photos: 'Ad Photos', drag_photos: 'Drag your photos here or', browse: 'browse', max_photos: 'Max 10 photos', 
+    category: 'Category', select: 'Select...', condition: 'Condition', new: 'New', used: 'Used', location: 'Location', 
+    loc_placeholder: 'Type your city...', video_opt: 'Video (Optional)', report_ad: 'Report this ad', verified_seller: 'Verified Seller', 
+    id_confirmed: 'Identity confirmed', show_qr: 'Show Contact QR', similar_ads: 'Similar ads', client_reviews: 'Customer reviews', 
+    leave_review: 'Leave your review', publish_review: 'Publish review', no_reviews: 'This seller has no reviews yet', scan_qr: 'Scan QR', 
+    report_seller: 'Report this seller', verified_id: 'Verified identity', high_rep: 'High reputation', product_desc: 'Product Description', 
+    no_desc: 'The seller did not provide a description.', download_pdf: 'Download PDF Brochure'
   },
   pt: {
     home: 'Início', search: 'Pesquisar', post: 'Publicar Anúncio', profile: 'Perfil', categories: 'Categorias', recent_ads: 'Anúncios Recentes',
@@ -136,7 +187,30 @@ const translations = {
     card1: "COMPRA SEGURA", card2: "VENDA RÁPIDO", card3: "SUPORTE 24/7",
     cardDesc1: "Moderação ativa e proteção contra fraudes.",
     cardDesc2: "Milhares de compradores visitam o Mercasto diariamente.",
-    cardDesc3: "Estamos aqui para ajudar em cada etapa."
+    cardDesc3: "Estamos aqui para ajudar em cada etapa.",
+    back_to_list: 'Voltar à lista', back: 'Voltar', category_stats: 'Estatísticas de Categoria', personal_info: 'Informação Pessoal', 
+    update_photo: 'Atualize sua foto de perfil...', edit_profile: 'Editar Perfil', security: 'Segurança', update_password: 'Atualize sua senha...', 
+    curr_password: 'Senha atual', new_password: 'Nova senha', conf_password: 'Confirmar nova senha', update_pass_btn: 'Atualizar Senha', 
+    email_settings: 'Configurações de E-mail', update_email: 'Atualize seu e-mail...', new_email: 'Novo e-mail', req_change: 'Solicitar Mudança', 
+    notifications: 'Notificações', choose_alerts: 'Escolha quais alertas receber...', email_alerts: 'Alertas por e-mail', push_alerts: 'Notificações Push', 
+    marketing_alerts: 'Promoções e newsletter', save_prefs: 'Salvar Preferências', interface: 'Interface', customize_app: 'Personalizar aparência...', 
+    autoplay: 'Autoplay do carrossel', danger_zone: 'Zona de Perigo', del_warning: 'Depois de excluir sua conta...', del_account: 'Excluir Conta', 
+    export_json: 'Exportar JSON', cover_photo: 'Foto de Capa', upload_cover: 'Enviar capa', comp_name: 'Nome da Empresa', comp_desc: 'Descrição do Negócio', 
+    website: 'Site', phone: 'Telefone de Contato', address: 'Endereço Comercial', save_changes: 'Salvar Alterações', cat_tab: 'Categorias', 
+    users_tab: 'Usuários', mod_tab: 'Moderação', coupons_tab: 'Cupons', reports_tab: 'Denúncias', add_cat: 'Adicionar Categoria', 
+    edit_cat: 'Editar Categoria', slug: 'Slug (identificador)', icon: 'Ícone', name_es: 'Nome em Espanhol', name_en: 'Nome em Inglês', 
+    sort_order: 'Ordem', save_cat: 'Salvar Categoria', cancel: 'Cancelar', existing_cats: 'Categorias Existentes', pending_ads: 'Anúncios Pendentes', 
+    no_pending: 'Sem anúncios para moderar', approve: 'Aprovar', reject: 'Rejeitar', coupon_gen: 'Gerador de Cupons', code: 'Código', 
+    credits: 'Créditos', max_uses: 'Usos Máx.', create: 'Criar', no_coupons: 'Nenhum cupom ativo', report_center: 'Central de Denúncias', 
+    reported_ad: 'Anúncio', reason: 'Motivo', comments: 'Comentários', reported_by: 'Denunciado por', action: 'Ação', no_reports: 'Nenhuma denúncia', 
+    reported_user: 'Usuário Denunciado', user_mgmt: 'Gestão de Usuários', search_users: 'Buscar nome ou e-mail...', role: 'Cargo', hidden_ip: 'IP Oculto', 
+    no_users: 'Nenhum usuário encontrado', ad_photos: 'Fotos do anúncio', drag_photos: 'Arraste suas fotos ou', browse: 'procurar', max_photos: 'Máx 10 fotos', 
+    category: 'Categoria', select: 'Selecionar...', condition: 'Condição', new: 'Novo', used: 'Usado', location: 'Localização', 
+    loc_placeholder: 'Digite sua cidade...', video_opt: 'Vídeo (Opcional)', report_ad: 'Denunciar este anúncio', verified_seller: 'Vendedor Verificado', 
+    id_confirmed: 'Identidade confirmada', show_qr: 'Mostrar QR de Contato', similar_ads: 'Anúncios similares', client_reviews: 'Avaliações de clientes', 
+    leave_review: 'Deixe sua opinião', publish_review: 'Publicar avaliação', no_reviews: 'Este vendedor não tem avaliações', scan_qr: 'Escanear QR', 
+    report_seller: 'Denunciar vendedor', verified_id: 'Identidade verificada', high_rep: 'Alta reputação', product_desc: 'Descrição do produto', 
+    no_desc: 'O vendedor não forneceu uma descrição.', download_pdf: 'Baixar Folheto PDF'
   }
 };
 
@@ -690,6 +764,21 @@ export default function App() {
     }
 }, [user]);
 
+  // --- ОБРАБОТКА КНОПКИ "НАЗАД" БРАУЗЕРА (ПРАВИЛЬНЫЙ ROUTING SPA) ---
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash;
+      if (!hash) {
+        setViewedAd(null);
+        setViewedCompany(null);
+        setShowAuthModal(false);
+        setShowPricingModal(false);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // --- WEB PUSH API SUBSCRIPTION LOGIC ---
   const subscribeToPush = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -877,7 +966,8 @@ export default function App() {
       const res = await fetch(`${API_URL}/users`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setAdminUsers(data);
+        // Фикс белого экрана: Laravel возвращает { data: [...] } при пагинации
+        setAdminUsers(data.data || (Array.isArray(data) ? data : []));
       }
     } catch (err) { console.error("Error fetching users", err); } 
     finally { setLoadingAdminUsers(false); }
@@ -1686,6 +1776,7 @@ export default function App() {
 
   // --- ПРОСМОТР ОБЪЯВЛЕНИЯ И АНАЛИТИКА ---
   const handleViewAd = (ad) => {
+    window.history.pushState({ popup: 'ad' }, '', `#ad-${ad.id}`);
     setViewedAd(ad);
     fetch(`${API_URL}/ads/${ad.id}/view`, { method: 'POST' })
       .then(res => res.ok ? res.json() : null)
@@ -1698,6 +1789,22 @@ export default function App() {
         }
       })
       .catch(err => console.error("Error recording view", err));
+  };
+
+  // --- ПРОСМОТР ПРОФИЛЯ ПРОДАВЦА ---
+  const handleViewCompany = (seller) => {
+    if (!seller) return;
+    window.history.pushState({ popup: 'company' }, '', `#company-${seller.id}`);
+    setViewedCompany(seller);
+    setLoadingCompanyAds(true);
+    Promise.all([
+      fetch(`${API_URL}/ads?user_id=${seller.id}`).then(res => res.ok ? res.json() : { data: [] }),
+      fetch(`${API_URL}/users/${seller.id}/reviews`).then(res => res.ok ? res.json() : { reviews: [], average: 0, total: 0 })
+    ]).then(([adsData, reviewsData]) => {
+        setCompanyAds(adsData.data || (Array.isArray(adsData) ? adsData : []));
+        setCompanyReviews(reviewsData.reviews || []);
+        setCompanyRatingStats({ average: reviewsData.average || 0, total: reviewsData.total || 0 });
+    }).catch(err => console.error(err)).finally(() => setLoadingCompanyAds(false));
   };
 
   // --- РЕНДЕР КАРТОЧКИ ---
@@ -1756,8 +1863,8 @@ export default function App() {
     return (
       <div className="bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
         <div className="sticky top-0 bg-white/90 backdrop-blur-xl z-40 border-b border-slate-200 px-4 py-3 flex items-center shadow-sm h-[60px]">
-           <button onClick={() => { setViewedAd(null); window.history.replaceState({}, '', '/'); }} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
-             <ChevronLeft className="w-4 h-4" /> Volver al listado
+           <button onClick={() => { if(window.location.hash) window.history.back(); else { setViewedAd(null); window.history.replaceState({}, '', '/'); } }} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
+             <ChevronLeft className="w-4 h-4" /> {t.back_to_list}
            </button>
         </div>
 
@@ -1773,7 +1880,7 @@ export default function App() {
                     <p className="text-slate-900 font-bold text-[32px] md:text-[38px] tracking-tight leading-none">${Number(ad.price).toLocaleString()} <span className="text-[14px] text-slate-500 font-medium tracking-normal align-top">MXN</span></p>
                     <div className="flex items-center gap-2">
                       {ad.category === 'inmobiliaria' && (
-                        <a href={`${API_URL}/ads/${ad.id}/pdf`} target="_blank" className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-colors active:scale-95 group" title="Descargar Ficha PDF">
+                        <a href={`${API_URL}/ads/${ad.id}/pdf`} target="_blank" className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-colors active:scale-95 group" title={t.download_pdf}>
                           <Download className="w-5 h-5 text-slate-400 group-hover:text-slate-700" />
                         </a>
                       )}
@@ -1799,19 +1906,19 @@ export default function App() {
                   </div>
 
                   <div className="mb-8">
-                     <h3 className="text-[15px] font-bold text-slate-900 mb-3">Descripción del producto</h3>
-                     <p className="text-[14px] text-slate-600 whitespace-pre-line leading-relaxed">{ad.description || 'El vendedor no ha proporcionado una descripción detallada para este producto.'}</p>
+                     <h3 className="text-[15px] font-bold text-slate-900 mb-3">{t.product_desc}</h3>
+                     <p className="text-[14px] text-slate-600 whitespace-pre-line leading-relaxed">{ad.description || t.no_desc}</p>
                   </div>
 
                   <div className="mb-8">
-                     <h3 className="text-[15px] font-bold text-slate-900 mb-3">Ubicación</h3>
+                     <h3 className="text-[15px] font-bold text-slate-900 mb-3">{t.location}</h3>
                      <div className="w-full h-48 md:h-64 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 relative shadow-sm">
                          <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={`https://maps.google.com/maps?q=${encodeURIComponent(ad.location || 'Mexico')}&t=&z=14&ie=UTF8&iwloc=&output=embed`} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)' }}></iframe>
                      </div>
                   </div>
 
                   <button onClick={() => { setReportingAd(ad); setShowReportModal(true); }} className="text-[12px] text-slate-400 hover:text-red-500 mb-6 flex items-center gap-1.5 underline underline-offset-4 font-medium transition-colors w-fit">
-                    <Shield size={14} /> Reportar este anuncio
+                    <Shield size={14} /> {t.report_ad}
                   </button>
 
                   <div className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between border border-slate-200 mb-8 md:mb-0 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleViewCompany(ad.user)}>
@@ -1824,8 +1931,8 @@ export default function App() {
                          )}
                        </div>
                        <div>
-                         <p className="font-semibold text-slate-900 text-[15px] flex items-center gap-1.5">{ad.user?.name || 'Vendedor Verificado'} {ad.user?.role === 'business' && <span className="badge bg-slate-900 text-white leading-none px-1.5 py-0.5">PRO</span>}</p>
-                         <p className="text-[12px] font-medium text-slate-500 flex items-center mt-0.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] mr-1"/> Identidad confirmada</p>
+                         <p className="font-semibold text-slate-900 text-[15px] flex items-center gap-1.5">{ad.user?.name || t.verified_seller} {ad.user?.role === 'business' && <span className="badge bg-slate-900 text-white leading-none px-1.5 py-0.5">PRO</span>}</p>
+                         <p className="text-[12px] font-medium text-slate-500 flex items-center mt-0.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] mr-1"/> {t.id_confirmed}</p>
                        </div>
                      </div>
                      <ChevronRight className="w-5 h-5 text-slate-400" />
@@ -1837,7 +1944,7 @@ export default function App() {
                       onClick={() => { handleWhatsAppClick(ad); setQrModalData(`https://wa.me/521234567890?text=${encodeURIComponent('Hola, me interesa tu anuncio en Mercasto: ' + ad.title)}`); }}
                       className="btn-lg w-full bg-[#0F172A] hover:bg-black text-white flex items-center justify-center gap-2 shadow-md"
                     >
-                       <QrCode className="w-5 h-5" /> Mostrar QR de Contacto
+                       <QrCode className="w-5 h-5" /> {t.show_qr}
                     </button>
                 </div>
              </div>
@@ -1846,7 +1953,7 @@ export default function App() {
           {/* ПОХОЖИЕ ОБЪЯВЛЕНИЯ */}
           {relatedAds.length > 0 && (
             <div className="mt-12 mb-8 pt-8 border-t border-slate-200">
-              <h3 className="text-[20px] font-bold text-slate-900 mb-6">Anuncios similares</h3>
+              <h3 className="text-[20px] font-bold text-slate-900 mb-6">{t.similar_ads}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {relatedAds.map(relAd => renderAdCard(relAd))}
               </div>
@@ -1864,8 +1971,8 @@ export default function App() {
     return (
       <div className="bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
         <div className="sticky top-0 bg-white/90 backdrop-blur-xl z-40 border-b border-slate-200 px-4 py-3 flex items-center shadow-sm h-[60px]">
-           <button onClick={() => setViewedCompany(null)} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
-             <ChevronLeft className="w-4 h-4" /> Volver
+           <button onClick={() => { if(window.location.hash) window.history.back(); else { setViewedCompany(null); } }} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
+             <ChevronLeft className="w-4 h-4" /> {t.back}
            </button>
         </div>
 
@@ -1895,22 +2002,22 @@ export default function App() {
                  <div className="flex flex-wrap gap-2 mt-4">
                    {viewedCompany.is_verified && (
                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-emerald-50 border-emerald-100 text-emerald-700 text-[12px] font-semibold">
-                       <CheckCircle className="w-3.5 h-3.5"/> Identidad verificada
+                       <CheckCircle className="w-3.5 h-3.5"/> {t.verified_id}
                      </div>
                    )}
                    {companyAds.length >= 10 && (
                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-blue-50 border-blue-100 text-blue-700 text-[12px] font-semibold">
-                       <TrendingUp className="w-3.5 h-3.5"/> +10 Anuncios
+                       <TrendingUp className="w-3.5 h-3.5"/> +10 {t.active_ads}
                      </div>
                    )}
                    {companyRatingStats.average >= 4.5 && companyRatingStats.total >= 5 && (
                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-amber-50 border-amber-100 text-amber-700 text-[12px] font-semibold">
-                       <Star className="w-3.5 h-3.5 fill-amber-500"/> Alta reputación
+                       <Star className="w-3.5 h-3.5 fill-amber-500"/> {t.high_rep}
                      </div>
                    )}
                  </div>
                  <button onClick={() => setShowUserReportModal(true)} className="mt-4 text-[12px] text-slate-400 hover:text-red-500 flex items-center gap-1.5 underline underline-offset-4 font-medium transition-colors w-fit">
-                   <AlertTriangle size={14} /> Reportar a este vendedor
+                   <AlertTriangle size={14} /> {t.report_seller}
                  </button>
                </div>
                <div className="w-full md:w-auto">
@@ -1918,17 +2025,17 @@ export default function App() {
                    onClick={() => setQrModalData(viewedCompany.phone_number ? `https://wa.me/${viewedCompany.phone_number.replace(/\D/g, '')}` : 'tel:+521234567890')}
                    className="btn-md w-full border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2 shadow-sm"
                  >
-                   <QrCode className="w-4 h-4" /> Escanear QR
+                   <QrCode className="w-4 h-4" /> {t.scan_qr}
                  </button>
                </div>
             </div>
           </div>
 
-          <h3 className="text-[18px] font-bold text-slate-900 mb-5">Anuncios ({companyAds.length})</h3>
+          <h3 className="text-[18px] font-bold text-slate-900 mb-5">{t.active_ads} ({companyAds.length})</h3>
           {loadingCompanyAds ? (
             <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 text-[#84CC16] animate-spin" /></div>
           ) : companyAds.length === 0 ? (
-            <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px] bg-white rounded-3xl border border-slate-200">No hay anuncios publicados</div>
+            <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px] bg-white rounded-3xl border border-slate-200">{t.noAds}</div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {companyAds.map(ad => renderAdCard(ad))}
@@ -1938,12 +2045,12 @@ export default function App() {
           {/* REVIEWS SECTION */}
           <div className="mt-12 bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
             <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> Reseñas de clientes ({companyRatingStats.total})
+              <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> {t.client_reviews} ({companyRatingStats.total})
             </h3>
             
             {user && user.id !== viewedCompany.id && (
               <form onSubmit={handleReviewSubmit} className="mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <h4 className="text-[14px] font-semibold text-slate-800 mb-3">Deja tu opinión</h4>
+                <h4 className="text-[14px] font-semibold text-slate-800 mb-3">{t.leave_review}</h4>
                 <div className="flex items-center gap-2 mb-3">
                   {[1, 2, 3, 4, 5].map(star => (
                     <button type="button" key={star} onClick={() => setReviewForm({...reviewForm, rating: star})} className="focus:outline-none">
@@ -1953,14 +2060,14 @@ export default function App() {
                 </div>
                 <textarea value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} placeholder="¿Cómo fue tu experiencia con este vendedor?" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[14px] mb-3 min-h-[80px]"></textarea>
                 <button type="submit" disabled={submittingReview} className="btn-sm bg-[#0F172A] text-white hover:bg-black flex items-center gap-2">
-                  {submittingReview ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Publicar reseña'}
+                  {submittingReview ? <Loader2 className="w-4 h-4 animate-spin"/> : t.publish_review}
                 </button>
               </form>
             )}
 
             <div className="space-y-4">
               {companyReviews.length === 0 ? (
-                <p className="text-slate-500 text-[13px]">Este vendedor aún no tiene reseñas.</p>
+                <p className="text-slate-500 text-[13px]">{t.no_reviews}</p>
               ) : (
                 companyReviews.map((rev, idx) => (
                   <div key={idx} className="p-4 border border-slate-100 rounded-2xl">
@@ -2280,11 +2387,11 @@ export default function App() {
                     <p className="text-2xl md:text-3xl font-black text-[#84CC16]">{totalViews}</p>
                   </div>
                   <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-                    <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-1">Contactos (QR)</p>
+                    <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-1">{t.contacts_qr}</p>
                     <p className="text-2xl md:text-3xl font-black text-slate-900">{totalContactClicks}</p>
                   </div>
                   <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-                    <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-1">Conversión</p>
+                    <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-1">{t.conversion}</p>
                     <p className="text-2xl md:text-3xl font-black text-blue-500">{conversionRate}%</p>
                   </div>
                 </div>
@@ -2406,73 +2513,73 @@ export default function App() {
                   <h2 className="text-[18px] font-bold text-slate-900 mb-6">{t.settings}</h2>
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">Información Personal</h3>
-                      <p className="text-[13px] text-slate-600 mb-4">Actualiza tu foto de perfil y nombre visible para los compradores en la plataforma.</p>
-                      <button onClick={openProfileModal} className="btn-md border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2"><User className="w-4 h-4" /> Editar Perfil</button>
+                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">{t.personal_info}</h3>
+                      <p className="text-[13px] text-slate-600 mb-4">{t.update_photo}</p>
+                      <button onClick={openProfileModal} className="btn-md border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2"><User className="w-4 h-4" /> {t.edit_profile}</button>
                     </div>
                     <hr className="border-slate-100" />
                     <div>
-                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">Seguridad</h3>
-                      <p className="text-[13px] text-slate-600 mb-4">Actualiza tu contraseña para mantener tu cuenta segura.</p>
+                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">{t.security}</h3>
+                      <p className="text-[13px] text-slate-600 mb-4">{t.update_password}</p>
                       <form onSubmit={handlePasswordSubmit} className="space-y-3 max-w-sm">
-                         <input type="password" placeholder="Contraseña actual" value={passwordForm.current_password} onChange={e => setPasswordForm({...passwordForm, current_password: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
-                         <input type="password" required placeholder="Nueva contraseña" minLength={8} value={passwordForm.new_password} onChange={e => setPasswordForm({...passwordForm, new_password: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
-                         <input type="password" required placeholder="Confirmar nueva contraseña" minLength={8} value={passwordForm.confirm_password} onChange={e => setPasswordForm({...passwordForm, confirm_password: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
+                         <input type="password" placeholder={t.curr_password} value={passwordForm.current_password} onChange={e => setPasswordForm({...passwordForm, current_password: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
+                         <input type="password" required placeholder={t.new_password} minLength={8} value={passwordForm.new_password} onChange={e => setPasswordForm({...passwordForm, new_password: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
+                         <input type="password" required placeholder={t.conf_password} minLength={8} value={passwordForm.confirm_password} onChange={e => setPasswordForm({...passwordForm, confirm_password: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
                          <button type="submit" disabled={passwordLoading} className="btn-md bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-2">
-                           {passwordLoading ? <Loader2 className="animate-spin w-4 h-4"/> : 'Actualizar Contraseña'}
+                           {passwordLoading ? <Loader2 className="animate-spin w-4 h-4"/> : t.update_pass_btn}
                          </button>
                       </form>
                     </div>
                     <hr className="border-slate-100" />
                     <div>
-                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">Correo Electrónico</h3>
-                      <p className="text-[13px] text-slate-600 mb-4">Actualiza la dirección de correo electrónico asociada a tu cuenta.</p>
+                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">{t.email_settings}</h3>
+                      <p className="text-[13px] text-slate-600 mb-4">{t.update_email}</p>
                       <form onSubmit={handleEmailSubmit} className="space-y-3 max-w-sm">
-                        <input type="email" required placeholder="Nuevo correo electrónico" value={emailForm.new_email} onChange={e => setEmailForm({...emailForm, new_email: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
-                        <input type="password" required placeholder="Contraseña actual" value={emailForm.password} onChange={e => setEmailForm({...emailForm, password: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
+                        <input type="email" required placeholder={t.new_email} value={emailForm.new_email} onChange={e => setEmailForm({...emailForm, new_email: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
+                        <input type="password" required placeholder={t.curr_password} value={emailForm.password} onChange={e => setEmailForm({...emailForm, password: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
                         <button type="submit" disabled={emailLoading} className="btn-md bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-2">
-                          {emailLoading ? <Loader2 className="animate-spin w-4 h-4"/> : 'Solicitar Cambio'}
+                          {emailLoading ? <Loader2 className="animate-spin w-4 h-4"/> : t.req_change}
                         </button>
                       </form>
                     </div>
                     <hr className="border-slate-100" />
                     <div>
-                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">Notificaciones</h3>
-                      <p className="text-[13px] text-slate-600 mb-4">Elige qué tipo de alertas quieres recibir en tu correo o dispositivo.</p>
+                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">{t.notifications}</h3>
+                      <p className="text-[13px] text-slate-600 mb-4">{t.choose_alerts}</p>
                       <form onSubmit={handleNotificationsSubmit} className="space-y-4 max-w-sm">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input type="checkbox" checked={notificationsForm.email_alerts} onChange={e => setNotificationsForm({...notificationsForm, email_alerts: e.target.checked})} className="w-4 h-4 text-[#84CC16] rounded border-slate-300 focus:ring-[#84CC16]" />
-                          <span className="text-[14px] text-slate-700">Alertas por correo (favoritos, actualizaciones)</span>
+                          <span className="text-[14px] text-slate-700">{t.email_alerts}</span>
                         </label>
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input type="checkbox" checked={notificationsForm.push_notifications} onChange={e => setNotificationsForm({...notificationsForm, push_notifications: e.target.checked})} className="w-4 h-4 text-[#84CC16] rounded border-slate-300 focus:ring-[#84CC16]" />
-                          <span className="text-[14px] text-slate-700">Notificaciones Push en el navegador</span>
+                          <span className="text-[14px] text-slate-700">{t.push_alerts}</span>
                         </label>
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input type="checkbox" checked={notificationsForm.marketing} onChange={e => setNotificationsForm({...notificationsForm, marketing: e.target.checked})} className="w-4 h-4 text-[#84CC16] rounded border-slate-300 focus:ring-[#84CC16]" />
-                          <span className="text-[14px] text-slate-700">Promociones y boletín semanal</span>
+                          <span className="text-[14px] text-slate-700">{t.marketing_alerts}</span>
                         </label>
                         <button type="submit" disabled={notificationsLoading} className="btn-md bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-2 mt-2">
-                          {notificationsLoading ? <Loader2 className="animate-spin w-4 h-4"/> : 'Guardar Preferencias'}
+                          {notificationsLoading ? <Loader2 className="animate-spin w-4 h-4"/> : t.save_prefs}
                         </button>
                       </form>
                     </div>
                     <hr className="border-slate-100" />
                     <div>
-                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">Interfaz</h3>
-                      <p className="text-[13px] text-slate-600 mb-4">Personaliza la apariencia y el comportamiento de la aplicación.</p>
+                      <h3 className="text-[15px] font-semibold text-slate-900 mb-2">{t.interface}</h3>
+                      <p className="text-[13px] text-slate-600 mb-4">{t.customize_app}</p>
                       <div className="space-y-4 max-w-sm">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input type="checkbox" checked={sliderAutoplay} onChange={e => setSliderAutoplay(e.target.checked)} className="w-4 h-4 text-[#84CC16] rounded border-slate-300 focus:ring-[#84CC16]" />
-                          <span className="text-[14px] text-slate-700">Autoplay en el carrusel de imágenes</span>
+                          <span className="text-[14px] text-slate-700">{t.autoplay}</span>
                         </label>
                       </div>
                     </div>
                     <hr className="border-slate-100" />
                     <div>
-                      <h3 className="text-[15px] font-semibold text-red-600 mb-2">Zona de Peligro</h3>
-                      <p className="text-[13px] text-slate-600 mb-4">Una vez que elimines tu cuenta, perderás todos tus anuncios, favoritos y mensajes. Esta acción no se puede deshacer.</p>
-                      <button onClick={handleDeleteAccount} className="btn-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 className="w-4 h-4" /> Eliminar Cuenta</button>
+                      <h3 className="text-[15px] font-semibold text-red-600 mb-2">{t.danger_zone}</h3>
+                      <p className="text-[13px] text-slate-600 mb-4">{t.del_warning}</p>
+                      <button onClick={handleDeleteAccount} className="btn-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 className="w-4 h-4" /> {t.del_account}</button>
                     </div>
                   </div>
                 </div>
@@ -2481,18 +2588,18 @@ export default function App() {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-[18px] font-bold text-slate-900">{t.company_profile}</h2>
                     <button onClick={handleExportCompanyData} type="button" className="btn-sm border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                      <Download className="w-4 h-4" /> Exportar JSON
+                      <Download className="w-4 h-4" /> {t.export_json}
                     </button>
                   </div>
                   <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); alert('Perfil de empresa actualizado exitosamente.'); }}>
                     <div>
-                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">Foto de Portada</label>
+                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.cover_photo}</label>
                       <label className="w-full h-32 md:h-48 bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors group relative overflow-hidden">
                         {companyForm.coverPreview && <img src={companyForm.coverPreview} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-30 transition-opacity" alt="Cover" />}
                         <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform mb-2 relative z-10">
                           <Camera className="w-6 h-6 text-slate-400" />
                         </div>
-                        <span className="text-[13px] font-medium text-slate-600 relative z-10">Subir portada (1200x400px)</span>
+                        <span className="text-[13px] font-medium text-slate-600 relative z-10">{t.upload_cover}</span>
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                           if (e.target.files && e.target.files[0]) {
                             setCompanyForm({...companyForm, coverPreview: URL.createObjectURL(e.target.files[0])});
@@ -2502,29 +2609,29 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div className="md:col-span-2">
-                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">Nombre de la Empresa</label>
+                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.comp_name}</label>
                         <input type="text" value={companyForm.name} onChange={e => setCompanyForm({...companyForm, name: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">Descripción del Negocio</label>
+                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.comp_desc}</label>
                         <textarea rows="4" value={companyForm.description} onChange={e => setCompanyForm({...companyForm, description: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"></textarea>
                       </div>
                       <div>
-                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">Sitio Web</label>
+                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.website}</label>
                         <input type="url" value={companyForm.website} onChange={e => setCompanyForm({...companyForm, website: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                       </div>
                       <div>
-                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">Teléfono de Contacto</label>
+                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.phone}</label>
                         <input type="tel" value={companyForm.phone} onChange={e => setCompanyForm({...companyForm, phone: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">Dirección Comercial</label>
+                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.address}</label>
                         <input type="text" value={companyForm.address} onChange={e => setCompanyForm({...companyForm, address: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                       </div>
                     </div>
                     <div className="pt-2 flex justify-end">
                       <button type="submit" className="btn-md bg-[#0F172A] text-white hover:bg-black shadow-sm">
-                        Guardar Cambios
+                        {t.save_changes}
                       </button>
                     </div>
                   </form>
@@ -3356,13 +3463,13 @@ export default function App() {
       <div className="bg-[var(--paper)] min-h-screen pb-6 md:pb-12 w-full">
         <div className="p-4 md:p-8 w-full max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-            <h2 className="hidden md:flex text-2xl font-bold items-center gap-3 text-slate-900 tracking-tight"><Shield className="text-red-500" size={32}/> Panel de Administración</h2>
+            <h2 className="hidden md:flex text-2xl font-bold items-center gap-3 text-slate-900 tracking-tight"><Shield className="text-red-500" size={32}/> {t.admin_panel}</h2>
             <div className="bg-slate-200 p-1 rounded-xl flex items-center w-fit">
-               <button onClick={() => setAdminTab('categories')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'categories' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Categorías</button>
-               <button onClick={() => {setAdminTab('users'); loadAdminUsers();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Usuarios</button>
-               <button onClick={() => {setAdminTab('moderation'); loadPendingAds();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'moderation' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Moderación</button>
-               <button onClick={() => {setAdminTab('coupons'); loadCoupons();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'coupons' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Cupones</button>
-               <button onClick={() => {setAdminTab('reports'); loadAdminReports();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'reports' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Reportes</button>
+               <button onClick={() => setAdminTab('categories')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'categories' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.cat_tab}</button>
+               <button onClick={() => {setAdminTab('users'); loadAdminUsers();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.users_tab}</button>
+               <button onClick={() => {setAdminTab('moderation'); loadPendingAds();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'moderation' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.mod_tab}</button>
+               <button onClick={() => {setAdminTab('coupons'); loadCoupons();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'coupons' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.coupons_tab}</button>
+               <button onClick={() => {setAdminTab('reports'); loadAdminReports();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'reports' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.reports_tab}</button>
                <a href="/horizon" target="_blank" rel="noopener noreferrer" className="px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all text-slate-500 hover:text-purple-600 flex items-center gap-1.5"><Activity size={14}/> Horizon</a>
             </div>
           </div>
@@ -3372,40 +3479,40 @@ export default function App() {
               <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 mb-8">
             <h3 className="text-[18px] font-bold mb-6 text-slate-900 flex items-center gap-2">
               {editingCatId ? <Pencil className="text-[#84CC16]" size={20}/> : <PlusCircle className="text-[#84CC16]" size={20}/>} 
-              {editingCatId ? 'Editar Categoría' : 'Añadir Nueva Categoría'}
+              {editingCatId ? t.edit_cat : t.add_cat}
             </h3>
             <form onSubmit={handleSaveCategory} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Slug (identificador único)</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.slug}</label>
                   <input value={adminCatForm.slug} onChange={e=>setAdminCatForm({...adminCatForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})} required placeholder="ej. deportes-extremos" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Icono (selecciona uno)</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.icon}</label>
                   <select value={adminCatForm.icon} onChange={e=>setAdminCatForm({...adminCatForm, icon: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
                     {Object.keys(IconMap).map(k => <option key={k} value={k}>{k}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Nombre en Español</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.name_es}</label>
                   <input value={adminCatForm.name_es} onChange={e=>setAdminCatForm({...adminCatForm, name_es: e.target.value})} required placeholder="Deportes Extremos" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Nombre en Inglés (English)</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.name_en}</label>
                   <input value={adminCatForm.name_en} onChange={e=>setAdminCatForm({...adminCatForm, name_en: e.target.value})} required placeholder="Extreme Sports" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Orden (Número de posición)</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.sort_order}</label>
                   <input type="number" value={adminCatForm.sort_order} onChange={e=>setAdminCatForm({...adminCatForm, sort_order: parseInt(e.target.value) || 0})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                 </div>
               </div>
               <div className="flex flex-col md:flex-row gap-3 mt-2">
                 <button type="submit" disabled={adminLoading} className="btn-md w-full md:w-auto bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-2">
-                  {adminLoading ? <Loader2 className="animate-spin" size={18}/> : (editingCatId ? <><Pencil size={16}/> Guardar Cambios</> : <><PlusCircle size={16}/> Guardar Categoría</>)}
+                  {adminLoading ? <Loader2 className="animate-spin" size={18}/> : (editingCatId ? <><Pencil size={16}/> {t.save_changes}</> : <><PlusCircle size={16}/> {t.save_cat}</>)}
                 </button>
                 {editingCatId && (
                   <button type="button" onClick={cancelCatEdit} className="btn-md w-full md:w-auto border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center justify-center gap-2">
-                    Cancelar
+                    {t.cancel}
                   </button>
                 )}
               </div>
@@ -3413,7 +3520,7 @@ export default function App() {
           </div>
 
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
-            <h3 className="text-[18px] font-bold mb-6 text-slate-900">Categorías Existentes ({categoriesData.length})</h3>
+            <h3 className="text-[18px] font-bold mb-6 text-slate-900">{t.existing_cats} ({categoriesData.length})</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {categoriesData.map(cat => {
                 const Icon = IconMap[cat.icon] || Star;
@@ -3422,7 +3529,7 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-white rounded-xl shadow-sm border border-slate-100"><Icon size={20} className="text-[#65A30D]"/></div>
                       <div>
-                        <p className="font-semibold text-[14px] text-slate-900 leading-tight">{cat.name?.es}</p>
+                        <p className="font-semibold text-[14px] text-slate-900 leading-tight">{cat.name?.[lang] || cat.name?.['es'] || cat.name}</p>
                         <p className="text-[11px] font-medium text-slate-500 mt-1">{cat.slug}</p>
                       </div>
                     </div>
@@ -3437,11 +3544,11 @@ export default function App() {
           </>
           ) : adminTab === 'moderation' ? (
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
-              <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><ShieldCheck className="text-[#84CC16]" size={20}/> Anuncios Pendientes ({adminPendingAds.length})</h3>
+              <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><ShieldCheck className="text-[#84CC16]" size={20}/> {t.pending_ads} ({adminPendingAds.length})</h3>
               {loadingPendingAds ? (
                  <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#84CC16]" size={32}/></div>
               ) : adminPendingAds.length === 0 ? (
-                 <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px]">No hay anuncios para moderar</div>
+                 <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px]">{t.no_pending}</div>
               ) : (
                  <div className="space-y-4">
                     {adminPendingAds.map(ad => (
@@ -3457,8 +3564,8 @@ export default function App() {
                              <p className="text-[12px] text-slate-500 mt-1">Por: {ad.user?.name} ({ad.user?.email})</p>
                           </div>
                           <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                             <button onClick={() => handleModerateAd(ad.id, 'active')} className="btn-sm bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100 flex items-center justify-center gap-1.5 flex-1 sm:flex-none"><CheckCircle size={16}/> Aprobar</button>
-                             <button onClick={() => handleModerateAd(ad.id, 'rejected')} className="btn-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 flex items-center justify-center gap-1.5 flex-1 sm:flex-none"><XCircle size={16}/> Rechazar</button>
+                             <button onClick={() => handleModerateAd(ad.id, 'active')} className="btn-sm bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100 flex items-center justify-center gap-1.5 flex-1 sm:flex-none"><CheckCircle size={16}/> {t.approve}</button>
+                             <button onClick={() => handleModerateAd(ad.id, 'rejected')} className="btn-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 flex items-center justify-center gap-1.5 flex-1 sm:flex-none"><XCircle size={16}/> {t.reject}</button>
                           </div>
                        </div>
                     ))}
@@ -3467,21 +3574,21 @@ export default function App() {
             </div>
           ) : adminTab === 'coupons' ? (
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
-              <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><Ticket className="text-[#84CC16]" size={20}/> Generador de Cupones</h3>
+              <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><Ticket className="text-[#84CC16]" size={20}/> {t.coupon_gen}</h3>
               <form onSubmit={handleCreateCoupon} className="flex flex-col sm:flex-row items-end gap-3 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div className="w-full sm:flex-1">
-                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">Código (ej. PROMO50)</label>
+                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">{t.code}</label>
                   <input type="text" value={couponForm.code} onChange={e => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})} required className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px] uppercase" />
                 </div>
                 <div className="w-full sm:w-28">
-                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">Créditos</label>
+                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">{t.credits}</label>
                   <input type="number" value={couponForm.credits} onChange={e => setCouponForm({...couponForm, credits: Number(e.target.value)})} required min="1" className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px]" />
                 </div>
                 <div className="w-full sm:w-28">
-                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">Usos Máx.</label>
+                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">{t.max_uses}</label>
                   <input type="number" value={couponForm.max_uses} onChange={e => setCouponForm({...couponForm, max_uses: Number(e.target.value)})} required min="1" className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px]" />
                 </div>
-                <button type="submit" className="btn-sm bg-[#0F172A] text-white hover:bg-black h-[38px] w-full sm:w-auto">Crear</button>
+                <button type="submit" className="btn-sm bg-[#0F172A] text-white hover:bg-black h-[38px] w-full sm:w-auto">{t.create}</button>
               </form>
 
               {loadingCoupons ? <div className="flex justify-center py-5"><Loader2 className="animate-spin text-slate-400"/></div> : (
@@ -3496,14 +3603,14 @@ export default function App() {
                       <button onClick={() => handleDeleteCoupon(c.id)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><Trash2 size={16}/></button>
                     </div>
                   ))}
-                  {adminCoupons.length === 0 && <p className="text-slate-400 text-[13px] col-span-full">No hay cupones activos.</p>}
+                  {adminCoupons.length === 0 && <p className="text-slate-400 text-[13px] col-span-full">{t.no_coupons}</p>}
                 </div>
               )}
             </div>
           ) : adminTab === 'reports' ? (
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-2"><Shield className="text-[#84CC16]" size={20}/> Centro de Reportes</h3>
+                <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-2"><Shield className="text-[#84CC16]" size={20}/> {t.report_center}</h3>
                 <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
                   <button onClick={() => setAdminReportTab('ads')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${adminReportTab === 'ads' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Anuncios</button>
                   <button onClick={() => setAdminReportTab('users')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${adminReportTab === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Usuarios</button>
@@ -3515,11 +3622,11 @@ export default function App() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 text-[12px] uppercase tracking-wide text-slate-500">
-                        <th className="p-3">Anuncio</th>
-                        <th className="p-3">Motivo</th>
-                        <th className="p-3 hidden md:table-cell">Comentarios</th>
-                        <th className="p-3 hidden sm:table-cell">Reportado por</th>
-                        <th className="p-3 text-right">Acción</th>
+                        <th className="p-3">{t.reported_ad}</th>
+                        <th className="p-3">{t.reason}</th>
+                        <th className="p-3 hidden md:table-cell">{t.comments}</th>
+                        <th className="p-3 hidden sm:table-cell">{t.reported_by}</th>
+                        <th className="p-3 text-right">{t.action}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -3537,18 +3644,18 @@ export default function App() {
                           </td>
                         </tr>
                       ))}
-                      {adminReports.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-slate-400 font-medium">No hay reportes.</td></tr>}
+                      {adminReports.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-slate-400 font-medium">{t.no_reports}</td></tr>}
                     </tbody>
                   </table>
                   ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 text-[12px] uppercase tracking-wide text-slate-500">
-                        <th className="p-3">Usuario Reportado</th>
-                        <th className="p-3">Motivo</th>
-                        <th className="p-3 hidden md:table-cell">Comentarios</th>
-                        <th className="p-3 hidden sm:table-cell">Reportado por</th>
-                        <th className="p-3 text-right">Acción</th>
+                        <th className="p-3">{t.reported_user}</th>
+                        <th className="p-3">{t.reason}</th>
+                        <th className="p-3 hidden md:table-cell">{t.comments}</th>
+                        <th className="p-3 hidden sm:table-cell">{t.reported_by}</th>
+                        <th className="p-3 text-right">{t.action}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -3563,7 +3670,7 @@ export default function App() {
                           </td>
                         </tr>
                       ))}
-                      {adminUserReports.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-slate-400 font-medium">No hay reportes.</td></tr>}
+                      {adminUserReports.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-slate-400 font-medium">{t.no_reports}</td></tr>}
                     </tbody>
                   </table>
                   )}
@@ -3573,9 +3680,9 @@ export default function App() {
           ) : (
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-2"><Users className="text-[#84CC16]" size={20}/> Gestión de Usuarios</h3>
+                <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-2"><Users className="text-[#84CC16]" size={20}/> {t.user_mgmt}</h3>
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                   <input value={adminUserSearch} onChange={e=>setAdminUserSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && loadAdminUsers()} placeholder="Buscar nombre o email..." className="w-full md:w-64 px-3.5 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
+                   <input value={adminUserSearch} onChange={e=>setAdminUserSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && loadAdminUsers()} placeholder={t.search_users} className="w-full md:w-64 px-3.5 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
                    <button onClick={loadAdminUsers} className="bg-slate-900 hover:bg-black text-white p-2 border border-slate-900 rounded-xl transition-colors"><Search size={18}/></button>
                 </div>
               </div>
@@ -3587,10 +3694,10 @@ export default function App() {
                    <table className="w-full text-left border-collapse">
                      <thead>
                        <tr className="border-b border-slate-200 text-[12px] uppercase tracking-wide text-slate-500">
-                         <th className="p-3">Usuario</th>
+                         <th className="p-3">{t.users_tab}</th>
                          <th className="p-3">Email / IP</th>
-                         <th className="p-3">Rol</th>
-                         <th className="p-3 text-right">Acciones</th>
+                         <th className="p-3">{t.role}</th>
+                         <th className="p-3 text-right">{t.action}</th>
                        </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-100">
@@ -3609,7 +3716,7 @@ export default function App() {
                            </td>
                            <td className="p-3">
                              <p className="font-medium text-[14px] text-slate-900">{u.email}</p>
-                             <p className="text-[11px] text-slate-500">{u.ip_address || 'IP oculta'}</p>
+                             <p className="text-[11px] text-slate-500">{u.ip_address || t.hidden_ip}</p>
                            </td>
                            <td className="p-3">
                              <select 
@@ -3634,7 +3741,7 @@ export default function App() {
                        ))}
                        {filteredAdminUsers.length === 0 && (
                          <tr>
-                           <td colSpan="4" className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No se encontraron usuarios</td>
+                           <td colSpan="4" className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">{t.no_users}</td>
                          </tr>
                        )}
                      </tbody>
