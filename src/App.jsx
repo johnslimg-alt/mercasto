@@ -114,7 +114,7 @@ const translations = {
     show_qr: 'Mostrar QR de Contacto', similar_ads: 'Anuncios similares', client_reviews: 'Reseñas de clientes', leave_review: 'Deja tu opinión', 
     publish_review: 'Publicar reseña', no_reviews: 'Este vendedor aún no tiene reseñas', scan_qr: 'Escanear QR', report_seller: 'Reportar a este vendedor', 
     verified_id: 'Identidad verificada', high_rep: 'Alta reputación', product_desc: 'Descripción del producto', no_desc: 'El vendedor no ha proporcionado una descripción.',
-    download_pdf: 'Descargar Ficha PDF'
+    download_pdf: 'Descargar Ficha PDF', contacts_qr: 'Contactos (QR)', conversion: 'Conversión'
   },
   en: {
     home: 'Home', search: 'Search', post: 'Post Ad', profile: 'Profile', categories: 'Categories', recent_ads: 'Recent Ads',
@@ -162,7 +162,7 @@ const translations = {
     id_confirmed: 'Identity confirmed', show_qr: 'Show Contact QR', similar_ads: 'Similar ads', client_reviews: 'Customer reviews', 
     leave_review: 'Leave your review', publish_review: 'Publish review', no_reviews: 'This seller has no reviews yet', scan_qr: 'Scan QR', 
     report_seller: 'Report this seller', verified_id: 'Verified identity', high_rep: 'High reputation', product_desc: 'Product Description', 
-    no_desc: 'The seller did not provide a description.', download_pdf: 'Download PDF Brochure'
+    no_desc: 'The seller did not provide a description.', download_pdf: 'Download PDF Brochure', contacts_qr: 'Contacts (QR)', conversion: 'Conversion'
   },
   pt: {
     home: 'Início', search: 'Pesquisar', post: 'Publicar Anúncio', profile: 'Perfil', categories: 'Categorias', recent_ads: 'Anúncios Recentes',
@@ -210,7 +210,7 @@ const translations = {
     id_confirmed: 'Identidade confirmada', show_qr: 'Mostrar QR de Contato', similar_ads: 'Anúncios similares', client_reviews: 'Avaliações de clientes', 
     leave_review: 'Deixe sua opinião', publish_review: 'Publicar avaliação', no_reviews: 'Este vendedor não tem avaliações', scan_qr: 'Escanear QR', 
     report_seller: 'Denunciar vendedor', verified_id: 'Identidade verificada', high_rep: 'Alta reputação', product_desc: 'Descrição do produto', 
-    no_desc: 'O vendedor não forneceu uma descrição.', download_pdf: 'Baixar Folheto PDF'
+    no_desc: 'O vendedor não forneceu uma descrição.', download_pdf: 'Baixar Folheto PDF', contacts_qr: 'Contatos (QR)', conversion: 'Conversão'
   }
 };
 
@@ -463,6 +463,13 @@ const MediaSlider = ({ media, isPro, autoplay }) => {
     </div>
   );
 };
+
+// --- РЕКЛАМНЫЙ БАННЕР ---
+const AdSenseBanner = () => (
+  <div className="w-full col-span-2 sm:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 text-[12px] font-bold uppercase tracking-widest border border-slate-200 h-[120px] shadow-inner my-2">
+    Espacio Publicitario
+  </div>
+);
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('home');
