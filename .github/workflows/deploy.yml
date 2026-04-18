@@ -22,7 +22,8 @@ jobs:
             cd /var/www/mercasto
             
             # 1. Получаем свежий код из репозитория
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
             
             # 2. Собираем бэкенд (Laravel)
             cd backend
