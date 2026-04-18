@@ -90,7 +90,7 @@ class AdController extends Controller
             'location' => 'nullable|string|max:255',
             'category' => 'required|string|max:100',
             'images' => 'nullable|array|max:10', // Максимум 10 картинок
-            'images.*' => 'image|max:5120', // Максимум 5МБ каждая
+            'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120', // Максимум 5МБ каждая
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // 50MB Max
         ]);
@@ -201,7 +201,7 @@ class AdController extends Controller
             'existing_images' => 'nullable|array',
             'existing_images.*' => 'string',
             'images' => 'nullable|array|max:10', // Новые изображения
-            'images.*' => 'image|max:5120',
+            'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'condition' => 'nullable|in:nuevo,usado',
             'video_url' => 'nullable|url|max:255',
         ]);
@@ -500,7 +500,7 @@ class AdController extends Controller
     public function pendingAds(Request $request)
     {
         if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Доступ запрещен'], 403);
+            return response()->json(['message' => 'Acceso denegado'], 403);
         }
         
         $ads = Ad::with('user:id,name,email')->where('status', 'pending')->latest()->get();
@@ -514,7 +514,7 @@ class AdController extends Controller
     public function getReports(Request $request)
     {
         if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Доступ запрещен'], 403);
+            return response()->json(['message' => 'Acceso denegado'], 403);
         }
         $reports = DB::table('reports')
             ->join('ads', 'reports.ad_id', '=', 'ads.id')
@@ -528,7 +528,7 @@ class AdController extends Controller
     public function deleteReport(Request $request, $id)
     {
         if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Доступ запрещен'], 403);
+            return response()->json(['message' => 'Acceso denegado'], 403);
         }
         DB::table('reports')->where('id', $id)->delete();
         return response()->json(['success' => true]);

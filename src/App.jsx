@@ -314,7 +314,8 @@ const getImageUrl = (url, fallbackUrl) => {
   if (typeof cleanUrl !== 'string') return defaultImg;
   if (cleanUrl.startsWith('http')) return cleanUrl;
   cleanUrl = cleanUrl.startsWith('/') ? cleanUrl.slice(1) : cleanUrl;
-  return `https://mercasto.com/storage/${cleanUrl}`;
+  const formattedUrl = cleanUrl.endsWith('.webp') ? cleanUrl : cleanUrl + (cleanUrl.includes('?') ? '&' : '?') + 'format=webp';
+  return `https://mercasto.com/storage/${formattedUrl}`;
 };
 
 // --- ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ МАССИВА КАРТИНОК ---
@@ -336,7 +337,8 @@ const getImageUrls = (url, fallbackUrl) => {
     if (typeof u !== 'string') return defaultImg;
     if (u.startsWith('http')) return u;
     const cleanUrl = u.startsWith('/') ? u.slice(1) : u;
-    return `https://mercasto.com/storage/${cleanUrl}`;
+    const formattedUrl = cleanUrl.endsWith('.webp') ? cleanUrl : cleanUrl + (cleanUrl.includes('?') ? '&' : '?') + 'format=webp';
+    return `https://mercasto.com/storage/${formattedUrl}`;
   });
 };
 
@@ -556,6 +558,25 @@ export default function App() {
   const [analyticsDays, setAnalyticsDays] = useState(7);
   const [dashboardPage, setDashboardPage] = useState(1);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [availableProviders, setAvailableProviders] = useState({ apple: true, telegram: true });
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api'}/auth/providers`)
+      .then(res => res.json())
+      .then(data => {
+        // Normalize: live server returns { providers: { apple: { enabled: bool } } }
+        // Our new route returns { apple: bool } — handle both shapes
+        const p = data?.providers ?? data;
+        setAvailableProviders({
+          google:   p?.google?.enabled  ?? p?.google  ?? false,
+          apple:    p?.apple?.enabled   ?? p?.apple   ?? false,
+          telegram: p?.telegram?.enabled ?? p?.telegram ?? false,
+        });
+      })
+      .catch(() => {});
+  }, []);
   const [profileForm, setProfileForm] = useState({ name: '', avatarFile: null, avatarPreview: '' });
   const [profileLoading, setProfileLoading] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
@@ -1195,6 +1216,7 @@ export default function App() {
         if (data.status === 'added') setFavoriteIds(prev => [...prev, id]);
         else setFavoriteIds(prev => prev.filter(fId => fId !== id));
         loadFavorites();
+        loadFavoriteAds();
       }
     } catch (err) { console.error("Error toggling favorite", err); }
   };
@@ -1828,23 +1850,26 @@ export default function App() {
   };
 
   // --- АКТИВАЦИЯ КУПОНА ---
-  const handleRedeemCoupon = async () => {
-    const code = window.prompt("Introduce tu código de cupón promocional:");
-    if (!code || !code.trim()) return;
+  const handleRedeemCoupon = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!couponInput || !couponInput.trim()) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/user/coupons/redeem`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim() })
+        body: JSON.stringify({ code: couponInput.trim() })
       });
       const data = await res.json();
       alert(data.message);
       if (res.ok && data.balance !== undefined) {
+        setShowCouponModal(false);
+        setCouponInput('');
         const updatedUser = { ...user, balance: data.balance };
-        setUser(updatedUser); localStorage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser); 
+        localStorage.setItem('user', JSON.stringify(updatedUser));
       }
-    } catch (e) { console.error(e); alert('Error al canjear cupón'); }
+    } catch (e) { console.error(e); alert('Error de conexión'); }
   };
 
   // --- ПРОСМОТР ОБЪЯВЛЕНИЯ И АНАЛИТИКА ---
@@ -2062,7 +2087,7 @@ export default function App() {
         <div className="max-w-[1000px] mx-auto md:py-8 pt-4 px-4">
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm mb-8">
             <div className="h-32 md:h-48 bg-slate-200 relative">
-               <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=400&fit=crop" className="w-full h-full object-cover opacity-90 mix-blend-multiply" alt="Cover" />
+               <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=400&fit=crop" loading="lazy" className="w-full h-full object-cover opacity-90 mix-blend-multiply" alt="Cover" />
             </div>
             <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start md:items-center relative">
                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center font-bold text-3xl shadow-lg border-4 border-white -mt-14 md:-mt-16 z-10 relative shrink-0">
@@ -2403,7 +2428,7 @@ export default function App() {
                   {parseFloat(user?.balance || 0).toFixed(0)} Créditos
                   <button onClick={() => handleClipPayment(100, '100 Créditos Mercasto')} className="ml-1 bg-amber-500 text-white w-6 h-6 rounded-md flex items-center justify-center hover:bg-amber-600 transition-colors shadow-sm" title="Comprar créditos">+</button>
                   <div className="absolute top-full right-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto">
-                    <button onClick={handleRedeemCoupon} className="bg-white border border-slate-200 text-slate-700 text-[12px] px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap hover:bg-slate-50 flex items-center gap-1.5"><Ticket size={14}/> Canjear cupón</button>
+                    <button onClick={() => setShowCouponModal(true)} className="bg-white border border-slate-200 text-slate-700 text-[12px] px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap hover:bg-slate-50 flex items-center gap-1.5"><Ticket size={14}/> Canjear cupón</button>
                   </div>
               </div>
               {userRole === 'admin' && (
@@ -3490,6 +3515,24 @@ export default function App() {
     );
   };
 
+  const renderCouponModal = () => {
+    if (!showCouponModal) return null;
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div className="bg-white w-full max-w-sm rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95">
+          <button onClick={() => setShowCouponModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
+          <div className="flex justify-center mb-4"><Ticket className="text-[#84CC16] w-12 h-12" /></div>
+          <h2 className="text-[20px] font-bold tracking-tight mb-2 text-center text-slate-900">Canjear Cupón</h2>
+          <p className="text-center text-slate-500 text-[13px] mb-6">Introduce tu código promocional para recibir créditos gratis.</p>
+          <form onSubmit={handleRedeemCoupon} className="space-y-4">
+            <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} required placeholder="CÓDIGO" className="w-full px-3.5 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 uppercase text-center font-bold tracking-widest" />
+            <button type="submit" className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black">Canjear</button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   // --- РЕНДЕР МОДАЛКИ ПРОФИЛЯ ---
   const renderProfileModal = () => {
     if (!showProfileModal) return null;
@@ -4007,6 +4050,7 @@ export default function App() {
       {!viewedAd && renderTabBar()}
       {renderPricingModal()}
       {renderProfileModal()}
+      {renderCouponModal()}
       {renderQRModal()}
       {renderReportModal()}
       {renderUserReportModal()}
@@ -4087,18 +4131,22 @@ export default function App() {
                           <Phone className="w-4 h-4" />
                           Teléfono (SMS)
                       </button>
+                      {availableProviders?.apple && (
                       <button type="button" onClick={() => window.location.href = `${API_URL}/auth/apple/redirect`} className="btn-md w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-3">
                           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                               <path d="M16.365 21.435c-1.47 1.043-2.52 1.488-4.225 1.488-1.545 0-2.925-.536-4.39-1.503-3.64-2.42-6.58-8.24-4.88-13.16 1.18-3.41 3.98-5.32 6.84-5.32 1.54 0 2.92.54 4.15 1.25 1.05.61 1.67.92 2.29.92.57 0 1.25-.32 2.38-.97 1.44-.82 3.12-1.12 4.7-.62 2.66.86 4.49 2.97 5.48 5.76-4.5 1.83-5.34 7.63-2.02 10.37-1.07 2.95-3.21 5.34-5.59 7.04-1.28.92-2.3 1.34-3.67 1.34-1.29 0-2.35-.45-3.8-1.39zm-3.08-20.17c-.55-2.05 1.27-4.13 3.3-4.26.65 2.15-1.39 4.34-3.3 4.26z"/>
                           </svg>
                           Apple
                       </button>
+                      )}
+                      {availableProviders?.telegram && (
                       <button type="button" onClick={() => window.location.href = `${API_URL}/auth/telegram/redirect`} className="btn-md w-full bg-[#229ED9] text-white hover:bg-[#1c88ba] flex items-center justify-center gap-2">
                           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                               <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.223-.535.223l.188-2.85 5.18-4.686c.223-.195-.054-.31-.35-.11l-6.4 4.02-2.76-.89c-.6-.188-.614-.6.126-.89L17.2 7.15c.523-.188.983.118.694 1.07z"/>
                           </svg>
                           Telegram
                       </button>
+                      )}
                     </div>
                   </>
                 )}

@@ -32,6 +32,11 @@ jobs:
             php artisan route:cache
             php artisan view:cache
             
+            # Restart backend container to clear OPcache
+            docker restart mercasto_backend_container || true
+            sudo systemctl restart php8.2-fpm || true
+            sudo systemctl restart php-fpm || true
+            
             # 3. Собираем фронтенд (React + Vite)
             cd ..
             npm install

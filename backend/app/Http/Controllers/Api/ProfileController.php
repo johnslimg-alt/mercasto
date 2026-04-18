@@ -19,7 +19,7 @@ class ProfileController extends Controller
     public function index(Request $request)
     {
         if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Доступ запрещен.'], 403);
+            return response()->json(['message' => 'Acceso denegado'], 403);
         }
 
         $query = User::query();
@@ -211,29 +211,43 @@ class ProfileController extends Controller
         return response()->json(['message' => 'Preferencias actualizadas.', 'user' => $user]);
     }
 
+    public function changeRole(Request $request, $id)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Acceso denegado'], 403);
+        }
+
+        $request->validate(['role' => 'required|in:individual,business,admin']);
+        $user = User::findOrFail($id);
+        $user->role = $request->role;
+        $user->save();
+
+        return response()->json(['message' => 'Rol actualizado exitosamente', 'role' => $user->role]);
+    }
+
     public function verifyUser(Request $request, $id)
     {
         if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Доступ запрещен. Только для администраторов.'], 403);
+            return response()->json(['message' => 'Acceso denegado'], 403);
         }
 
         $userToVerify = User::findOrFail($id);
         $userToVerify->is_verified = !$userToVerify->is_verified;
         $userToVerify->save();
 
-        return response()->json(['message' => 'Статус верификации обновлен', 'is_verified' => $userToVerify->is_verified]);
+        return response()->json(['message' => 'Estado de verificación actualizado', 'is_verified' => $userToVerify->is_verified]);
     }
 
     public function destroy(Request $request, $id)
     {
         if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Доступ запрещен.'], 403);
+            return response()->json(['message' => 'Acceso denegado'], 403);
         }
 
         $user = User::findOrFail($id);
         $user->delete();
 
-        return response()->json(['message' => 'Пользователь удален']);
+        return response()->json(['message' => 'Usuario eliminado exitosamente']);
     }
 
     public function getSubscriptions(Request $request)
@@ -283,7 +297,7 @@ class ProfileController extends Controller
     public function getUserReports(Request $request)
     {
         if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Доступ запрещен'], 403);
+            return response()->json(['message' => 'Acceso denegado'], 403);
         }
         $reports = DB::table('user_reports')
             ->join('users as reported', 'user_reports.reported_user_id', '=', 'reported.id')
@@ -297,7 +311,7 @@ class ProfileController extends Controller
     public function deleteUserReport(Request $request, $id)
     {
         if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Доступ запрещен'], 403);
+            return response()->json(['message' => 'Acceso denegado'], 403);
         }
         DB::table('user_reports')->where('id', $id)->delete();
         return response()->json(['success' => true]);

@@ -79,15 +79,23 @@ class PaymentController extends Controller
      */
     public function handleWebhook(Request $request)
     {
-        // Verify webhook signature to prevent spoofed events
+        // Verify webhook signature — FAIL CLOSED: reject if secret not configured
         $secret = env('CLIP_WEBHOOK_SECRET');
-        if ($secret) {
-            $signature = $request->header('X-Clip-Signature') ?? $request->header('X-Webhook-Signature');
-            $expectedSignature = hash_hmac('sha256', $request->getContent(), $secret);
-            if (!$signature || !hash_equals($expectedSignature, ltrim($signature, 'sha256='))) {
-                \Illuminate\Support\Facades\Log::warning('Invalid Clip webhook signature received');
-                return response()->json(['status' => 'invalid_signature'], 401);
-            }
+        if (!$secret) {
+            \Illuminate\Support\Facades\Log::error('CLIP_WEBHOOK_SECRET not configured — webhook rejected');
+            return response()->json(['status' => 'misconfigured'], 503);
+        }
+
+        $signature = $request->header('X-Clip-Signature') ?? $request->header('X-Webhook-Signature');
+        $expectedSignature = hash_hmac('sha256', $request->getContent(), $secret);
+        $receivedHash = ltrim((string) $signature, 'sha256=');
+
+        if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
+            \Illuminate\Support\Facades\Log::warning('Invalid Clip webhook signature', [
+                'ip' => $request->ip(),
+                'signature' => $signature,
+            ]);
+            return response()->json(['status' => 'invalid_signature'], 401);
         }
 
         $payload = $request->all();

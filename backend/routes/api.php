@@ -25,6 +25,7 @@ if (app()->environment('local', 'staging')) {
         throw new Exception('Это тестовое исключение для Sentry!');
     });
 }
+
 // Группа для защиты от перебора (Rate Limiting)
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -36,14 +37,27 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
-// OAuth routes
+// Returns which OAuth providers are actually configured (credentials present in env)
+// IMPORTANT: must be defined BEFORE the {provider} wildcard routes
+Route::get('/auth/providers', function () {
+    return response()->json([
+        'google'   => !empty(env('GOOGLE_CLIENT_ID')) && !empty(env('GOOGLE_CLIENT_SECRET')),
+        'apple'    => !empty(env('APPLE_CLIENT_ID')) && !empty(env('APPLE_CLIENT_SECRET')),
+        'telegram' => !empty(env('TELEGRAM_BOT_TOKEN')),
+    ]);
+});
+
+// OAuth wildcard routes (must come AFTER static /auth/providers)
 Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider']);
 Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback']);
 
 Route::post('/ads/{id}/click', [ContactController::class, 'recordClick']);
-Route::post('/ads/{id}/report', [AdController::class, 'report']); // Пожаловаться на объявление
-Route::post('/users/{id}/report', [ProfileController::class, 'report']); // Пожаловаться на пользователя
 Route::post('/ads/{id}/view', [AdController::class, 'recordView']);
+
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/ads/{id}/report', [AdController::class, 'report']); // Пожаловаться на объявление
+    Route::post('/users/{id}/report', [ProfileController::class, 'report']); // Пожаловаться на пользователя
+});
 
 // Webhook routes (no auth middleware)
 Route::post('/webhooks/clip', [PaymentController::class, 'handleWebhook']);

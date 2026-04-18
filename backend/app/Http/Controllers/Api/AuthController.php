@@ -217,7 +217,7 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|email|exists:users,email',
             'token' => 'required|string',
-            'password' => 'required|string|min:8',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();
@@ -252,7 +252,7 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'message' => 'Вы успешно вышли из системы'
+            'message' => 'Sesión cerrada exitosamente.'
         ]);
     }
 
@@ -263,7 +263,7 @@ class AuthController extends Controller
     {
         $allowedProviders = ['google', 'apple', 'telegram'];
         if (!in_array($provider, $allowedProviders)) {
-            return response()->json(['error' => 'Провайдер не поддерживается'], 400);
+            return response()->json(['error' => 'Proveedor no soportado'], 400);
         }
         
         return Socialite::driver($provider)->stateless()->redirect();
