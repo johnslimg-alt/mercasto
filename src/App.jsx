@@ -1833,6 +1833,7 @@ export default function App() {
   const handleViewAd = (ad) => {
     window.history.pushState({ popup: 'ad' }, '', `#ad-${ad.id}`);
     setViewedAd(ad);
+    window.scrollTo(0, 0); // Исправляет проблему "белого экрана" из-за скролла
     fetch(`${API_URL}/ads/${ad.id}/view`, { method: 'POST' })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -1851,6 +1852,7 @@ export default function App() {
     if (!seller) return;
     window.history.pushState({ popup: 'company' }, '', `#company-${seller.id}`);
     setViewedCompany(seller);
+    window.scrollTo(0, 0); // Исправляет проблему "белого экрана" из-за скролла
     setLoadingCompanyAds(true);
     Promise.all([
       fetch(`${API_URL}/ads?user_id=${seller.id}`).then(res => res.ok ? res.json() : { data: [] }),
@@ -1995,12 +1997,20 @@ export default function App() {
                 </div>
 
                 <div className="fixed md:static bottom-0 left-0 w-full bg-white md:bg-transparent p-4 md:p-0 border-t md:border-none border-slate-200 z-50 mt-auto pt-6">
-                    <button 
-                      onClick={() => { handleWhatsAppClick(ad); setQrModalData(`https://wa.me/521234567890?text=${encodeURIComponent('Hola, me interesa tu anuncio en Mercasto: ' + ad.title)}`); }}
-                      className="btn-lg w-full bg-[#0F172A] hover:bg-black text-white flex items-center justify-center gap-2 shadow-md"
-                    >
-                       <QrCode className="w-5 h-5" /> {t.show_qr}
-                    </button>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => { handleWhatsAppClick(ad); const phone = ad.user?.phone_number ? ad.user.phone_number.replace(/\D/g, '') : '521234567890'; window.open(`https://wa.me/${phone}?text=${encodeURIComponent('Hola, me interesa tu anuncio: ' + ad.title)}`, '_blank'); }}
+                        className="btn-lg flex-1 bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center gap-2 shadow-md"
+                      >
+                         <Phone className="w-5 h-5" /> WhatsApp
+                      </button>
+                      <button 
+                        onClick={() => { const phone = ad.user?.phone_number ? ad.user.phone_number.replace(/\D/g, '') : '521234567890'; window.open(`https://t.me/+${phone}`, '_blank'); }}
+                        className="btn-lg flex-1 bg-[#229ED9] hover:bg-[#1C88BA] text-white flex items-center justify-center gap-2 shadow-md"
+                      >
+                         <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.223-.535.223l.188-2.85 5.18-4.686c.223-.195-.054-.31-.35-.11l-6.4 4.02-2.76-.89c-.6-.188-.614-.6.126-.89L17.2 7.15c.523-.188.983.118.694 1.07z"/></svg> Telegram
+                      </button>
+                    </div>
                 </div>
              </div>
           </div>

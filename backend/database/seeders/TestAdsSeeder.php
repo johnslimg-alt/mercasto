@@ -115,18 +115,66 @@ class TestAdsSeeder extends Seeder
 
         // Utilizamos imágenes específicas por categoría que se cachean en el navegador para evitar el bloqueo por límite de peticiones (Rate Limit) de Unsplash
         $categoryImages = [
-            'motor' => 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80',
-            'inmobiliaria' => 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80',
-            'empleo' => 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80',
-            'servicios' => 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80',
-            'informatica' => 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80',
-            'telefonia' => 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80',
-            'hogar' => 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80',
-            'moda' => 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&q=80',
-            'bebes' => 'https://images.unsplash.com/photo-1519689680058-324335c77eba?w=800&q=80',
-            'mascotas' => 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800&q=80',
-            'ocio' => 'https://images.unsplash.com/photo-1511886929837-354d827aae26?w=800&q=80',
-            'boletos' => 'https://images.unsplash.com/photo-1540039155733-d7696d4eb98b?w=800&q=80'
+            'motor' => [
+                'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80',
+                'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80',
+                'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=800&q=80'
+            ],
+            'inmobiliaria' => [
+                'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80',
+                'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80',
+                'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80'
+            ],
+            'empleo' => [
+                'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80',
+                'https://images.unsplash.com/photo-1573164713988-8665fc963095?w=800&q=80',
+                'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&q=80'
+            ],
+            'servicios' => [
+                'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80',
+                'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80',
+                'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&q=80'
+            ],
+            'informatica' => [
+                'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80',
+                'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&q=80',
+                'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=800&q=80'
+            ],
+            'telefonia' => [
+                'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80',
+                'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=800&q=80',
+                'https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=800&q=80'
+            ],
+            'hogar' => [
+                'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80',
+                'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800&q=80',
+                'https://images.unsplash.com/photo-1505693314120-0d443867891c?w=800&q=80'
+            ],
+            'moda' => [
+                'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&q=80',
+                'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&q=80',
+                'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80'
+            ],
+            'bebes' => [
+                'https://images.unsplash.com/photo-1519689680058-324335c77eba?w=800&q=80',
+                'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=800&q=80',
+                'https://images.unsplash.com/photo-1522771930-78848d9293e8?w=800&q=80'
+            ],
+            'mascotas' => [
+                'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800&q=80',
+                'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=800&q=80',
+                'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&q=80'
+            ],
+            'ocio' => [
+                'https://images.unsplash.com/photo-1511886929837-354d827aae26?w=800&q=80',
+                'https://images.unsplash.com/photo-1540829016269-e05670f88adb?w=800&q=80',
+                'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800&q=80'
+            ],
+            'boletos' => [
+                'https://images.unsplash.com/photo-1540039155733-d7696d4eb98b?w=800&q=80',
+                'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&q=80',
+                'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80'
+            ]
         ];
 
         foreach ($catalog as $categorySlug => $subcategories) {
@@ -136,6 +184,9 @@ class TestAdsSeeder extends Seeder
                     $itemName = $items[array_rand($items)];
                     $location = $locations[array_rand($locations)];
                     
+                    $catImages = $categoryImages[$categorySlug] ?? ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80'];
+                    $selectedImage = $catImages[array_rand($catImages)];
+                    
                     Ad::create([
                         'user_id' => $user->id,
                         'title' => $itemName . ' (' . $subcatName . ') - ' . rand(100, 999),
@@ -144,7 +195,7 @@ class TestAdsSeeder extends Seeder
                         'location' => $location,
                         'category' => $categorySlug,
                         'condition' => (rand(0, 1) ? 'nuevo' : 'usado'),
-                        'image_url' => json_encode([$categoryImages[$categorySlug] ?? 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800']),
+                        'image_url' => json_encode([$selectedImage]),
                         'status' => 'active',
                         'views' => rand(15, 3500),
                         'promoted' => rand(0, 100) > 90 ? 'destacado' : (rand(0, 100) > 90 ? 'urgente' : null),
