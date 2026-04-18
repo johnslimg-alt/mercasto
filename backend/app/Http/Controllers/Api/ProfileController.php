@@ -303,6 +303,35 @@ class ProfileController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function deleteAccount(Request $request)
+    {
+        $user = $request->user();
+
+        // Delete all user's ad images from storage
+        $ads = \App\Models\Ad::where('user_id', $user->id)->get();
+        foreach ($ads as $ad) {
+            if ($ad->image_url) {
+                $images = json_decode($ad->image_url, true);
+                if (is_array($images)) {
+                    foreach ($images as $path) {
+                        Storage::disk('public')->delete($path);
+                    }
+                }
+            }
+        }
+
+        // Delete the user's ads
+        \App\Models\Ad::where('user_id', $user->id)->delete();
+
+        // Revoke all tokens
+        $user->tokens()->delete();
+
+        // Delete the user
+        $user->delete();
+
+        return response()->json(['message' => 'Cuenta eliminada exitosamente.']);
+    }
+
     public function pushSubscribe(Request $request)
     {
         $request->validate([

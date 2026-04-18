@@ -19,11 +19,12 @@ Route::get('/google-merchant.xml', [AdController::class, 'googleMerchantFeed']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/users/{id}/reviews', [ReviewController::class, 'index']);
 
-// Тестовый маршрут для проверки Sentry
-Route::get('/debug-sentry', function () {
-    throw new Exception('Это тестовое исключение для Sentry!');
-});
-
+// Debug route — only available in non-production environments
+if (app()->environment('local', 'staging')) {
+    Route::get('/debug-sentry', function () {
+        throw new Exception('Это тестовое исключение для Sentry!');
+    });
+}
 // Группа для защиты от перебора (Rate Limiting)
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);

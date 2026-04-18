@@ -41,6 +41,11 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+        'email_verification_token',
+        'pending_email',
     ];
 
     /**
@@ -52,7 +57,13 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted',
+            'notification_preferences' => 'array',
+            'is_verified' => 'boolean',
+            'balance' => 'decimal:2',
         ];
     }
 }

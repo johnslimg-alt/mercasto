@@ -79,7 +79,16 @@ class PaymentController extends Controller
      */
     public function handleWebhook(Request $request)
     {
-        // В идеале здесь должна быть проверка подписи веб-хука от Clip для безопасности
+        // Verify webhook signature to prevent spoofed events
+        $secret = env('CLIP_WEBHOOK_SECRET');
+        if ($secret) {
+            $signature = $request->header('X-Clip-Signature') ?? $request->header('X-Webhook-Signature');
+            $expectedSignature = hash_hmac('sha256', $request->getContent(), $secret);
+            if (!$signature || !hash_equals($expectedSignature, ltrim($signature, 'sha256='))) {
+                \Illuminate\Support\Facades\Log::warning('Invalid Clip webhook signature received');
+                return response()->json(['status' => 'invalid_signature'], 401);
+            }
+        }
 
         $payload = $request->all();
         $checkoutId = $payload['reference'] ?? null; // Получаем наш ID из веб-хука
@@ -92,7 +101,7 @@ class PaymentController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Бизнес-логика: Выдаем PRO статус (роль 'business'), если оплачен тариф "PRO" или "Plus"
+            // Бизнес-логика: Выдаем PRO статус (роль 'business'), если оплачен тариф «PRO» или «Plus»
             $payment = DB::table('payments')->where('clip_checkout_id', $checkoutId)->first();
             if ($payment && $payment->user_id) {
                 $desc = strtolower($payment->description);
@@ -100,7 +109,7 @@ class PaymentController extends Controller
                     DB::table('users')->where('id', $payment->user_id)->update(['role' => 'business']);
                 }
 
-                // Бизнес-логика: Зачисление кредитов (если в описании есть слово "Crédito")
+                // Бизнес-логика: Зачисление кредитов (если в описании есть слово «Crédito»)
                 if (str_contains($desc, 'crédito') || str_contains($desc, 'credito')) {
                     DB::table('users')->where('id', $payment->user_id)->increment('balance', $payment->amount);
                 }

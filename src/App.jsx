@@ -602,7 +602,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   
   // Вставьте сюда публичный VAPID ключ из вашего .env
-  const PUBLIC_VAPID_KEY = 'ВАШ_VAPID_PUBLIC_KEY_ИЗ_ENV';
+  const PUBLIC_VAPID_KEY = 'BAhZDxk3BjI_OCkHCOEyihsxsuCfcDtMilUZjMfecw-Lt4JvHNfYkmZIU_llDiaF3L0uOtXsgU60IZksmtpTrIs';
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
   const lastAdElementRef = useCallback(node => {
@@ -1097,7 +1097,7 @@ export default function App() {
       });
       if (res.ok) {
         setAdminPendingAds(prev => prev.filter(ad => ad.id !== id));
-        if (status === 'active') loadAds(1, true); // Обновляем ленту если одобрено
+        if (status === 'active') loadAds(1); // Refresh the public feed after approval
       }
     } catch (err) { console.error("Error moderating ad", err); }
   };
@@ -1241,7 +1241,8 @@ export default function App() {
     setAdminCatForm({ slug: '', name_es: '', name_en: '', icon: 'Star', sort_order: 100 });
   };
 
-  const allAds = useMemo(() => [...serverAds, ...mockAds], [serverAds]);
+  // Only use real server ads. mockAds are only used as fallback when no real ads are loaded yet.
+  const allAds = useMemo(() => serverAds.length > 0 ? serverAds : mockAds, [serverAds]);
 
   // --- ЛОГИКА АВТОРИЗАЦИИ (API) ---
   const handleAuthSubmit = async (e) => {
@@ -1273,7 +1274,15 @@ export default function App() {
         if (authMode === 'forgot_password' || authMode === 'reset_password') {
           alert(result.message);
           setAuthMode('login');
+        } else if (result.two_factor) {
+          // Backend requires 2FA — capture the email and redirect to 2FA input
+          setTwoFactorEmail(data.email || '');
+          setRequiresTwoFactor(true);
         } else {
+          if (!result.user) {
+            alert('Error de servidor: respuesta inesperada.');
+            return;
+          }
           setUser(result.user);
           setUserRole(result.user.role || 'individual');
           localStorage.setItem('user', JSON.stringify(result.user));
@@ -1360,7 +1369,9 @@ export default function App() {
     finally { setAuthLoading(false); }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = localStorage.getItem('auth_token');
+    // Clear local state first for immediate UX response
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('auth_token');
@@ -1368,6 +1379,13 @@ export default function App() {
     setUserAds([]);
     setFavoriteAds([]);
     setCurrentTab('home');
+    // Revoke token on backend (fire-and-forget, don't block UI)
+    if (token) {
+      fetch(`${API_URL}/logout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(err => console.error('Logout revoke error:', err));
+    }
   };
 
   // --- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ---
@@ -1569,7 +1587,7 @@ export default function App() {
         setVideoFile(null);
         setEditingAd(null);
         setCurrentTab('home');
-        loadAds(1, true); // Перезагружаем список после создания
+        loadAds(1); // Reload after create/update
         loadUserAds(); // Обновляем список моих объявлений
       } else {
         const errorData = await res.json();
@@ -1589,7 +1607,7 @@ export default function App() {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (res.ok) {
-        loadAds(1, true); // Перезагружаем список после удаления
+        loadAds(1); // Reload after delete
         loadUserAds(); // Обновляем список моих объявлений
       } else {
         alert("Error al eliminar el anuncio.");

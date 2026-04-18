@@ -186,22 +186,27 @@ class AuthController extends Controller
      */
     public function forgotPassword(Request $request)
     {
-        $request->validate(['email' => 'required|email|exists:users,email']);
+        $request->validate(['email' => 'required|email|max:255']);
 
-        $token = Str::random(60);
-        
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $request->email],
-            ['token' => Hash::make($token), 'created_at' => now()]
-        );
+        $user = \App\Models\User::where('email', $request->email)->first();
 
-        $resetUrl = env('FRONTEND_URL', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($request->email);
+        // Always return the same response regardless of whether email exists (prevent enumeration)
+        if ($user) {
+            $token = Str::random(60);
+            
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $request->email],
+                ['token' => Hash::make($token), 'created_at' => now()]
+            );
 
-        Mail::raw("Para restablecer tu contraseña, haz clic en el siguiente enlace:\n\n$resetUrl\n\nSi no solicitaste este cambio, puedes ignorar este correo.", function($message) use ($request) {
-            $message->to($request->email)->subject('Restablecer contraseña - Mercasto');
-        });
+            $resetUrl = env('FRONTEND_URL', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($request->email);
 
-        return response()->json(['message' => 'Se ha enviado un enlace de recuperación a tu correo.']);
+            Mail::raw("Para restablecer tu contraseña, haz clic en el siguiente enlace:\n\n$resetUrl\n\nSi no solicitaste este cambio, puedes ignorar este correo.", function($message) use ($request) {
+                $message->to($request->email)->subject('Restablecer contraseña - Mercasto');
+            });
+        }
+
+        return response()->json(['message' => 'Se ha enviado un enlace de recuperación a tu correo si existe una cuenta asociada.']);
     }
 
     /**
@@ -220,11 +225,22 @@ class AuthController extends Controller
             return response()->json(['message' => 'El token es inválido o ha expirado.'], 400);
         }
 
-        User::where('email', $request->email)->update(['password' => Hash::make($request->password)]);
-        
+        // Reject tokens older than 1 hour
+        if (\Carbon\Carbon::parse($record->created_at)->addHour()->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return response()->json(['message' => 'El token ha expirado. Por favor solicita uno nuevo.'], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        // Revoke ALL existing tokens to force re-login everywhere
+        $user->tokens()->delete();
+
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
-        return response()->json(['message' => 'Contraseña restablecida exitosamente.']);
+        return response()->json(['message' => 'Contraseña restablecida exitosamente. Por favor inicia sesión.']);
     }
 
     /**
