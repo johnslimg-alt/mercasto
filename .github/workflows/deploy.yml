@@ -25,6 +25,13 @@ jobs:
             git fetch origin
             git reset --hard origin/main
             
+            # Auto-configure webhook secret if missing
+            if ! grep -q "CLIP_WEBHOOK_SECRET=" backend/.env 2>/dev/null; then
+              echo "CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> backend/.env
+            elif grep -q "CLIP_WEBHOOK_SECRET=$" backend/.env 2>/dev/null; then
+              sed -i "s/CLIP_WEBHOOK_SECRET=.*/CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)/" backend/.env
+            fi
+            
             # 2. Собираем бэкенд (Laravel)
             cd backend
             composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
