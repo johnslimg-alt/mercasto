@@ -52,4 +52,8 @@ return [
         'client_secret' => env('TELEGRAM_CLIENT_SECRET'),
         'redirect' => env('APP_URL') . '/api/auth/telegram/callback',
     ],
+
+    'clip' => [
+        'webhook_secret' => env('CLIP_WEBHOOK_SECRET'),
+    ],
 ];

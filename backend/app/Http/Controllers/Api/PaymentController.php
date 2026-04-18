@@ -80,8 +80,8 @@ class PaymentController extends Controller
     public function handleWebhook(Request $request)
     {
         // Verify webhook signature — FAIL CLOSED: reject if secret not configured
-        $secret = env('CLIP_WEBHOOK_SECRET');
-        if (!$secret) {
+        $secret = config('services.clip.webhook_secret');
+        if (empty($secret)) {
             \Illuminate\Support\Facades\Log::error('CLIP_WEBHOOK_SECRET not configured — webhook rejected');
             return response()->json(['status' => 'misconfigured'], 503);
         }
