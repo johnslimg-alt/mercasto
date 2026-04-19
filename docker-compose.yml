@@ -23,6 +23,7 @@ services:
     volumes:
       - ./default.conf:/etc/nginx/conf.d/default.conf
       - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot # Папка для проверки владения доменом
       - ./backend:/var/www # Для раздачи статики Laravel (storage) и доступа к index.php
     restart: unless-stopped
     depends_on:
@@ -69,6 +70,60 @@ services:
         max-size: "20m"
         max-file: "5"
 
+  # Laravel Queue Worker (Фоновая отправка писем, обработка видео и т.д.)
+  mercasto-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mercasto_worker_container
+    command: php artisan queue:work --sleep=3 --tries=3
+    volumes:
+      - ./backend:/var/www
+    environment:
+      - "DB_HOST=mysql"
+      - "REDIS_HOST=redis"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Laravel Scheduler (Автоматическое выполнение задач по расписанию - CRON)
+  mercasto-scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mercasto_scheduler_container
+    command: php artisan schedule:work
+    volumes:
+      - ./backend:/var/www
+    environment:
+      - "DB_HOST=mysql"
+      - "REDIS_HOST=redis"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Laravel Reverb (Сервер WebSockets для уведомлений в реальном времени)
+  mercasto-reverb:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mercasto_reverb_container
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/var/www
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   # База данных
   mysql:
     image: mysql:8.0
@@ -76,15 +131,15 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_DATABASE: mercasto_db_name
-      MYSQL_USER: your_db_user
-      MYSQL_PASSWORD: your_db_password
-      MYSQL_ROOT_PASSWORD: your_root_password
+      MYSQL_DATABASE: ${DB_DATABASE:-mercasto}
+      MYSQL_USER: ${DB_USERNAME:-mercasto_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
     volumes:
       - ./mysql-data:/var/lib/mysql
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pyour_root_password"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-secret}"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -116,8 +171,8 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
-    ports:
-      - "8081:8080" # Интерфейс мониторинга будет доступен на порту 8081 (чтобы не конфликтовать с Reverb)
+    expose:
+      - "8080" # Скрыто от интернета. Доступно только внутренним контейнерам (Grafana и Prometheus)
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -132,8 +187,8 @@ services:
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
+    expose:
+      - "9090" # Скрыто от интернета.
     depends_on:
       - cadvisor
     restart: unless-stopped
@@ -149,4 +204,14 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=mercasto_secure_pass # Измените пароль для продакшена!
     depends_on:
       - prometheus
+    restart: unless-stopped
+
+  # Certbot (Автоматический выпуск и продление SSL-сертификатов Let's Encrypt)
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     restart: unless-stopped

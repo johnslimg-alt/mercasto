@@ -4,8 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ProfileController;
+use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
@@ -18,6 +18,9 @@ Route::get('/sitemap.xml', [AdController::class, 'sitemap']);
 Route::get('/google-merchant.xml', [AdController::class, 'googleMerchantFeed']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/users/{id}/reviews', [ReviewController::class, 'index']);
+
+// Регистрация маршрутов для WebSockets (Reverb / Echo) с авторизацией Sanctum
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 // Debug route — only available in non-production environments
 if (app()->environment('local', 'staging')) {
@@ -39,20 +42,17 @@ Route::middleware('throttle:10,1')->group(function () {
 
 // Returns which OAuth providers are actually configured (credentials present in env)
 // IMPORTANT: must be defined BEFORE the {provider} wildcard routes
-Route::get('/auth/providers', function () {
-    return response()->json([
-        'google'   => !empty(env('GOOGLE_CLIENT_ID')) && !empty(env('GOOGLE_CLIENT_SECRET')),
-        'apple'    => !empty(env('APPLE_CLIENT_ID')) && !empty(env('APPLE_CLIENT_SECRET')),
-        'telegram' => !empty(env('TELEGRAM_BOT_TOKEN')),
-    ]);
-});
+Route::get('/auth/providers', [AuthController::class, 'getProviders']);
 
 // OAuth wildcard routes (must come AFTER static /auth/providers)
 Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider']);
 Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback']);
 
-Route::post('/ads/{id}/click', [ContactController::class, 'recordClick']);
-Route::post('/ads/{id}/view', [AdController::class, 'recordView']);
+// Защита метрик и просмотров от ботов и накруток (максимум 60 запросов в минуту с 1 IP)
+Route::middleware('throttle:60,1')->group(function () {
+    Route::post('/ads/{id}/click', [AdController::class, 'recordClick']);
+    Route::post('/ads/{id}/view', [AdController::class, 'recordView']);
+});
 
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/ads/{id}/report', [AdController::class, 'report']); // Пожаловаться на объявление
@@ -84,7 +84,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/notifications/read-all', [ProfileController::class, 'markAllNotificationsRead']); // Прочитать все уведомления
     Route::post('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений
     Route::delete('/user/notifications/{id}', [ProfileController::class, 'deleteNotification']); // Удалить уведомление
-    Route::post('/users/{id}/reviews', [ReviewController::class, 'store']); // Оставить отзыв
     Route::post('/user/push-subscribe', [ProfileController::class, 'pushSubscribe']); // Подписка на Web Push
     Route::post('/user/push-unsubscribe', [ProfileController::class, 'pushUnsubscribe']); // Отписка от Web Push
     Route::delete('/user', [ProfileController::class, 'deleteAccount']); // User self-deletion
@@ -95,7 +94,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/two-factor-authentication/confirm', [TwoFactorAuthenticationController::class, 'confirm']);
     Route::delete('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'destroy']);
 
-    Route::post('/user/coupons/redeem', [PaymentController::class, 'redeemCoupon']); // Активация купона
+    // Защита от спама и брутфорса (максимум 5 запросов в минуту)
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/user/coupons/redeem', [PaymentController::class, 'redeemCoupon']); // Защита подбора купонов
+        Route::post('/users/{id}/reviews', [ReviewController::class, 'store']); // Защита от спама отзывами
+    });
+
     Route::get('/admin/coupons', [PaymentController::class, 'getCoupons']); // Список купонов (Админ)
     Route::post('/admin/coupons', [PaymentController::class, 'createCoupon']); // Создать купон (Админ)
     Route::delete('/admin/coupons/{id}', [PaymentController::class, 'deleteCoupon']); // Удалить купон (Админ)

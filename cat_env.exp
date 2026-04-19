@@ -1,0 +1,5 @@
+#!/usr/bin/expect -f
+set timeout -1
+spawn ssh -o StrictHostKeyChecking=no root@72.62.173.145 "cat /var/www/mercasto/backend/.env | grep CLIP_WEBHOOK"
+expect "*assword:*" { send "Prosto202626@\r" }
+expect eof

@@ -39,14 +39,23 @@ class ReviewController extends Controller
             return response()->json(['message' => 'No puedes dejarte una reseña a ti mismo'], 400);
         }
 
-        DB::table('reviews')->updateOrInsert(
-            ['reviewer_id' => $reviewerId, 'seller_id' => $id],
-            [
+        $exists = DB::table('reviews')->where('reviewer_id', $reviewerId)->where('seller_id', $id)->exists();
+        
+        if ($exists) {
+            DB::table('reviews')
+                ->where('reviewer_id', $reviewerId)
+                ->where('seller_id', $id)
+                ->update(['rating' => $request->rating, 'comment' => $request->comment, 'updated_at' => now()]);
+        } else {
+            DB::table('reviews')->insert([
+                'reviewer_id' => $reviewerId,
+                'seller_id' => $id,
                 'rating' => $request->rating,
                 'comment' => $request->comment,
+                'created_at' => now(),
                 'updated_at' => now(),
-            ]
-        );
+            ]);
+        }
 
         return response()->json(['message' => 'Reseña guardada exitosamente']);
     }

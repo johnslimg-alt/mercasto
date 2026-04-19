@@ -1,0 +1,5 @@
+#!/usr/bin/expect -f
+set timeout -1
+spawn ssh -o StrictHostKeyChecking=no root@72.62.173.145 "cd /var/www/mercasto && git fetch origin && git reset --hard origin/main && docker restart mercasto_backend_container && sleep 5 && docker exec mercasto_backend_container php artisan config:cache && curl -s -X POST https://mercasto.com/api/webhooks/clip"
+expect "*assword:*" { send "Prosto202626@\r" }
+expect eof

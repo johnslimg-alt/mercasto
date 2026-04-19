@@ -34,18 +34,23 @@ export const mexicoLocations = {
 };
 
 export const subcategoriesMap = {
-  'motor': ['Autos Compactos', 'Camionetas y SUV', 'Motos', 'Autopartes'],
-  'inmobiliaria': ['Casas en Venta', 'Departamentos en Renta', 'Terrenos', 'Locales Comerciales'],
-  'empleo': ['Tecnología', 'Ventas', 'Atención al Cliente', 'Administración'],
-  'servicios': ['Reparaciones y Hogar', 'Clases y Cursos', 'Belleza y Salud', 'Eventos'],
-  'informatica': ['Laptops', 'Componentes', 'Accesorios', 'Tablets'],
-  'telefonia': ['Smartphones', 'Fundas y Micas', 'Wearables', 'Cargadores'],
-  'hogar': ['Muebles', 'Electrodomésticos', 'Decoración', 'Jardín'],
-  'moda': ['Hombre', 'Mujer', 'Relojes', 'Accesorios'],
-  'bebes': ['Paseo', 'Habitación', 'Ropa', 'Juguetes'],
-  'mascotas': ['Perros', 'Gatos', 'Aves y Peces', 'Higiene'],
-  'ocio': ['Deportes', 'Música', 'Libros', 'Juegos'],
-  'boletos': ['Conciertos', 'Deportes', 'Teatro y Cultura', 'Viajes']
+  'coches': ['Compactos', 'SUV', 'Pickup', 'Sedán', 'Hatchback', 'Coupé', 'Deportivos', 'Clásicos', 'Eléctricos', 'Accesorios'],
+  'motor': ['Motos', 'Scooters', 'Cuatrimotos', 'UTV', 'Motos de agua', 'Refacciones', 'Cascos', 'Equipamiento'],
+  'inmobiliaria': ['Casas en venta', 'Casas en renta', 'Departamentos', 'Terrenos', 'Locales comerciales', 'Oficinas', 'Bodegas', 'Renta vacacional'],
+  'empleo': ['Ventas', 'Chofer', 'Construcción', 'Administración', 'Atención al cliente', 'Tecnología', 'Hotelería', 'Medio tiempo'],
+  'servicios': ['Mudanzas', 'Limpieza', 'Plomería', 'Electricidad', 'Cerrajería', 'Clases', 'Diseño', 'Eventos'],
+  'moda': ['Ropa mujer', 'Ropa hombre', 'Calzado', 'Bolsos', 'Accesorios', 'Joyería', 'Cosmética'],
+  'hogar': ['Muebles', 'Decoración', 'Electrodomésticos', 'Cocina', 'Jardín', 'Herramientas', 'Organización'],
+  'electronica': ['Laptops', 'Tablets', 'TV y video', 'Audio', 'Cámaras', 'Drones', 'Accesorios'],
+  'telefonos': ['Smartphones', 'Fundas y Carcasas', 'Smartwatches', 'Cargadores y Cables', 'Repuestos'],
+  'deportes': ['Bicicletas', 'Gym', 'Running', 'Camping', 'Pesca', 'Surf', 'Kayak'],
+  'infantil': ['Juguetes', 'Ropa infantil', 'Escolar', 'Muebles infantiles', 'Seguridad'],
+  'bebes': ['Carriolas', 'Autoasientos', 'Ropa bebé', 'Baño y cuidado', 'Cunas', 'Juguetes bebé'],
+  'mascotas': ['Perros', 'Gatos', 'Aves', 'Peces', 'Accesorios', 'Alimento', 'Veterinaria'],
+  'negocios': ['Traspasos', 'Franquicias', 'Equipamiento', 'Maquinaria', 'Industria', 'Inversión'],
+  'formacion': ['Libros', 'Cursos', 'Idiomas', 'Universidad', 'Infantil', 'Programación'],
+  'informatica': ['PCs', 'Componentes', 'Monitores', 'Impresoras', 'Redes'],
+  'coleccionismo': ['Arte', 'Antigüedades', 'Cómics', 'Monedas y Billetes', 'Música y Vinilos', 'Instrumentos musicales', 'Entradas']
 };
 
 export const mockAds = [
@@ -254,4 +259,3 @@ export const recentlyViewed = [
   { name: 'Condo 3 bed', price: '$3.25M', img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200' },
   { name: 'Nike Air Max', price: '$1,850', img: 'https://images.unsplash.com/photo-1542291026-797186bcca9e?w=200' }
 ];
-

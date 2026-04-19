@@ -1,0 +1,9 @@
+#!/usr/bin/expect -f
+set timeout -1
+spawn scp -o StrictHostKeyChecking=no fix_env.sh root@72.62.173.145:/root/
+expect "*assword:*" { send "Prosto202626@\r" }
+expect eof
+
+spawn ssh -o StrictHostKeyChecking=no root@72.62.173.145 "bash /root/fix_env.sh"
+expect "*assword:*" { send "Prosto202626@\r" }
+expect eof

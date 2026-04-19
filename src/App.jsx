@@ -15,30 +15,79 @@ import echo from './echo';
 // --- ЛОГОТИП И ИКОНКИ ---
 const MercastoLogo = ({ className = "h-11" }) => (
   <div className={`flex items-center gap-2 ${className}`}>
-    <svg viewBox="0 0 100 100" className="h-full w-auto drop-shadow-sm">
-      <path d="M20 70 Q 5 60 0 45 Q 10 70 25 80 Z" fill="#2A7B4C" />
-      <path d="M80 70 Q 95 60 100 45 Q 90 70 75 80 Z" fill="#2A7B4C" />
-      <path d="M50 95 C 50 95 20 60 20 35 A 30 30 0 0 1 50 5 Z" fill="#0D4A30" />
-      <path d="M50 95 C 50 95 80 60 80 35 A 30 30 0 0 0 50 5 Z" fill="#D02F35" />
-      <circle cx="50" cy="35" r="14" fill="#FFFFFF" />
-      <circle cx="50" cy="35" r="6" fill="#E8833A" /> 
-      <ellipse cx="50" cy="18" rx="45" ry="6" fill="#0D4A30" stroke="#FFFFFF" strokeWidth="2" />
-      <path d="M30 15 C 30 0 70 0 70 15 Z" fill="#D02F35" />
-      <path d="M35 10 C 35 0 65 0 65 10 Z" fill="#E8833A" /> 
-      <path d="M30 85 Q 10 85 5 70 Q 20 90 40 95 Z" fill="#1B5A36" />
-      <path d="M70 85 Q 90 85 95 70 Q 80 90 60 95 Z" fill="#1B5A36" />
-      <rect x="25" y="96" width="50" height="2" rx="1" fill="#0D4A30" />
+    {/* Новый лаконичный логотип: Буква "M" внутри геолокационного пина */}
+    <svg viewBox="0 0 100 100" className="h-full w-auto drop-shadow-md">
+      <path d="M50 5 C27.9 5 10 22.9 10 45 C10 75 50 95 50 95 C50 95 90 75 90 45 C90 22.9 72.1 5 50 5 Z" fill="#84CC16" />
+      <path d="M30 60 L30 35 L50 50 L70 35 L70 60" fill="none" stroke="#ffffff" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
     <div className="flex flex-col justify-center">
-      <span className="font-sans text-xl md:text-2xl font-black text-[#0D4A30] leading-none tracking-tight">Mercasto</span>
-      <span className="text-[6px] md:text-[7px] font-bold text-[#0D4A30] uppercase tracking-wider leading-none mt-1">Tablón de anuncios</span>
-      <span className="text-[8px] md:text-[9px] font-black text-[#D02F35] tracking-wide leading-none mt-0.5">México</span>
+      <span className="font-sans text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-none tracking-tight">Mercasto</span>
+      <span className="text-[7.5px] font-bold text-[#65A30D] uppercase tracking-widest leading-none mt-1">Marketplace</span>
     </div>
   </div>
 );
 
 // --- КАРТА ИКОНОК ---
-const IconMap = { Car, Home, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Star };
+const IconMap = { Car, Home, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Star, Store, Activity, Cpu };
+
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
+
+const getImageUrl = (path, fallback = null) => {
+  if (!path) return fallback || 'https://placehold.co/600x400?text=No+Image';
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  if (path.startsWith('[')) {
+    try {
+      const arr = JSON.parse(path);
+      if (arr && arr.length > 0) return `${STORAGE_URL}/${arr[0]}`;
+    } catch (e) {}
+  }
+  return `${STORAGE_URL}/${path}`;
+};
+
+const getImageUrls = (pathStr, fallbackArr = []) => {
+  if (!pathStr) return fallbackArr;
+  try {
+    const arr = JSON.parse(pathStr);
+    if (Array.isArray(arr)) return arr.map(p => p.startsWith('http') || p.startsWith('data:') ? p : `${STORAGE_URL}/${p}`);
+  } catch(e) {}
+  return [getImageUrl(pathStr)];
+};
+
+const getRelativePath = (url) => {
+    if (!url) return null;
+    if (url.startsWith(STORAGE_URL)) return url.replace(`${STORAGE_URL}/`, '');
+    return url;
+};
+
+const MediaSlider = ({ media, autoplay }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (!autoplay || !media || media.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentIndex(prev => (prev === media.length - 1 ? 0 : prev + 1));
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [media, autoplay]);
+
+  if (!media || media.length === 0) return <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400"><Camera size={48}/></div>;
+  return (
+    <div className="relative w-full h-full group bg-black/5 flex items-center justify-center">
+      {media[currentIndex].type === 'video' ? (
+        <video src={media[currentIndex].url} controls className="max-w-full max-h-full object-contain" />
+      ) : (
+        <img src={media[currentIndex].url} className="max-w-full max-h-full object-contain shadow-sm" />
+      )}
+      {media.length > 1 && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === 0 ? media.length - 1 : prev - 1); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"><ChevronLeft/></button>
+          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === media.length - 1 ? 0 : prev + 1); }} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"><ChevronRight/></button>
+        </>
+      )}
+    </div>
+  );
+};
 
 // --- ДАННЫЕ И ПЕРЕВОДЫ ---
 
@@ -97,7 +146,7 @@ export default function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [couponInput, setCouponInput] = useState('');
-  const [availableProviders, setAvailableProviders] = useState({ apple: true, telegram: true });
+  const [availableProviders, setAvailableProviders] = useState({ google: false, apple: false, telegram: false });
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api'}/auth/providers`)
@@ -156,11 +205,13 @@ export default function App() {
   const [radius, setRadius] = useState(50);
   const [searchLocation, setSearchLocation] = useState(null); // { lat, lng, name }
   const [searchLocationInput, setSearchLocationInput] = useState('');
-  const locationInputRef = useRef(null);
+  const desktopLocationInputRef = useRef(null);
+  const mobileLocationInputRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedLocInput, setDebouncedLocInput] = useState('');
   
-  // Вставьте сюда публичный VAPID ключ из вашего .env
-  const PUBLIC_VAPID_KEY = 'BAhZDxk3BjI_OCkHCOEyihsxsuCfcDtMilUZjMfecw-Lt4JvHNfYkmZIU_llDiaF3L0uOtXsgU60IZksmtpTrIs';
+  const PUBLIC_VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BAhZDxk3BjI_OCkHCOEyihsxsuCfcDtMilUZjMfecw-Lt4JvHNfYkmZIU_llDiaF3L0uOtXsgU60IZksmtpTrIs';
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
   const lastAdElementRef = useCallback(node => {
@@ -193,6 +244,33 @@ export default function App() {
     address: 'Av. Francisco Medina Ascencio 1234, Puerto Vallarta',
     coverPreview: ''
   });
+
+  // Синхронизация формы компании с данными пользователя
+  useEffect(() => {
+    if (user) {
+      setCompanyForm(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        phone: user.phone_number || prev.phone
+      }));
+    }
+  }, [user]);
+
+  // --- ИСПРАВЛЕНИЕ "ВЫЛЕТОВ" С САЙТА ---
+  // Обрабатываем кнопку "Назад" в браузере, чтобы не было пустых экранов
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash;
+      if (!hash) {
+        setViewedAd(null);
+        setViewedCompany(null);
+        setShowAuthModal(false);
+        setShowPricingModal(false);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const handleExportCompanyData = async () => {
     try {
@@ -333,7 +411,7 @@ export default function App() {
     } else if (viewedCompany) {
       title = `${viewedCompany.name} - Tienda en Mercasto`;
     } else if (activeCat) {
-      const catName = categoriesData.find(c => c.slug === activeCat)?.name[lang] || activeCat;
+      const catName = getCatName(categoriesData.find(c => c.slug === activeCat), lang) || activeCat;
       title = `${catName} en México | Anuncios Clasificados Mercasto`;
     }
 
@@ -402,23 +480,27 @@ export default function App() {
 
   // --- GOOGLE PLACES AUTOCOMPLETE ---
   useEffect(() => {
-    if (window.google && locationInputRef.current) {
-        const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
-            types: ['(cities)'],
-            componentRestrictions: { country: 'mx' }
-        });
-        autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            if (place.geometry) {
-                setSearchLocation({
-                    lat: place.geometry.location.lat(),
-                    lng: place.geometry.location.lng(),
-                });
-                setSearchLocationInput(place.formatted_address);
-            }
-        });
-    }
-  }, [locationInputRef.current]); // Re-run if the ref becomes available
+    const initAutocomplete = (ref) => {
+      if (window.google && ref.current) {
+          const autocomplete = new window.google.maps.places.Autocomplete(ref.current, {
+              types: ['(cities)'],
+              componentRestrictions: { country: 'mx' }
+          });
+          autocomplete.addListener('place_changed', () => {
+              const place = autocomplete.getPlace();
+              if (place.geometry) {
+                  setSearchLocation({
+                      lat: place.geometry.location.lat(),
+                      lng: place.geometry.location.lng(),
+                  });
+                  setSearchLocationInput(place.formatted_address);
+              }
+          });
+      }
+    };
+    initAutocomplete(desktopLocationInputRef);
+    initAutocomplete(mobileLocationInputRef);
+  }, [desktopLocationInputRef.current, mobileLocationInputRef.current]);
 
   useEffect(() => {
     if (user && user.notification_preferences) {
@@ -541,11 +623,13 @@ export default function App() {
         params.append('lat', searchLocation.lat);
         params.append('lng', searchLocation.lng);
         params.append('radius', radius);
+    } else if (debouncedLocInput) {
+        // Если пользователь ввел город вручную, но не выбрал из выпадающего списка
+        params.append('location', debouncedLocInput);
     }
-    // Добавляем другие фильтры, если они есть
-    if (searchQuery) params.append('search', searchQuery);
+    if (debouncedSearch) params.append('search', debouncedSearch);
     if (activeCat) params.append('category', activeCat);
-    if (selectedState && !searchLocation) params.append('location', selectedState);
+    if (selectedState && !searchLocation && !debouncedLocInput) params.append('location', selectedState);
 
     try {
       const res = await fetch(`${API_URL}/ads?${params.toString()}`);
@@ -578,7 +662,7 @@ export default function App() {
   useEffect(() => {
     setServerAds([]); // Сбрасываем объявления при смене фильтров
     loadAds(1);
-  }, [searchQuery, activeCat, selectedState, searchLocation, radius]);
+  }, [debouncedSearch, activeCat, selectedState, searchLocation, debouncedLocInput, radius]);
   useEffect(() => { loadFavorites(); }, [loadFavorites]);
 
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: ПОЛЬЗОВАТЕЛИ ---
@@ -800,8 +884,8 @@ export default function App() {
     setAdminCatForm({ slug: '', name_es: '', name_en: '', icon: 'Star', sort_order: 100 });
   };
 
-  // Only use real server ads. mockAds are only used as fallback when no real ads are loaded yet.
-  const allAds = useMemo(() => serverAds.length > 0 ? serverAds : mockAds, [serverAds]);
+  // В Production мы используем только реальные объявления из БД. Убираем mockAds, чтобы поиск мог корректно показывать "Ничего не найдено"
+  const allAds = serverAds;
 
   // --- ЛОГИКА АВТОРИЗАЦИИ (API) ---
   const handleAuthSubmit = async (e) => {
@@ -1140,6 +1224,13 @@ export default function App() {
       });
 
       if (res.ok) {
+        // Очищаем оперативную память браузера от временных файлов (Memory Leak fix)
+        images.forEach(img => {
+          if (img.source === 'new' && img.preview) {
+            URL.revokeObjectURL(img.preview);
+          }
+        });
+
         // Сбрасываем состояние формы
         setForm({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo' });
         setImages([]);
@@ -1537,7 +1628,7 @@ export default function App() {
                      </span>
                      {ad.category && (
                        <span className="flex items-center text-[12px] font-semibold text-[#65A30D] bg-[#84CC16]/10 px-2.5 py-1.5 rounded-lg">
-                           {categoriesData.find(c => c.slug === ad.category)?.name?.[lang] || ad.category}
+                           {getCatName(categoriesData.find(c => c.slug === ad.category), lang) || ad.category}
                        </span>
                      )}
                   </div>
@@ -1900,6 +1991,14 @@ export default function App() {
   };
 
   // --- РЕНДЕР ДАШБОРДА ПОЛЬЗОВАТЕЛЯ ---
+  const activeAds = useMemo(() => userAds.filter(a => a.status === 'active'), [userAds]);
+  const inactiveAds = useMemo(() => userAds.filter(a => a.status !== 'active'), [userAds]);
+  const totalViews = useMemo(() => userAds.reduce((sum, a) => sum + (a.views || 0), 0), [userAds]);
+  const totalContactClicks = useMemo(() => userAds.reduce((sum, a) => sum + (a.whatsapp_clicks || 0), 0), [userAds]);
+  const conversionRate = useMemo(() => totalViews > 0 ? ((totalContactClicks / totalViews) * 100).toFixed(1) : 0, [totalViews, totalContactClicks]);
+  const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
+  const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
+
   const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderUserDashboard={renderUserDashboard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
@@ -1974,15 +2073,15 @@ export default function App() {
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (
     <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[84px] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-      <button onClick={() => setCurrentTab('home')} className={`flex flex-col items-center p-1 ${currentTab === 'home' ? 'text-[#12B981]' : 'text-gray-400'}`}>
+      <button onClick={() => setCurrentTab('home')} className={`flex flex-col items-center p-1 ${currentTab === 'home' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => setCurrentTab('search')} className={`flex flex-col items-center p-1 ${currentTab === 'search' ? 'text-[#12B981]' : 'text-gray-400'}`}>
+      <button onClick={() => { setCurrentTab('home'); window.scrollTo(0,0); setTimeout(() => mobileLocationInputRef.current?.focus(), 100); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-8"><div className="flex flex-col items-center justify-center bg-[#12B981] text-white p-3.5 rounded-full shadow-lg border-4 border-[#f5f5f5]"><PlusCircle className="w-7 h-7" /></div></button>
-      <button onClick={() => { user ? setShowNotifications(!showNotifications) : setShowAuthModal(true); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'notifications' ? 'text-[#12B981]' : 'text-gray-400'}`}><Bell className="w-6 h-6 mb-1" />{notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}</button>
-      <button onClick={() => { user ? setCurrentTab('profile') : setShowAuthModal(true) }} className={`flex flex-col items-center p-1 ${currentTab === 'profile' ? 'text-[#12B981]' : 'text-gray-400'}`}>
+      <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-8"><div className="flex flex-col items-center justify-center bg-[#84CC16] text-white p-3.5 rounded-full shadow-lg border-4 border-[#f5f5f5]"><PlusCircle className="w-7 h-7" /></div></button>
+      <button onClick={() => { user ? setShowNotifications(!showNotifications) : setShowAuthModal(true); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}><Bell className="w-6 h-6 mb-1" />{notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}</button>
+      <button onClick={() => { user ? setCurrentTab('profile') : setShowAuthModal(true) }} className={`flex flex-col items-center p-1 ${currentTab === 'profile' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <User className="w-6 h-6 mb-1" />
       </button>
     </div>
@@ -2001,10 +2100,10 @@ export default function App() {
             <div className="hidden lg:flex flex-1 items-center">
               <div className="flex w-full max-w-[820px] items-center bg-white border border-slate-300 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-[#84CC16]/30 focus-within:border-[#84CC16]">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-                <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} placeholder="Buscar autos, celulares, empleos..." className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
+              <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder="Buscar autos, celulares, empleos..." className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
                 <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
-                <input ref={locationInputRef} value={searchLocationInput} onChange={(e) => { setSearchLocationInput(e.target.value); if(e.target.value === '') setSearchLocation(null); }} placeholder="Ubicación" className="w-full max-w-[200px] px-2 py-2.5 bg-transparent outline-none text-[14px]" />
+              <input ref={desktopLocationInputRef} value={searchLocationInput} onChange={(e) => { setSearchLocationInput(e.target.value); if(e.target.value === '') setSearchLocation(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder="Ubicación" className="w-full max-w-[200px] px-2 py-2.5 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
                 <select value={radius} onChange={e => setRadius(Number(e.target.value))} className="bg-transparent px-3 py-2.5 text-[13px] outline-none text-slate-700 w-fit cursor-pointer">
                   <option value={5}>+5 km</option>
@@ -2013,7 +2112,7 @@ export default function App() {
                   <option value={50}>+50 km</option>
                   <option value={100}>+100 km</option>
                 </select>
-                <button onClick={loadAds} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5">
+              <button onClick={executeSearch} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5">
                   <Search size={16}/>
                   Buscar
                 </button>
@@ -2023,7 +2122,7 @@ export default function App() {
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100/50 hover:bg-slate-200/50 border border-slate-200/50 text-slate-500 hover:text-slate-900 transition-colors mr-1">
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <div className="hidden md:flex items-center gap-1.5 text-slate-600 hover:text-slate-900 bg-slate-100/50 px-2 py-1 rounded-lg border border-slate-200/50">
+              <div className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 bg-slate-100/50 px-2 py-1 rounded-lg border border-slate-200/50">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
                 <select value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
                   {Object.keys(translations).map(l => (
@@ -2078,20 +2177,24 @@ export default function App() {
               </button>
             </div>
           </div>
-          {/* Mobile Search */}
-          <div className="lg:hidden pb-3">
+          {/* Mobile Search & Location */}
+          <div className="lg:hidden pb-3 flex flex-col gap-2">
             <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
               <Search className="w-4 h-4 text-slate-500" />
-              <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} placeholder="Search Mercasto" className="bg-transparent w-full text-sm outline-none"/>
+              <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder="Buscar producto..." className="bg-transparent w-full text-sm outline-none"/>
+            </div>
+            <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
+              <MapPin className="w-4 h-4 text-slate-500" />
+              <input ref={mobileLocationInputRef} value={searchLocationInput} onChange={(e) => { setSearchLocationInput(e.target.value); if(e.target.value === '') setSearchLocation(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder="Ubicación o Ciudad" className="bg-transparent w-full text-sm outline-none"/>
             </div>
           </div>
         </div>
         <div className="border-t border-slate-100 bg-white">
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-            <nav className="flex items-center gap-5 overflow-x-auto scrollbar-hide text-[13.5px] font-medium text-slate-600">
-              <a onClick={() => setActiveCat('')} className={`whitespace-nowrap py-3 cursor-pointer ${activeCat === '' ? 'border-b-2 border-[#84CC16] text-[#0F172A] font-semibold' : 'hover:text-[#0F172A]'}`}>All</a>
+            <nav className="flex items-center gap-6 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600">
+              <a onClick={() => setActiveCat('')} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === '' ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{t.all || 'All'}</a>
               {categoriesData.map(c => (
-                <a key={c.slug} onClick={() => setActiveCat(c.slug)} className={`whitespace-nowrap py-3 cursor-pointer ${activeCat === c.slug ? 'border-b-2 border-[#84CC16] text-[#0F172A] font-semibold' : 'hover:text-[#0F172A]'}`}>{c.name[lang] || c.name['es']}</a>
+                <a key={c.slug} onClick={() => setActiveCat(c.slug)} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === c.slug ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{getCatName(c, lang)}</a>
               ))}
             </nav>
           </div>
@@ -2122,14 +2225,14 @@ export default function App() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
-                <MercastoLogo className="grayscale brightness-200 h-8" />
+                <MercastoLogo className="h-8" />
               </div>
               <p className="text-[13px] text-slate-400 leading-relaxed">Mexico's fastest local marketplace. Buy, sell, rent, and find jobs — safely.</p>
             </div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Buyers</h5><ul className="space-y-2 text-[13px]"><li><a className="hover:text-white cursor-pointer">How to buy</a></li><li><a className="hover:text-white cursor-pointer">Safety tips</a></li><li><a className="hover:text-white cursor-pointer">Favorites</a></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Sellers</h5><ul className="space-y-2 text-[13px]"><li><a className="hover:text-white cursor-pointer" onClick={() => setCurrentTab('post')}>Post ad</a></li><li><a className="hover:text-white cursor-pointer" onClick={() => setShowPricingModal(true)}>Pricing</a></li><li><a className="hover:text-white cursor-pointer">Promote listing</a></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Business</h5><ul className="space-y-2 text-[13px]"><li><a className="hover:text-white cursor-pointer" onClick={() => setShowPricingModal(true)}>Mercasto Pro</a></li><li><a className="hover:text-white cursor-pointer">API</a></li><li><a className="hover:text-white cursor-pointer">Partners</a></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Help</h5><ul className="space-y-2 text-[13px]"><li><a className="hover:text-white cursor-pointer">Help Center</a></li><li><a className="hover:text-white cursor-pointer">Safety Center</a></li><li><a className="hover:text-white cursor-pointer">Terms & Privacy</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Buyers</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={e=>{e.preventDefault(); alert('Próximamente disponible / Coming soon')}} className="hover:text-white cursor-pointer">How to buy</a></li><li><a href="#" onClick={e=>{e.preventDefault(); alert('Próximamente disponible / Coming soon')}} className="hover:text-white cursor-pointer">Safety tips</a></li><li><a href="#" onClick={e=>{e.preventDefault(); user ? setCurrentTab('profile') : setShowAuthModal(true)}} className="hover:text-white cursor-pointer">Favorites</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Sellers</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={(e) => { e.preventDefault(); setCurrentTab('post')}} className="hover:text-white cursor-pointer">Post ad</a></li><li><a href="#" onClick={(e) => { e.preventDefault(); setShowPricingModal(true)}} className="hover:text-white cursor-pointer">Pricing</a></li><li><a href="#" onClick={e=>{e.preventDefault(); alert('Próximamente disponible / Coming soon')}} className="hover:text-white cursor-pointer">Promote listing</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Business</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={(e) => { e.preventDefault(); setShowPricingModal(true)}} className="hover:text-white cursor-pointer">Mercasto Pro</a></li><li><a href="#" onClick={e=>{e.preventDefault(); alert('Próximamente disponible / Coming soon')}} className="hover:text-white cursor-pointer">API</a></li><li><a href="#" onClick={e=>{e.preventDefault(); alert('Próximamente disponible / Coming soon')}} className="hover:text-white cursor-pointer">Partners</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Help</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={e=>{e.preventDefault(); alert('Próximamente disponible / Coming soon')}} className="hover:text-white cursor-pointer">Help Center</a></li><li><a href="#" onClick={e=>{e.preventDefault(); alert('Próximamente disponible / Coming soon')}} className="hover:text-white cursor-pointer">Safety Center</a></li><li><a href="#" onClick={e=>{e.preventDefault(); alert('Próximamente disponible / Coming soon')}} className="hover:text-white cursor-pointer">Terms & Privacy</a></li></ul></div>
           </div>
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-[12px] text-slate-400">
@@ -2210,15 +2313,17 @@ export default function App() {
                     </div>
 
                     <div className="space-y-2.5">
-                      <button type="button" onClick={() => window.location.href = `${API_URL}/auth/google/redirect`} className="btn-md w-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-3">
-                          <svg className="w-4 h-4" viewBox="0 0 24 24">
-                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                          </svg>
-                          Google
-                      </button>
+                      {availableProviders?.google && (
+                        <button type="button" onClick={() => window.location.href = `${API_URL}/auth/google/redirect`} className="btn-md w-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-3">
+                            <svg className="w-4 h-4" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Google
+                        </button>
+                      )}
                       <button type="button" onClick={() => setAuthMode('phone_request')} className="btn-md w-full bg-[#10B981] text-white hover:bg-[#059669] flex items-center justify-center gap-3">
                           <Phone className="w-4 h-4" />
                           Teléfono (SMS)

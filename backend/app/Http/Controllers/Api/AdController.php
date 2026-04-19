@@ -100,7 +100,7 @@ class AdController extends Controller
         if ($request->filled('location')) {
             $apiKey = config('services.google.maps_api_key');
             if ($apiKey) {
-                $response = Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
+                $response = Http::timeout(5)->get('https://maps.googleapis.com/maps/api/geocode/json', [
                     'address' => $request->location,
                     'key' => $apiKey,
                 ]);
@@ -126,6 +126,13 @@ class AdController extends Controller
                 }
 
                 $img = Image::make($image)->orientate();
+                
+                // Защита от OOM (Out Of Memory) при загрузке огромных фото со смартфонов.
+                // Уменьшаем изображение до разумных 1200px перед наложением водяного знака.
+                $img->resize(1200, 1200, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
 
                 // Наложение водяного знака (логотипа)
                 $watermarkPath = storage_path('app/public/logo-watermark.png');
@@ -212,7 +219,7 @@ class AdController extends Controller
         if ($request->filled('location') && $request->location !== $ad->location) {
             $apiKey = config('services.google.maps_api_key');
             if ($apiKey) {
-                $response = Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
+                $response = Http::timeout(5)->get('https://maps.googleapis.com/maps/api/geocode/json', [
                     'address' => $request->location,
                     'key' => $apiKey,
                 ]);
@@ -249,6 +256,13 @@ class AdController extends Controller
                 }
                 
                 $img = Image::make($image)->orientate();
+                
+                // Защита от OOM (Out Of Memory) при загрузке огромных фото со смартфонов.
+                // Уменьшаем изображение до разумных 1200px перед наложением водяного знака.
+                $img->resize(1200, 1200, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
 
                 // Наложение водяного знака (логотипа)
                 $watermarkPath = storage_path('app/public/logo-watermark.png');
@@ -340,12 +354,12 @@ class AdController extends Controller
 
             // Send Web Push Notification
             $pushSubscribers = DB::table('push_subscriptions')->where('user_id', $ad->user_id)->get();
-            if ($pushSubscribers->count() > 0 && env('VAPID_PUBLIC_KEY')) {
+            if ($pushSubscribers->count() > 0 && config('services.webpush.vapid_public_key')) {
                 $auth = [
                     'VAPID' => [
                         'subject' => 'mailto:hello@mercasto.com',
-                        'publicKey' => env('VAPID_PUBLIC_KEY'),
-                        'privateKey' => env('VAPID_PRIVATE_KEY'),
+                        'publicKey' => config('services.webpush.vapid_public_key'),
+                        'privateKey' => config('services.webpush.vapid_private_key'),
                     ],
                 ];
                 $webPush = new WebPush($auth);
@@ -395,17 +409,21 @@ class AdController extends Controller
         }
 
         $cost = 50; // Стоимость продвижения в кредитах
-        $currentBalance = $user->balance ?? 0;
-
-        if ($currentBalance < $cost) {
+        
+        // Атомарное списание для предотвращения ухода в минус при параллельных DdoS запросах
+        $updated = DB::table('users')
+            ->where('id', $user->id)
+            ->where('balance', '>=', $cost)
+            ->decrement('balance', $cost);
+            
+        if (!$updated) {
             return response()->json(['message' => 'No tienes suficientes créditos'], 400);
         }
-
-        DB::table('users')->where('id', $user->id)->decrement('balance', $cost);
+        
         $ad->promoted = 'destacado';
         $ad->save();
         
-        $newBalance = $currentBalance - $cost;
+        $newBalance = DB::table('users')->where('id', $user->id)->value('balance');
         return response()->json(['success' => true, 'balance' => $newBalance]);
     }
 
@@ -431,6 +449,11 @@ class AdController extends Controller
             } else {
                 Storage::disk('public')->delete($ad->image_url); // Обратная совместимость для старых записей
             }
+        }
+
+        // Удаляем прикрепленное видео, чтобы не засорять жесткий диск
+        if ($ad->video_url) {
+            Storage::disk('public')->delete($ad->video_url);
         }
 
         $ad->delete();
@@ -624,7 +647,7 @@ class AdController extends Controller
             ])
             ->where('user_id', $request->user()->id)
             ->latest()
-            ->get(); // Возвращаем все товары пользователя
+            ->paginate(50); // Пагинация вместо жесткого лимита для PRO-продавцов
             
         return response()->json($ads);
     }
@@ -645,7 +668,7 @@ class AdController extends Controller
                 $query->select('ad_id')->from('favorites')->where('user_id', $userId);
             })
             ->latest()
-            ->get(); // Возвращаем все избранные товары
+            ->paginate(50); // Пагинация вместо жесткого лимита
             
         return response()->json($ads);
     }
@@ -702,27 +725,27 @@ class AdController extends Controller
      */
     public function sitemap()
     {
-        // Получаем только активные объявления (берем только нужные поля для оптимизации памяти)
-        $ads = Ad::where('status', 'active')->latest()->get(['id', 'updated_at', 'category']);
+        // Ограничиваем до 10,000 записей, чтобы избежать падения сервера (OOM) при миллионах объявлений
+        $ads = Ad::where('status', 'active')->latest()->limit(10000)->get(['id', 'updated_at', 'category']);
         
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         
         // Главная страница
-        $xml .= "   <url>\n      <loc>" . env('FRONTEND_URL', 'https://mercasto.com') . "/</loc>\n      <changefreq>always</changefreq>\n      <priority>1.0</priority>\n   </url>\n";
+        $xml .= "   <url>\n      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/</loc>\n      <changefreq>always</changefreq>\n      <priority>1.0</priority>\n   </url>\n";
         
         // Уникальные категории
         $categories = $ads->pluck('category')->unique();
         foreach ($categories as $category) {
             $xml .= "   <url>\n";
-            $xml .= "      <loc>" . env('FRONTEND_URL', 'https://mercasto.com') . "/?cat=" . urlencode($category) . "</loc>\n";
+            $xml .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/?cat=" . urlencode($category) . "</loc>\n";
             $xml .= "      <changefreq>hourly</changefreq>\n      <priority>0.9</priority>\n   </url>\n";
         }
         
         // Динамические страницы объявлений
         foreach ($ads as $ad) {
             $xml .= "   <url>\n";
-            $xml .= "      <loc>" . env('FRONTEND_URL', 'https://mercasto.com') . "/?ad=" . $ad->id . "</loc>\n";
+            $xml .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/?ad=" . $ad->id . "</loc>\n";
             $xml .= "      <lastmod>" . $ad->updated_at->toAtomString() . "</lastmod>\n";
             $xml .= "      <changefreq>daily</changefreq>\n      <priority>0.8</priority>\n   </url>\n";
         }
@@ -744,7 +767,7 @@ class AdController extends Controller
             return response()->json(['message' => 'PDF брошюры доступны только для недвижимости.'], 403);
         }
 
-        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode(env('FRONTEND_URL') . '/?ad=' . $ad->id);
+        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode(config('app.frontend_url', 'https://mercasto.com') . '/?ad=' . $ad->id);
 
         $data = [
             'ad' => $ad,
@@ -773,5 +796,24 @@ class AdController extends Controller
         return response()
             ->view('xml.google_merchant', ['ads' => $ads])
             ->header('Content-Type', 'application/xml');
+    }
+
+    /**
+     * Запись клика по кнопкам контактов (WhatsApp / Telegram) для аналитики
+     */
+    public function recordClick(Request $request, $id)
+    {
+        $request->validate(['channel' => 'required|string']);
+        $ad = Ad::findOrFail($id);
+
+        DB::table('ad_clicks')->insert([
+            'ad_id' => $ad->id,
+            'user_id' => auth('sanctum')->id(), // Может быть null для гостей
+            'channel' => $request->channel,
+            'ip_address' => $request->ip(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        return response()->json(['success' => true]);
     }
 }

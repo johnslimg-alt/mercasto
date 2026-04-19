@@ -1,0 +1,10 @@
+#!/usr/bin/expect -f
+set timeout -1
+spawn ssh -o StrictHostKeyChecking=no root@72.62.173.145 "cd /var/www/mercasto && git fetch origin && git reset --hard origin/main && if ! grep -q \"CLIP_WEBHOOK_SECRET=\" backend/.env 2>/dev/null; then echo \"CLIP_WEBHOOK_SECRET=\$(openssl rand -hex 32)\" >> backend/.env; elif grep -q \"CLIP_WEBHOOK_SECRET=$\" backend/.env 2>/dev/null; then sed -i \"s/CLIP_WEBHOOK_SECRET=.*/CLIP_WEBHOOK_SECRET=\$(openssl rand -hex 32)/\" backend/.env; fi && docker restart mercasto_backend_container && sleep 5 && docker exec mercasto_backend_container php artisan route:cache && docker exec mercasto_backend_container php artisan config:cache && curl -s -X POST https://mercasto.com/api/webhooks/clip"
+expect {
+    "*assword:*" {
+        send "Prosto202626@\r"
+        exp_continue
+    }
+    eof
+}

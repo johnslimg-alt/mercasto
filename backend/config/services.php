@@ -39,6 +39,7 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('APP_URL') . '/api/auth/google/callback',
+        'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
     'apple' => [
@@ -54,6 +55,13 @@ return [
     ],
 
     'clip' => [
+        'api_key' => env('CLIP_API_KEY'),
+        'api_secret' => env('CLIP_API_SECRET'),
         'webhook_secret' => env('CLIP_WEBHOOK_SECRET'),
+    ],
+
+    'webpush' => [
+        'vapid_public_key' => env('VAPID_PUBLIC_KEY'),
+        'vapid_private_key' => env('VAPID_PRIVATE_KEY'),
     ],
 ];

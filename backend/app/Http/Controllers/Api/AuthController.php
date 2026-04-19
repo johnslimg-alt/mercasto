@@ -142,7 +142,7 @@ class AuthController extends Controller
     {
         $request->validate(['phone_number' => 'required|string|min:10|max:20']);
         
-        $code = rand(100000, 999999);
+        $code = random_int(100000, 999999); // Используем криптографически надежный генератор
         Cache::put('phone_auth_' . $request->phone_number, $code, now()->addMinutes(10));
 
         // Для продакшена: здесь вызывается сервис отправки SMS (например, Twilio или AWS SNS)
@@ -199,7 +199,7 @@ class AuthController extends Controller
                 ['token' => Hash::make($token), 'created_at' => now()]
             );
 
-            $resetUrl = env('FRONTEND_URL', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($request->email);
+        $resetUrl = config('app.frontend_url', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($request->email);
 
             Mail::raw("Para restablecer tu contraseña, haz clic en el siguiente enlace:\n\n$resetUrl\n\nSi no solicitaste este cambio, puedes ignorar este correo.", function($message) use ($request) {
                 $message->to($request->email)->subject('Restablecer contraseña - Mercasto');
@@ -257,6 +257,20 @@ class AuthController extends Controller
     }
 
     /**
+     * Returns which OAuth providers are actually configured
+     */
+    public function getProviders()
+    {
+        // Using config() instead of env() because env() returns null when config is cached in production.
+        // This safely checks the Socialite configurations mapping.
+        return response()->json([
+            'google'   => !empty(config('services.google.client_id')) && !empty(config('services.google.client_secret')),
+            'apple'    => !empty(config('services.apple.client_id')) && !empty(config('services.apple.client_secret')),
+            'telegram' => !empty(config('services.telegram.client_id')) && !empty(config('services.telegram.client_secret')),
+        ]);
+    }
+
+    /**
      * Перенаправление на страницу авторизации провайдера
      */
     public function redirectToProvider($provider)
@@ -301,10 +315,10 @@ class AuthController extends Controller
             }
 
             $token = $user->createToken('auth_token')->plainTextToken;
-        return redirect()->away(env('FRONTEND_URL', 'https://mercasto.com') . '/?token=' . $token);
-    } catch (\Throwable $e) {
+            return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?token=' . $token);
+        } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error(ucfirst($provider) . ' OAuth Error: ' . $e->getMessage());
-        return redirect()->away(env('FRONTEND_URL', 'https://mercasto.com') . '/?error=oauth_failed');
+            return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=oauth_failed');
         }
     }
 }

@@ -37,4 +37,14 @@ class NewNotification implements ShouldBroadcast
             new PrivateChannel('App.Models.User.' . $this->notification['user_id']),
         ];
     }
+
+    /**
+     * Указываем точное имя события для Laravel Echo (React)
+     *
+     * @return string
+     */
+    public function broadcastAs()
+    {
+        return 'NewNotification';
+    }
 }

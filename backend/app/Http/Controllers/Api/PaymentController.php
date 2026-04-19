@@ -45,16 +45,16 @@ class PaymentController extends Controller
         //     'customer_id' => $user->id, // ID нашего пользователя
         // ]);
         // Реальный вызов API Clip
-        $response = Http::withBasicAuth(env('CLIP_API_KEY'), env('CLIP_API_SECRET'))
+        $response = Http::withBasicAuth(config('services.clip.api_key'), config('services.clip.api_secret'))
             ->post('https://api.clip.mx/v2/checkouts', [
                 'amount' => (float) $request->amount,
                 'currency' => 'MXN',
                 'purchase_description' => $request->description,
                 'reference' => $checkoutId, // Наш уникальный ID для отслеживания веб-хука
                 'redirection_url' => [
-                    'success' => env('FRONTEND_URL', 'https://mercasto.com') . '/?payment=success',
-                    'error'   => env('FRONTEND_URL', 'https://mercasto.com') . '/?payment=error',
-                    'default' => env('FRONTEND_URL', 'https://mercasto.com')
+                    'success' => config('app.frontend_url', 'https://mercasto.com') . '/?payment=success',
+                    'error'   => config('app.frontend_url', 'https://mercasto.com') . '/?payment=error',
+                    'default' => config('app.frontend_url', 'https://mercasto.com')
                 ],
                 'override_color' => '#84CC16' // Фирменный цвет кнопок Mercasto
             ]);
@@ -176,17 +176,25 @@ class PaymentController extends Controller
     {
         $request->validate(['code' => 'required|string']);
         $user = $request->user();
-        $coupon = DB::table('coupons')->where('code', strtoupper($request->code))->first();
+        
+        // Предотвращение Race Condition (двойного зачисления) через транзакцию и блокировку
+        return DB::transaction(function () use ($request, $user) {
+            $coupon = DB::table('coupons')->where('code', strtoupper($request->code))->lockForUpdate()->first();
 
-        if (!$coupon) return response()->json(['message' => 'Cupón no válido'], 400);
-        if ($coupon->used_count >= $coupon->max_uses) return response()->json(['message' => 'Este cupón se ha agotado'], 400);
-        if (DB::table('coupon_user')->where('user_id', $user->id)->where('coupon_id', $coupon->id)->exists()) {
-            return response()->json(['message' => 'Ya has canjeado este cupón'], 400);
-        }
+            if (!$coupon) return response()->json(['message' => 'Cupón no válido'], 400);
+            if ($coupon->used_count >= $coupon->max_uses) return response()->json(['message' => 'Este cupón se ha agotado'], 400);
+            
+            $exists = DB::table('coupon_user')->where('user_id', $user->id)->where('coupon_id', $coupon->id)->lockForUpdate()->exists();
+            if ($exists) {
+                return response()->json(['message' => 'Ya has canjeado este cupón'], 400);
+            }
 
-        DB::table('coupon_user')->insert(['user_id' => $user->id, 'coupon_id' => $coupon->id, 'created_at' => now()]);
-        DB::table('coupons')->where('id', $coupon->id)->increment('used_count');
-        DB::table('users')->where('id', $user->id)->increment('balance', $coupon->credits);
-        return response()->json(['success' => true, 'message' => "¡Has recibido {$coupon->credits} créditos!", 'balance' => $user->balance + $coupon->credits]);
+            DB::table('coupon_user')->insert(['user_id' => $user->id, 'coupon_id' => $coupon->id, 'created_at' => now()]);
+            DB::table('coupons')->where('id', $coupon->id)->increment('used_count');
+            DB::table('users')->where('id', $user->id)->increment('balance', $coupon->credits);
+            
+            $newBalance = DB::table('users')->where('id', $user->id)->value('balance');
+            return response()->json(['success' => true, 'message' => "¡Has recibido {$coupon->credits} créditos!", 'balance' => $newBalance]);
+        });
     }
 }

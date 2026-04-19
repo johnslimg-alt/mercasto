@@ -3,7 +3,7 @@ import Pusher from 'pusher-js';
 
 window.Pusher = Pusher;
 
-const API_URL = 'https://mercasto.com/api'; // Make sure this is correct
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
 const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
 let echo = null;
