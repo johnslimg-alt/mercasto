@@ -245,6 +245,41 @@ class ProfileController extends Controller
         }
 
         $user = User::findOrFail($id);
+
+        // Глубокая очистка файлов и связей при удалении пользователя администратором
+        $ads = \App\Models\Ad::where('user_id', $user->id)->get();
+        foreach ($ads as $ad) {
+            if ($ad->image_url) {
+                $images = json_decode($ad->image_url, true);
+                if (is_array($images)) {
+                    foreach ($images as $path) {
+                        Storage::disk('public')->delete($path);
+                    }
+                } else {
+                    Storage::disk('public')->delete($ad->image_url);
+                }
+            }
+            if ($ad->video_url) {
+                Storage::disk('public')->delete($ad->video_url);
+            }
+        }
+        
+        if ($user->avatar_url && !str_starts_with($user->avatar_url, 'http')) {
+            Storage::disk('public')->delete($user->avatar_url);
+        }
+
+        DB::table('reviews')->where('reviewer_id', $user->id)->orWhere('seller_id', $user->id)->delete();
+        DB::table('favorites')->where('user_id', $user->id)->delete();
+        DB::table('user_notifications')->where('user_id', $user->id)->delete();
+        DB::table('ad_clicks')->where('user_id', $user->id)->delete();
+        DB::table('ad_views')->where('user_id', $user->id)->delete();
+        DB::table('reports')->where('user_id', $user->id)->delete();
+        DB::table('user_reports')->where('reporter_id', $user->id)->orWhere('reported_user_id', $user->id)->delete();
+        DB::table('payments')->where('user_id', $user->id)->delete();
+        DB::table('push_subscriptions')->where('user_id', $user->id)->delete();
+        DB::table('category_subscriptions')->where('user_id', $user->id)->delete();
+        DB::table('coupon_user')->where('user_id', $user->id)->delete();
+
         $user->delete();
 
         return response()->json(['message' => 'Usuario eliminado exitosamente']);
@@ -283,6 +318,12 @@ class ProfileController extends Controller
             'reason' => 'required|string|max:255',
             'comments' => 'nullable|string|max:1000'
         ]);
+        
+        // Защита от сбоя целостности БД (Foreign Key Violation)
+        if (!User::where('id', $id)->exists()) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+        
         DB::table('user_reports')->insert([
             'reported_user_id' => $id,
             'reporter_id' => auth('sanctum')->id(), // Может быть null, если гость
@@ -304,7 +345,7 @@ class ProfileController extends Controller
             ->leftJoin('users as reporter', 'user_reports.reporter_id', '=', 'reporter.id')
             ->select('user_reports.*', 'reported.name as reported_name', 'reported.email as reported_email', 'reporter.name as reporter_name')
             ->orderByDesc('user_reports.created_at')
-            ->get();
+            ->paginate(50);
         return response()->json($reports);
     }
 
@@ -344,6 +385,19 @@ class ProfileController extends Controller
         if ($user->avatar_url && !str_starts_with($user->avatar_url, 'http')) {
             Storage::disk('public')->delete($user->avatar_url);
         }
+
+        // Глубокая очистка связанных данных для предотвращения ошибок БД (Foreign Key Constraints)
+        DB::table('reviews')->where('reviewer_id', $user->id)->orWhere('seller_id', $user->id)->delete();
+        DB::table('favorites')->where('user_id', $user->id)->delete();
+        DB::table('user_notifications')->where('user_id', $user->id)->delete();
+        DB::table('ad_clicks')->where('user_id', $user->id)->delete();
+        DB::table('ad_views')->where('user_id', $user->id)->delete();
+        DB::table('reports')->where('user_id', $user->id)->delete();
+        DB::table('user_reports')->where('reporter_id', $user->id)->orWhere('reported_user_id', $user->id)->delete();
+        DB::table('payments')->where('user_id', $user->id)->delete();
+        DB::table('push_subscriptions')->where('user_id', $user->id)->delete();
+        DB::table('category_subscriptions')->where('user_id', $user->id)->delete();
+        DB::table('coupon_user')->where('user_id', $user->id)->delete();
 
         // Delete the user's ads
         \App\Models\Ad::where('user_id', $user->id)->delete();

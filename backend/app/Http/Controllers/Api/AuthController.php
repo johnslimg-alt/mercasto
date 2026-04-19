@@ -34,11 +34,15 @@ class AuthController extends Controller
         $ip = $request->ip();
         $role = $request->input('role', 'individual');
 
-        // Ограничение: 1 аккаунт individual и 1 аккаунт business на один IP
-        $existingAccounts = User::where('ip_address', $ip)->get();
-        if ($existingAccounts->where('role', $role)->count() >= 1) {
+        // Ограничение: защита от спама, не более 3 регистраций с одного IP в сутки
+        // (Чтобы не блокировать пользователей NAT: офисы, университеты, публичный Wi-Fi)
+        $recentAccounts = User::where('ip_address', $ip)
+            ->where('created_at', '>=', now()->subDay())
+            ->count();
+            
+        if ($recentAccounts >= 3) {
             throw ValidationException::withMessages([
-                'ip_address' => ['Solo se permite crear una cuenta de tipo "' . ($role === 'business' ? 'Empresa' : 'Particular') . '" por dirección IP.'],
+                'ip_address' => ['Has alcanzado el límite de cuentas creadas desde esta red (IP) por hoy. Intenta de nuevo mañana.'],
             ]);
         }
 

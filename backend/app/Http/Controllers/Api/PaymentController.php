@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Events\NewNotification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -18,7 +19,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'description' => 'required|string|max:255',
-            'ad_id' => 'nullable|integer',
+            'ad_id' => 'nullable|integer|exists:ads,id', // Защита от создания призрачных платежей
         ]);
 
         $user = $request->user();
@@ -88,7 +89,8 @@ class PaymentController extends Controller
 
         $signature = $request->header('X-Clip-Signature') ?? $request->header('X-Webhook-Signature');
         $expectedSignature = hash_hmac('sha256', $request->getContent(), $secret);
-        $receivedHash = ltrim((string) $signature, 'sha256=');
+        // Защита от криптографического бага ltrim (удалял нужные символы хэша, если они совпадали с маской)
+        $receivedHash = str_starts_with((string) $signature, 'sha256=') ? substr((string) $signature, 7) : (string) $signature;
 
         if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
             \Illuminate\Support\Facades\Log::warning('Invalid Clip webhook signature', [
@@ -102,16 +104,17 @@ class PaymentController extends Controller
         $checkoutId = $payload['reference'] ?? null; // Получаем наш ID из веб-хука
 
         if ($checkoutId && isset($payload['status']) && $payload['status'] === 'paid') {
-            // Обновляем статус платежа в нашей базе
-            DB::table('payments')->where('clip_checkout_id', $checkoutId)->update([
-                'status' => 'paid',
-                'webhook_payload' => json_encode($payload),
-                'updated_at' => now(),
-            ]);
-
-            // Бизнес-логика: Выдаем PRO статус (роль 'business'), если оплачен тариф «PRO» или «Plus»
             $payment = DB::table('payments')->where('clip_checkout_id', $checkoutId)->first();
-            if ($payment && $payment->user_id) {
+            
+            // Защита от двойного списания (Double-Spend): проверяем, не был ли вебхук уже обработан
+            if ($payment && $payment->status !== 'paid' && $payment->user_id) {
+                DB::table('payments')->where('id', $payment->id)->update([
+                    'status' => 'paid',
+                    'webhook_payload' => json_encode($payload),
+                    'updated_at' => now(),
+                ]);
+
+                // Бизнес-логика: Выдаем PRO статус (роль 'business'), если оплачен тариф «PRO» или «Plus»
                 $desc = strtolower($payment->description);
                 if (str_contains($desc, 'pro') || str_contains($desc, 'plus')) {
                     DB::table('users')->where('id', $payment->user_id)->update(['role' => 'business']);
@@ -126,6 +129,20 @@ class PaymentController extends Controller
                 if ($payment->ad_id) {
                     DB::table('ads')->where('id', $payment->ad_id)->update(['promoted' => 'destacado']);
                 }
+
+                // Безопасная генерация Push-уведомления в реальном времени через WebSocket
+                $notificationData = [
+                    'user_id' => $payment->user_id,
+                    'title' => '¡Pago exitoso!',
+                    'message' => 'Tu pago de $' . number_format($payment->amount, 2) . ' MXN por "' . $payment->description . '" se procesó correctamente.',
+                    'is_read' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                $notifId = DB::table('user_notifications')->insertGetId($notificationData);
+                $notificationData['id'] = $notifId;
+                
+                broadcast(new NewNotification($notificationData));
             }
         }
 
@@ -137,7 +154,7 @@ class PaymentController extends Controller
         if ($request->user()->role !== 'admin') {
             return response()->json(['message' => 'Acceso denegado'], 403);
         }
-        return response()->json(DB::table('coupons')->latest()->get());
+        return response()->json(DB::table('coupons')->latest()->paginate(50));
     }
 
     public function createCoupon(Request $request)
@@ -168,6 +185,9 @@ class PaymentController extends Controller
         if ($request->user()->role !== 'admin') {
             return response()->json(['message' => 'Acceso denegado'], 403);
         }
+        
+        // Каскадное удаление связей (чтобы база не упала с ошибкой Foreign Key)
+        DB::table('coupon_user')->where('coupon_id', $id)->delete();
         DB::table('coupons')->where('id', $id)->delete();
         return response()->json(['success' => true]);
     }

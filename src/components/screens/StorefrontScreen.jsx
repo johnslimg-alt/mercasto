@@ -12,7 +12,7 @@ export default function StorefrontScreen({
   return (
   <div className="bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
     <div className="sticky top-0 bg-white/90 backdrop-blur-xl z-40 border-b border-slate-200 px-4 py-3 flex items-center shadow-sm h-[60px]">
-       <button onClick={() => { if(window.location.hash) window.history.back(); else { setViewedCompany(null); } }} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
+       <button onClick={() => { setViewedCompany(null); window.history.replaceState({}, '', '/'); }} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
          <ChevronLeft className="w-4 h-4" /> {t.back}
        </button>
     </div>

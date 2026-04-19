@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from './constants/mockData';
+import { translations } from './constants/mockData';
 import ChartTooltip from './components/common/ChartTooltip';
 import AdSenseBanner from './components/common/AdSenseBanner';
 import { 
@@ -61,6 +61,11 @@ const getRelativePath = (url) => {
     return url;
 };
 
+const getCatName = (cat, lang) => {
+  if (!cat) return '';
+  return cat.name?.[lang] || cat.name?.['es'] || cat.name;
+};
+
 const MediaSlider = ({ media, autoplay }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -101,7 +106,14 @@ const PostScreen = React.lazy(() => import('./components/screens/PostScreen'));
 const UserDashboard = React.lazy(() => import('./components/screens/UserDashboard'));
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState('home');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentTab = location.pathname.split('/')[1] || 'home';
+  const setCurrentTab = useCallback((tab) => {
+    if (tab === 'home') navigate('/');
+    else navigate(`/${tab}`);
+  }, [navigate]);
+
   const [lang, setLang] = useState(localStorage.getItem('lang') || 'es');
   const t = translations[lang] || translations['es'];
 
@@ -138,6 +150,7 @@ export default function App() {
   const [editingAd, setEditingAd] = useState(null);
   const [images, setImages] = useState([]); // { source: 'new' | 'existing', file?: File, url?: string, preview: string }
   const [videoFile, setVideoFile] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [priceTab, setPriceTab] = useState(accountType); 
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -341,14 +354,6 @@ export default function App() {
 
     // Обработка возврата с платежного шлюза
     if (paymentStatus === 'success') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        fetch(`${API_URL}/user/notifications/create`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: 'Pago completado', message: '¡Gracias por tu compra! Tu servicio ha sido activado.' })
-        }).then(() => loadNotifications());
-      }
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (paymentStatus === 'error') {
       const token = localStorage.getItem('auth_token');
@@ -1564,7 +1569,7 @@ export default function App() {
   const renderAdCard = (ad) => {
     const isDestacado = ad.promoted === 'destacado' || ad.is_featured;
     const isUrgente = ad.promoted === 'urgente';
-    const isPro = ad.type === 'pro';
+    const isPro = ad.user?.role === 'business';
     const isFav = favoriteIds.includes(ad.id);
     const safeImage = getImageUrl(ad.image_url, ad.image);
 
@@ -1585,7 +1590,7 @@ export default function App() {
           <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500">
             <span className="truncate pr-2">{ad.location?.split(',')[0] || 'México'}</span>
           </div>
-          {ad.type !== 'pro' && (
+        {ad.user?.role !== 'business' && (
             <button className="w-full mt-3 btn-md bg-[#0F172A] text-white hover:bg-black" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
           )}
         </div>
@@ -1594,7 +1599,7 @@ export default function App() {
   };
 
   // --- РЕНДЕР СТРАНИЦЫ ТОВАРА ---
-  const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} MediaSlider={MediaSlider} renderAdCard={renderAdCard} />;
+  const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} />;
 
   // --- РЕНДЕР ПУБЛИЧНОГО ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
   const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
@@ -1772,7 +1777,7 @@ export default function App() {
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
-  const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} />;
+  const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} />;
 
   const renderCouponModal = () => {
     if (!showCouponModal) return null;
@@ -2023,6 +2028,13 @@ export default function App() {
       {renderQRModal()}
       {renderReportModal()}
       {renderUserReportModal()}
+      <PricingModal showPricingModal={showPricingModal} setShowPricingModal={setShowPricingModal} priceTab={priceTab} setPriceTab={setPriceTab} handleClipPayment={handleClipPayment} t={t} />
+      <ProfileModal showProfileModal={showProfileModal} setShowProfileModal={setShowProfileModal} handleProfileSubmit={handleProfileSubmit} profileForm={profileForm} setProfileForm={setProfileForm} profileLoading={profileLoading} user={user} getImageUrl={getImageUrl} />
+      <CouponModal showCouponModal={showCouponModal} setShowCouponModal={setShowCouponModal} handleRedeemCoupon={handleRedeemCoupon} couponInput={couponInput} setCouponInput={setCouponInput} />
+      <QRModal qrModalData={qrModalData} setQrModalData={setQrModalData} />
+      <ReportModal showReportModal={showReportModal} setShowReportModal={setShowReportModal} handleReportAd={handleReportAd} reportForm={reportForm} setReportForm={setReportForm} />
+      <UserReportModal showUserReportModal={showUserReportModal} setShowUserReportModal={setShowUserReportModal} handleUserReportSubmit={handleUserReportSubmit} userReportForm={userReportForm} setUserReportForm={setUserReportForm} />
+      <AuthModal showAuthModal={showAuthModal} setShowAuthModal={setShowAuthModal} requiresTwoFactor={requiresTwoFactor} handleTwoFactorSubmit={handleTwoFactorSubmit} authMode={authMode} setAuthMode={setAuthMode} authLoading={authLoading} authPhone={authPhone} handlePhoneRequestSubmit={handlePhoneRequestSubmit} handlePhoneVerifySubmit={handlePhoneVerifySubmit} handleAuthSubmit={handleAuthSubmit} availableProviders={availableProviders} API_URL={API_URL} t={t} />
 
       {/* AUTH MODAL */}
       {showAuthModal && (

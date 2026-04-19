@@ -5,13 +5,18 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CategoryController extends Controller
 {
     public function index()
     {
-        // Возвращаем все категории, отсортированные по порядку (sort_order)
-        return response()->json(Category::orderBy('sort_order')->get());
+        // Кэшируем список категорий на 24 часа (очень редко меняются)
+        $categories = Cache::remember('categories_all', 86400, function () {
+            return Category::orderBy('sort_order')->get()->toArray();
+        });
+        
+        return response()->json($categories);
     }
 
     public function store(Request $request)
@@ -31,10 +36,12 @@ class CategoryController extends Controller
 
         $category = Category::create([
             'slug' => $request->slug,
-            'name' => ['es' => $request->name_es, 'en' => $request->name_en],
+            'name' => json_encode(['es' => $request->name_es, 'en' => $request->name_en], JSON_UNESCAPED_UNICODE),
             'icon' => $request->icon,
             'sort_order' => $request->sort_order ?? 0,
         ]);
+    
+        Cache::forget('categories_all');
 
         return response()->json($category, 201);
     }
@@ -58,10 +65,12 @@ class CategoryController extends Controller
 
         $category->update([
             'slug' => $request->slug,
-            'name' => ['es' => $request->name_es, 'en' => $request->name_en],
+            'name' => json_encode(['es' => $request->name_es, 'en' => $request->name_en], JSON_UNESCAPED_UNICODE),
             'icon' => $request->icon,
             'sort_order' => $request->sort_order ?? 0,
         ]);
+    
+        Cache::forget('categories_all');
 
         return response()->json($category);
     }

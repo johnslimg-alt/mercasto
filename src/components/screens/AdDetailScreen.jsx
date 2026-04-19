@@ -5,7 +5,7 @@ export default function AdDetailScreen({
   ad, API_URL, getImageUrl, getImageUrls, getCatName, t, lang, favoriteIds,
   categoriesData, sliderAutoplay, handleShareAd, handleToggleFavorite,
   setReportingAd, setShowReportModal, handleViewCompany, handleWhatsAppClick,
-  allAds, setViewedAd, MediaSlider, renderAdCard
+  allAds, setViewedAd, MediaSlider, renderAdCard, AdSenseBanner
 }) {
   if (!ad) return null;
   
@@ -21,13 +21,13 @@ export default function AdDetailScreen({
       });
   }
 
-  const isPro = ad.type === 'pro';
+  const isPro = ad.user?.role === 'business';
   const relatedAds = allAds.filter(a => a.category === ad.category && a.id !== ad.id).slice(0, 4);
 
   return (
   <div className="bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
     <div className="sticky top-0 bg-white/90 backdrop-blur-xl z-40 border-b border-slate-200 px-4 py-3 flex items-center shadow-sm h-[60px]">
-       <button onClick={() => { if(window.location.hash) window.history.back(); else { setViewedAd(null); window.history.replaceState({}, '', '/'); } }} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
+       <button onClick={() => { setViewedAd(null); window.history.replaceState({}, '', '/'); }} className="btn-sm flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 bg-transparent">
          <ChevronLeft className="w-4 h-4" /> {t.back_to_list}
        </button>
     </div>
@@ -102,6 +102,11 @@ export default function AdDetailScreen({
                  <ChevronRight className="w-5 h-5 text-slate-400" />
               </div>
             </div>
+
+           {/* РЕКЛАМНЫЙ БЛОК GOOGLE ADSENSE */}
+           <div className="mt-8 md:mt-10 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-center text-center shadow-inner overflow-hidden">
+              <AdSenseBanner slot="1234567890" format="auto" responsive="true" className="w-full min-h-[100px] flex justify-center items-center" />
+           </div>
 
             <div className="fixed md:static bottom-0 left-0 w-full bg-white md:bg-transparent p-4 md:p-0 border-t md:border-none border-slate-200 z-50 mt-auto pt-6">
                 <div className="flex gap-3">

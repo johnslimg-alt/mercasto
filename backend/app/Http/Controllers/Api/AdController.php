@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Intervention\Image\Facades\Image;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Events\NewNotification;
 use App\Jobs\ProcessVideoWatermark;
@@ -72,6 +73,17 @@ class AdController extends Controller
         if ($request->filled('location')) {
             $query->where('location', 'like', "%{$request->location}%");
         }
+        
+        // Кэшируем главную страницу (без фильтров) на 60 секунд в Redis, чтобы выдерживать DDoS
+        $isDefaultQuery = empty($request->except('page'));
+        if ($isDefaultQuery) {
+            $page = $request->query('page', 1);
+            $cacheKey = "ads_index_page_{$page}";
+            
+            return response()->json(Cache::remember($cacheKey, 60, function () use ($query) {
+                return $query->paginate(16)->toArray();
+            }));
+        }
             
         $ads = $query->paginate(16); // Возвращаем по 16 объявлений на страницу
             
@@ -81,14 +93,28 @@ class AdController extends Controller
     /**
      * Получение одного объявления (Для прямых ссылок, SEO и Push-уведомлений)
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $ad = Ad::with('user:id,name,role,email,avatar_url,is_verified,created_at')->findOrFail($id);
         
-        $ad->whatsapp_clicks = DB::table('ad_clicks')
-            ->where('ad_id', $ad->id)
-            ->where('channel', 'whatsapp')
-            ->count();
+        // Защита от IDOR: скрытые объявления могут видеть только их авторы или администраторы
+        if ($ad->status !== 'active') {
+            $user = auth('sanctum')->user(); // Маршрут публичный, поэтому проверяем токен вручную
+            if (!$user || ($user->id !== $ad->user_id && $user->role !== 'admin')) {
+                return response()->json(['message' => 'Anuncio no disponible o en revisión'], 403);
+            }
+        }
+
+        // Защита приватности: скрываем аналитику (клики) от посторонних глаз
+        $user = auth('sanctum')->user();
+        if ($user && ($user->id === $ad->user_id || $user->role === 'admin')) {
+            $ad->whatsapp_clicks = DB::table('ad_clicks')
+                ->where('ad_id', $ad->id)
+                ->where('channel', 'whatsapp')
+                ->count();
+        } else {
+            $ad->whatsapp_clicks = null; // Скрываем от публики
+        }
             
         return response()->json($ad);
     }
@@ -132,13 +158,7 @@ class AdController extends Controller
             foreach ($request->file('images') as $image) {
                 // Generate a unique name and convert to WebP
                 $filename = Str::uuid() . '.webp';
-                $path = storage_path('app/public/ads/' . $filename);
-                
-                // Ensure directory exists
-                $directory = dirname($path);
-                if (!file_exists($directory)) {
-                    mkdir($directory, 0755, true);
-                }
+                $path = 'ads/' . $filename;
 
                 $img = Image::make($image)->orientate();
                 
@@ -160,8 +180,8 @@ class AdController extends Controller
                     // Добавляем отступы в 20px от краев
                     $img->insert($watermark, 'bottom-right', 20, 20);
                 }
-                $img->encode('webp', 85)->save($path); // Сохраняем в WebP
-                $imagePaths[] = 'ads/' . $filename;
+                Storage::disk('public')->put($path, (string) $img->encode('webp', 85)); // Поддержка AWS S3
+                $imagePaths[] = $path;
             }
         }
 
@@ -225,7 +245,7 @@ class AdController extends Controller
             'images' => 'nullable|array|max:10', // Новые изображения
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'condition' => 'nullable|in:nuevo,usado',
-            'video_url' => 'nullable|url|max:255',
+            'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // Защита от загрузки вредоносных скриптов
         ]);
 
         $lat = $ad->latitude;
@@ -248,9 +268,9 @@ class AdController extends Controller
 
         // 3. Обработка изображений
         $currentImages = json_decode($ad->image_url, true) ?? [];
-        // Санитизация: защищаемся от инъекций вредоносных URL-адресов
+        // Санитизация: строгая защита от SSRF/XSS при подмене изображений
         $keptImages = array_filter($request->input('existing_images', []), function($img) {
-            return is_string($img) && (str_starts_with($img, 'ads/') || str_starts_with($img, 'http'));
+            return is_string($img) && str_starts_with($img, 'ads/');
         });
 
         // Находим изображения для удаления, сравнивая текущие с сохраненными
@@ -265,13 +285,7 @@ class AdController extends Controller
             foreach ($request->file('images') as $image) {
                 // Generate a unique name and convert to WebP
                 $filename = Str::uuid() . '.webp';
-                $path = storage_path('app/public/ads/' . $filename);
-
-                // Ensure directory exists
-                $directory = dirname($path);
-                if (!file_exists($directory)) {
-                    mkdir($directory, 0755, true);
-                }
+                $path = 'ads/' . $filename;
                 
                 $img = Image::make($image)->orientate();
                 
@@ -294,8 +308,8 @@ class AdController extends Controller
                     $img->insert($watermark, 'bottom-right', 20, 20);
                 }
 
-                $img->encode('webp', 85)->save($path); // Сохраняем в WebP
-                $newImagePaths[] = 'ads/' . $filename;
+                Storage::disk('public')->put($path, (string) $img->encode('webp', 85)); // Поддержка AWS S3
+                $newImagePaths[] = $path;
             }
         }
 
@@ -354,6 +368,11 @@ class AdController extends Controller
         }
 
         $request->validate(['status' => 'required|in:active,inactive,archived,pending']);
+        
+        // Защита от обхода модерации: только админ может активировать объявление со статусом pending/rejected
+        if ($request->status === 'active' && in_array($ad->status, ['pending', 'rejected']) && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'No puedes activar un anuncio en revisión o rechazado.'], 403);
+        }
         
         if ($request->status === 'active' && $ad->status !== 'active') {
             $notificationData = [
@@ -474,6 +493,13 @@ class AdController extends Controller
             Storage::disk('public')->delete($ad->video_url);
         }
 
+        // Глубокая очистка связанных данных для предотвращения сбоев целостности БД
+        DB::table('favorites')->where('ad_id', $ad->id)->delete();
+        DB::table('ad_views')->where('ad_id', $ad->id)->delete();
+        DB::table('ad_clicks')->where('ad_id', $ad->id)->delete();
+        DB::table('reports')->where('ad_id', $ad->id)->delete();
+        DB::table('payments')->where('ad_id', $ad->id)->delete();
+
         $ad->delete();
 
         return response()->json(['message' => 'Объявление успешно удалено']);
@@ -496,40 +522,74 @@ class AdController extends Controller
         $path = $request->file('file')->getRealPath();
         $extension = $request->file('file')->getClientOriginalExtension();
         $count = 0;
+        $batch = [];
+        $batchSize = 500; // Пакетная вставка для защиты от таймаута сервера (504 Gateway Timeout)
+        $now = now();
 
         if (strtolower($extension) === 'xml') {
             $xml = simplexml_load_file($path);
             if ($xml && isset($xml->ad)) {
                 foreach ($xml->ad as $adNode) {
-                    Ad::create([
-                        'user_id' => $request->user()->id,
-                        'title' => substr((string)$adNode->title, 0, 255),
-                        'price' => is_numeric((string)$adNode->price) ? (float)$adNode->price : 0,
-                        'description' => (string)$adNode->description,
-                        'location' => substr((string)$adNode->location, 0, 255),
-                        'category' => substr((string)$adNode->category, 0, 100),
-                        'status' => 'pending', // Отправляем на модерацию
-                    ]);
-                    $count++;
+                    try {
+                        $batch[] = [
+                            'user_id' => $request->user()->id,
+                            'title' => substr((string)$adNode->title, 0, 255),
+                            'price' => is_numeric((string)$adNode->price) ? (float)$adNode->price : 0,
+                            'description' => (string)$adNode->description,
+                            'location' => substr((string)$adNode->location, 0, 255),
+                            'category' => substr((string)$adNode->category, 0, 100),
+                            'status' => 'pending',
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                        $count++;
+                        
+                        if (count($batch) >= $batchSize) {
+                            Ad::insert($batch);
+                            $batch = [];
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::warning("Skipped invalid XML row: " . $e->getMessage());
+                    }
                 }
             }
         } else {
-            $data = array_map('str_getcsv', file($path));
-            array_shift($data); // Удаляем заголовки колонок
-            foreach ($data as $row) {
-                if (count($row) >= 5) {
-                    Ad::create([
-                        'user_id' => $request->user()->id,
-                        'title' => substr($row[0], 0, 255),
-                        'price' => is_numeric($row[1]) ? (float) $row[1] : 0,
-                        'description' => $row[2],
-                        'location' => substr($row[3], 0, 255),
-                        'category' => substr($row[4], 0, 100),
-                        'status' => 'pending', // Отправляем на модерацию
-                    ]);
-                    $count++;
+            // Потоковое чтение файла (Стриминг). Защищает сервер от падения по оперативной памяти (OOM)
+            $handle = fopen($path, 'r');
+            if ($handle !== false) {
+                fgetcsv($handle); // Удаляем заголовки колонок
+                while (($row = fgetcsv($handle)) !== false) {
+                    if (count($row) >= 5) {
+                        try {
+                            $batch[] = [
+                                'user_id' => $request->user()->id,
+                                'title' => substr($row[0], 0, 255),
+                                'price' => is_numeric($row[1]) ? (float) $row[1] : 0,
+                                'description' => $row[2],
+                                'location' => substr($row[3], 0, 255),
+                                'category' => substr($row[4], 0, 100),
+                                'status' => 'pending',
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
+                            $count++;
+                            
+                            if (count($batch) >= $batchSize) {
+                                Ad::insert($batch);
+                                $batch = [];
+                            }
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::warning("Skipped invalid CSV row: " . $e->getMessage());
+                        }
+                    }
                 }
+                fclose($handle);
             }
+        }
+        
+        // Вставляем остатки
+        if (count($batch) > 0) {
+            Ad::insert($batch);
         }
 
         return response()->json(['message' => "$count anuncios subidos exitosamente."]);
@@ -544,7 +604,7 @@ class AdController extends Controller
             return response()->json(['message' => 'Acceso denegado'], 403);
         }
         
-        $ads = Ad::with('user:id,name,email')->where('status', 'pending')->latest()->get();
+        $ads = Ad::with('user:id,name,email')->where('status', 'pending')->latest()->paginate(50);
         
         return response()->json($ads);
     }
@@ -562,7 +622,7 @@ class AdController extends Controller
             ->leftJoin('users', 'reports.user_id', '=', 'users.id')
             ->select('reports.*', 'ads.title as ad_title', 'ads.status as ad_status', 'users.name as reporter_name', 'users.email as reporter_email')
             ->orderByDesc('reports.created_at')
-            ->get();
+            ->paginate(50);
         return response()->json($reports);
     }
 
@@ -582,17 +642,27 @@ class AdController extends Controller
     {
         $ad = Ad::find($id);
         if ($ad) {
-            $ad->increment('views');
+            // Защита от накрутки: засчитываем только 1 уникальный просмотр с IP в течение часа
+            $recentView = DB::table('ad_views')
+                ->where('ad_id', $ad->id)
+                ->where('ip_address', $request->ip())
+                ->where('created_at', '>=', now()->subHour())
+                ->exists();
 
-            DB::table('ad_views')->insert([
-                'ad_id' => $ad->id,
-                'user_id' => auth('sanctum')->id(), // Captures user if logged in
-                'ip_address' => $request->ip(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            if (!$recentView) {
+                $ad->increment('views');
 
-            return response()->json(['success' => true, 'views' => $ad->views]);
+                DB::table('ad_views')->insert([
+                    'ad_id' => $ad->id,
+                    'user_id' => auth('sanctum')->id(),
+                    'ip_address' => $request->ip(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                return response()->json(['success' => true, 'views' => $ad->views]);
+            }
+            
+            return response()->json(['success' => true, 'views' => $ad->views, 'ignored' => true]);
         }
         return response()->json(['message' => 'Ad not found'], 404);
     }
@@ -606,6 +676,12 @@ class AdController extends Controller
             'reason' => 'required|string|max:255',
             'comments' => 'nullable|string|max:1000'
         ]);
+        
+        // Защита от сбоя целостности БД (Foreign Key Violation)
+        if (!Ad::where('id', $id)->exists()) {
+            return response()->json(['message' => 'Anuncio no encontrado'], 404);
+        }
+        
         DB::table('reports')->insert([
             'ad_id' => $id,
             'user_id' => auth('sanctum')->id(), // Может быть null для гостей
@@ -743,32 +819,32 @@ class AdController extends Controller
      */
     public function sitemap()
     {
-        // Ограничиваем до 10,000 записей, чтобы избежать падения сервера (OOM) при миллионах объявлений
-        $ads = Ad::where('status', 'active')->latest()->limit(10000)->get(['id', 'updated_at', 'category']);
-        
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-        
-        // Главная страница
-        $xml .= "   <url>\n      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/</loc>\n      <changefreq>always</changefreq>\n      <priority>1.0</priority>\n   </url>\n";
-        
-        // Уникальные категории
-        $categories = $ads->pluck('category')->unique();
-        foreach ($categories as $category) {
-            $xml .= "   <url>\n";
-            $xml .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/?cat=" . urlencode($category) . "</loc>\n";
-            $xml .= "      <changefreq>hourly</changefreq>\n      <priority>0.9</priority>\n   </url>\n";
-        }
-        
-        // Динамические страницы объявлений
-        foreach ($ads as $ad) {
-            $xml .= "   <url>\n";
-            $xml .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/?ad=" . $ad->id . "</loc>\n";
-            $xml .= "      <lastmod>" . $ad->updated_at->toAtomString() . "</lastmod>\n";
-            $xml .= "      <changefreq>daily</changefreq>\n      <priority>0.8</priority>\n   </url>\n";
-        }
-        
-        $xml .= '</urlset>';
+        // Кэшируем карту сайта в Redis на 1 час (3600 секунд)
+        $xml = Cache::remember('sitemap_xml', 3600, function () {
+            $ads = Ad::where('status', 'active')->latest()->limit(10000)->get(['id', 'updated_at', 'category']);
+            
+            $content = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+            $content .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+            
+            $content .= "   <url>\n      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/</loc>\n      <changefreq>always</changefreq>\n      <priority>1.0</priority>\n   </url>\n";
+            
+            $categories = $ads->pluck('category')->unique();
+            foreach ($categories as $category) {
+                $content .= "   <url>\n";
+                $content .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/?cat=" . urlencode($category) . "</loc>\n";
+                $content .= "      <changefreq>hourly</changefreq>\n      <priority>0.9</priority>\n   </url>\n";
+            }
+            
+            foreach ($ads as $ad) {
+                $content .= "   <url>\n";
+                $content .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/?ad=" . $ad->id . "</loc>\n";
+                $content .= "      <lastmod>" . $ad->updated_at->toAtomString() . "</lastmod>\n";
+                $content .= "      <changefreq>daily</changefreq>\n      <priority>0.8</priority>\n   </url>\n";
+            }
+            
+            $content .= '</urlset>';
+            return $content;
+        });
         
         return response($xml)->header('Content-Type', 'application/xml');
     }
@@ -804,16 +880,18 @@ class AdController extends Controller
      */
     public function googleMerchantFeed()
     {
-        $ads = Ad::with('user:id,name')
-            ->where('status', 'active')
-            ->where('price', '>', 0)
-            ->latest()
-            ->limit(5000) // Ограничиваем количество для производительности
-            ->get();
+        // Кэшируем фид Merchant в Redis на 1 час (3600 секунд)
+        $xml = Cache::remember('google_merchant_xml', 3600, function () {
+            $ads = Ad::with('user:id,name')
+                ->where('status', 'active')
+                ->where('price', '>', 0)
+                ->latest()
+                ->limit(5000)
+                ->get();
+            return view('xml.google_merchant', ['ads' => $ads])->render();
+        });
 
-        return response()
-            ->view('xml.google_merchant', ['ads' => $ads])
-            ->header('Content-Type', 'application/xml');
+        return response($xml)->header('Content-Type', 'application/xml');
     }
 
     /**
@@ -824,14 +902,67 @@ class AdController extends Controller
         $request->validate(['channel' => 'required|string']);
         $ad = Ad::findOrFail($id);
 
-        DB::table('ad_clicks')->insert([
-            'ad_id' => $ad->id,
-            'user_id' => auth('sanctum')->id(), // Может быть null для гостей
-            'channel' => $request->channel,
-            'ip_address' => $request->ip(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // Защита от накрутки конверсии: 1 уникальный клик (WhatsApp/Telegram) с IP раз в 15 минут
+        $recentClick = DB::table('ad_clicks')
+            ->where('ad_id', $ad->id)
+            ->where('ip_address', $request->ip())
+            ->where('channel', $request->channel)
+            ->where('created_at', '>=', now()->subMinutes(15))
+            ->exists();
+
+        if (!$recentClick) {
+            DB::table('ad_clicks')->insert([
+                'ad_id' => $ad->id,
+                'user_id' => auth('sanctum')->id(),
+                'channel' => $request->channel,
+                'ip_address' => $request->ip(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Автоматическая генерация описания товара с помощью Google Gemini AI
+     */
+    public function generateDescription(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|max:5120',
+        ]);
+
+        $apiKey = env('GEMINI_API_KEY');
+        if (!$apiKey) {
+            return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
+        }
+
+        $mimeType = $request->file('image')->getMimeType();
+        $base64Image = base64_encode(file_get_contents($request->file('image')->getRealPath()));
+
+        $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => 'Escribe una descripción atractiva para vender este producto en un mercado de clasificados. Sé conciso, destaca sus mejores características visuales y usa un tono vendedor. Solo devuelve la descripción sin introducciones ni comillas. Idioma: Español.'],
+                        [
+                            'inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data' => $base64Image
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+
+        if ($response->successful()) {
+            $text = $response->json('candidates.0.content.parts.0.text');
+            return response()->json(['description' => trim($text)]);
+        }
+
+        \Illuminate\Support\Facades\Log::error('Gemini API Error: ' . $response->body());
+        return response()->json(['message' => 'Error al analizar la imagen con IA.'], 500);
     }
 }

@@ -10,19 +10,21 @@ class ReviewController extends Controller
 {
     public function index($id)
     {
+        $average = DB::table('reviews')->where('seller_id', $id)->avg('rating') ?? 0;
+        $total = DB::table('reviews')->where('seller_id', $id)->count();
+
         $reviews = DB::table('reviews')
             ->join('users', 'reviews.reviewer_id', '=', 'users.id')
             ->where('seller_id', $id)
             ->select('reviews.*', 'users.name as reviewer_name', 'users.avatar_url as reviewer_avatar')
             ->orderByDesc('reviews.created_at')
-            ->get();
-
-        $average = $reviews->avg('rating') ?? 0;
+            ->paginate(15);
 
         return response()->json([
-            'reviews' => $reviews,
+            'reviews' => $reviews->items(),
             'average' => round($average, 1),
-            'total' => $reviews->count()
+            'total' => $total,
+            'has_more' => $reviews->hasMorePages()
         ]);
     }
 
@@ -37,6 +39,11 @@ class ReviewController extends Controller
 
         if ($reviewerId == $id) {
             return response()->json(['message' => 'No puedes dejarte una reseña a ti mismo'], 400);
+        }
+        
+        // Защита от сбоя целостности БД
+        if (!\App\Models\User::where('id', $id)->exists()) {
+            return response()->json(['message' => 'Vendedor no encontrado'], 404);
         }
 
         $exists = DB::table('reviews')->where('reviewer_id', $reviewerId)->where('seller_id', $id)->exists();

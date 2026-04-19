@@ -66,6 +66,7 @@ Route::post('/webhooks/clip', [PaymentController::class, 'handleWebhook']);
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ads', [AdController::class, 'store']);
+    Route::post('/ads/generate-description', [AdController::class, 'generateDescription']); // Gemini AI
     Route::post('/categories', [CategoryController::class, 'store']); // Создание категории (только для админов)
     Route::put('/categories/{id}', [CategoryController::class, 'update']); // Редактирование категории
     Route::post('/ads/bulk-upload', [AdController::class, 'bulkUpload']); // Массовая загрузка CSV
