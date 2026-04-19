@@ -16,7 +16,18 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW ref error', err));
+          navigator.serviceWorker.register('/sw.js?v=1.1.0').then(reg => {
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing;
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  if (confirm('¡Nueva versión de Mercasto disponible! Haz clic en Aceptar para actualizar.')) {
+                    window.location.reload();
+                  }
+                }
+              };
+            };
+          }).catch(err => console.log('SW ref error', err));
         });
       }
     </script>

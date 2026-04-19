@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Security, Keys & Dev Scripts
+y
+y.pub
+*.exp
+*.py
+mercasto-report.txt

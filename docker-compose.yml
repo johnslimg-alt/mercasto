@@ -52,6 +52,7 @@ services:
     environment:
       - "DB_HOST=mysql" # Указываем, что БД находится в другом контейнере
       - "REDIS_HOST=redis" # Связываем с контейнером Redis
+      - "REDIS_PASSWORD=${REDIS_PASSWORD:-mercasto_secure_redis_2026}"
       # ... другие переменные из вашего .env
     depends_on:
       mysql:
@@ -82,6 +83,7 @@ services:
     environment:
       - "DB_HOST=mysql"
       - "REDIS_HOST=redis"
+      - "REDIS_PASSWORD=${REDIS_PASSWORD:-mercasto_secure_redis_2026}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -101,6 +103,7 @@ services:
     environment:
       - "DB_HOST=mysql"
       - "REDIS_HOST=redis"
+      - "REDIS_PASSWORD=${REDIS_PASSWORD:-mercasto_secure_redis_2026}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -119,6 +122,8 @@ services:
       - "8080:8080"
     volumes:
       - ./backend:/var/www
+    environment:
+      - "REDIS_PASSWORD=${REDIS_PASSWORD:-mercasto_secure_redis_2026}"
     depends_on:
       redis:
         condition: service_healthy
@@ -128,8 +133,8 @@ services:
   mysql:
     image: mysql:8.0
     container_name: mercasto_db_container
-    ports:
-      - "3306:3306"
+    expose:
+      - "3306" # Закрыто от интернета, доступно только внутри Docker
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-mercasto}
       MYSQL_USER: ${DB_USERNAME:-mercasto_user}
@@ -153,11 +158,14 @@ services:
   redis:
     image: redis:7-alpine
     container_name: mercasto_redis_container
-    ports:
-      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-mercasto_secure_redis_2026} --appendonly yes
+    expose:
+      - "6379" # Закрыто от интернета
+    volumes:
+      - ./redis-data:/data # ЗАЩИТА ОТ ПОТЕРИ ДАННЫХ: Сохраняем кэш и очереди при рестартах
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-mercasto_secure_redis_2026}", "ping"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -198,10 +206,10 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000" # Доступно только локально. Настройте Nginx Basic Auth для внешнего доступа
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=mercasto_secure_pass # Измените пароль для продакшена!
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-mercasto_secure_admin_993}
     depends_on:
       - prometheus
     restart: unless-stopped

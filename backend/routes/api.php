@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\TwoFactorAuthenticationController;
 
 // Public routes
 Route::get('/ads', [AdController::class, 'index']);
+Route::get('/ads/{id}', [AdController::class, 'show']); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
 Route::get('/ads/{id}/pdf', [AdController::class, 'generatePdf']);
 Route::get('/sitemap.xml', [AdController::class, 'sitemap']);
 Route::get('/google-merchant.xml', [AdController::class, 'googleMerchantFeed']);

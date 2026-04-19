@@ -79,6 +79,21 @@ class AdController extends Controller
     }
 
     /**
+     * Получение одного объявления (Для прямых ссылок, SEO и Push-уведомлений)
+     */
+    public function show($id)
+    {
+        $ad = Ad::with('user:id,name,role,email,avatar_url,is_verified,created_at')->findOrFail($id);
+        
+        $ad->whatsapp_clicks = DB::table('ad_clicks')
+            ->where('ad_id', $ad->id)
+            ->where('channel', 'whatsapp')
+            ->count();
+            
+        return response()->json($ad);
+    }
+
+    /**
      * Сохранение нового объявления
      */
     public function store(Request $request)
@@ -233,7 +248,10 @@ class AdController extends Controller
 
         // 3. Обработка изображений
         $currentImages = json_decode($ad->image_url, true) ?? [];
-        $keptImages = $request->input('existing_images', []);
+        // Санитизация: защищаемся от инъекций вредоносных URL-адресов
+        $keptImages = array_filter($request->input('existing_images', []), function($img) {
+            return is_string($img) && (str_starts_with($img, 'ads/') || str_starts_with($img, 'http'));
+        });
 
         // Находим изображения для удаления, сравнивая текущие с сохраненными
         $imagesToDelete = array_diff($currentImages, $keptImages);
