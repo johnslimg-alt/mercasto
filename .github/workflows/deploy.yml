@@ -3,63 +3,68 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - main # Воркфлоу запустится при пуше в эту ветку
+      - main
+
+concurrency:
+  group: mercasto-production
+  cancel-in-progress: true
 
 jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify backend lockfile exists
+        run: test -f backend/composer.lock
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
   deploy:
     runs-on: ubuntu-latest
+    needs: build-and-verify
 
     steps:
-      - name: Execute deployment script via SSH
+      - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          # Скрипт, который будет выполнен прямо на вашем сервере
           script: |
-            # Переходим в папку с проектом
+            set -e
+
             cd /var/www/mercasto
-            
-            # --- ЭКСТРЕННАЯ ОЧИСТКА СЕРВЕРА (АУДИТ БЕЗОПАСНОСТИ) ---
-            pm2 stop laravel-api || true
-            pm2 delete laravel-api || true
-            pm2 save || true
-            rm -f /var/www/mercasto/y /var/www/mercasto/y.pub /var/www/mercasto/*.py /var/www/mercasto/*.exp /var/www/mercasto/*.sh /var/www/mercasto/mercasto-report.txt
-            rm -f /var/www/mercasto/src/BackupDatabase.php /var/www/mercasto/src/LoginFrontendTest.php /var/www/mercasto/src/UploadAdImage.php /var/www/mercasto/src/GeminiDemo.jsx /var/www/mercasto/src/AdminPanelJSX.txt
-            
-            # Очистка диска от мусора Docker
-            docker image prune -a -f || true
-            # -------------------------------------------------------
-            
-            # 1. Получаем свежий код из репозитория
+
             git fetch origin
             git reset --hard origin/main
-            
-            # Auto-configure webhook secret if missing
+
             if ! grep -q "CLIP_WEBHOOK_SECRET=" backend/.env 2>/dev/null; then
               echo "CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> backend/.env
             elif grep -q "CLIP_WEBHOOK_SECRET=$" backend/.env 2>/dev/null; then
               sed -i "s/CLIP_WEBHOOK_SECRET=.*/CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)/" backend/.env
             fi
-            
-            # 2. Собираем бэкенд (Laravel)
-            cd backend
-            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            
-            # Restart backend container to clear OPcache
-            docker restart mercasto_backend_container || true
-            sudo systemctl restart php8.2-fpm || true
-            sudo systemctl restart php-fpm || true
-            
-            # Перезапуск инфраструктуры Docker (Воркеры, Cron, WebSockets)
-            docker compose up -d --remove-orphans
-            
-            # 3. Собираем фронтенд (React + Vite)
-            cd ..
-            npm install
-            npm run build
+
+            docker compose build mercasto-backend mercasto-frontend mercasto-worker mercasto-scheduler mercasto-reverb
+            docker compose up -d --remove-orphans mercasto-backend mercasto-frontend mercasto-worker mercasto-scheduler mercasto-reverb
+
+            docker exec mercasto_backend_container composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            docker exec mercasto_backend_container php artisan migrate --force
+            docker exec mercasto_backend_container php artisan config:cache
+            docker exec mercasto_backend_container php artisan route:cache
+            docker exec mercasto_backend_container php artisan view:cache
+
+            curl -fsS https://mercasto.com/up > /dev/null
+            curl -fsS https://mercasto.com/api/categories > /dev/null
+            curl -fsS https://mercasto.com/api/auth/providers > /dev/null

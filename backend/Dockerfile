@@ -30,4 +30,11 @@ WORKDIR /var/www
 COPY . .
 
 # Устанавливаем зависимости Composer
-RUN composer install --no-dev --optimize-autoloader
+RUN test -f composer.lock \
+    && composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+# Убираем искусственный bottleneck PHP-FPM под burst-нагрузкой дашборда и параллельных API-запросов.
+RUN sed -i 's/^pm.max_children = .*/pm.max_children = 20/' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's/^pm.start_servers = .*/pm.start_servers = 4/' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's/^pm.min_spare_servers = .*/pm.min_spare_servers = 2/' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's/^pm.max_spare_servers = .*/pm.max_spare_servers = 8/' /usr/local/etc/php-fpm.d/www.conf
