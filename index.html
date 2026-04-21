@@ -24,8 +24,9 @@
 
       // АГЕНТ 1: Убийца зомби-кэша
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          for(let reg of regs) { reg.unregister(); }
+        window.addEventListener('load', function() {
+          // Регистрируем чистый Service Worker, чтобы Push-уведомления и PWA могли работать
+          navigator.serviceWorker.register('/sw.js').catch(function() {});
         });
       }
       
