@@ -57,12 +57,11 @@ jobs:
             docker compose up -d --build --remove-orphans
             
             # 3. Собираем бэкенд (Laravel)
-            cd backend
-            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+            docker exec mercasto_backend_container composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            docker exec mercasto_backend_container php artisan migrate --force
+            docker exec mercasto_backend_container php artisan config:cache
+            docker exec mercasto_backend_container php artisan route:cache
+            docker exec mercasto_backend_container php artisan view:cache
             
             # Restart backend container to clear OPcache
             docker restart mercasto_backend_container || true
