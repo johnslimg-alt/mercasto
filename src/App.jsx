@@ -13,6 +13,32 @@ import {
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import echo from './echo';
 
+// Глобальный перехватчик фатальных ошибок (Защита от белого экрана)
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo });
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6 text-center w-full">
+          <h1 className="text-[24px] font-bold text-slate-900 mb-2">¡Error Crítico en la Interfaz!</h1>
+          <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.errorInfo?.componentStack}</div>
+          <button onClick={() => window.location.reload()} className="px-6 py-3 bg-slate-900 text-white rounded-xl shadow-md hover:bg-black transition-colors">Recargar página</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // --- ЛОГОТИП И ИКОНКИ ---
 const MercastoLogo = ({ className = "h-11" }) => (
   <div className={`flex items-center gap-2 ${className}`}>
@@ -2169,6 +2195,7 @@ export default function App() {
   );
 
   return (
+    <ErrorBoundary>
     <div className="w-full min-h-screen bg-[var(--paper)] font-sans text-[var(--ink)] selection:bg-[#84CC16]/20">
       
       {/* GLOBAL HEADER */}
@@ -2205,7 +2232,7 @@ export default function App() {
                           <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad / Municipio'}</label>
                           <select value={locCity} onChange={e => setLocCity(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
                             <option value="">{t.all_cities || 'Todas las ciudades'}</option>
-                          {MEXICO_STATES_CITIES[locState]?.map(city => <option key={city} value={city}>{city}</option>)}
+                          {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                           </select>
                         </div>
                       )}
@@ -2315,7 +2342,7 @@ export default function App() {
                       <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad'}</label>
                       <select value={locCity} onChange={e => setLocCity(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white">
                         <option value="">{t.all_cities || 'Todas las ciudades'}</option>
-                      {MEXICO_STATES_CITIES[locState]?.map(city => <option key={city} value={city}>{city}</option>)}
+                      {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
                     </>
                   )}
@@ -2545,6 +2572,7 @@ export default function App() {
         html.dark input, html.dark textarea, html.dark select { background-color: #0F172A !important; color: #F8FAFC !important; }
       `}} />
     </div>
+    </ErrorBoundary>
   );
 }
  
