@@ -11,15 +11,16 @@
     <script defer src="https://maps.googleapis.com/maps/api/js?key=%VITE_GOOGLE_MAPS_API_KEY%&libraries=places&callback=Function.prototype"></script>
   </head>
   <body class="antialiased bg-[#F8FAFC]">
+    <!-- ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК ОШИБОК ИНИЦИАЛИЗАЦИИ JS -->
     <script>
-      // 1. УБИВАЕМ ЗАСТРЯВШИЙ SERVICE WORKER НАВСЕГДА
+      // 1. УБИВАЕМ ЗАСТРЯВШИЙ SERVICE WORKER (Главная причина вечного белого экрана)
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(regs) {
           for(let reg of regs) { reg.unregister(); }
         });
       }
-      
-      // 2. БЕЗОПАСНЫЙ ПЕРЕХВАТЧИК ОШИБОК (не разрушает React)
+
+      // 2. БЕЗОПАСНЫЙ ПЕРЕХВАТЧИК (Не удаляет React-приложение)
       window.addEventListener('error', function(event) {
         var errDiv = document.createElement('div');
         errDiv.style.cssText = 'padding: 20px; font-family: monospace; background: #fef2f2; color: #dc2626; word-break: break-all; z-index: 9999; position: fixed; top: 0; left: 0; right: 0; border-bottom: 2px solid #f87171; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);';
@@ -27,7 +28,7 @@
         document.body.appendChild(errDiv);
       });
     </script>
-    
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
