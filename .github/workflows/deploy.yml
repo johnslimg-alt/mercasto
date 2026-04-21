@@ -1,35 +1,68 @@
-name: Deploy React Frontend to VPS
+name: Deploy to Production
 
 on:
   push:
     branches:
-      - main
+      - main # Воркфлоу запустится при пуше в эту ветку
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Install Dependencies
-      run: npm install
-
-    - name: Build Project
-      run: npm run build
-
-    - name: Deploy to VPS
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        source: "dist/*"
-        target: "/var/www/mercasto/frontend/"
-        strip_components: 1
+      - name: Execute deployment script via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          # Скрипт, который будет выполнен прямо на вашем сервере
+          script: |
+            # Переходим в папку с проектом
+            cd /var/www/mercasto
+            
+            # --- ЭКСТРЕННАЯ ОЧИСТКА СЕРВЕРА (АУДИТ БЕЗОПАСНОСТИ) ---
+            pm2 stop laravel-api || true
+            pm2 delete laravel-api || true
+            pm2 save || true
+            rm -f /var/www/mercasto/y /var/www/mercasto/y.pub /var/www/mercasto/*.py /var/www/mercasto/*.exp /var/www/mercasto/*.sh /var/www/mercasto/mercasto-report.txt
+            rm -f /var/www/mercasto/src/BackupDatabase.php /var/www/mercasto/src/LoginFrontendTest.php /var/www/mercasto/src/UploadAdImage.php /var/www/mercasto/src/GeminiDemo.jsx /var/www/mercasto/src/AdminPanelJSX.txt
+            
+            # Очистка диска от мусора Docker
+            docker image prune -a -f || true
+            # -------------------------------------------------------
+            
+            # 1. Получаем свежий код из репозитория
+            git fetch origin
+            git reset --hard origin/main
+            
+            # Auto-configure webhook secret if missing
+            if ! grep -q "CLIP_WEBHOOK_SECRET=" backend/.env 2>/dev/null; then
+              echo "CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> backend/.env
+            elif grep -q "CLIP_WEBHOOK_SECRET=$" backend/.env 2>/dev/null; then
+              sed -i "s/CLIP_WEBHOOK_SECRET=.*/CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)/" backend/.env
+            fi
+            
+            # 2. Собираем бэкенд (Laravel)
+            cd backend
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            
+            # Restart backend container to clear OPcache
+            docker restart mercasto_backend_container || true
+            sudo systemctl restart php8.2-fpm || true
+            sudo systemctl restart php-fpm || true
+            
+            # Перезапуск инфраструктуры Docker (Воркеры, Cron, WebSockets)
+            docker compose up -d --remove-orphans
+            
+            # 3. Собираем фронтенд (React + Vite)
+            cd ..
+            npm install
+            npm run build
