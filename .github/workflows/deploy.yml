@@ -46,7 +46,17 @@ jobs:
               sed -i "s/CLIP_WEBHOOK_SECRET=.*/CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)/" backend/.env
             fi
             
-            # 2. Собираем бэкенд (Laravel)
+            # FIX: Восстановление убитой базы данных после очистки Git
+            if [ -d "mysql-data" ] && [ ! -f "mysql-data/ibdata1" ]; then
+              echo "Обнаружена поврежденная БД MySQL. Выполняется жесткий сброс..."
+              docker compose down || true
+              sudo rm -rf mysql-data redis-data
+            fi
+            
+            # 2. ЗАПУСК И ПЕРЕСБОРКА DOCKER (БД должна работать до миграций)
+            docker compose up -d --build --remove-orphans
+            
+            # 3. Собираем бэкенд (Laravel)
             cd backend
             composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
             php artisan migrate --force
@@ -58,7 +68,3 @@ jobs:
             docker restart mercasto_backend_container || true
             sudo systemctl restart php8.2-fpm || true
             sudo systemctl restart php-fpm || true
-            
-            # 3. ПРИНУДИТЕЛЬНАЯ ПЕРЕСБОРКА DOCKER-КОНТЕЙНЕРОВ С НОВЫМ КОДОМ ФРОНТЕНДА
-            cd /var/www/mercasto
-            docker compose up -d --build --remove-orphans
