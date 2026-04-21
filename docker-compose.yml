@@ -48,6 +48,7 @@ services:
     container_name: mercasto_backend_container
     volumes:
       - ./backend:/var/www
+      - /var/www/vendor
       - /var/www/vendor # Защищаем системные библиотеки от перезаписи
     environment:
       - "DB_HOST=postgres" # Указываем, что БД находится в другом контейнере
@@ -80,6 +81,7 @@ services:
     command: php artisan queue:work --sleep=3 --tries=3
     volumes:
       - ./backend:/var/www
+      - /var/www/vendor
     environment:
       - "DB_HOST=postgres"
       - "REDIS_HOST=redis"
@@ -100,6 +102,7 @@ services:
     command: php artisan schedule:work
     volumes:
       - ./backend:/var/www
+      - /var/www/vendor
     environment:
       - "DB_HOST=postgres"
       - "REDIS_HOST=redis"
@@ -113,20 +116,23 @@ services:
 
   # Laravel Reverb (Сервер WebSockets для уведомлений в реальном времени)
   mercasto-reverb:
-    profiles:
-      - realtime
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mercasto_reverb_container
     command: php artisan reverb:start --host=0.0.0.0 --port=8082
-    ports:
-      - "8082:8082"
+    expose:
+      - "8082"
     volumes:
       - ./backend:/var/www
+      - /var/www/vendor
     environment:
+      - "DB_HOST=postgres"
+      - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:-mercasto_secure_redis_2026}"
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
@@ -178,7 +184,7 @@ services:
 
   # Мониторинг ресурсов (cAdvisor)
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: cadvisor
     expose:
       - "8080" # Скрыто от интернета. Доступно только внутренним контейнерам (Grafana и Prometheus)
@@ -192,7 +198,7 @@ services:
 
   # Prometheus (Сбор метрик контейнеров)
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.54.0
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
@@ -204,7 +210,7 @@ services:
 
   # Grafana (Продвинутая визуализация метрик и логов)
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.1.0
     container_name: grafana
     ports:
       - "127.0.0.1:3000:3000" # Доступно только локально. Настройте Nginx Basic Auth для внешнего доступа
@@ -217,7 +223,7 @@ services:
 
   # Certbot (Автоматический выпуск и продление SSL-сертификатов Let's Encrypt)
   certbot:
-    image: certbot/certbot
+    image: certbot/certbot:v2.10.0
     container_name: certbot
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
