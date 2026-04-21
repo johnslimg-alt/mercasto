@@ -110,6 +110,81 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Laravel Reverb (WebSocket server — proxied by Nginx, no public port)
+  mercasto-reverb:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mercasto_reverb_container
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    volumes:
+      - ./backend:/var/www
+      - /var/www/vendor
+    environment:
+      - "DB_HOST=postgres"
+      - "REDIS_HOST=redis"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Queue worker
+  mercasto-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mercasto_worker_container
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    volumes:
+      - ./backend:/var/www
+      - /var/www/vendor
+    environment:
+      - "DB_HOST=postgres"
+      - "REDIS_HOST=redis"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Task scheduler
+  mercasto-scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mercasto_scheduler_container
+    command: php artisan schedule:work
+    volumes:
+      - ./backend:/var/www
+      - /var/www/vendor
+    environment:
+      - "DB_HOST=postgres"
+      - "REDIS_HOST=redis"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # Мониторинг ресурсов (cAdvisor)
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest

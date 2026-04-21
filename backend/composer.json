@@ -9,6 +9,7 @@
         "barryvdh/laravel-dompdf": "^3.0",
         "intervention/image": "^3.0",
         "laravel/framework": "^13.0",
+        "laravel/reverb": "^1.10",
         "laravel/horizon": "^6.0",
         "laravel/sanctum": "^5.0",
         "laravel/socialite": "^5.12",
