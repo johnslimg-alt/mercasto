@@ -7,6 +7,23 @@ import SidebarFilters from '../common/SidebarFilters';
 export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categoriesData, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
 
+    // Заглушка (Fallback) на случай, если база данных категорий пуста
+    const defaultCats = [
+      { slug: 'motor', name: { es: 'Motor' }, icon: 'Car' },
+      { slug: 'inmobiliaria', name: { es: 'Inmuebles' }, icon: 'Home' },
+      { slug: 'empleo', name: { es: 'Empleo' }, icon: 'Briefcase' },
+      { slug: 'servicios', name: { es: 'Servicios' }, icon: 'Wrench' },
+      { slug: 'informatica', name: { es: 'Informática' }, icon: 'Monitor' },
+      { slug: 'telefonia', name: { es: 'Telefonía' }, icon: 'Smartphone' },
+      { slug: 'hogar', name: { es: 'Hogar' }, icon: 'Sofa' },
+      { slug: 'moda', name: { es: 'Moda' }, icon: 'Shirt' },
+      { slug: 'bebes', name: { es: 'Bebés' }, icon: 'Baby' },
+      { slug: 'mascotas', name: { es: 'Mascotas' }, icon: 'PawPrint' },
+      { slug: 'ocio', name: { es: 'Ocio' }, icon: 'Bike' },
+      { slug: 'boletos', name: { es: 'Boletos' }, icon: 'Ticket' }
+    ];
+    const displayCategories = categoriesData && categoriesData.length > 0 ? categoriesData : defaultCats;
+
     if (activeCat || searchQuery || selectedState) {
 
       return (
@@ -155,7 +172,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
 
-                {categoriesData.slice(0, 16).map(cat => {
+                {displayCategories.slice(0, 16).map(cat => {
 
                   const Icon = IconMap[cat.icon] || Star;
 

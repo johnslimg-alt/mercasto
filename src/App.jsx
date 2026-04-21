@@ -319,9 +319,9 @@ export default function App() {
   const [debouncedLocInput, setDebouncedLocInput] = useState('');
   
   // FIX: Функция executeSearch отсутствовала, что приводило к фатальному сбою (WSOD) при нажатии Enter
-  const executeSearch = useCallback(() => {
-    setDebouncedSearch(searchQuery);
-    setDebouncedLocInput(searchLocationInput);
+  const executeSearch = useCallback((overrideSearch = null, overrideLoc = null) => {
+    setDebouncedSearch(typeof overrideSearch === 'string' ? overrideSearch : searchQuery);
+    setDebouncedLocInput(typeof overrideLoc === 'string' ? overrideLoc : searchLocationInput);
     setCurrentTab('home');
     setViewedAd(null);
     setViewedCompany(null);
@@ -2205,13 +2205,13 @@ export default function App() {
                           <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad / Municipio'}</label>
                           <select value={locCity} onChange={e => setLocCity(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
                             <option value="">{t.all_cities || 'Todas las ciudades'}</option>
-                            {MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>)}
+                          {MEXICO_STATES_CITIES[locState]?.map(city => <option key={city} value={city}>{city}</option>)}
                           </select>
                         </div>
                       )}
                       <div className="flex gap-2">
                         <button onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
-                        <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowLocationPicker(false); executeSearch(); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                      <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowLocationPicker(false); executeSearch(null, query); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
                       </div>
                     </div>
                   )}
@@ -2315,11 +2315,11 @@ export default function App() {
                       <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad'}</label>
                       <select value={locCity} onChange={e => setLocCity(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white">
                         <option value="">{t.all_cities || 'Todas las ciudades'}</option>
-                        {MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>)}
+                      {MEXICO_STATES_CITIES[locState]?.map(city => <option key={city} value={city}>{city}</option>)}
                       </select>
                     </>
                   )}
-                  <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowMobileLocationPicker(false); executeSearch(); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
+                <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowMobileLocationPicker(false); executeSearch(null, query); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
                 </div>
               )}
             </div>
