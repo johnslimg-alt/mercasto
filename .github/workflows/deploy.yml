@@ -50,14 +50,13 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
-            if ! grep -q "CLIP_WEBHOOK_SECRET=" backend/.env 2>/dev/null; then
-              echo "CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> backend/.env
-            elif grep -q "CLIP_WEBHOOK_SECRET=$" backend/.env 2>/dev/null; then
-              sed -i "s/CLIP_WEBHOOK_SECRET=.*/CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)/" backend/.env
+            if ! grep -q '^CLIP_WEBHOOK_SECRET=.' backend/.env 2>/dev/null; then
+              echo "CLIP_WEBHOOK_SECRET must be set in backend/.env before deploy" >&2
+              exit 1
             fi
 
-            docker compose build mercasto-backend mercasto-frontend mercasto-worker mercasto-scheduler mercasto-reverb
-            docker compose up -d --remove-orphans mercasto-backend mercasto-frontend mercasto-worker mercasto-scheduler mercasto-reverb
+            docker compose build mercasto-backend mercasto-frontend mercasto-worker mercasto-scheduler
+            docker compose up -d --remove-orphans mercasto-backend mercasto-frontend mercasto-worker mercasto-scheduler
 
             docker exec mercasto_backend_container composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
             docker exec mercasto_backend_container php artisan migrate --force

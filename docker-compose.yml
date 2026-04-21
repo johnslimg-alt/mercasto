@@ -113,13 +113,15 @@ services:
 
   # Laravel Reverb (Сервер WebSockets для уведомлений в реальном времени)
   mercasto-reverb:
+    profiles:
+      - realtime
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mercasto_reverb_container
-    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    command: php artisan reverb:start --host=0.0.0.0 --port=8082
     ports:
-      - "8080:8080"
+      - "8082:8082"
     volumes:
       - ./backend:/var/www
     environment:
