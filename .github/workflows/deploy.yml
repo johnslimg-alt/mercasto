@@ -58,7 +58,7 @@ jobs:
             fi
             
             # 2. ЗАПУСК И ПЕРЕСБОРКА DOCKER (БД должна работать до миграций)
-            docker compose up -d --build --remove-orphans
+            docker compose --profile realtime up -d --build --remove-orphans
             
             # 3. Собираем бэкенд (Laravel)
             docker exec mercasto_backend_container composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
@@ -66,6 +66,7 @@ jobs:
             docker exec mercasto_backend_container php artisan config:cache
             docker exec mercasto_backend_container php artisan route:cache
             docker exec mercasto_backend_container php artisan view:cache
+            docker exec mercasto_backend_container php artisan storage:link || true
             
             # Restart backend container to clear OPcache
             docker restart mercasto_backend_container || true
