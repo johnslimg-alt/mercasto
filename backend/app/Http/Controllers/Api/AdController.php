@@ -66,10 +66,27 @@ class AdController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
+            $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+            $vectorSearchSuccess = false;
+
+            if ($apiKey) {
+                $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
+                    'model' => 'models/text-embedding-004',
+                    'content' => ['parts' => [['text' => $search]]]
+                ]);
+                if ($response->successful() && $embedding = $response->json('embedding.values')) {
+                    $embeddingString = '[' . implode(',', $embedding) . ']';
+                    $query->whereNotNull('embedding')->orderByRaw('embedding <=> ?', [$embeddingString]);
+                    $vectorSearchSuccess = true;
+                }
+            }
+
+            if (!$vectorSearchSuccess) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
         }
 
         // Фильтрация по локации
@@ -281,6 +298,48 @@ class AdController extends Controller
             ProcessVideoWatermark::dispatch($ad);
         }
 
+        // --- AI СИСТЕМА: СЕМАНТИЧЕСКИЙ ПОИСК (EMBEDDINGS) И АВТО-МОДЕРАЦИЯ ---
+        dispatch(function () use ($ad) {
+            $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+            if (!$apiKey) return;
+            
+            // 1. Генерация Вектора (Embedding) для Умного Поиска
+            $textContent = "{$ad->title} {$ad->category} {$ad->description}";
+            $embedRes = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
+                'model' => 'models/text-embedding-004',
+                'content' => ['parts' => [['text' => $textContent]]]
+            ]);
+            if ($embedRes->successful() && $embedding = $embedRes->json('embedding.values')) {
+                $embeddingString = '[' . implode(',', $embedding) . ']';
+                DB::statement('UPDATE ads SET embedding = ?::vector WHERE id = ?', [$embeddingString, $ad->id]);
+            }
+
+            // 2. ИИ Авто-Модерация Контента (Анализ фото и текста)
+            if ($ad->status === 'pending') {
+                $images = json_decode($ad->image_url, true) ?? [];
+                $parts = [['text' => "Act as a marketplace moderator. Analyze this ad. Title: '{$ad->title}'. Description: '{$ad->description}'. Return JSON ONLY: {\"status\": \"approved\"|\"rejected\", \"reason\": \"why\"}. Reject if it contains NSFW, weapons, drugs, scams, or inappropriate images. Approve otherwise."]];
+                
+                foreach (array_slice($images, 0, 2) as $img) {
+                    $path = Storage::disk('public')->path($img);
+                    if (file_exists($path)) {
+                        $parts[] = ['inline_data' => ['mime_type' => mime_content_type($path), 'data' => base64_encode(file_get_contents($path))]];
+                    }
+                }
+                
+                $modRes = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+                    'contents' => [['parts' => $parts]]
+                ]);
+                
+                if ($modRes->successful() && preg_match('/\{.*\}/s', $modRes->json('candidates.0.content.parts.0.text'), $matches)) {
+                    $data = json_decode($matches[0], true);
+                    if (isset($data['status'])) {
+                        $newStatus = $data['status'] === 'approved' ? 'active' : 'rejected';
+                        DB::table('ads')->where('id', $ad->id)->update(['status' => $newStatus]);
+                    }
+                }
+            }
+        });
+
         $ad->load('user');
         $ad->whatsapp_clicks = DB::table('ad_clicks')
             ->where('ad_id', $ad->id)
@@ -452,6 +511,46 @@ class AdController extends Controller
         if ($request->hasFile('video_file')) {
             ProcessVideoWatermark::dispatch($ad->fresh());
         }
+
+        // --- AI СИСТЕМА: ОБНОВЛЕНИЕ ВЕКТОРА И ПОВТОРНАЯ МОДЕРАЦИЯ ---
+        dispatch(function () use ($ad) {
+            $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+            if (!$apiKey) return;
+            
+            $textContent = "{$ad->title} {$ad->category} {$ad->description}";
+            $embedRes = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
+                'model' => 'models/text-embedding-004',
+                'content' => ['parts' => [['text' => $textContent]]]
+            ]);
+            if ($embedRes->successful() && $embedding = $embedRes->json('embedding.values')) {
+                $embeddingString = '[' . implode(',', $embedding) . ']';
+                DB::statement('UPDATE ads SET embedding = ?::vector WHERE id = ?', [$embeddingString, $ad->id]);
+            }
+
+            if ($ad->status === 'pending') {
+                $images = json_decode($ad->image_url, true) ?? [];
+                $parts = [['text' => "Act as a marketplace moderator. Analyze this ad. Title: '{$ad->title}'. Description: '{$ad->description}'. Return JSON ONLY: {\"status\": \"approved\"|\"rejected\", \"reason\": \"why\"}. Reject if it contains NSFW, weapons, drugs, scams, or inappropriate images. Approve otherwise."]];
+                
+                foreach (array_slice($images, 0, 2) as $img) {
+                    $path = Storage::disk('public')->path($img);
+                    if (file_exists($path)) {
+                        $parts[] = ['inline_data' => ['mime_type' => mime_content_type($path), 'data' => base64_encode(file_get_contents($path))]];
+                    }
+                }
+                
+                $modRes = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+                    'contents' => [['parts' => $parts]]
+                ]);
+                
+                if ($modRes->successful() && preg_match('/\{.*\}/s', $modRes->json('candidates.0.content.parts.0.text'), $matches)) {
+                    $data = json_decode($matches[0], true);
+                    if (isset($data['status'])) {
+                        $newStatus = $data['status'] === 'approved' ? 'active' : 'rejected';
+                        DB::table('ads')->where('id', $ad->id)->update(['status' => $newStatus]);
+                    }
+                }
+            }
+        });
 
         // 5. Возвращаем ответ
         $ad->load('user');

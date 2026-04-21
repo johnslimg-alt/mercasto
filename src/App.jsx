@@ -187,7 +187,15 @@ const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScr
 const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Storefront - En construcción</div> })));
 const StaticPages = React.lazy(() => import('./components/screens/StaticPages').catch(() => ({ default: ({currentTab}) => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-2xl font-bold capitalize text-slate-400">{currentTab} - Página en construcción</div> })));
 
-export default function App() {
+export default function AppWrapper() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
+
+function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentTab = location.pathname.split('/')[1] || 'home';
@@ -2195,7 +2203,6 @@ export default function App() {
   );
 
   return (
-    <ErrorBoundary>
     <div className="w-full min-h-screen bg-[var(--paper)] font-sans text-[var(--ink)] selection:bg-[#84CC16]/20">
       
       {/* GLOBAL HEADER */}
@@ -2572,7 +2579,6 @@ export default function App() {
         html.dark input, html.dark textarea, html.dark select { background-color: #0F172A !important; color: #F8FAFC !important; }
       `}} />
     </div>
-    </ErrorBoundary>
   );
 }
  
