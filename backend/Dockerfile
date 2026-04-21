@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y libpq-dev \
 RUN pecl install redis \
     && docker-php-ext-enable redis
 
-# Устанавливаем Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Устанавливаем Composer v2.9.7
+COPY --from=composer:2.9.7 /usr/bin/composer /usr/bin/composer
 
 # Устанавливаем рабочую директорию
 WORKDIR /var/www
