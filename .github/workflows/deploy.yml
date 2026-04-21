@@ -1,69 +1,35 @@
-name: Deploy to Production
+name: Deploy React Frontend to VPS
 
 on:
   push:
     branches:
       - main
 
-concurrency:
-  group: mercasto-production
-  cancel-in-progress: true
-
 jobs:
-  build-and-verify:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Verify backend lockfile exists
-        run: test -f backend/composer.lock
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Build frontend
-        run: npm run build
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-verify
 
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            set -e
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-            cd /var/www/mercasto
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-            git fetch origin
-            git reset --hard origin/main
+    - name: Install Dependencies
+      run: npm install
 
-            if ! grep -q '^CLIP_WEBHOOK_SECRET=.' backend/.env 2>/dev/null; then
-              echo "CLIP_WEBHOOK_SECRET must be set in backend/.env before deploy" >&2
-              exit 1
-            fi
+    - name: Build Project
+      run: npm run build
 
-            docker compose build mercasto-backend mercasto-frontend mercasto-worker mercasto-scheduler
-            docker compose up -d --remove-orphans mercasto-backend mercasto-frontend mercasto-worker mercasto-scheduler
-
-            docker exec mercasto_backend_container composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-            docker exec mercasto_backend_container php artisan migrate --force
-            docker exec mercasto_backend_container php artisan config:cache
-            docker exec mercasto_backend_container php artisan route:cache
-            docker exec mercasto_backend_container php artisan view:cache
-
-            curl -fsS https://mercasto.com/up > /dev/null
-            curl -fsS https://mercasto.com/api/categories > /dev/null
-            curl -fsS https://mercasto.com/api/auth/providers > /dev/null
+    - name: Deploy to VPS
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        source: "dist/*"
+        target: "/var/www/mercasto/frontend/"
+        strip_components: 1
