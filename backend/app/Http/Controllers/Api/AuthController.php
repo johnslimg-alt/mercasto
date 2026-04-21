@@ -17,54 +17,6 @@ use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
-    private function normalizePhoneNumber(string $phoneNumber): string
-    {
-        $normalized = preg_replace('/[^\d+]/', '', trim($phoneNumber)) ?? '';
-
-        if (str_starts_with($normalized, '00')) {
-            $normalized = '+' . substr($normalized, 2);
-        }
-
-        if (!str_starts_with($normalized, '+')) {
-            $normalized = '+' . ltrim($normalized, '+');
-        }
-
-        return $normalized;
-    }
-
-    private function phoneAuthCacheKey(string $phoneNumber): string
-    {
-        return 'phone_auth:' . hash('sha256', $phoneNumber);
-    }
-
-    private function phoneAuthAttemptsKey(string $phoneNumber): string
-    {
-        return 'phone_auth_attempts:' . hash('sha256', $phoneNumber);
-    }
-
-    private function issueLoginChallenge(User $user, string $source): string
-    {
-        $challengeToken = Str::random(64);
-
-        Cache::put("auth_challenge:{$challengeToken}", [
-            'user_id' => $user->id,
-            'source' => $source,
-        ], now()->addMinutes(10));
-
-        return $challengeToken;
-    }
-
-    private function issueOAuthExchangeCode(User $user): string
-    {
-        $exchangeCode = Str::random(64);
-
-        Cache::put("oauth_exchange:{$exchangeCode}", [
-            'user_id' => $user->id,
-        ], now()->addMinutes(2));
-
-        return $exchangeCode;
-    }
-
     /**
      * Регистрация нового пользователя
      */
@@ -74,20 +26,9 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8', // Можно добавить |confirmed, если на фронтенде есть поле password_confirmation
-            'phone_number' => 'nullable|string|max:20',
+            'phone_number' => 'nullable|string|max:20|unique:users',
             'avatar_url' => 'nullable|string|url',
         ]);
-
-        $normalizedPhoneNumber = null;
-        if ($request->filled('phone_number')) {
-            $normalizedPhoneNumber = $this->normalizePhoneNumber($request->phone_number);
-            if (strlen(preg_replace('/\D/', '', $normalizedPhoneNumber) ?? '') < 10) {
-                throw ValidationException::withMessages(['phone_number' => ['Número de teléfono inválido.']]);
-            }
-            if (User::where('phone_number', $normalizedPhoneNumber)->exists()) {
-                throw ValidationException::withMessages(['phone_number' => ['Este número de teléfono ya está en uso.']]);
-            }
-        }
 
         // GDPR/LFPDPPP Compliance: Хешируем IP-адрес (PII) перед сохранением/поиском в БД
         $ip = hash('sha256', $request->ip());
@@ -110,7 +51,7 @@ class AuthController extends Controller
         $user->name = $request->name;
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
-        $user->phone_number = $normalizedPhoneNumber;
+        $user->phone_number = $request->phone_number;
         $user->avatar_url = $request->avatar_url;
         $user->role = $role;
         $user->ip_address = $ip;
@@ -149,11 +90,7 @@ class AuthController extends Controller
 
         // Проверка, включена ли 2FA
         if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
-            return response()->json([
-                'two_factor' => true,
-                'challenge_token' => $this->issueLoginChallenge($user, 'password'),
-                'email' => $user->email,
-            ]);
+            return response()->json(['two_factor' => true]);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -172,19 +109,11 @@ class AuthController extends Controller
     public function loginTwoFactor(Request $request)
     {
         $request->validate([
-            'challenge_token' => 'required|string',
+            'email' => 'required|string|email',
             'code' => 'required|string',
         ]);
 
-        $challenge = Cache::pull('auth_challenge:' . $request->challenge_token);
-        if (!$challenge || empty($challenge['user_id'])) {
-            return response()->json(['message' => 'El desafío de autenticación ha expirado. Inicia sesión de nuevo.'], 422);
-        }
-
-        $user = User::find($challenge['user_id']);
-        if (!$user || !$user->two_factor_secret || !$user->two_factor_confirmed_at) {
-            return response()->json(['message' => 'El desafío de autenticación ya no es válido.'], 422);
-        }
+        $user = User::where('email', $request->email)->firstOrFail();
 
         $google2fa = new \PragmaRX\Google2FA\Google2FA();
 
@@ -222,21 +151,15 @@ class AuthController extends Controller
     public function requestPhoneCode(Request $request)
     {
         $request->validate(['phone_number' => 'required|string|min:10|max:20']);
-        $normalizedPhoneNumber = $this->normalizePhoneNumber($request->phone_number);
-        if (strlen(preg_replace('/\D/', '', $normalizedPhoneNumber) ?? '') < 10) {
-            throw ValidationException::withMessages(['phone_number' => ['Número de teléfono inválido.']]);
-        }
-
+        
         $code = random_int(100000, 999999); // Используем криптографически надежный генератор
-        Cache::put($this->phoneAuthCacheKey($normalizedPhoneNumber), $code, now()->addMinutes(10));
-        Cache::forget($this->phoneAuthAttemptsKey($normalizedPhoneNumber));
+        Cache::put('phone_auth_' . $request->phone_number, $code, now()->addMinutes(10));
 
-        // Не пишем OTP в production logs.
-        if (app()->environment('local')) {
-            Log::info("SMS Code for {$normalizedPhoneNumber}: {$code}");
-        }
+        // Для продакшена: здесь вызывается сервис отправки SMS (например, Twilio или AWS SNS)
+        // Для разработки мы просто логируем код
+        Log::info("SMS Code for {$request->phone_number}: {$code}");
 
-        return response()->json(['message' => 'Código SMS enviado.']);
+        return response()->json(['message' => 'Código SMS enviado. (Revisa los logs del servidor)']);
     }
 
     /**
@@ -245,35 +168,20 @@ class AuthController extends Controller
     public function verifyPhoneCode(Request $request)
     {
         $request->validate(['phone_number' => 'required|string|min:10|max:20', 'code' => 'required|string|size:6']);
-        $normalizedPhoneNumber = $this->normalizePhoneNumber($request->phone_number);
-        if (strlen(preg_replace('/\D/', '', $normalizedPhoneNumber) ?? '') < 10) {
-            throw ValidationException::withMessages(['phone_number' => ['Número de teléfono inválido.']]);
-        }
 
-        $cacheKey = $this->phoneAuthCacheKey($normalizedPhoneNumber);
-        $attemptsKey = $this->phoneAuthAttemptsKey($normalizedPhoneNumber);
-        $attempts = (int) Cache::get($attemptsKey, 0);
-
-        if ($attempts >= 5) {
-            Cache::forget($cacheKey);
-            return response()->json(['message' => 'Demasiados intentos fallidos. Solicita un nuevo código SMS.'], 429);
-        }
-
-        $cachedCode = Cache::get($cacheKey);
+        $cachedCode = Cache::get('phone_auth_' . $request->phone_number);
 
         if (!$cachedCode || $cachedCode != $request->code) {
-            Cache::put($attemptsKey, $attempts + 1, now()->addMinutes(10));
             throw ValidationException::withMessages(['code' => ['Código SMS inválido o expirado.']]);
         }
-        Cache::forget($cacheKey);
-        Cache::forget($attemptsKey);
+        Cache::forget('phone_auth_' . $request->phone_number);
 
-        $user = User::where('phone_number', $normalizedPhoneNumber)->first();
+        $user = User::where('phone_number', $request->phone_number)->first();
         if (!$user) {
             $user = new User();
-            $user->phone_number = $normalizedPhoneNumber;
-            $user->name = 'Usuario ' . substr($normalizedPhoneNumber, -4);
-            $user->email = preg_replace('/\D/', '', $normalizedPhoneNumber) . '@mercasto.local';
+            $user->phone_number = $request->phone_number;
+            $user->name = 'Usuario ' . substr($request->phone_number, -4);
+            $user->email = $request->phone_number . '@mercasto.local';
             $user->password = Hash::make(Str::random(16));
             $user->role = 'individual';
             $user->ip_address = hash('sha256', $request->ip());
@@ -305,7 +213,13 @@ class AuthController extends Controller
 
             // Защита от Time-Based Enumeration: асинхронная отправка письма
             dispatch(function() use ($request, $resetUrl) {
-                Mail::raw("Para restablecer tu contraseña, haz clic en el siguiente enlace:\n\n$resetUrl\n\nSi no solicitaste este cambio, puedes ignorar este correo.", function($message) use ($request) {
+                Mail::send('emails.action', [
+                    'title' => 'Restablecer tu contraseña',
+                    'body' => 'Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en Mercasto. Haz clic en el botón de abajo para elegir una nueva contraseña.',
+                    'actionText' => 'Restablecer Contraseña',
+                    'actionUrl' => $resetUrl,
+                    'footer' => 'Si no solicitaste este cambio, puedes ignorar o eliminar este correo de forma segura. Tu cuenta seguirá protegida.'
+                ], function($message) use ($request) {
                     $message->to($request->email)->subject('Restablecer contraseña - Mercasto');
                 });
             });
@@ -323,7 +237,7 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|exists:users,email',
             'token' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
@@ -341,10 +255,9 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
         
-        // Не раскрываем, существует ли пользователь к моменту сброса.
+        // Защита от Fatal Error 500, если пользователь удалил аккаунт до сброса пароля
         if (!$user) {
-            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
-            return response()->json(['message' => 'El token es inválido o ha expirado.'], 400);
+            return response()->json(['message' => 'Usuario no encontrado.'], 404);
         }
         
         $user->password = Hash::make($request->password);
@@ -364,12 +277,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         // Удаляем токен, с которым пользователь сейчас авторизован
-        $currentToken = $request->user()->currentAccessToken();
-        if ($currentToken) {
-            $currentToken->delete();
-        } else {
-            $request->user()->tokens()->delete();
-        }
+        $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Sesión cerrada exitosamente.'
@@ -382,41 +290,11 @@ class AuthController extends Controller
     public function getProviders()
     {
         // Using config() instead of env() because env() returns null when config is cached in production.
-        // Support both legacy Telegram bot env names and the Socialite-style config mapping.
-        $googleConfigured = filled(config('services.google.client_id')) && filled(config('services.google.client_secret'));
-        $appleConfigured = filled(config('services.apple.client_id')) && filled(config('services.apple.client_secret'));
-        $telegramConfigured = filled(config('services.telegram.client_id')) && filled(config('services.telegram.client_secret'));
-
+        // This safely checks the Socialite configurations mapping.
         return response()->json([
-            'google'   => $googleConfigured,
-            'apple'    => $appleConfigured,
-            'telegram' => $telegramConfigured,
-            'maps_api_key' => config('services.google.maps_api_key'),
-        ]);
-    }
-
-    public function exchangeOAuthCode(Request $request)
-    {
-        $request->validate([
-            'code' => 'required|string',
-        ]);
-
-        $payload = Cache::pull('oauth_exchange:' . $request->code);
-        if (!$payload || empty($payload['user_id'])) {
-            return response()->json(['message' => 'El inicio de sesión social ha expirado. Intenta de nuevo.'], 422);
-        }
-
-        $user = User::find($payload['user_id']);
-        if (!$user) {
-            return response()->json(['message' => 'Usuario no encontrado.'], 404);
-        }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password']),
+            'google'   => !empty(config('services.google.client_id')) && !empty(config('services.google.client_secret')),
+            'apple'    => !empty(config('services.apple.client_id')) && !empty(config('services.apple.client_secret')),
+            'telegram' => !empty(config('services.telegram.client_id')) && !empty(config('services.telegram.client_secret')),
         ]);
     }
 
@@ -464,7 +342,7 @@ class AuthController extends Controller
                 $user->{"{$provider}_id"} = $socialUser->id;
                 $user->avatar_url = $socialUser->avatar;
                 $user->role = 'individual';
-                $user->ip_address = hash('sha256', $request->ip());
+                $user->ip_address = $request->ip();
                 $user->save();
             } elseif (!$user->{"{$provider}_id"}) {
                 $user->{"{$provider}_id"} = $socialUser->id;
@@ -473,12 +351,14 @@ class AuthController extends Controller
 
             // Защита от обхода 2FA через социальные сети (OAuth Zero-Day Bypass)
             if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
-                $challengeToken = $this->issueLoginChallenge($user, "oauth:{$provider}");
-                return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?oauth_challenge=' . urlencode($challengeToken));
+                // Если включена 2FA, мы не можем выдать токен напрямую.
+                // Перенаправляем на фронтенд со специальным флагом для запроса кода
+                $tempToken = base64_encode($user->email);
+                return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?oauth_2fa=' . $tempToken);
             }
 
-            $exchangeCode = $this->issueOAuthExchangeCode($user);
-            return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?oauth_code=' . urlencode($exchangeCode));
+            $token = $user->createToken('auth_token')->plainTextToken;
+            return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?token=' . $token);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error(ucfirst($provider) . ' OAuth Error: ' . $e->getMessage());
             return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=oauth_failed');

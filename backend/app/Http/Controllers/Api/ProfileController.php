@@ -156,7 +156,13 @@ class ProfileController extends Controller
 
         $confirmUrl = config('app.frontend_url', 'https://mercasto.com') . "/?email_token={$token}";
 
-        Mail::raw("Para confirmar tu nuevo correo electrónico, haz clic en el siguiente enlace:\n\n$confirmUrl\n\nSi no solicitaste este cambio, puedes ignorar este mensaje.", function($message) use ($request) {
+        Mail::send('emails.action', [
+            'title' => 'Confirma tu nuevo correo',
+            'body' => 'Has solicitado cambiar el correo electrónico asociado a tu cuenta de Mercasto. Para completar este proceso, por favor verifica esta dirección haciendo clic en el botón de abajo.',
+            'actionText' => 'Confirmar Correo',
+            'actionUrl' => $confirmUrl,
+            'footer' => 'Si no solicitaste este cambio, ignora este mensaje. Tu correo actual seguirá siendo el principal.'
+        ], function($message) use ($request) {
             $message->to($request->new_email)->subject('Confirmar nuevo correo - Mercasto');
         });
 
