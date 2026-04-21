@@ -59,10 +59,6 @@ jobs:
             sudo systemctl restart php8.2-fpm || true
             sudo systemctl restart php-fpm || true
             
-            # Перезапуск инфраструктуры Docker (Воркеры, Cron, WebSockets)
-            docker compose up -d --remove-orphans
-            
-            # 3. Собираем фронтенд (React + Vite)
-            cd ..
-            npm install
-            npm run build
+            # 3. ПРИНУДИТЕЛЬНАЯ ПЕРЕСБОРКА DOCKER-КОНТЕЙНЕРОВ С НОВЫМ КОДОМ ФРОНТЕНДА
+            cd /var/www/mercasto
+            docker compose up -d --build --remove-orphans
