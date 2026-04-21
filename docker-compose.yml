@@ -161,6 +161,30 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Автоматический бэкап базы данных (Ежедневно, хранение 7 дней)
+  db-backup:
+    image: pgvector/pgvector:pg18
+    container_name: mercasto_db_backup
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - ./postgres-backups:/backups
+    entrypoint: >
+      /bin/bash -c "
+      echo 'Backup daemon started. Running daily...';
+      while true; do
+        sleep 86400;
+        FILE=/backups/backup_$$(date +%Y%m%d_%H%M).dump;
+        pg_dump -h postgres -U ${DB_USERNAME:-mercasto_user} -d ${DB_DATABASE:-mercasto} -F c -f $$FILE;
+        echo \"Backup created: $$FILE\";
+        find /backups -type f -name '*.dump' -mtime +7 -delete;
+      done
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   # Redis (Кэш и очереди)
   redis:
     image: redis:7-alpine
