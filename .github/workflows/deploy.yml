@@ -18,13 +18,7 @@ jobs:
         with:
           host: "72.62.173.145"
           username: "root"
-          password: "-----BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACAzlUprUDBoNh786GX4n8RAD88pRo/vLsjR0IivybV2RwAAAJirryjAq68o
-wAAAAAtzc2gtZWQyNTUxOQAAACAzlUprUDBoNh786GX4n8RAD88pRo/vLsjR0IivybV2Rw
-AAAEA2iDD00fXSKpvVOPlHt6THZRFJFTs5EF5K2RbCEuIzWjOVSmtQMGg2HvzoZfifxEAP
-zylGj+8uyNHQiK/JtXZHAAAAFWdpdGh1Yi1hY3Rpb25zLWRlcGxveQ==
------END OPENSSH PRIVATE KEY-----"
+          key: ${{ secrets.SERVER_SSH_KEY }}
           # Скрипт, который будет выполнен прямо на вашем сервере
           script: |
             # Переходим в папку с проектом
