@@ -21,6 +21,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           # Скрипт, который будет выполнен прямо на вашем сервере
           script: |
+            set -e
+            
             # Переходим в папку с проектом
             cd /var/www/mercasto
             
