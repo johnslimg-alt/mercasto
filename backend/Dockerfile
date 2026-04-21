@@ -1,5 +1,5 @@
-# Используем официальный образ PHP 8.3 с FPM
-FROM php:8.3-fpm
+# Используем официальный образ PHP 8.4 с FPM (Стандарт 2026 года)
+FROM php:8.4-fpm
 
 # Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
@@ -39,7 +39,7 @@ RUN sed -i 's/^pm.max_children = .*/pm.max_children = 20/' /usr/local/etc/php-fp
     && sed -i 's/^pm.min_spare_servers = .*/pm.min_spare_servers = 2/' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's/^pm.max_spare_servers = .*/pm.max_spare_servers = 8/' /usr/local/etc/php-fpm.d/www.conf
 
-# --- СУПЕР-ОПТИМИЗАЦИЯ PHP 8.3 ---
+# --- СУПЕР-ОПТИМИЗАЦИЯ PHP 8.4 ---
 # Включаем OPcache и JIT (Just-In-Time) компиляцию для экстремального ускорения Laravel
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.jit_buffer_size=100M" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \

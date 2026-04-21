@@ -74,5 +74,5 @@ jobs:
             
             # Restart backend container to clear OPcache
             docker restart mercasto_backend_container || true
-            sudo systemctl restart php8.3-fpm || true
+            sudo systemctl restart php8.4-fpm || true
             sudo systemctl restart php-fpm || true
