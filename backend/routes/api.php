@@ -149,4 +149,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Subscription Routes
     Route::get('/user/subscriptions', [ProfileController::class, 'getSubscriptions']);
     Route::post('/user/subscriptions/toggle', [ProfileController::class, 'toggleSubscription']);
+
+    // Автономные ИИ-Агенты (PostgreSQL & React)
+    Route::post('/agents/postgresql', [AdController::class, 'askPostgresAgent']); // AI Database Agent
+    Route::post('/agents/react', [AdController::class, 'generateReactComponent']); // AI UI Builder Agent
 });

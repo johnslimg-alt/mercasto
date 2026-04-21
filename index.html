@@ -23,6 +23,15 @@
       });
     </script>
 
+    <!-- SENTRY APM AGENT (Автоматический отлов белого экрана React) -->
+    <script src="https://browser.sentry-cdn.com/7.105.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+      Sentry.init({
+        dsn: "https://public@sentry.example.com/1", // Замените на свой DSN в будущем
+        tracesSampleRate: 1.0,
+      });
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
