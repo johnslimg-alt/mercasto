@@ -49,11 +49,10 @@ services:
       - ./backend:/var/www
       - /var/www/vendor # Защищаем системные библиотеки от перезаписи
     environment:
-      - "DB_HOST=mysql" # Указываем, что БД находится в другом контейнере
-      - "REDIS_HOST=redis" # Связываем с контейнером Redis
-      # ... другие переменные из вашего .env
+      - "DB_HOST=postgres"
+      - "REDIS_HOST=redis"
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -70,21 +69,20 @@ services:
         max-file: "5"
 
   # База данных
-  mysql:
-    image: mysql:8.0
+  postgres:
+    image: pgvector/pgvector:pg18
     container_name: mercasto_db_container
     ports:
-      - "3306:3306"
+      - "5432:5432"
     environment:
-      MYSQL_DATABASE: mercasto_db_name
-      MYSQL_USER: your_db_user
-      MYSQL_PASSWORD: your_db_password
-      MYSQL_ROOT_PASSWORD: your_root_password
+      POSTGRES_DB: mercasto_db_name
+      POSTGRES_USER: your_db_user
+      POSTGRES_PASSWORD: your_db_password
     volumes:
-      - ./mysql-data:/var/lib/mysql
+      - ./postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pyour_root_password"]
+      test: ["CMD-SHELL", "pg_isready -U your_db_user -d mercasto_db_name"]
       interval: 15s
       timeout: 5s
       retries: 5
