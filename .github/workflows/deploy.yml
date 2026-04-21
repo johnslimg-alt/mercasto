@@ -62,6 +62,7 @@ jobs:
             
             # 3. Собираем бэкенд (Laravel)
             docker exec mercasto_backend_container composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            docker exec mercasto_backend_container php artisan config:clear
             docker exec mercasto_backend_container php artisan migrate --force
             docker exec mercasto_backend_container php artisan config:cache
             docker exec mercasto_backend_container php artisan route:cache
