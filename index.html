@@ -13,19 +13,41 @@
   <body class="antialiased bg-[#F8FAFC]">
     <!-- ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК ОШИБОК ИНИЦИАЛИЗАЦИИ JS -->
     <script>
-      // 1. УБИВАЕМ ЗАСТРЯВШИЙ SERVICE WORKER (Главная причина вечного белого экрана)
+      // --- СПЕЦОТРЯД АГЕНТОВ ДИАГНОСТИКИ (ВИКТОР) ---
+      
+      function callAgent(name, msg) {
+        var errDiv = document.getElementById('agent-report') || document.createElement('div');
+        errDiv.id = 'agent-report';
+        errDiv.style.cssText = 'padding: 20px; font-family: monospace; background: #0f172a; color: #38bdf8; word-break: break-all; z-index: 2147483647; position: fixed; top: 0; left: 0; right: 0; border-bottom: 4px solid #84CC16; box-shadow: 0 10px 25px rgba(0,0,0,0.5);';
+        errDiv.innerHTML += '<div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #334155;"><strong style="color: #fbbf24;">[' + name + ']</strong> ' + msg + '</div>';
+        document.body.prepend(errDiv);
+      }
+
+      // АГЕНТ 1: Убийца зомби-кэша
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(regs) {
           for(let reg of regs) { reg.unregister(); }
         });
       }
-
-      // 2. БЕЗОПАСНЫЙ ПЕРЕХВАТЧИК (Не удаляет React-приложение)
+      
+      // АГЕНТ 2: Перехватчик критических JS-ошибок (Например, старый ReactDOM.render в React 19)
       window.addEventListener('error', function(event) {
-        var errDiv = document.createElement('div');
-        errDiv.style.cssText = 'padding: 20px; font-family: monospace; background: #fef2f2; color: #dc2626; word-break: break-all; z-index: 9999; position: fixed; top: 0; left: 0; right: 0; border-bottom: 2px solid #f87171; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);';
-        errDiv.innerHTML = '<h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">¡Error fatal de inicialización!</h2><b>Mensaje:</b> ' + event.message;
-        document.body.appendChild(errDiv);
+        callAgent('JS SENTRY', event.message + ' en ' + event.filename + ':' + event.lineno);
+      });
+
+      // АГЕНТ 3: Перехватчик асинхронных сбоев (Сетевые 404, сломанные чанки Vite)
+      window.addEventListener('unhandledrejection', function(event) {
+        callAgent('NETWORK AGENT', event.reason ? (event.reason.message || event.reason) : 'Promesa rechazada');
+      });
+
+      // АГЕНТ 4: Сканер смерти интерфейса (Пустой экран)
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          var root = document.getElementById('root');
+          if (!root || root.innerHTML.trim() === '') {
+            callAgent('DOM INSPECTOR', 'El contenedor React (#root) está vacío. React no pudo arrancar. Pulsa F12 para detalles en consola.');
+          }
+        }, 3000);
       });
     </script>
 
