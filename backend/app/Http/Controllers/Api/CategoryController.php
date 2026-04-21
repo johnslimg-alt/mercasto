@@ -63,12 +63,19 @@ class CategoryController extends Controller
             'sort_order' => 'nullable|integer',
         ]);
 
+        $oldSlug = $category->slug;
+
         $category->update([
             'slug' => $request->slug,
             'name' => json_encode(['es' => $request->name_es, 'en' => $request->name_en], JSON_UNESCAPED_UNICODE),
             'icon' => $request->icon,
             'sort_order' => $request->sort_order ?? 0,
         ]);
+        
+        // Защита от Data Orphanization: если slug изменился, каскадно обновляем все объявления
+        if ($oldSlug !== $request->slug) {
+            \Illuminate\Support\Facades\DB::table('ads')->where('category', $oldSlug)->update(['category' => $request->slug]);
+        }
     
         Cache::forget('categories_all');
 

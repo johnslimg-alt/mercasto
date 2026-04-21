@@ -15,5 +15,6 @@ use App\Models\User;
 */
 
 Broadcast::channel('App.Models.User.{id}', function (User $user, int $id) {
-    return $user->id === $id;
+    // Защита от бага строгой типизации: WebSocket роутер передает ID как строку
+    return $user->id === (int) $id;
 });

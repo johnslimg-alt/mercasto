@@ -55,6 +55,42 @@ const getImageUrls = (pathStr, fallbackArr = []) => {
   return [getImageUrl(pathStr)];
 };
 
+// База данных всех Штатов и основных Городов Мексики
+const MEXICO_STATES_CITIES = {
+  "Aguascalientes": ["Aguascalientes", "Jesús María", "Calvillo", "Rincón de Romos"],
+  "Baja California": ["Tijuana", "Mexicali", "Ensenada", "Playas de Rosarito", "Tecate"],
+  "Baja California Sur": ["La Paz", "Cabo San Lucas", "San José del Cabo", "Loreto"],
+  "Campeche": ["Campeche", "Ciudad del Carmen", "Champotón", "Escárcega"],
+  "Chiapas": ["Tuxtla Gutiérrez", "Tapachula", "San Cristóbal de las Casas", "Comitán"],
+  "Chihuahua": ["Chihuahua", "Ciudad Juárez", "Delicias", "Hidalgo del Parral", "Cuauhtémoc"],
+  "Ciudad de México": ["Álvaro Obregón", "Azcapotzalco", "Benito Juárez", "Coyoacán", "Cuauhtémoc", "Gustavo A. Madero", "Iztapalapa", "Miguel Hidalgo", "Tlalpan", "Xochimilco"],
+  "Coahuila": ["Saltillo", "Torreón", "Monclova", "Piedras Negras", "Acuña"],
+  "Colima": ["Colima", "Manzanillo", "Tecomán", "Villa de Álvarez"],
+  "Durango": ["Durango", "Gómez Palacio", "Lerdo", "Santiago Papasquiaro"],
+  "Estado de México": ["Toluca", "Ecatepec", "Naucalpan", "Tlalnepantla", "Nezahualcóyotl", "Metepec", "Huixquilucan", "Cuautitlán Izcalli", "Chalco"],
+  "Guanajuato": ["León", "Irapuato", "Celaya", "Guanajuato", "San Miguel de Allende", "Salamanca"],
+  "Guerrero": ["Acapulco", "Chilpancingo", "Zihuatanejo", "Iguala", "Taxco"],
+  "Hidalgo": ["Pachuca", "Tulancingo", "Tula de Allende", "Tizayuca"],
+  "Jalisco": ["Guadalajara", "Zapopan", "Tlaquepaque", "Tonalá", "Puerto Vallarta", "Tlajomulco de Zúñiga", "Lagos de Moreno"],
+  "Michoacán": ["Morelia", "Uruapan", "Zamora", "Lázaro Cárdenas", "Zitácuaro"],
+  "Morelos": ["Cuernavaca", "Jiutepec", "Cuautla", "Temixco"],
+  "Nayarit": ["Tepic", "Bahía de Banderas", "Compostela", "Santiago Ixcuintla"],
+  "Nuevo León": ["Monterrey", "Apodaca", "Guadalupe", "San Nicolás de los Garza", "San Pedro Garza García", "Santa Catarina", "General Escobedo"],
+  "Oaxaca": ["Oaxaca de Juárez", "Salina Cruz", "Juchitán de Zaragoza", "San Juan Bautista Tuxtepec", "Puerto Escondido"],
+  "Puebla": ["Puebla", "Tehuacán", "San Pedro Cholula", "San Andrés Cholula", "Atlixco"],
+  "Querétaro": ["Santiago de Querétaro", "San Juan del Río", "Corregidora", "El Marqués"],
+  "Quintana Roo": ["Cancún", "Playa del Carmen", "Chetumal", "Cozumel", "Tulum"],
+  "San Luis Potosí": ["San Luis Potosí", "Ciudad Valles", "Matehuala", "Rioverde"],
+  "Sinaloa": ["Culiacán", "Mazatlán", "Los Mochis", "Guasave", "Navolato"],
+  "Sonora": ["Hermosillo", "Ciudad Obregón", "Nogales", "San Luis Río Colorado", "Guaymas", "Navojoa"],
+  "Tabasco": ["Villahermosa", "Cárdenas", "Comalcalco", "Macuspana"],
+  "Tamaulipas": ["Tampico", "Reynosa", "Matamoros", "Nuevo Laredo", "Ciudad Victoria", "Ciudad Madero"],
+  "Tlaxcala": ["Tlaxcala", "Apizaco", "Huamantla", "Chiautempan"],
+  "Veracruz": ["Veracruz", "Xalapa", "Coatzacoalcos", "Poza Rica", "Boca del Río", "Córdoba", "Orizaba", "Minatitlán"],
+  "Yucatán": ["Mérida", "Kanasín", "Valladolid", "Progreso", "Tizimín"],
+  "Zacatecas": ["Zacatecas", "Fresnillo", "Guadalupe", "Jerez"]
+};
+
 const getRelativePath = (url) => {
     if (!url) return null;
     if (url.startsWith(STORAGE_URL)) return url.replace(`${STORAGE_URL}/`, '');
@@ -64,6 +100,21 @@ const getRelativePath = (url) => {
 const getCatName = (cat, lang) => {
   if (!cat) return '';
   return cat.name?.[lang] || cat.name?.['es'] || cat.name;
+};
+
+// Утилита для безопасной конвертации VAPID-ключей Web Push
+const urlBase64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 };
 
 const MediaSlider = ({ media, autoplay }) => {
@@ -105,16 +156,21 @@ const PostScreen = React.lazy(() => import('./components/screens/PostScreen'));
 
 const UserDashboard = React.lazy(() => import('./components/screens/UserDashboard'));
 
+// Безопасный импорт экранов (если файл не найден, React не выдаст белый экран, а покажет заглушку)
+const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Ad Detail Screen - En construcción</div> })));
+const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Storefront - En construcción</div> })));
+const StaticPages = React.lazy(() => import('./components/screens/StaticPages').catch(() => ({ default: ({currentTab}) => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-2xl font-bold capitalize text-slate-400">{currentTab} - Página en construcción</div> })));
+
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentTab = location.pathname.split('/')[1] || 'home';
-  const setCurrentTab = useCallback((tab) => {
-    if (tab === 'home') navigate('/');
-    else navigate(`/${tab}`);
-  }, [navigate]);
 
-  const [lang, setLang] = useState(localStorage.getItem('lang') || 'es');
+  // Защита от Prototype Pollution (WSOD Crash): проверяем, что язык действительно существует в словаре
+  const [lang, setLang] = useState(() => {
+    const saved = localStorage.getItem('lang');
+    return Object.keys(translations).includes(saved) ? saved : 'es';
+  });
   const t = translations[lang] || translations['es'];
 
   const [serverAds, setServerAds] = useState([]);
@@ -122,6 +178,13 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [activeCat, setActiveCat] = useState(''); // Фильтр по категории
+  
+  // Состояния для динамической фильтрации (EAV JSON)
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [conditionFilter, setConditionFilter] = useState([]);
+  const [dynamicFilters, setDynamicFilters] = useState({});
+  
   const [viewedAd, setViewedAd] = useState(null); 
   const [viewedCompany, setViewedCompany] = useState(null);
   const [companyAds, setCompanyAds] = useState([]);
@@ -131,7 +194,12 @@ export default function App() {
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
   
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')) || null); 
+  // Защита от фатального "Белого экрана смерти" (WSOD) при повреждении localStorage
+  const getSafeUser = () => {
+    try { return JSON.parse(localStorage.getItem('user')) || null; } 
+    catch (e) { localStorage.removeItem('user'); return null; }
+  };
+  const [user, setUser] = useState(getSafeUser()); 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [resetToken, setResetToken] = useState('');
@@ -139,11 +207,12 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorEmail, setTwoFactorEmail] = useState('');
+  const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState('');
 
   const [accountType, setAccountType] = useState('particular');
   const [userRole, setUserRole] = useState('admin');
   
-  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo' });
+  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
   const [debouncedLocation, setDebouncedLocation] = useState('');
   const [isMapUpdating, setIsMapUpdating] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
@@ -161,6 +230,25 @@ export default function App() {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [availableProviders, setAvailableProviders] = useState({ google: false, apple: false, telegram: false });
+  const [mapsApiKey, setMapsApiKey] = useState('');
+
+  const setCurrentTab = useCallback((tab) => {
+    // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
+    if (currentTab === 'post' && tab !== 'post') {
+        images.forEach(img => {
+            if (img.source === 'new' && img.preview) {
+                URL.revokeObjectURL(img.preview);
+            }
+        });
+        // Также сбрасываем состояние формы, чтобы не показывать "протухшие" данные
+        setImages([]);
+        setVideoFile(null);
+        setEditingAd(null);
+        setForm({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
+    }
+
+    if (tab === 'home') navigate('/'); else navigate(`/${tab}`);
+  }, [navigate, currentTab, images]);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api'}/auth/providers`)
@@ -174,6 +262,7 @@ export default function App() {
           apple:    p?.apple?.enabled   ?? p?.apple   ?? false,
           telegram: p?.telegram?.enabled ?? p?.telegram ?? false,
         });
+        setMapsApiKey(data?.maps_api_key || '');
       })
       .catch(() => {});
   }, []);
@@ -219,12 +308,54 @@ export default function App() {
   const [radius, setRadius] = useState(50);
   const [searchLocation, setSearchLocation] = useState(null); // { lat, lng, name }
   const [searchLocationInput, setSearchLocationInput] = useState('');
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [showMobileLocationPicker, setShowMobileLocationPicker] = useState(false);
+  const [locState, setLocState] = useState('');
+  const [locCity, setLocCity] = useState('');
   const desktopLocationInputRef = useRef(null);
   const mobileLocationInputRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [debouncedLocInput, setDebouncedLocInput] = useState('');
   
+  // FIX: Функция executeSearch отсутствовала, что приводило к фатальному сбою (WSOD) при нажатии Enter
+  const executeSearch = useCallback(() => {
+    setDebouncedSearch(searchQuery);
+    setDebouncedLocInput(searchLocationInput);
+    setCurrentTab('home');
+    setViewedAd(null);
+    setViewedCompany(null);
+  }, [searchQuery, searchLocationInput, setCurrentTab]);
+
+  // Защита от логических сбоев UI: сбрасываем специфичные для категории фильтры (ОЗУ, двигатель) при смене самой категории
+  useEffect(() => {
+    setDynamicFilters({});
+  }, [activeCat]);
+
+  // FIX: Performance. Оптимизация рендеринга карточек, чтобы избежать создания сотен лишних функций при скролле
+  const handleAdImageLoad = useCallback((e) => {
+    e.target.classList.remove('opacity-0');
+    if (e.target.parentElement) {
+      e.target.parentElement.classList.remove('bg-slate-200', 'dark:bg-slate-800');
+    }
+  }, []);
+
+  // Защита от "Ловушки интерфейса" (Modal State Trap):
+  // Сбрасываем все внутренние состояния авторизации, когда пользователь закрывает окно,
+  // чтобы при следующем открытии он снова видел форму логина, а не застрял на вводе SMS.
+  useEffect(() => {
+    if (!showAuthModal) {
+      const timer = setTimeout(() => {
+        setAuthMode('login');
+        setRequiresTwoFactor(false);
+        setAuthPhone('');
+        setTwoFactorEmail('');
+        setTwoFactorChallengeToken('');
+      }, 300); // Ждем окончания анимации закрытия
+      return () => clearTimeout(timer);
+    }
+  }, [showAuthModal]);
+
   const PUBLIC_VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BAhZDxk3BjI_OCkHCOEyihsxsuCfcDtMilUZjMfecw-Lt4JvHNfYkmZIU_llDiaF3L0uOtXsgU60IZksmtpTrIs';
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
@@ -255,7 +386,7 @@ export default function App() {
     description: 'Somos una agencia de autos seminuevos certificados con más de 10 años de experiencia en el mercado...',
     website: 'https://automotors.mx',
     phone: user?.phone_number || '+52 322 123 4567',
-    address: 'Av. Francisco Medina Ascencio 1234, Puerto Vallarta',
+    address: 'Av. Insurgentes Sur 1234, Ciudad de México',
     coverPreview: ''
   });
 
@@ -323,11 +454,16 @@ export default function App() {
     // 1. Отработка прямых ссылок на объявления (Google Merchant, Sitemap, Web Push)
     const urlParams = new URLSearchParams(window.location.search);
     const adIdParam = urlParams.get('ad');
+    const companyIdParam = urlParams.get('store');
     const hash = window.location.hash;
     
     let targetAdId = null;
+    let targetCompanyId = null;
+
     if (adIdParam) targetAdId = adIdParam;
     else if (hash.startsWith('#ad-')) targetAdId = hash.replace('#ad-', '');
+    else if (companyIdParam) targetCompanyId = companyIdParam;
+    else if (hash.startsWith('#company-')) targetCompanyId = hash.replace('#company-', '');
 
     if (targetAdId) {
       fetch(`${API_URL}/ads/${targetAdId}`)
@@ -342,18 +478,42 @@ export default function App() {
         })
         .catch(() => console.error("Error loading deep link ad"));
     }
+    else if (targetCompanyId) {
+      // Защита UX: Обработка прямых ссылок на магазины PRO-продавцов
+      fetch(`${API_URL}/users/${targetCompanyId}/profile`)
+        .then(res => res.ok ? res.json() : null)
+        .then(sellerData => {
+           if (sellerData) {
+             handleViewCompany(sellerData);
+             if (companyIdParam) window.history.replaceState({}, '', `/#company-${targetCompanyId}`);
+           }
+        })
+        .catch(() => console.error("Error loading deep link company"));
+    }
 
     // 2. Отработка токенов и платежей
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
     const error = params.get('error');
     const rToken = params.get('reset_token');
     const rEmail = params.get('email');
     const eToken = params.get('email_token');
     const paymentStatus = params.get('payment');
+    const oauthChallenge = params.get('oauth_challenge');
+    const oauthCode = params.get('oauth_code');
 
     // Обработка возврата с платежного шлюза
     if (paymentStatus === 'success') {
+      // UX Fix: Мгновенно обновляем профиль (роль и баланс), чтобы пользователь сразу увидел свой PRO-статус
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } })
+          .then(res => res.json())
+          .then(userData => {
+            setUser(userData);
+            setUserRole(userData.role || 'individual');
+            localStorage.setItem('user', JSON.stringify(userData));
+          }).catch(() => {});
+      }
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (paymentStatus === 'error') {
       const token = localStorage.getItem('auth_token');
@@ -392,17 +552,38 @@ export default function App() {
       setAuthMode('reset_password');
       setShowAuthModal(true);
       window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (token) {
-      localStorage.setItem('auth_token', token);
+    } else if (oauthChallenge) {
+      setTwoFactorChallengeToken(oauthChallenge);
+      setTwoFactorEmail('');
+      setRequiresTwoFactor(true);
+      setAuthMode('login');
+      setShowAuthModal(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (oauthCode) {
       window.history.replaceState({}, document.title, window.location.pathname); // Очищаем URL
-      
-      fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => res.json())
-        .then(userData => {
-          setUser(userData);
-          setUserRole(userData.role || 'individual');
-          localStorage.setItem('user', JSON.stringify(userData));
-        }).catch(err => console.error(err));
+
+      fetch(`${API_URL}/auth/oauth/exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: oauthCode })
+      })
+        .then(async (res) => ({ ok: res.ok, data: await res.json() }))
+        .then(({ ok, data }) => {
+          if (!ok || !data.access_token || !data.user) {
+            throw new Error(data.message || 'OAuth exchange failed');
+          }
+          localStorage.setItem('auth_token', data.access_token);
+          setUser(data.user);
+          setUserRole(data.user.role || 'individual');
+          localStorage.setItem('user', JSON.stringify(data.user));
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Error de autenticación con Google');
+        });
+    } else if (params.get('token')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      alert('Ese enlace de autenticación ya no es válido. Inicia sesión de nuevo.');
     } else if (error) {
       alert('Error de autenticación con Google');
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -473,9 +654,12 @@ export default function App() {
 
         return () => {
             channel.stopListening('.NewNotification');
+            echo.leave(`private-App.Models.User.${user.id}`); // Закрываем приватный канал с правильным префиксом
         };
     }
-}, [user]);
+// Защита от DDoS WebSockets (Connection Thrashing): привязываем зависимость ТОЛЬКО к ID,
+// иначе при любом обновлении профиля/баланса React будет рвать и заново создавать сокет-соединение
+}, [user?.id]);
 
   // --- WEB PUSH API SUBSCRIPTION LOGIC ---
   const subscribeToPush = async () => {
@@ -510,8 +694,10 @@ export default function App() {
 
   // --- GOOGLE PLACES AUTOCOMPLETE ---
   useEffect(() => {
+    if (!mapsApiKey) return;
+
     const initAutocomplete = (ref) => {
-      if (window.google && ref.current) {
+      if (window.google?.maps?.places && ref.current && !ref.current.dataset.autocompleteReady) {
           const autocomplete = new window.google.maps.places.Autocomplete(ref.current, {
               types: ['(cities)'],
               componentRestrictions: { country: 'mx' }
@@ -526,11 +712,34 @@ export default function App() {
                   setSearchLocationInput(place.formatted_address);
               }
           });
+          ref.current.dataset.autocompleteReady = 'true';
       }
     };
-    initAutocomplete(desktopLocationInputRef);
-    initAutocomplete(mobileLocationInputRef);
-  }, [desktopLocationInputRef.current, mobileLocationInputRef.current]);
+
+    const bindAutocomplete = () => {
+      // Google Maps Autocomplete отключен в Header, так как мы используем кастомные выпадающие списки
+      // Он остался доступен для других компонентов (например, PostScreen)
+    };
+
+    if (window.google?.maps?.places) {
+      bindAutocomplete();
+      return;
+    }
+
+    const scriptId = 'google-maps-places-script';
+    let script = document.getElementById(scriptId);
+    if (!script) {
+      script = document.createElement('script');
+      script.id = scriptId;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsApiKey)}&libraries=places&callback=Function.prototype`;
+      script.async = true;
+      script.defer = true;
+      script.addEventListener('load', bindAutocomplete, { once: true });
+      document.head.appendChild(script);
+    } else {
+      script.addEventListener('load', bindAutocomplete, { once: true });
+    }
+  }, [mapsApiKey]);
 
   useEffect(() => {
     if (user && user.notification_preferences) {
@@ -660,6 +869,18 @@ export default function App() {
     if (debouncedSearch) params.append('search', debouncedSearch);
     if (activeCat) params.append('category', activeCat);
     if (selectedState && !searchLocation && !debouncedLocInput) params.append('location', selectedState);
+        
+        // Прикрепляем значения глобальных фильтров и EAV-атрибутов для Laravel Controller
+        if (minPrice) params.append('min_price', minPrice);
+        if (maxPrice) params.append('max_price', maxPrice);
+        if (conditionFilter.length > 0) params.append('condition', conditionFilter.join(','));
+        Object.keys(dynamicFilters).forEach(key => {
+            if (Array.isArray(dynamicFilters[key]) && dynamicFilters[key].length > 0) {
+                dynamicFilters[key].forEach(v => params.append(`filters[${key}][]`, v));
+            } else if (typeof dynamicFilters[key] === 'string' && dynamicFilters[key]) {
+                params.append(`filters[${key}]`, dynamicFilters[key]);
+            }
+        });
 
     try {
       const res = await fetch(`${API_URL}/ads?${params.toString()}`);
@@ -672,7 +893,7 @@ export default function App() {
       }
     } catch (err) { console.error("Error fetching ads", err); } 
     finally { setLoadingAds(false); setLoadingMore(false); }
-  }, [searchQuery, activeCat, selectedState, searchLocation, radius]); // Зависимости для пересоздания функции
+  }, [debouncedSearch, debouncedLocInput, activeCat, selectedState, searchLocation, radius, minPrice, maxPrice, conditionFilter, dynamicFilters]); // Защита от бага Stale Closure в React
 
   const loadFavorites = useCallback(async () => {
     if (!user) return;
@@ -692,7 +913,7 @@ export default function App() {
   useEffect(() => {
     setServerAds([]); // Сбрасываем объявления при смене фильтров
     loadAds(1);
-  }, [debouncedSearch, activeCat, selectedState, searchLocation, debouncedLocInput, radius]);
+  }, [debouncedSearch, activeCat, selectedState, searchLocation, debouncedLocInput, radius, minPrice, maxPrice, conditionFilter, dynamicFilters]);
   useEffect(() => { loadFavorites(); }, [loadFavorites]);
 
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: ПОЛЬЗОВАТЕЛИ ---
@@ -700,7 +921,8 @@ export default function App() {
     setLoadingAdminUsers(true);
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`${API_URL}/users`, { headers: { 'Authorization': `Bearer ${token}` } });
+      // UX Fix: Передаем поисковый запрос на бэкенд, чтобы поиск работал по ВСЕЙ базе данных, а не только по первой странице
+      const res = await fetch(`${API_URL}/users?search=${encodeURIComponent(adminUserSearch)}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         // Фикс белого экрана: Laravel возвращает { data: [...] } при пагинации
@@ -708,7 +930,7 @@ export default function App() {
       }
     } catch (err) { console.error("Error fetching users", err); } 
     finally { setLoadingAdminUsers(false); }
-  }, []);
+  }, [adminUserSearch]);
 
   const handleAdminVerifyUser = async (id) => {
     try {
@@ -948,8 +1170,8 @@ export default function App() {
           alert(result.message);
           setAuthMode('login');
         } else if (result.two_factor) {
-          // Backend requires 2FA — capture the email and redirect to 2FA input
-          setTwoFactorEmail(data.email || '');
+          setTwoFactorEmail(result.email || data.email || '');
+          setTwoFactorChallengeToken(result.challenge_token || '');
           setRequiresTwoFactor(true);
         } else {
           if (!result.user) {
@@ -984,7 +1206,10 @@ export default function App() {
       const res = await fetch(`${API_URL}/login/two-factor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          challenge_token: twoFactorChallengeToken,
+          code: data.code,
+        })
       });
       const result = await res.json();
       if (res.ok) {
@@ -993,6 +1218,8 @@ export default function App() {
         if (result.access_token) localStorage.setItem('auth_token', result.access_token);
         setShowAuthModal(false);
         setRequiresTwoFactor(false);
+        setTwoFactorChallengeToken('');
+        setTwoFactorEmail('');
       } else {
         alert(result.message || 'Código 2FA inválido.');
       }
@@ -1051,14 +1278,21 @@ export default function App() {
     setFavoriteIds([]);
     setUserAds([]);
     setFavoriteAds([]);
-    setCurrentTab('home');
-    // Revoke token on backend (fire-and-forget, don't block UI)
+    // FIX: Ghost UI. Сбрасываем открытое объявление/магазин при выходе
+    setViewedAd(null);
+    setViewedCompany(null);
+    
+    // Защита от Logout Blackhole: дожидаемся отзыва токена на сервере, прежде чем перезагружать страницу, иначе браузер оборвет запрос
     if (token) {
-      fetch(`${API_URL}/logout`, {
+      await fetch(`${API_URL}/logout`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       }).catch(err => console.error('Logout revoke error:', err));
     }
+    
+    // UX Оптимизация: Используем мягкий сброс SPA вместо жесткой перезагрузки страницы
+    setCurrentTab('home');
+    window.scrollTo(0, 0);
   };
 
   // --- ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ---
@@ -1208,6 +1442,50 @@ export default function App() {
     setImages(prev => prev.filter((_, i) => i !== idxToRemove));
   };
 
+  const handleGenerateDescription = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    const firstNewImage = images.find(img => img.source === 'new' && img.file);
+    if (!firstNewImage?.file) {
+      alert('Agrega al menos una foto nueva para generar la descripción con IA.');
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const formData = new FormData();
+      formData.append('image', firstNewImage.file);
+      if (form.title) formData.append('title', form.title);
+      if (form.category) formData.append('category', form.category);
+      if (form.condition) formData.append('condition', form.condition);
+
+      const res = await fetch(`${API_URL}/ads/generate-description`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.message || 'No se pudo generar la descripción.');
+        return;
+      }
+
+      if (data.description) {
+        setForm(prev => ({ ...prev, description: data.description }));
+      }
+    } catch (err) {
+      console.error('AI description error', err);
+      alert('Error de conexión al generar la descripción.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handlePostSubmit = async (e) => {
     e.preventDefault();
     if (!user) { 
@@ -1223,6 +1501,15 @@ export default function App() {
     formData.append('location', form.location || 'México');
     formData.append('category', form.category || 'general');
     if (user && user.id) formData.append('user_id', user.id);
+    
+    // Добавляем динамические атрибуты (EAV JSON)
+    if (form.attributes) {
+      Object.keys(form.attributes).forEach(key => {
+        if (form.attributes[key]) {
+          formData.append(`attributes[${key}]`, form.attributes[key]);
+        }
+      });
+    }
 
     // Обработка изображений для создания и обновления
     images.forEach(img => {
@@ -1235,8 +1522,10 @@ export default function App() {
     });
 
     // Добавляем видеофайл, если он выбран
-    if (videoFile) {
+    if (videoFile && !videoFile.isExisting) {
       formData.append('video_file', videoFile);
+    } else if (editingAd && editingAd.video_url && !videoFile) {
+      formData.append('remove_video', 'true'); // Корректное удаление видео
     }
 
     try {
@@ -1262,7 +1551,7 @@ export default function App() {
         });
 
         // Сбрасываем состояние формы
-        setForm({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo' });
+        setForm({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
@@ -1299,6 +1588,11 @@ export default function App() {
 
   // --- РЕДАКТИРОВАНИЕ ОБЪЯВЛЕНИЯ ---
   const handleEditAd = (ad) => {
+    let parsedAttributes = {};
+    try {
+        parsedAttributes = typeof ad.attributes === 'string' ? JSON.parse(ad.attributes) : (ad.attributes || {});
+    } catch(e) { console.error("Error parsing attributes", e); }
+
     setEditingAd(ad);
     setForm({
       title: ad.title,
@@ -1307,13 +1601,14 @@ export default function App() {
       location: ad.location || '',
       category: ad.category || '',
       condition: ad.condition || 'usado',
+      attributes: parsedAttributes
     });
     setImages(getImageUrls(ad.image_url, ad.image).map(url => ({
       source: 'existing',
       url: url,
       preview: url
     })));
-    setVideoFile(null); // Сбрасываем видеофайл при редактировании
+    setVideoFile(ad.video_url ? { name: 'Video adjunto (Haz clic en la papelera para eliminar)', isExisting: true } : null); // Исправляем баг потери видео при редактировании
     setCurrentTab('post');
   };
 
@@ -1575,8 +1870,8 @@ export default function App() {
 
     return (
       <article key={ad.id} onClick={() => handleViewAd(ad)} className="card bg-white border border-slate-200 rounded-2xl overflow-hidden cursor-pointer group flex flex-col h-full shrink-0">
-        <div className="relative">
-          <img src={safeImage} loading="lazy" className="w-full h-[160px] md:h-[180px] object-cover group-hover:scale-105 transition-transform duration-500" alt={ad.title}/>
+        <div className="relative bg-slate-200 dark:bg-slate-800">
+          <img src={safeImage} loading="lazy" className="w-full h-[160px] md:h-[180px] object-cover group-hover:scale-105 transition-transform duration-500 opacity-0 transition-opacity duration-300" onLoad={handleAdImageLoad} alt={ad.title}/>
           <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white z-10">
             <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700'}`} />
           </button>
@@ -1598,11 +1893,25 @@ export default function App() {
     );
   };
 
+  // --- РЕНДЕР СКЕЛЕТОНА (ЗАГЛУШКИ) ---
+  const renderSkeletonCard = (index) => (
+    <article key={`skeleton-${index}`} className="card bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col h-full shrink-0 animate-pulse">
+      <div className="relative bg-slate-200 dark:bg-slate-700 w-full h-[160px] md:h-[180px]"></div>
+      <div className="p-3.5 flex flex-col flex-1 bg-white z-10">
+        <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded-lg w-1/2 mb-2 mt-1"></div>
+        <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg w-3/4 mb-4"></div>
+        <div className="mt-auto pt-2 flex items-center justify-between">
+          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded-md w-1/3"></div>
+        </div>
+      </div>
+    </article>
+  );
+
   // --- РЕНДЕР СТРАНИЦЫ ТОВАРА ---
   const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} />;
 
   // --- РЕНДЕР ПУБЛИЧНОГО ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
-  const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
+  const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
 
   // --- РЕНДЕР МОДАЛКИ С QR-КОДОМ ---
   const renderQRModal = () => {
@@ -1774,10 +2083,10 @@ export default function App() {
   const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderUserDashboard={renderUserDashboard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
-  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} />;
+  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
-  const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} />;
+  const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
 
   const renderCouponModal = () => {
     if (!showCouponModal) return null;
@@ -1852,8 +2161,8 @@ export default function App() {
         <Search className="w-6 h-6 mb-1" />
       </button>
       <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-8"><div className="flex flex-col items-center justify-center bg-[#84CC16] text-white p-3.5 rounded-full shadow-lg border-4 border-[#f5f5f5]"><PlusCircle className="w-7 h-7" /></div></button>
-      <button onClick={() => { user ? setShowNotifications(!showNotifications) : setShowAuthModal(true); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}><Bell className="w-6 h-6 mb-1" />{notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}</button>
-      <button onClick={() => { user ? setCurrentTab('profile') : setShowAuthModal(true) }} className={`flex flex-col items-center p-1 ${currentTab === 'profile' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}><Bell className="w-6 h-6 mb-1" />{notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}</button>
+      <button onClick={() => { user ? setCurrentTab('profile') : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 ${currentTab === 'profile' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <User className="w-6 h-6 mb-1" />
       </button>
     </div>
@@ -1872,10 +2181,42 @@ export default function App() {
             <div className="hidden lg:flex flex-1 items-center">
               <div className="flex w-full max-w-[820px] items-center bg-white border border-slate-300 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-[#84CC16]/30 focus-within:border-[#84CC16]">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-              <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder="Buscar autos, celulares, empleos..." className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
+              <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
-                <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
-              <input ref={desktopLocationInputRef} value={searchLocationInput} onChange={(e) => { setSearchLocationInput(e.target.value); if(e.target.value === '') setSearchLocation(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder="Ubicación" className="w-full max-w-[200px] px-2 py-2.5 bg-transparent outline-none text-[14px]" />
+                
+                {/* КАСТОМНЫЙ ПОПАП ВЫБОРА ЛОКАЦИИ (ШТАТ + ГОРОД) */}
+                <div className="relative flex items-center w-full max-w-[220px]">
+                  <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
+                  <button onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2.5 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
+                    {searchLocationInput || t.location_placeholder || "Estado y Ciudad"}
+                  </button>
+                  
+                  {showLocationPicker && (
+                    <div className="absolute top-full left-0 mt-3 w-[260px] bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50">
+                      <div className="mb-3">
+                        <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
+                        <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
+                          <option value="">{t.all_mexico || 'Todo México'}</option>
+                          {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
+                        </select>
+                      </div>
+                      {locState && (
+                        <div className="mb-4">
+                          <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad / Municipio'}</label>
+                          <select value={locCity} onChange={e => setLocCity(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
+                            <option value="">{t.all_cities || 'Todas las ciudades'}</option>
+                            {MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
+                        <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowLocationPicker(false); executeSearch(); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="h-7 w-px bg-slate-200"></div>
                 <select value={radius} onChange={e => setRadius(Number(e.target.value))} className="bg-transparent px-3 py-2.5 text-[13px] outline-none text-slate-700 w-fit cursor-pointer">
                   <option value={5}>+5 km</option>
@@ -1886,7 +2227,7 @@ export default function App() {
                 </select>
               <button onClick={executeSearch} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5">
                   <Search size={16}/>
-                  Buscar
+                  {t.search_btn || "Buscar"}
                 </button>
               </div>
             </div>
@@ -1903,20 +2244,20 @@ export default function App() {
                 </select>
               </div>
               <div className="relative">
-                <button onClick={() => { user ? setShowNotifications(!showNotifications) : setShowAuthModal(true); }} className="relative p-2.5 hover:bg-slate-100 rounded-xl text-slate-700">
+              <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="relative p-2.5 hover:bg-slate-100 rounded-xl text-slate-700">
                   <Bell className="w-[22px] h-[22px]" />
                   {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
                 </button>
                 {showNotifications && user && (
                   <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50">
                     <div className="p-4 border-b border-slate-100 font-bold text-slate-900 flex justify-between items-center">
-                      <span>Notificaciones</span>
+                    <span>{t.notifications || "Notificaciones"}</span>
                       {notifications.filter(n => !n.is_read).length > 0 && (
-                        <button onClick={handleMarkAllNotificationsRead} className="text-[11px] text-[#65A30D] hover:underline font-medium font-sans">Marcar todas leídas</button>
+                      <button onClick={handleMarkAllNotificationsRead} className="text-[11px] text-[#65A30D] hover:underline font-medium font-sans">{t.mark_all_read || "Marcar todas leídas"}</button>
                       )}
                     </div>
                     <div className="max-h-80 overflow-y-auto">
-                      {notifications.length === 0 ? <div className="p-6 text-center text-slate-500 text-[13px]">No tienes notificaciones</div> :
+                    {notifications.length === 0 ? <div className="p-6 text-center text-slate-500 text-[13px]">{t.no_notifications || "No tienes notificaciones"}</div> :
                         notifications.map(n => (
                           <div key={n.id} onClick={() => handleMarkNotificationRead(n.id)} className={`p-4 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors relative group ${!n.is_read ? 'bg-[#84CC16]/5' : ''}`}>
                             <h4 className={`text-[13px] pr-6 ${!n.is_read ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>{n.title}</h4>
@@ -1932,20 +2273,20 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <button onClick={() => { user ? setCurrentTab('profile') : setShowAuthModal(true); setDashboardTab('favorites'); }} className="relative p-2.5 hover:bg-slate-100 rounded-xl">
+            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="relative p-2.5 hover:bg-slate-100 rounded-xl">
                 <Heart className="w-[22px] h-[22px] text-slate-700" />
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
-              <button onClick={() => { user ? setCurrentTab('profile') : setShowAuthModal(true); setViewedAd(null); setViewedCompany(null); }} className="flex items-center gap-2 pl-1 pr-2.5 py-1 hover:bg-slate-100 rounded-xl">
+            <button onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="flex items-center gap-2 pl-1 pr-2.5 py-1 hover:bg-slate-100 rounded-xl">
                 {user?.avatar_url ? (
                   <img src={getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-lg object-cover" alt=""/>
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500"><User size={18} /></div>
                 )}
-                <span className="text-[13px] font-medium hidden lg:block">{user?.name || 'Invitado'}</span>
+              <span className="text-[13px] font-medium hidden lg:block">{user?.name || t.guest || 'Invitado'}</span>
               </button>
               <button onClick={() => { setCurrentTab('post'); setViewedAd(null); setViewedCompany(null); }} className="btn-lg bg-[#84CC16] hover:bg-[#65A30D] text-white shadow-md shadow-[#84CC16]/20 ml-1 hidden sm:inline-flex items-center gap-1.5">
-                <PlusCircle className="w-4 h-4" /> Post ad
+              <PlusCircle className="w-4 h-4" /> {t.post_ad || "Publicar"}
               </button>
             </div>
           </div>
@@ -1953,11 +2294,34 @@ export default function App() {
           <div className="lg:hidden pb-3 flex flex-col gap-2">
             <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
               <Search className="w-4 h-4 text-slate-500" />
-              <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder="Buscar producto..." className="bg-transparent w-full text-sm outline-none"/>
+            <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent w-full text-sm outline-none"/>
             </div>
-            <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
-              <MapPin className="w-4 h-4 text-slate-500" />
-              <input ref={mobileLocationInputRef} value={searchLocationInput} onChange={(e) => { setSearchLocationInput(e.target.value); if(e.target.value === '') setSearchLocation(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder="Ubicación o Ciudad" className="bg-transparent w-full text-sm outline-none"/>
+            
+            {/* МОБИЛЬНЫЙ ВЫБОР ЛОКАЦИИ */}
+            <div className="relative">
+              <div onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2.5 cursor-pointer">
+                <MapPin className="w-4 h-4 text-slate-500" />
+                <span className={`text-sm ${searchLocationInput ? 'text-slate-900' : 'text-slate-500'}`}>{searchLocationInput || t.location_placeholder_short || "Ubicación o Estado"}</span>
+              </div>
+              {showMobileLocationPicker && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50">
+                  <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
+                  <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white">
+                    <option value="">{t.all_mexico || 'Todo México'}</option>
+                    {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
+                  </select>
+                  {locState && (
+                    <>
+                      <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad'}</label>
+                      <select value={locCity} onChange={e => setLocCity(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white">
+                        <option value="">{t.all_cities || 'Todas las ciudades'}</option>
+                        {MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>)}
+                      </select>
+                    </>
+                  )}
+                  <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowMobileLocationPicker(false); executeSearch(); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2006,12 +2370,12 @@ export default function App() {
               <div className="flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
                 <MercastoLogo className="h-8" />
               </div>
-              <p className="text-[13px] text-slate-400 leading-relaxed">Mexico's fastest local marketplace. Buy, sell, rent, and find jobs — safely.</p>
+              <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'El marketplace local de más rápido crecimiento en México. Compra, vende, renta y encuentra empleo de forma segura.'}</p>
             </div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Buyers</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('help'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">How to buy</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('safety'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">Safety tips</a></li><li><a href="#" onClick={e=>{e.preventDefault(); user ? setCurrentTab('profile') : setShowAuthModal(true)}} className="hover:text-white cursor-pointer">Favorites</a></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Sellers</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={(e) => { e.preventDefault(); setCurrentTab('post'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">Post ad</a></li><li><a href="#" onClick={(e) => { e.preventDefault(); setShowPricingModal(true)}} className="hover:text-white cursor-pointer">Pricing</a></li><li><a href="#" onClick={e=>{e.preventDefault(); user ? setCurrentTab('profile') : setShowAuthModal(true)}} className="hover:text-white cursor-pointer">Promote listing</a></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Business</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={(e) => { e.preventDefault(); setShowPricingModal(true)}} className="hover:text-white cursor-pointer">Mercasto Pro</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('terms'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">API</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('terms'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">Partners</a></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">Help</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('help'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">Help Center</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('safety'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">Safety Center</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('privacy'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">Privacy Policy</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('help'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('safety'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><a href="#" onClick={e=>{e.preventDefault(); if(user){setCurrentTab('profile'); setDashboardTab('favorites');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer">{t.favorites || 'Favoritos'}</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={(e) => { e.preventDefault(); setCurrentTab('post'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><a href="#" onClick={(e) => { e.preventDefault(); setShowPricingModal(true)}} className="hover:text-white cursor-pointer">{t.pricing || 'Precios'}</a></li><li><a href="#" onClick={e=>{e.preventDefault(); if(user){setCurrentTab('profile'); setDashboardTab('my_ads');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer">{t.promote_ad || 'Promocionar anuncio'}</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={(e) => { e.preventDefault(); setShowPricingModal(true)}} className="hover:text-white cursor-pointer">Mercasto Pro</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('terms'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">API</a></li><li><a href="#" onClick={e=>{e.preventDefault(); alert('Escríbenos a partners@mercasto.com');}} className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.help || 'Ayuda'}</h5><ul className="space-y-2 text-[13px]"><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('help'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">{t.help_center || 'Centro de Ayuda'}</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('safety'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">{t.safety_center || 'Centro de Seguridad'}</a></li><li><a href="#" onClick={e=>{e.preventDefault(); setCurrentTab('privacy'); window.scrollTo(0,0);}} className="hover:text-white cursor-pointer">{t.privacy_policy || 'Aviso de Privacidad'}</a></li></ul></div>
           </div>
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-[12px] text-slate-400">
@@ -2028,13 +2392,6 @@ export default function App() {
       {renderQRModal()}
       {renderReportModal()}
       {renderUserReportModal()}
-      <PricingModal showPricingModal={showPricingModal} setShowPricingModal={setShowPricingModal} priceTab={priceTab} setPriceTab={setPriceTab} handleClipPayment={handleClipPayment} t={t} />
-      <ProfileModal showProfileModal={showProfileModal} setShowProfileModal={setShowProfileModal} handleProfileSubmit={handleProfileSubmit} profileForm={profileForm} setProfileForm={setProfileForm} profileLoading={profileLoading} user={user} getImageUrl={getImageUrl} />
-      <CouponModal showCouponModal={showCouponModal} setShowCouponModal={setShowCouponModal} handleRedeemCoupon={handleRedeemCoupon} couponInput={couponInput} setCouponInput={setCouponInput} />
-      <QRModal qrModalData={qrModalData} setQrModalData={setQrModalData} />
-      <ReportModal showReportModal={showReportModal} setShowReportModal={setShowReportModal} handleReportAd={handleReportAd} reportForm={reportForm} setReportForm={setReportForm} />
-      <UserReportModal showUserReportModal={showUserReportModal} setShowUserReportModal={setShowUserReportModal} handleUserReportSubmit={handleUserReportSubmit} userReportForm={userReportForm} setUserReportForm={setUserReportForm} />
-      <AuthModal showAuthModal={showAuthModal} setShowAuthModal={setShowAuthModal} requiresTwoFactor={requiresTwoFactor} handleTwoFactorSubmit={handleTwoFactorSubmit} authMode={authMode} setAuthMode={setAuthMode} authLoading={authLoading} authPhone={authPhone} handlePhoneRequestSubmit={handlePhoneRequestSubmit} handlePhoneVerifySubmit={handlePhoneVerifySubmit} handleAuthSubmit={handleAuthSubmit} availableProviders={availableProviders} API_URL={API_URL} t={t} />
 
       {/* AUTH MODAL */}
       {showAuthModal && (
@@ -2190,3 +2547,4 @@ export default function App() {
     </div>
   );
 }
+ 

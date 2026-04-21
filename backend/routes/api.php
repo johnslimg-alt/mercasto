@@ -14,20 +14,28 @@ use App\Http\Controllers\Api\TwoFactorAuthenticationController;
 // Public routes
 Route::get('/ads', [AdController::class, 'index']);
 Route::get('/ads/{id}', [AdController::class, 'show']); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
-Route::get('/ads/{id}/pdf', [AdController::class, 'generatePdf']);
+
+// Защита от CPU DDoS: генерация PDF очень ресурсоемкая, ставим лимит 10 в минуту
+Route::middleware('throttle:10,1')->group(function () {
+    Route::get('/ads/{id}/pdf', [AdController::class, 'generatePdf']);
+});
 Route::get('/sitemap.xml', [AdController::class, 'sitemap']);
 Route::get('/google-merchant.xml', [AdController::class, 'googleMerchantFeed']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/users/{id}/reviews', [ReviewController::class, 'index']);
+Route::get('/users/{id}/profile', [ProfileController::class, 'publicProfile']); // Публичный профиль продавца (Storefront)
 
 // Регистрация маршрутов для WebSockets (Reverb / Echo) с авторизацией Sanctum
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
-// Debug route — only available in non-production environments
+// Debug route — only available in non-production environments (Защищено от исчерпания квот)
 if (app()->environment('local', 'staging')) {
-    Route::get('/debug-sentry', function () {
-        throw new Exception('Это тестовое исключение для Sentry!');
-    });
+    Route::get('/debug-sentry', function (Request $request) {
+        if ($request->user() && $request->user()->role === 'admin') {
+            throw new Exception('Это тестовое исключение para Sentry!');
+        }
+        abort(403);
+    })->middleware('auth:sanctum');
 }
 
 // Группа для защиты от перебора (Rate Limiting)
@@ -35,6 +43,7 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/login/two-factor', [AuthController::class, 'loginTwoFactor']);
+    Route::post('/auth/oauth/exchange', [AuthController::class, 'exchangeOAuthCode']);
     Route::post('/auth/phone/request', [AuthController::class, 'requestPhoneCode']);
     Route::post('/auth/phone/verify', [AuthController::class, 'verifyPhoneCode']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
@@ -60,13 +69,18 @@ Route::middleware('throttle:5,1')->group(function () {
     Route::post('/users/{id}/report', [ProfileController::class, 'report']); // Пожаловаться на пользователя
 });
 
-// Webhook routes (no auth middleware)
-Route::post('/webhooks/clip', [PaymentController::class, 'handleWebhook']);
+// Webhook routes (Защита от Crypto CPU DoS: ограничиваем попытки брутфорса HMAC-подписей)
+Route::middleware('throttle:60,1')->group(function () {
+    Route::post('/webhooks/clip', [PaymentController::class, 'handleWebhook']);
+});
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ads', [AdController::class, 'store']);
-    Route::post('/ads/generate-description', [AdController::class, 'generateDescription']); // Gemini AI
+    // Защита ИИ от спама и истощения лимитов API (максимум 5 генераций в минуту на пользователя)
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/ads/generate-description', [AdController::class, 'generateDescription']); // Gemini AI
+    });
     Route::post('/categories', [CategoryController::class, 'store']); // Создание категории (только для админов)
     Route::put('/categories/{id}', [CategoryController::class, 'update']); // Редактирование категории
     Route::post('/ads/bulk-upload', [AdController::class, 'bulkUpload']); // Массовая загрузка CSV
@@ -78,9 +92,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [ProfileController::class, 'show']);
     Route::post('/user/profile', [ProfileController::class, 'update']);
     Route::post('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля
-    Route::post('/user/email/request', [ProfileController::class, 'requestEmailChange']); // Запрос на смену email
+    
+    // Защита домена от блокировки спам-фильтрами (AWS SES/Mailgun): лимит на отправку писем
+    Route::middleware('throttle:3,1')->group(function () {
+        Route::post('/user/email/request', [ProfileController::class, 'requestEmailChange']); // Запрос на смену email
+    });
     Route::post('/user/email/confirm', [ProfileController::class, 'confirmEmailChange']); // Подтверждение нового email
-    Route::post('/user/notifications/create', [ProfileController::class, 'createNotification']); // Создать уведомление вручную
     Route::get('/user/notifications/list', [ProfileController::class, 'getNotifications']); // Получить уведомления
     Route::post('/user/notifications/{id}/read', [ProfileController::class, 'markNotificationRead']); // Прочитать уведомление
     Route::post('/user/notifications/read-all', [ProfileController::class, 'markAllNotificationsRead']); // Прочитать все уведомления
@@ -90,6 +107,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/push-unsubscribe', [ProfileController::class, 'pushUnsubscribe']); // Отписка от Web Push
     Route::delete('/user', [ProfileController::class, 'deleteAccount']); // User self-deletion
     Route::post('/users/{id}/verify', [ProfileController::class, 'verifyUser']);
+    Route::post('/user/kyc', [ProfileController::class, 'submitKyc']); // Загрузка документов KYC
 
     // 2FA Routes
     Route::post('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store']);
@@ -108,6 +126,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [ProfileController::class, 'index']); // Список пользователей (Админ)
     Route::get('/admin/ads/pending', [AdController::class, 'pendingAds']); // Объявления на модерации (Админ)
     Route::get('/admin/reports', [AdController::class, 'getReports']); // Список жалоб (Админ)
+    Route::get('/admin/kyc', [ProfileController::class, 'getPendingKyc']); // Заявки на верификацию (Админ)
+    Route::post('/admin/kyc/{id}/approve', [ProfileController::class, 'approveKyc']); // Одобрить KYC
+    Route::post('/admin/kyc/{id}/reject', [ProfileController::class, 'rejectKyc']); // Отклонить KYC
+    Route::get('/admin/kyc/document/{id}', [ProfileController::class, 'viewKycDocument']); // Безопасный просмотр паспорта
     Route::delete('/admin/reports/{id}', [AdController::class, 'deleteReport']); // Удалить жалобу (Админ)
     Route::get('/admin/user-reports', [ProfileController::class, 'getUserReports']); // Жалобы на пользователей
     Route::delete('/admin/user-reports/{id}', [ProfileController::class, 'deleteUserReport']); // Удалить жалобу на пользователя
@@ -118,7 +140,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/ads', [AdController::class, 'myAds']);
     Route::get('/user/favorite-ads', [AdController::class, 'favoriteAds']);
     Route::get('/user/analytics', [AdController::class, 'analytics']);
-    Route::post('/payment/clip', [PaymentController::class, 'createClipCheckout']); // Генерация оплаты Clip
+    
+    // Защита от блокировки аккаунта Clip (Third-Party Cascade DoS): ограничиваем генерацию ссылок
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('/payment/clip', [PaymentController::class, 'createClipCheckout']); // Генерация оплаты Clip
+    });
 
     // Subscription Routes
     Route::get('/user/subscriptions', [ProfileController::class, 'getSubscriptions']);

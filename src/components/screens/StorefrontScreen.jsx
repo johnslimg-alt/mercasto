@@ -4,7 +4,7 @@ import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCo
 export default function StorefrontScreen({
   company, t, getImageUrl, companyRatingStats, companyAds, companyReviews,
   loadingCompanyAds, submittingReview, setShowUserReportModal, setQrModalData,
-  setViewedCompany, renderAdCard, handleReviewSubmit, reviewForm, setReviewForm,
+  setViewedCompany, renderAdCard, renderSkeletonCard, handleReviewSubmit, reviewForm, setReviewForm,
   user, handleViewCompany
 }) {
   if (!company) return null;
@@ -35,7 +35,7 @@ export default function StorefrontScreen({
              <p className="text-[14px] text-slate-500 mt-1 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> México</p>
              <div className="flex items-center gap-1 mt-2">
                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-               <span className="font-bold text-slate-900 text-[14px]">{companyRatingStats.average}</span>
+               <span className="font-bold text-slate-900 text-[14px]">{Number(companyRatingStats.average || 0).toFixed(1)}</span>
                <span className="text-slate-500 text-[13px]">({companyRatingStats.total} reseñas)</span>
              </div>
              
@@ -73,7 +73,9 @@ export default function StorefrontScreen({
 
       <h3 className="text-[18px] font-bold text-slate-900 mb-5">{t.active_ads} ({companyAds.length})</h3>
       {loadingCompanyAds ? (
-        <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 text-[#84CC16] animate-spin" /></div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => renderSkeletonCard(`storefront-${i}`))}
+        </div>
       ) : companyAds.length === 0 ? (
         <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px] bg-white rounded-3xl border border-slate-200">{t.noAds}</div>
       ) : (

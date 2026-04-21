@@ -7,15 +7,21 @@
     @foreach($ads as $ad)
     <item>
         <g:id>{{ $ad->id }}</g:id>
-        <g:title><![CDATA[{{ \Illuminate\Support\Str::limit($ad->title, 150) }}]]></g:title>
-        <g:description><![CDATA[{{ \Illuminate\Support\Str::limit(strip_tags($ad->description), 5000) }}]]></g:description>
+        <g:title><![CDATA[{{ str_replace(']]>', ']]]]><![CDATA[>', \Illuminate\Support\Str::limit($ad->title, 150)) }}]]></g:title>
+        <g:description><![CDATA[{{ str_replace(']]>', ']]]]><![CDATA[>', \Illuminate\Support\Str::limit(strip_tags($ad->description), 5000)) }}]]></g:description>
         <g:link>{{ config('app.frontend_url', 'https://mercasto.com') }}/?ad={{ $ad->id }}</g:link>
         @php
             $images = is_string($ad->image_url) ? json_decode($ad->image_url, true) : [];
             $mainImage = is_array($images) && count($images) > 0 ? $images[0] : null;
         @endphp
         @if($mainImage)
-        <g:image_link>{{ rtrim(config('app.frontend_url', 'https://mercasto.com'), '/') . '/storage/' . ltrim($mainImage, '/') }}</g:image_link>
+        @php
+            // Защита от битых ссылок при использовании AWS S3 / Cloudflare R2
+            $imageUrl = str_starts_with($mainImage, 'http') 
+                ? $mainImage 
+                : \Illuminate\Support\Facades\Storage::disk('public')->url($mainImage);
+        @endphp
+        <g:image_link><![CDATA[{{ $imageUrl }}]]></g:image_link>
         @endif
         <g:availability>in stock</g:availability>
         <g:price>{{ number_format($ad->price, 2, '.', '') }} MXN</g:price>

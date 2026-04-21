@@ -8,6 +8,7 @@ use App\Events\NewNotification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class PaymentController extends Controller
 {
@@ -25,17 +26,50 @@ class PaymentController extends Controller
         $user = $request->user();
         $checkoutId = 'clip_' . Str::uuid();
 
-        // Создаем запись о платеже в нашей базе данных со статусом 'pending'
-        DB::table('payments')->insert([
-            'user_id' => $user->id,
-            'ad_id' => $request->ad_id,
-            'clip_checkout_id' => $checkoutId,
-            'amount' => $request->amount,
-            'description' => $request->description,
-            'status' => 'pending',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $amount = (float) $request->amount;
+        $description = $request->description;
+
+        // Защита от подмены цен (Client-Side Pricing Exploit): Жестко фиксируем все цены
+        $packages = [
+            'Suscripción Paquete Plus' => 99,
+            'Suscripción PRO Estándar' => 500,
+            'Suscripción PRO Ilimitado' => 1500,
+        ];
+        
+        if ($request->ad_id) {
+            // Защита от IDOR: убеждаемся, что пользователь продвигает только свои объявления
+            $ad = DB::table('ads')->where('id', $request->ad_id)->first();
+            if (!$ad || $ad->user_id !== $user->id) {
+                return response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403);
+            }
+            
+            // Финансовая защита (Fraud Prevention): блокируем оплату для уже продвинутых или неактивных объявлений
+            if ($ad->status !== 'active') {
+                return response()->json(['message' => 'Solo puedes promocionar anuncios que estén activos.'], 400);
+            }
+            if ($ad->promoted === 'destacado') {
+                return response()->json(['message' => 'Este anuncio ya está destacado.'], 400);
+            }
+
+            $amount = 50; // Жесткая цена за продвижение
+            $description = "Promoción de anuncio #" . $request->ad_id;
+        } elseif (array_key_exists($description, $packages)) {
+            $amount = (float) $packages[$description];
+        } else {
+            return response()->json(['message' => 'Servicio no válido'], 400);
+        }
+
+        // Защита от DB Bloat DoS: переиспользуем 'pending' сессии
+        $existing = DB::table('payments')->where(['user_id' => $user->id, 'ad_id' => $request->ad_id, 'description' => $description, 'status' => 'pending'])->first();
+        if ($existing) {
+            DB::table('payments')->where('id', $existing->id)->update(['clip_checkout_id' => $checkoutId, 'amount' => $amount, 'updated_at' => now()]);
+        } else {
+            DB::table('payments')->insert([
+                'user_id' => $user->id, 'ad_id' => $request->ad_id, 'clip_checkout_id' => $checkoutId, 
+                'amount' => $amount, 'description' => $description, 'status' => 'pending', 
+                'created_at' => now(), 'updated_at' => now()
+            ]);
+        }
 
         // Здесь будет реальный вызов Clip API (https://api.clip.mx/v2/checkouts)
         // $response = Http::withHeaders(['x-api-key' => env('CLIP_API_KEY')])->post('https://api.clip.mx/v2/checkouts', [
@@ -48,9 +82,9 @@ class PaymentController extends Controller
         // Реальный вызов API Clip
         $response = Http::withBasicAuth(config('services.clip.api_key'), config('services.clip.api_secret'))
             ->post('https://api.clip.mx/v2/checkouts', [
-                'amount' => (float) $request->amount,
+                'amount' => $amount,
                 'currency' => 'MXN',
-                'purchase_description' => $request->description,
+                'purchase_description' => $description,
                 'reference' => $checkoutId, // Наш уникальный ID для отслеживания веб-хука
                 'redirection_url' => [
                     'success' => config('app.frontend_url', 'https://mercasto.com') . '/?payment=success',
@@ -93,9 +127,9 @@ class PaymentController extends Controller
         $receivedHash = str_starts_with((string) $signature, 'sha256=') ? substr((string) $signature, 7) : (string) $signature;
 
         if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
+            $clientIpHash = hash('sha256', (string) $request->ip());
             \Illuminate\Support\Facades\Log::warning('Invalid Clip webhook signature', [
-                'ip' => $request->ip(),
-                'signature' => $signature,
+                'ip_hash' => $clientIpHash,
             ]);
             return response()->json(['status' => 'invalid_signature'], 401);
         }
@@ -104,30 +138,43 @@ class PaymentController extends Controller
         $checkoutId = $payload['reference'] ?? null; // Получаем наш ID из веб-хука
 
         if ($checkoutId && isset($payload['status']) && $payload['status'] === 'paid') {
-            $payment = DB::table('payments')->where('clip_checkout_id', $checkoutId)->first();
-            
-            // Защита от двойного списания (Double-Spend): проверяем, не был ли вебхук уже обработан
-            if ($payment && $payment->status !== 'paid' && $payment->user_id) {
-                DB::table('payments')->where('id', $payment->id)->update([
+            // Атомарное обновление для абсолютной защиты от Race Condition (Double-Spend)
+            $updated = DB::table('payments')
+                ->where('clip_checkout_id', $checkoutId)
+                ->where('status', '!=', 'paid')
+                ->update([
                     'status' => 'paid',
                     'webhook_payload' => json_encode($payload),
                     'updated_at' => now(),
                 ]);
 
+            if ($updated) {
+                $payment = DB::table('payments')->where('clip_checkout_id', $checkoutId)->first();
+                if ($payment && $payment->user_id) {
+
                 // Бизнес-логика: Выдаем PRO статус (роль 'business'), если оплачен тариф «PRO» или «Plus»
                 $desc = strtolower($payment->description);
-                if (str_contains($desc, 'pro') || str_contains($desc, 'plus')) {
+                if ((str_contains($desc, 'pro') || str_contains($desc, 'plus')) && $payment->amount >= 99) {
                     DB::table('users')->where('id', $payment->user_id)->update(['role' => 'business']);
                 }
 
                 // Бизнес-логика: Зачисление кредитов (если в описании есть слово «Crédito»)
-                if (str_contains($desc, 'crédito') || str_contains($desc, 'credito')) {
+                if ((str_contains($desc, 'crédito') || str_contains($desc, 'credito')) && $payment->amount >= 1) {
                     DB::table('users')->where('id', $payment->user_id)->increment('balance', $payment->amount);
                 }
                 
                 // Бизнес-логика: Если платеж привязан к объявлению, продвигаем его
                 if ($payment->ad_id) {
                     DB::table('ads')->where('id', $payment->ad_id)->update(['promoted' => 'destacado']);
+                    
+                    // Финансовый Аудит: Логируем оказанную услугу и устанавливаем срок сгорания VIP-статуса (7 дней)
+                    DB::table('ad_promotions')->insert([
+                        'ad_id' => $payment->ad_id,
+                        'type' => 'vip',
+                        'expires_at' => now()->addDays(7),
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
                 }
 
                 // Безопасная генерация Push-уведомления в реальном времени через WebSocket
@@ -143,6 +190,7 @@ class PaymentController extends Controller
                 $notificationData['id'] = $notifId;
                 
                 broadcast(new NewNotification($notificationData));
+                }
             }
         }
 
@@ -202,6 +250,13 @@ class PaymentController extends Controller
             $coupon = DB::table('coupons')->where('code', strtoupper($request->code))->lockForUpdate()->first();
 
             if (!$coupon) return response()->json(['message' => 'Cupón no válido'], 400);
+            
+            // Защита от "Coupon Farming" (генерация бесконечных кредитов через пересоздание аккаунта)
+            $fraudKey = 'coupon_claimed_' . $coupon->id . '_' . hash('sha256', (string) $request->ip());
+            if (Cache::has($fraudKey)) {
+                return response()->json(['message' => 'Este cupón ya fue canjeado desde esta red o dispositivo.'], 400);
+            }
+            
             if ($coupon->used_count >= $coupon->max_uses) return response()->json(['message' => 'Este cupón se ha agotado'], 400);
             
             $exists = DB::table('coupon_user')->where('user_id', $user->id)->where('coupon_id', $coupon->id)->lockForUpdate()->exists();
@@ -212,6 +267,9 @@ class PaymentController extends Controller
             DB::table('coupon_user')->insert(['user_id' => $user->id, 'coupon_id' => $coupon->id, 'created_at' => now()]);
             DB::table('coupons')->where('id', $coupon->id)->increment('used_count');
             DB::table('users')->where('id', $user->id)->increment('balance', $coupon->credits);
+            
+            // Блокируем IP-адрес на год для данного купона
+            Cache::put($fraudKey, true, now()->addDays(365));
             
             $newBalance = DB::table('users')->where('id', $user->id)->value('balance');
             return response()->json(['success' => true, 'message' => "¡Has recibido {$coupon->credits} créditos!", 'balance' => $newBalance]);

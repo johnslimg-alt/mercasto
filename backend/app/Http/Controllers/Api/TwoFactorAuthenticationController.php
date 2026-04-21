@@ -16,6 +16,12 @@ class TwoFactorAuthenticationController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
+        
+        // Защита от перехвата аккаунта (2FA Overwrite): блокируем генерацию, если 2FA уже включена
+        if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
+            return response()->json(['message' => 'La autenticación de dos factores ya está activada.'], 400);
+        }
+
         $google2fa = new Google2FA();
 
         $secretKey = $google2fa->generateSecretKey();
@@ -26,6 +32,13 @@ class TwoFactorAuthenticationController extends Controller
                 return Str::random(10) . '-' . Str::random(10);
             })->all()),
         ])->save();
+
+        // Защита (Session Hijacking): отзываем все остальные сессии при включении 2FA, 
+        // чтобы выкинуть потенциальных взломщиков, оставив только текущее устройство
+        $currentToken = $request->user()->currentAccessToken();
+        if ($currentToken) {
+            $user->tokens()->where('id', '!=', $currentToken->id)->delete();
+        }
 
         $qrCodeUrl = $google2fa->getQRCodeUrl(
             config('app.name'),

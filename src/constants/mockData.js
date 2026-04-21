@@ -13,10 +13,10 @@ export const mexicoLocations = {
   'Guanajuato': ['León', 'Irapuato', 'Celaya', 'Salamanca', 'Guanajuato'],
   'Guerrero': ['Acapulco', 'Chilpancingo', 'Iguala', 'Zihuatanejo'],
   'Hidalgo': ['Pachuca', 'Tulancingo', 'Tula'],
-  'Jalisco': ['Guadalajara', 'Zapopan', 'Tlaquepaque', 'Tlajomulco', 'Puerto Vallarta'],
+  'Jalisco': ['Guadalajara', 'Zapopan', 'Tlaquepaque', 'Tlajomulco', 'Lagos de Moreno'],
   'Michoacán': ['Morelia', 'Uruapan', 'Zamora', 'Lázaro Cárdenas'],
   'Morelos': ['Cuernavaca', 'Jiutepec', 'Cuautla'],
-  'Nayarit': ['Tepic', 'Bahía de Banderas', 'Nuevo Vallarta'],
+  'Nayarit': ['Tepic', 'Bahía de Banderas', 'Santiago Ixcuintla'],
   'Nuevo León': ['Monterrey', 'San Pedro Garza García', 'Guadalupe', 'Apodaca', 'San Nicolás'],
   'Oaxaca': ['Oaxaca', 'Salina Cruz', 'Puerto Escondido', 'Huatulco'],
   'Puebla': ['Puebla', 'Tehuacán', 'Atlixco', 'Cholula'],
@@ -55,7 +55,7 @@ export const subcategoriesMap = {
 
 export const mockAds = [
   { id: 1, title: 'MacBook Pro M2 2023 512GB', price: 25000, currency: 'MXN', location: 'Polanco, CDMX', category: 'informatica', image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&q=80&w=400&h=300', description: 'Computadora en perfecto estado, batería al 100%. Entrego con caja y accesorios originales.', type: 'particular', promoted: false },
-  { id: 2, title: 'Hermoso Departamento con vista al mar', price: 280000, currency: 'MXN', location: 'Puerto Vallarta, Jalisco', category: 'inmobiliaria', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=400&h=300', description: 'Totalmente amueblado. Amenidades incluyen piscina, gimnasio y seguridad 24/7.', type: 'pro', promoted: 'destacado' },
+  { id: 2, title: 'Hermoso Departamento con vista panorámica', price: 280000, currency: 'MXN', location: 'Querétaro, Querétaro', category: 'inmobiliaria', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=400&h=300', description: 'Totalmente amueblado. Amenidades incluyen piscina, gimnasio y seguridad 24/7.', type: 'pro', promoted: 'destacado' },
   { id: 3, title: 'Honda Civic 2020 EX - Único dueño', price: 320000, currency: 'MXN', location: 'Monterrey, Nuevo León', category: 'motor', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400&h=300', description: 'Todos los mantenimientos en agencia. Listo para carretera.', type: 'particular', promoted: 'urgente' },
 ];
 
@@ -222,10 +222,10 @@ export const spotlightRealEstate = [
 
 export const jobsBoard = [
   { role: 'Senior React Developer', company: 'Mercasto', salary: '$65k – $85k', loc: 'Remote', logo: 'bg-lime-50 border', initial: 'MD' },
-  { role: 'Restaurant Manager', company: 'La Palapa', salary: '$25,000', loc: 'Puerto Vallarta', logo: 'bg-amber-100 text-amber-700', initial: 'LP' },
+  { role: 'Restaurant Manager', company: 'La Palapa', salary: '$25,000', loc: 'Querétaro', logo: 'bg-amber-100 text-amber-700', initial: 'LP' },
   { role: 'Real Estate Agent', company: 'Century 21', salary: '$20k + Commission', loc: 'Guadalajara', logo: 'bg-blue-100 text-blue-700', initial: 'C21' },
   { role: 'English Teacher', company: 'Harmon Hall', salary: '$18,000', loc: 'Zapopan', logo: 'bg-emerald-100 text-emerald-700', initial: 'HH' },
-  { role: 'Delivery Driver', company: 'DiDi', salary: '$15k – $22k', loc: 'Puerto Vallarta', logo: 'bg-purple-100 text-purple-700', initial: 'Di' },
+  { role: 'Delivery Driver', company: 'DiDi', salary: '$15k – $22k', loc: 'Guadalajara', logo: 'bg-purple-100 text-purple-700', initial: 'Di' },
   { role: 'Graphic Designer (Freelance)', company: 'Freelance', salary: '$30,000', loc: 'Remote', logo: 'bg-slate-200', initial: '🎨' },
   { role: 'Barista', company: 'Starbucks', salary: '$12,500', loc: 'Guadalajara', logo: 'bg-green-100 text-green-700', initial: 'SB' },
   { role: 'Plumber - Full Time', company: 'Servicios Pro', salary: '$22,000', loc: 'Zapopan', logo: 'bg-orange-100', initial: '🔧' }

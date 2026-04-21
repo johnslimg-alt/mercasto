@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -48,5 +49,23 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonStructure(['message', 'access_token', 'token_type', 'user']);
+    }
+
+    public function test_provider_endpoint_reflects_configured_oauth_services()
+    {
+        Config::set('services.google.client_id', 'google-client');
+        Config::set('services.google.client_secret', 'google-secret');
+        Config::set('services.apple.client_id', null);
+        Config::set('services.apple.client_secret', null);
+        Config::set('services.telegram.client_id', 'telegram-client');
+        Config::set('services.telegram.client_secret', 'telegram-secret');
+
+        $response = $this->getJson('/api/auth/providers');
+
+        $response->assertOk()->assertExactJson([
+            'google' => true,
+            'apple' => false,
+            'telegram' => true,
+        ]);
     }
 }

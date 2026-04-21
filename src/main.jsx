@@ -5,7 +5,8 @@ import App from './App.jsx'
 import * as Sentry from "@sentry/react";
 import { BrowserRouter } from 'react-router-dom';
 
-if (import.meta.env.VITE_SENTRY_DSN) {
+// Защита квот разработчика: активируем Sentry ТОЛЬКО в боевом окружении (Production)
+if (import.meta.env.VITE_SENTRY_DSN && import.meta.env.PROD) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     integrations: [
@@ -14,8 +15,8 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     ],
     // Performance Monitoring
     tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0, 
-    // Session Replay
-    replaysSessionSampleRate: 0.1, 
+    // Защита от Sentry Session Replay Overload: снижаем частоту записи экранов до 0.1% для продакшена (спасает трафик и квоты)
+    replaysSessionSampleRate: import.meta.env.PROD ? 0.001 : 1.0, 
     replaysOnErrorSampleRate: 1.0,
   });
 }

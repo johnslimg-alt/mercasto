@@ -35,7 +35,23 @@
     @endphp
 
     @if($mainImage)
-        <img src="{{ public_path('storage/' . $mainImage) }}" class="main-image" alt="{{ $ad->title }}">
+        @php
+            // Защита от зависания серверов (PHP Worker Starvation): устанавливаем жесткий тайм-аут в 2 секунды
+            $ctx = stream_context_create(['http' => ['timeout' => 2]]);
+            if (str_starts_with($mainImage, 'http')) {
+                $rawImage = @file_get_contents($mainImage, false, $ctx);
+                $imageContent = $rawImage ? base64_encode($rawImage) : null;
+                $mimeType = 'image/jpeg';
+            } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($mainImage)) {
+                $imageContent = base64_encode(\Illuminate\Support\Facades\Storage::disk('public')->get($mainImage));
+                $mimeType = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($mainImage);
+            } else {
+                $imageContent = null;
+            }
+        @endphp
+        @if($imageContent)
+        <img src="data:{{ $mimeType }};base64,{{ $imageContent }}" class="main-image" alt="{{ $ad->title }}">
+        @endif
     @endif
 
     <div class="details">
@@ -51,7 +67,7 @@
 
     <div class="description">
         <h2>Descripción</h2>
-        <p>{{ $ad->description }}</p>
+        <p>{!! nl2br(e($ad->description)) !!}</p>
     </div>
 
     <div class="qr-section">

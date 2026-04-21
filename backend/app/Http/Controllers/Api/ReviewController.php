@@ -45,24 +45,31 @@ class ReviewController extends Controller
         if (!\App\Models\User::where('id', $id)->exists()) {
             return response()->json(['message' => 'Vendedor no encontrado'], 404);
         }
-
-        $exists = DB::table('reviews')->where('reviewer_id', $reviewerId)->where('seller_id', $id)->exists();
         
-        if ($exists) {
-            DB::table('reviews')
-                ->where('reviewer_id', $reviewerId)
-                ->where('seller_id', $id)
-                ->update(['rating' => $request->rating, 'comment' => $request->comment, 'updated_at' => now()]);
-        } else {
-            DB::table('reviews')->insert([
-                'reviewer_id' => $reviewerId,
-                'seller_id' => $id,
-                'rating' => $request->rating,
-                'comment' => $request->comment,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        // Защита от фейковых отзывов (Review Bombing): разрешаем отзыв, только если было взаимодействие с продавцом
+        $hasInteracted = DB::table('ad_clicks')
+            ->join('ads', 'ad_clicks.ad_id', '=', 'ads.id')
+            ->where('ad_clicks.user_id', $reviewerId)
+            ->where('ads.user_id', $id)
+            ->exists();
+            
+        $hasFavorited = DB::table('favorites')->join('ads', 'favorites.ad_id', '=', 'ads.id')->where('favorites.user_id', $reviewerId)->where('ads.user_id', $id)->exists();
+
+        if (!$hasInteracted && !$hasFavorited) {
+            return response()->json(['message' => 'Solo puedes dejar una reseña a vendedores con los que has interactuado (favoritos o contacto).'], 403);
         }
+
+        // Защита от Race Condition при двойном клике: используем атомарный upsert на уровне базы данных
+        DB::table('reviews')->upsert([
+            [
+                'reviewer_id' => $reviewerId, 
+                'seller_id' => $id, 
+                'rating' => $request->rating, 
+                'comment' => $request->comment, 
+                'created_at' => now(), 
+                'updated_at' => now()
+            ]
+        ], ['reviewer_id', 'seller_id'], ['rating', 'comment', 'updated_at']);
 
         return response()->json(['message' => 'Reseña guardada exitosamente']);
     }

@@ -11,6 +11,12 @@ class TestAdsSeeder extends Seeder
 {
     public function run()
     {
+        // Абсолютная защита: никогда не запускать сидер с тестовыми данными в Production!
+        if (app()->environment('production')) {
+            \Illuminate\Support\Facades\Log::warning('Attempted to run TestAdsSeeder in production. Aborted.');
+            return;
+        }
+
         // Создаем фейкового PRO-продавца для тестовых товаров
         $user = User::firstOrCreate(
             ['email' => 'tienda_demo@mercasto.com'],
@@ -29,7 +35,7 @@ class TestAdsSeeder extends Seeder
             'Ciudad de México, CDMX', 'Polanco, CDMX', 'Coyoacán, CDMX', 'Condesa, CDMX',
             'Saltillo, COAH', 'Torreón, COAH', 'Colima, COL', 'Manzanillo, COL', 'Durango, DGO',
             'Toluca, EDOMEX', 'Ecatepec, EDOMEX', 'Naucalpan, EDOMEX', 'León, GTO', 'Guanajuato, GTO',
-            'Acapulco, GRO', 'Chilpancingo, GRO', 'Pachuca, HGO', 'Guadalajara, JAL', 'Zapopan, JAL', 'Puerto Vallarta, JAL',
+            'Acapulco, GRO', 'Chilpancingo, GRO', 'Pachuca, HGO', 'Guadalajara, JAL', 'Zapopan, JAL', 'Lagos de Moreno, JAL',
             'Morelia, MICH', 'Uruapan, MICH', 'Cuernavaca, MOR', 'Tepic, NAY', 'Monterrey, NL', 'San Pedro Garza García, NL',
             'Oaxaca, OAX', 'Puerto Escondido, OAX', 'Puebla, PUE', 'Cholula, PUE', 'Querétaro, QRO',
             'Cancún, ROO', 'Playa del Carmen, ROO', 'Tulum, ROO', 'San Luis Potosí, SLP',
@@ -69,7 +75,7 @@ class TestAdsSeeder extends Seeder
                 'Accesorios' => ['Teclado mecánico RGB', 'Mouse inalámbrico Logitech', 'Monitor Dell 27" 4K'],
                 'Tablets' => ['iPad Pro 11"', 'Samsung Galaxy Tab S8', 'iPad Mini']
             ],
-            'telefonia' => [
+            'telefonos' => [
                 'Smartphones' => ['iPhone 13 Pro Max', 'Samsung Galaxy S23 Ultra', 'Xiaomi Redmi Note 12'],
                 'Fundas y Micas' => ['Funda protectora uso rudo', 'Mica de Cristal Templado', 'Funda de Silicón'],
                 'Wearables' => ['Apple Watch Series 8', 'Galaxy Watch 5', 'Smartband Fitness'],
@@ -99,13 +105,13 @@ class TestAdsSeeder extends Seeder
                 'Aves y Peces' => ['Acuario equipado 50L', 'Jaula Grande para Aves', 'Alimento para Peces'],
                 'Higiene' => ['Shampoo Antipulgas', 'Cepillo Deslanador', 'Tapetes Entrenadores']
             ],
-            'ocio' => [
+            'deportes' => [
                 'Deportes' => ['Bicicleta de montaña R29', 'Pesas Mancuernas 10kg', 'Raqueta de tenis Wilson'],
                 'Música' => ['Guitarra acústica Fender', 'Teclado Yamaha 61 Teclas', 'Batería Electrónica'],
                 'Libros' => ['Colección Harry Potter', 'Libro de Finanzas Personales', 'Novela Best Seller'],
                 'Juegos' => ['Tienda de campaña', 'Juego de mesa Catan', 'Consola PlayStation 5']
             ],
-            'boletos' => [
+            'formacion' => [
                 'Conciertos' => ['Boleto Concierto VIP', 'Entrada General Festival', 'Abono festival 3 días'],
                 'Deportes' => ['Boleto Partido Final Liguilla', 'Pase Fórmula 1', 'Entrada Lucha Libre'],
                 'Teatro y Cultura' => ['Entrada teatro 2 personas', 'Pase anual museo', 'Entrada Show Standup'],
