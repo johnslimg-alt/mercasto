@@ -29,3 +29,6 @@ y.pub
 *.exp
 *.py
 mercasto-report.txt
+mysql-data/
+postgres-data/
+redis-data/

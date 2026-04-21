@@ -50,12 +50,12 @@ services:
       - ./backend:/var/www
       - /var/www/vendor # Защищаем системные библиотеки от перезаписи
     environment:
-      - "DB_HOST=mysql" # Указываем, что БД находится в другом контейнере
+      - "DB_HOST=postgres" # Указываем, что БД находится в другом контейнере
       - "REDIS_HOST=redis" # Связываем с контейнером Redis
       - "REDIS_PASSWORD=${REDIS_PASSWORD:-mercasto_secure_redis_2026}"
       # ... другие переменные из вашего .env
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -81,11 +81,11 @@ services:
     volumes:
       - ./backend:/var/www
     environment:
-      - "DB_HOST=mysql"
+      - "DB_HOST=postgres"
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:-mercasto_secure_redis_2026}"
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -101,11 +101,11 @@ services:
     volumes:
       - ./backend:/var/www
     environment:
-      - "DB_HOST=mysql"
+      - "DB_HOST=postgres"
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:-mercasto_secure_redis_2026}"
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -132,22 +132,21 @@ services:
     restart: unless-stopped
 
   # База данных
-  mysql:
-    image: mysql:8.0
+  postgres:
+    image: pgvector/pgvector:pg18.3
     container_name: mercasto_db_container
     expose:
-      - "3306" # Закрыто от интернета, доступно только внутри Docker
+      - "5432" # Закрыто от интернета, доступно только внутри Docker
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-mercasto}
-      MYSQL_USER: ${DB_USERNAME:-mercasto_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_DATABASE:-mercasto}
+      POSTGRES_USER: ${DB_USERNAME:-mercasto_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
     volumes:
-      - ./mysql-data:/var/lib/mysql
+      - ./postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-secret}"]
-      interval: 15s
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-mercasto_user} -d ${DB_DATABASE:-mercasto}"]
+      interval: 10s
       timeout: 5s
       retries: 5
     logging:

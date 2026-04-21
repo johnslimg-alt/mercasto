@@ -10,7 +10,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 class BackupDatabase extends Command
 {
     protected $signature = 'db:backup';
-    protected $description = 'Create a MySQL dump and upload it to AWS S3';
+    protected $description = 'Create a PostgreSQL dump and upload it to AWS S3';
 
     public function handle()
     {
@@ -20,12 +20,13 @@ class BackupDatabase extends Command
         $this->info("Generating database dump...");
 
         $process = new Process([
-            'mysqldump',
-            '-u', env('DB_USERNAME', 'mercasto_user'),
-            '-p' . env('DB_PASSWORD', 'secret'),
-            '-h', env('DB_HOST', 'mysql'),
+            'pg_dump',
+            '-U', env('DB_USERNAME', 'mercasto_user'),
+            '-h', env('DB_HOST', 'postgres'),
+            '-p', env('DB_PORT', '5432'),
             env('DB_DATABASE', 'mercasto'),
         ]);
+        $process->setEnv(['PGPASSWORD' => env('DB_PASSWORD', 'secret')]);
 
         try {
             $process->mustRun();

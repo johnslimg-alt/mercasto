@@ -46,11 +46,15 @@ jobs:
               sed -i "s/CLIP_WEBHOOK_SECRET=.*/CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)/" backend/.env
             fi
             
-            # FIX: Восстановление убитой базы данных после очистки Git
-            if [ -d "mysql-data" ] && [ ! -f "mysql-data/ibdata1" ]; then
-              echo "Обнаружена поврежденная БД MySQL. Выполняется жесткий сброс..."
+            # Автоматически переключаем Laravel на использование PostgreSQL
+            sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=pgsql/" backend/.env 2>/dev/null || true
+            sed -i "s/DB_PORT=.*/DB_PORT=5432/" backend/.env 2>/dev/null || true
+            
+            # FIX: Восстановление убитой базы данных PostgreSQL
+            if [ -d "postgres-data" ] && [ ! -f "postgres-data/PG_VERSION" ]; then
+              echo "Обнаружена поврежденная БД PostgreSQL. Выполняется жесткий сброс..."
               docker compose down || true
-              sudo rm -rf mysql-data redis-data
+              sudo rm -rf postgres-data redis-data mysql-data
             fi
             
             # 2. ЗАПУСК И ПЕРЕСБОРКА DOCKER (БД должна работать до миграций)
@@ -65,5 +69,5 @@ jobs:
             
             # Restart backend container to clear OPcache
             docker restart mercasto_backend_container || true
-            sudo systemctl restart php8.2-fpm || true
+            sudo systemctl restart php8.3-fpm || true
             sudo systemctl restart php-fpm || true
