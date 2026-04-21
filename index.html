@@ -11,6 +11,18 @@
     <script defer src="https://maps.googleapis.com/maps/api/js?key=%VITE_GOOGLE_MAPS_API_KEY%&libraries=places&callback=Function.prototype"></script>
   </head>
   <body class="antialiased bg-[#F8FAFC]">
+    <!-- ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК ОШИБОК ИНИЦИАЛИЗАЦИИ JS -->
+    <script>
+      window.addEventListener('error', function(event) {
+        document.body.innerHTML = '<div style="padding: 20px; font-family: monospace; background: #fef2f2; color: #dc2626; word-break: break-all; z-index: 9999; position: relative;">' +
+          '<h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">¡Error fatal de inicialización!</h2>' +
+          '<b>Mensaje:</b> ' + event.message + '<br><br>' + 
+          '<b>Archivo:</b> ' + event.filename + ':' + event.lineno + '<br><br>' +
+          '<b>Stack Trace:</b><pre style="font-size: 12px; margin-top: 10px;">' + (event.error && event.error.stack ? event.error.stack : 'N/A') + '</pre>' +
+          '</div>';
+      });
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
