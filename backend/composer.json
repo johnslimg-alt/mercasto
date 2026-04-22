@@ -7,7 +7,7 @@
     "require": {
         "php": "^8.3 || ^8.4",
         "barryvdh/laravel-dompdf": "^3.0",
-        "intervention/image": "^2.7",
+        "intervention/image": "^3.0",
         "laravel/framework": "^13.0",
         "laravel/horizon": "*",
         "laravel/reverb": "^1.8.1",
@@ -15,10 +15,10 @@
         "laravel/socialite": "*",
         "laravel/tinker": "*",
         "minishlink/web-push": "^10.0",
-        "nuwave/lighthouse": "^6.38",
+        "nuwave/lighthouse": "^7.0",
         "pragmarx/google2fa-laravel": "*",
         "predis/predis": "^3.4",
-        "sentry/sentry-laravel": "^4.0"
+        "sentry/sentry-laravel": "^5.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

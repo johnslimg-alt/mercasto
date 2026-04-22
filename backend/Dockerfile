@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 
 # Устанавливаем расширения PHP (добавили zip, pgsql)
 RUN apt-get update && apt-get install -y libpq-dev \
-    && docker-php-ext-install pdo_mysql pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip opcache
+    && docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip opcache
 
 # Устанавливаем и включаем расширение Redis
 RUN pecl install redis \

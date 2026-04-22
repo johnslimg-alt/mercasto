@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -1302,12 +1303,36 @@ class AdController extends Controller
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['query' => 'required|string']);
         
-        // Здесь ИИ-Агент (через Laravel AI SDK) переводит естественный язык в SQL-запрос для PostgreSQL 18.3
-        return response()->json([
-            'agent' => '🐘 PostgreSQL DBA AI',
-            'response' => 'El agente está analizando la base de datos y los índices de pgvector...',
-            'status' => 'processing'
+        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+        if (!$apiKey) {
+            return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
+        }
+
+        $schema = "Tables: ads(id, title, price, status, views, category, created_at), users(id, name, email, role, created_at), ad_clicks(ad_id, channel, created_at).";
+        $prompt = "You are a PostgreSQL DBA. Schema: {$schema}. Translate this request to SQL: '{$request->query}'. Return ONLY the raw SELECT query without markdown formatting.";
+
+        $response = Http::timeout(15)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+            'contents' => [['parts' => [['text' => $prompt]]]]
         ]);
+
+        if ($response->successful()) {
+            $sql = trim(str_replace(['```sql', '```', '`'], '', $response->json('candidates.0.content.parts.0.text')));
+            
+            try {
+                if (!preg_match('/^\s*SELECT/i', $sql)) throw new \Exception("Solo se permiten consultas SELECT por seguridad.");
+                $data = DB::select($sql);
+                return response()->json([
+                    'agent' => '🐘 PostgreSQL DBA AI',
+                    'sql' => $sql,
+                    'data' => $data,
+                    'status' => 'success'
+                ]);
+            } catch (\Exception $e) {
+                return response()->json(['agent' => '🐘 PostgreSQL DBA AI', 'error' => $e->getMessage(), 'sql' => $sql], 400);
+            }
+        }
+        
+        return response()->json(['message' => 'Error al analizar la base de datos'], 500);
     }
 
     /**
@@ -1318,11 +1343,26 @@ class AdController extends Controller
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['prompt' => 'required|string']);
         
-        // Здесь ИИ-Агент генерирует готовые React JSX компоненты "на лету" (Generative UI)
-        return response()->json([
-            'agent' => '⚛️ React UI Engineer AI',
-            'response' => 'El agente está escribiendo el componente React + Tailwind...',
-            'status' => 'processing'
+        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+        if (!$apiKey) {
+            return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
+        }
+
+        $prompt = "You are an expert React + Tailwind CSS v4 developer. Create a component based on this request: '{$request->prompt}'. Use Lucide React for icons. Return ONLY valid raw JSX code, NO markdown blocks, NO explanations.";
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
+            'contents' => [['parts' => [['text' => $prompt]]]]
         ]);
+
+        if ($response->successful()) {
+            $jsx = trim(str_replace(['```jsx', '```react', '```', 'javascriptreact'], '', $response->json('candidates.0.content.parts.0.text')));
+            return response()->json([
+                'agent' => '⚛️ React UI Engineer AI',
+                'response' => $jsx,
+                'status' => 'success'
+            ]);
+        }
+        
+        return response()->json(['message' => 'Error al generar el componente'], 500);
     }
 }
