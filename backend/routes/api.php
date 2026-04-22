@@ -157,4 +157,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/agents/lawyer', [AdController::class, 'askLawyerAgent']); // AI Lawyer Agent
     Route::post('/agents/notary', [AdController::class, 'askNotaryAgent']); // AI Notary Agent
     Route::post('/agents/advocate', [AdController::class, 'askAdvocateAgent']); // AI Advocate Agent
+    Route::post('/agents/marketing', [AdController::class, 'askMarketingAgent']); // AI Marketing Agent
+    Route::post('/agents/seo', [AdController::class, 'askSeoAgent']); // AI SEO Agent
+    Route::post('/agents/ceo-ui', [AdController::class, 'askCeoUiAgent']); // AI CEO UI Agent
+    Route::post('/agents/ceo-ux', [AdController::class, 'askCeoUxAgent']); // AI CEO UX Agent
 });

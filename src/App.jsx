@@ -89,38 +89,38 @@ const getImageUrls = (pathStr, fallbackArr = []) => {
 
 // База данных всех Штатов и основных Городов Мексики
 const MEXICO_STATES_CITIES = {
-  "Aguascalientes": ["Aguascalientes", "Jesús María", "Calvillo", "Rincón de Romos"],
-  "Baja California": ["Tijuana", "Mexicali", "Ensenada", "Playas de Rosarito", "Tecate"],
-  "Baja California Sur": ["La Paz", "Cabo San Lucas", "San José del Cabo", "Loreto"],
-  "Campeche": ["Campeche", "Ciudad del Carmen", "Champotón", "Escárcega"],
-  "Chiapas": ["Tuxtla Gutiérrez", "Tapachula", "San Cristóbal de las Casas", "Comitán"],
-  "Chihuahua": ["Chihuahua", "Ciudad Juárez", "Delicias", "Hidalgo del Parral", "Cuauhtémoc"],
-  "Ciudad de México": ["Álvaro Obregón", "Azcapotzalco", "Benito Juárez", "Coyoacán", "Cuauhtémoc", "Gustavo A. Madero", "Iztapalapa", "Miguel Hidalgo", "Tlalpan", "Xochimilco"],
-  "Coahuila": ["Saltillo", "Torreón", "Monclova", "Piedras Negras", "Acuña"],
-  "Colima": ["Colima", "Manzanillo", "Tecomán", "Villa de Álvarez"],
-  "Durango": ["Durango", "Gómez Palacio", "Lerdo", "Santiago Papasquiaro"],
-  "Estado de México": ["Toluca", "Ecatepec", "Naucalpan", "Tlalnepantla", "Nezahualcóyotl", "Metepec", "Huixquilucan", "Cuautitlán Izcalli", "Chalco"],
-  "Guanajuato": ["León", "Irapuato", "Celaya", "Guanajuato", "San Miguel de Allende", "Salamanca"],
-  "Guerrero": ["Acapulco", "Chilpancingo", "Zihuatanejo", "Iguala", "Taxco"],
-  "Hidalgo": ["Pachuca", "Tulancingo", "Tula de Allende", "Tizayuca"],
-  "Jalisco": ["Guadalajara", "Zapopan", "Tlaquepaque", "Tonalá", "Puerto Vallarta", "Tlajomulco de Zúñiga", "Lagos de Moreno"],
-  "Michoacán": ["Morelia", "Uruapan", "Zamora", "Lázaro Cárdenas", "Zitácuaro"],
-  "Morelos": ["Cuernavaca", "Jiutepec", "Cuautla", "Temixco"],
-  "Nayarit": ["Tepic", "Bahía de Banderas", "Compostela", "Santiago Ixcuintla"],
-  "Nuevo León": ["Monterrey", "Apodaca", "Guadalupe", "San Nicolás de los Garza", "San Pedro Garza García", "Santa Catarina", "General Escobedo"],
-  "Oaxaca": ["Oaxaca de Juárez", "Salina Cruz", "Juchitán de Zaragoza", "San Juan Bautista Tuxtepec", "Puerto Escondido"],
-  "Puebla": ["Puebla", "Tehuacán", "San Pedro Cholula", "San Andrés Cholula", "Atlixco"],
-  "Querétaro": ["Santiago de Querétaro", "San Juan del Río", "Corregidora", "El Marqués"],
-  "Quintana Roo": ["Cancún", "Playa del Carmen", "Chetumal", "Cozumel", "Tulum"],
-  "San Luis Potosí": ["San Luis Potosí", "Ciudad Valles", "Matehuala", "Rioverde"],
-  "Sinaloa": ["Culiacán", "Mazatlán", "Los Mochis", "Guasave", "Navolato"],
-  "Sonora": ["Hermosillo", "Ciudad Obregón", "Nogales", "San Luis Río Colorado", "Guaymas", "Navojoa"],
-  "Tabasco": ["Villahermosa", "Cárdenas", "Comalcalco", "Macuspana"],
-  "Tamaulipas": ["Tampico", "Reynosa", "Matamoros", "Nuevo Laredo", "Ciudad Victoria", "Ciudad Madero"],
-  "Tlaxcala": ["Tlaxcala", "Apizaco", "Huamantla", "Chiautempan"],
-  "Veracruz": ["Veracruz", "Xalapa", "Coatzacoalcos", "Poza Rica", "Boca del Río", "Córdoba", "Orizaba", "Minatitlán"],
-  "Yucatán": ["Mérida", "Kanasín", "Valladolid", "Progreso", "Tizimín"],
-  "Zacatecas": ["Zacatecas", "Fresnillo", "Guadalupe", "Jerez"]
+  "Aguascalientes": ["Aguascalientes", "Asientos", "Calvillo", "Cosío", "Jesús María", "Pabellón de Arteaga", "Rincón de Romos", "San José de Gracia", "Tepezalá", "El Llano", "San Francisco de los Romo"],
+  "Baja California": ["Ensenada", "Mexicali", "Tecate", "Tijuana", "Playas de Rosarito", "San Quintín", "San Felipe"],
+  "Baja California Sur": ["Comondú", "Mulegé", "La Paz", "Los Cabos", "Loreto"],
+  "Campeche": ["Calkiní", "Campeche", "Carmen", "Champotón", "Hecelchakán", "Hopelchén", "Palizada", "Tenabo", "Escárcega", "Calakmul", "Candelaria", "Seybaplaya", "Dzitbalché"],
+  "Chiapas": ["Tuxtla Gutiérrez", "Tapachula", "San Cristóbal de las Casas", "Comitán de Domínguez", "Chiapa de Corzo", "Palenque", "Ocosingo", "Tonalá", "Villaflores", "Huixtla", "Reforma"],
+  "Chihuahua": ["Chihuahua", "Ciudad Juárez", "Cuauhtémoc", "Delicias", "Hidalgo del Parral", "Nuevo Casas Grandes", "Camargo", "Jiménez", "Ojinaga", "Meoqui"],
+  "Ciudad de México": ["Álvaro Obregón", "Azcapotzalco", "Benito Juárez", "Coyoacán", "Cuajimalpa de Morelos", "Cuauhtémoc", "Gustavo A. Madero", "Iztacalco", "Iztapalapa", "La Magdalena Contreras", "Miguel Hidalgo", "Milpa Alta", "Tláhuac", "Tlalpan", "Venustiano Carranza", "Xochimilco"],
+  "Coahuila": ["Saltillo", "Torreón", "Monclova", "Piedras Negras", "Acuña", "Matamoros", "San Pedro", "Frontera", "Ramos Arizpe", "Sabinas", "Múzquiz"],
+  "Colima": ["Colima", "Manzanillo", "Tecomán", "Villa de Álvarez", "Armería", "Coquimatlán", "Cuauhtémoc", "Comala", "Ixtlahuacán", "Minatitlán"],
+  "Durango": ["Durango", "Gómez Palacio", "Lerdo", "Pueblo Nuevo", "Santiago Papasquiaro", "Guadalupe Victoria", "Cuencamé", "Canatlán", "Nuevo Ideal"],
+  "Estado de México": ["Ecatepec de Morelos", "Nezahualcóyotl", "Toluca", "Naucalpan de Juárez", "Chimalhuacán", "Tlalnepantla de Baz", "Cuautitlán Izcalli", "Tecámac", "Ixtapaluca", "Atizapán de Zaragoza", "Tultitlán", "Valle de Chalco Solidaridad", "Chalco", "Coacalco de Berriozábal", "La Paz", "Huixquilucan", "Texcoco", "Metepec"],
+  "Guanajuato": ["León", "Irapuato", "Celaya", "Salamanca", "Silao de la Victoria", "Guanajuato", "San Miguel de Allende", "Pénjamo", "Valle de Santiago", "San Francisco del Rincón", "Dolores Hidalgo", "Acámbaro"],
+  "Guerrero": ["Acapulco de Juárez", "Chilpancingo de los Bravo", "Iguala de la Independencia", "Zihuatanejo de Azueta", "Taxco de Alarcón", "Chilapa de Álvarez", "Tlapa de Comonfort"],
+  "Hidalgo": ["Pachuca de Soto", "Tulancingo de Bravo", "Mineral de la Reforma", "Tizayuca", "Tula de Allende", "Huejutla de Reyes", "Tepeji del Río de Ocampo", "Ixmiquilpan"],
+  "Jalisco": ["Guadalajara", "Zapopan", "San Pedro Tlaquepaque", "Tlajomulco de Zúñiga", "Tonalá", "Puerto Vallarta", "Lagos de Moreno", "Tepatitlán de Morelos", "Zapotlán el Grande", "Ocotlán", "Tala", "Arandas"],
+  "Michoacán": ["Morelia", "Uruapan", "Zamora", "Lázaro Cárdenas", "Zitácuaro", "Apatzingán", "Hidalgo", "Tarímbaro", "La Piedad", "Pátzcuaro", "Los Reyes", "Sahuayo"],
+  "Morelos": ["Cuernavaca", "Jiutepec", "Cuautla", "Temixco", "Yautepec", "Emiliano Zapata", "Ayala", "Xochitepec", "Puente de Ixtla", "Jojutla"],
+  "Nayarit": ["Tepic", "Bahía de Banderas", "Santiago Ixcuintla", "Compostela", "Tecuala", "Acaponeta", "Xalisco", "San Blas", "Ruiz"],
+  "Nuevo León": ["Monterrey", "Apodaca", "Guadalupe", "General Escobedo", "Juárez", "San Nicolás de los Garza", "Santa Catarina", "San Pedro Garza García", "García", "Cadereyta Jiménez", "Linares", "Pesquería"],
+  "Oaxaca": ["Oaxaca de Juárez", "San Juan Bautista Tuxtepec", "Juchitán de Zaragoza", "Heroica Ciudad de Huajuapan de León", "Salina Cruz", "Santa Cruz Xoxocotlán", "Loma Bonita", "Heroica Ciudad de Tlaxiaco"],
+  "Puebla": ["Puebla", "Tehuacán", "San Martín Texmelucan", "San Andrés Cholula", "Atlixco", "San Pedro Cholula", "Amozoc", "Teziutlán", "Huauchinango", "Zacatlán"],
+  "Querétaro": ["Santiago de Querétaro", "San Juan del Río", "Corregidora", "El Marqués", "Tequisquiapan", "Amealco de Bonfil", "Pedro Escobedo", "Ezequiel Montes"],
+  "Quintana Roo": ["Benito Juárez", "Solidaridad", "Othón P. Blanco", "Cozumel", "Tulum", "Felipe Carrillo Puerto", "Isla Mujeres", "Bacalar", "José María Morelos", "Lázaro Cárdenas", "Puerto Morelos"],
+  "San Luis Potosí": ["San Luis Potosí", "Soledad de Graciano Sánchez", "Ciudad Valles", "Rioverde", "Matehuala", "Tamazunchale", "Ciudad Fernández", "Mexquitic de Carmona"],
+  "Sinaloa": ["Culiacán", "Mazatlán", "Ahome", "Guasave", "Navolato", "Salvador Alvarado", "El Fuerte", "Sinaloa", "Rosario", "Escuinapa"],
+  "Sonora": ["Hermosillo", "Cajeme", "Nogales", "San Luis Río Colorado", "Navojoa", "Guaymas", "Caborca", "Agua Prieta", "Huatabampo", "Puerto Peñasco"],
+  "Tabasco": ["Centro", "Cárdenas", "Comalcalco", "Macuspana", "Huimanguillo", "Cunduacán", "Centla", "Paraíso", "Teapa", "Balancán"],
+  "Tamaulipas": ["Reynosa", "Matamoros", "Nuevo Laredo", "Tampico", "Ciudad Victoria", "Ciudad Madero", "Altamira", "Río Bravo", "El Mante", "Valle Hermoso"],
+  "Tlaxcala": ["Tlaxcala", "Huamantla", "Apizaco", "San Pablo del Monte", "Chiautempan", "Zacatelco", "Calpulalpan", "Contla de Juan Cuamatzi"],
+  "Veracruz": ["Veracruz", "Xalapa", "Coatzacoalcos", "Córdoba", "Poza Rica de Hidalgo", "Papantla", "Minatitlán", "San Andrés Tuxtla", "Boca del Río", "Orizaba", "Tuxpan", "Martínez de la Torre"],
+  "Yucatán": ["Mérida", "Kanasín", "Valladolid", "Tizimín", "Progreso", "Umán", "Tekax", "Ticul", "Chemax", "Motul", "Hunucmá", "Oxkutzcab"],
+  "Zacatecas": ["Zacatecas", "Fresnillo", "Guadalupe", "Jerez", "Río Grande", "Víctor Rosales", "Sombrerete", "Loreto", "Pinos", "Ojocaliente"]
 };
 
 const getRelativePath = (url) => {
@@ -1830,7 +1830,7 @@ function App() {
     setAiResult(null);
     try {
       const token = localStorage.getItem('auth_token');
-      const endpoints = { postgresql: '/agents/postgresql', react: '/agents/react', ceo: '/agents/ceo', lawyer: '/agents/lawyer', notary: '/agents/notary', advocate: '/agents/advocate', marketing: '/agents/marketing', seo: '/agents/seo' };
+      const endpoints = { postgresql: '/agents/postgresql', react: '/agents/react', ceo: '/agents/ceo', lawyer: '/agents/lawyer', notary: '/agents/notary', advocate: '/agents/advocate', marketing: '/agents/marketing', seo: '/agents/seo', ceo_ui: '/agents/ceo-ui', ceo_ux: '/agents/ceo-ux' };
       const endpoint = endpoints[aiAgentType] || '/agents/ceo';
       const payload = aiAgentType === 'react' ? { prompt: aiPrompt } : { query: aiPrompt };
       
@@ -2095,6 +2095,8 @@ function App() {
             <button type="button" onClick={() => {setAiAgentType('advocate'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'advocate' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🛡️ Адвокат</button>
             <button type="button" onClick={() => {setAiAgentType('marketing'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'marketing' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📈 Маркетолог</button>
             <button type="button" onClick={() => {setAiAgentType('seo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'seo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🔍 SEO</button>
+            <button type="button" onClick={() => {setAiAgentType('ceo_ui'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo_ui' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🎨 CEO UI</button>
+            <button type="button" onClick={() => {setAiAgentType('ceo_ux'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo_ux' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🧠 CEO UX</button>
           </div>
 
           <div className="flex-1 overflow-y-auto mb-4 bg-slate-950 rounded-xl p-4 border border-slate-800 font-mono text-[13px] text-slate-300">
@@ -2114,7 +2116,7 @@ function App() {
           </div>
 
           <form onSubmit={handleAiSubmit} className="flex gap-2">
-            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={aiAgentType === 'postgresql' ? "Напр: Сколько сейчас активных объявлений?" : aiAgentType === 'react' ? "Напр: Создай анимированную кнопку входа на Tailwind 4..." : aiAgentType === 'lawyer' ? "Напр: Составь новые правила возврата средств..." : aiAgentType === 'notary' ? "Напр: Какие требования к KYC документам?" : aiAgentType === 'advocate' ? "Напр: Как ответить на жалобу о мошенничестве?" : aiAgentType === 'marketing' ? "Напр: Как нам увеличить конверсию на главной?" : aiAgentType === 'seo' ? "Напр: Какие мета-теги добавить для карточки товара?" : "Напр: Алекс, какая у нас стратегия на Q3?"} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
+            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={aiAgentType === 'postgresql' ? "Напр: Сколько сейчас активных объявлений?" : aiAgentType === 'react' ? "Напр: Создай анимированную кнопку входа на Tailwind 4..." : aiAgentType === 'lawyer' ? "Напр: Составь новые правила возврата средств..." : aiAgentType === 'notary' ? "Напр: Какие требования к KYC документам?" : aiAgentType === 'advocate' ? "Напр: Как ответить на жалобу о мошенничестве?" : aiAgentType === 'marketing' ? "Напр: Как нам увеличить конверсию на главной?" : aiAgentType === 'seo' ? "Напр: Какие мета-теги добавить для карточки товара?" : aiAgentType === 'ceo_ui' ? "Напр: Какие цвета лучше использовать для премиум-товаров?" : aiAgentType === 'ceo_ux' ? "Напр: Как нам улучшить воронку оформления заказа?" : "Напр: Алекс, какая у нас стратегия на Q3?"} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
             <button type="submit" disabled={isAiProcessing || !aiPrompt.trim()} className="px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]">
               {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Выполнить'}
             </button>
@@ -2459,27 +2461,25 @@ function App() {
 
       {/* MAIN CONTENT */}
       <main className="w-full">
-        {viewedAd ? (
-          renderAdDetailScreen()
-        ) : viewedCompany ? (
-          renderStorefrontScreen()
-        ) : (
-          <>
-            <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#84CC16]" /></div>}>
-              <Routes>
-                <Route path="/" element={renderHomeScreen()} />
-                <Route path="/post" element={renderPostScreen()} />
-                <Route path="/profile" element={renderUserDashboard()} />
-                <Route path="/admin" element={renderAdminScreen()} />
-                <Route path="/terms" element={<StaticPages currentTab="terms" />} />
-                <Route path="/privacy" element={<StaticPages currentTab="privacy" />} />
-                <Route path="/help" element={<StaticPages currentTab="help" />} />
-                <Route path="/safety" element={<StaticPages currentTab="safety" />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
-          </>
-        )}
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#84CC16]" /></div>}>
+          {viewedAd ? (
+            renderAdDetailScreen()
+          ) : viewedCompany ? (
+            renderStorefrontScreen()
+          ) : (
+            <Routes>
+              <Route path="/" element={renderHomeScreen()} />
+              <Route path="/post" element={renderPostScreen()} />
+              <Route path="/profile" element={renderUserDashboard()} />
+              <Route path="/admin" element={renderAdminScreen()} />
+              <Route path="/terms" element={<StaticPages currentTab="terms" />} />
+              <Route path="/privacy" element={<StaticPages currentTab="privacy" />} />
+              <Route path="/help" element={<StaticPages currentTab="help" />} />
+              <Route path="/safety" element={<StaticPages currentTab="safety" />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          )}
+        </Suspense>
       </main>
 
       {/* FOOTER */}
@@ -2644,3 +2644,279 @@ function App() {
   );
 }
  
+import React from 'react';
+import { Star, BadgeCheck, MapPin, MessageCircle, Phone } from 'lucide-react';
+
+export default function SellerProfileCard() {
+  return (
+    <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+      {/* Обложка (Cover) */}
+      <div className="h-28 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+      {/* Информация профиля */}
+      <div className="px-6 pb-6 relative">
+        <div className="flex justify-between items-end -mt-12 mb-4">
+          {/* Аватар */}
+          <div className="relative">
+            <img
+              src="https://placehold.co/150x150/png?text=Auto+Motors"
+              alt="Avatar del Vendedor"
+              className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-900 object-cover bg-slate-100 shadow-md"
+            />
+            {/* Статус "В сети" */}
+            <div 
+              className="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900" 
+              title="En línea"
+            ></div>
+          </div>
+          
+          {/* Кнопки действий */}
+          <div className="flex gap-2">
+            <button className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-300 transition-colors">
+              <Phone className="w-5 h-5" />
+            </button>
+            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/30">
+              <MessageCircle className="w-5 h-5" />
+              Contactar
+            </button>
+          </div>
+        </div>
+
+        {/* Имя и локация */}
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            AutoMotors México
+            <BadgeCheck className="w-5 h-5 text-blue-500" />
+          </h2>
+          <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-4 h-4" /> Ciudad de México
+            </span>
+            <span>•</span>
+            <span>Miembro desde 2023</span>
+          </div>
+        </div>
+
+        {/* Статистика */}
+        <div className="grid grid-cols-3 gap-4 mt-6 py-4 border-y border-slate-100 dark:border-slate-800">
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">4.9</div>
+            <div className="flex justify-center text-amber-400 my-1">
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+            </div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500">128 reseñas</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">45</div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Anuncios</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">100%</div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Respuesta</div>
+          </div>
+        </div>
+
+        {/* Теги / Достижения */}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg">
+            Vendedor PRO
+          </span>
+          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-lg">
+            Identidad Verificada
+          </span>
+          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg">
+            Responde rápido
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+import React from 'react';
+import { Star, BadgeCheck, MapPin, MessageCircle, Phone } from 'lucide-react';
+
+export default function SellerProfileCard() {
+  return (
+    <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+      {/* Обложка (Cover) */}
+      <div className="h-28 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+      {/* Информация профиля */}
+      <div className="px-6 pb-6 relative">
+        <div className="flex justify-between items-end -mt-12 mb-4">
+          {/* Аватар */}
+          <div className="relative">
+            <img
+              src="https://placehold.co/150x150/png?text=Auto+Motors"
+              alt="Avatar del Vendedor"
+              className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-900 object-cover bg-slate-100 shadow-md"
+            />
+            {/* Статус "В сети" */}
+            <div 
+              className="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900" 
+              title="En línea"
+            ></div>
+          </div>
+          
+          {/* Кнопки действий */}
+          <div className="flex gap-2">
+            <button className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-300 transition-colors">
+              <Phone className="w-5 h-5" />
+            </button>
+            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/30">
+              <MessageCircle className="w-5 h-5" />
+              Contactar
+            </button>
+          </div>
+        </div>
+
+        {/* Имя и локация */}
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            AutoMotors México
+            <BadgeCheck className="w-5 h-5 text-blue-500" />
+          </h2>
+          <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-4 h-4" /> Ciudad de México
+            </span>
+            <span>•</span>
+            <span>Miembro desde 2023</span>
+          </div>
+        </div>
+
+        {/* Статистика */}
+        <div className="grid grid-cols-3 gap-4 mt-6 py-4 border-y border-slate-100 dark:border-slate-800">
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">4.9</div>
+            <div className="flex justify-center text-amber-400 my-1">
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+            </div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500">128 reseñas</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">45</div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Anuncios</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">100%</div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Respuesta</div>
+          </div>
+        </div>
+
+        {/* Теги / Достижения */}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg">
+            Vendedor PRO
+          </span>
+          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-lg">
+            Identidad Verificada
+          </span>
+          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg">
+            Responde rápido
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+import React from 'react';
+import { Star, BadgeCheck, MapPin, MessageCircle, Phone } from 'lucide-react';
+
+export default function SellerProfileCard() {
+  return (
+    <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+      {/* Обложка (Cover) */}
+      <div className="h-28 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+      {/* Информация профиля */}
+      <div className="px-6 pb-6 relative">
+        <div className="flex justify-between items-end -mt-12 mb-4">
+          {/* Аватар */}
+          <div className="relative">
+            <img
+              src="https://placehold.co/150x150/png?text=Auto+Motors"
+              alt="Avatar del Vendedor"
+              className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-900 object-cover bg-slate-100 shadow-md"
+            />
+            {/* Статус "В сети" */}
+            <div 
+              className="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900" 
+              title="En línea"
+            ></div>
+          </div>
+          
+          {/* Кнопки действий */}
+          <div className="flex gap-2">
+            <button className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-300 transition-colors">
+              <Phone className="w-5 h-5" />
+            </button>
+            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/30">
+              <MessageCircle className="w-5 h-5" />
+              Contactar
+            </button>
+          </div>
+        </div>
+
+        {/* Имя и локация */}
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            AutoMotors México
+            <BadgeCheck className="w-5 h-5 text-blue-500" />
+          </h2>
+          <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-4 h-4" /> Ciudad de México
+            </span>
+            <span>•</span>
+            <span>Miembro desde 2023</span>
+          </div>
+        </div>
+
+        {/* Статистика */}
+        <div className="grid grid-cols-3 gap-4 mt-6 py-4 border-y border-slate-100 dark:border-slate-800">
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">4.9</div>
+            <div className="flex justify-center text-amber-400 my-1">
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <Star className="w-3.5 h-3.5 fill-current" />
+            </div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500">128 reseñas</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">45</div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Anuncios</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-black text-slate-900 dark:text-white">100%</div>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Respuesta</div>
+          </div>
+        </div>
+
+        {/* Теги / Достижения */}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg">
+            Vendedor PRO
+          </span>
+          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-lg">
+            Identidad Verificada
+          </span>
+          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg">
+            Responde rápido
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

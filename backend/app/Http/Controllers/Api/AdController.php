@@ -1396,4 +1396,116 @@ class AdController extends Controller
         
         return response()->json(['message' => 'Error de conexión con el CEO'], 500);
     }
+
+    /**
+     * AI Agent for Marketing (CMO)
+     */
+    public function askMarketingAgent(Request $request)
+    {
+        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
+        $request->validate(['query' => 'required|string']);
+        
+        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
+
+        $prompt = "You are the Chief Marketing Officer (CMO) of Mercasto. Provide expert advice on digital marketing, user acquisition, conversion rate optimization, and advertising campaigns. Use Russian language. Request: '{$request->query}'";
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
+            'contents' => [['parts' => [['text' => $prompt]]]]
+        ]);
+
+        if ($response->successful()) {
+            return response()->json([
+                'agent' => '📈 Маркетолог',
+                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
+                'status' => 'success'
+            ]);
+        }
+        
+        return response()->json(['message' => 'Error de conexión con el Marketer'], 500);
+    }
+
+    /**
+     * AI Agent for SEO
+     */
+    public function askSeoAgent(Request $request)
+    {
+        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
+        $request->validate(['query' => 'required|string']);
+        
+        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
+
+        $prompt = "You are the Lead SEO Specialist of Mercasto. Provide expert advice on search engine optimization, keywords, technical SEO, structured data, and content strategy for the marketplace. Use Russian language. Request: '{$request->query}'";
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
+            'contents' => [['parts' => [['text' => $prompt]]]]
+        ]);
+
+        if ($response->successful()) {
+            return response()->json([
+                'agent' => '🔍 SEO-специалист',
+                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
+                'status' => 'success'
+            ]);
+        }
+        
+        return response()->json(['message' => 'Error de conexión con el SEO'], 500);
+    }
+
+    /**
+     * AI Agent for Chief UI Officer
+     */
+    public function askCeoUiAgent(Request $request)
+    {
+        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
+        $request->validate(['query' => 'required|string']);
+        
+        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
+
+        $prompt = "You are the Chief UI Officer (Head of User Interface) of Mercasto. Provide expert advice on visual design, color palettes, typography, component styling, and overall aesthetics for the marketplace. Use Russian language. Request: '{$request->query}'";
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
+            'contents' => [['parts' => [['text' => $prompt]]]]
+        ]);
+
+        if ($response->successful()) {
+            return response()->json([
+                'agent' => '🎨 CEO UI',
+                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
+                'status' => 'success'
+            ]);
+        }
+        
+        return response()->json(['message' => 'Error de conexión con el CEO UI'], 500);
+    }
+
+    /**
+     * AI Agent for Chief UX Officer
+     */
+    public function askCeoUxAgent(Request $request)
+    {
+        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
+        $request->validate(['query' => 'required|string']);
+        
+        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
+
+        $prompt = "You are the Chief UX Officer (Head of User Experience) of Mercasto. Provide expert advice on user flows, wireframing, usability, accessibility, interaction design, and overall user journey optimization for the marketplace. Use Russian language. Request: '{$request->query}'";
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
+            'contents' => [['parts' => [['text' => $prompt]]]]
+        ]);
+
+        if ($response->successful()) {
+            return response()->json([
+                'agent' => '🧠 CEO UX',
+                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
+                'status' => 'success'
+            ]);
+        }
+        
+        return response()->json(['message' => 'Error de conexión con el CEO UX'], 500);
+    }
 }
