@@ -1,0 +1,293 @@
+*2
+$6
+SELECT
+$1
+1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776840676571
+*5
+$3
+SET
+$47
+mercasto_database_mercasto_cache_categories_all
+$2380
+a:12:{i:0;a:7:{s:2:"id";i:1;s:4:"slug";s:5:"motor";s:4:"name";a:2:{s:2:"es";s:5:"Motor";s:2:"en";s:6:"Motors";}s:4:"icon";s:3:"Car";s:10:"sort_order";i:1;s:10:"created_at";N;s:10:"updated_at";N;}i:1;a:7:{s:2:"id";i:2;s:4:"slug";s:12:"inmobiliaria";s:4:"name";a:2:{s:2:"es";s:9:"Inmuebles";s:2:"en";s:11:"Real Estate";}s:4:"icon";s:4:"Home";s:10:"sort_order";i:2;s:10:"created_at";N;s:10:"updated_at";N;}i:2;a:7:{s:2:"id";i:3;s:4:"slug";s:6:"empleo";s:4:"name";a:2:{s:2:"es";s:6:"Empleo";s:2:"en";s:4:"Jobs";}s:4:"icon";s:9:"Briefcase";s:10:"sort_order";i:3;s:10:"created_at";N;s:10:"updated_at";N;}i:3;a:7:{s:2:"id";i:4;s:4:"slug";s:9:"servicios";s:4:"name";a:2:{s:2:"es";s:9:"Servicios";s:2:"en";s:8:"Services";}s:4:"icon";s:6:"Wrench";s:10:"sort_order";i:4;s:10:"created_at";N;s:10:"updated_at";N;}i:4;a:7:{s:2:"id";i:5;s:4:"slug";s:11:"informatica";s:4:"name";a:2:{s:2:"es";s:12:"Informática";s:2:"en";s:9:"Computers";}s:4:"icon";s:7:"Monitor";s:10:"sort_order";i:5;s:10:"created_at";N;s:10:"updated_at";N;}i:5;a:7:{s:2:"id";i:6;s:4:"slug";s:9:"telefonia";s:4:"name";a:2:{s:2:"es";s:10:"Telefonía";s:2:"en";s:6:"Phones";}s:4:"icon";s:10:"Smartphone";s:10:"sort_order";i:6;s:10:"created_at";N;s:10:"updated_at";N;}i:6;a:7:{s:2:"id";i:7;s:4:"slug";s:5:"hogar";s:4:"name";a:2:{s:2:"es";s:5:"Hogar";s:2:"en";s:4:"Home";}s:4:"icon";s:4:"Sofa";s:10:"sort_order";i:7;s:10:"created_at";N;s:10:"updated_at";N;}i:7;a:7:{s:2:"id";i:8;s:4:"slug";s:4:"moda";s:4:"name";a:2:{s:2:"es";s:4:"Moda";s:2:"en";s:7:"Fashion";}s:4:"icon";s:5:"Shirt";s:10:"sort_order";i:8;s:10:"created_at";N;s:10:"updated_at";N;}i:8;a:7:{s:2:"id";i:9;s:4:"slug";s:5:"bebes";s:4:"name";a:2:{s:2:"es";s:6:"Bebés";s:2:"en";s:6:"Babies";}s:4:"icon";s:4:"Baby";s:10:"sort_order";i:9;s:10:"created_at";N;s:10:"updated_at";N;}i:9;a:7:{s:2:"id";i:10;s:4:"slug";s:8:"mascotas";s:4:"name";a:2:{s:2:"es";s:8:"Mascotas";s:2:"en";s:4:"Pets";}s:4:"icon";s:8:"PawPrint";s:10:"sort_order";i:10;s:10:"created_at";N;s:10:"updated_at";N;}i:10;a:7:{s:2:"id";i:11;s:4:"slug";s:4:"ocio";s:4:"name";a:2:{s:2:"es";s:4:"Ocio";s:2:"en";s:7:"Hobbies";}s:4:"icon";s:4:"Bike";s:10:"sort_order";i:11;s:10:"created_at";N;s:10:"updated_at";N;}i:11;a:7:{s:2:"id";i:12;s:4:"slug";s:7:"boletos";s:4:"name";a:2:{s:2:"es";s:7:"Boletos";s:2:"en";s:7:"Tickets";}s:4:"icon";s:6:"Ticket";s:10:"sort_order";i:12;s:10:"created_at";N;s:10:"updated_at";N;}}
+$4
+PXAT
+$13
+1776927016598
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776840812398
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*5
+$3
+SET
+$44
+mercasto_database_mercasto_cache_sitemap_xml
+$779
+s:770:"<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+   <url>
+      <loc>https://mercasto.com/</loc>
+      <changefreq>always</changefreq>
+      <priority>1.0</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/terms</loc>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/privacy</loc>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/help</loc>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+   </url>
+   <url>
+      <loc>https://mercasto.com/safety</loc>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+   </url>
+</urlset>";
+$4
+PXAT
+$13
+1776844607513
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776841074823
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*2
+$3
+DEL
+$44
+mercasto_database_mercasto_cache_sitemap_xml
+*2
+$6
+SELECT
+$1
+0
+*5
+$3
+SET
+$73
+mercasto_database_mercasto_cache_ycKYhCblHIUSWju4dRKDNXFNVNnCSTn11bJTaTqV
+$418
+s:409:"a:3:{s:6:"_token";s:40:"4O6dACVD3WyX2keomGkCOO40xaSl85qrknUebf6V";s:9:"_previous";a:2:{s:3:"url";s:203:"https://mercasto.com/index.php?call_id=hy9vexaqp-0&controller=apiHealthCheck&fc=module&job_id=repeat%3Ashop-content-synchronization-54e0663b-ace0-4149-83ff-5639eb882c5f%3A1776862800000&module=ps_eventbus";s:5:"route";s:27:"generated::yr3Swig8V7FXaT34";}s:6:"_flash";a:2:{s:3:"old";a:0:{}s:3:"new";a:0:{}}}";
+$4
+PXAT
+$13
+1776873986865
+*5
+$3
+SET
+$73
+mercasto_database_mercasto_cache_yLcjm3GLDkKJR7XdwkdqKeAoLotukwDtA7XhvTWE
+$320
+s:311:"a:3:{s:6:"_token";s:40:"wd9FURvFuFtzMAURxVeAP7V8uwZXZnuvPJ75uHat";s:9:"_previous";a:2:{s:3:"url";s:105:"https://mercasto.com/index.php?call_id=nvel5tfiv-0&controller=apiHealthCheck&fc=module&module=ps_eventbus";s:5:"route";s:27:"generated::yr3Swig8V7FXaT34";}s:6:"_flash";a:2:{s:3:"old";a:0:{}s:3:"new";a:0:{}}}";
+$4
+PXAT
+$13
+1776873987024
+*5
+$3
+SET
+$73
+mercasto_database_mercasto_cache_LA9KoIbd5ub4h6ikgfO4npJcBNZwjfs52JD3nv3R
+$418
+s:409:"a:3:{s:6:"_token";s:40:"tq0rsKBABJKd9FdSw05Fr9UXUNGOgnq5K2LWy8ts";s:9:"_previous";a:2:{s:3:"url";s:203:"https://mercasto.com/index.php?call_id=b3c464v8o-0&controller=apiHealthCheck&fc=module&job_id=repeat%3Ashop-content-synchronization-a2e43f4b-f641-4b1d-8942-846317b44faf%3A1776862800000&module=ps_eventbus";s:5:"route";s:27:"generated::yr3Swig8V7FXaT34";}s:6:"_flash";a:2:{s:3:"old";a:0:{}s:3:"new";a:0:{}}}";
+$4
+PXAT
+$13
+1776877832838
+*5
+$3
+SET
+$73
+mercasto_database_mercasto_cache_riu0ZTYCBb0PUMOhNDE1nPptzew9B0ORUm8rsucL
+$320
+s:311:"a:3:{s:6:"_token";s:40:"SbXhx2seUQBNNKHvgT5YULlNsuPC9k3mMK15e4fu";s:9:"_previous";a:2:{s:3:"url";s:105:"https://mercasto.com/index.php?call_id=0nvtaoeii-0&controller=apiHealthCheck&fc=module&module=ps_eventbus";s:5:"route";s:27:"generated::yr3Swig8V7FXaT34";}s:6:"_flash";a:2:{s:3:"old";a:0:{}s:3:"new";a:0:{}}}";
+$4
+PXAT
+$13
+1776877833000
+*2
+$3
+DEL
+$73
+mercasto_database_mercasto_cache_ycKYhCblHIUSWju4dRKDNXFNVNnCSTn11bJTaTqV
+*2
+$3
+DEL
+$73
+mercasto_database_mercasto_cache_yLcjm3GLDkKJR7XdwkdqKeAoLotukwDtA7XhvTWE
+*2
+$3
+DEL
+$73
+mercasto_database_mercasto_cache_LA9KoIbd5ub4h6ikgfO4npJcBNZwjfs52JD3nv3R
+*2
+$3
+DEL
+$73
+mercasto_database_mercasto_cache_riu0ZTYCBb0PUMOhNDE1nPptzew9B0ORUm8rsucL
+*2
+$6
+SELECT
+$1
+1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776889873700
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776890088058
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776890319878
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776890565751
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776890657889
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776890921697
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+*5
+$3
+SET
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
+$655
+a:13:{s:12:"current_page";i:1;s:4:"data";a:0:{}s:14:"first_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:4:"from";N;s:9:"last_page";i:1;s:13:"last_page_url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"links";a:3:{i:0;a:4:{s:3:"url";N;s:5:"label";s:16:"&laquo; Previous";s:4:"page";N;s:6:"active";b:0;}i:1;a:4:{s:3:"url";s:35:"https://mercasto.com/api/ads?page=1";s:5:"label";s:1:"1";s:4:"page";i:1;s:6:"active";b:1;}i:2;a:4:{s:3:"url";N;s:5:"label";s:12:"Next &raquo;";s:4:"page";N;s:6:"active";b:0;}}s:13:"next_page_url";N;s:4:"path";s:28:"https://mercasto.com/api/ads";s:8:"per_page";i:16;s:13:"prev_page_url";N;s:2:"to";N;s:5:"total";i:0;}
+$4
+PXAT
+$13
+1776891225264
+*2
+$3
+DEL
+$49
+mercasto_database_mercasto_cache_ads_index_page_1
