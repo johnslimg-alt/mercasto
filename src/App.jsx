@@ -1830,7 +1830,7 @@ function App() {
     setAiResult(null);
     try {
       const token = localStorage.getItem('auth_token');
-      const endpoints = { postgresql: '/agents/postgresql', react: '/agents/react', ceo: '/agents/ceo', lawyer: '/agents/lawyer', notary: '/agents/notary', advocate: '/agents/advocate', marketing: '/agents/marketing', seo: '/agents/seo', ceo_ui: '/agents/ceo-ui', ceo_ux: '/agents/ceo-ux' };
+      const endpoints = { postgresql: '/agents/postgresql', react: '/agents/react', ceo: '/agents/ceo', lawyer: '/agents/lawyer', notary: '/agents/notary', advocate: '/agents/advocate', marketing: '/agents/marketing', seo: '/agents/seo', ceo_ui: '/agents/ceo-ui', ceo_ux: '/agents/ceo-ux', ui: '/agents/ui' };
       const endpoint = endpoints[aiAgentType] || '/agents/ceo';
       const payload = aiAgentType === 'react' ? { prompt: aiPrompt } : { query: aiPrompt };
       
@@ -2086,6 +2086,23 @@ function App() {
             </div>
           </div>
           
+          {/* Dynamic Placeholders Helper */}
+          {(() => {
+            window.aiPlaceholders = {
+              postgresql: "Напр: Сколько сейчас активных объявлений?",
+              react: "Напр: Создай анимированную кнопку входа на Tailwind 4...",
+              lawyer: "Напр: Составь новые правила возврата средств...",
+              notary: "Напр: Какие требования к KYC документам?",
+              advocate: "Напр: Как ответить на жалобу о мошенничестве?",
+              marketing: "Напр: Как нам увеличить конверсию на главной?",
+              seo: "Напр: Какие мета-теги добавить для карточки товара?",
+              ceo_ui: "Напр: Какие цвета лучше использовать для премиум-товаров?",
+              ceo_ux: "Напр: Как нам улучшить воронку оформления заказа?",
+              ui: "Напр: Напиши классы Tailwind для красивого хедера...",
+              ceo: "Напр: Алекс, какая у нас стратегия на Q3?"
+            };
+          })()}
+
           <div className="flex flex-wrap gap-2 mb-4 bg-slate-800 p-1 rounded-xl w-fit">
             <button type="button" onClick={() => {setAiAgentType('postgresql'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'postgresql' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🐘 Базы данных</button>
             <button type="button" onClick={() => {setAiAgentType('react'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'react' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚛️ UX Разработчик</button>
@@ -2097,6 +2114,7 @@ function App() {
             <button type="button" onClick={() => {setAiAgentType('seo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'seo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🔍 SEO</button>
             <button type="button" onClick={() => {setAiAgentType('ceo_ui'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo_ui' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🎨 CEO UI</button>
             <button type="button" onClick={() => {setAiAgentType('ceo_ux'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo_ux' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🧠 CEO UX</button>
+            <button type="button" onClick={() => {setAiAgentType('ui'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ui' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>✨ UI Разработчик</button>
           </div>
 
           <div className="flex-1 overflow-y-auto mb-4 bg-slate-950 rounded-xl p-4 border border-slate-800 font-mono text-[13px] text-slate-300">
@@ -2116,7 +2134,7 @@ function App() {
           </div>
 
           <form onSubmit={handleAiSubmit} className="flex gap-2">
-            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={aiAgentType === 'postgresql' ? "Напр: Сколько сейчас активных объявлений?" : aiAgentType === 'react' ? "Напр: Создай анимированную кнопку входа на Tailwind 4..." : aiAgentType === 'lawyer' ? "Напр: Составь новые правила возврата средств..." : aiAgentType === 'notary' ? "Напр: Какие требования к KYC документам?" : aiAgentType === 'advocate' ? "Напр: Как ответить на жалобу о мошенничестве?" : aiAgentType === 'marketing' ? "Напр: Как нам увеличить конверсию на главной?" : aiAgentType === 'seo' ? "Напр: Какие мета-теги добавить для карточки товара?" : aiAgentType === 'ceo_ui' ? "Напр: Какие цвета лучше использовать для премиум-товаров?" : aiAgentType === 'ceo_ux' ? "Напр: Как нам улучшить воронку оформления заказа?" : "Напр: Алекс, какая у нас стратегия на Q3?"} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
+            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={window.aiPlaceholders?.[aiAgentType] || window.aiPlaceholders?.ceo} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
             <button type="submit" disabled={isAiProcessing || !aiPrompt.trim()} className="px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]">
               {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Выполнить'}
             </button>
@@ -2640,283 +2658,6 @@ function App() {
           )}
         </div>
       )}
-    </div>
-  );
-}
- 
-import React from 'react';
-import { Star, BadgeCheck, MapPin, MessageCircle, Phone } from 'lucide-react';
-
-export default function SellerProfileCard() {
-  return (
-    <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
-      {/* Обложка (Cover) */}
-      <div className="h-28 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-
-      {/* Информация профиля */}
-      <div className="px-6 pb-6 relative">
-        <div className="flex justify-between items-end -mt-12 mb-4">
-          {/* Аватар */}
-          <div className="relative">
-            <img
-              src="https://placehold.co/150x150/png?text=Auto+Motors"
-              alt="Avatar del Vendedor"
-              className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-900 object-cover bg-slate-100 shadow-md"
-            />
-            {/* Статус "В сети" */}
-            <div 
-              className="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900" 
-              title="En línea"
-            ></div>
-          </div>
-          
-          {/* Кнопки действий */}
-          <div className="flex gap-2">
-            <button className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-300 transition-colors">
-              <Phone className="w-5 h-5" />
-            </button>
-            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/30">
-              <MessageCircle className="w-5 h-5" />
-              Contactar
-            </button>
-          </div>
-        </div>
-
-        {/* Имя и локация */}
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            AutoMotors México
-            <BadgeCheck className="w-5 h-5 text-blue-500" />
-          </h2>
-          <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" /> Ciudad de México
-            </span>
-            <span>•</span>
-            <span>Miembro desde 2023</span>
-          </div>
-        </div>
-
-        {/* Статистика */}
-        <div className="grid grid-cols-3 gap-4 mt-6 py-4 border-y border-slate-100 dark:border-slate-800">
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">4.9</div>
-            <div className="flex justify-center text-amber-400 my-1">
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-            </div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500">128 reseñas</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">45</div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Anuncios</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">100%</div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Respuesta</div>
-          </div>
-        </div>
-
-        {/* Теги / Достижения */}
-        <div className="mt-5 flex flex-wrap gap-2">
-          <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg">
-            Vendedor PRO
-          </span>
-          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-lg">
-            Identidad Verificada
-          </span>
-          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg">
-            Responde rápido
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-import React from 'react';
-import { Star, BadgeCheck, MapPin, MessageCircle, Phone } from 'lucide-react';
-
-export default function SellerProfileCard() {
-  return (
-    <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
-      {/* Обложка (Cover) */}
-      <div className="h-28 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-
-      {/* Информация профиля */}
-      <div className="px-6 pb-6 relative">
-        <div className="flex justify-between items-end -mt-12 mb-4">
-          {/* Аватар */}
-          <div className="relative">
-            <img
-              src="https://placehold.co/150x150/png?text=Auto+Motors"
-              alt="Avatar del Vendedor"
-              className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-900 object-cover bg-slate-100 shadow-md"
-            />
-            {/* Статус "В сети" */}
-            <div 
-              className="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900" 
-              title="En línea"
-            ></div>
-          </div>
-          
-          {/* Кнопки действий */}
-          <div className="flex gap-2">
-            <button className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-300 transition-colors">
-              <Phone className="w-5 h-5" />
-            </button>
-            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/30">
-              <MessageCircle className="w-5 h-5" />
-              Contactar
-            </button>
-          </div>
-        </div>
-
-        {/* Имя и локация */}
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            AutoMotors México
-            <BadgeCheck className="w-5 h-5 text-blue-500" />
-          </h2>
-          <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" /> Ciudad de México
-            </span>
-            <span>•</span>
-            <span>Miembro desde 2023</span>
-          </div>
-        </div>
-
-        {/* Статистика */}
-        <div className="grid grid-cols-3 gap-4 mt-6 py-4 border-y border-slate-100 dark:border-slate-800">
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">4.9</div>
-            <div className="flex justify-center text-amber-400 my-1">
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-            </div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500">128 reseñas</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">45</div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Anuncios</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">100%</div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Respuesta</div>
-          </div>
-        </div>
-
-        {/* Теги / Достижения */}
-        <div className="mt-5 flex flex-wrap gap-2">
-          <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg">
-            Vendedor PRO
-          </span>
-          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-lg">
-            Identidad Verificada
-          </span>
-          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg">
-            Responde rápido
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-import React from 'react';
-import { Star, BadgeCheck, MapPin, MessageCircle, Phone } from 'lucide-react';
-
-export default function SellerProfileCard() {
-  return (
-    <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
-      {/* Обложка (Cover) */}
-      <div className="h-28 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-
-      {/* Информация профиля */}
-      <div className="px-6 pb-6 relative">
-        <div className="flex justify-between items-end -mt-12 mb-4">
-          {/* Аватар */}
-          <div className="relative">
-            <img
-              src="https://placehold.co/150x150/png?text=Auto+Motors"
-              alt="Avatar del Vendedor"
-              className="w-24 h-24 rounded-2xl border-4 border-white dark:border-slate-900 object-cover bg-slate-100 shadow-md"
-            />
-            {/* Статус "В сети" */}
-            <div 
-              className="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full border-4 border-white dark:border-slate-900" 
-              title="En línea"
-            ></div>
-          </div>
-          
-          {/* Кнопки действий */}
-          <div className="flex gap-2">
-            <button className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-300 transition-colors">
-              <Phone className="w-5 h-5" />
-            </button>
-            <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl flex items-center gap-2 transition-all shadow-md shadow-indigo-500/30">
-              <MessageCircle className="w-5 h-5" />
-              Contactar
-            </button>
-          </div>
-        </div>
-
-        {/* Имя и локация */}
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            AutoMotors México
-            <BadgeCheck className="w-5 h-5 text-blue-500" />
-          </h2>
-          <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" /> Ciudad de México
-            </span>
-            <span>•</span>
-            <span>Miembro desde 2023</span>
-          </div>
-        </div>
-
-        {/* Статистика */}
-        <div className="grid grid-cols-3 gap-4 mt-6 py-4 border-y border-slate-100 dark:border-slate-800">
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">4.9</div>
-            <div className="flex justify-center text-amber-400 my-1">
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <Star className="w-3.5 h-3.5 fill-current" />
-            </div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500">128 reseñas</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">45</div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Anuncios</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-black text-slate-900 dark:text-white">100%</div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500 mt-1">Respuesta</div>
-          </div>
-        </div>
-
-        {/* Теги / Достижения */}
-        <div className="mt-5 flex flex-wrap gap-2">
-          <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-lg">
-            Vendedor PRO
-          </span>
-          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-lg">
-            Identidad Verificada
-          </span>
-          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg">
-            Responde rápido
-          </span>
-        </div>
-      </div>
     </div>
   );
 }
