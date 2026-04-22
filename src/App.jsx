@@ -1835,7 +1835,7 @@ function App() {
       const data = await res.json();
       setAiResult(data);
     } catch (err) {
-      setAiResult({ error: 'Error de conexión con el agente IA.' });
+      setAiResult({ error: 'Ошибка подключения к ИИ-агенту.' });
     } finally {
       setIsAiProcessing(false);
     }
@@ -2074,8 +2074,8 @@ function App() {
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center"><Sparkles className="text-indigo-400 w-6 h-6"/></div>
             <div>
-              <h2 className="text-[20px] font-bold text-white leading-none">Centro de Comando IA</h2>
-              <span className="text-[12px] text-slate-400">Agentes Autónomos Mercasto</span>
+              <h2 className="text-[20px] font-bold text-white leading-none">Центр Командования ИИ</h2>
+              <span className="text-[12px] text-slate-400">Автономные Агенты Mercasto</span>
             </div>
           </div>
           
@@ -2086,24 +2086,24 @@ function App() {
 
           <div className="flex-1 overflow-y-auto mb-4 bg-slate-950 rounded-xl p-4 border border-slate-800 font-mono text-[13px] text-slate-300">
             {isAiProcessing ? (
-              <div className="flex items-center gap-3 text-indigo-400"><Loader2 className="animate-spin w-5 h-5"/> El agente está analizando tu solicitud...</div>
+              <div className="flex items-center gap-3 text-indigo-400"><Loader2 className="animate-spin w-5 h-5"/> Агент анализирует ваш запрос...</div>
             ) : aiResult ? (
               <div>
                 <div className="text-indigo-400 font-bold mb-2">[{aiResult.agent || 'System'}]</div>
                 {aiResult.error && <div className="text-red-400">{aiResult.error}</div>}
-                {aiResult.sql && <div className="mb-4"><div className="text-slate-500 text-[10px] uppercase mb-1">SQL Generado:</div><code className="text-emerald-400">{aiResult.sql}</code></div>}
-                {aiResult.data && <div><div className="text-slate-500 text-[10px] uppercase mb-1">Resultados ({aiResult.data?.length || 0}):</div><pre className="overflow-x-auto text-blue-300 mt-2">{JSON.stringify(aiResult.data, null, 2)}</pre></div>}
-                {aiResult.response && <div><div className="text-slate-500 text-[10px] uppercase mb-1">Código Generado:</div><pre className="overflow-x-auto text-amber-300 mt-2">{aiResult.response}</pre></div>}
+                {aiResult.sql && <div className="mb-4"><div className="text-slate-500 text-[10px] uppercase mb-1">Сгенерированный SQL:</div><code className="text-emerald-400">{aiResult.sql}</code></div>}
+                {aiResult.data && <div><div className="text-slate-500 text-[10px] uppercase mb-1">Результаты ({aiResult.data?.length || 0}):</div><pre className="overflow-x-auto text-blue-300 mt-2">{JSON.stringify(aiResult.data, null, 2)}</pre></div>}
+                {aiResult.response && <div><div className="text-slate-500 text-[10px] uppercase mb-1">Сгенерированный код:</div><pre className="overflow-x-auto text-amber-300 mt-2">{aiResult.response}</pre></div>}
               </div>
             ) : (
-              <div className="text-slate-600 italic">Esperando órdenes, Comandante... Escribe tu petición abajo.</div>
+              <div className="text-slate-600 italic">Ожидаю приказов, Командир... Напишите ваш запрос ниже.</div>
             )}
           </div>
 
           <form onSubmit={handleAiSubmit} className="flex gap-2">
-            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={aiAgentType === 'postgresql' ? "Ej: ¿Cuántos anuncios activos hay?" : "Ej: Crea un botón de login animado con Tailwind 4..."} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
+            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={aiAgentType === 'postgresql' ? "Напр: Сколько сейчас активных объявлений?" : "Напр: Создай анимированную кнопку входа на Tailwind 4..."} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
             <button type="submit" disabled={isAiProcessing || !aiPrompt.trim()} className="px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]">
-              {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Ejecutar'}
+              {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Выполнить'}
             </button>
           </form>
         </div>
@@ -2193,7 +2193,7 @@ function App() {
   const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
   const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
 
-  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderUserDashboard={renderUserDashboard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} />;
+  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
