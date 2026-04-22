@@ -1809,6 +1809,31 @@ function App() {
     } catch (err) { console.error("Clip payment error", err); alert('Error de conexión'); }
   };
   
+  // --- AI COMMAND CENTER LOGIC ---
+  const handleAiSubmit = async (e) => {
+    e.preventDefault();
+    if (!aiPrompt.trim()) return;
+    setIsAiProcessing(true);
+    setAiResult(null);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const endpoint = aiAgentType === 'postgresql' ? '/agents/postgresql' : '/agents/react';
+      const payload = aiAgentType === 'postgresql' ? { query: aiPrompt } : { prompt: aiPrompt };
+      
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      setAiResult(data);
+    } catch (err) {
+      setAiResult({ error: 'Error de conexión con el agente IA.' });
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
+
   // --- ПРОДВИЖЕНИЕ ОБЪЯВЛЕНИЯ (Выбор: Кредиты или Карта) ---
   const handlePromoteAd = async (ad) => {
     const balance = parseFloat(user?.balance || 0);
@@ -2026,6 +2051,53 @@ function App() {
               <textarea value={userReportForm.comments} onChange={e => setUserReportForm({...userReportForm, comments: e.target.value})} placeholder="Explica la situación..." className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white"></textarea>
             </div>
             <button type="submit" className="btn-md w-full bg-[#0F172A] text-white hover:bg-black mt-2 shadow-sm">Enviar Reporte</button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  // --- РЕНДЕР AI COMMAND CENTER (ТОЛЬКО ДЛЯ АДМИНА) ---
+  const renderAiModal = () => {
+    if (!showAiModal || user?.role !== 'admin') return null;
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAiModal(false)}>
+        <div className="bg-slate-900 w-full max-w-3xl rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95 border border-slate-700 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+          <button onClick={() => setShowAiModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><XCircle size={24}/></button>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center"><Sparkles className="text-indigo-400 w-6 h-6"/></div>
+            <div>
+              <h2 className="text-[20px] font-bold text-white leading-none">Centro de Comando IA</h2>
+              <span className="text-[12px] text-slate-400">Agentes Autónomos Mercasto</span>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 mb-4 bg-slate-800 p-1 rounded-xl w-fit">
+            <button type="button" onClick={() => {setAiAgentType('postgresql'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'postgresql' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🐘 DB Agent</button>
+            <button type="button" onClick={() => {setAiAgentType('react'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'react' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚛️ UI Agent</button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto mb-4 bg-slate-950 rounded-xl p-4 border border-slate-800 font-mono text-[13px] text-slate-300">
+            {isAiProcessing ? (
+              <div className="flex items-center gap-3 text-indigo-400"><Loader2 className="animate-spin w-5 h-5"/> El agente está analizando tu solicitud...</div>
+            ) : aiResult ? (
+              <div>
+                <div className="text-indigo-400 font-bold mb-2">[{aiResult.agent || 'System'}]</div>
+                {aiResult.error && <div className="text-red-400">{aiResult.error}</div>}
+                {aiResult.sql && <div className="mb-4"><div className="text-slate-500 text-[10px] uppercase mb-1">SQL Generado:</div><code className="text-emerald-400">{aiResult.sql}</code></div>}
+                {aiResult.data && <div><div className="text-slate-500 text-[10px] uppercase mb-1">Resultados ({aiResult.data?.length || 0}):</div><pre className="overflow-x-auto text-blue-300 mt-2">{JSON.stringify(aiResult.data, null, 2)}</pre></div>}
+                {aiResult.response && <div><div className="text-slate-500 text-[10px] uppercase mb-1">Código Generado:</div><pre className="overflow-x-auto text-amber-300 mt-2">{aiResult.response}</pre></div>}
+              </div>
+            ) : (
+              <div className="text-slate-600 italic">Esperando órdenes, Comandante... Escribe tu petición abajo.</div>
+            )}
+          </div>
+
+          <form onSubmit={handleAiSubmit} className="flex gap-2">
+            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={aiAgentType === 'postgresql' ? "Ej: ¿Cuántos anuncios activos hay?" : "Ej: Crea un botón de login animado con Tailwind 4..."} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
+            <button type="submit" disabled={isAiProcessing || !aiPrompt.trim()} className="px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]">
+              {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Ejecutar'}
+            </button>
           </form>
         </div>
       </div>
@@ -2426,6 +2498,14 @@ function App() {
       {renderQRModal()}
       {renderReportModal()}
       {renderUserReportModal()}
+      {renderAiModal()}
+
+      {/* AI COMMAND CENTER FLOATING BUTTON (ADMIN ONLY) */}
+      {user?.role === 'admin' && !viewedAd && !viewedCompany && (
+        <button onClick={() => setShowAiModal(true)} className="fixed bottom-24 right-6 md:bottom-10 md:right-10 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-[0_0_20px_rgba(99,102,241,0.5)] flex items-center justify-center hover:bg-indigo-500 transition-all hover:scale-110 z-50 group">
+          <Sparkles className="w-6 h-6 group-hover:animate-pulse" />
+        </button>
+      )}
 
       {/* AUTH MODAL */}
       {showAuthModal && (
