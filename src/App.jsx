@@ -1830,7 +1830,7 @@ function App() {
     setAiResult(null);
     try {
       const token = localStorage.getItem('auth_token');
-      const endpoints = { postgresql: '/agents/postgresql', react: '/agents/react', ceo: '/agents/ceo', lawyer: '/agents/lawyer', notary: '/agents/notary', advocate: '/agents/advocate' };
+      const endpoints = { postgresql: '/agents/postgresql', react: '/agents/react', ceo: '/agents/ceo', lawyer: '/agents/lawyer', notary: '/agents/notary', advocate: '/agents/advocate', marketing: '/agents/marketing', seo: '/agents/seo' };
       const endpoint = endpoints[aiAgentType] || '/agents/ceo';
       const payload = aiAgentType === 'react' ? { prompt: aiPrompt } : { query: aiPrompt };
       
@@ -2087,12 +2087,14 @@ function App() {
           </div>
           
           <div className="flex flex-wrap gap-2 mb-4 bg-slate-800 p-1 rounded-xl w-fit">
-            <button type="button" onClick={() => {setAiAgentType('postgresql'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'postgresql' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🐘 DB Agent</button>
-            <button type="button" onClick={() => {setAiAgentType('react'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'react' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚛️ UI Agent</button>
-            <button type="button" onClick={() => {setAiAgentType('ceo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>👔 CEO Alex</button>
+            <button type="button" onClick={() => {setAiAgentType('postgresql'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'postgresql' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🐘 Базы данных</button>
+            <button type="button" onClick={() => {setAiAgentType('react'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'react' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚛️ UX Разработчик</button>
+            <button type="button" onClick={() => {setAiAgentType('ceo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>👔 CEO Алекс</button>
             <button type="button" onClick={() => {setAiAgentType('lawyer'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'lawyer' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚖️ Юрист</button>
             <button type="button" onClick={() => {setAiAgentType('notary'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'notary' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📝 Нотариус</button>
             <button type="button" onClick={() => {setAiAgentType('advocate'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'advocate' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🛡️ Адвокат</button>
+            <button type="button" onClick={() => {setAiAgentType('marketing'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'marketing' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📈 Маркетолог</button>
+            <button type="button" onClick={() => {setAiAgentType('seo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'seo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🔍 SEO</button>
           </div>
 
           <div className="flex-1 overflow-y-auto mb-4 bg-slate-950 rounded-xl p-4 border border-slate-800 font-mono text-[13px] text-slate-300">
@@ -2112,7 +2114,7 @@ function App() {
           </div>
 
           <form onSubmit={handleAiSubmit} className="flex gap-2">
-            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={aiAgentType === 'postgresql' ? "Напр: Сколько сейчас активных объявлений?" : aiAgentType === 'react' ? "Напр: Создай анимированную кнопку входа на Tailwind 4..." : aiAgentType === 'lawyer' ? "Напр: Составь новые правила возврата средств..." : aiAgentType === 'notary' ? "Напр: Какие требования к KYC документам?" : aiAgentType === 'advocate' ? "Напр: Как ответить на жалобу о мошенничестве?" : "Напр: Алекс, какая у нас стратегия на Q3?"} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
+            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={aiAgentType === 'postgresql' ? "Напр: Сколько сейчас активных объявлений?" : aiAgentType === 'react' ? "Напр: Создай анимированную кнопку входа на Tailwind 4..." : aiAgentType === 'lawyer' ? "Напр: Составь новые правила возврата средств..." : aiAgentType === 'notary' ? "Напр: Какие требования к KYC документам?" : aiAgentType === 'advocate' ? "Напр: Как ответить на жалобу о мошенничестве?" : aiAgentType === 'marketing' ? "Напр: Как нам увеличить конверсию на главной?" : aiAgentType === 'seo' ? "Напр: Какие мета-теги добавить для карточки товара?" : "Напр: Алекс, какая у нас стратегия на Q3?"} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
             <button type="submit" disabled={isAiProcessing || !aiPrompt.trim()} className="px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]">
               {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Выполнить'}
             </button>
