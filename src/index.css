@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Восстанавливаем ручное переключение темной темы через класс .dark (В v4 это обязательно) */
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -24,7 +23,6 @@
   * { outline: none !important; }
 }
 
-/* Базовые компоненты UI */
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -42,7 +40,6 @@
   .badge { @apply text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide; }
 }
 
-/* ГЛОБАЛЬНЫЕ ПРАВИЛА ТЕМНОЙ ТЕМЫ */
 @layer base {
   html.dark .bg-white { background-color: #1E293B !important; }
   html.dark .bg-slate-50, html.dark .bg-slate-100 { background-color: #0F172A !important; }
