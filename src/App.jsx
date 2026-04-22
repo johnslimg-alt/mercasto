@@ -24,6 +24,12 @@ class ErrorBoundary extends React.Component {
   }
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
+    
+    // Автоматическая защита от устаревшего кэша Vite (после новых деплоев)
+    if (error && error.message && error.message.includes('Failed to fetch dynamically imported module')) {
+      // Принудительно перезагружаем страницу, чтобы получить новые файлы с сервера
+      window.location.reload();
+    }
   }
   render() {
     if (this.state.hasError) {
