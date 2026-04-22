@@ -154,4 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/agents/postgresql', [AdController::class, 'askPostgresAgent']); // AI Database Agent
     Route::post('/agents/react', [AdController::class, 'generateReactComponent']); // AI UI Builder Agent
     Route::post('/agents/ceo', [AdController::class, 'askCeoAgent']); // AI CEO Agent
+    Route::post('/agents/lawyer', [AdController::class, 'askLawyerAgent']); // AI Lawyer Agent
+    Route::post('/agents/notary', [AdController::class, 'askNotaryAgent']); // AI Notary Agent
+    Route::post('/agents/advocate', [AdController::class, 'askAdvocateAgent']); // AI Advocate Agent
 });
