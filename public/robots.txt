@@ -1,6 +1,3 @@
 User-agent: *
 Allow: /
-Disallow: /admin/
-Disallow: /profile/
-
-Sitemap: https://mercasto.com/sitemap.xml
+Sitemap: https://mercasto.com/api/sitemap.xml
