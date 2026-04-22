@@ -1839,10 +1839,21 @@ function App() {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
+      
+      let data;
+      const text = await res.text();
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        data = { error: `HTTP ${res.status}: ${text.substring(0, 100)}` };
+      }
+      
+      if (!res.ok && !data.error && data.message) {
+        data.error = data.message;
+      }
       setAiResult(data);
     } catch (err) {
-      setAiResult({ error: 'Ошибка подключения к ИИ-агенту.' });
+      setAiResult({ error: `Ошибка сети: ${err.message}` });
     } finally {
       setIsAiProcessing(false);
     }
@@ -2121,13 +2132,14 @@ function App() {
             {isAiProcessing ? (
               <div className="flex items-center gap-3 text-indigo-400"><Loader2 className="animate-spin w-5 h-5"/> Агент анализирует ваш запрос...</div>
             ) : aiResult ? (
-              <div>
-                <div className="text-indigo-400 font-bold mb-2">[{aiResult.agent || 'System'}]</div>
-                {aiResult.error && <div className="text-red-400">{aiResult.error}</div>}
-                {aiResult.sql && <div className="mb-4"><div className="text-slate-500 text-[10px] uppercase mb-1">Сгенерированный SQL:</div><code className="text-emerald-400">{aiResult.sql}</code></div>}
-                {aiResult.data && <div><div className="text-slate-500 text-[10px] uppercase mb-1">Результаты ({aiResult.data?.length || 0}):</div><pre className="overflow-x-auto text-blue-300 mt-2">{JSON.stringify(aiResult.data, null, 2)}</pre></div>}
-                {aiResult.response && <div><div className="text-slate-500 text-[10px] uppercase mb-1">Сгенерированный код:</div><pre className="overflow-x-auto text-amber-300 mt-2">{aiResult.response}</pre></div>}
-              </div>
+              <pre className="overflow-x-auto whitespace-pre-wrap">
+                {aiResult.error
+                  ? <code className="text-red-400">{aiResult.error}</code>
+                  : aiResult.data
+                  ? <code className="text-blue-300">{JSON.stringify(aiResult.data, null, 2)}</code>
+                  : <code className="text-amber-300">{aiResult.response}</code>
+                }
+              </pre>
             ) : (
               <div className="text-slate-600 italic">Ожидаю приказов, Командир... Напишите ваш запрос ниже.</div>
             )}
