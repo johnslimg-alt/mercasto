@@ -153,4 +153,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // Автономные ИИ-Агенты (PostgreSQL & React)
     Route::post('/agents/postgresql', [AdController::class, 'askPostgresAgent']); // AI Database Agent
     Route::post('/agents/react', [AdController::class, 'generateReactComponent']); // AI UI Builder Agent
+    Route::post('/agents/ceo', [AdController::class, 'askCeoAgent']); // AI CEO Agent
 });

@@ -1365,4 +1365,35 @@ class AdController extends Controller
         
         return response()->json(['message' => 'Error al generar el componente'], 500);
     }
+
+    /**
+     * AI Agent for Business Strategy (CEO Alex)
+     */
+    public function askCeoAgent(Request $request)
+    {
+        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
+        $request->validate(['query' => 'required|string']);
+        
+        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+        if (!$apiKey) {
+            return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
+        }
+
+        $prompt = "You are Alex, the visionary CEO and founder of Mercasto (a fast-growing marketplace in Mexico). You are talking to your technical administrator. Answer their question or request strategically, professionally, but with a visionary and encouraging tone. Use Russian language since the admin interface is in Russian. Request: '{$request->query}'";
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
+            'contents' => [['parts' => [['text' => $prompt]]]]
+        ]);
+
+        if ($response->successful()) {
+            $text = trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text')));
+            return response()->json([
+                'agent' => '👔 CEO Alex',
+                'response' => $text,
+                'status' => 'success'
+            ]);
+        }
+        
+        return response()->json(['message' => 'Error de conexión con el CEO'], 500);
+    }
 }
