@@ -338,6 +338,13 @@ function App() {
   const [showUserReportModal, setShowUserReportModal] = useState(false);
   const [userReportForm, setUserReportForm] = useState({ reason: '', comments: '' });
   const [authPhone, setAuthPhone] = useState('');
+  
+  // --- AI COMMAND CENTER STATE ---
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiAgentType, setAiAgentType] = useState('postgresql');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiResult, setAiResult] = useState(null);
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
   const [radius, setRadius] = useState(50);
   const [searchLocation, setSearchLocation] = useState(null); // { lat, lng, name }
