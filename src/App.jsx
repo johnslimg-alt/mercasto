@@ -2318,15 +2318,13 @@ function App() {
                           {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                         </select>
                       </div>
-                      {locState && (
-                        <div className="mb-4">
-                          <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad / Municipio'}</label>
-                          <select value={locCity} onChange={e => setLocCity(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
-                            <option value="">{t.all_cities || 'Todas las ciudades'}</option>
-                          {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
-                          </select>
-                        </div>
-                      )}
+                    <div className="mb-4">
+                      <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad / Municipio'}</label>
+                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400">
+                        <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
+                        {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
+                      </select>
+                    </div>
                       <div className="flex gap-2">
                         <button onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
                       <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowLocationPicker(false); executeSearch(null, query); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
@@ -2428,15 +2426,11 @@ function App() {
                     <option value="">{t.all_mexico || 'Todo México'}</option>
                     {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
-                  {locState && (
-                    <>
                       <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad'}</label>
-                      <select value={locCity} onChange={e => setLocCity(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white">
-                        <option value="">{t.all_cities || 'Todas las ciudades'}</option>
-                      {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
+                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white disabled:bg-slate-50 disabled:text-slate-400">
+                        <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
+                        {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
-                    </>
-                  )}
                 <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowMobileLocationPicker(false); executeSearch(null, query); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
                 </div>
               )}
