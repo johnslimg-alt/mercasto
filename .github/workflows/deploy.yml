@@ -3,7 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - main # Воркфлоу запустится при пуше в эту ветку
+      - main
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -13,66 +13,78 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Execute deployment script via SSH
+      - name: Execute deployment via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: "72.62.173.145"
           username: "root"
           key: ${{ secrets.SERVER_SSH_KEY }}
-          # Скрипт, который будет выполнен прямо на вашем сервере
           script: |
             set -e
             
-            # Переходим в папку с проектом
-            cd /var/www/mercasto
+            echo "🚀 Mercasto Deploy — $(date)"
+            cd /opt/mercasto
             
-            # --- ЭКСТРЕННАЯ ОЧИСТКА СЕРВЕРА (АУДИТ БЕЗОПАСНОСТИ) ---
-            pm2 stop laravel-api || true
-            pm2 delete laravel-api || true
-            pm2 save || true
-            rm -f /var/www/mercasto/y /var/www/mercasto/y.pub /var/www/mercasto/*.py /var/www/mercasto/*.exp /var/www/mercasto/*.sh /var/www/mercasto/mercasto-report.txt
-            rm -f /var/www/mercasto/src/BackupDatabase.php /var/www/mercasto/src/LoginFrontendTest.php /var/www/mercasto/src/UploadAdImage.php /var/www/mercasto/src/GeminiDemo.jsx /var/www/mercasto/src/AdminPanelJSX.txt
-            
-            # Очистка диска от мусора Docker
-            docker image prune -a -f || true
-            # -------------------------------------------------------
-            
-            # 1. Получаем свежий код из репозитория
+            # 1. Git pull
+            echo "📥 Pulling code..."
             git fetch origin
             git reset --hard origin/main
             
-            # Auto-configure webhook secret if missing
-            if ! grep -q "CLIP_WEBHOOK_SECRET=" backend/.env 2>/dev/null; then
-              echo "CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> backend/.env
-            elif grep -q "CLIP_WEBHOOK_SECRET=$" backend/.env 2>/dev/null; then
-              sed -i "s/CLIP_WEBHOOK_SECRET=.*/CLIP_WEBHOOK_SECRET=$(openssl rand -hex 32)/" backend/.env
+            # 2. Env fixes for PostgreSQL 18
+            echo "⚙️ Configuring environment..."
+            if [ -f backend/.env ]; then
+              sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=pgsql/" backend/.env
+              sed -i "s/DB_HOST=.*/DB_HOST=postgres/" backend/.env
+              sed -i "s/DB_PORT=.*/DB_PORT=5432/" backend/.env
+              sed -i "s/CACHE_DRIVER=.*/CACHE_DRIVER=redis/" backend/.env
+              sed -i "s/QUEUE_CONNECTION=.*/QUEUE_CONNECTION=redis/" backend/.env
+              
+              # Add Ollama config if missing
+              grep -q "OLLAMA_HOST" backend/.env || echo "OLLAMA_HOST=http://ollama:11434" >> backend/.env
+              grep -q "OLLAMA_TEXT_MODEL" backend/.env || echo "OLLAMA_TEXT_MODEL=mistral-small3.1:24b-instruct-2503-q4_K_M" >> backend/.env
             fi
             
-            # Автоматически переключаем Laravel на использование PostgreSQL
-            sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=pgsql/" backend/.env 2>/dev/null || true
-            sed -i "s/DB_PORT=.*/DB_PORT=5432/" backend/.env 2>/dev/null || true
+            # 3. Docker build (parallel, cache)
+            echo "🐳 Building images..."
+            docker compose build --parallel frontend backend
             
-            # FIX: Восстановление убитой базы данных PostgreSQL
-            if [ -d "postgres-data" ] && [ ! -f "postgres-data/PG_VERSION" ]; then
-              echo "Обнаружена поврежденная БД PostgreSQL. Выполняется жесткий сброс..."
-              docker compose down || true
-              sudo rm -rf postgres-data redis-data mysql-data
-            fi
+            # 4. Zero-downtime restart
+            echo "🔄 Restarting services..."
+            docker compose up -d --no-deps --build frontend backend worker scheduler
             
-            # 2. ЗАПУСК И ПЕРЕСБОРКА DOCKER (БД должна работать до миграций)
-            docker compose --profile realtime up -d --build --remove-orphans
+            # 5. Wait for DB
+            echo "⏳ Waiting for PostgreSQL..."
+            sleep 8
             
-            # 3. Собираем бэкенд (Laravel)
-            docker exec mercasto_backend_container composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-            docker exec mercasto_backend_container composer dump-autoload
-            docker exec mercasto_backend_container php artisan config:clear
-            docker exec mercasto_backend_container php artisan migrate --force
-            docker exec mercasto_backend_container php artisan config:cache
-            docker exec mercasto_backend_container php artisan route:cache
-            docker exec mercasto_backend_container php artisan view:cache
-            docker exec mercasto_backend_container php artisan storage:link || true
+            # 6. Laravel tasks
+            echo "🔧 Laravel optimization..."
+            docker exec mercasto_backend composer install --no-dev --optimize-autoloader --no-interaction
+            docker exec mercasto_backend php artisan migrate --force
+            docker exec mercasto_backend php artisan config:cache
+            docker exec mercasto_backend php artisan route:cache
+            docker exec mercasto_backend php artisan view:cache
+            docker exec mercasto_backend php artisan event:cache
+            docker exec mercasto_backend php artisan storage:link || true
             
-            # Restart backend container to clear OPcache
-            docker restart mercasto_backend_container || true
-            sudo systemctl restart php8.4-fpm || true
-            sudo systemctl restart php-fpm || true
+            # 7. Frontend build check
+            echo "🎨 Verifying frontend..."
+            docker exec mercasto_frontend ls -la /app/dist/index.html || echo "Frontend build missing!"
+            
+            # 8. Health checks
+            echo "🏥 Health checks..."
+            sleep 3
+            curl -sf https://mercasto.com/api/health || echo "⚠️ API health check failed"
+            curl -sf -I https://mercasto.com | head -1
+            
+            # 9. Check AI services
+            echo "🤖 AI Services..."
+            docker exec mercasto_ollama ollama list | grep mistral || echo "Mistral not loaded"
+            docker exec mercasto_backend php artisan tinker --execute="echo 'OPcache JIT: ' . opcache_get_status()['jit']['enabled'];" || true
+            
+            # 10. Cleanup (safe)
+            echo "🧹 Cleanup..."
+            docker image prune -f --filter "until=24h"
+            
+            # 11. Status
+            echo "✅ Deployment complete"
+            docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
