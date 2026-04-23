@@ -1,19 +1,25 @@
 name: Deploy to Production
-
 on:
   push:
+<<<<<<< Updated upstream
     branches:
       - main
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+=======
+    branches: [main]
+>>>>>>> Stashed changes
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
+<<<<<<< Updated upstream
       - name: Deploy via SSH
+=======
+      - name: Deploy
+>>>>>>> Stashed changes
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: "72.62.173.145"
@@ -21,6 +27,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
+<<<<<<< Updated upstream
             echo "🚀 Mercasto Deploy $(date)"
             cd /opt/mercasto
 
@@ -74,3 +81,13 @@ jobs:
 
             echo "✅ Done"
             docker ps --format "table {{.Names}}\t{{.Status}}"
+=======
+            cd /var/www/mercasto
+            git fetch origin && git reset --hard origin/main
+            docker compose build --parallel mercasto_frontend_container mercasto_backend_container
+            docker compose up -d --no-deps mercasto_frontend_container mercasto_backend_container mercasto_worker_container mercasto_scheduler_container
+            sleep 5
+            docker exec mercasto_backend_container php artisan migrate --force
+            docker exec mercasto_backend_container php artisan optimize
+            docker image prune -f
+>>>>>>> Stashed changes
