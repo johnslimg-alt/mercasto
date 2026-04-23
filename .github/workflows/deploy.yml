@@ -1,25 +1,12 @@
 name: Deploy to Production
 on:
   push:
-<<<<<<< Updated upstream
-    branches:
-      - main
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
-=======
     branches: [main]
->>>>>>> Stashed changes
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-<<<<<<< Updated upstream
-      - name: Deploy via SSH
-=======
       - name: Deploy
->>>>>>> Stashed changes
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: "72.62.173.145"
@@ -27,61 +14,6 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
-<<<<<<< Updated upstream
-            echo "🚀 Mercasto Deploy $(date)"
-            cd /opt/mercasto
-
-            # Git pull
-            git fetch origin
-            git reset --hard origin/main
-
-            # Env fixes
-            if [ -f backend/.env ]; then
-              sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=pgsql/" backend/.env
-              sed -i "s/DB_HOST=.*/DB_HOST=mercasto_db_container/" backend/.env
-              sed -i "s/DB_PORT=.*/DB_PORT=5432/" backend/.env
-              sed -i "s/REDIS_HOST=.*/REDIS_HOST=mercasto_redis_container/" backend/.env
-              grep -q "OLLAMA_HOST" backend/.env || echo "OLLAMA_HOST=http://mercasto_ollama:11434" >> backend/.env
-            fi
-
-            # Build (твои контейнеры)
-            echo "🐳 Building..."
-            docker compose build --parallel mercasto_frontend_container mercasto_backend_container
-
-            # Restart core services
-            echo "🔄 Restarting..."
-            docker compose up -d --no-deps --build mercasto_frontend_container mercasto_backend_container mercasto_worker_container mercasto_scheduler_container
-
-            # Wait DB
-            sleep 8
-
-            # Laravel
-            echo "🔧 Laravel..."
-            docker exec mercasto_backend_container composer install --no-dev --optimize-autoloader --no-interaction
-            docker exec mercasto_backend_container php artisan migrate --force
-            docker exec mercasto_backend_container php artisan config:cache
-            docker exec mercasto_backend_container php artisan route:cache
-            docker exec mercasto_backend_container php artisan view:cache
-            docker exec mercasto_backend_container php artisan event:cache
-
-            # Frontend check
-            docker exec mercasto_frontend_container ls /app/dist/index.html
-
-            # Health
-            echo "🏥 Health check..."
-            curl -sf https://mercasto.com/api/health || true
-
-            # AI check
-            echo "🤖 AI models:"
-            docker ps | grep ollama || echo "Ollama not found - checking name..."
-            docker ps --format "{{.Names}}" | grep ollama
-
-            # Cleanup safe
-            docker image prune -f --filter "until=24h"
-
-            echo "✅ Done"
-            docker ps --format "table {{.Names}}\t{{.Status}}"
-=======
             cd /var/www/mercasto
             git fetch origin && git reset --hard origin/main
             docker compose build --parallel mercasto_frontend_container mercasto_backend_container
@@ -90,4 +22,3 @@ jobs:
             docker exec mercasto_backend_container php artisan migrate --force
             docker exec mercasto_backend_container php artisan optimize
             docker image prune -f
->>>>>>> Stashed changes
