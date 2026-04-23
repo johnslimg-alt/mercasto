@@ -1,6 +1,3 @@
-cd /var/www/mercasto
-
-cat >.github/workflows/deploy.yml << 'EOF'
 name: Deploy to Production
 on:
   push:
@@ -26,8 +23,3 @@ jobs:
             docker exec mercasto_backend_container php artisan optimize:clear
             docker exec mercasto_backend_container php artisan optimize
             docker image prune -f
-EOF
-
-git add -A
-git commit -m "fix: use exact docker-compose service names"
-git push origin main
