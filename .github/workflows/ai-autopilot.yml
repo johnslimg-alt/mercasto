@@ -1,0 +1,57 @@
+name: AI Autopilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Model to deploy'
+        default: 'qwen2.5:1.5b'
+        type: choice
+        options:
+          - qwen2.5:1.5b
+          - qwen2.5:3b
+          - mistral:7b
+          - gemma3:1b
+  push:
+    paths:
+      - '.ai-model'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy AI Model
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            MODEL="${{ github.event.inputs.model || 'qwen2.5:1.5b' }}"
+            BACKEND=$(docker ps --format '{{.Names}}' | grep backend)
+            OLLAMA=$(docker ps --format '{{.Names}}' | grep ollama)
+            
+            echo "▶ Pull $MODEL"
+            docker exec $OLLAMA ollama pull $MODEL
+            
+            echo "▶ Update code"
+            AI=$(docker exec $BACKEND find /var/www -name AiService.php | head -1)
+            docker exec $BACKEND sed -i "s/'model' => '[^']*'/'model' => '$MODEL'/g" $AI
+            
+            echo "▶ Ensure route"
+            docker exec $BACKEND bash -c "cat > /var/www/html/routes/ai.php << 'PHP'
+            <?php use Illuminate\Http\Request; use Illuminate\Support\Facades\Route; use App\Services\AiService;
+            Route::post('/ai/describe', fn(Request \$r, AiService \$ai) => response()->json([
+              'text' => \$ai->generateDescription(\$r->input('title'), \$r->input('category')),
+              'model' => '$MODEL'
+            ]));
+            PHP"
+            docker exec $BACKEND bash -c "grep -q ai.php /var/www/html/routes/api.php || echo \"require __DIR__.'/ai.php';\" >> /var/www/html/routes/api.php"
+            
+            docker restart $OLLAMA $BACKEND
+            sleep 8
+            docker exec $OLLAMA ollama run $MODEL "warmup" --keepalive 24h &
+            
+            echo "✅ Deployed $MODEL"
+            curl -s -X POST https://mercasto.com/api/ai/describe -d '{"title":"Test","category":"Test"}' | jq .
