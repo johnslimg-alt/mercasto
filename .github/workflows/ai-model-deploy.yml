@@ -1,0 +1,44 @@
+mkdir -p .github/workflows
+cat > .github/workflows/ai-model-deploy.yml << 'YML'
+name: Deploy AI Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Ollama model'
+        required: true
+        default: 'qwen2.5:1.5b'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/mercasto
+            
+            echo "▶ Pull model ${{ github.event.inputs.model }}"
+            docker exec mercasto_ollama ollama pull ${{ github.event.inputs.model }}
+            
+            echo "▶ Update AiService.php"
+            sed -i -E "s/'model' => '[^']+'/'model' => '${{ github.event.inputs.model }}'/" backend/app/Services/AiService.php
+            
+            echo "▶ Restart backend"
+            docker compose restart mercasto-backend
+            sleep 5
+            
+            echo "▶ Warmup"
+            docker exec mercasto_ollama ollama run ${{ github.event.inputs.model }} "warmup" --keepalive 24h > /dev/null 2>&1 &
+            
+            echo "▶ Test"
+            curl -s https://mercasto.com/api/ai/describe -d "title=Test" -d "category=General" | jq -r .text | head -c 100
+            
+            docker exec mercasto_ollama ollama ps
+YML
