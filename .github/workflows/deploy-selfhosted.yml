@@ -1,0 +1,33 @@
+name: Deploy Mercasto
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted # ← главное изменение
+
+    steps:
+      - name: Обновить код
+        run: |
+          cd /var/www/mercasto
+          git fetch origin
+          git reset --hard origin/main
+
+      - name: Собрать и поднять
+        run: |
+          cd /var/www/mercasto
+          docker compose build --parallel mercasto-frontend mercasto-backend
+          docker compose up -d --no-deps mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb
+
+      - name: Миграции
+        run: |
+          sleep 5
+          docker exec mercasto_backend_container php artisan migrate --force
+          docker exec mercasto_backend_container php artisan optimize:clear
+          docker exec mercasto_backend_container php artisan optimize
+
+      - name: Очистка
+        run: docker image prune -f
