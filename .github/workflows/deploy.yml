@@ -1,25 +1,69 @@
-name: Deploy to Production
+name: Deploy Mercasto
+
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    timeout-minutes: 15
+
     steps:
-      - name: Deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: "72.62.173.145"
-          username: "root"
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            set -e
-            cd /var/www/mercasto
-            git fetch origin && git reset --hard origin/main
-            docker compose build --parallel mercasto-frontend mercasto-backend
-            docker compose up -d --no-deps mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb
-            sleep 5
-            docker exec mercasto_backend_container php artisan migrate --force
-            docker exec mercasto_backend_container php artisan optimize:clear
-            docker exec mercasto_backend_container php artisan optimize
-            docker image prune -f
+      - name: Pull code
+        run: |
+          cd /var/www/mercasto
+          git fetch origin main --prune
+          git reset --hard origin/main
+          git clean -fd
+
+      - name: Pull base images (cache)
+        run: |
+          cd /var/www/mercasto
+          docker compose pull mercasto-frontend mercasto-backend || true
+
+      - name: Build with cache
+        run: |
+          cd /var/www/mercasto
+          DOCKER_BUILDKIT=1 docker compose build \
+            --parallel \
+            --pull \
+            mercasto-frontend mercasto-backend
+
+      - name: Zero-downtime up
+        run: |
+          cd /var/www/mercasto
+          # стартуем новые контейнеры, старые выключатся сами
+          docker compose up -d --no-deps --build mercasto-backend mercasto-frontend
+          docker compose up -d mercasto-worker mercasto-scheduler mercasto-reverb
+
+      - name: Wait for health
+        run: |
+          for i in {1..30}; do
+            docker exec mercasto_backend_container php artisan tinker --execute="echo 'ok';" && break
+            sleep 2
+          done
+
+      - name: Migrate (safe)
+        run: |
+          docker exec mercasto_backend_container php artisan down --render="errors::503" || true
+          docker exec mercasto_backend_container php artisan migrate --force
+          docker exec mercasto_backend_container php artisan optimize
+          docker exec mercasto_backend_container php artisan up
+
+      - name: Warm cache
+        run: |
+          docker exec mercasto_backend_container php artisan config:cache
+          docker exec mercasto_backend_container php artisan route:cache
+          docker exec mercasto_backend_container php artisan view:cache
+          docker exec mercasto_backend_container php artisan event:cache
+
+      - name: Cleanup old images
+        run: |
+          docker image prune -af --filter "until=24h"
+          docker builder prune -af --filter "until=24h"
