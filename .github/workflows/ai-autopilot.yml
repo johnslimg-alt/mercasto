@@ -7,34 +7,30 @@ on:
         description: 'Model'
         default: 'qwen2.5:1.5b'
         type: choice
-        options: [qwen2.5:1.5b, qwen2.5:3b, mistral:7b, gemma3:1b]
+        options: [qwen2.5:1.5b, qwen2.5:3b, mistral:7b]
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  deploy-ai:
+    runs-on: self-hosted
+
     steps:
-      - name: Deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: root
-          key: ${{ secrets.SSH_KEY }}
-          port: 22
-          script_stop: true
-          timeout: 120s
-          script: |
-            set -e
-            MODEL="${{ github.event.inputs.model }}"
-            BACKEND=$(docker ps --format '{{.Names}}' | grep backend)
-            OLLAMA=$(docker ps --format '{{.Names}}' | grep ollama)
-            docker exec $OLLAMA ollama pull $MODEL
-            AI=$(docker exec $BACKEND find /var/www -name AiService.php | head -1)
-            docker exec $BACKEND sed -i "s/'model' => '[^']*'/'model' => '$MODEL'/g" $AI
-            docker exec $BACKEND bash -c "mkdir -p /var/www/html/routes && cat > /var/www/html/routes/ai.php << 'PHP'
-            <?php use Illuminate\Http\Request; use Illuminate\Support\Facades\Route; use App\Services\AiService;
-            Route::post('/ai/describe', fn(Request \$r, AiService \$ai) => response()->json(['text' => \$ai->generateDescription(\$r->input('title'), \$r->input('category')), 'model' => '$MODEL']));
-            PHP"
-            docker exec $BACKEND bash -c "grep -q ai.php /var/www/html/routes/api.php || echo \"require __DIR__.'/ai.php';\" >> /var/www/html/routes/api.php"
-            docker restart $OLLAMA $BACKEND
-            sleep 8
-            curl -s -X POST https://mercasto.com/api/ai/describe -d '{"title":"Test","category":"Test"}' | jq .
+      - name: Установить модель
+        run: |
+          MODEL="${{ inputs.model }}"
+          OLLAMA=$(docker ps --format '{{.Names}}' | grep ollama)
+          BACKEND=$(docker ps --format '{{.Names}}' | grep backend)
+
+          echo "▶ Pull $MODEL"
+          docker exec $OLLAMA ollama pull $MODEL
+
+          echo "▶ Обновить код"
+          AI=$(docker exec $BACKEND find /var/www -name AiService.php | head -1)
+          docker exec $BACKEND sed -i "s/'model' => '[^']*'/'model' => '$MODEL'/g" $AI
+
+          docker restart $OLLAMA $BACKEND
+          sleep 8
+
+          echo "✅ $MODEL готов"
+          curl -s -X POST https://mercasto.com/api/ai/describe \
+            -H "Content-Type: application/json" \
+            -d '{"title":"Test","category":"Test"}' | jq.
