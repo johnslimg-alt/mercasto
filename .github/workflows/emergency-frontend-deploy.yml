@@ -2,18 +2,6 @@ name: Emergency Frontend Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'index.html'
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'Dockerfile'
-      - 'default.conf'
-      - '.github/workflows/emergency-frontend-deploy.yml'
 
 permissions:
   contents: read
