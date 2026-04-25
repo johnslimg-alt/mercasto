@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start:server": "node server/index.js"
+    "start:server": "node server/index.js",
+    "smoke:prod": "bash scripts/smoke-test.sh",
+    "smoke": "bash scripts/smoke-test.sh"
   },
   "dependencies": {
     "@sentry/react": "^10.49.0",
