@@ -2,7 +2,6 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 5 C27.9 5 10 22.9 10 45 C10 75 50 95 50 95 C50 95 90 75 90 45 C90 22.9 72.1 5 50 5 Z' fill='%2384CC16'/><path d='M30 60 L30 35 L50 50 L70 35 L70 60' fill='none' stroke='%23ffffff' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
     <link rel="apple-touch-icon" href="/icon-192x192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#84CC16">
@@ -10,44 +9,33 @@
     <title>Mercasto | Compra, Vende y Renta en Todo México</title>
   </head>
   <body class="antialiased bg-[#F8FAFC]">
-    <!-- ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК ОШИБОК ИНИЦИАЛИЗАЦИИ JS -->
     <script>
-      // --- СПЕЦОТРЯД АГЕНТОВ ДИАГНОСТИКИ (ВИКТОР) ---
-      
-      function callAgent(name, msg) {
-        var errDiv = document.getElementById('agent-report') || document.createElement('div');
-        errDiv.id = 'agent-report';
-        errDiv.style.cssText = 'padding: 20px; font-family: monospace; background: #0f172a; color: #38bdf8; word-break: break-all; z-index: 2147483647; position: fixed; top: 0; left: 0; right: 0; border-bottom: 4px solid #84CC16; box-shadow: 0 10px 25px rgba(0,0,0,0.5);';
-        errDiv.innerHTML += '<div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #334155;"><strong style="color: #fbbf24;">[' + name + ']</strong> ' + msg + '</div>';
-        document.body.prepend(errDiv);
+      function showBootMessage(title, message) {
+        var root = document.getElementById('root');
+        if (!root || root.innerHTML.trim() !== '') return;
+        root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#f8fafc;color:#0f172a;"><div style="max-width:440px;background:white;border:1px solid #e2e8f0;border-radius:20px;padding:24px;box-shadow:0 20px 60px rgba(15,23,42,.12);"><h1 style="font-size:24px;margin:0 0 12px;font-weight:800;">' + title + '</h1><p style="font-size:16px;line-height:1.5;margin:0;color:#475569;">' + message + '</p><button onclick="location.reload()" style="margin-top:18px;background:#84cc16;color:#111827;border:0;border-radius:12px;padding:12px 16px;font-weight:700;">Reintentar</button></div></div>';
       }
 
-      // АГЕНТ 1: Убийца зомби-кэша
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          // Регистрируем чистый Service Worker, чтобы Push-уведомления и PWA могли работать
-          navigator.serviceWorker.register('/sw.js').catch(function() {});
-        });
-      }
-      
-      // АГЕНТ 2: Перехватчик критических JS-ошибок (Например, старый ReactDOM.render в React 19)
       window.addEventListener('error', function(event) {
-        callAgent('JS SENTRY', event.message + ' en ' + event.filename + ':' + event.lineno);
+        showBootMessage('Mercasto no pudo cargar', 'Actualiza la página. Si sigue igual, borra los datos del sitio en Safari/Chrome e intenta de nuevo.');
       });
 
-      // АГЕНТ 3: Перехватчик асинхронных сбоев (Сетевые 404, сломанные чанки Vite)
-      window.addEventListener('unhandledrejection', function(event) {
-        callAgent('NETWORK AGENT', event.reason ? (event.reason.message || event.reason) : 'Promesa rechazada');
+      window.addEventListener('unhandledrejection', function() {
+        showBootMessage('Mercasto no pudo cargar', 'Actualiza la página. Si sigue igual, borra los datos del sitio en Safari/Chrome e intenta de nuevo.');
       });
 
-      // АГЕНТ 4: Сканер смерти интерфейса (Пустой экран)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          registrations.forEach(function(registration) {
+            registration.unregister();
+          });
+        }).catch(function() {});
+      }
+
       window.addEventListener('load', function() {
         setTimeout(function() {
-          var root = document.getElementById('root');
-          if (!root || root.innerHTML.trim() === '') {
-            callAgent('DOM INSPECTOR', 'El contenedor React (#root) está vacío. React no pudo arrancar. Pulsa F12 para detalles en consola.');
-          }
-        }, 3000);
+          showBootMessage('Mercasto está actualizando', 'Estamos recargando la app. Pulsa Reintentar en unos segundos.');
+        }, 3500);
       });
     </script>
 
