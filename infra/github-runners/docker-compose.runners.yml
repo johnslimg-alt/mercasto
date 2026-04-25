@@ -1,0 +1,45 @@
+services:
+  runner-1:
+    image: myoung34/github-runner:latest
+    container_name: gh-runner-1
+    environment:
+      REPO_URL: https://github.com/johnslimg-alt/mercasto
+      RUNNER_NAME: mercasto-docker-1
+      RUNNER_GROUP: Default
+      LABELS: docker,linux,self-hosted
+      # возьми токен: GitHub → Settings → Actions → Runners → New runner → получишь token
+      RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}
+      RUNNER_WORKDIR: /tmp/runner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./runner1:/tmp/runner
+    restart: unless-stopped
+
+  runner-2:
+    image: myoung34/github-runner:latest
+    container_name: gh-runner-2
+    environment:
+      REPO_URL: https://github.com/johnslimg-alt/mercasto
+      RUNNER_NAME: mercasto-docker-2
+      RUNNER_GROUP: Default
+      LABELS: docker,linux,self-hosted
+      RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}
+      RUNNER_WORKDIR: /tmp/runner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./runner2:/tmp/runner
+    restart: unless-stopped
+
+  runner-3:
+    image: myoung34/github-runner:latest
+    container_name: gh-runner-3
+    environment:
+      REPO_URL: https://github.com/johnslimg-alt/mercasto
+      RUNNER_NAME: mercasto-docker-3
+      RUNNER_GROUP: Default
+      LABELS: docker,linux,self-hosted
+      RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./runner3:/tmp/runner
+    restart: unless-stopped
