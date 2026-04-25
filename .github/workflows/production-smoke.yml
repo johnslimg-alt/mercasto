@@ -1,0 +1,27 @@
+name: Production Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Base URL to test
+        required: true
+        default: https://mercasto.com
+  schedule:
+    - cron: '0 */6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Run smoke checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run smoke test
+        run: |
+          chmod +x scripts/smoke-test.sh
+          ./scripts/smoke-test.sh "${{ github.event.inputs.base_url || 'https://mercasto.com' }}"
