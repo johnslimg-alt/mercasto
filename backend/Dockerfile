@@ -20,6 +20,10 @@ RUN apt-get update && apt-get install -y libpq-dev \
 RUN pecl install redis \
     && docker-php-ext-enable redis
 
+# Фиксируем production PHP-настройки в репозитории, чтобы деплой не зависел от ручных правок на VPS
+COPY opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
 # Устанавливаем Composer v2.9.7
 COPY --from=composer:2.9.7 /usr/bin/composer /usr/bin/composer
 
@@ -38,9 +42,3 @@ RUN sed -i 's/^pm.max_children = .*/pm.max_children = 20/' /usr/local/etc/php-fp
     && sed -i 's/^pm.start_servers = .*/pm.start_servers = 4/' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's/^pm.min_spare_servers = .*/pm.min_spare_servers = 2/' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's/^pm.max_spare_servers = .*/pm.max_spare_servers = 8/' /usr/local/etc/php-fpm.d/www.conf
-
-# --- СУПЕР-ОПТИМИЗАЦИЯ PHP 8.4 ---
-# Включаем OPcache и JIT (Just-In-Time) компиляцию для экстремального ускорения Laravel
-RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
-    && echo "opcache.jit_buffer_size=100M" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
-    && echo "opcache.jit=tracing" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
