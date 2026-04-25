@@ -23,8 +23,8 @@ jobs:
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_USER: root
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
           set -euo pipefail
           test -n "$SERVER_HOST"
@@ -34,7 +34,7 @@ jobs:
       - name: Install SSH key
         shell: bash
         env:
-          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           set -euo pipefail
@@ -47,7 +47,7 @@ jobs:
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_USER: root
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/mercasto_deploy_key "$SERVER_USER@$SERVER_HOST" 'bash -s' <<'REMOTE'
@@ -70,7 +70,7 @@ jobs:
           done
 
           if [ -z "$project_dir" ]; then
-            found=$(find /root /var/www /opt /srv "$HOME" -maxdepth 3 -name docker-compose.yml -print 2>/dev/null | head -1 || true)
+            found=$(find /root /home /var/www /opt /srv "$HOME" -maxdepth 4 -name docker-compose.yml -print 2>/dev/null | head -1 || true)
             if [ -n "$found" ]; then
               project_dir=$(dirname "$found")
             fi
