@@ -1,0 +1,54 @@
+name: PR Quality Gate
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-quality-gate:
+    name: PR quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR body and title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+
+          echo "Checking PR: ${PR_TITLE}"
+
+          if [ -z "${PR_BODY}" ]; then
+            echo "PR body is empty. Fill the PR template."
+            exit 1
+          fi
+
+          if printf '%s' "${PR_BODY}" | grep -Eqi 'BEGIN (OPENSSH|RSA|DSA|EC|PRIVATE) KEY'; then
+            echo "Possible private key detected in PR body. Remove it and rotate the credential."
+            exit 1
+          fi
+
+          if printf '%s' "${PR_BODY}" | grep -Eqi '(password|secret|token|api[_-]?key)[[:space:]]*[:=][[:space:]]*[^[:space:]]+'; then
+            echo "Possible secret-like value detected in PR body. Remove it and use a secret manager."
+            exit 1
+          fi
+
+          required_sections=("Summary" "Risk" "Smoke" "Rollback")
+          missing=0
+          for section in "${required_sections[@]}"; do
+            if ! printf '%s' "${PR_BODY}" | grep -Eiq "${section}"; then
+              echo "Missing PR section keyword: ${section}"
+              missing=1
+            fi
+          done
+
+          if [ "${missing}" -ne 0 ]; then
+            echo "PR body must include summary, risk, smoke test, and rollback information."
+            exit 1
+          fi
+
+          echo "PR quality gate passed."
