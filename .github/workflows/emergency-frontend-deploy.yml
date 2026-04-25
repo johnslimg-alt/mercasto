@@ -1,0 +1,92 @@
+name: Emergency Frontend Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'Dockerfile'
+      - 'default.conf'
+      - '.github/workflows/emergency-frontend-deploy.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emergency-frontend-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy-frontend:
+    name: Deploy frontend on self-hosted runner
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
+    steps:
+      - name: Find production project directory
+        id: project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          candidates=(
+            "$HOME/mercasto"
+            "/root/mercasto"
+            "/var/www/mercasto"
+            "/opt/mercasto"
+            "/srv/mercasto"
+          )
+
+          for dir in "${candidates[@]}"; do
+            if [ -f "$dir/docker-compose.yml" ] && [ -d "$dir/.git" ]; then
+              echo "dir=$dir" >> "$GITHUB_OUTPUT"
+              echo "Found project directory: $dir"
+              exit 0
+            fi
+          done
+
+          found=$(find /root /var/www /opt /srv "$HOME" -maxdepth 3 -name docker-compose.yml -print 2>/dev/null | head -1 || true)
+          if [ -n "$found" ]; then
+            dir=$(dirname "$found")
+            if [ -d "$dir/.git" ]; then
+              echo "dir=$dir" >> "$GITHUB_OUTPUT"
+              echo "Found project directory: $dir"
+              exit 0
+            fi
+          fi
+
+          echo "Mercasto project directory was not found."
+          exit 1
+
+      - name: Pull latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ steps.project.outputs.dir }}"
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Rebuild frontend only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ steps.project.outputs.dir }}"
+          docker compose build --no-cache mercasto-frontend
+          docker compose up -d mercasto-frontend
+          docker compose ps
+
+      - name: Smoke check
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ steps.project.outputs.dir }}"
+          if [ -f scripts/smoke-test.sh ]; then
+            bash scripts/smoke-test.sh https://mercasto.com
+          else
+            curl -I https://mercasto.com/
+          fi
