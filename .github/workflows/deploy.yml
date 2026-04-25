@@ -1,4 +1,4 @@
-name: Deploy Mercasto
+name: Deploy Mercasto Frontend Hotfix
 
 on:
   push:
@@ -6,67 +6,74 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: production-deploy
+  group: production-frontend-deploy
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: self-hosted
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
-      - name: Pull code
+      - name: Find project directory
         run: |
-          cd /var/www/mercasto
+          set -euo pipefail
+
+          candidates=(
+            "$HOME/mercasto"
+            "/root/mercasto"
+            "/var/www/mercasto"
+            "/opt/mercasto"
+            "/srv/mercasto"
+          )
+
+          project_dir=""
+          for dir in "${candidates[@]}"; do
+            if [ -f "$dir/docker-compose.yml" ] && [ -d "$dir/.git" ]; then
+              project_dir="$dir"
+              break
+            fi
+          done
+
+          if [ -z "$project_dir" ]; then
+            found=$(find /root /home /var/www /opt /srv "$HOME" -maxdepth 4 -name docker-compose.yml -print 2>/dev/null | head -1 || true)
+            if [ -n "$found" ]; then
+              project_dir=$(dirname "$found")
+            fi
+          fi
+
+          if [ -z "$project_dir" ] || [ ! -d "$project_dir/.git" ]; then
+            echo "Mercasto project directory was not found."
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$project_dir" >> "$GITHUB_ENV"
+          echo "Using project directory: $project_dir"
+
+      - name: Pull latest main
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          git config --global --add safe.directory "$PROJECT_DIR" || true
           git fetch origin main --prune
           git reset --hard origin/main
           git clean -fd
 
-      - name: Pull base images (cache)
+      - name: Build frontend
         run: |
-          cd /var/www/mercasto
-          docker compose pull mercasto-frontend mercasto-backend || true
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          DOCKER_BUILDKIT=1 docker compose build --no-cache mercasto-frontend
 
-      - name: Build with cache
+      - name: Restart frontend
         run: |
-          cd /var/www/mercasto
-          DOCKER_BUILDKIT=1 docker compose build \
-            --parallel \
-            --pull \
-            mercasto-frontend mercasto-backend
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          docker compose up -d --no-deps mercasto-frontend
+          docker compose ps
 
-      - name: Zero-downtime up
+      - name: Smoke check
         run: |
-          cd /var/www/mercasto
-          # стартуем новые контейнеры, старые выключатся сами
-          docker compose up -d --no-deps --build mercasto-backend mercasto-frontend
-          docker compose up -d mercasto-worker mercasto-scheduler mercasto-reverb
-
-      - name: Wait for health
-        run: |
-          for i in {1..30}; do
-            docker exec mercasto_backend_container php artisan tinker --execute="echo 'ok';" && break
-            sleep 2
-          done
-
-      - name: Migrate (safe)
-        run: |
-          docker exec mercasto_backend_container php artisan down --render="errors::503" || true
-          docker exec mercasto_backend_container php artisan migrate --force
-          docker exec mercasto_backend_container php artisan optimize
-          docker exec mercasto_backend_container php artisan up
-
-      - name: Warm cache
-        run: |
-          docker exec mercasto_backend_container php artisan config:cache
-          docker exec mercasto_backend_container php artisan route:cache
-          docker exec mercasto_backend_container php artisan view:cache
-          docker exec mercasto_backend_container php artisan event:cache
-
-      - name: Cleanup old images
-        run: |
-          docker image prune -af --filter "until=24h"
-          docker builder prune -af --filter "until=24h"
-volumes:
-    - /var/www/vendor
-    - /root/.composer/cache:/tmp/cache
+          set -euo pipefail
+          curl -I --max-time 30 https://mercasto.com/
+          curl -sS --max-time 30 https://mercasto.com/api/categories | head -c 300
