@@ -1,0 +1,48 @@
+name: Public Smoke Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-smoke-check
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Check public site and API
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSIL --max-time 30 https://mercasto.com/
+          curl -fsSL --max-time 30 https://mercasto.com/ | grep -i "Mercasto"
+
+      - name: Check categories API
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(curl -fsSL --max-time 30 https://mercasto.com/api/categories)
+          echo "$body" | head -c 500
+          echo "$body" | grep -q '"slug"'
+
+      - name: Check ads API
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1')
+          echo "$body" | head -c 500
+          echo "$body" | grep -Eq '"data"|"id"|\['
+
+      - name: Check auth providers API
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers)
+          echo "$body" | head -c 500
+          echo "$body" | grep -Eq 'google|facebook|providers|\{'
