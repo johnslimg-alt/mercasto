@@ -10,6 +10,12 @@
   </head>
   <body class="antialiased bg-[#F8FAFC]">
     <script>
+      if (typeof window.Notification === 'undefined') {
+        window.Notification = function NotificationFallback() { return null; };
+        window.Notification.permission = 'denied';
+        window.Notification.requestPermission = function() { return Promise.resolve('denied'); };
+      }
+
       function showBootMessage(title, message) {
         var root = document.getElementById('root');
         if (!root || root.innerHTML.trim() !== '') return;
