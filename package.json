@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "start:server": "node server/index.js",
     "smoke:prod": "bash scripts/smoke-test.sh",
-    "smoke": "bash scripts/smoke-test.sh"
+    "smoke": "bash scripts/smoke-test.sh",
+    "check:recovery": "node scripts/check-recovery-guards.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.49.0",
