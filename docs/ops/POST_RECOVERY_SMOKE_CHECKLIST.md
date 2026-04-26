@@ -2,6 +2,21 @@
 
 Purpose: minimum checks after frontend recovery or deploy changes.
 
+## Automated public checks
+
+Use the manual GitHub Actions workflow:
+
+`Public Smoke Check`
+
+This workflow uses GitHub-hosted runners only. It does not use SSH, secrets, server-runner, database migrations, payments, or production deploy.
+
+It checks:
+
+- homepage HTML;
+- `/api/categories`;
+- `/api/ads?page=1`;
+- `/api/auth/providers`.
+
 ## Mobile browser checks
 
 Check on a real iPhone:
@@ -40,7 +55,7 @@ Watch for these strings:
 
 1. Production deploy workflows should be manual unless explicitly re-enabled.
 2. `Emergency SSH Frontend Deploy` is the preferred manual frontend deploy path.
-3. Server-runner workflows are reserve paths until runner health is fixed.
+3. Server-runner workflows should remain disabled until runner health is fixed.
 4. Disabled AI workflows should not run automatically.
 5. Action failures should map to real failures, not stale workflow noise.
 
@@ -53,7 +68,7 @@ Do not change database schema, auth settings, payment logic, production secrets,
 Recovery is stable when:
 
 - homepage opens on iOS Safari and Chrome;
-- API category route returns JSON;
+- public smoke workflow passes;
 - no critical frontend screen appears;
 - workflows are readable and not noisy;
 - deploy path is documented.
