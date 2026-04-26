@@ -31,10 +31,11 @@ Use GitHub repository secrets or the provider's secure secret store.
 
 1. Create a new deploy key or deploy user credential.
 2. Add the new value to GitHub Actions secrets.
-3. Run a manual deploy test with the new credential.
-4. Remove the old exposed credential from the server's authorized keys or provider console.
-5. Confirm the old credential no longer works.
-6. Update the deploy runbook with the active secret names, not the secret values.
+3. Run `Deploy Secret Presence Check` to verify required secrets exist without printing values.
+4. Run a manual deploy test with the new credential.
+5. Remove the old exposed credential from the server's authorized keys or provider console.
+6. Confirm the old credential no longer works.
+7. Update the deploy runbook with the active secret names, not the secret values.
 
 ## GitHub Actions secret names currently expected
 
@@ -44,6 +45,20 @@ The manual frontend deploy workflow expects:
 - `SSH_KEY`
 
 Use an IPv4 value for `SERVER_HOST` if IPv6 routing fails.
+
+## Safe secret presence check
+
+Use the manual workflow:
+
+`Deploy Secret Presence Check`
+
+It verifies:
+
+- `SERVER_HOST` exists;
+- `SSH_KEY` exists;
+- `SERVER_HOST` is formatted as IPv4 during stabilization.
+
+It does not print secret values, connect to the server, or deploy production.
 
 ## Do not store
 
@@ -60,6 +75,7 @@ Never commit or document actual values for:
 
 After rotation:
 
+- `Deploy Secret Presence Check` passes;
 - manual frontend deploy works;
 - old exposed credential has been revoked;
 - Actions logs do not print secret values;
