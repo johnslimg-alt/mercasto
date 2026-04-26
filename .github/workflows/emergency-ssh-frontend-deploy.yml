@@ -1,4 +1,4 @@
-name: Disabled Emergency SSH Frontend Deploy
+name: Emergency SSH Frontend Deploy
 
 on:
   workflow_dispatch:
@@ -6,9 +6,90 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: emergency-ssh-frontend-deploy
+  cancel-in-progress: true
+
 jobs:
-  disabled:
+  deploy:
+    name: Deploy frontend over SSH
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Disabled during recovery
-        run: echo "SSH deploy is disabled during recovery. Use Emergency Container Frontend Patch instead."
+      - name: Validate required secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: root
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_USER"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_deploy_key
+          chmod 600 ~/.ssh/mercasto_deploy_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy frontend
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: root
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_deploy_key "$SERVER_USER@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+
+          candidates=(
+            "$HOME/mercasto"
+            "/root/mercasto"
+            "/var/www/mercasto"
+            "/opt/mercasto"
+            "/srv/mercasto"
+          )
+
+          project_dir=""
+          for dir in "${candidates[@]}"; do
+            if [ -f "$dir/docker-compose.yml" ] && [ -d "$dir/.git" ]; then
+              project_dir="$dir"
+              break
+            fi
+          done
+
+          if [ -z "$project_dir" ]; then
+            found=$(find /root /home /var/www /opt /srv "$HOME" -maxdepth 4 -name docker-compose.yml -print 2>/dev/null | head -1 || true)
+            if [ -n "$found" ]; then
+              project_dir=$(dirname "$found")
+            fi
+          fi
+
+          if [ -z "$project_dir" ] || [ ! -d "$project_dir/.git" ]; then
+            echo "Mercasto project directory was not found."
+            exit 1
+          fi
+
+          cd "$project_dir"
+          git fetch origin main
+          git reset --hard origin/main
+          docker compose build --no-cache mercasto-frontend
+          docker compose up -d mercasto-frontend
+          docker compose ps
+          REMOTE
+
+      - name: Smoke check
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -I --max-time 30 https://mercasto.com/
+          curl -sS --max-time 30 https://mercasto.com/ | head -c 500
+          curl -sS --max-time 30 https://mercasto.com/api/categories | head -c 300
