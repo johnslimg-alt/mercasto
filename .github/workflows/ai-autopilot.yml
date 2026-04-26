@@ -1,36 +1,14 @@
-name: AI Autopilot
+name: Disabled AI Autopilot
 
 on:
   workflow_dispatch:
-    inputs:
-      model:
-        description: 'Model'
-        default: 'qwen2.5:1.5b'
-        type: choice
-        options: [qwen2.5:1.5b, qwen2.5:3b, mistral:7b]
+
+permissions:
+  contents: read
 
 jobs:
-  deploy-ai:
-    runs-on: self-hosted
-
+  disabled:
+    runs-on: ubuntu-latest
     steps:
-      - name: Установить модель
-        run: |
-          MODEL="${{ inputs.model }}"
-          OLLAMA=$(docker ps --format '{{.Names}}' | grep ollama)
-          BACKEND=$(docker ps --format '{{.Names}}' | grep backend)
-
-          echo "▶ Pull $MODEL"
-          docker exec $OLLAMA ollama pull $MODEL
-
-          echo "▶ Обновить код"
-          AI=$(docker exec $BACKEND find /var/www -name AiService.php | head -1)
-          docker exec $BACKEND sed -i "s/'model' => '[^']*'/'model' => '$MODEL'/g" $AI
-
-          docker restart $OLLAMA $BACKEND
-          sleep 8
-
-          echo "✅ $MODEL готов"
-          curl -s -X POST https://mercasto.com/api/ai/describe \
-            -H "Content-Type: application/json" \
-            -d '{"title":"Test","category":"Test"}' | jq.
+      - name: Disabled during stabilization
+        run: echo "AI Autopilot is disabled until runner health, deploy secrets, and production smoke checks are verified."
