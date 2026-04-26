@@ -1,0 +1,29 @@
+name: Recovery Guard
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'src/main.jsx'
+      - 'src/lib/notificationPolyfill.js'
+      - '.github/workflows/emergency-container-frontend-patch.yml'
+      - '.github/workflows/emergency-ssh-frontend-deploy.yml'
+      - 'scripts/check-recovery-guards.mjs'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run recovery guard checks
+        run: npm run check:recovery
