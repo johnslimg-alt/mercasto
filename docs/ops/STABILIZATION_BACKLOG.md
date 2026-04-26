@@ -19,6 +19,7 @@ Purpose: define what remains before returning to normal feature development.
 - Added post-recovery smoke checklist.
 - Added runner health runbook.
 - Added secret rotation checklist.
+- Added PR-only frontend quality gate for build and recovery guard checks.
 - Disabled or reduced noisy workflows during stabilization.
 
 ## Open stabilization tasks
@@ -39,7 +40,8 @@ Resume UI, analytics, AI, monetization, and large refactors only after:
 - runner repair is complete or server-runner workflows are removed;
 - exposed deploy credential is rotated;
 - one manual frontend deploy is verified with the new credential;
-- Actions page is readable and not flooded with unrelated failures.
+- Actions page is readable and not flooded with unrelated failures;
+- frontend PR quality gate is green on new frontend changes.
 
 ## Feature work currently paused
 
@@ -58,4 +60,5 @@ Resume UI, analytics, AI, monetization, and large refactors only after:
 - small CI trigger cleanup;
 - non-runtime runbooks;
 - smoke test tracking;
-- planning tasks for later implementation.
+- planning tasks for later implementation;
+- PR-only quality checks that do not deploy production.
