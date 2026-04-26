@@ -8,6 +8,7 @@ Purpose: define what remains before returning to normal feature development.
 - API category endpoint returns JSON.
 - The iOS `Notification` runtime crash has been patched.
 - Production deploy workflows have been reduced to manual paths.
+- Server-runner deploy workflows are disabled until runner health is repaired.
 - Runner health and secret rotation are tracked in separate issues.
 
 ## Completed recovery items
@@ -21,11 +22,12 @@ Purpose: define what remains before returning to normal feature development.
 - Added secret rotation checklist.
 - Added PR-only frontend quality gate for build and recovery guard checks.
 - Disabled or reduced noisy workflows during stabilization.
+- Disabled server-runner frontend patch workflow until runner health is repaired.
 
 ## Open stabilization tasks
 
 1. Complete smoke validation from issue #77.
-2. Repair server GitHub runner from issue #75.
+2. Keep server-runner workflows disabled until issue #75 is repaired and verified.
 3. Rotate exposed deploy SSH credential from issue #79.
 4. Confirm `SERVER_HOST` uses IPv4 while IPv6 routing is unreliable.
 5. Verify the manual SSH frontend deploy works with the rotated credential.
@@ -37,7 +39,7 @@ Purpose: define what remains before returning to normal feature development.
 Resume UI, analytics, AI, monetization, and large refactors only after:
 
 - smoke checklist passes;
-- runner repair is complete or server-runner workflows are removed;
+- runner repair is complete or server-runner workflows remain disabled;
 - exposed deploy credential is rotated;
 - one manual frontend deploy is verified with the new credential;
 - Actions page is readable and not flooded with unrelated failures;
