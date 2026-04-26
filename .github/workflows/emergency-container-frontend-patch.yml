@@ -1,0 +1,47 @@
+name: Emergency Container Frontend Patch
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emergency-container-frontend-patch
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    name: Patch running frontend container
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 20
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Build frontend assets
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/app" \
+            -w /app \
+            node:22-alpine \
+            sh -lc 'npm ci && npm run build'
+
+      - name: Patch frontend container files
+        run: |
+          set -euo pipefail
+          test -d dist
+          docker ps --format '{{.Names}}' | grep -qx 'mercasto_frontend_container'
+          docker exec mercasto_frontend_container sh -lc 'rm -rf /usr/share/nginx/html/*'
+          docker cp dist/. mercasto_frontend_container:/usr/share/nginx/html/
+          docker exec mercasto_frontend_container nginx -s reload
+
+      - name: Smoke check
+        run: |
+          set -euo pipefail
+          curl -I --max-time 30 https://mercasto.com/
+          curl -sS --max-time 30 https://mercasto.com/ | head -c 500
+          curl -sS --max-time 30 https://mercasto.com/api/categories | head -c 300
