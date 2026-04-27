@@ -2,6 +2,8 @@ name: Public Smoke Check
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 11 * * *'
 
 permissions:
   contents: read
