@@ -46,7 +46,7 @@ Forbidden:
 
 ### QA Agent
 
-Issues: #77, #86
+Issues: #77, #86, #103
 
 Mission:
 
@@ -58,6 +58,7 @@ Allowed:
 
 - public URL checks;
 - `Public Smoke Check` workflow;
+- scheduled daily public smoke checks;
 - screenshots or written pass/fail notes without secrets.
 
 Forbidden:
@@ -66,6 +67,30 @@ Forbidden:
 - deploy;
 - data deletion;
 - credential handling.
+
+### Scheduled Public Smoke Agent
+
+Workflow: `Public Smoke Check`
+
+Mission:
+
+- run daily public homepage/API checks through GitHub-hosted runners;
+- provide early warning if public homepage or public API routes stop responding.
+
+Allowed:
+
+- read-only public URL checks;
+- scheduled GitHub-hosted workflow runs;
+- manual workflow runs.
+
+Forbidden:
+
+- SSH;
+- secrets;
+- server-runner;
+- deploy;
+- database writes;
+- payment actions.
 
 ### Security Agent
 
@@ -168,6 +193,7 @@ Agents may proceed without extra approval for:
 - GitHub issues;
 - PRs that only change docs or non-deploy CI checks;
 - public smoke checks;
+- scheduled read-only public checks;
 - workflow changes that reduce deploy risk;
 - comments that record status and next actions.
 
