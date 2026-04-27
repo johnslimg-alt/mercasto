@@ -1,0 +1,67 @@
+name: Agent Task
+
+description: Create a scoped autonomous agent task.
+
+title: "Agent: "
+labels:
+  - agent
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for scoped agent work. Keep sensitive values out of issues.
+  - type: input
+    id: agent_role
+    attributes:
+      label: Agent role
+      placeholder: QA Agent
+    validations:
+      required: true
+  - type: textarea
+    id: mission
+    attributes:
+      label: Mission
+      placeholder: Verify public checks and update linked issues.
+    validations:
+      required: true
+  - type: textarea
+    id: inputs
+    attributes:
+      label: Inputs and links
+      placeholder: |
+        - #92
+        - docs/ops/P0_AGENT_COMMAND_CENTER.md
+    validations:
+      required: false
+  - type: textarea
+    id: allowed
+    attributes:
+      label: Allowed actions
+      placeholder: |
+        - documentation
+        - issue comments
+        - public checks
+        - non-deploy CI checks
+    validations:
+      required: true
+  - type: textarea
+    id: forbidden
+    attributes:
+      label: Forbidden actions
+      placeholder: |
+        - no sensitive values in issues
+        - no server access
+        - no database changes
+        - no payment changes
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - results posted to linked issue
+        - no forbidden actions taken
+        - follow-up issues created if needed
+    validations:
+      required: true

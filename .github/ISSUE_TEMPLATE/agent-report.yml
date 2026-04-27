@@ -1,0 +1,47 @@
+name: Agent Report
+
+description: Report results from an agent task or workflow check.
+
+title: "Agent Report: "
+labels:
+  - agent-report
+body:
+  - type: input
+    id: related_issue
+    attributes:
+      label: Related issue
+      placeholder: "#92"
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - pass
+        - fail
+        - blocked
+        - partial
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      placeholder: Link workflow run, PR, issue comment, or public result.
+    validations:
+      required: false
+  - type: textarea
+    id: next_steps
+    attributes:
+      label: Next steps
+      placeholder: What should happen next?
+    validations:
+      required: true
