@@ -76,6 +76,7 @@ check_public_port_closed "http://${PUBLIC_IP}:11434/api/tags"
 check_public_port_closed "http://${PUBLIC_IP}:6379"
 check_public_port_closed "http://${PUBLIC_IP}:5432"
 check_public_port_closed "http://${PUBLIC_IP}:9090"
+check_public_port_closed "http://${PUBLIC_IP}:8080"
 
 echo "== Redis host setting =="
 if [[ "$(sysctl -n vm.overcommit_memory 2>/dev/null || echo unknown)" != "1" ]]; then
