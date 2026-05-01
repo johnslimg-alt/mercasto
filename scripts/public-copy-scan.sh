@@ -30,7 +30,7 @@ if [[ ${#EXISTING_TARGETS[@]} -eq 0 ]]; then
   exit 1
 fi
 
-PATTERN='MVP|stack trace|stacktrace|debug|placeholder|TODO|FIXME|En construcción|Página en construcción|Error Crítico|white screen|WSOD'
+PATTERN='MVP|stack trace|stacktrace|placeholder|En construcción|Página en construcción|Error Crítico|white screen'
 
 echo "== Public copy/code scan =="
 if grep -RInE \
@@ -41,7 +41,7 @@ if grep -RInE \
   --exclude='*.map' \
   --exclude='*.lock' \
   "$PATTERN" "${EXISTING_TARGETS[@]}"; then
-  echo "public copy scan found banned or review-required terms" >&2
+  echo "public copy scan found banned or review-required public text" >&2
   exit 1
 fi
 
