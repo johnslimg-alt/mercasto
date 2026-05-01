@@ -114,7 +114,7 @@ export const ProfileModal = ({ showProfileModal, setShowProfileModal, handleProf
   );
 };
 
-export const PricingModal = ({ showPricingModal, setShowPricingModal, priceTab, setPriceTab, handlepagoPayment, t }) => {
+export const PricingModal = ({ showPricingModal, setShowPricingModal, priceTab, setPriceTab, handleClipPayment, t }) => {
   if (!showPricingModal) return null;
   return (
     <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-end md:items-center justify-center p-0 md:p-6 backdrop-blur-sm">
@@ -140,7 +140,7 @@ export const PricingModal = ({ showPricingModal, setShowPricingModal, priceTab, 
               <div className="bg-[#84CC16] rounded-3xl p-6 md:p-8 border border-[#84CC16] flex flex-col shadow-lg">
                 <h4 className="font-bold text-lime-100 uppercase tracking-wider text-[12px] mb-2">{t.plan_plus}</h4><p className="text-4xl font-black text-white mb-4">$99 <span className="text-[14px] font-medium text-lime-100">/mes</span></p>
                 <ul className="space-y-3 mb-8 flex-1"><li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> 10 anuncios / mes</li><li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> 2 Subidas a TOP gratis</li><li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> Más visibilidad</li></ul>
-                <button onClick={() => handlepagoPayment(99, 'Suscripción Paquete Plus')} className="btn-lg w-full bg-white text-[#65A30D] hover:bg-slate-50 shadow-sm">{t.buy_plan}</button>
+                <button onClick={() => handleClipPayment(99, 'Suscripción Paquete Plus')} className="btn-lg w-full bg-white text-[#65A30D] hover:bg-slate-50 shadow-sm">{t.buy_plan}</button>
               </div>
             </div>
           ) : (
@@ -148,13 +148,13 @@ export const PricingModal = ({ showPricingModal, setShowPricingModal, priceTab, 
               <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#84CC16]/50 flex flex-col relative shadow-sm">
                 <h4 className="font-bold text-slate-500 uppercase tracking-wider text-[12px] mb-2">{t.plan_pro_basic}</h4><p className="text-4xl font-black text-slate-900 mb-4">$500 <span className="text-[14px] font-medium text-slate-500">/mes</span></p>
                 <ul className="space-y-3 mb-8 flex-1"><li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> 50 anuncios / mes</li><li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Insignia "PRO"</li><li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Página de Empresa</li><li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Estadísticas avanzadas</li></ul>
-                <button onClick={() => handlepagoPayment(500, 'Suscripción PRO Estándar')} className="btn-lg w-full border-2 border-[#84CC16] text-[#65A30D] hover:bg-[#84CC16]/5">{t.buy_plan}</button>
+                <button onClick={() => handleClipPayment(500, 'Suscripción PRO Estándar')} className="btn-lg w-full border-2 border-[#84CC16] text-[#65A30D] hover:bg-[#84CC16]/5">{t.buy_plan}</button>
               </div>
               <div className="bg-[#0F172A] rounded-3xl p-6 md:p-8 flex flex-col relative shadow-xl transform md:-translate-y-2 ring-2 ring-[#84CC16]">
                 <div className="absolute top-0 right-6 -translate-y-1/2 bg-[#84CC16] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-md">POPULAR</div>
                 <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[12px] mb-2">{t.plan_pro_max}</h4><p className="text-4xl font-black text-white mb-4">$1,500 <span className="text-[14px] font-medium text-slate-400">/mes</span></p>
                 <ul className="space-y-3 mb-8 flex-1"><li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Anuncios Ilimitados</li><li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Subida masiva (XML/CSV)</li><li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> 10 Destacados incluidos</li><li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Soporte dedicado</li></ul>
-                <button onClick={() => handlepagoPayment(1500, 'Suscripción PRO Ilimitado')} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] shadow-md">{t.buy_plan}</button>
+                <button onClick={() => handleClipPayment(1500, 'Suscripción PRO Ilimitado')} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] shadow-md">{t.buy_plan}</button>
               </div>
             </div>
           )}
