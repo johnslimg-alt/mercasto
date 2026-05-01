@@ -19,6 +19,7 @@
     "verify:prod": "npm run smoke:full",
     "maintenance:precheck": "bash scripts/os-maintenance-precheck.sh",
     "smoke": "npm run smoke:prod",
+    "check:scripts": "find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n",
     "check:recovery": "node scripts/check-recovery-guards.mjs"
   },
   "dependencies": {
