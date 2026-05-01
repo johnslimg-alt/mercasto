@@ -13,7 +13,7 @@
     "smoke:security": "bash scripts/security-probes.sh",
     "smoke:routes": "bash scripts/listing-route-smoke.sh",
     "smoke:copy": "bash scripts/public-copy-scan.sh",
-    "smoke:all": "npm run smoke:prod && npm run smoke:security && npm run smoke:routes && npm run smoke:copy",
+    "smoke:all": "npm run check:scripts && npm run smoke:prod && npm run smoke:security && npm run smoke:routes && npm run smoke:copy",
     "smoke:full": "npm run smoke:all && npm run maintenance:precheck",
     "verify:quick": "npm run smoke:all",
     "verify:prod": "npm run smoke:full",
