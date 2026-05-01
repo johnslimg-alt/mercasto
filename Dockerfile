@@ -1,11 +1,11 @@
 # --- Этап сборки (Build Stage) ---
-FROM node:22-alpine as build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# Копируем package.json и устанавливаем зависимости
+# Копируем package.json/package-lock.json и устанавливаем зависимости воспроизводимо.
 COPY package*.json ./
-RUN npm install
+RUN npm ci --no-audit --no-fund
 
 # Копируем остальные файлы и собираем production-версию
 COPY . .
