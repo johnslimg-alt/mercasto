@@ -1,0 +1,10 @@
+services:
+  mercasto-scheduler:
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  mercasto-reverb:
+    depends_on:
+      redis:
+        condition: service_healthy
