@@ -13,6 +13,7 @@
     "smoke:security": "bash scripts/security-probes.sh",
     "smoke:routes": "bash scripts/listing-route-smoke.sh",
     "smoke:copy": "bash scripts/public-copy-scan.sh",
+    "smoke:all": "npm run smoke:prod && npm run smoke:security && npm run smoke:routes && npm run smoke:copy",
     "maintenance:precheck": "bash scripts/os-maintenance-precheck.sh",
     "smoke": "npm run smoke:prod",
     "check:recovery": "node scripts/check-recovery-guards.mjs"
