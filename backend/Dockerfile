@@ -92,6 +92,7 @@ RUN echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/docker-php
     && echo "opcache.memory_consumption=192" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
-# PHP-FPM healthcheck for compose/orchestrator visibility.
+# PHP-FPM runtime metadata for compose/orchestrator visibility and graceful shutdown.
 EXPOSE 9000
+STOPSIGNAL SIGQUIT
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD php-fpm -t || exit 1
