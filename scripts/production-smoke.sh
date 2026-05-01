@@ -80,6 +80,20 @@ check_public_port_closed "http://${PUBLIC_IP}:5432"
 check_public_port_closed "http://${PUBLIC_IP}:9090"
 check_public_port_closed "http://${PUBLIC_IP}:8080"
 
+echo "== PHP upload limit settings =="
+PHP_UPLOAD_MAX="$(docker compose "${COMPOSE_FILES[@]}" exec -T mercasto-backend php -r 'echo ini_get("upload_max_filesize");')"
+PHP_POST_MAX="$(docker compose "${COMPOSE_FILES[@]}" exec -T mercasto-backend php -r 'echo ini_get("post_max_size");')"
+echo "upload_max_filesize=$PHP_UPLOAD_MAX"
+echo "post_max_size=$PHP_POST_MAX"
+if [[ "$PHP_UPLOAD_MAX" != "10M" ]]; then
+  echo "unexpected upload_max_filesize: $PHP_UPLOAD_MAX" >&2
+  exit 1
+fi
+if [[ "$PHP_POST_MAX" != "25M" ]]; then
+  echo "unexpected post_max_size: $PHP_POST_MAX" >&2
+  exit 1
+fi
+
 echo "== Redis host setting =="
 if [[ "$(sysctl -n vm.overcommit_memory 2>/dev/null || echo unknown)" != "1" ]]; then
   echo "vm.overcommit_memory is not 1" >&2
