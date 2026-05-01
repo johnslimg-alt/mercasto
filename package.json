@@ -9,8 +9,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start:server": "node server/index.js",
-    "smoke:prod": "bash scripts/smoke-test.sh",
-    "smoke": "bash scripts/smoke-test.sh",
+    "smoke:prod": "bash scripts/production-smoke.sh",
+    "smoke:security": "bash scripts/security-probes.sh",
+    "smoke:routes": "bash scripts/listing-route-smoke.sh",
+    "maintenance:precheck": "bash scripts/os-maintenance-precheck.sh",
+    "smoke": "npm run smoke:prod",
     "check:recovery": "node scripts/check-recovery-guards.mjs"
   },
   "dependencies": {
