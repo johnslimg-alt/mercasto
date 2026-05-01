@@ -27,6 +27,9 @@ jobs:
       - name: Validate compose file
         run: docker compose config
 
+      - name: Validate compose file with override
+        run: docker compose -f docker-compose.yml -f docker-compose.override.yml config
+
   frontend-build:
     name: Build frontend
     runs-on: ubuntu-latest
