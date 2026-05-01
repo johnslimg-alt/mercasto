@@ -27,6 +27,7 @@ check_not_5xx() {
 }
 
 require_cmd curl
+require_cmd python3
 
 if [[ ! -f docker-compose.yml ]]; then
   echo "run this script from the Mercasto repository root" >&2
