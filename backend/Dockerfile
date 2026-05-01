@@ -1,8 +1,13 @@
+# syntax=docker/dockerfile:1
 # Используем официальный образ PHP 8.4 с FPM
 FROM php:8.4-fpm
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Устанавливаем системные зависимости и расширения PHP одним слоем.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
     git \
     curl \
     ca-certificates \
@@ -19,14 +24,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     npm \
     zip \
     unzip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip opcache intl \
-    && rm -rf /var/lib/apt/lists/*
+    ; \
+    docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp; \
+    docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip opcache intl; \
+    rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем и включаем расширение Redis
-RUN pecl install redis \
-    && docker-php-ext-enable redis \
-    && rm -rf /tmp/pear
+RUN set -eux; \
+    pecl install redis; \
+    docker-php-ext-enable redis; \
+    rm -rf /tmp/pear
 
 # Устанавливаем Composer v2.9.7
 COPY --from=composer:2.9.7 /usr/bin/composer /usr/bin/composer
