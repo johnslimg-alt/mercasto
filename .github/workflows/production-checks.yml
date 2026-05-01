@@ -46,6 +46,16 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
+  frontend-docker-build:
+    name: Build frontend Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -f Dockerfile .
+
   backend-docker-build:
     name: Build backend Docker image
     runs-on: ubuntu-latest
