@@ -33,6 +33,8 @@ check_denied "${BASE_URL}/.env"
 check_denied "${BASE_URL}/.git/config"
 check_denied "${BASE_URL}/backend/.env"
 check_denied "${BASE_URL}/storage/../.env"
+check_denied "${BASE_URL}/horizon"
+check_denied "${BASE_URL}/vendor/horizon"
 
 echo "== Public internal-service ports =="
 check_closed "http://${PUBLIC_IP}:11434/api/tags"
