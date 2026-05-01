@@ -396,7 +396,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   <div className="bg-white border border-slate-200 rounded-2xl h-full min-h-[360px] overflow-hidden relative">
 
-                    <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedState || 'Puerto Vallarta')}&t=&z=13&ie=UTF8&iwloc=&output=embed`} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)', position: 'absolute', top: 0, left: 0 }} className="opacity-40 pointer-events-none"></iframe>
+                    <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedState || 'México')}&t=&z=5&ie=UTF8&iwloc=&output=embed`} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)', position: 'absolute', top: 0, left: 0 }} className="opacity-40 pointer-events-none"></iframe>
 
                     <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-transparent pointer-events-none"></div>
 
@@ -404,9 +404,9 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                       <div className="flex items-center justify-between">
 
-                        <h3 className="font-semibold">Map preview</h3>
+                        <h3 className="font-semibold">Todo México</h3>
 
-                        <button onClick={() => setActiveCat('inmobiliaria')} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">Open map</button>
+                        <button onClick={() => setActiveCat('inmobiliaria')} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">Ver estados</button>
 
                       </div>
 
@@ -424,7 +424,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                       <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur rounded-xl p-3 border border-slate-200">
 
-                        <div className="flex items-center justify-between text-[12px]"><span className="font-medium">247 properties in Puerto Vallarta</span><span onClick={() => setSelectedState('Puerto Vallarta')} className="text-[#65A30D] font-semibold cursor-pointer hover:underline">Filter →</span></div>
+                        <div className="flex items-center justify-between text-[12px]"><span className="font-medium">Todos los estados y ciudades de México</span><span onClick={() => setSelectedState('')} className="text-[#65A30D] font-semibold cursor-pointer hover:underline">Ver todo →</span></div>
 
                       </div>
 
@@ -908,7 +908,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 <div className="flex flex-wrap gap-2 mt-3">
 
-                  {['iphone 15', 'samsung s24', 'departamento renta puerto vallarta', 'casa venta guadalajara', 'honda civic', 'toyota corolla', 'trabajo remoto', 'recepcionista', 'nintendo switch', 'ps5', 'macbook', 'trabajo medio tiempo', 'bicicleta', 'escritorio', 'sala', 'refrigerador', 'lavadora', 'golden retriever', 'gatitos', 'terreno', 'local comercial', 'moto italika', 'yamaha', 'abogado', 'contador', 'plomero', 'electricista', 'clases ingles', 'uber carro', 'airbnb amueblado'].map(term => (
+                  {['iphone 15', 'samsung s24', 'departamento renta cdmx', 'casa venta guadalajara', 'honda civic', 'toyota corolla', 'trabajo remoto', 'recepcionista', 'nintendo switch', 'ps5', 'macbook', 'trabajo medio tiempo', 'bicicleta', 'escritorio', 'sala', 'refrigerador', 'lavadora', 'golden retriever', 'gatitos', 'terreno', 'local comercial', 'moto italika', 'yamaha', 'abogado', 'contador', 'plomero', 'electricista', 'clases ingles', 'uber carro', 'airbnb amueblado'].map(term => (
 
                     <a key={term} onClick={() => setSearchQuery(term)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[13px] cursor-pointer">{term}</a>
 
@@ -948,7 +948,8 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   { name: 'Tijuana', count: '76,551' },
 
-                  { name: 'Puerto Vallarta', count: '47,882', highlight: true },
+                  { name: 'Aguascalientes', count: '47,882', highlight: true },
+                  { name: 'Puerto Vallarta', count: '45,118' },
 
                   { name: 'Cancún', count: '58,992' },
 
