@@ -70,6 +70,8 @@ echo "== Sensitive path probes =="
 check_http_status "${BASE_URL}/.env" '^(403|404|410)$'
 check_http_status "${BASE_URL}/.git/config" '^(403|404|410)$'
 check_http_status "${BASE_URL}/backend/.env" '^(403|404|410)$'
+check_http_status "${BASE_URL}/composer.json" '^(403|404|410)$'
+check_http_status "${BASE_URL}/package.json" '^(403|404|410)$'
 
 echo "== Internal service exposure probes =="
 check_public_port_closed "http://${PUBLIC_IP}:11434/api/tags"
