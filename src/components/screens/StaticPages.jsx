@@ -23,8 +23,8 @@ export default function StaticPages({ currentTab }) {
             <li>Anuncios duplicados o con la intención de manipular los algoritmos de búsqueda (Spam).</li>
           </ul>
 
-          <h3 className="text-[18px] font-bold text-slate-900 mt-6">4. Pagos, Clip y Suscripciones PRO</h3>
-          <p>Los pagos para promociones de anuncios y suscripciones (Mercasto PRO, Mercasto Plus) son procesados de forma segura a través de <strong>Clip México</strong>. Todos los cargos se realizan en Pesos Mexicanos (MXN). Una vez que un anuncio es destacado o una suscripción es activada, el pago <strong>no es reembolsable</strong> a menos que exista una falla técnica comprobable en nuestra plataforma.</p>
+          <h3 className="text-[18px] font-bold text-slate-900 mt-6">4. Pagos y Suscripciones PRO</h3>
+          <p>Los pagos para promociones de anuncios y suscripciones (Mercasto PRO, Mercasto Plus) se procesan de forma segura. Puedes pagar con tarjeta y, cuando esté disponible, en efectivo en OXXO. Todos los cargos se realizan en Pesos Mexicanos (MXN). Una vez que un anuncio es destacado o una suscripción es activada, el pago <strong>no es reembolsable</strong> a menos que exista una falla técnica comprobable en nuestra plataforma.</p>
 
           <h3 className="text-[18px] font-bold text-slate-900 mt-6">5. Limitación de Responsabilidad</h3>
           <p>Mercasto actúa únicamente como un intermediario tecnológico para conectar a compradores y vendedores. No somos propietarios de los artículos publicados, ni garantizamos la veracidad de las descripciones o la calidad de los productos. Toda transacción realizada fuera o dentro de la plataforma es bajo su propio riesgo.</p>
@@ -44,7 +44,7 @@ export default function StaticPages({ currentTab }) {
           <p>Para brindarle nuestros servicios, recabamos los siguientes datos personales:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li>Datos de identificación: Nombre, correo electrónico, número de teléfono.</li>
-            <li>Datos patrimoniales: Historial de transacciones (procesado por Clip).</li>
+            <li>Datos patrimoniales: Historial de transacciones.</li>
             <li>Datos de navegación: Dirección IP (anonimizada), ubicación aproximada, cookies.</li>
             <li>Datos sensibles (Solo KYC): Identificación oficial (INE, Pasaporte) recabada exclusivamente para otorgar la insignia de "Usuario Verificado". Estos documentos se almacenan en servidores cifrados (AWS S3) con acceso restringido.</li>
           </ul>
@@ -75,7 +75,7 @@ export default function StaticPages({ currentTab }) {
 
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
             <h4 className="font-bold text-slate-900 text-[16px]">¿Cómo destaco mi anuncio para vender más rápido?</h4>
-            <p className="mt-2 text-[14px]">Ve a la sección "Mis Anuncios" en tu perfil. Localiza el anuncio que deseas vender rápido y haz clic en el botón <strong>"Promocionar"</strong>. Podrás pagar 50 créditos o usar tu tarjeta a través de Clip para destacar tu anuncio con una etiqueta azul durante 7 días.</p>
+            <p className="mt-2 text-[14px]">Ve a la sección "Mis Anuncios" en tu perfil. Localiza el anuncio que deseas vender rápido y haz clic en el botón <strong>"Promocionar"</strong>. Podrás pagar 50 créditos o usar métodos de pago disponibles al finalizar, como tarjeta o efectivo en OXXO, para destacar tu anuncio durante 7 días.</p>
           </div>
         </div>
       )

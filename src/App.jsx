@@ -1805,7 +1805,7 @@ function App() {
     }
   };
 
-  // --- ОПЛАТА ЧЕРЕЗ CLIP MEXICO ---
+  // --- PAYMENT CHECKOUT ---
   const handleClipPayment = async (amount, description, adId = null) => {
     if (!user) { setShowAuthModal(true); return; }
     try {
@@ -1818,8 +1818,8 @@ function App() {
       const data = await res.json();
       if (res.ok && data.payment_url) {
         window.location.href = data.payment_url;
-      } else alert('Error al generar pago con Clip');
-    } catch (err) { console.error("Clip payment error", err); alert('Error de conexión'); }
+      } else alert('Error al generar el pago');
+    } catch (err) { console.error("Payment error", err); alert('Error de conexión'); }
   };
   
   // --- AI COMMAND CENTER LOGIC ---
