@@ -1,1 +1,25 @@
-# Mercasto P1 Post-Rotation Security Cleanup\n\n## Purpose\nThis checklist defines what to do after rotating secrets, credentials, tokens, API keys, database passwords, webhook secrets, admin passwords, or deployment credentials.\n\n## Rotation scope\nUse this runbook after changing database password, app secret, session secret, payment secret, webhook secret, admin password, GitHub token, deploy token, SSH key, hosting password, SMTP credential, or any environment secret.\n\n## Immediate safety rules\n- Do not commit secrets.\n- Do not paste full secrets into Git, issues, chat, frontend JS, templates, error pages, screenshots, or logs.\n- Do not leave old secrets active after the new secret works.\n\n## Step 1: Verify app boot\n- Homepage opens.\n- Login opens.\n- Listings open.\n- No 500.\n- No blank screen.\n- No raw error.\n- No config path leak.\n\n## Step 2: Verify auth/session\n- Login works.\n- Logout works.\n- Protected account routes remain protected.\n- Session cookies remain HttpOnly, Secure, and SameSite where configured.\n\n## Step 3: Verify payments\n- Pricing/promotions page loads.\n- Checkout creation works.\n- Webhook endpoint uses the new secret.\n- Invalid webhook signature is rejected.\n- Valid webhook is accepted.\n- Payment is not activated by success redirect alone.\n- Duplicate webhook is idempotent.\n\n## Step 4: Verify deployment access\n```bash\ncd /var/www/mercasto\ngit status --short\ngit pull --ff-only origin main\n```\n\n## Step 5: Search repository for accidental secrets\n```bash\ngrep -RIn --exclude-dir=.git --exclude-dir=vendor --exclude-dir=node_modules -E "SECRET|TOKEN|PASSWORD|PRIVATE KEY|DB_PASSWORD|API_KEY|WEBHOOK" . || true\n```\n\n## Step 6: Search public UI for forbidden/internal wording\n```bash\ngrep -RIn --exclude-dir=.git --exclude-dir=vendor --exclude-dir=node_modules -E "MVP|Clip|debug|test|placeholder|stack trace" . || true\n```\n\nPublic UI should not show MVP, internal payment provider wording, debug/test fragments, stack traces, or raw placeholder text.\n\nPreferred public payment copy:\n- Pago con tarjeta.\n- Pago en efectivo en OXXO.\n- Métodos de pago disponibles al finalizar.\n\n## Step 7: Check logs for exposure\nLogs must not contain full passwords, full API keys, webhook secrets, full session IDs, private tokens, or private payment data.\n\n## Step 8: Revoke old secrets\nDisable or delete old API keys, webhook secrets, deploy tokens, SSH keys, admin users, database users/passwords, and app passwords.\n\n## Completion criteria\n- New secret works.\n- Old secret is revoked.\n- No real secret is present in tracked files.\n- Public UI has no internal/debug/security leakage.\n- Logs do not expose secrets.\n- P1 smoke checks pass.\n- Rotation note is recorded.\n
+# Mercasto P1 Post-Rotation Security Cleanup
+
+## Purpose
+Checklist after rotating tokens, SSH keys, API keys, database passwords, webhook secrets, or deployment credentials.
+
+## Safety rules
+- Do not commit secrets.
+- Do not paste secrets into Git, issues, chat, frontend code, templates, screenshots, or logs.
+- Revoke old credentials after the new credential works.
+
+## Required checks
+- Verify homepage, login, listings, account, and API endpoints.
+- Verify deployment access after SSH/GitHub token changes.
+- Verify payment webhook and checkout after payment secret changes.
+- Search repo for accidental secrets.
+- Search public UI for MVP, internal provider wording, debug/test fragments, and stack traces.
+- Check logs for full passwords, API keys, tokens, private keys, webhook secrets, or session IDs.
+
+## Public payment copy
+- Pago con tarjeta.
+- Pago en efectivo en OXXO.
+- Métodos de pago disponibles al finalizar.
+
+## Completion criteria
+Rotation cleanup is complete only when new secret works, old secret is revoked, no tracked files/logs expose secrets, and P1 smoke checks pass.

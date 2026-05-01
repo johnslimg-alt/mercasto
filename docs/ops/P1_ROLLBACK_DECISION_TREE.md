@@ -1,1 +1,26 @@
-# Mercasto P1 Rollback Decision Tree\n\n## Purpose\nThis runbook defines when to rollback, when to hotfix, and when to keep monitoring after a production change.\n\n## First rule\nDo not improvise on production.\n\nBefore rollback or hotfix:\n1. Capture current commit.\n2. Capture current database backup state.\n3. Capture current error symptoms.\n4. Decide whether the problem is code, database, config, payment, or infrastructure.\n\n## Immediate rollback triggers\n- Homepage returns 500 or blank screen.\n- Login/register is broken.\n- Seller account is inaccessible.\n- Publish flow is broken.\n- Listing detail pages are broken.\n- Paused/deleted listings are publicly visible.\n- Users can edit/delete another user's listing.\n- Photo uploads allow dangerous files.\n- Payment success page activates paid features without verified server confirmation.\n- Webhook processing duplicates paid effects.\n- Production exposes stack traces, SQL errors, secrets, or config.\n\n## Do not rollback automatically if\n- Only one non-critical visual block is misaligned.\n- One translation string is wrong.\n- One icon or non-critical image is missing.\n- One listing has bad test data.\n- A feature flag/config value can safely disable the issue.\n\n## Decision tree\n1. Check if site is reachable.\n2. Check auth.\n3. Check seller lifecycle.\n4. Check public visibility.\n5. Check uploads.\n6. Check payments.\n7. Check secrets/private data exposure.\n\n## Code rollback\nFor a normal bad commit on main, prefer git revert.\n\n```bash\ncd /var/www/mercasto\ngit log --oneline -5\ngit revert <BAD_COMMIT>\ngit push origin main\n```\n\n## Payment rollback rules\n- Never blindly delete payment rows.\n- Preserve payments.\n- Preserve payment_events.\n- Disable promotion activation if needed.\n- Do not trust success redirect as proof of payment.\n\n## Security rollback rules\n1. Disable vulnerable route.\n2. Preserve logs.\n3. Rotate affected secrets.\n4. Check git history for committed secrets.\n5. Audit uploads.\n6. Record incident note.\n\n## Rollback success criteria\n- Core pages return normal responses.\n- Login works.\n- Seller account works.\n- Public listing visibility is correct.\n- No dangerous upload/payment/security regression remains.\n- P1 smoke matrix passes.\n
+# Mercasto P1 Rollback Decision Tree
+
+## Purpose
+Operational decision tree for rollback or hotfix after a Mercasto production change.
+
+## Immediate rollback triggers
+- Homepage returns 500 or blank screen.
+- Login/register/account is broken.
+- Seller can edit/delete another users listing.
+- Paused/deleted listings are publicly visible.
+- Dangerous uploads can execute.
+- Payment success redirect activates paid features without verified server confirmation.
+- Production exposes stack traces, SQL errors, secrets, or config.
+
+## Preferred rollback method
+For a bad commit already pushed to main, prefer git revert so history stays linear.
+
+```bash
+cd /var/www/mercasto
+git log --oneline -5
+git revert <BAD_COMMIT>
+git push origin main
+```
+
+## Completion criteria
+Rollback is complete only when core pages, login, seller account, public visibility, uploads, payments, and P1 smoke checks pass.
