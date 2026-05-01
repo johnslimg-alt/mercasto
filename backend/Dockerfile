@@ -80,7 +80,7 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.
 RUN { \
         echo "memory_limit=256M"; \
         echo "upload_max_filesize=10M"; \
-        echo "post_max_size=48M"; \
+        echo "post_max_size=25M"; \
         echo "max_file_uploads=12"; \
         echo "max_execution_time=60"; \
         echo "max_input_time=60"; \
