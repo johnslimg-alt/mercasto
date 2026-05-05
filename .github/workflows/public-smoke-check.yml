@@ -48,3 +48,24 @@ jobs:
           body=$(curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers)
           echo "$body" | head -c 500
           echo "$body" | grep -Eq 'google|facebook|providers|\{'
+
+      - name: Check protected public paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            /.env \
+            /.git/config \
+            /backend/.env \
+            /composer.json \
+            /package.json \
+            /horizon \
+            /vendor/horizon
+          do
+            status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "https://mercasto.com${path}")
+            echo "${path} -> ${status}"
+            case "$status" in
+              403|404|410) ;;
+              *) echo "unexpected status for ${path}: ${status}" >&2; exit 1 ;;
+            esac
+          done
