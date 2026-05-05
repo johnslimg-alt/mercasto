@@ -141,14 +141,21 @@ Expected:
 
 ## 10. Route inventory gate
 
-After route or middleware changes, generate a route inventory artifact:
+After route or middleware changes, generate and validate a route inventory artifact:
 
 ```bash
 cd /var/www/mercasto
-bash scripts/export-route-inventory.sh
+bash scripts/route-inventory-gate.sh
 ```
 
-The script writes:
+The gate runs:
+
+```bash
+bash scripts/export-route-inventory.sh
+bash scripts/check-route-inventory-artifact.sh
+```
+
+The generated artifact is:
 
 ```text
 docs/route-inventory-generated.md
@@ -169,6 +176,8 @@ docs/route-inventory.md
 
 Expected:
 
+- Route list generation succeeds.
+- Route inventory artifact exists and is not empty.
 - Middleware is visible.
 - State-changing browser routes are identified.
 - Protected routes are marked.
