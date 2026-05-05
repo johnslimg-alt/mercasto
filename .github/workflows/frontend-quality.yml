@@ -1,6 +1,23 @@
 name: Frontend Quality Gate
 
 on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - 'tailwind.config.*'
+      - '.github/workflows/frontend-quality.yml'
+      - 'scripts/check-recovery-guards.mjs'
+      - 'scripts/public-copy-scan.sh'
+      - 'scripts/fix-public-copy-fallbacks.sh'
+      - 'scripts/apply-production-hotfixes.sh'
   pull_request:
     branches:
       - main
@@ -14,6 +31,9 @@ on:
       - 'tailwind.config.*'
       - '.github/workflows/frontend-quality.yml'
       - 'scripts/check-recovery-guards.mjs'
+      - 'scripts/public-copy-scan.sh'
+      - 'scripts/fix-public-copy-fallbacks.sh'
+      - 'scripts/apply-production-hotfixes.sh'
 
 permissions:
   contents: read
@@ -37,5 +57,7 @@ jobs:
         run: npm ci
       - name: Run recovery guards
         run: npm run check:recovery
+      - name: Run public copy scan
+        run: bash scripts/public-copy-scan.sh
       - name: Build frontend
         run: npm run build
