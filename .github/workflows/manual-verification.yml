@@ -1,0 +1,81 @@
+name: Manual Verification Suite
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 12 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-verification-suite
+  cancel-in-progress: true
+
+jobs:
+  public-smoke:
+    name: Public smoke and protected paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check public site and API
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSIL --max-time 30 https://mercasto.com/
+          curl -fsSIL --max-time 30 https://mercasto.com/up
+          curl -fsSL --max-time 30 https://mercasto.com/api/categories | head -c 1000 | grep -q '"slug"'
+          curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | head -c 1000 | grep -Eq '"data"|"id"|\['
+
+      - name: Check protected public paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            /.env \
+            /.git/config \
+            /backend/.env \
+            /composer.json \
+            /package.json \
+            /horizon \
+            /vendor/horizon
+          do
+            status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "https://mercasto.com${path}")
+            echo "${path} -> ${status}"
+            case "$status" in
+              403|404|410) ;;
+              *) echo "unexpected status for ${path}: ${status}" >&2; exit 1 ;;
+            esac
+          done
+
+  frontend-quality:
+    name: Frontend build and copy scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Recovery guard check
+        run: npm run check:recovery
+      - name: Public copy scan
+        run: bash scripts/public-copy-scan.sh
+      - name: Build frontend
+        run: npm run build
+
+  compose-config:
+    name: Compose config checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose files
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose config >/tmp/mercasto_compose_base.out
+          docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out
