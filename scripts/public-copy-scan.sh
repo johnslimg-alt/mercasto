@@ -30,7 +30,7 @@ if [[ ${#EXISTING_TARGETS[@]} -eq 0 ]]; then
   exit 1
 fi
 
-PATTERN='MVP|stack trace|stacktrace|placeholder|En construcción|Página en construcción|Error Crítico|white screen'
+PATTERN='MVP|stack trace|stacktrace|En construcción|Página en construcción|Error Crítico|white screen'
 
 echo "== Public copy/code scan =="
 if grep -RInE \
