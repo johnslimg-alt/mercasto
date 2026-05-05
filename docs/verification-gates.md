@@ -141,14 +141,27 @@ Expected:
 
 ## 10. Route inventory gate
 
-After route or middleware changes:
+After route or middleware changes, generate a route inventory artifact:
+
+```bash
+cd /var/www/mercasto
+bash scripts/export-route-inventory.sh
+```
+
+The script writes:
+
+```text
+docs/route-inventory-generated.md
+```
+
+Manual fallback command:
 
 ```bash
 cd /var/www/mercasto/backend
 php artisan route:list --except-vendor -v
 ```
 
-Then update:
+Then update the curated route inventory if needed:
 
 ```text
 docs/route-inventory.md
