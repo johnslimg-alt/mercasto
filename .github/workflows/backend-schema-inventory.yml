@@ -1,0 +1,51 @@
+name: Backend Schema Inventory
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/database/**'
+      - '.github/workflows/backend-schema-inventory.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-schema-inventory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    name: Inventory backend schema files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate schema inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mercasto-schema-inventory
+          {
+            echo '# Backend Schema Inventory'
+            echo
+            echo '## Migration files'
+            if [ -d backend/database/migrations ]; then
+              find backend/database/migrations -maxdepth 1 -type f | sort
+            else
+              echo 'backend/database/migrations directory not found'
+            fi
+            echo
+            echo '## Table keyword matches'
+            grep -RInE 'payments|ad_promotions|user_notifications|clip_checkout_id|webhook_payload' backend/database backend/app 2>/dev/null || true
+          } | tee /tmp/mercasto-schema-inventory/backend-schema-inventory.md
+
+      - name: Upload schema inventory artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-schema-inventory
+          path: /tmp/mercasto-schema-inventory/backend-schema-inventory.md
+          if-no-files-found: error
