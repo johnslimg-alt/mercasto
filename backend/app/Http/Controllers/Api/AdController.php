@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Intervention\Image\Alignment;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Str;
@@ -23,6 +24,11 @@ use Minishlink\WebPush\Subscription;
 
 class AdController extends Controller
 {
+    private function imageManager(): ImageManager
+    {
+        return ImageManager::usingDriver(Driver::class);
+    }
+
     /**
      * Получение списка всех активных объявлений
      */
@@ -235,39 +241,31 @@ class AdController extends Controller
             // Оптимизация памяти (OOM): выносим загрузку водяного знака за пределы цикла
             $watermarkPath = storage_path('app/public/logo-watermark.png');
             $hasWatermark = file_exists($watermarkPath);
-            $watermark = $hasWatermark ? Image::make($watermarkPath) : null;
+            $manager = $this->imageManager();
+            $watermark = $hasWatermark ? $manager->decode($watermarkPath) : null;
 
             foreach ($request->file('images') as $image) {
                 // Generate a unique name and convert to WebP
                 $filename = Str::uuid() . '.webp';
                 $path = 'ads/' . $filename;
 
-                $img = Image::make($image)->orientate();
+                $img = $manager->decode($image);
                 
                 // Защита от OOM (Out Of Memory) при загрузке огромных фото со смартфонов.
                 // Уменьшаем изображение до разумных 1200px перед наложением водяного знака.
-                $img->resize(1200, 1200, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
+                $img->scaleDown(width: 1200, height: 1200);
 
                 // Наложение водяного знака (логотипа)
                 if ($watermark) {
                     $wm = clone $watermark;
                     // Масштабируем водяной знак до 15% ширины
-                    $wm->resize($img->width() * 0.15, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
+                    $wm->scaleDown(width: (int) ($img->width() * 0.15));
                     // Добавляем отступы в 20px от краев
-                    $img->insert($wm, 'bottom-right', 20, 20);
-                    $wm->destroy(); // Очищаем память клона
+                    $img->insert($wm, alignment: Alignment::BOTTOM_RIGHT);
                 }
-                Storage::disk('public')->put($path, (string) $img->encode('webp', 85)); // Поддержка AWS S3
+                Storage::disk('public')->put($path, (string) $img->encodeUsingFileExtension('webp', quality: 85)); // Поддержка AWS S3
                 $imagePaths[] = $path;
-                
-                $img->destroy(); // FIX MEMORY LEAK: Очищаем RAM после каждого фото
             }
-            if ($watermark) $watermark->destroy();
         }
 
         $videoPath = null;
@@ -428,39 +426,32 @@ class AdController extends Controller
             // Оптимизация памяти (OOM): выносим загрузку водяного знака за пределы цикла
             $watermarkPath = storage_path('app/public/logo-watermark.png');
             $hasWatermark = file_exists($watermarkPath);
-            $watermark = $hasWatermark ? Image::make($watermarkPath) : null;
+            $manager = $this->imageManager();
+            $watermark = $hasWatermark ? $manager->decode($watermarkPath) : null;
 
             foreach ($request->file('images') as $image) {
                 // Generate a unique name and convert to WebP
                 $filename = Str::uuid() . '.webp';
                 $path = 'ads/' . $filename;
                 
-                $img = Image::make($image)->orientate();
+                $img = $manager->decode($image);
                 
                 // Защита от OOM (Out Of Memory) при загрузке огромных фото со смартфонов.
                 // Уменьшаем изображение до разумных 1200px перед наложением водяного знака.
-                $img->resize(1200, 1200, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
+                $img->scaleDown(width: 1200, height: 1200);
 
                 // Наложение водяного знака (логотипа)
                 if ($watermark) {
                     $wm = clone $watermark;
                     // Масштабируем водяной знак до 15%
-                    $wm->resize($img->width() * 0.15, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
+                    $wm->scaleDown(width: (int) ($img->width() * 0.15));
                     // Добавляем отступы в 20px от краев
-                    $img->insert($wm, 'bottom-right', 20, 20);
-                    $wm->destroy();
+                    $img->insert($wm, alignment: Alignment::BOTTOM_RIGHT);
                 }
 
-                Storage::disk('public')->put($path, (string) $img->encode('webp', 85)); // Поддержка AWS S3
+                Storage::disk('public')->put($path, (string) $img->encodeUsingFileExtension('webp', quality: 85)); // Поддержка AWS S3
                 $newImagePaths[] = $path;
-                $img->destroy(); // FIX MEMORY LEAK
             }
-            if ($watermark) $watermark->destroy();
         }
 
         // Объединяем сохраненные и новые изображения

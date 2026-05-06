@@ -7,6 +7,10 @@ class AddVectorEmbeddingToAds extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         // Включаем расширение pgvector в PostgreSQL
         DB::statement('CREATE EXTENSION IF NOT EXISTS vector;');
         // Добавляем векторную колонку на 768 измерений (стандарт для моделей Gemini)
@@ -17,6 +21,10 @@ class AddVectorEmbeddingToAds extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE ads DROP COLUMN IF EXISTS embedding;');
     }
 };

@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Models\User;
@@ -18,6 +19,11 @@ use Minishlink\WebPush\Subscription;
 
 class ProfileController extends Controller
 {
+    private function imageManager(): ImageManager
+    {
+        return ImageManager::usingDriver(Driver::class);
+    }
+
     public function index(Request $request)
     {
         if ($request->user()->role !== 'admin') {
@@ -81,10 +87,12 @@ class ProfileController extends Controller
             // Оптимизация памяти и трафика: сжимаем аватарку до 250x250px и конвертируем в WebP
             $filename = Str::uuid() . '.webp';
             $path = 'avatars/' . $filename;
-            $img = Image::make($request->file('avatar'))->orientate()->fit(250, 250)->encode('webp', 85);
+            $img = $this->imageManager()
+                ->decode($request->file('avatar'))
+                ->cover(250, 250)
+                ->encodeUsingFileExtension('webp', quality: 85);
             Storage::disk('public')->put($path, (string) $img);
             $user->avatar_url = $path;
-            $img->destroy(); // FIX MEMORY LEAK: Освобождаем ОЗУ после обработки изображения
         }
 
         $user->save();
