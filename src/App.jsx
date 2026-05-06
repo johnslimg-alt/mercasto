@@ -35,7 +35,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6 text-center w-full">
-          <h1 className="text-[24px] font-bold text-slate-900 mb-2">¡Error Crítico en la Interfaz!</h1>
+          <h1 className="text-[24px] font-bold text-slate-900 mb-2">No pudimos cargar esta sección</h1>
           <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.errorInfo?.componentStack}</div>
           <button onClick={() => window.location.reload()} className="px-6 py-3 bg-slate-900 text-white rounded-xl shadow-md hover:bg-black transition-colors">Recargar página</button>
         </div>
@@ -189,9 +189,9 @@ const PostScreen = React.lazy(() => import('./components/screens/PostScreen'));
 const UserDashboard = React.lazy(() => import('./components/screens/UserDashboard'));
 
 // Безопасный импорт экранов (если файл не найден, React не выдаст белый экран, а покажет заглушку)
-const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Ad Detail Screen - En construcción</div> })));
-const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Storefront - En construcción</div> })));
-const StaticPages = React.lazy(() => import('./components/screens/StaticPages').catch(() => ({ default: ({currentTab}) => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-2xl font-bold capitalize text-slate-400">{currentTab} - Página en construcción</div> })));
+const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el anuncio. Inténtalo de nuevo más tarde.</div> })));
+const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta tienda. Inténtalo de nuevo más tarde.</div> })));
+const StaticPages = React.lazy(() => import('./components/screens/StaticPages').catch(() => ({ default: ({currentTab}) => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-2xl font-bold capitalize text-slate-400">No pudimos cargar esta página. Inténtalo de nuevo más tarde.</div> })));
 
 export default function AppWrapper() {
   return (
