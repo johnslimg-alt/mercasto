@@ -14,6 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   PUBLIC_SMOKE_REPORT_ISSUES: "98 103 104"
 
 jobs:
@@ -27,7 +28,23 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSIL --max-time 30 https://mercasto.com/
-          curl -fsSL --max-time 30 https://mercasto.com/ | grep -i "Mercasto"
+          curl -fsSL --max-time 30 https://mercasto.com/ | tee /tmp/mercasto-home.html | grep -i "Mercasto"
+
+      - name: Check SEO and AEO public signals
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s /tmp/mercasto-home.html || curl -fsSL --max-time 30 https://mercasto.com/ -o /tmp/mercasto-home.html
+          curl -fsSL --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/mercasto-sitemap.xml
+          curl -fsSL --max-time 30 https://mercasto.com/robots.txt -o /tmp/mercasto-robots.txt
+          grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/mercasto-home.html
+          grep -Eiq 'name="description"|property="og:description"' /tmp/mercasto-home.html
+          grep -Eiq 'property="og:title"' /tmp/mercasto-home.html
+          grep -Eiq 'property="og:url"' /tmp/mercasto-home.html
+          grep -Eiq 'name="twitter:card"|property="twitter:card"' /tmp/mercasto-home.html
+          grep -Eiq 'application/ld\+json|schema.org' /tmp/mercasto-home.html
+          grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/mercasto-sitemap.xml
+          grep -Eiq 'Sitemap:|User-agent:' /tmp/mercasto-robots.txt
 
       - name: Check categories API
         shell: bash
@@ -94,6 +111,7 @@ Timestamp: ${timestamp}
 
 Checks:
 - homepage loads;
+- SEO/AEO signals exist: title, description, Open Graph, Twitter card, structured data, sitemap, robots;
 - categories API returns category-like JSON;
 - ads API returns list-like JSON;
 - auth providers API returns provider-like JSON;
