@@ -33,6 +33,9 @@ postgres-data/
 postgres-backups/
 redis-data/
 ollama_data/
+runners/data*/
+runners/backup-*.tgz
+runners/.env
 *.sql
 *.dump
 *.bak
