@@ -1,0 +1,76 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Mexico_City"
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    groups:
+      frontend-runtime:
+        dependency-type: "production"
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-router-dom"
+          - "@sentry/react"
+          - "laravel-echo"
+          - "pusher-js"
+          - "recharts"
+          - "lucide-react"
+      frontend-tooling:
+        dependency-type: "development"
+        patterns:
+          - "@vitejs/*"
+          - "vite"
+          - "eslint*"
+          - "@eslint/*"
+          - "@types/*"
+          - "tailwindcss"
+          - "@tailwindcss/*"
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:30"
+      timezone: "America/Mexico_City"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "America/Mexico_City"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
