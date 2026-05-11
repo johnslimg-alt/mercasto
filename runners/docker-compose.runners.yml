@@ -16,6 +16,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
+      - /var/www/mercasto:/var/www/mercasto
       - /var/www/mercasto/runners/data1:/runner/data
       - /tmp/runner1:/tmp/runner1
     restart: unless-stopped
@@ -38,6 +39,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
+      - /var/www/mercasto:/var/www/mercasto
       - /var/www/mercasto/runners/data2:/runner/data
       - /tmp/runner2:/tmp/runner2
     restart: unless-stopped
@@ -60,6 +62,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
+      - /var/www/mercasto:/var/www/mercasto
       - /var/www/mercasto/runners/data3:/runner/data
       - /tmp/runner3:/tmp/runner3
     restart: unless-stopped
