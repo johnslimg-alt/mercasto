@@ -71,6 +71,15 @@ class PaymentController extends Controller
             ]);
         }
 
+        // Fail closed when Clip credentials are not configured.
+        if (empty(config('services.clip.api_key')) || empty(config('services.clip.api_secret'))) {
+            \Illuminate\Support\Facades\Log::error('Clip API credentials not configured — checkout rejected');
+            return response()->json([
+                'success' => false,
+                'message' => 'Servicio de pago no configurado temporalmente',
+            ], 503);
+        }
+
         // Здесь будет реальный вызов Clip API (https://api.clip.mx/v2/checkouts)
         // $response = Http::withHeaders(['x-api-key' => env('CLIP_API_KEY')])->post('https://api.clip.mx/v2/checkouts', [
         //     'amount' => $request->amount * 100, // Clip ожидает сумму в центах
