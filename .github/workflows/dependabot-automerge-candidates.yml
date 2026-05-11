@@ -1,0 +1,84 @@
+name: Dependabot Automerge Candidates
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: dependabot-automerge-candidate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  label-safe-dependabot-update:
+    name: Label safe Dependabot PRs for automerge
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide automerge eligibility
+        id: decision
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEPENDENCY_TYPE: ${{ steps.metadata.outputs.dependency-type }}
+          PACKAGE_ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
+        run: |
+          set -euo pipefail
+
+          echo "update_type=${UPDATE_TYPE}"
+          echo "dependency_type=${DEPENDENCY_TYPE}"
+          echo "package_ecosystem=${PACKAGE_ECOSYSTEM}"
+
+          eligible=false
+
+          case "${UPDATE_TYPE}" in
+            version-update:semver-patch|version-update:semver-minor)
+              case "${PACKAGE_ECOSYSTEM}" in
+                npm|github-actions|docker)
+                  eligible=true
+                  ;;
+              esac
+              ;;
+          esac
+
+          # Production dependency updates stay gated by PR checks and automerge,
+          # but major updates are never labeled automatically.
+          echo "eligible=${eligible}" >> "$GITHUB_OUTPUT"
+
+      - name: Add automerge label
+        if: steps.decision.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label automerge
+
+      - name: Mark non-automerge major or unsupported update
+        if: steps.decision.outputs.eligible != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label needs-manual-review
