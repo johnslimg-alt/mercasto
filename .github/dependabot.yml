@@ -67,6 +67,10 @@ updates:
       time: "10:00"
       timezone: "America/Mexico_City"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "node"
+        update-types:
+          - "version-update:semver-major"
     labels:
       - "dependencies"
       - "docker"
