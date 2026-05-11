@@ -28,6 +28,8 @@ Required PR label: `automerge`
 
 Merge method: `squash`
 
+The workflow uses first-party GitHub CLI commands and the repository `GITHUB_TOKEN`. It resolves the PR number, verifies that the PR is open, non-draft, labeled `automerge`, free of blocking labels, and in a merge-ready state, then merges with `--match-head-commit` so the merge is rejected if the PR head changes after validation.
+
 The workflow relies on GitHub pull request readiness and required checks. It must not be used to bypass failing checks or unresolved blockers.
 
 ## Production verification baseline
