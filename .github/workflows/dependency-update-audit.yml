@@ -1,0 +1,91 @@
+name: Dependency Update Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 12 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-update-audit
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  audit:
+    name: Audit npm, Composer, and Docker dependencies
+    runs-on: self-hosted
+    timeout-minutes: 30
+
+    steps:
+      - name: Find project directory
+        run: |
+          set -euo pipefail
+
+          candidates=(
+            "$HOME/mercasto"
+            "/root/mercasto"
+            "/var/www/mercasto"
+            "/opt/mercasto"
+            "/srv/mercasto"
+          )
+
+          project_dir=""
+          for dir in "${candidates[@]}"; do
+            if [ -f "$dir/package.json" ] && [ -f "$dir/scripts/dependency-update-audit.sh" ]; then
+              project_dir="$dir"
+              break
+            fi
+          done
+
+          if [ -z "$project_dir" ]; then
+            found=$(find /root /home /var/www /opt /srv "$HOME" -maxdepth 5 -path '*/scripts/dependency-update-audit.sh' -print 2>/dev/null | head -1 || true)
+            if [ -n "$found" ]; then
+              project_dir=$(cd "$(dirname "$found")/.." && pwd)
+            fi
+          fi
+
+          if [ -z "$project_dir" ]; then
+            echo "Mercasto project directory was not found."
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$project_dir" >> "$GITHUB_ENV"
+          echo "AUDIT_DIR=/tmp/mercasto-dependency-audit-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+          echo "Using project directory: $project_dir"
+
+      - name: Sync repository to latest main
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          git fetch origin main
+          git reset --hard origin/main
+
+      - name: Run dependency update audit
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          chmod +x scripts/dependency-update-audit.sh
+          scripts/dependency-update-audit.sh "$AUDIT_DIR"
+
+      - name: Print concise audit pointers
+        if: always()
+        run: |
+          set -euo pipefail
+          echo "Audit directory: ${AUDIT_DIR:-unset}"
+          if [ -d "${AUDIT_DIR:-}" ]; then
+            find "$AUDIT_DIR" -maxdepth 1 -type f -printf '%f\n' | sort
+          fi
+
+      - name: Upload dependency audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercasto-dependency-update-audit
+          path: ${{ env.AUDIT_DIR }}
+          if-no-files-found: warn
+          retention-days: 14
