@@ -38,6 +38,41 @@
   .btn-lg { @apply px-6 py-3 text-[15px] leading-tight rounded-xl font-semibold transition-colors; }
   .card { @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg; }
   .badge { @apply text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide; }
+
+  /* Home category rail: single horizontal row on desktop, tablet, and phone. */
+  main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2 {
+    display: flex !important;
+    grid-template-columns: none !important;
+    flex-flow: row nowrap;
+    align-items: stretch;
+    gap: 0.75rem;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    padding: 0.125rem 0 0.75rem;
+  }
+
+  main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2 > div {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 999px;
+  }
+
+  main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 @layer base {
