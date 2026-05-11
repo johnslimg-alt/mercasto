@@ -52,6 +52,22 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
+  seo-aeo-smoke:
+    name: SEO/AEO production smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check public search signals
+        run: |
+          set -euo pipefail
+          curl -fsS https://mercasto.com/ >/tmp/home.html
+          curl -fsS https://mercasto.com/sitemap.xml >/tmp/sitemap.xml
+          curl -fsS https://mercasto.com/robots.txt >/tmp/robots.txt
+          grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/home.html
+          grep -Eiq 'name="description"|property="og:description"' /tmp/home.html
+          grep -Eiq 'application/ld\+json|schema.org' /tmp/home.html
+          grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/sitemap.xml
+          grep -Eiq 'Sitemap:|User-agent:' /tmp/robots.txt
+
   frontend-docker-build:
     name: Build frontend Docker image
     runs-on: ubuntu-latest
