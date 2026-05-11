@@ -154,14 +154,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/subscriptions/toggle', [ProfileController::class, 'toggleSubscription']);
 
     // Автономные ИИ-Агенты (PostgreSQL & React)
-    Route::post('/agents/postgresql', [AdController::class, 'askPostgresAgent']); // AI Database Agent
-    Route::post('/agents/react', [AdController::class, 'generateReactComponent']); // AI UI Builder Agent
-    Route::post('/agents/ceo', [AdController::class, 'askCeoAgent']); // AI CEO Agent
-    Route::post('/agents/lawyer', [AdController::class, 'askLawyerAgent']); // AI Lawyer Agent
-    Route::post('/agents/notary', [AdController::class, 'askNotaryAgent']); // AI Notary Agent
-    Route::post('/agents/advocate', [AdController::class, 'askAdvocateAgent']); // AI Advocate Agent
-    Route::post('/agents/marketing', [AdController::class, 'askMarketingAgent']); // AI Marketing Agent
-    Route::post('/agents/seo', [AdController::class, 'askSeoAgent']); // AI SEO Agent
-    Route::post('/agents/ceo-ui', [AdController::class, 'askCeoUiAgent']); // AI CEO UI Agent
-    Route::post('/agents/ceo-ux', [AdController::class, 'askCeoUxAgent']); // AI CEO UX Agent
+    // Отдельный лимит защищает AI/infra ресурсы от authenticated abuse и runaway clients.
+    Route::middleware('throttle:2,1')->group(function () {
+        Route::post('/agents/postgresql', [AdController::class, 'askPostgresAgent']); // AI Database Agent
+        Route::post('/agents/react', [AdController::class, 'generateReactComponent']); // AI UI Builder Agent
+        Route::post('/agents/ceo', [AdController::class, 'askCeoAgent']); // AI CEO Agent
+        Route::post('/agents/lawyer', [AdController::class, 'askLawyerAgent']); // AI Lawyer Agent
+        Route::post('/agents/notary', [AdController::class, 'askNotaryAgent']); // AI Notary Agent
+        Route::post('/agents/advocate', [AdController::class, 'askAdvocateAgent']); // AI Advocate Agent
+        Route::post('/agents/marketing', [AdController::class, 'askMarketingAgent']); // AI Marketing Agent
+        Route::post('/agents/seo', [AdController::class, 'askSeoAgent']); // AI SEO Agent
+        Route::post('/agents/ceo-ui', [AdController::class, 'askCeoUiAgent']); // AI CEO UI Agent
+        Route::post('/agents/ceo-ux', [AdController::class, 'askCeoUxAgent']); // AI CEO UX Agent
+    });
 });
