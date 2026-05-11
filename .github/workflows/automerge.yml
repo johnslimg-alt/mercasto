@@ -26,6 +26,7 @@ permissions:
   pull-requests: write
   checks: read
   statuses: read
+  actions: write
 
 env:
   GH_REPO: ${{ github.repository }}
@@ -136,3 +137,11 @@ jobs:
             --squash \
             --delete-branch \
             --match-head-commit "$HEAD_SHA"
+
+      - name: Dispatch post-merge production checks
+        if: steps.eligible.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh workflow run production-checks.yml --repo "$GH_REPO" --ref main
