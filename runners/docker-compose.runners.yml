@@ -13,6 +13,7 @@ services:
       CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /runner/data
       DISABLE_AUTOMATIC_DEREGISTRATION: "true"
       DISABLE_AUTO_UPDATE: "true"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
@@ -36,6 +37,7 @@ services:
       CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /runner/data
       DISABLE_AUTOMATIC_DEREGISTRATION: "true"
       DISABLE_AUTO_UPDATE: "true"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
@@ -59,6 +61,7 @@ services:
       CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /runner/data
       DISABLE_AUTOMATIC_DEREGISTRATION: "true"
       DISABLE_AUTO_UPDATE: "true"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
