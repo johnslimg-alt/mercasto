@@ -20,6 +20,11 @@ on:
         description: Pull request number to merge when ready
         required: false
         type: string
+      confirm:
+        description: Type MERCASTO to enable manual automerge
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -30,6 +35,7 @@ permissions:
 
 env:
   GH_REPO: ${{ github.repository }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 concurrency:
   group: automerge-${{ github.event.pull_request.number || github.event.workflow_run.head_branch || github.run_id }}
@@ -48,8 +54,14 @@ jobs:
           EVENT_PR: ${{ github.event.pull_request.number }}
           EVENT_BRANCH: ${{ github.event.workflow_run.head_branch }}
           INPUT_PR: ${{ inputs.pr }}
+          INPUT_CONFIRM: ${{ inputs.confirm }}
         run: |
           set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "${INPUT_CONFIRM:-}" != "MERCASTO" ]; then
+            echo "Manual automerge requires confirm=MERCASTO."
+            exit 64
+          fi
 
           pr="${INPUT_PR:-}"
           if [ -z "$pr" ] && [ -n "${EVENT_PR:-}" ]; then
@@ -65,6 +77,13 @@ jobs:
             exit 0
           fi
 
+          case "$pr" in
+            ''|*[!0-9]*)
+              echo "Invalid PR number: $pr"
+              exit 2
+              ;;
+          esac
+
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
           echo "should_run=true" >> "$GITHUB_OUTPUT"
 
@@ -77,16 +96,27 @@ jobs:
         run: |
           set -euo pipefail
 
-          data="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json isDraft,labels,mergeStateStatus,state,headRefName,headRefOid)"
+          data="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json isDraft,labels,mergeStateStatus,state,headRefName,headRefOid,authorAssociation)"
 
           state="$(printf '%s' "$data" | jq -r '.state')"
           draft="$(printf '%s' "$data" | jq -r '.isDraft')"
           merge_state="$(printf '%s' "$data" | jq -r '.mergeStateStatus')"
           labels="$(printf '%s' "$data" | jq -r '[.labels[].name] | join(",")')"
           head_sha="$(printf '%s' "$data" | jq -r '.headRefOid')"
+          author_association="$(printf '%s' "$data" | jq -r '.authorAssociation')"
 
-          echo "state=$state labels=$labels merge_state=$merge_state head=$head_sha"
+          echo "state=$state labels=$labels merge_state=$merge_state author_association=$author_association head=$head_sha"
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+          case "$author_association" in
+            OWNER|MEMBER|COLLABORATOR)
+              ;;
+            *)
+              echo "Refusing untrusted author association: $author_association"
+              echo "eligible=false" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
 
           if [ "$state" != "OPEN" ]; then
             echo "PR is not open; exiting."
@@ -106,7 +136,7 @@ jobs:
             exit 0
           fi
 
-          for blocked in wip blocked do-not-merge; do
+          for blocked in wip blocked do-not-merge security-hold production-hold; do
             if printf '%s' "$labels" | tr ',' '\n' | grep -Fxq "$blocked"; then
               echo "Blocking label present: $blocked"
               echo "eligible=false" >> "$GITHUB_OUTPUT"
