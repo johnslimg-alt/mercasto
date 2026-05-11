@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -22,6 +23,15 @@ class PaymentController extends Controller
             'description' => 'required|string|max:255',
             'ad_id' => 'nullable|integer|exists:ads,id', // Защита от создания призрачных платежей
         ]);
+
+        // Fail closed before mutating payment state when Clip credentials are not configured.
+        if (empty(config('services.clip.api_key')) || empty(config('services.clip.api_secret'))) {
+            Log::error('Clip API credentials not configured — checkout rejected');
+            return response()->json([
+                'success' => false,
+                'message' => 'Servicio de pago no configurado temporalmente',
+            ], 503);
+        }
 
         $user = $request->user();
         $checkoutId = 'clip_' . Str::uuid();
@@ -71,24 +81,6 @@ class PaymentController extends Controller
             ]);
         }
 
-        // Fail closed when Clip credentials are not configured.
-        if (empty(config('services.clip.api_key')) || empty(config('services.clip.api_secret'))) {
-            \Illuminate\Support\Facades\Log::error('Clip API credentials not configured — checkout rejected');
-            return response()->json([
-                'success' => false,
-                'message' => 'Servicio de pago no configurado temporalmente',
-            ], 503);
-        }
-
-        // Здесь будет реальный вызов Clip API (https://api.clip.mx/v2/checkouts)
-        // $response = Http::withHeaders(['x-api-key' => env('CLIP_API_KEY')])->post('https://api.clip.mx/v2/checkouts', [
-        //     'amount' => $request->amount * 100, // Clip ожидает сумму в центах
-        //     'currency' => 'MXN',
-        //     'description' => $request->description,
-        //     'reference' => $checkoutId, // Наш уникальный ID для отслеживания
-        //     'customer_id' => $user->id, // ID нашего пользователя
-        // ]);
-        // Реальный вызов API Clip
         $response = Http::withBasicAuth(config('services.clip.api_key'), config('services.clip.api_secret'))
             ->post('https://api.clip.mx/v2/checkouts', [
                 'amount' => $amount,
@@ -126,7 +118,7 @@ class PaymentController extends Controller
         // Verify webhook signature — FAIL CLOSED: reject if secret not configured
         $secret = config('services.clip.webhook_secret');
         if (empty($secret)) {
-            \Illuminate\Support\Facades\Log::error('CLIP_WEBHOOK_SECRET not configured — webhook rejected');
+            Log::error('CLIP_WEBHOOK_SECRET not configured — webhook rejected');
             return response()->json(['status' => 'misconfigured'], 503);
         }
 
@@ -137,7 +129,7 @@ class PaymentController extends Controller
 
         if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
             $clientIpHash = hash('sha256', (string) $request->ip());
-            \Illuminate\Support\Facades\Log::warning('Invalid Clip webhook signature', [
+            Log::warning('Invalid Clip webhook signature', [
                 'ip_hash' => $clientIpHash,
             ]);
             return response()->json(['status' => 'invalid_signature'], 401);
