@@ -1,0 +1,80 @@
+name: Post-merge production verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: post-merge-production-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify live production after merge
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: Find project directory
+        run: |
+          set -euo pipefail
+
+          candidates=(
+            "$HOME/mercasto"
+            "/root/mercasto"
+            "/var/www/mercasto"
+            "/opt/mercasto"
+            "/srv/mercasto"
+          )
+
+          project_dir=""
+          for dir in "${candidates[@]}"; do
+            if [ -f "$dir/docker-compose.yml" ] && [ -d "$dir/.git" ]; then
+              project_dir="$dir"
+              break
+            fi
+          done
+
+          if [ -z "$project_dir" ]; then
+            found=$(find /root /home /var/www /opt /srv "$HOME" -maxdepth 4 -name docker-compose.yml -print 2>/dev/null | head -1 || true)
+            if [ -n "$found" ]; then
+              project_dir=$(dirname "$found")
+            fi
+          fi
+
+          if [ -z "$project_dir" ] || [ ! -d "$project_dir/.git" ]; then
+            echo "Mercasto project directory was not found."
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$project_dir" >> "$GITHUB_ENV"
+          echo "Using project directory: $project_dir"
+
+      - name: Verify compose and containers
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_post_merge_compose.yml
+          docker compose -f docker-compose.yml -f docker-compose.override.yml ps
+
+      - name: Run quick production smoke suite
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          npm run verify:quick
+
+      - name: Probe critical public endpoints
+        run: |
+          set -euo pipefail
+          for url in \
+            "https://mercasto.com/" \
+            "https://mercasto.com/up" \
+            "https://mercasto.com/api/categories" \
+            "https://mercasto.com/api/ads?page=1" \
+            "https://mercasto.com/horizon" \
+            "https://mercasto.com/vendor/horizon"; do
+            echo "== $url =="
+            curl -fsSIL --max-time 30 "$url" || true
+          done
