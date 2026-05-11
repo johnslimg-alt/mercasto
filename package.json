@@ -19,6 +19,7 @@
     "smoke:full": "npm run smoke:all && npm run maintenance:precheck",
     "verify:quick": "npm run smoke:all",
     "verify:prod": "npm run smoke:full",
+    "gate:prod": "npm run check:scripts && npm run check:compose && npm run check:recovery && npm run build && npm run verify:quick",
     "maintenance:precheck": "bash scripts/os-maintenance-precheck.sh",
     "smoke": "npm run smoke:prod",
     "check:compose": "docker compose config >/tmp/mercasto_compose_base.out && docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out",
