@@ -4,40 +4,63 @@ services:
     container_name: gh-runner-1
     environment:
       REPO_URL: https://github.com/johnslimg-alt/mercasto
+      RUNNER_SCOPE: repo
       RUNNER_NAME: mercasto-docker-1
       RUNNER_GROUP: Default
       LABELS: docker,linux,self-hosted
-      RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}
+      ACCESS_TOKEN: ${GITHUB_ACCESS_TOKEN}
+      RUNNER_WORKDIR: /tmp/runner1/work
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /runner/data
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
+      DISABLE_AUTO_UPDATE: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
+      - /var/www/mercasto/runners/data1:/runner/data
+      - /tmp/runner1:/tmp/runner1
     restart: unless-stopped
     privileged: true
+
   runner-2:
     image: myoung34/github-runner:latest
     container_name: gh-runner-2
     environment:
       REPO_URL: https://github.com/johnslimg-alt/mercasto
+      RUNNER_SCOPE: repo
       RUNNER_NAME: mercasto-docker-2
       RUNNER_GROUP: Default
       LABELS: docker,linux,self-hosted
-      RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}
+      ACCESS_TOKEN: ${GITHUB_ACCESS_TOKEN}
+      RUNNER_WORKDIR: /tmp/runner2/work
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /runner/data
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
+      DISABLE_AUTO_UPDATE: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
+      - /var/www/mercasto/runners/data2:/runner/data
+      - /tmp/runner2:/tmp/runner2
     restart: unless-stopped
     privileged: true
+
   runner-3:
     image: myoung34/github-runner:latest
     container_name: gh-runner-3
     environment:
       REPO_URL: https://github.com/johnslimg-alt/mercasto
+      RUNNER_SCOPE: repo
       RUNNER_NAME: mercasto-docker-3
       RUNNER_GROUP: Default
       LABELS: docker,linux,self-hosted
-      RUNNER_TOKEN: ${GITHUB_RUNNER_TOKEN}
+      ACCESS_TOKEN: ${GITHUB_ACCESS_TOKEN}
+      RUNNER_WORKDIR: /tmp/runner3/work
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /runner/data
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
+      DISABLE_AUTO_UPDATE: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/mercasto:/work
+      - /var/www/mercasto/runners/data3:/runner/data
+      - /tmp/runner3:/tmp/runner3
     restart: unless-stopped
     privileged: true
