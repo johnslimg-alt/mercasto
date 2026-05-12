@@ -20,6 +20,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repository-gates:
+    name: Repository safety gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check shell scripts
+        run: npm run check:scripts
+
+      - name: Check payment retention policy
+        run: npm run check:payment-retention
+
+      - name: Check cache and PWA policy
+        run: npm run check:cache-policy
+
   compose-config:
     name: Validate Docker Compose config
     runs-on: ubuntu-latest
