@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AccountDeletionController;
 use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ReviewController;
@@ -108,7 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/user/notifications/{id}', [ProfileController::class, 'deleteNotification']); // Удалить уведомление
     Route::post('/user/push-subscribe', [ProfileController::class, 'pushSubscribe']); // Подписка на Web Push
     Route::post('/user/push-unsubscribe', [ProfileController::class, 'pushUnsubscribe']); // Отписка от Web Push
-    Route::delete('/user', [ProfileController::class, 'deleteAccount']); // User self-deletion
+    Route::delete('/user', [AccountDeletionController::class, 'delete']); // User self-deletion with financial/audit retention
     Route::post('/users/{id}/verify', [ProfileController::class, 'verifyUser']);
     Route::post('/user/kyc', [ProfileController::class, 'submitKyc']); // Загрузка документов KYC
 
