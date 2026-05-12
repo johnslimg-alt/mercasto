@@ -21,6 +21,7 @@ npm run gate:prod
 | Compose syntax | `npm run check:compose` | Base and production override Docker Compose configs render successfully. |
 | Recovery guard | `npm run check:recovery` | Recovery/protection rules are still present before deployment. |
 | Payment retention | `npm run check:payment-retention` | Account deletion never physically deletes payment rows; financial/audit history is preserved. |
+| Cache/PWA policy | `npm run check:cache-policy` | Blocks accidental production service-worker registration without a dedicated cache gate and rollback plan. |
 | Frontend build | `npm run build` | Vite production assets compile. |
 | Public production smoke | `npm run smoke:prod` | Public health, homepage, categories, ads, sensitive paths, internal ports, PHP upload limits. |
 | Security probes | `npm run smoke:security` | Sensitive HTTP paths and internal service ports are not exposed. |
@@ -42,6 +43,7 @@ npm run gate:prod
 | Legacy listing routes | `/ads/{id}`, `/ad/{id}` | `npm run smoke:routes` | Compatibility routes resolve or redirect without 404/500. | Frontend/backend agent |
 | Publish flow shell | Authenticated `/api/ads` | Dedicated authenticated QA once test credentials exist | Valid authenticated ad creation succeeds; invalid uploads/fields fail with 4xx, not 5xx. | QA agent |
 | Search and filters | Public listing feed/category query params | Browser/device QA or future Playwright gate | Filter state updates URL and results without blank page or API crash. | QA/Frontend agent |
+| Cache/PWA policy | Frontend source/config | `npm run check:cache-policy` | No service-worker registration exists unless a dedicated PWA/cache gate and rollback plan is approved. | Frontend/Infra agent |
 | Sensitive paths | `.env`, `.git/config`, `backend/.env`, package manifests, Horizon paths | `npm run smoke:security` | 404 or closed; never 200; no source or secret disclosure. | Security agent |
 | Internal ports | Ollama, Redis, Postgres, Prometheus, cAdvisor | `npm run smoke:security` | Public IP endpoints are closed/unreachable. | Security/Infra agent |
 | Payment checkout config | Clip checkout route | `npm run check:payment-retention`; manual payment QA only with sandbox/live credentials | Missing credentials fail closed before payment mutation; no fake checkout success. | Payments agent |
@@ -67,6 +69,7 @@ A PR or direct autonomous commit may be merged only when all applicable gates ar
 3. Backend/API/security/payment/routing change: `npm run gate:prod`.
 4. Production infra/runner change: `npm run verify:quick`, successful Deploy Mercasto workflow, and successful Production checks workflow.
 5. SEO/AEO change: `npm run smoke:seo`, `npm run smoke:copy`, and `npm run verify:quick`.
+6. Cache/PWA/service-worker change: `npm run check:cache-policy`, `npm run build`, and `npm run verify:quick`; broad caching changes require `npm run gate:prod`.
 
 ## Failure policy
 
@@ -83,4 +86,5 @@ If any gate fails:
 - Add authenticated Playwright smoke when stable test credentials exist.
 - Add signed Clip webhook fixture tests using non-production secrets.
 - Add browser matrix artifacts for iOS Safari, iOS Chrome, Android Chrome, desktop Chrome.
+- Add live header smoke for homepage HTML cache policy.
 - Promote this matrix into branch protection once native auto-merge is enabled in repository settings.
