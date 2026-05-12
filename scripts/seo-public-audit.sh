@@ -22,9 +22,15 @@ status_code() {
   curl -k -sS -o /dev/null -w '%{http_code}' --max-time 20 "$1"
 }
 
+page_cache_path() {
+  local path="$1"
+  printf '%s/%s.html' "$TMP_DIR" "$(printf '%s' "$path" | tr '/?' '__')"
+}
+
 assert_not_noindex() {
   local path="$1"
-  local file="$TMP_DIR/$(printf '%s' "$path" | tr '/?' '__').html"
+  local file
+  file="$(page_cache_path "$path")"
   fetch_body "$path" "$file"
 
   if grep -Eiq '<meta[^>]+name=["'"'']robots["'"''][^>]+content=["'"''][^"'"'']*noindex|x-robots-tag:[[:space:]]*noindex' "$file"; then
@@ -34,6 +40,32 @@ assert_not_noindex() {
 
   if ! grep -Eiq '<title>[^<]{8,}</title>' "$file"; then
     echo "missing or too-short title on public page: ${BASE_URL}${path}" >&2
+    exit 1
+  fi
+}
+
+assert_homepage_metadata() {
+  local file
+  file="$(page_cache_path "/")"
+  fetch_body "/" "$file"
+
+  if ! grep -Eiq '<meta[^>]+name=["'"'']description["'"''][^>]+content=["'"''][^"'"'']{40,170}["'"'']' "$file"; then
+    echo "homepage missing useful meta description" >&2
+    exit 1
+  fi
+
+  if ! grep -Eiq '<link[^>]+rel=["'"'']canonical["'"''][^>]+href=["'"'']https://mercasto\.com/?["'"'']' "$file"; then
+    echo "homepage missing canonical URL" >&2
+    exit 1
+  fi
+
+  if ! grep -Eiq '<meta[^>]+property=["'"'']og:title["'"'']|<meta[^>]+property=["'"'']og:description["'"'']' "$file"; then
+    echo "homepage missing Open Graph title/description metadata" >&2
+    exit 1
+  fi
+
+  if ! grep -Eiq 'application/ld\+json|schema\.org' "$file"; then
+    echo "homepage missing JSON-LD/schema.org structured data for AEO" >&2
     exit 1
   fi
 }
@@ -59,6 +91,7 @@ echo "BASE_URL=${BASE_URL}"
 echo "== Public pages must be indexable and titled =="
 assert_not_noindex "/"
 assert_not_noindex "/listings"
+assert_homepage_metadata
 assert_no_legacy_public_copy "/"
 assert_no_legacy_public_copy "/listings"
 
