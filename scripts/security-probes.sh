@@ -7,7 +7,7 @@ PUBLIC_IP="${PUBLIC_IP:-72.62.173.145}"
 check_denied() {
   local url="$1"
   local status
-  status="$(curl -k -sS -o /dev/null -w '%{http_code}' "$url")"
+  status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 15 "$url")"
   echo "$url -> $status"
   case "$status" in
     403|404|410) return 0 ;;
@@ -29,14 +29,27 @@ check_closed() {
 command -v curl >/dev/null 2>&1 || { echo "curl is required" >&2; exit 1; }
 
 echo "== Sensitive HTTP paths =="
-check_denied "${BASE_URL}/.env"
-check_denied "${BASE_URL}/.git/config"
-check_denied "${BASE_URL}/backend/.env"
-check_denied "${BASE_URL}/storage/../.env"
-check_denied "${BASE_URL}/composer.json"
-check_denied "${BASE_URL}/package.json"
-check_denied "${BASE_URL}/horizon"
-check_denied "${BASE_URL}/vendor/horizon"
+for path in \
+  "/.env" \
+  "/.env.backup" \
+  "/.env.bak" \
+  "/.env.example" \
+  "/.git/config" \
+  "/.git/HEAD" \
+  "/.git/index" \
+  "/backend/.env" \
+  "/storage/../.env" \
+  "/storage/logs/laravel.log" \
+  "/composer.json" \
+  "/composer.lock" \
+  "/package.json" \
+  "/package-lock.json" \
+  "/vendor/autoload.php" \
+  "/horizon" \
+  "/vendor/horizon"
+do
+  check_denied "${BASE_URL}${path}"
+done
 
 echo "== Public internal-service ports =="
 check_closed "http://${PUBLIC_IP}:11434/api/tags"
