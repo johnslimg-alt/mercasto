@@ -22,6 +22,7 @@ npm run gate:prod
 | Recovery guard | `npm run check:recovery` | Recovery/protection rules are still present before deployment. |
 | Payment retention | `npm run check:payment-retention` | Account deletion never physically deletes payment rows; financial/audit history is preserved. |
 | Cache/PWA policy | `npm run check:cache-policy` | Blocks accidental production service-worker registration without a dedicated cache gate and rollback plan. |
+| Homepage cache headers | `npm run smoke:cache-headers` | Verifies homepage HTML is not dangerously long-cacheable and does not expose service-worker policy headers. |
 | Frontend build | `npm run build` | Vite production assets compile. |
 | Public production smoke | `npm run smoke:prod` | Public health, homepage, categories, ads, sensitive paths, internal ports, PHP upload limits. |
 | Security probes | `npm run smoke:security` | Sensitive HTTP paths and internal service ports are not exposed. |
@@ -35,6 +36,7 @@ npm run gate:prod
 | Check | Surface | How to verify | Pass criteria | Owner |
 | --- | --- | --- | --- | --- |
 | Homepage availability | `https://mercasto.com/` | `npm run smoke:prod` and `curl -I https://mercasto.com/` | HTTP 200; security headers present; no 5xx. | CEO/Major operator |
+| Homepage cache headers | `https://mercasto.com/` | `npm run smoke:cache-headers` | Homepage HTML is not long-cacheable with public immutable headers and does not expose Service-Worker-Allowed. | Frontend/Infra agent |
 | Health endpoint | `https://mercasto.com/up` | `npm run smoke:prod` | HTTP 200. | CEO/Major operator |
 | Categories API | `https://mercasto.com/api/categories` | `npm run smoke:prod` | HTTP 200 JSON; no 502/500. | Backend agent |
 | Ads API | `https://mercasto.com/api/ads?page=1` | `npm run smoke:prod` | HTTP 200 JSON; pagination endpoint available even with empty catalog. | Backend agent |
@@ -68,8 +70,8 @@ A PR or direct autonomous commit may be merged only when all applicable gates ar
 2. Frontend/UI change: `npm run build` and `npm run verify:quick`.
 3. Backend/API/security/payment/routing change: `npm run gate:prod`.
 4. Production infra/runner change: `npm run verify:quick`, successful Deploy Mercasto workflow, and successful Production checks workflow.
-5. SEO/AEO change: `npm run smoke:seo`, `npm run smoke:copy`, and `npm run verify:quick`.
-6. Cache/PWA/service-worker change: `npm run check:cache-policy`, `npm run build`, and `npm run verify:quick`; broad caching changes require `npm run gate:prod`.
+5. SEO/AEO change: `npm run smoke:seo`, `npm run smoke:copy`, `npm run smoke:cache-headers`, and `npm run verify:quick`.
+6. Cache/PWA/service-worker change: `npm run check:cache-policy`, `npm run smoke:cache-headers`, `npm run build`, and `npm run verify:quick`; broad caching changes require `npm run gate:prod`.
 
 ## Failure policy
 
@@ -86,5 +88,4 @@ If any gate fails:
 - Add authenticated Playwright smoke when stable test credentials exist.
 - Add signed Clip webhook fixture tests using non-production secrets.
 - Add browser matrix artifacts for iOS Safari, iOS Chrome, Android Chrome, desktop Chrome.
-- Add live header smoke for homepage HTML cache policy.
 - Promote this matrix into branch protection once native auto-merge is enabled in repository settings.
