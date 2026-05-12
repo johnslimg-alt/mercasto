@@ -15,17 +15,18 @@
     "smoke:route-audit": "bash scripts/production-route-audit.sh",
     "smoke:seo": "bash scripts/seo-public-audit.sh",
     "smoke:copy": "bash scripts/public-copy-scan.sh",
-    "smoke:all": "npm run check:scripts && npm run check:compose && npm run check:payment-retention && npm run smoke:prod && npm run smoke:security && npm run smoke:routes && npm run smoke:route-audit && npm run smoke:seo && npm run smoke:copy",
+    "smoke:all": "npm run check:scripts && npm run check:compose && npm run check:payment-retention && npm run check:cache-policy && npm run smoke:prod && npm run smoke:security && npm run smoke:routes && npm run smoke:route-audit && npm run smoke:seo && npm run smoke:copy",
     "smoke:full": "npm run smoke:all && npm run maintenance:precheck",
     "verify:quick": "npm run smoke:all",
     "verify:prod": "npm run smoke:full",
-    "gate:prod": "npm run check:scripts && npm run check:compose && npm run check:recovery && npm run check:payment-retention && npm run build && npm run verify:quick",
+    "gate:prod": "npm run check:scripts && npm run check:compose && npm run check:recovery && npm run check:payment-retention && npm run check:cache-policy && npm run build && npm run verify:quick",
     "maintenance:precheck": "bash scripts/os-maintenance-precheck.sh",
     "smoke": "npm run smoke:prod",
     "check:compose": "docker compose config >/tmp/mercasto_compose_base.out && docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out",
     "check:scripts": "find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n",
     "check:recovery": "node scripts/check-recovery-guards.mjs",
-    "check:payment-retention": "bash scripts/payment-retention-scan.sh"
+    "check:payment-retention": "bash scripts/payment-retention-scan.sh",
+    "check:cache-policy": "bash scripts/cache-policy-scan.sh"
   },
   "dependencies": {
     "@sentry/react": "^10.49.0",
