@@ -11,8 +11,8 @@ command -v grep >/dev/null 2>&1 || {
 
 echo "== Service worker cache policy guard =="
 
-matches="$(grep -RInE 'navigator\.serviceWorker|serviceWorker\.register|register\([^)]*service-worker|register\([^)]*sw\.js' \
-  src public backend scripts .github \
+matches="$(grep -RInE 'serviceWorker\.register|register\([^)]*service-worker|register\([^)]*sw\.js|navigator\.serviceWorker\.register' \
+  index.html src public backend scripts .github \
   --exclude-dir=node_modules \
   --exclude-dir=dist \
   --exclude-dir=build \
@@ -27,4 +27,5 @@ if [[ -n "$matches" ]]; then
 fi
 
 echo "no frontend service worker registration found"
+echo "service worker unregister cleanup is allowed"
 echo "cache policy scan OK"
