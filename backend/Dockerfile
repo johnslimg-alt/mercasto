@@ -76,11 +76,12 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.
     && echo "opcache.jit_buffer_size=100M" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.jit=tracing" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
-# Production PHP limits for marketplace forms, photo uploads and Laravel runtime.
+# Production PHP limits for marketplace forms, photo/video uploads and Laravel runtime.
+# Keep PHP request limits above Laravel's 51200 KB video validation cap so Laravel returns controlled validation errors.
 RUN { \
         echo "memory_limit=256M"; \
-        echo "upload_max_filesize=10M"; \
-        echo "post_max_size=25M"; \
+        echo "upload_max_filesize=64M"; \
+        echo "post_max_size=64M"; \
         echo "max_file_uploads=12"; \
         echo "max_execution_time=60"; \
         echo "max_input_time=60"; \
