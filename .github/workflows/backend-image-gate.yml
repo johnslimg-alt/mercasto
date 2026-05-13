@@ -35,8 +35,8 @@ jobs:
           test -f backend/Dockerfile
           grep -n '^FROM php:8\.4-fpm' backend/Dockerfile
           grep -n 'composer.lock is required for production build' backend/Dockerfile
-          grep -n 'upload_max_filesize=10M' backend/Dockerfile
-          grep -n 'post_max_size=25M' backend/Dockerfile
+          grep -n 'upload_max_filesize=64M' backend/Dockerfile
+          grep -n 'post_max_size=64M' backend/Dockerfile
           grep -n 'max_file_uploads=12' backend/Dockerfile
           grep -n 'expose_php=0' backend/Dockerfile
           grep -n 'HEALTHCHECK .*php-fpm -t' backend/Dockerfile
