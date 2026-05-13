@@ -1,0 +1,31 @@
+name: Self-hosted runner diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runner-diagnostic:
+    name: Verify self-hosted runner mount
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 10
+    steps:
+      - name: Check production checkout mount
+        run: |
+          set -euo pipefail
+          test -d /var/www/mercasto
+          test -f /var/www/mercasto/docker-compose.yml
+          test -d /var/www/mercasto/.git
+
+      - name: Check Mercasto wrapper syntax
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash -n scripts/server-gate.sh
+
+      - name: Check Docker command availability
+        run: |
+          set -euo pipefail
+          docker version >/dev/null
