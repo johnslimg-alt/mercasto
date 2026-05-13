@@ -1,0 +1,95 @@
+name: Autonomous Server Live Gate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 */8 * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: autonomous-server-live-gate
+  cancel-in-progress: false
+
+jobs:
+  server-live-gate:
+    name: Run production server live gate
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 45
+    steps:
+      - name: Verify production checkout exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /var/www/mercasto
+          test -f /var/www/mercasto/scripts/server-operator.sh
+          test -f /var/www/mercasto/package.json
+          test -f /var/www/mercasto/docker-compose.yml
+
+      - name: Run server status
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/server-operator.sh status
+
+      - name: Run quick production verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/server-operator.sh verify_quick
+
+      - name: Run runner health snapshot
+        shell: bash
+        if: always()
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/server-operator.sh runner_health
+
+  report-failure:
+    name: Report server live gate failure
+    runs-on: ubuntu-latest
+    needs:
+      - server-live-gate
+    if: failure()
+    timeout-minutes: 5
+    steps:
+      - name: Create incident issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `Autonomous server live gate failed: ${new Date().toISOString().slice(0, 10)}`;
+            const body = [
+              'Autonomous Server Live Gate failed.',
+              '',
+              `Run: ${runUrl}`,
+              '',
+              'Scope:',
+              '- production checkout existence;',
+              '- server operator status;',
+              '- quick production verification;',
+              '- runner health snapshot.',
+              '',
+              'Required action:',
+              '- inspect the failed job log;',
+              '- fix the smallest reproducible cause;',
+              '- rerun this workflow or run the same server-operator command from the production checkout;',
+              '- do not close this issue until the live gate is green again.',
+              '',
+              'Safety boundary: this workflow is read-only. It does not deploy, migrate, restart services, prune Docker, or mutate production data.'
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['production', 'autonomous-watch', 'server-live-gate', 'incident']
+            });
