@@ -14,6 +14,7 @@ on:
           - deploy_main
           - restart_frontend
           - restart_stack
+          - align_media_caps
           - security_smoke
           - seo_aeo_smoke
           - runner_health
@@ -21,7 +22,7 @@ on:
           - logs_backend
           - cleanup_docker
       confirm:
-        description: Type MERCASTO for mutating operations: deploy_main, restart_frontend, restart_stack, cleanup_docker
+        description: Type MERCASTO for mutating operations: deploy_main, restart_frontend, restart_stack, align_media_caps, cleanup_docker
         required: false
         default: ""
         type: string
@@ -30,6 +31,8 @@ on:
         required: false
         default: "160"
         type: string
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -46,14 +49,52 @@ jobs:
     name: Run guarded server operation
     runs-on: [self-hosted, linux]
     timeout-minutes: 30
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.number == 200 &&
+       github.event.comment.user.login == 'johnslimg-alt' &&
+       contains(github.event.comment.body, '/server align-media-caps MERCASTO'))
 
     steps:
+      - name: Resolve operation
+        id: resolve
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_OPERATION: ${{ inputs.operation }}
+          INPUT_CONFIRM: ${{ inputs.confirm }}
+          INPUT_TAIL_LINES: ${{ inputs.tail_lines }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+
+          operation="${INPUT_OPERATION:-status}"
+          confirm="${INPUT_CONFIRM:-}"
+          tail_lines="${INPUT_TAIL_LINES:-160}"
+
+          if [ "$EVENT_NAME" = "issue_comment" ]; then
+            case "$COMMENT_BODY" in
+              *'/server align-media-caps MERCASTO'*)
+                operation="align_media_caps"
+                confirm="MERCASTO"
+                ;;
+              *)
+                echo "Unsupported issue comment trigger."
+                exit 64
+                ;;
+            esac
+          fi
+
+          echo "operation=$operation" >> "$GITHUB_OUTPUT"
+          echo "confirm=$confirm" >> "$GITHUB_OUTPUT"
+          echo "tail_lines=$tail_lines" >> "$GITHUB_OUTPUT"
+
       - name: Run selected operation
         shell: bash
         env:
-          OPERATION: ${{ inputs.operation }}
-          CONFIRM: ${{ inputs.confirm }}
-          TAIL_LINES: ${{ inputs.tail_lines }}
+          OPERATION: ${{ steps.resolve.outputs.operation }}
+          CONFIRM: ${{ steps.resolve.outputs.confirm }}
+          TAIL_LINES: ${{ steps.resolve.outputs.tail_lines }}
         run: |
           set -euo pipefail
 
