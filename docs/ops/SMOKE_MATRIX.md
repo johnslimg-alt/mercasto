@@ -23,6 +23,7 @@ npm run gate:prod
 | Payment retention | `npm run check:payment-retention` | Account deletion never physically deletes payment rows; financial/audit history is preserved. |
 | Cache/PWA policy | `npm run check:cache-policy` | Blocks accidental production service-worker registration without a dedicated cache gate and rollback plan. |
 | Homepage cache headers | `npm run smoke:cache-headers` | Verifies homepage HTML is not dangerously long-cacheable and does not expose service-worker policy headers. |
+| Auth providers smoke | `npm run smoke:auth-providers` | Verifies the public auth-provider status endpoint is alive and returns a JSON-looking response without exposing credentials. |
 | Frontend build | `npm run build` | Vite production assets compile. |
 | Public production smoke | `npm run smoke:prod` | Public health, homepage, categories, ads, sensitive paths, internal ports, PHP upload limits. |
 | Security probes | `npm run smoke:security` | Sensitive HTTP paths and internal service ports are not exposed. |
@@ -40,7 +41,7 @@ npm run gate:prod
 | Health endpoint | `https://mercasto.com/up` | `npm run smoke:prod` | HTTP 200. | CEO/Major operator |
 | Categories API | `https://mercasto.com/api/categories` | `npm run smoke:prod` | HTTP 200 JSON; no 502/500. | Backend agent |
 | Ads API | `https://mercasto.com/api/ads?page=1` | `npm run smoke:prod` | HTTP 200 JSON; pagination endpoint available even with empty catalog. | Backend agent |
-| Auth providers API | `https://mercasto.com/api/auth/providers` | Manual curl or API smoke extension | HTTP 200 JSON; exposes only configured OAuth provider status, no secrets. | Backend/security agent |
+| Auth providers API | `https://mercasto.com/api/auth/providers` | `npm run smoke:auth-providers` | HTTP 200 and JSON-looking body; exposes provider availability only, not credentials. | Backend/security agent |
 | Listing canonical route | `/listing/{id}-{slug}` | `npm run smoke:routes` | Existing listing resolves; fallback test route redirects or returns expected safe status. | Frontend/backend agent |
 | Legacy listing routes | `/ads/{id}`, `/ad/{id}` | `npm run smoke:routes` | Compatibility routes resolve or redirect without 404/500. | Frontend/backend agent |
 | Publish flow shell | Authenticated `/api/ads` | Dedicated authenticated QA once test credentials exist | Valid authenticated ad creation succeeds; invalid uploads/fields fail with 4xx, not 5xx. | QA agent |
