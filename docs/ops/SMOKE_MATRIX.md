@@ -24,6 +24,7 @@ npm run gate:prod
 | Cache/PWA policy | `npm run check:cache-policy` | Blocks accidental production service-worker registration without a dedicated cache gate and rollback plan. |
 | Homepage cache headers | `npm run smoke:cache-headers` | Verifies homepage HTML is not dangerously long-cacheable and does not expose service-worker policy headers. |
 | Auth providers smoke | `npm run smoke:auth-providers` | Verifies the public auth-provider status endpoint is alive and returns a JSON-looking response without exposing credentials. |
+| Public manifest denial | `npm run smoke:public-manifests` | Verifies root project manifests, lockfiles, and build config files are not served through static handling or SPA fallback. |
 | Frontend build | `npm run build` | Vite production assets compile. |
 | Public production smoke | `npm run smoke:prod` | Public health, homepage, categories, ads, sensitive paths, internal ports, PHP upload limits. |
 | Security probes | `npm run smoke:security` | Sensitive HTTP paths and internal service ports are not exposed. |
@@ -42,12 +43,13 @@ npm run gate:prod
 | Categories API | `https://mercasto.com/api/categories` | `npm run smoke:prod` | HTTP 200 JSON; no 502/500. | Backend agent |
 | Ads API | `https://mercasto.com/api/ads?page=1` | `npm run smoke:prod` | HTTP 200 JSON; pagination endpoint available even with empty catalog. | Backend agent |
 | Auth providers API | `https://mercasto.com/api/auth/providers` | `npm run smoke:auth-providers` | HTTP 200 and JSON-looking body; exposes provider availability only, not credentials. | Backend/security agent |
+| Public manifest/config files | root project manifest, lock, and build config paths | `npm run smoke:public-manifests` | Every probed path returns 403, 404, or 410; SPA fallback must not serve `index.html` for these paths. | Security/Infra agent |
 | Listing canonical route | `/listing/{id}-{slug}` | `npm run smoke:routes` | Existing listing resolves; fallback test route redirects or returns expected safe status. | Frontend/backend agent |
 | Legacy listing routes | `/ads/{id}`, `/ad/{id}` | `npm run smoke:routes` | Compatibility routes resolve or redirect without 404/500. | Frontend/backend agent |
 | Publish flow shell | Authenticated `/api/ads` | Dedicated authenticated QA once test credentials exist | Valid authenticated ad creation succeeds; invalid uploads/fields fail with 4xx, not 5xx. | QA agent |
 | Search and filters | Public listing feed/category query params | Browser/device QA or future Playwright gate | Filter state updates URL and results without blank page or API crash. | QA/Frontend agent |
 | Cache/PWA policy | Frontend source/config | `npm run check:cache-policy` | No service-worker registration exists unless a dedicated PWA/cache gate and rollback plan is approved. | Frontend/Infra agent |
-| Sensitive paths | `.env`, `.git/config`, `backend/.env`, package manifests, Horizon paths | `npm run smoke:security` | 404 or closed; never 200; no source or secret disclosure. | Security agent |
+| Sensitive paths | `.env`, `.git/config`, `backend/.env`, package manifests, Horizon paths | `npm run smoke:security` and `npm run smoke:public-manifests` | 404 or closed; never 200; no source or secret disclosure. | Security agent |
 | Internal ports | Ollama, Redis, Postgres, Prometheus, cAdvisor | `npm run smoke:security` | Public IP endpoints are closed/unreachable. | Security/Infra agent |
 | Payment checkout config | Clip checkout route | `npm run check:payment-retention`; manual payment QA only with sandbox/live credentials | Missing credentials fail closed before payment mutation; no fake checkout success. | Payments agent |
 | Payment webhook authenticity | `/api/webhooks/clip` | Code audit plus future signed fixture test | Missing/invalid signature rejected; only signed paid webhook mutates payment state. | Payments/security agent |
@@ -73,6 +75,7 @@ A PR or direct autonomous commit may be merged only when all applicable gates ar
 4. Production infra/runner change: `npm run verify:quick`, successful Deploy Mercasto workflow, and successful Production checks workflow.
 5. SEO/AEO change: `npm run smoke:seo`, `npm run smoke:copy`, `npm run smoke:cache-headers`, and `npm run verify:quick`.
 6. Cache/PWA/service-worker change: `npm run check:cache-policy`, `npm run smoke:cache-headers`, `npm run build`, and `npm run verify:quick`; broad caching changes require `npm run gate:prod`.
+7. Root manifest/config deny-list change: `npm run smoke:public-manifests`, `npm run smoke:security`, and `npm run verify:quick`; nginx changes require production deploy verification before closing the lane.
 
 ## Failure policy
 
