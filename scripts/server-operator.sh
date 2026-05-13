@@ -120,6 +120,34 @@ case "$OPERATION" in
     public_smoke
     ;;
 
+  align_media_caps)
+    require_confirm
+    print_header "Align nginx media upload cap"
+    python3 - <<'PY'
+from pathlib import Path
+path = Path('default.conf')
+text = path.read_text()
+old = 'client_max_body_size 25m;'
+new = 'client_max_body_size 64m;'
+if new in text:
+    print('client_max_body_size already aligned to 64m')
+elif old in text:
+    path.write_text(text.replace(old, new, 1))
+    print('client_max_body_size aligned from 25m to 64m')
+else:
+    raise SystemExit('expected client_max_body_size 25m or 64m in default.conf')
+PY
+    grep -n "client_max_body_size" default.conf
+    print_header "Validate nginx config"
+    docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-frontend nginx -t
+    print_header "Restart frontend with aligned config"
+    docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --no-deps --force-recreate mercasto-frontend
+    compose_ps
+    public_smoke
+    print_header "verify:quick"
+    npm run verify:quick
+    ;;
+
   security_smoke)
     print_header "Security probes"
     npm run smoke:security
