@@ -1,0 +1,20 @@
+# Mercasto production-sensitive ownership
+# Keep this focused: ownership is for high-risk files that affect deploy, security, payments, infrastructure, and production gates.
+
+* @johnslimg-alt
+
+.github/workflows/ @johnslimg-alt
+scripts/ @johnslimg-alt
+docs/ops/ @johnslimg-alt
+
+Dockerfile @johnslimg-alt
+docker-compose.yml @johnslimg-alt
+docker-compose.override.yml @johnslimg-alt
+default.conf @johnslimg-alt
+
+backend/Dockerfile @johnslimg-alt
+backend/app/Http/Controllers/ @johnslimg-alt
+backend/config/ @johnslimg-alt
+backend/routes/ @johnslimg-alt
+
+runners/ @johnslimg-alt
