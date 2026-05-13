@@ -96,23 +96,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          data="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json isDraft,labels,mergeStateStatus,state,headRefName,headRefOid,authorAssociation)"
+          data="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json isDraft,labels,mergeStateStatus,state,headRefName,headRefOid,author)"
 
           state="$(printf '%s' "$data" | jq -r '.state')"
           draft="$(printf '%s' "$data" | jq -r '.isDraft')"
           merge_state="$(printf '%s' "$data" | jq -r '.mergeStateStatus')"
           labels="$(printf '%s' "$data" | jq -r '[.labels[].name] | join(",")')"
           head_sha="$(printf '%s' "$data" | jq -r '.headRefOid')"
-          author_association="$(printf '%s' "$data" | jq -r '.authorAssociation')"
+          author_login="$(printf '%s' "$data" | jq -r '.author.login // ""')"
 
-          echo "state=$state labels=$labels merge_state=$merge_state author_association=$author_association head=$head_sha"
+          echo "state=$state labels=$labels merge_state=$merge_state author=$author_login head=$head_sha"
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
-          case "$author_association" in
-            OWNER|MEMBER|COLLABORATOR)
+          case "$author_login" in
+            johnslimg-alt|github-actions[bot])
               ;;
             *)
-              echo "Refusing untrusted author association: $author_association"
+              echo "Refusing untrusted author: $author_login"
               echo "eligible=false" >> "$GITHUB_OUTPUT"
               exit 0
               ;;
