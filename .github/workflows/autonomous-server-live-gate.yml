@@ -61,16 +61,19 @@ jobs:
     if: failure()
     timeout-minutes: 5
     steps:
-      - name: Create incident issue
+      - name: Create or update incident issue
         uses: actions/github-script@v9
         with:
           script: |
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const title = `Autonomous server live gate failed: ${new Date().toISOString().slice(0, 10)}`;
+            const marker = 'AUTONOMOUS_SERVER_LIVE_GATE_INCIDENT';
+            const title = 'Autonomous server live gate failing';
             const body = [
+              marker,
+              '',
               'Autonomous Server Live Gate failed.',
               '',
-              `Run: ${runUrl}`,
+              `Latest failed run: ${runUrl}`,
               '',
               'Scope:',
               '- production checkout existence;',
@@ -86,10 +89,28 @@ jobs:
               '',
               'Safety boundary: this workflow is read-only. It does not deploy, migrate, restart services, prune Docker, or mutate production data.'
             ].join('\n');
-            await github.rest.issues.create({
+
+            const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title,
-              body,
-              labels: ['production', 'autonomous-watch', 'server-live-gate', 'incident']
+              state: 'open',
+              labels: 'server-live-gate,incident',
+              per_page: 20
             });
+            const existing = issues.find(issue => issue.title === title || (issue.body || '').includes(marker));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `Still failing. Latest run: ${runUrl}`
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['production', 'autonomous-watch', 'server-live-gate', 'incident']
+              });
+            }
