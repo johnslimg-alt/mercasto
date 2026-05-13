@@ -115,16 +115,19 @@ jobs:
     if: failure()
     timeout-minutes: 5
     steps:
-      - name: Create production watch issue
+      - name: Create or update production watch issue
         uses: actions/github-script@v9
         with:
           script: |
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const title = `Autonomous production watch failed: ${new Date().toISOString().slice(0, 10)}`;
+            const marker = 'AUTONOMOUS_PRODUCTION_WATCH_INCIDENT';
+            const title = 'Autonomous production watch failing';
             const body = [
+              marker,
+              '',
               'Autonomous Production Watch failed.',
               '',
-              `Run: ${runUrl}`,
+              `Latest failed run: ${runUrl}`,
               '',
               'Required action:',
               '- inspect the failed job log;',
@@ -134,10 +137,28 @@ jobs:
               '',
               'Safety boundary: this workflow is read-only. It does not deploy, migrate, restart services, or mutate production data.'
             ].join('\n');
-            await github.rest.issues.create({
+
+            const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title,
-              body,
-              labels: ['production', 'autonomous-watch', 'incident']
+              state: 'open',
+              labels: 'autonomous-watch,incident',
+              per_page: 20
             });
+            const existing = issues.find(issue => issue.title === title || (issue.body || '').includes(marker));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `Still failing. Latest run: ${runUrl}`
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['production', 'autonomous-watch', 'incident']
+              });
+            }
