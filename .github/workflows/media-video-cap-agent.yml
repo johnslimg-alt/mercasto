@@ -1,0 +1,152 @@
+name: Media Video Cap Agent
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: media-video-cap-agent
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    name: Patch media video cap and open PR
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.number == 200 &&
+       contains(github.event.comment.body, '/agent media-video-cap') &&
+       github.event.comment.user.login == 'johnslimg-alt')
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply exact media cap patch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          controller="backend/app/Http/Controllers/Api/AdController.php"
+          scan="scripts/media-upload-validation-scan.sh"
+          doc="docs/media-upload-safety.md"
+
+          test -f "$controller"
+          test -f "$scan"
+          test -f "$doc"
+
+          count_controller=$(grep -cF "'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200'" "$controller" || true)
+          if [ "$count_controller" -ne 2 ]; then
+            echo "Expected exactly 2 controller video max:51200 rules, found $count_controller" >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          controller = Path('backend/app/Http/Controllers/Api/AdController.php')
+          text = controller.read_text()
+          old = "'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200'"
+          new = "'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:20480'"
+          if text.count(old) != 2:
+              raise SystemExit(f"expected 2 controller rules, found {text.count(old)}")
+          text = text.replace(old, new)
+          text = text.replace('// 50MB Max', '// 20MB Max; aligned below production request cap')
+          text = text.replace('// Защита от загрузки вредоносных скриптов', '// 20MB Max; aligned below production request cap')
+          controller.write_text(text)
+
+          scan = Path('scripts/media-upload-validation-scan.sh')
+          text = scan.read_text()
+          old = "'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200'"
+          new = "'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:20480'"
+          if old not in text:
+              raise SystemExit('scan invariant max:51200 not found')
+          text = text.replace(old, new)
+          scan.write_text(text)
+
+          doc = Path('docs/media-upload-safety.md')
+          text = doc.read_text()
+          text = text.replace('Per-video maximum is 51200 KB.', 'Per-video maximum is 20480 KB / 20 MB.')
+          text = text.replace(
+              'The current image validation limit of 5120 KB is below the PHP single-file limit. The video validation limit of 51200 KB is above the current PHP and nginx body caps, so large videos may be rejected before Laravel validation. This should be treated as a follow-up UX/runtime alignment issue rather than an immediate security failure.',
+              'The current image validation limit of 5120 KB is below the PHP single-file limit. The video validation limit of 20480 KB / 20 MB is intentionally below the current 25 MB PHP and nginx request caps to leave multipart overhead room, so Laravel can return a controlled validation response before the request reaches infrastructure limits.'
+          )
+          text = text.replace('1. Decide whether video upload should stay at 50 MB or be aligned down to the current 25 MB request cap.\n', '')
+          doc.write_text(text)
+          PY
+
+          if grep -qF "max:51200" "$controller" "$scan" "$doc"; then
+            echo "max:51200 still present after patch" >&2
+            grep -nF "max:51200" "$controller" "$scan" "$doc" >&2 || true
+            exit 1
+          fi
+
+          grep -qF "max:20480" "$controller"
+          grep -qF "max:20480" "$scan"
+          grep -qF "20480 KB / 20 MB" "$doc"
+
+      - name: Run required gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run check:scripts
+          bash scripts/media-upload-validation-scan.sh
+          bash scripts/static-safety-scans.sh
+          npm run verify:quick
+
+      - name: Create pull request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="agent/media-video-cap-alignment"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add backend/app/Http/Controllers/Api/AdController.php scripts/media-upload-validation-scan.sh docs/media-upload-safety.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "fix(media): align video upload cap with production request limit"
+          git push --force-with-lease origin "$branch"
+          body=$(cat <<'EOF'
+          ## Summary
+          - Aligns listing video upload validation from 50 MB to 20 MB in both create and update flows.
+          - Updates the media validation scan to enforce the new 20 MB cap.
+          - Updates media upload safety docs to document the runtime alignment below the 25 MB PHP/nginx request cap.
+
+          ## Risk
+          - Low: targeted validation cap reduction only.
+          - No auth, payment, routing, Docker, nginx, database, or UI behavior changed.
+
+          ## Gates
+          - `npm run check:scripts`
+          - `bash scripts/media-upload-validation-scan.sh`
+          - `bash scripts/static-safety-scans.sh`
+          - `npm run verify:quick`
+
+          ## Rollback
+          - Revert this PR to restore the previous 50 MB Laravel video validation limit.
+
+          Closes #200
+          EOF
+          )
+          gh pr create \
+            --repo johnslimg-alt/mercasto \
+            --base main \
+            --head "$branch" \
+            --title "fix(media): align video upload cap with production request limit" \
+            --body "$body"
