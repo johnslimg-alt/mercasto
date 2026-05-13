@@ -1,0 +1,144 @@
+name: Autonomous Production Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: autonomous-production-watch
+  cancel-in-progress: false
+
+jobs:
+  public-watch:
+    name: Public production watch
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check public endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_head() {
+            local url="$1"
+            local pattern="$2"
+            local status
+            status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url")"
+            echo "$url -> $status"
+            if [[ ! "$status" =~ $pattern ]]; then
+              echo "unexpected status for $url: $status" >&2
+              exit 1
+            fi
+          }
+
+          check_head https://mercasto.com/up '^200$'
+          check_head https://mercasto.com/ '^(200|301|302)$'
+          check_head https://mercasto.com/api/categories '^200$'
+          check_head 'https://mercasto.com/api/ads?page=1' '^200$'
+          check_head https://mercasto.com/api/auth/providers '^200$'
+
+      - name: Check public search signals
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 30 https://mercasto.com/ >/tmp/home.html
+          curl -fsS --max-time 30 https://mercasto.com/sitemap.xml >/tmp/sitemap.xml
+          curl -fsS --max-time 30 https://mercasto.com/robots.txt >/tmp/robots.txt
+          grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/home.html
+          grep -Eiq 'name="description"|property="og:description"' /tmp/home.html
+          grep -Eiq 'application/ld\+json|schema.org' /tmp/home.html
+          grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/sitemap.xml
+          grep -Eiq 'Sitemap:|User-agent:' /tmp/robots.txt
+
+      - name: Check public denial paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            /.env \
+            /.git/config \
+            /backend/.env \
+            /composer.json \
+            /composer.lock \
+            /package.json \
+            /package-lock.json \
+            /pnpm-lock.yaml \
+            /yarn.lock \
+            /vite.config.js \
+            /vite.config.ts \
+            /vite.config.mjs \
+            /tailwind.config.js \
+            /tailwind.config.ts \
+            /tailwind.config.mjs \
+            /horizon \
+            /vendor/horizon
+          do
+            status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "https://mercasto.com${path}")"
+            echo "$path -> $status"
+            case "$status" in
+              403|404|410) ;;
+              *) echo "unexpected public denial status for $path: $status" >&2; exit 1 ;;
+            esac
+          done
+
+  repository-watch:
+    name: Repository static watch
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check scripts
+        run: npm run check:scripts
+
+      - name: Run static safety scans
+        run: npm run check:static-safety
+
+      - name: Validate compose config
+        run: |
+          docker compose config >/tmp/mercasto-compose-base.yml
+          docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto-compose-prod.yml
+
+  report-failure:
+    name: Report watch failure
+    runs-on: ubuntu-latest
+    needs:
+      - public-watch
+      - repository-watch
+    if: failure()
+    timeout-minutes: 5
+    steps:
+      - name: Create production watch issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `Autonomous production watch failed: ${new Date().toISOString().slice(0, 10)}`;
+            const body = [
+              'Autonomous Production Watch failed.',
+              '',
+              `Run: ${runUrl}`,
+              '',
+              'Required action:',
+              '- inspect the failed job log;',
+              '- fix the smallest reproducible cause;',
+              '- rerun the failed workflow or run `npm run verify:quick` from production checkout;',
+              '- do not close this issue until the watch is green again.',
+              '',
+              'Safety boundary: this workflow is read-only. It does not deploy, migrate, restart services, or mutate production data.'
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['production', 'autonomous-watch', 'incident']
+            });
