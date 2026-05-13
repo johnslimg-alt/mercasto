@@ -1,0 +1,3 @@
+Current-main gate verification marker.
+
+This file intentionally contains no runtime configuration and exists only on the verification branch to trigger backend PR gates.
