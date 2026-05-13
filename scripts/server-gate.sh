@@ -63,6 +63,7 @@ case "$MODE" in
   security)
     print_header "Security gate"
     npm run smoke:security
+    npm run smoke:public-manifests
     npm run check:payment-retention
     npm run check:cache-policy
     ;;
