@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '41 */8 * * *'
+  workflow_run:
+    workflows:
+      - Production checks
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -20,6 +25,10 @@ jobs:
   server-live-gate:
     name: Run production server live gate
     runs-on: [self-hosted, linux, docker]
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
     timeout-minutes: 45
     steps:
       - name: Verify production checkout exists
