@@ -75,6 +75,11 @@ public_smoke() {
   curl -fsSI --max-time 30 https://mercasto.com/vendor/horizon | head -n 20 || true
 }
 
+nginx_config_test() {
+  print_header "Validate nginx config"
+  docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-frontend nginx -t
+}
+
 case "$OPERATION" in
   status)
     print_header "Git status"
@@ -98,6 +103,7 @@ case "$OPERATION" in
     git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
     print_header "Build and start stack"
     docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build --remove-orphans
+    nginx_config_test
     print_header "Run migrations"
     docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-backend php artisan migrate --force
     print_header "Verify"
@@ -108,6 +114,7 @@ case "$OPERATION" in
     require_confirm
     print_header "Restart frontend"
     docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --no-deps --force-recreate mercasto-frontend
+    nginx_config_test
     compose_ps
     public_smoke
     ;;
@@ -116,6 +123,7 @@ case "$OPERATION" in
     require_confirm
     print_header "Restart stack"
     docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --remove-orphans
+    nginx_config_test
     compose_ps
     public_smoke
     ;;
@@ -138,8 +146,7 @@ else:
     raise SystemExit('expected client_max_body_size 25m or 64m in default.conf')
 PY
     grep -n "client_max_body_size" default.conf
-    print_header "Validate nginx config"
-    docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-frontend nginx -t
+    nginx_config_test
     print_header "Restart frontend with aligned config"
     docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --no-deps --force-recreate mercasto-frontend
     compose_ps
