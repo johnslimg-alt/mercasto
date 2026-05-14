@@ -5,8 +5,8 @@
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --color-lime-primary: #84CC16;
-  --color-lime-dark: #65A30D;
+  --color-lime-primary: #0f8f7d;
+  --color-lime-dark: #0b6f61;
   --color-ink: #0F172A;
   --color-paper: #F8FAFC;
 }
