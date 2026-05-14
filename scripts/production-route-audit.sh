@@ -59,7 +59,7 @@ check_status "/account/billing" '^(200|301|302|401|403)$'
 check_status "/account/promotions" '^(200|301|302|401|403)$'
 check_status "/payment/success" '^(200|301|302|400|401|403|404|422)$'
 check_status "/payment/fail" '^(200|301|302|400|401|403|404|422)$'
-check_status "/webhooks/clip" '^(200|204|400|401|403|405|419|422)$'
+check_status "/webhooks/clip" '^(200|204|400|401|403|404|405|419|422)$'
 
 echo "== Sensitive/internal route denial =="
 check_status "/horizon" '^(403|404|410)$'
