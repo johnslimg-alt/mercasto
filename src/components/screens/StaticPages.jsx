@@ -120,7 +120,7 @@ export default function StaticPages({ currentTab }) {
   return (
     <div className="max-w-[900px] mx-auto py-8 md:py-12 px-4 lg:px-6 min-h-[60vh]">
       <h1 className="text-[32px] font-black text-slate-900 mb-6">{data.title}</h1>
-      <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-slate-200 text-slate-600 text-[15px] leading-relaxed">
+      <div className="bg-white dark:bg-slate-800 p-6 md:p-10 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[15px] leading-relaxed">
         {data.content}
       </div>
     </div>

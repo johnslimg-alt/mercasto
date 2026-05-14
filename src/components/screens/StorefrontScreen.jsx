@@ -18,7 +18,7 @@ export default function StorefrontScreen({
     </div>
 
     <div className="max-w-[1000px] mx-auto md:py-8 pt-4 px-4">
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm mb-8">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm mb-8">
         <div className="h-32 md:h-48 bg-slate-200 relative">
            <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=400&fit=crop" loading="lazy" className="w-full h-full object-cover opacity-90 mix-blend-multiply" alt="Cover" />
         </div>
@@ -84,7 +84,7 @@ export default function StorefrontScreen({
         </div>
       )}
 
-      <div className="mt-12 bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
+      <div className="mt-12 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
         <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2">
           <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> {t.client_reviews} ({companyRatingStats.total})
         </h3>

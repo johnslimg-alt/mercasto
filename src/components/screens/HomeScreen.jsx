@@ -110,7 +110,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
         {/* 1. HERO STATS */}
 
-        <div className="bg-white border-b border-slate-200">
+        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
 
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-3 flex flex-col md:flex-row md:items-center gap-3 justify-between">
 
@@ -280,7 +280,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 </div>
 
-                <div className="card bg-white border border-slate-200 rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
+                <div className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
 
                   <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#84CC16]/10 rounded-full blur-2xl"></div>
 
@@ -306,7 +306,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 </div>
 
-                <div className="card bg-white border-2 border-[#84CC16]/30 rounded-3xl p-6 h-[190px] flex flex-col">
+                <div className="card bg-white dark:bg-slate-800 border-2 border-[#84CC16]/30 dark:border-[#84CC16]/20 rounded-3xl p-6 h-[190px] flex flex-col">
 
                   <span className="text-[11px] uppercase tracking-wider text-[#65A30D] font-semibold">{t.for_sellers || 'Para vendedores'}</span>
 
@@ -358,7 +358,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                     {spotlightRealEstate.map((item, idx) => (
 
-                      <article key={idx} className="card bg-white border border-slate-200 rounded-2xl overflow-hidden cursor-pointer" onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery(item.specs); }}>
+                      <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer" onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery(item.specs); }}>
 
                         <div className="relative">
 
@@ -562,7 +562,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 {servicesMarketplace.map((srv, idx) => (
 
-                  <div key={idx} className="card bg-white border border-slate-200 rounded-2xl p-4 cursor-pointer" onClick={() => { setActiveCat('servicios'); setSearchQuery(srv.title); }}>
+                  <div key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => { setActiveCat('servicios'); setSearchQuery(srv.title); }}>
 
                     <div className="flex items-start gap-3">
 
@@ -634,7 +634,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 {automotiveDeals.map((car, idx) => (
 
-                  <article key={idx} className="card bg-white border border-slate-200 rounded-2xl overflow-hidden cursor-pointer" onClick={() => { setActiveCat('motor'); setSearchQuery(car.title); }}>
+                  <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer" onClick={() => { setActiveCat('motor'); setSearchQuery(car.title); }}>
 
                     <img src={car.img} loading="lazy" className="w-full h-140px] object-cover" alt=""/>
 

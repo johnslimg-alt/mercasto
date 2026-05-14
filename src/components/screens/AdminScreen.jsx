@@ -53,7 +53,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
             <>
 
-              <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 mb-8">
+              <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700 mb-8">
 
             <h3 className="text-[18px] font-bold mb-6 text-slate-900 flex items-center gap-2">
 
@@ -139,7 +139,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
 
 
-          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
 
             <h3 className="text-[18px] font-bold mb-6 text-slate-900">{t.existing_cats} ({categoriesData.length})</h3>
 
@@ -187,7 +187,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
           ) : adminTab === 'moderation' ? (
 
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
 
               <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><ShieldCheck className="text-[#84CC16]" size={20}/> {t.pending_ads} ({adminPendingAds.length})</h3>
 
@@ -247,7 +247,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
           ) : adminTab === 'coupons' ? (
 
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
 
               <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><Ticket className="text-[#84CC16]" size={20}/> {t.coupon_gen}</h3>
 
@@ -317,7 +317,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
           ) : adminTab === 'reports' ? (
 
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
 
@@ -457,7 +457,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
           ) : (
 
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
 
