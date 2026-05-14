@@ -53,7 +53,8 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event.issue.number == 200 &&
        github.event.comment.user.login == 'johnslimg-alt' &&
-       contains(github.event.comment.body, '/server align-media-caps MERCASTO'))
+       (contains(github.event.comment.body, '/server align-media-caps MERCASTO') ||
+        contains(github.event.comment.body, '/server deploy-main MERCASTO')))
 
     steps:
       - name: Resolve operation
@@ -74,6 +75,10 @@ jobs:
 
           if [ "$EVENT_NAME" = "issue_comment" ]; then
             case "$COMMENT_BODY" in
+              *'/server deploy-main MERCASTO'*)
+                operation="deploy_main"
+                confirm="MERCASTO"
+                ;;
               *'/server align-media-caps MERCASTO'*)
                 operation="align_media_caps"
                 confirm="MERCASTO"
