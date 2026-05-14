@@ -80,6 +80,42 @@ nginx_config_test() {
   docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-frontend nginx -t
 }
 
+seo_aeo_probe() {
+  print_header "SEO/AEO smoke"
+  curl -fsS https://mercasto.com/ >/tmp/mercasto-home.html
+  curl -fsS https://mercasto.com/sitemap.xml >/tmp/mercasto-sitemap.xml
+  curl -fsS https://mercasto.com/robots.txt >/tmp/mercasto-robots.txt
+  grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/mercasto-home.html
+  grep -Eiq 'name="description"|property="og:description"' /tmp/mercasto-home.html
+  grep -Eiq 'application/ld\+json|schema.org' /tmp/mercasto-home.html
+  grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/mercasto-sitemap.xml
+  grep -Eiq 'Sitemap:|User-agent:' /tmp/mercasto-robots.txt
+  echo "SEO/AEO smoke OK"
+}
+
+run_verify_quick() {
+  print_header "verify:quick"
+  if command -v npm >/dev/null 2>&1; then
+    npm run verify:quick
+    return
+  fi
+
+  echo "npm not found; running server-compatible verify:quick fallback"
+  find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
+  docker compose config >/tmp/mercasto_compose_base.out
+  docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out
+  bash scripts/static-safety-scans.sh
+  bash scripts/production-smoke.sh
+  bash scripts/auth-providers-smoke.sh
+  bash scripts/public-manifest-smoke.sh
+  bash scripts/security-probes.sh
+  bash scripts/listing-route-smoke.sh
+  bash scripts/production-route-audit.sh
+  seo_aeo_probe
+  bash scripts/cache-header-smoke.sh
+  bash scripts/public-copy-scan.sh
+}
+
 case "$OPERATION" in
   status)
     print_header "Git status"
@@ -91,8 +127,7 @@ case "$OPERATION" in
     ;;
 
   verify_quick)
-    print_header "verify:quick"
-    npm run verify:quick
+    run_verify_quick
     ;;
 
   deploy_main)
@@ -106,8 +141,7 @@ case "$OPERATION" in
     nginx_config_test
     print_header "Run migrations"
     docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-backend php artisan migrate --force
-    print_header "Verify"
-    npm run verify:quick
+    run_verify_quick
     ;;
 
   restart_frontend)
@@ -151,26 +185,20 @@ PY
     docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --no-deps --force-recreate mercasto-frontend
     compose_ps
     public_smoke
-    print_header "verify:quick"
-    npm run verify:quick
+    run_verify_quick
     ;;
 
   security_smoke)
     print_header "Security probes"
-    npm run smoke:security
+    if command -v npm >/dev/null 2>&1; then
+      npm run smoke:security
+    else
+      bash scripts/security-probes.sh
+    fi
     ;;
 
   seo_aeo_smoke)
-    print_header "SEO/AEO smoke"
-    curl -fsS https://mercasto.com/ >/tmp/mercasto-home.html
-    curl -fsS https://mercasto.com/sitemap.xml >/tmp/mercasto-sitemap.xml
-    curl -fsS https://mercasto.com/robots.txt >/tmp/mercasto-robots.txt
-    grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/mercasto-home.html
-    grep -Eiq 'name="description"|property="og:description"' /tmp/mercasto-home.html
-    grep -Eiq 'application/ld\+json|schema.org' /tmp/mercasto-home.html
-    grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/mercasto-sitemap.xml
-    grep -Eiq 'Sitemap:|User-agent:' /tmp/mercasto-robots.txt
-    echo "SEO/AEO smoke OK"
+    seo_aeo_probe
     ;;
 
   runner_health)
