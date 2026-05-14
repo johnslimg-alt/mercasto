@@ -36,6 +36,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -137,3 +138,21 @@ jobs:
           git fetch origin main --prune
           git reset --hard origin/main
           bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
+
+      - name: Report issue-comment server result
+        if: always() && github.event_name == 'issue_comment'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          OPERATION: ${{ steps.resolve.outputs.operation }}
+          STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ "$STATUS" = "success" ]; then
+            body="Server operator ${OPERATION} succeeded. ${RUN_URL}"
+          else
+            body="Server operator ${OPERATION} failed. ${RUN_URL}"
+          fi
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$body"
