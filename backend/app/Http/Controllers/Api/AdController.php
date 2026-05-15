@@ -98,9 +98,20 @@ class AdController extends Controller
 
         // Фильтрация по локации
         if ($request->filled('location')) {
-            $query->where('location', 'like', "%{$request->location}%");
+            $locationParts = collect(explode(',', (string) $request->location))
+                ->map(fn ($part) => trim($part))
+                ->filter()
+                ->unique()
+                ->values();
+
+            $query->where(function ($q) use ($locationParts, $request) {
+                $q->where('location', 'like', '%' . $request->location . '%');
+                foreach ($locationParts as $part) {
+                    $q->orWhere('location', 'like', '%' . $part . '%');
+                }
+            });
         }
-        
+
         // Глобальный фильтр: Цена
         if ($request->filled('min_price')) {
             $query->where('price', '>=', (float) $request->min_price);
@@ -128,11 +139,11 @@ class AdController extends Controller
 
         // Сортировка (Спецификация: по дате, цене, популярности)
         $sort = $request->query('sort', 'latest');
-        if ($sort === 'price_asc') { $query->orderBy('price', 'asc'); } 
-        elseif ($sort === 'price_desc') { $query->orderBy('price', 'desc'); } 
-        elseif ($sort === 'popular') { $query->orderBy('views', 'desc'); } 
+        if ($sort === 'price_asc') { $query->orderBy('price', 'asc'); }
+        elseif ($sort === 'price_desc') { $query->orderBy('price', 'desc'); }
+        elseif ($sort === 'popular') { $query->orderBy('views', 'desc'); }
         elseif ($sort === 'latest' && !$request->filled('radius')) { $query->latest(); }
-        
+
         // Кэшируем главную страницу (без фильтров) на 60 секунд в Redis, чтобы выдерживать DDoS
         // Защита от Cache Bypass: проверяем только реальные параметры фильтрации, игнорируя мусорные
         $hasFilters = $request->anyFilled([
@@ -149,18 +160,18 @@ class AdController extends Controller
             'sort',
         ]) || $request->filled('filters');
         $isDefaultQuery = !$hasFilters;
-        
+
         // Защита от Infinite Cache Bomb (DDoS Redis): кэшируем только первые 10 страниц
         if ($isDefaultQuery && $page <= 10) {
             $cacheKey = "ads_index_page_{$page}";
-            
+
             return response()->json(Cache::remember($cacheKey, 60, function () use ($query) {
                 return $query->paginate(16)->toArray();
             }));
         }
-            
+
         $ads = $query->paginate(16); // Возвращаем по 16 объявлений на страницу
-            
+
         return response()->json($ads);
     }
 
@@ -170,7 +181,7 @@ class AdController extends Controller
     public function show(Request $request, $id)
     {
         $ad = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')->findOrFail($id);
-        
+
         // Защита от IDOR: скрытые объявления могут видеть только их авторы или администраторы
         if ($ad->status !== 'active') {
             $user = auth('sanctum')->user(); // Маршрут публичный, поэтому проверяем токен вручную
@@ -189,7 +200,7 @@ class AdController extends Controller
         } else {
             $ad->whatsapp_clicks = null; // Скрываем от публики
         }
-            
+
         return response()->json($ad);
     }
 
@@ -250,7 +261,7 @@ class AdController extends Controller
                 $path = 'ads/' . $filename;
 
                 $img = $manager->decode($image);
-                
+
                 // Защита от OOM (Out Of Memory) при загрузке огромных фото со смартфонов.
                 // Уменьшаем изображение до разумных 1200px перед наложением водяного знака.
                 $img->scaleDown(width: 1200, height: 1200);
@@ -301,7 +312,7 @@ class AdController extends Controller
         dispatch(function () use ($ad) {
             $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
             if (!$apiKey) return;
-            
+
             // 1. Генерация Вектора (Embedding) для Умного Поиска
             $textContent = "{$ad->title} {$ad->category} {$ad->description}";
             $embedRes = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
@@ -317,18 +328,18 @@ class AdController extends Controller
             if ($ad->status === 'pending') {
                 $images = json_decode($ad->image_url, true) ?? [];
                 $parts = [['text' => "Act as a marketplace moderator. Analyze this ad. Title: '{$ad->title}'. Description: '{$ad->description}'. Return JSON ONLY: {\"status\": \"approved\"|\"rejected\", \"reason\": \"why\"}. Reject if it contains NSFW, weapons, drugs, scams, or inappropriate images. Approve otherwise."]];
-                
+
                 foreach (array_slice($images, 0, 2) as $img) {
                     $path = Storage::disk('public')->path($img);
                     if (file_exists($path)) {
                         $parts[] = ['inline_data' => ['mime_type' => mime_content_type($path), 'data' => base64_encode(file_get_contents($path))]];
                     }
                 }
-                
+
                 $modRes = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
                     'contents' => [['parts' => $parts]]
                 ]);
-                
+
                 if ($modRes->successful() && preg_match('/\{.*\}/s', $modRes->json('candidates.0.content.parts.0.text'), $matches)) {
                     $data = json_decode($matches[0], true);
                     if (isset($data['status'])) {
@@ -344,7 +355,7 @@ class AdController extends Controller
             ->where('ad_id', $ad->id)
             ->where('channel', 'whatsapp')
             ->count();
-            
+
         // Сбрасываем кэш, чтобы новое объявление сразу появилось на главной странице и в SEO-картах
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
@@ -433,9 +444,7 @@ class AdController extends Controller
                 // Generate a unique name and convert to WebP
                 $filename = Str::uuid() . '.webp';
                 $path = 'ads/' . $filename;
-                
                 $img = $manager->decode($image);
-                
                 // Защита от OOM (Out Of Memory) при загрузке огромных фото со смартфонов.
                 // Уменьшаем изображение до разумных 1200px перед наложением водяного знака.
                 $img->scaleDown(width: 1200, height: 1200);
@@ -508,7 +517,7 @@ class AdController extends Controller
         dispatch(function () use ($ad) {
             $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
             if (!$apiKey) return;
-            
+
             $textContent = "{$ad->title} {$ad->category} {$ad->description}";
             $embedRes = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
                 'model' => 'models/text-embedding-004',
@@ -522,18 +531,18 @@ class AdController extends Controller
             if ($ad->status === 'pending') {
                 $images = json_decode($ad->image_url, true) ?? [];
                 $parts = [['text' => "Act as a marketplace moderator. Analyze this ad. Title: '{$ad->title}'. Description: '{$ad->description}'. Return JSON ONLY: {\"status\": \"approved\"|\"rejected\", \"reason\": \"why\"}. Reject if it contains NSFW, weapons, drugs, scams, or inappropriate images. Approve otherwise."]];
-                
+
                 foreach (array_slice($images, 0, 2) as $img) {
                     $path = Storage::disk('public')->path($img);
                     if (file_exists($path)) {
                         $parts[] = ['inline_data' => ['mime_type' => mime_content_type($path), 'data' => base64_encode(file_get_contents($path))]];
                     }
                 }
-                
+
                 $modRes = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
                     'contents' => [['parts' => $parts]]
                 ]);
-                
+
                 if ($modRes->successful() && preg_match('/\{.*\}/s', $modRes->json('candidates.0.content.parts.0.text'), $matches)) {
                     $data = json_decode($matches[0], true);
                     if (isset($data['status'])) {
@@ -550,14 +559,14 @@ class AdController extends Controller
             ->where('ad_id', $ad->id)
             ->where('channel', 'whatsapp')
             ->count();
-            
+
         // Сбрасываем кэш SEO и главной страницы, чтобы изменения отразились мгновенно
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
         for ($i = 1; $i <= 10; $i++) {
             Cache::forget("ads_index_page_{$i}");
         }
-        
+
         return response()->json($ad);
     }
 
@@ -573,12 +582,12 @@ class AdController extends Controller
         }
 
         $request->validate(['status' => 'required|in:active,inactive,archived,pending']);
-        
+
         // Защита от обхода модерации: только админ может активировать объявление со статусом pending/rejected
         if ($request->status === 'active' && in_array($ad->status, ['pending', 'rejected']) && $request->user()->role !== 'admin') {
             return response()->json(['message' => 'No puedes activar un anuncio en revisión o rechazado.'], 403);
         }
-        
+
         // Защита от спама: уведомляем подписчиков только при ПЕРВИЧНОЙ публикации (из pending в active), а не при каждом снятии с паузы
         if ($request->status === 'active' && $ad->status === 'pending') {
             $notificationData = [
@@ -635,10 +644,10 @@ class AdController extends Controller
                 }
             });
         }
-        
+
         $ad->status = $request->status;
         $ad->save();
-        
+
         // Сбрасываем кэш SEO и главной страницы
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
@@ -667,20 +676,20 @@ class AdController extends Controller
         }
 
         $cost = 50; // Стоимость продвижения в кредитах
-        
+
         // Атомарное списание для предотвращения ухода в минус при параллельных DdoS запросах
         $updated = DB::table('users')
             ->where('id', $user->id)
             ->where('balance', '>=', $cost)
             ->decrement('balance', $cost);
-            
+
         if (!$updated) {
             return response()->json(['message' => 'No tienes suficientes créditos'], 400);
         }
-        
+
         $ad->promoted = 'destacado';
         $ad->save();
-        
+
         // Финансовый Аудит (Recurring Revenue): ограничиваем услугу 7 днями, чтобы продавец платил снова
         DB::table('ad_promotions')->insert([
             'ad_id' => $ad->id,
@@ -689,7 +698,7 @@ class AdController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
-        
+
         $newBalance = DB::table('users')->where('id', $user->id)->value('balance');
         return response()->json(['success' => true, 'balance' => $newBalance]);
     }
@@ -728,12 +737,12 @@ class AdController extends Controller
         DB::table('ad_views')->where('ad_id', $ad->id)->delete();
         DB::table('ad_clicks')->where('ad_id', $ad->id)->delete();
         DB::table('reports')->where('ad_id', $ad->id)->delete();
-        
+
         // Защита финансовой отчетности: отвязываем платежи, сохраняя их в истории транзакций
         DB::table('payments')->where('ad_id', $ad->id)->update(['ad_id' => null]);
 
         $ad->delete();
-        
+
         // Сбрасываем кэш SEO и главной страницы
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
@@ -786,12 +795,12 @@ class AdController extends Controller
                 while ($reader->read()) {
                     if ($reader->nodeType == \XMLReader::ELEMENT && $reader->name == 'ad') {
                         $adNode = new \SimpleXMLElement($reader->readOuterXml());
-                        
+
                     if ($count >= $availableQuota) {
                         \Illuminate\Support\Facades\Log::warning("Bulk upload quota reached for user " . $user->id);
                         break; // Останавливаем загрузку, если квота исчерпана
                     }
-                    
+
                     $catSlug = substr((string)$adNode->category, 0, 100);
                     if (!in_array($catSlug, $validCategories)) $catSlug = 'general'; // Fallback на общую категорию
 
@@ -808,7 +817,7 @@ class AdController extends Controller
                             'updated_at' => $now,
                         ];
                         $count++;
-                        
+
                         if (count($batch) >= $batchSize) {
                             Ad::insert($batch);
                             $batch = [];
@@ -816,7 +825,7 @@ class AdController extends Controller
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::warning("Skipped invalid XML row: " . $e->getMessage());
                     }
-                    
+
                     $reader->next(); // Пропускаем поддерево, чтобы освободить память
                     }
                 }
@@ -850,7 +859,7 @@ class AdController extends Controller
                                 'updated_at' => $now,
                             ];
                             $count++;
-                            
+
                             if (count($batch) >= $batchSize) {
                                 Ad::insert($batch);
                                 $batch = [];
@@ -863,12 +872,12 @@ class AdController extends Controller
                 fclose($handle);
             }
         }
-        
+
         // Вставляем остатки
         if (count($batch) > 0) {
             Ad::insert($batch);
         }
-        
+
         // Сбрасываем кэш, чтобы массово загруженные объявления сразу появились на сайте и в SEO-фидах
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
@@ -887,9 +896,9 @@ class AdController extends Controller
         if ($request->user()->role !== 'admin') {
             return response()->json(['message' => 'Acceso denegado'], 403);
         }
-        
+
         $ads = Ad::with('user:id,name')->where('status', 'pending')->latest()->paginate(50);
-        
+
         return response()->json($ads);
     }
 
@@ -952,7 +961,7 @@ class AdController extends Controller
                 ]);
                 return response()->json(['success' => true, 'views' => $ad->views]);
             }
-            
+
             return response()->json(['success' => true, 'views' => $ad->views, 'ignored' => true]);
         }
         return response()->json(['message' => 'Ad not found'], 404);
@@ -967,12 +976,12 @@ class AdController extends Controller
             'reason' => 'required|string|max:255',
             'comments' => 'nullable|string|max:1000'
         ]);
-        
+
         // Защита от сбоя целостности БД (Foreign Key Violation)
         if (!Ad::where('id', $id)->exists()) {
             return response()->json(['message' => 'Anuncio no encontrado'], 404);
         }
-        
+
         DB::table('reports')->insert([
             'ad_id' => $id,
             'user_id' => auth('sanctum')->id(), // Может быть null для гостей
@@ -992,7 +1001,7 @@ class AdController extends Controller
         $favoriteIds = DB::table('favorites')
             ->where('user_id', $request->user()->id)
             ->pluck('ad_id');
-            
+
         return response()->json($favoriteIds);
     }
 
@@ -1002,7 +1011,7 @@ class AdController extends Controller
     public function toggleFavorite(Request $request, $id)
     {
         $userId = $request->user()->id;
-        
+
         // Проверяем существует ли объявление
         $ad = Ad::find($id);
         if (!$ad || ($ad->status !== 'active' && $ad->user_id !== $userId)) {
@@ -1041,7 +1050,7 @@ class AdController extends Controller
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(500); // Защита UX: увеличиваем лимит, чтобы PRO-продавцы не теряли доступ к своим объявлениям (фронтенд пока не поддерживает кнопку "Загрузить еще" в дашборде)
-            
+
         return response()->json($ads);
     }
 
@@ -1058,7 +1067,7 @@ class AdController extends Controller
             })
             ->latest()
             ->paginate(500); // Увеличиваем лимит для корректного отображения в личном кабинете
-            
+
         return response()->json($ads);
     }
 
@@ -1118,12 +1127,12 @@ class AdController extends Controller
         $xml = Cache::remember('sitemap_xml', 3600, function () {
             // Оптимизация памяти (OOM): используем DB фасады для получения сырых объектов, вместо тяжелых моделей Eloquent
             $ads = DB::table('ads')->where('status', 'active')->latest()->limit(10000)->get(['id', 'updated_at', 'category']);
-            
+
             $content = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
             $content .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-            
+
             $content .= "   <url>\n      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/</loc>\n      <changefreq>always</changefreq>\n      <priority>1.0</priority>\n   </url>\n";
-            
+
             // SEO: Добавляем статические страницы в карту сайта
             $staticPages = ['terms', 'privacy', 'help', 'safety'];
             foreach ($staticPages as $page) {
@@ -1138,18 +1147,18 @@ class AdController extends Controller
                 $content .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/?cat=" . urlencode($category) . "</loc>\n";
                 $content .= "      <changefreq>hourly</changefreq>\n      <priority>0.9</priority>\n   </url>\n";
             }
-            
+
             foreach ($ads as $ad) {
                 $content .= "   <url>\n";
                 $content .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/?ad=" . $ad->id . "</loc>\n";
                 $content .= "      <lastmod>" . \Carbon\Carbon::parse($ad->updated_at)->toAtomString() . "</lastmod>\n";
                 $content .= "      <changefreq>daily</changefreq>\n      <priority>0.8</priority>\n   </url>\n";
             }
-            
+
             $content .= '</urlset>';
             return $content;
         });
-        
+
         return response($xml)->header('Content-Type', 'application/xml');
     }
 
@@ -1213,7 +1222,7 @@ class AdController extends Controller
     {
         $request->validate(['channel' => 'required|string']);
         $ad = Ad::findOrFail($id);
-        
+
         if ($ad->status !== 'active') {
             return response()->json(['message' => 'Anuncio inactivo', 'ignored' => true]);
         }
@@ -1238,7 +1247,7 @@ class AdController extends Controller
                 'updated_at' => now(),
             ]);
         }
-        
+
         return response()->json(['success' => true]);
     }
 
@@ -1293,7 +1302,7 @@ class AdController extends Controller
     {
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['query' => 'required|string']);
-        
+
         $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
         if (!$apiKey) {
             return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
@@ -1308,7 +1317,7 @@ class AdController extends Controller
 
         if ($response->successful()) {
             $sql = trim(str_replace(['```sql', '```', '`'], '', $response->json('candidates.0.content.parts.0.text')));
-            
+
             try {
                 if (!preg_match('/^\s*SELECT/i', $sql)) throw new \Exception("Solo se permiten consultas SELECT por seguridad.");
                 $data = DB::select($sql);
@@ -1322,7 +1331,7 @@ class AdController extends Controller
                 return response()->json(['agent' => '🐘 PostgreSQL DBA AI', 'error' => $e->getMessage(), 'sql' => $sql], 400);
             }
         }
-        
+
         return response()->json(['message' => 'Error al analizar la base de datos'], 500);
     }
 
@@ -1333,7 +1342,7 @@ class AdController extends Controller
     {
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['prompt' => 'required|string']);
-        
+
         $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
         if (!$apiKey) {
             return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
@@ -1353,7 +1362,7 @@ class AdController extends Controller
                 'status' => 'success'
             ]);
         }
-        
+
         return response()->json(['message' => 'Error al generar el componente'], 500);
     }
 
@@ -1364,7 +1373,7 @@ class AdController extends Controller
     {
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['query' => 'required|string']);
-        
+
         $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
         if (!$apiKey) {
             return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
@@ -1384,7 +1393,7 @@ class AdController extends Controller
                 'status' => 'success'
             ]);
         }
-        
+
         return response()->json(['message' => 'Error de conexión con el CEO'], 500);
     }
 
@@ -1395,7 +1404,7 @@ class AdController extends Controller
     {
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['query' => 'required|string']);
-        
+
         $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
         if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
 
@@ -1412,7 +1421,7 @@ class AdController extends Controller
                 'status' => 'success'
             ]);
         }
-        
+
         return response()->json(['message' => 'Error de conexión con el Marketer'], 500);
     }
 
@@ -1423,7 +1432,7 @@ class AdController extends Controller
     {
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['query' => 'required|string']);
-        
+
         $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
         if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
 
@@ -1440,7 +1449,7 @@ class AdController extends Controller
                 'status' => 'success'
             ]);
         }
-        
+
         return response()->json(['message' => 'Error de conexión con el SEO'], 500);
     }
 
@@ -1451,7 +1460,7 @@ class AdController extends Controller
     {
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['query' => 'required|string']);
-        
+
         $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
         if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
 
@@ -1468,7 +1477,7 @@ class AdController extends Controller
                 'status' => 'success'
             ]);
         }
-        
+
         return response()->json(['message' => 'Error de conexión con el CEO UI'], 500);
     }
 
@@ -1479,7 +1488,7 @@ class AdController extends Controller
     {
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         $request->validate(['query' => 'required|string']);
-        
+
         $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
         if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
 
@@ -1496,7 +1505,35 @@ class AdController extends Controller
                 'status' => 'success'
             ]);
         }
-        
+
         return response()->json(['message' => 'Error de conexión con el CEO UX'], 500);
+    }
+
+    /**
+     * AI Agent for UI Developer
+     */
+    public function askUiAgent(Request $request)
+    {
+        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
+        $request->validate(['query' => 'required|string']);
+
+        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
+        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
+
+        $prompt = "You are an expert UI Developer for Mercasto. Provide specific, actionable code and advice on styling, CSS, Tailwind v4 classes, and visual components. Use Russian language. Request: '{$request->query}'";
+
+        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
+            'contents' => [['parts' => [['text' => $prompt]]]]
+        ]);
+
+        if ($response->successful()) {
+            return response()->json([
+                'agent' => '✨ UI Разработчик',
+                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
+                'status' => 'success'
+            ]);
+        }
+
+        return response()->json(['message' => 'Error de conexión con el agente UI'], 500);
     }
 }

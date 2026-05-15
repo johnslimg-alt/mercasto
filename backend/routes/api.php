@@ -167,5 +167,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/agents/seo', [AdController::class, 'askSeoAgent']); // AI SEO Agent
         Route::post('/agents/ceo-ui', [AdController::class, 'askCeoUiAgent']); // AI CEO UI Agent
         Route::post('/agents/ceo-ux', [AdController::class, 'askCeoUxAgent']); // AI CEO UX Agent
+        Route::post('/agents/ui', [AdController::class, 'askUiAgent']); // AI UI Agent
     });
 });

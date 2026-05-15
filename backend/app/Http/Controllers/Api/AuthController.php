@@ -90,7 +90,10 @@ class AuthController extends Controller
 
         // Проверка, включена ли 2FA
         if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
-            return response()->json(['two_factor' => true]);
+            return response()->json([
+                'two_factor' => true,
+                'email' => $user->email,
+            ]);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;

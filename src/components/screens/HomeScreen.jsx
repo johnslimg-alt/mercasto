@@ -4,8 +4,9 @@ import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
 import SidebarFilters from '../common/SidebarFilters';
 
-export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categoriesData, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters }) {
+export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
+    const [showAllCategories, setShowAllCategories] = React.useState(false);
 
     // Заглушка (Fallback) на случай, если база данных категорий пуста
     const defaultCats = [
@@ -23,6 +24,29 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
       { slug: 'boletos', name: { es: 'Boletos' }, icon: 'Ticket' }
     ];
     const displayCategories = categoriesData && categoriesData.length > 0 ? categoriesData : defaultCats;
+    const trendingAds = React.useMemo(() => {
+      const seen = new Set();
+      return [...(serverAds || []), ...mockAds]
+        .filter(ad => {
+          if (!ad?.id || seen.has(ad.id)) return false;
+          seen.add(ad.id);
+          return true;
+        })
+        .slice(0, 12);
+    }, [serverAds]);
+    const applyCityFilter = React.useCallback((cityName) => {
+      setSearchLocation?.(null);
+      setSearchLocationInput?.(cityName);
+      setSelectedState(cityName);
+      executeSearch?.(null, cityName);
+      setCurrentTab('home');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [executeSearch, setCurrentTab, setSearchLocation, setSearchLocationInput, setSelectedState]);
+    const runSearch = React.useCallback((term = '', category = null) => {
+      if (category !== null) setActiveCat(category);
+      runSearch(term);
+      executeSearch?.(term);
+    }, [executeSearch, setActiveCat, setSearchQuery]);
 
     if (activeCat || searchQuery || selectedState) {
 
@@ -110,21 +134,21 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
         {/* 1. HERO STATS */}
 
-        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+        <div className="bg-white/75 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
 
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-3 flex flex-col md:flex-row md:items-center gap-3 justify-between">
 
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[13px] text-slate-700">
 
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] font-semibold">1,847,392</strong> {t.active_listings || 'anuncios activos'}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] dark:text-white font-semibold">1,847,392</strong> {t.active_listings || 'anuncios activos'}</span>
 
               <span className="text-slate-300 hidden sm:block">•</span>
 
-              <span><strong className="text-[#0F172A] font-semibold">247,103</strong> {t.users_online || 'usuarios en línea'}</span>
+              <span><strong className="text-[#0F172A] dark:text-white font-semibold">247,103</strong> {t.users_online || 'usuarios en línea'}</span>
 
               <span className="text-slate-300 hidden sm:block">•</span>
 
-              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-500" />{t.all_mexico || 'Todo México'}</span>
+              <span className="location-chip"><MapPin className="w-3.5 h-3.5" />{selectedState || t.all_mexico || 'Todo México'}</span>
 
             </div>
 
@@ -134,7 +158,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
               <button onClick={() => setActiveCat('empleo')} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50">{t.find_job || 'Buscar empleo'}</button>
 
-              <button onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery('renta'); }} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.rent_apt || 'Rentar depa'}</button>
+              <button onClick={() => { runSearch('renta', 'inmobiliaria'); }} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.rent_apt || 'Rentar depa'}</button>
 
               <button onClick={() => setActiveCat('servicios')} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.hire_service || 'Contratar servicio'}</button>
 
@@ -164,33 +188,33 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   <button className="text-[13px] font-medium text-slate-600 hover:text-slate-900 hidden sm:block">{t.sort_popular || 'Ordenar: Popular'}</button>
 
-                  <a className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer" onClick={() => setActiveCat('')}>{t.view_all_cat || 'Ver todas las categorías →'}</a>
+                  <a className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer" onClick={() => setShowAllCategories(prev => !prev)}>{showAllCategories ? (t.show_less || 'Ver menos') : (t.view_all_cat || 'Ver todas las categorías →')}</a>
 
                 </div>
 
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+              <div className="category-rail rail-fade -mx-4 px-4 lg:mx-0 lg:px-0">
 
-                {displayCategories.slice(0, 16).map(cat => {
+                {displayCategories.slice(0, showAllCategories ? displayCategories.length : 16).map(cat => {
 
                   const Icon = IconMap[cat.icon] || Star;
 
                   return (
 
-                    <div key={cat.slug} onClick={() => setActiveCat(cat.slug)} className="flex flex-col items-center justify-center snap-start shrink-0 w-[80px] sm:w-[90px] cursor-pointer group">
+                    <button key={cat.slug} onClick={() => setActiveCat(cat.slug)} className="category-pill group min-w-[150px] sm:min-w-[168px]">
 
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] group-hover:border-[#65A30D] group-hover:shadow-md transition-all mb-2">
+                      <div className="w-11 h-11 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] group-hover:bg-[#84CC16]/10 transition-all">
 
-                        <Icon size={24} className="sm:w-7 sm:h-7" />
+                        <Icon size={22} />
 
                       </div>
 
-                      <h3 className="font-medium text-[11px] sm:text-[12px] text-center text-slate-700 group-hover:text-[#65A30D] line-clamp-2 leading-tight px-1">
+                      <h3 className="font-semibold text-[13px] text-left text-slate-700 group-hover:text-[#365314] line-clamp-1 leading-tight">
                         {cat.name?.[lang] || cat.name?.['es'] || cat.name}
                       </h3>
 
-                    </div>
+                    </button>
 
                   );
 
@@ -232,7 +256,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2">
 
-                  {(serverAds.length > 0 ? serverAds : mockAds).slice(0, 12).map(ad => (
+                  {trendingAds.map(ad => (
 
                     <div key={ad.id} className="snap-start shrink-0 w-[260px]">
 
@@ -280,7 +304,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 </div>
 
-                <div className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
+                <div className="market-card rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
 
                   <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#84CC16]/10 rounded-full blur-2xl"></div>
 
@@ -306,7 +330,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 </div>
 
-                <div className="card bg-white dark:bg-slate-800 border-2 border-[#84CC16]/30 dark:border-[#84CC16]/20 rounded-3xl p-6 h-[190px] flex flex-col">
+                <div className="market-card border-2 border-[#84CC16]/30 rounded-3xl p-6 h-[190px] flex flex-col">
 
                   <span className="text-[11px] uppercase tracking-wider text-[#65A30D] font-semibold">{t.for_sellers || 'Para vendedores'}</span>
 
@@ -336,11 +360,11 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   <div className="hidden md:flex items-center gap-2">
 
-                    <button onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery('renta'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.rent || 'Rentar'}</button>
+                    <button onClick={() => { runSearch('renta', 'inmobiliaria'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.rent || 'Rentar'}</button>
 
-                    <button onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery('venta'); }} className="btn-sm bg-slate-900 text-white">{t.buy || 'Comprar'}</button>
+                    <button onClick={() => { runSearch('venta', 'inmobiliaria'); }} className="btn-sm bg-slate-900 text-white">{t.buy || 'Comprar'}</button>
 
-                    <button onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery('comercial'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.commercial || 'Comercial'}</button>
+                    <button onClick={() => { runSearch('comercial', 'inmobiliaria'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.commercial || 'Comercial'}</button>
 
                   </div>
 
@@ -358,7 +382,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                     {spotlightRealEstate.map((item, idx) => (
 
-                      <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer" onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery(item.specs); }}>
+                      <article key={idx} className="market-card overflow-hidden cursor-pointer" onClick={() => { runSearch(item.specs, 'inmobiliaria'); }}>
 
                         <div className="relative">
 
@@ -394,9 +418,9 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 <div className="col-span-12 xl:col-span-4">
 
-                  <div className="bg-white border border-slate-200 rounded-2xl h-full min-h-[360px] overflow-hidden relative">
+                  <div className="market-card h-full min-h-[360px] overflow-hidden relative">
 
-                    <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedState || 'México')}&t=&z=5&ie=UTF8&iwloc=&output=embed`} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)', position: 'absolute', top: 0, left: 0 }} className="opacity-40 pointer-events-none"></iframe>
+                    <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedState || 'México')}&t=&z=${selectedState ? 8 : 5}&ie=UTF8&iwloc=&output=embed`} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)', position: 'absolute', top: 0, left: 0 }} className="opacity-40 pointer-events-none"></iframe>
 
                     <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-transparent pointer-events-none"></div>
 
@@ -404,27 +428,27 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                       <div className="flex items-center justify-between">
 
-                        <h3 className="font-semibold">Todo México</h3>
+                        <h3 className="font-semibold">{selectedState || t.all_mexico || 'Todo México'}</h3>
 
-                        <button onClick={() => setActiveCat('inmobiliaria')} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">Ver estados</button>
+                        <button onClick={() => setActiveCat('inmobiliaria')} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">{t.open_map || 'Abrir mapa'}</button>
 
                       </div>
 
                       <div className="relative mt-6">
 
-                        <div className="absolute left-[20%] top-[40%]"><div className="w-8 h-8 rounded-full bg-[#84CC16] text-white flex items-center justify-center text-[11px] font-bold shadow-lg ring-4 ring-[#84CC16]/30 animate-pulse cursor-pointer" onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery('3.2M'); }}>$3.2M</div></div>
+                        <div className="absolute left-[20%] top-[40%]"><div className="w-8 h-8 rounded-full bg-[#84CC16] text-white flex items-center justify-center text-[11px] font-bold shadow-lg ring-4 ring-[#84CC16]/30 animate-pulse cursor-pointer" onClick={() => { runSearch('3.2M', 'inmobiliaria'); }}>$3.2M</div></div>
 
-                        <div className="absolute left-[55%] top-[25%]"><div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold shadow-lg cursor-pointer" onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery('1.8M'); }}>$1.8M</div></div>
+                        <div className="absolute left-[55%] top-[25%]"><div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold shadow-lg cursor-pointer" onClick={() => { runSearch('1.8M', 'inmobiliaria'); }}>$1.8M</div></div>
 
-                        <div className="absolute left-[70%] top-[60%]"><div className="w-8 h-8 rounded-full bg-[#84CC16] text-white flex items-center justify-center text-[11px] font-bold shadow-lg ring-4 ring-[#84CC16]/30 cursor-pointer" onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery('4.9M'); }}>$4.9M</div></div>
+                        <div className="absolute left-[70%] top-[60%]"><div className="w-8 h-8 rounded-full bg-[#84CC16] text-white flex items-center justify-center text-[11px] font-bold shadow-lg ring-4 ring-[#84CC16]/30 cursor-pointer" onClick={() => { runSearch('4.9M', 'inmobiliaria'); }}>$4.9M</div></div>
 
-                        <div className="absolute left-[35%] top-[70%]"><div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold shadow-lg cursor-pointer" onClick={() => { setActiveCat('inmobiliaria'); setSearchQuery('28k'); }}>$28k</div></div>
+                        <div className="absolute left-[35%] top-[70%]"><div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold shadow-lg cursor-pointer" onClick={() => { runSearch('28k', 'inmobiliaria'); }}>$28k</div></div>
 
                       </div>
 
                       <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur rounded-xl p-3 border border-slate-200">
 
-                        <div className="flex items-center justify-between text-[12px]"><span className="font-medium">Todos los estados y ciudades de México</span><span onClick={() => setSelectedState('')} className="text-[#65A30D] font-semibold cursor-pointer hover:underline">Ver todo →</span></div>
+                        <div className="flex items-center justify-between text-[12px]"><span className="font-medium">{selectedState ? `Propiedades en ${selectedState}` : 'Propiedades en todo México'}</span><span onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="text-[#65A30D] font-semibold cursor-pointer hover:underline">{t.view_all_mexico || 'Ver todo México'} →</span></div>
 
                       </div>
 
@@ -450,9 +474,9 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 <div className="flex items-center gap-2">
 
-                  <button onClick={() => { setActiveCat('empleo'); setSearchQuery('Remoto'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.remote_only || 'Solo remoto'}</button>
+                  <button onClick={() => { runSearch('Remoto', 'empleo'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.remote_only || 'Solo remoto'}</button>
 
-                  <button onClick={() => { setActiveCat('empleo'); setSearchQuery('Tiempo Completo'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.full_time || 'Tiempo completo'}</button>
+                  <button onClick={() => { runSearch('Tiempo Completo', 'empleo'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.full_time || 'Tiempo completo'}</button>
 
                   <a onClick={() => setActiveCat('empleo')} className="text-[13px] font-semibold text-[#65A30D] hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
 
@@ -476,7 +500,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                       {jobsBoard.map((job, idx) => (
 
-                        <tr key={idx} className="hover:bg-slate-50 cursor-pointer" onClick={() => { setActiveCat('empleo'); setSearchQuery(job.role); }}>
+                        <tr key={idx} className="hover:bg-slate-50 cursor-pointer" onClick={() => { runSearch(job.role, 'empleo'); }}>
 
                           <td className="px-4 py-3">
 
@@ -562,7 +586,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 {servicesMarketplace.map((srv, idx) => (
 
-                  <div key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => { setActiveCat('servicios'); setSearchQuery(srv.title); }}>
+                  <div key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => { runSearch(srv.title, 'servicios'); }}>
 
                     <div className="flex items-start gap-3">
 
@@ -610,15 +634,15 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 <div className="flex items-center gap-2">
 
-                  <button onClick={() => { setActiveCat('motor'); setSearchQuery(''); }} className="btn-sm bg-slate-900 text-white">{t.all || 'Todos'}</button>
+                  <button onClick={() => { runSearch('', 'motor'); }} className="btn-sm bg-slate-900 text-white">{t.all || 'Todos'}</button>
 
-                  <button onClick={() => { setActiveCat('motor'); setSearchQuery('Nissan'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">Nissan</button>
+                  <button onClick={() => { runSearch('Nissan', 'motor'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">Nissan</button>
 
-                  <button onClick={() => { setActiveCat('motor'); setSearchQuery('VW'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">VW</button>
+                  <button onClick={() => { runSearch('VW', 'motor'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">VW</button>
 
-                  <button onClick={() => { setActiveCat('motor'); setSearchQuery('Toyota'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">Toyota</button>
+                  <button onClick={() => { runSearch('Toyota', 'motor'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">Toyota</button>
 
-                  <button onClick={() => { setActiveCat('motor'); setSearchQuery('Honda'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:inline-flex">Honda</button>
+                  <button onClick={() => { runSearch('Honda', 'motor'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:inline-flex">Honda</button>
 
                   <span className="w-px h-5 bg-slate-300 mx-1 hidden sm:block"></span>
 
@@ -634,7 +658,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 {automotiveDeals.map((car, idx) => (
 
-                  <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer" onClick={() => { setActiveCat('motor'); setSearchQuery(car.title); }}>
+                  <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer" onClick={() => { runSearch(car.title, 'motor'); }}>
 
                     <img src={car.img} loading="lazy" className="w-full h-140px] object-cover" alt=""/>
 
@@ -680,7 +704,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 {recentlyViewed.map((item, idx) => (
 
-                  <div key={idx} className="bg-white border border-slate-200 rounded-xl p-2.5 flex gap-2.5 items-center hover:shadow-sm cursor-pointer" onClick={() => setSearchQuery(item.name)}>
+                  <div key={idx} className="bg-white border border-slate-200 rounded-xl p-2.5 flex gap-2.5 items-center hover:shadow-sm cursor-pointer" onClick={() => runSearch(item.name)}>
 
                     <img src={item.img} loading="lazy" className="w-14 h-14 rounded-lg object-cover" alt=""/>
 
@@ -910,7 +934,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   {['iphone 15', 'samsung s24', 'departamento renta cdmx', 'casa venta guadalajara', 'honda civic', 'toyota corolla', 'trabajo remoto', 'recepcionista', 'nintendo switch', 'ps5', 'macbook', 'trabajo medio tiempo', 'bicicleta', 'escritorio', 'sala', 'refrigerador', 'lavadora', 'golden retriever', 'gatitos', 'terreno', 'local comercial', 'moto italika', 'yamaha', 'abogado', 'contador', 'plomero', 'electricista', 'clases ingles', 'uber carro', 'airbnb amueblado'].map(term => (
 
-                    <a key={term} onClick={() => setSearchQuery(term)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[13px] cursor-pointer">{term}</a>
+                    <a key={term} onClick={() => runSearch(term)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[13px] cursor-pointer">{term}</a>
 
                   ))}
 
@@ -930,7 +954,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 <h3 className="font-bold text-[17px]">{t.explore_city || 'Explorar por ciudad'}</h3>
 
-                <a onClick={() => setSelectedState('')} className="text-[13px] font-medium text-slate-600 hover:text-slate-900 cursor-pointer">{t.view_all_mexico || 'Ver todo México →'}</a>
+                <a onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="text-[13px] font-medium text-slate-600 hover:text-slate-900 cursor-pointer">{t.view_all_mexico || 'Ver todo México →'}</a>
 
               </div>
 
@@ -938,7 +962,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 {[
 
-                  { name: 'Ciudad de México', count: '284,392' },
+                  { name: 'Ciudad de México', count: '284,392', highlight: true },
 
                   { name: 'Guadalajara', count: '198,445' },
 
@@ -949,7 +973,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
                   { name: 'Tijuana', count: '76,551' },
 
                   { name: 'Aguascalientes', count: '47,882', highlight: true },
-                  { name: 'Puerto Vallarta', count: '45,118' },
+                  { name: 'San Luis Potosí', count: '47,882' },
 
                   { name: 'Cancún', count: '58,992' },
 
@@ -981,7 +1005,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 ].map(city => (
 
-                  <a key={city.name} onClick={() => setSelectedState(city.name)} className={`bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 hover:shadow-sm flex justify-between items-center cursor-pointer ${city.highlight ? 'ring-2 ring-[#84CC16]/40' : ''}`}>
+                  <a key={city.name} onClick={() => applyCityFilter(city.name)} className={`bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 hover:shadow-sm flex justify-between items-center cursor-pointer ${city.highlight ? 'ring-2 ring-[#84CC16]/40' : ''}`}>
 
                     <span className={`text-[14px] ${city.highlight ? 'font-medium' : ''}`}>{city.name}</span>
 

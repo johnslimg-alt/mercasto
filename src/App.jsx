@@ -3,8 +3,8 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import { translations } from './constants/mockData';
 import ChartTooltip from './components/common/ChartTooltip';
 import AdSenseBanner from './components/common/AdSenseBanner';
-import { 
-  Search, Home, PlusCircle, User, Users, Settings, Shield, 
+import {
+  Search, Home, PlusCircle, User, Users, Settings, Shield,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
   CheckCircle, XCircle, BarChart3, LogOut, Globe, Sparkles, Loader2, Play, Video, Phone, AlertTriangle, Activity,
   Car, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Pencil, Moon, Sun, BadgeCheck,
@@ -24,7 +24,7 @@ class ErrorBoundary extends React.Component {
   }
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
-    
+
     // Автоматическая защита от устаревшего кэша Vite (после новых деплоев)
     if (error && error.message && error.message.includes('Failed to fetch dynamically imported module')) {
       // Принудительно перезагружаем страницу, чтобы получить новые файлы с сервера
@@ -67,7 +67,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
 
 const getImageUrl = (path, fallback = null) => {
-  if (!path) return fallback || 'https://placehold.co/600x400?text=No+Image';
+  if (!path) return fallback || '/placeholder-ad.svg';
   if (path.startsWith('http') || path.startsWith('data:')) return path;
   if (path.startsWith('[')) {
     try {
@@ -218,14 +218,14 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [activeCat, setActiveCat] = useState(''); // Фильтр по категории
-  
+
   // Состояния для динамической фильтрации (EAV JSON)
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [conditionFilter, setConditionFilter] = useState([]);
   const [dynamicFilters, setDynamicFilters] = useState({});
-  
-  const [viewedAd, setViewedAd] = useState(null); 
+
+  const [viewedAd, setViewedAd] = useState(null);
   const [viewedCompany, setViewedCompany] = useState(null);
   const [companyAds, setCompanyAds] = useState([]);
   const [loadingCompanyAds, setLoadingCompanyAds] = useState(false);
@@ -233,13 +233,13 @@ function App() {
   const [companyRatingStats, setCompanyRatingStats] = useState({ average: 0, total: 0 });
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
-  
+
   // Защита от фатального "Белого экрана смерти" (WSOD) при повреждении localStorage
   const getSafeUser = () => {
-    try { return JSON.parse(localStorage.getItem('user')) || null; } 
+    try { return JSON.parse(localStorage.getItem('user')) || null; }
     catch (e) { localStorage.removeItem('user'); return null; }
   };
-  const [user, setUser] = useState(getSafeUser()); 
+  const [user, setUser] = useState(getSafeUser());
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [resetToken, setResetToken] = useState('');
@@ -251,7 +251,7 @@ function App() {
 
   const [accountType, setAccountType] = useState('particular');
   const [userRole, setUserRole] = useState('admin');
-  
+
   const [form, setForm] = useState({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
   const [debouncedLocation, setDebouncedLocation] = useState('');
   const [isMapUpdating, setIsMapUpdating] = useState(false);
@@ -261,7 +261,7 @@ function App() {
   const [videoFile, setVideoFile] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [priceTab, setPriceTab] = useState(accountType); 
+  const [priceTab, setPriceTab] = useState(accountType);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [analyticsData, setAnalyticsData] = useState([]);
   const [analyticsDays, setAnalyticsDays] = useState(7);
@@ -344,7 +344,7 @@ function App() {
   const [showUserReportModal, setShowUserReportModal] = useState(false);
   const [userReportForm, setUserReportForm] = useState({ reason: '', comments: '' });
   const [authPhone, setAuthPhone] = useState('');
-  
+
   // --- AI COMMAND CENTER STATE ---
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiAgentType, setAiAgentType] = useState('postgresql');
@@ -364,7 +364,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [debouncedLocInput, setDebouncedLocInput] = useState('');
-  
+
   // FIX: Функция executeSearch отсутствовала, что приводило к фатальному сбою (WSOD) при нажатии Enter
   const executeSearch = useCallback((overrideSearch = null, overrideLoc = null) => {
     setDebouncedSearch(typeof overrideSearch === 'string' ? overrideSearch : searchQuery);
@@ -386,6 +386,11 @@ function App() {
       e.target.parentElement.classList.remove('bg-slate-200', 'dark:bg-slate-800');
     }
   }, []);
+  const handleAdImageError = useCallback((e) => {
+    if (e.currentTarget.src.endsWith('/placeholder-ad.svg')) return;
+    e.currentTarget.src = '/placeholder-ad.svg';
+    handleAdImageLoad(e);
+  }, [handleAdImageLoad]);
 
   // Защита от "Ловушки интерфейса" (Modal State Trap):
   // Сбрасываем все внутренние состояния авторизации, когда пользователь закрывает окно,
@@ -417,7 +422,7 @@ function App() {
     });
     if (node) observer.current.observe(node);
   }, [loadingAds, loadingMore, hasMore, currentPage]);
-  
+
   // --- СОСТОЯНИЕ ТЕМНОЙ ТЕМЫ ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -468,7 +473,7 @@ function App() {
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } });
-      
+
       if (res.ok) {
         const userData = await res.json();
         const exportData = {
@@ -503,7 +508,7 @@ function App() {
     const adIdParam = urlParams.get('ad');
     const companyIdParam = urlParams.get('store');
     const hash = window.location.hash;
-    
+
     let targetAdId = null;
     let targetCompanyId = null;
 
@@ -545,7 +550,7 @@ function App() {
     const rEmail = params.get('email');
     const eToken = params.get('email_token');
     const paymentStatus = params.get('payment');
-    const oauthChallenge = params.get('oauth_challenge');
+    const oauthChallenge = params.get('oauth_challenge') || params.get('oauth_2fa');
     const oauthCode = params.get('oauth_code');
 
     // Обработка возврата с платежного шлюза
@@ -601,7 +606,11 @@ function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (oauthChallenge) {
       setTwoFactorChallengeToken(oauthChallenge);
-      setTwoFactorEmail('');
+      try {
+        setTwoFactorEmail(window.atob(oauthChallenge));
+      } catch {
+        setTwoFactorEmail('');
+      }
       setRequiresTwoFactor(true);
       setAuthMode('login');
       setShowAuthModal(true);
@@ -629,15 +638,34 @@ function App() {
           alert('Error de autenticación con Google');
         });
     } else if (params.get('token')) {
+      const token = params.get('token');
       window.history.replaceState({}, document.title, window.location.pathname);
-      alert('Ese enlace de autenticación ya no es válido. Inicia sesión de nuevo.');
+      localStorage.setItem('auth_token', token);
+
+      fetch(`${API_URL}/user`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.ok ? res.json() : Promise.reject('Failed to load user'))
+      .then(userData => {
+        setUser(userData);
+        setUserRole(userData.role || 'individual');
+        localStorage.setItem('user', JSON.stringify(userData));
+        setShowAuthModal(false);
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error al cargar el perfil. Inicia sesión de nuevo.');
+      });
     } else if (error) {
       alert('Error de autenticación con Google');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
-  useEffect(() => { localStorage.setItem('lang', lang); }, [lang]);
+  useEffect(() => {
+    localStorage.setItem('lang', lang);
+    document.documentElement.lang = lang;
+  }, [lang]);
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
 
   useEffect(() => { setDashboardPage(1); }, [dashboardTab, adStatusFilter]);
@@ -662,7 +690,7 @@ function App() {
   useEffect(() => {
     let title = "Mercasto | Compra, Vende y Renta en Todo México";
     let desc = "Únete a Mercasto, el mercado local de crecimiento más rápido en México. Compra autos, renta departamentos, busca empleo y ofrece servicios cerca de ti.";
-    
+
     if (viewedAd) {
       title = `${viewedAd.title} - ${viewedAd.location?.split(',')[0]} | Mercasto`;
       desc = viewedAd.description ? viewedAd.description.substring(0, 160) : desc;
@@ -692,7 +720,7 @@ function App() {
   useEffect(() => {
     if (user?.id && echo) {
         const channel = echo.private(`App.Models.User.${user.id}`);
-        
+
         channel.listen('.NewNotification', (e) => {
             console.log('Real-time event received:', e);
             // The actual notification data is inside e.notification
@@ -799,12 +827,12 @@ function App() {
         });
       } catch (e) {}
     }
-    
+
     // Автоматически обновляем подписку, если пользователь уже разрешил уведомления
     if (user && Notification.permission === 'granted') {
        subscribeToPush();
     }
-    
+
   }, [user]);
 
   const loadUserAds = useCallback(async () => {
@@ -916,7 +944,7 @@ function App() {
     if (debouncedSearch) params.append('search', debouncedSearch);
     if (activeCat) params.append('category', activeCat);
     if (selectedState && !searchLocation && !debouncedLocInput) params.append('location', selectedState);
-        
+
         // Прикрепляем значения глобальных фильтров и EAV-атрибутов для Laravel Controller
         if (minPrice) params.append('min_price', minPrice);
         if (maxPrice) params.append('max_price', maxPrice);
@@ -938,7 +966,7 @@ function App() {
         setCurrentPage(data.current_page || 1);
         setHasMore(data.last_page ? data.current_page < data.last_page : false);
       }
-    } catch (err) { console.error("Error fetching ads", err); } 
+    } catch (err) { console.error("Error fetching ads", err); }
     finally { setLoadingAds(false); setLoadingMore(false); }
   }, [debouncedSearch, debouncedLocInput, activeCat, selectedState, searchLocation, radius, minPrice, maxPrice, conditionFilter, dynamicFilters]); // Защита от бага Stale Closure в React
 
@@ -975,7 +1003,7 @@ function App() {
         // Фикс белого экрана: Laravel возвращает { data: [...] } при пагинации
         setAdminUsers(data.data || (Array.isArray(data) ? data : []));
       }
-    } catch (err) { console.error("Error fetching users", err); } 
+    } catch (err) { console.error("Error fetching users", err); }
     finally { setLoadingAdminUsers(false); }
   }, [adminUserSearch]);
 
@@ -1004,8 +1032,8 @@ function App() {
     if (!window.confirm(`¿Cambiar rol a ${newRole}?`)) return;
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`${API_URL}/users/${id}/role`, { 
-        method: 'POST', 
+      const res = await fetch(`${API_URL}/users/${id}/role`, {
+        method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole })
       });
@@ -1156,13 +1184,13 @@ function App() {
       const token = localStorage.getItem('auth_token');
       const method = editingCatId ? 'PUT' : 'POST';
       const url = editingCatId ? `${API_URL}/categories/${editingCatId}` : `${API_URL}/categories`;
-      
+
       const res = await fetch(url, {
         method,
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(adminCatForm)
       });
-      
+
       if (res.ok) {
         const catRes = await fetch(`${API_URL}/categories`);
         setCategoriesData(await catRes.json());
@@ -1192,7 +1220,7 @@ function App() {
     setAuthLoading(true);
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
-    
+
     try {
       let endpoint = '';
       if (authMode === 'register') endpoint = '/register';
@@ -1209,7 +1237,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      
+
       const result = await res.json();
 
       if (res.ok) {
@@ -1234,11 +1262,11 @@ function App() {
       } else {
         alert(result.message || result.error || "Credenciales incorrectas");
       }
-    } catch (err) { 
-      console.error("Auth error", err); 
+    } catch (err) {
+      console.error("Auth error", err);
       alert("Error de conexión");
-    } finally { 
-      setAuthLoading(false); 
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -1254,6 +1282,7 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          email: data.email,
           challenge_token: twoFactorChallengeToken,
           code: data.code,
         })
@@ -1328,7 +1357,7 @@ function App() {
     // FIX: Ghost UI. Сбрасываем открытое объявление/магазин при выходе
     setViewedAd(null);
     setViewedCompany(null);
-    
+
     // Защита от Logout Blackhole: дожидаемся отзыва токена на сервере, прежде чем перезагружать страницу, иначе браузер оборвет запрос
     if (token) {
       await fetch(`${API_URL}/logout`, {
@@ -1336,7 +1365,7 @@ function App() {
         headers: { 'Authorization': `Bearer ${token}` }
       }).catch(err => console.error('Logout revoke error:', err));
     }
-    
+
     // UX Оптимизация: Используем мягкий сброс SPA вместо жесткой перезагрузки страницы
     setCurrentTab('home');
     window.scrollTo(0, 0);
@@ -1440,7 +1469,7 @@ function App() {
       if (res.ok) {
         setUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
-        
+
         if (notificationsForm.push_notifications) {
            subscribeToPush();
         } else {
@@ -1454,7 +1483,7 @@ function App() {
 
   const handleDeleteAccount = async () => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar tu cuenta? Esta acción eliminará todos tus anuncios permanentemente y no se puede deshacer.')) return;
-    
+
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/user`, {
@@ -1535,11 +1564,11 @@ function App() {
 
   const handlePostSubmit = async (e) => {
     e.preventDefault();
-    if (!user) { 
-      setShowAuthModal(true); 
-      return; 
+    if (!user) {
+      setShowAuthModal(true);
+      return;
     }
-    
+
     setPostLoading(true);
     const formData = new FormData();
     formData.append('title', form.title);
@@ -1548,7 +1577,7 @@ function App() {
     formData.append('location', form.location || 'México');
     formData.append('category', form.category || 'general');
     if (user && user.id) formData.append('user_id', user.id);
-    
+
     // Добавляем динамические атрибуты (EAV JSON)
     if (form.attributes) {
       Object.keys(form.attributes).forEach(key => {
@@ -1579,14 +1608,14 @@ function App() {
       const token = localStorage.getItem('auth_token');
       const isUpdating = !!editingAd;
       const endpoint = isUpdating ? `${API_URL}/ads/${editingAd.id}` : `${API_URL}/ads`;
-      
+
       // Для обновлений Laravel может имитировать PUT/PATCH с полем _method, но мы определили маршрут POST.
       // Поэтому мы просто отправляем POST на эндпоинт обновления.
 
-      const res = await fetch(endpoint, { 
-        method: 'POST', 
+      const res = await fetch(endpoint, {
+        method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        body: formData 
+        body: formData
       });
 
       if (res.ok) {
@@ -1609,7 +1638,7 @@ function App() {
         const errorData = await res.json();
         alert(`Error: ${errorData.message || 'Ошибка при сохранении объявления.'}`);
       }
-    } catch (err) { console.error("Post error"); } 
+    } catch (err) { console.error("Post error"); }
     finally { setPostLoading(false); }
   };
 
@@ -1666,7 +1695,7 @@ function App() {
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ channel: 'whatsapp' })
     }).catch(err => console.log("Analytics error", err));
-      
+
       // GTM Event push para conversiones
       if (typeof window !== 'undefined') {
         window.dataLayer = window.dataLayer || [];
@@ -1696,7 +1725,7 @@ function App() {
         const errData = await res.json();
         alert(`Error: ${errData.message}`);
       }
-    } catch (err) { console.error("Review error", err); alert('Error de conexión'); } 
+    } catch (err) { console.error("Review error", err); alert('Error de conexión'); }
     finally { setSubmittingReview(false); }
   };
 
@@ -1743,7 +1772,7 @@ function App() {
     // Оптимистичное обновление UI
     setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: newStatus } : a));
     setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: newStatus } : a));
-    
+
     try {
       const token = localStorage.getItem('auth_token');
       await fetch(`${API_URL}/ads/${ad.id}/status`, {
@@ -1761,7 +1790,7 @@ function App() {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/ads/${reportingAd.id}/report`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -1782,7 +1811,7 @@ function App() {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/users/${viewedCompany.id}/report`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -1821,7 +1850,7 @@ function App() {
       } else alert('Error al generar el pago');
     } catch (err) { console.error("Payment error", err); alert('Error de conexión'); }
   };
-  
+
   // --- AI COMMAND CENTER LOGIC ---
   const handleAiSubmit = async (e) => {
     e.preventDefault();
@@ -1830,16 +1859,21 @@ function App() {
     setAiResult(null);
     try {
       const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setAiResult({ error: '🚨 Системная ошибка: Токен авторизации не найден (Unauthenticated). Пожалуйста, выйдите из аккаунта и зайдите снова.' });
+        setIsAiProcessing(false);
+        return;
+      }
       const endpoints = { postgresql: '/agents/postgresql', react: '/agents/react', ceo: '/agents/ceo', lawyer: '/agents/lawyer', notary: '/agents/notary', advocate: '/agents/advocate', marketing: '/agents/marketing', seo: '/agents/seo', ceo_ui: '/agents/ceo-ui', ceo_ux: '/agents/ceo-ux', ui: '/agents/ui' };
       const endpoint = endpoints[aiAgentType] || '/agents/ceo';
       const payload = aiAgentType === 'react' ? { prompt: aiPrompt } : { query: aiPrompt };
-      
+
       const res = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       let data;
       const text = await res.text();
       try {
@@ -1847,7 +1881,7 @@ function App() {
       } catch (e) {
         data = { error: `HTTP ${res.status}: ${text.substring(0, 100)}` };
       }
-      
+
       if (!res.ok && !data.error && data.message) {
         data.error = data.message;
       }
@@ -1903,7 +1937,7 @@ function App() {
         setShowCouponModal(false);
         setCouponInput('');
         const updatedUser = { ...user, balance: data.balance };
-        setUser(updatedUser); 
+        setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
     } catch (e) { console.error(e); alert('Error de conexión'); }
@@ -1953,9 +1987,9 @@ function App() {
     const safeImage = getImageUrl(ad.image_url, ad.image);
 
     return (
-      <article key={ad.id} onClick={() => handleViewAd(ad)} className="card bg-white border border-slate-200 rounded-2xl overflow-hidden cursor-pointer group flex flex-col h-full shrink-0">
+      <article key={ad.id} onClick={() => handleViewAd(ad)} className="market-card overflow-hidden cursor-pointer group flex flex-col h-full shrink-0">
         <div className="relative bg-slate-200 dark:bg-slate-800">
-          <img src={safeImage} loading="lazy" className="w-full h-[160px] md:h-[180px] object-cover group-hover:scale-105 transition-transform duration-500 opacity-0 transition-opacity duration-300" onLoad={handleAdImageLoad} alt={ad.title}/>
+          <img src={safeImage} loading="lazy" className="w-full h-[160px] md:h-[180px] object-cover group-hover:scale-105 transition-transform duration-500 opacity-0 transition-opacity duration-300" onLoad={handleAdImageLoad} onError={handleAdImageError} alt={ad.title}/>
           <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white z-10">
             <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700'}`} />
           </button>
@@ -1963,9 +1997,9 @@ function App() {
           {!isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
           {!isDestacado && !isUrgente && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
         </div>
-        <div className="p-3.5 flex flex-col flex-1 relative bg-white z-10">
-          <div className="text-[20px] font-bold leading-none">${Number(ad.price).toLocaleString()} <span className="text-[11px] font-medium text-slate-500">MXN</span></div>
-          <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1">{ad.title}</h3>
+        <div className="p-3.5 flex flex-col flex-1 relative bg-white z-10 text-[#0F172A]">
+          <div className="text-[20px] font-bold leading-none text-[#0F172A]">${Number(ad.price).toLocaleString()} <span className="text-[11px] font-medium text-slate-500">MXN</span></div>
+          <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700">{ad.title}</h3>
           <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500">
             <span className="truncate pr-2">{ad.location?.split(',')[0] || 'México'}</span>
           </div>
@@ -2001,7 +2035,7 @@ function App() {
   const renderQRModal = () => {
     if (!qrModalData) return null;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrModalData)}`;
-    
+
     return (
       <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setQrModalData(null)}>
         <div className="bg-white rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95 flex flex-col items-center max-w-sm w-full" onClick={e => e.stopPropagation()}>
@@ -2096,7 +2130,7 @@ function App() {
               <span className="text-[12px] text-slate-400">Автономные Агенты Mercasto</span>
             </div>
           </div>
-          
+
           {/* Dynamic Placeholders Helper */}
           {(() => {
             window.aiPlaceholders = {
@@ -2241,7 +2275,7 @@ function App() {
   const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
-  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
+  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
@@ -2272,7 +2306,7 @@ function App() {
         <div className="bg-white w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
           <button onClick={() => setShowProfileModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
           <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900">Editar Perfil</h2>
-          
+
           <form onSubmit={handleProfileSubmit} className="space-y-5">
             <div className="flex flex-col items-center mb-6">
               <div className="w-24 h-24 rounded-full bg-slate-100 mb-3 overflow-hidden relative group border border-slate-200">
@@ -2328,27 +2362,27 @@ function App() {
 
   return (
     <div className="w-full min-h-screen bg-[var(--paper)] font-sans text-[var(--ink)] selection:bg-[#84CC16]/20">
-      
+
       {/* GLOBAL HEADER */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200">
+      <header className="sticky top-0 z-40 bg-white/[0.92] backdrop-blur-2xl border-b border-slate-200 shadow-sm shadow-slate-200/60">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
           <div className="flex items-center gap-3 h-[68px]">
             <a href="#" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
               <MercastoLogo />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
-              <div className="flex w-full max-w-[820px] items-center bg-white border border-slate-300 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-[#84CC16]/30 focus-within:border-[#84CC16]">
+              <div className="flex w-full max-w-[860px] items-center bg-white border border-slate-200 rounded-2xl shadow-sm shadow-slate-200/70 focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
               <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
-                
+
                 {/* КАСТОМНЫЙ ПОПАП ВЫБОРА ЛОКАЦИИ (ШТАТ + ГОРОД) */}
                 <div className="relative flex items-center w-full max-w-[220px]">
                   <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
                   <button onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2.5 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
-                    {searchLocationInput || t.location_placeholder || "Estado y Ciudad"}
+                    {searchLocationInput || t.all_mexico || "Todo México"}
                   </button>
-                  
+
                   {showLocationPicker && (
                     <div className="absolute top-full left-0 mt-3 w-[260px] bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50">
                       <div className="mb-3">
@@ -2367,21 +2401,25 @@ function App() {
                     </div>
                       <div className="flex gap-2">
                         <button onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
-                      <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowLocationPicker(false); executeSearch(null, query); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                      <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowLocationPicker(false); executeSearch(null, query); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="h-7 w-px bg-slate-200"></div>
-                <select value={radius} onChange={e => setRadius(Number(e.target.value))} className="bg-transparent px-3 py-2.5 text-[13px] outline-none text-slate-700 w-fit cursor-pointer">
-                  <option value={5}>+5 km</option>
-                  <option value={10}>+10 km</option>
-                  <option value={25}>+25 km</option>
-                  <option value={50}>+50 km</option>
-                  <option value={100}>+100 km</option>
-                </select>
-              <button onClick={executeSearch} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5">
+                {searchLocation?.lat && (
+                  <>
+                    <div className="h-7 w-px bg-slate-200"></div>
+                    <select value={radius} onChange={e => setRadius(Number(e.target.value))} className="bg-transparent px-3 py-2.5 text-[13px] outline-none text-slate-700 w-fit cursor-pointer">
+                      <option value={5}>+5 km</option>
+                      <option value={10}>+10 km</option>
+                      <option value={25}>+25 km</option>
+                      <option value={50}>+50 km</option>
+                      <option value={100}>+100 km</option>
+                    </select>
+                  </>
+                )}
+              <button onClick={executeSearch} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn || "Buscar"}
                 </button>
@@ -2391,7 +2429,7 @@ function App() {
               <button onClick={() => setIsDarkMode(!isDarkMode)} className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100/50 hover:bg-slate-200/50 border border-slate-200/50 text-slate-500 hover:text-slate-900 transition-colors mr-1">
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <div className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 bg-slate-100/50 px-2 py-1 rounded-lg border border-slate-200/50">
+              <div className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 bg-slate-100/70 px-2.5 py-1.5 rounded-xl border border-slate-200/70">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
                 <select value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
                   {Object.keys(translations).map(l => (
@@ -2399,7 +2437,7 @@ function App() {
                   ))}
                 </select>
               </div>
-              <div className="relative">
+              <div className="relative hidden sm:block">
               <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="relative p-2.5 hover:bg-slate-100 rounded-xl text-slate-700">
                   <Bell className="w-[22px] h-[22px]" />
                   {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
@@ -2429,11 +2467,11 @@ function App() {
                   </div>
                 )}
               </div>
-            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="relative p-2.5 hover:bg-slate-100 rounded-xl">
+            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="relative p-2.5 hover:bg-slate-100 rounded-xl hidden sm:block">
                 <Heart className="w-[22px] h-[22px] text-slate-700" />
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
-            <button onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="flex items-center gap-2 pl-1 pr-2.5 py-1 hover:bg-slate-100 rounded-xl">
+            <button onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="hidden sm:flex items-center gap-2 pl-1 pr-2.5 py-1 hover:bg-slate-100 rounded-xl">
                 {user?.avatar_url ? (
                   <img src={getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-lg object-cover" alt=""/>
                 ) : (
@@ -2448,16 +2486,16 @@ function App() {
           </div>
           {/* Mobile Search & Location */}
           <div className="lg:hidden pb-3 flex flex-col gap-2">
-            <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
+            <div className="flex items-center gap-2 bg-slate-100 rounded-2xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
               <Search className="w-4 h-4 text-slate-500" />
             <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent w-full text-sm outline-none"/>
             </div>
-            
+
             {/* МОБИЛЬНЫЙ ВЫБОР ЛОКАЦИИ */}
             <div className="relative">
-              <div onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-2.5 cursor-pointer">
+              <div onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="flex items-center gap-2 bg-slate-100 rounded-2xl px-3 py-2.5 cursor-pointer">
                 <MapPin className="w-4 h-4 text-slate-500" />
-                <span className={`text-sm ${searchLocationInput ? 'text-slate-900' : 'text-slate-500'}`}>{searchLocationInput || t.location_placeholder_short || "Ubicación o Estado"}</span>
+                <span className={`text-sm ${searchLocationInput ? 'text-slate-900' : 'text-slate-500'}`}>{searchLocationInput || t.all_mexico || "Todo México"}</span>
               </div>
               {showMobileLocationPicker && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50">
@@ -2471,7 +2509,7 @@ function App() {
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
-                <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocationInput(query); setSelectedState(locState); setShowMobileLocationPicker(false); executeSearch(null, query); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
+                <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowMobileLocationPicker(false); executeSearch(null, query); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
                 </div>
               )}
             </div>
@@ -2479,7 +2517,7 @@ function App() {
         </div>
         <div className="border-t border-slate-100 bg-white">
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-            <nav className="flex items-center gap-6 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600">
+            <nav className="flex items-center gap-6 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600 whitespace-nowrap">
               <a onClick={() => setActiveCat('')} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === '' ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{t.all || 'All'}</a>
               {categoriesData.map(c => (
                 <a key={c.slug} onClick={() => setActiveCat(c.slug)} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === c.slug ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{getCatName(c, lang)}</a>
@@ -2571,7 +2609,7 @@ function App() {
             <div className="bg-white w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
               <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
               <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900">Acceso con Teléfono</h2>
-              
+
               {authMode === 'phone_request' ? (
                 <form onSubmit={handlePhoneRequestSubmit} className="space-y-3.5">
                   <input name="phone_number" required type="tel" placeholder="Número de teléfono" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"/>
@@ -2605,7 +2643,7 @@ function App() {
                       </button>
                     </div>
                 </form>
-                
+
                 {(authMode === 'login' || authMode === 'register') && (
                   <>
                     <div className="relative my-6">

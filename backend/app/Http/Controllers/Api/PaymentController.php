@@ -99,13 +99,13 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Checkout generado',
-                'payment_url' => $response->json('payment_url') // Реальная ссылка на форму оплаты Clip
+                'payment_url' => $response->json('payment_url')
             ]);
         }
 
         return response()->json([
             'success' => false,
-            'message' => 'Error al generar el pago con Clip',
+            'message' => 'Error al generar el pago',
             'error' => $response->json()
         ], 400);
     }

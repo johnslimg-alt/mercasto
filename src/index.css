@@ -16,11 +16,26 @@
   html { scroll-behavior: smooth; }
   body { 
     @apply bg-[var(--color-paper)] text-[var(--color-ink)] antialiased font-sans; 
+    --paper: #F6F8FB;
+    --ink: #0F172A;
+    --surface: #FFFFFF;
+    --surface-soft: #F8FAFC;
+    --line: #E2E8F0;
+    --brand: #84CC16;
+    --brand-dark: #65A30D;
+    --navy: #0F172A;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(132, 204, 22, 0.10), transparent 26rem),
+      radial-gradient(circle at 86% 12%, rgba(15, 23, 42, 0.06), transparent 24rem),
+      var(--paper);
   }
   html.dark body { 
     @apply bg-[var(--color-ink)] text-[var(--color-paper)]; 
   }
-  * { outline: none !important; }
+  :focus-visible {
+    outline: 3px solid rgba(132, 204, 22, 0.55);
+    outline-offset: 3px;
+  }
 }
 
 @layer utilities {
@@ -38,7 +53,6 @@
   .btn-lg { @apply px-6 py-3 text-[15px] leading-tight rounded-xl font-semibold transition-colors; }
   .card { @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg; }
   .badge { @apply text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide; }
-
   /* Home category rail: single horizontal row on desktop, tablet, and phone. */
   main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2 {
     display: flex !important;
@@ -73,9 +87,52 @@
   main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  .market-surface { @apply bg-white border border-slate-200 shadow-sm; }
+  .market-shell { @apply rounded-[28px] border border-slate-200 bg-white/90 shadow-sm shadow-slate-200/70; }
+  .market-card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-200/80; }
+  .category-rail {
+    @apply flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2;
+    scroll-padding-inline: 1rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .category-rail::-webkit-scrollbar { display: none; }
+  .category-pill {
+    @apply snap-start shrink-0 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[#0F172A] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#84CC16] hover:text-[#365314] hover:shadow-md;
+  }
+  .location-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-[#84CC16]/30 bg-[#84CC16]/10 px-3 py-1 text-[12px] font-semibold text-[#365314];
+  }
+  .rail-fade {
+    mask-image: linear-gradient(90deg, transparent, black 1.5rem, black calc(100% - 1.5rem), transparent);
+  }
 }
 
 @layer base {
+  html.dark body {
+    --paper: #0F172A;
+    --ink: #F8FAFC;
+    --surface: #1E293B;
+    --surface-soft: #162033;
+    --line: #334155;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(132, 204, 22, 0.12), transparent 26rem),
+      radial-gradient(circle at 86% 12%, rgba(148, 163, 184, 0.08), transparent 24rem),
+      var(--paper);
+  }
+  html.dark header.bg-white\/\[0\.92\] { background-color: rgba(15, 23, 42, 0.94) !important; }
+  html.dark header .bg-white { background-color: #1E293B !important; }
+  html.dark header .bg-slate-100 { background-color: rgba(30, 41, 59, 0.9) !important; }
+  html.dark .category-pill { background-color: #FFFFFF !important; color: #0F172A !important; border-color: #E2E8F0 !important; }
+  html.dark .category-pill h3 { color: #0F172A !important; }
+  html.dark .market-card { background-color: #FFFFFF !important; color: #0F172A !important; }
+  html.dark .market-card .bg-white { background-color: #FFFFFF !important; }
+  html.dark .market-card .text-slate-900,
+  html.dark .market-card .text-slate-800,
+  html.dark .market-card .text-slate-700 { color: #0F172A !important; }
+  html.dark .market-card .text-slate-600,
+  html.dark .market-card .text-slate-500 { color: #475569 !important; }
   html.dark .bg-white { background-color: #1E293B !important; }
   html.dark .bg-slate-50, html.dark .bg-slate-100 { background-color: #0F172A !important; }
   html.dark .border-slate-100, html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #334155 !important; }

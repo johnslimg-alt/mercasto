@@ -36,7 +36,7 @@ class CategoryController extends Controller
 
         $category = Category::create([
             'slug' => $request->slug,
-            'name' => json_encode(['es' => $request->name_es, 'en' => $request->name_en], JSON_UNESCAPED_UNICODE),
+            'name' => ['es' => $request->name_es, 'en' => $request->name_en],
             'icon' => $request->icon,
             'sort_order' => $request->sort_order ?? 0,
         ]);
@@ -67,7 +67,7 @@ class CategoryController extends Controller
 
         $category->update([
             'slug' => $request->slug,
-            'name' => json_encode(['es' => $request->name_es, 'en' => $request->name_en], JSON_UNESCAPED_UNICODE),
+            'name' => ['es' => $request->name_es, 'en' => $request->name_en],
             'icon' => $request->icon,
             'sort_order' => $request->sort_order ?? 0,
         ]);
