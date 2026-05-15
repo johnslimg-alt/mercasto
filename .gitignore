@@ -63,3 +63,4 @@ Thumbs.db
 
 # Local reports
 mercasto-report.txt
+scripts/ai_ci_audit.py
