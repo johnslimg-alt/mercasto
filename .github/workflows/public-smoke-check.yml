@@ -1,6 +1,8 @@
 name: Public Smoke Check
 
-"on":
+on:
+  push:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '17 11 * * *'
@@ -18,9 +20,17 @@ env:
   PUBLIC_SMOKE_REPORT_ISSUES: "98 103 104"
 
 jobs:
+  push-noop:
+    name: Push compatibility no-op
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - run: echo "Public smoke runs on schedule or manual dispatch; push is covered by Production checks."
+
   smoke:
     name: Check public site and API
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     timeout-minutes: 5
     steps:
       - name: Check homepage

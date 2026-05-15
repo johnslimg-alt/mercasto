@@ -1,6 +1,8 @@
 name: Manual Verification Suite
 
-"on":
+on:
+  push:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '43 12 * * *'
@@ -17,9 +19,17 @@ env:
   MANUAL_VERIFICATION_REPORT_ISSUES: "98 103 104"
 
 jobs:
+  push-noop:
+    name: Push compatibility no-op
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - run: echo "Manual Verification Suite is schedule/manual; push is covered by Production checks."
+
   public-smoke:
     name: Public smoke and protected paths
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     timeout-minutes: 8
     steps:
       - name: Check public site and API
@@ -55,6 +65,7 @@ jobs:
   frontend-quality:
     name: Frontend build and copy scan
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
@@ -74,6 +85,7 @@ jobs:
   compose-config:
     name: Compose config checks
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
@@ -91,7 +103,7 @@ jobs:
       - public-smoke
       - frontend-quality
       - compose-config
-    if: always()
+    if: always() && github.event_name != 'push'
     timeout-minutes: 3
     steps:
       - name: Report result to linked issues

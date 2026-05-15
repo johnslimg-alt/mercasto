@@ -1,6 +1,8 @@
 name: Media Video Cap Agent
 
-"on":
+on:
+  push:
+    branches: [main]
   issue_comment:
     types: [created]
   workflow_dispatch:
@@ -18,6 +20,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  push-noop:
+    name: Push compatibility no-op
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - run: echo "Media Video Cap Agent is manual/comment-only; push is covered by production checks."
+
   patch:
     name: Patch media video cap and open PR
     runs-on: ubuntu-latest

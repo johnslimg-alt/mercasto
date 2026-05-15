@@ -1,6 +1,8 @@
 name: Server Operator
 
-"on":
+on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       operation:
@@ -46,6 +48,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  push-noop:
+    name: Push compatibility no-op
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - run: echo "Server Operator is manual/comment-only; push is covered by deploy and production checks."
+
   operator:
     name: Run guarded server operation
     runs-on: [self-hosted, linux]
