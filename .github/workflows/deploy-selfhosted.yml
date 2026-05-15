@@ -15,6 +15,7 @@ jobs:
           cd /var/www/mercasto
           git fetch origin
           git reset --hard origin/main
+          git clean -fd
 
       - name: Собрать и поднять
         run: |
