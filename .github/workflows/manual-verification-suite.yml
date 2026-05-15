@@ -15,9 +15,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  push-noop:
+    name: Push compatibility no-op
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - run: echo "Manual Verification Suite is schedule/manual; push is covered by Production checks and Public Smoke Check."
+
   verify:
     name: Lightweight verification
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
