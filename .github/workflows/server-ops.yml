@@ -6,162 +6,32 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Server operation to run on the production self-hosted runner
+        description: Read-only operation to run on production runner
         required: true
         default: status
         type: choice
         options:
           - status
           - verify_quick
-          - deploy_main
-          - restart_frontend
-          - restart_stack
-          - align_media_caps
-          - security_smoke
-          - seo_aeo_smoke
-          - runner_health
-          - logs_frontend
-          - logs_backend
-          - cleanup_docker
-      confirm:
-        description: Type MERCASTO for mutating operations: deploy_main, restart_frontend, restart_stack, align_media_caps, cleanup_docker
-        required: false
-        default: ""
-        type: string
-      tail_lines:
-        description: Log lines for logs_frontend/logs_backend
-        required: false
-        default: "160"
-        type: string
-  issue_comment:
-    types: [created]
 
 permissions:
   contents: read
-  issues: write
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
-concurrency:
-  group: server-operator-production
-  cancel-in-progress: false
 
 jobs:
-  push-noop:
-    name: Push compatibility no-op
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-      - run: echo "Server Operator is manual/comment-only; push is covered by deploy and production checks."
-
   operator:
-    name: Run guarded server operation
+    name: Server operator
     runs-on: [self-hosted, linux]
-    timeout-minutes: 30
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.issue.number == 200 &&
-       github.event.comment.user.login == 'johnslimg-alt' &&
-       (contains(github.event.comment.body, '/server align-media-caps MERCASTO') ||
-        contains(github.event.comment.body, '/server deploy-main MERCASTO')))
-
+    timeout-minutes: 10
     steps:
-      - name: Resolve operation
-        id: resolve
+      - name: Push compatibility
+        if: github.event_name == 'push'
+        run: echo "Server Operator is manual-only; push is covered by Deploy and Production checks."
+
+      - name: Run read-only status
+        if: github.event_name != 'push'
         shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_OPERATION: ${{ inputs.operation }}
-          INPUT_CONFIRM: ${{ inputs.confirm }}
-          INPUT_TAIL_LINES: ${{ inputs.tail_lines }}
-          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           set -euo pipefail
-
-          operation="${INPUT_OPERATION:-status}"
-          confirm="${INPUT_CONFIRM:-}"
-          tail_lines="${INPUT_TAIL_LINES:-160}"
-
-          if [ "$EVENT_NAME" = "issue_comment" ]; then
-            case "$COMMENT_BODY" in
-              *'/server deploy-main MERCASTO'*)
-                operation="deploy_main"
-                confirm="MERCASTO"
-                ;;
-              *'/server align-media-caps MERCASTO'*)
-                operation="align_media_caps"
-                confirm="MERCASTO"
-                ;;
-              *)
-                echo "Unsupported issue comment trigger."
-                exit 64
-                ;;
-            esac
-          fi
-
-          echo "operation=$operation" >> "$GITHUB_OUTPUT"
-          echo "confirm=$confirm" >> "$GITHUB_OUTPUT"
-          echo "tail_lines=$tail_lines" >> "$GITHUB_OUTPUT"
-
-      - name: Run selected operation
-        shell: bash
-        env:
-          OPERATION: ${{ steps.resolve.outputs.operation }}
-          CONFIRM: ${{ steps.resolve.outputs.confirm }}
-          TAIL_LINES: ${{ steps.resolve.outputs.tail_lines }}
-        run: |
-          set -euo pipefail
-
-          candidates=(
-            "/var/www/mercasto"
-            "$HOME/mercasto"
-            "/root/mercasto"
-            "/opt/mercasto"
-            "/srv/mercasto"
-            "/work"
-          )
-
-          project_dir=""
-          for dir in "${candidates[@]}"; do
-            if [ -f "$dir/docker-compose.yml" ] && [ -d "$dir/.git" ]; then
-              project_dir="$dir"
-              break
-            fi
-          done
-
-          if [ -z "$project_dir" ]; then
-            found=$(find /var/www /root /home /opt /srv /work -maxdepth 4 -name docker-compose.yml -print 2>/dev/null | head -1 || true)
-            if [ -n "$found" ] && [ -d "$(dirname "$found")/.git" ]; then
-              project_dir=$(dirname "$found")
-            fi
-          fi
-
-          if [ -z "$project_dir" ] || [ ! -d "$project_dir/.git" ]; then
-            echo "Mercasto project directory was not found."
-            exit 1
-          fi
-
-          cd "$project_dir"
-          git config --global --add safe.directory "$project_dir" || true
-          git fetch origin main --prune
-          git reset --hard origin/main
-          bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
-
-      - name: Report issue-comment server result
-        if: always() && github.event_name == 'issue_comment'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          OPERATION: ${{ steps.resolve.outputs.operation }}
-          STATUS: ${{ job.status }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          if [ "$STATUS" = "success" ]; then
-            body="Server operator ${OPERATION} succeeded. ${RUN_URL}"
-          else
-            body="Server operator ${OPERATION} failed. ${RUN_URL}"
-          fi
-          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$body"
+          cd /var/www/mercasto
+          docker compose ps
+          curl -fsS --max-time 30 https://mercasto.com/api/categories | head -c 300

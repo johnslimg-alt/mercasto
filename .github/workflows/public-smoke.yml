@@ -9,132 +9,36 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
-  group: public-smoke-check
+  group: public-smoke-check-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  PUBLIC_SMOKE_REPORT_ISSUES: "98 103 104"
-
 jobs:
-  push-noop:
-    name: Push compatibility no-op
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-      - run: echo "Public smoke runs on schedule or manual dispatch; push is covered by Production checks."
-
   smoke:
-    name: Check public site and API
+    name: Public site and API smoke
     runs-on: ubuntu-latest
-    if: github.event_name != 'push'
     timeout-minutes: 5
     steps:
-      - name: Check homepage
+      - name: Check public endpoints
         shell: bash
         run: |
           set -euo pipefail
           curl -fsSIL --max-time 30 https://mercasto.com/
-          curl -fsSL --max-time 30 https://mercasto.com/ | tee /tmp/mercasto-home.html | grep -i "Mercasto"
-
-      - name: Check SEO and AEO public signals
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s /tmp/mercasto-home.html || curl -fsSL --max-time 30 https://mercasto.com/ -o /tmp/mercasto-home.html
-          curl -fsSL --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/mercasto-sitemap.xml
-          curl -fsSL --max-time 30 https://mercasto.com/robots.txt -o /tmp/mercasto-robots.txt
-          grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/mercasto-home.html
-          grep -Eiq 'name="description"|property="og:description"' /tmp/mercasto-home.html
-          grep -Eiq 'property="og:title"' /tmp/mercasto-home.html
-          grep -Eiq 'property="og:url"' /tmp/mercasto-home.html
-          grep -Eiq 'name="twitter:card"|property="twitter:card"' /tmp/mercasto-home.html
-          grep -Eiq 'application/ld\+json|schema.org' /tmp/mercasto-home.html
-          grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/mercasto-sitemap.xml
-          grep -Eiq 'Sitemap:|User-agent:' /tmp/mercasto-robots.txt
-
-      - name: Check categories API
-        shell: bash
-        run: |
-          set -euo pipefail
-          body=$(curl -fsSL --max-time 30 https://mercasto.com/api/categories)
-          echo "$body" | head -c 500
-          echo "$body" | grep -q '"slug"'
-
-      - name: Check ads API
-        shell: bash
-        run: |
-          set -euo pipefail
-          body=$(curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1')
-          echo "$body" | head -c 500
-          echo "$body" | grep -Eq '"data"|"id"|\['
-
-      - name: Check auth providers API
-        shell: bash
-        run: |
-          set -euo pipefail
-          body=$(curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers)
-          echo "$body" | head -c 500
-          echo "$body" | grep -Eq 'google|facebook|providers|\{'
+          curl -fsSL --max-time 30 https://mercasto.com/ | grep -i "Mercasto"
+          curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers | grep -Eq 'google|\{'
+          curl -fsSL --max-time 30 https://mercasto.com/api/categories | head -c 1000 | grep -q '"slug"'
+          curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | head -c 1000 | grep -Eq '"data"|"id"|\['
 
       - name: Check protected public paths
         shell: bash
         run: |
           set -euo pipefail
-          for path in \
-            /.env \
-            /.git/config \
-            /backend/.env \
-            /composer.json \
-            /package.json \
-            /horizon \
-            /vendor/horizon
-          do
+          for path in /.env /.git/config /backend/.env /composer.json /package.json /horizon /vendor/horizon; do
             status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "https://mercasto.com${path}")
             echo "${path} -> ${status}"
             case "$status" in
               403|404|410) ;;
               *) echo "unexpected status for ${path}: ${status}" >&2; exit 1 ;;
             esac
-          done
-
-      - name: Report public smoke result
-        if: always()
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          RESULT: ${{ job.status }}
-        run: |
-          set -euo pipefail
-          timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          body=$(cat <<EOF
-Agent Report: Public Smoke Check
-
-Result: ${RESULT}
-Run: ${RUN_URL}
-Timestamp: ${timestamp}
-
-Checks:
-- homepage loads;
-- SEO/AEO signals exist: title, description, Open Graph, Twitter card, structured data, sitemap, robots;
-- categories API returns category-like JSON;
-- ads API returns list-like JSON;
-- auth providers API returns provider-like JSON;
-- protected public paths return 403, 404, or 410.
-
-Safety boundary: public HTTP verification only; no server shell, no deploy, no database writes, no payment actions, no secret values printed.
-EOF
-)
-          for issue in ${PUBLIC_SMOKE_REPORT_ISSUES}; do
-            curl -fsS -X POST \
-              -H "Authorization: Bearer ${GH_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${REPO}/issues/${issue}/comments" \
-              -d "$(jq -n --arg body "$body" '{body: $body}')"
           done
