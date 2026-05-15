@@ -1,6 +1,6 @@
 name: Manual Verification Suite
 
-on:
+"on":
   workflow_dispatch:
   schedule:
     - cron: '43 12 * * *'

@@ -1,6 +1,6 @@
 name: Media Video Cap Agent
 
-on:
+"on":
   issue_comment:
     types: [created]
   workflow_dispatch:

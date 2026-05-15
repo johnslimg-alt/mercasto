@@ -1,6 +1,6 @@
 name: Server Operator
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       operation:
