@@ -27,8 +27,8 @@ jobs:
           curl -fsSIL --max-time 30 https://mercasto.com/
           curl -fsSL --max-time 30 https://mercasto.com/ | grep -i "Mercasto"
           curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers | grep -Eq 'google|\{'
-          curl -fsSL --max-time 30 https://mercasto.com/api/categories | head -c 1000 | grep -q '"slug"'
-          curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | head -c 1000 | grep -Eq '"data"|"id"|\['
+          curl -fsSL --max-time 30 https://mercasto.com/api/categories | grep -q '"slug"'
+          curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | grep -Eq '"data"|"id"|\['
 
       - name: Check protected public paths
         shell: bash
