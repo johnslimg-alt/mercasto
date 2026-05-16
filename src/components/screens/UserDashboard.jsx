@@ -1,4 +1,5 @@
 import ChartTooltip from '../common/ChartTooltip';
+import { Link } from 'react-router-dom';
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
@@ -522,7 +523,7 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
 
                       <p className="text-[13px] text-slate-600 mb-4">{t.update_photo}</p>
 
-                      <button onClick={openProfileModal} className="btn-md border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2"><User className="w-4 h-4" /> {t.edit_profile}</button>
+                      <Link to="/perfil/editar" className="btn-md border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2"><User className="w-4 h-4" /> {t.edit_profile || 'Editar perfil'}</Link>
 
                     </div>
 

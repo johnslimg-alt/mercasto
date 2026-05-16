@@ -56,11 +56,35 @@ class ProfileController extends Controller
      */
     public function publicProfile($id)
     {
-        $user = User::select('id', 'name', 'avatar_url', 'role', 'is_verified', 'created_at', 'phone_number')->findOrFail($id);
+        $user = User::select(
+            'id',
+            'name',
+            'avatar_url',
+            'role',
+            'is_verified',
+            'created_at',
+            'phone_number',
+            'whatsapp',
+            'bio',
+            'city',
+            'website',
+            'social_instagram'
+        )->findOrFail($id);
+
+        $reviewStats = DB::table('reviews')
+            ->where('seller_id', $user->id)
+            ->selectRaw('COUNT(*) as count, AVG(rating) as avg')
+            ->first();
+
+        $user->active_ads = $user->ads()->where('status', 'active')->count();
+        $user->rating_count = (int) ($reviewStats->count ?? 0);
+        $user->rating_avg = round((float) ($reviewStats->avg ?? 0), 1);
+        $user->member_since = $user->created_at?->format('Y-m-d');
         
         // GDPR & Privacy Leak Fix: Скрываем номер телефона, если продавец не является PRO-компанией
         if ($user->role !== 'business') {
             $user->phone_number = null;
+            $user->whatsapp = null;
         }
         
         return response()->json($user);
@@ -322,13 +346,23 @@ class ProfileController extends Controller
             'email_alerts' => 'boolean',
             'push_notifications' => 'boolean',
             'marketing' => 'boolean',
+            'email_new_message' => 'boolean',
+            'email_ad_reply' => 'boolean',
+            'push_enabled' => 'boolean',
         ]);
 
-        // Явное преобразование в JSON для предотвращения ошибки "Array to string conversion" на сервере
-        $user->notification_preferences = json_encode([
-            'email_alerts' => $request->boolean('email_alerts', true),
-            'push_notifications' => $request->boolean('push_notifications', true),
-            'marketing' => $request->boolean('marketing', false),
+        $existing = $user->notification_preferences ?? [];
+        if (is_string($existing)) {
+            $existing = json_decode($existing, true) ?: [];
+        }
+
+        $user->notification_preferences = array_merge($existing, [
+            'email_alerts' => $request->boolean('email_alerts', $existing['email_alerts'] ?? true),
+            'push_notifications' => $request->boolean('push_notifications', $existing['push_notifications'] ?? true),
+            'marketing' => $request->boolean('marketing', $existing['marketing'] ?? false),
+            'email_new_message' => $request->boolean('email_new_message', $existing['email_new_message'] ?? true),
+            'email_ad_reply' => $request->boolean('email_ad_reply', $existing['email_ad_reply'] ?? true),
+            'push_enabled' => $request->boolean('push_enabled', $existing['push_enabled'] ?? false),
         ]);
         $user->save();
 

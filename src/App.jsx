@@ -192,6 +192,8 @@ const UserDashboard = React.lazy(() => import('./components/screens/UserDashboar
 const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el anuncio. Inténtalo de nuevo más tarde.</div> })));
 const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta tienda. Inténtalo de nuevo más tarde.</div> })));
 const StaticPages = React.lazy(() => import('./components/screens/StaticPages').catch(() => ({ default: ({currentTab}) => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-2xl font-bold capitalize text-slate-400">No pudimos cargar esta página. Inténtalo de nuevo más tarde.</div> })));
+const SellerProfileScreen = React.lazy(() => import('./components/screens/SellerProfileScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar este perfil.</div> })));
+const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor de perfil.</div> })));
 
 export default function AppWrapper() {
   return (
@@ -2473,7 +2475,7 @@ function App() {
               </button>
             <button onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="hidden sm:flex items-center gap-2 pl-1 pr-2.5 py-1 hover:bg-slate-100 rounded-xl">
                 {user?.avatar_url ? (
-                  <img src={getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-lg object-cover" alt=""/>
+                  <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-lg object-cover" alt=""/>
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500"><User size={18} /></div>
                 )}
@@ -2544,6 +2546,8 @@ function App() {
               <Route path="/privacy" element={<StaticPages currentTab="privacy" />} />
               <Route path="/help" element={<StaticPages currentTab="help" />} />
               <Route path="/safety" element={<StaticPages currentTab="safety" />} />
+              <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
+              <Route path="/perfil/editar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           )}
