@@ -11,7 +11,10 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      if (res.ok) { setStatus('paused'); ad.status = 'paused'; }
+      if (res.ok) {
+        setStatus('paused');
+        setViewedAd?.(prev => prev && prev.id === ad.id ? { ...prev, status: 'paused' } : prev);
+      }
       else { const d = await res.json(); alert(d.message || 'Error al pausar'); }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -24,7 +27,10 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      if (res.ok) { setStatus('active'); ad.status = 'active'; }
+      if (res.ok) {
+        setStatus('active');
+        setViewedAd?.(prev => prev && prev.id === ad.id ? { ...prev, status: 'active' } : prev);
+      }
       else { const d = await res.json(); alert(d.message || 'Error al reactivar'); }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }

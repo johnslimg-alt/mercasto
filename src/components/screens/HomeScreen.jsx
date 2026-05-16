@@ -53,7 +53,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
     }, [executeSearch, setCurrentTab, setSearchLocation, setSearchLocationInput, setSelectedState]);
     const runSearch = React.useCallback((term = '', category = null) => {
       if (category !== null) setActiveCat(category);
-      runSearch(term);
+      setSearchQuery(term);
       executeSearch?.(term);
     }, [executeSearch, setActiveCat, setSearchQuery]);
 
