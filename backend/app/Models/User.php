@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'whatsapp',
         'website',
         'social_instagram',
+        'last_active_at',
         'role',
         'ip_address',
         'balance',
@@ -69,6 +71,12 @@ class User extends Authenticatable
             'notification_preferences' => 'array',
             'is_verified' => 'boolean',
             'balance' => 'decimal:2',
+            'last_active_at' => 'datetime',
         ];
+    }
+
+    public function ads(): HasMany
+    {
+        return $this->hasMany(Ad::class);
     }
 }

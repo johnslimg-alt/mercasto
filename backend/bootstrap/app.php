@@ -26,6 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(function (Request $request) {
             return $request->is('api/*') || $request->expectsJson() ? null : route('login');
         });
+        $middleware->alias([
+            'last-active' => \App\Http\Middleware\UpdateLastActive::class,
+        ]);
+        $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastActive::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
