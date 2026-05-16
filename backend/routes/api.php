@@ -95,6 +95,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [ProfileController::class, 'show']);
     Route::post('/user/profile', [ProfileController::class, 'update']);
+    Route::get('/user/profile', [ProfileController::class, 'getProfile']); // Получить профиль
+    Route::put('/user/profile', [ProfileController::class, 'update']); // Обновить профиль (PUT)
+    Route::post('/user/avatar', [ProfileController::class, 'uploadAvatar']); // Загрузить аватар
+    Route::put('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля (PUT)
+    Route::put('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений (PUT)
     Route::post('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля
     
     // Защита домена от блокировки спам-фильтрами (AWS SES/Mailgun): лимит на отправку писем

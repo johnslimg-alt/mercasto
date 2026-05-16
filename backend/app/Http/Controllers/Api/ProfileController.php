@@ -21,7 +21,7 @@ class ProfileController extends Controller
 {
     private function imageManager(): ImageManager
     {
-        return ImageManager::usingDriver(Driver::class);
+        return ImageManager::withDriver(Driver::class);
     }
 
     public function index(Request $request)
@@ -66,16 +66,87 @@ class ProfileController extends Controller
         return response()->json($user);
     }
 
+    public function getProfile(Request $request)
+    {
+        $user = $request->user();
+        $userId = $user->id;
+
+        $totalAds = $user->ads()->count();
+        $activeAds = $user->ads()->where("status", "active")->count();
+
+        $reviewStats = DB::table("reviews")
+            ->where("seller_id", $userId)
+            ->selectRaw("COUNT(*) as count, AVG(rating) as avg")
+            ->first();
+
+        $isOAuthOnly = !!$user->google_id || !!$user->apple_id || !!$user->telegram_id;
+        $isPhoneAuth = str_ends_with($user->email, "@mercasto.local");
+        if ($isPhoneAuth) $isOAuthOnly = true;
+
+        return response()->json(array_merge(
+            $user->makeHidden(["two_factor_secret", "two_factor_recovery_codes", "email_verification_token", "password"])->toArray(),
+            [
+                "total_ads" => $totalAds,
+                "active_ads" => $activeAds,
+                "rating_count" => (int)($reviewStats->count ?? 0),
+                "rating_avg" => round((float)($reviewStats->avg ?? 0), 1),
+                "member_since" => $user->created_at?->format("Y-m-d"),
+                "is_oauth_only" => $isOAuthOnly,
+            ]
+        ));
+    }
+
+    public function uploadAvatar(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            "avatar" => "required|file|mimes:jpg,jpeg,png,webp|max:5120|dimensions:max_width=4096,max_height=4096",
+        ]);
+
+        if ($user->avatar_url && !str_starts_with($user->avatar_url, "http")) {
+            Storage::disk("public")->delete($user->avatar_url);
+        }
+
+        $path = "avatars/" . Str::uuid() . ".webp";
+        $img = $this->imageManager()
+            ->decode($request->file("avatar"))
+            ->cover(256, 256)
+            ->encodeUsingFileExtension("webp", quality: 85);
+
+        Storage::disk("public")->put($path, (string) $img);
+
+        $user->avatar_url = $path;
+        $user->save();
+
+        return response()->json([
+            "avatar_url" => $user->avatar_url,
+            "message" => "Avatar actualizado correctamente",
+        ]);
+    }
+
     public function update(Request $request)
     {
         $user = $request->user();
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'avatar' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120|dimensions:max_width=4096,max_height=4096', // Защита от OOM Pixel Flood
+            'bio' => 'nullable|string|max:1000',
+            'city' => 'nullable|string|max:100',
+            'phone_number' => 'nullable|string|max:20',
+            'whatsapp' => 'nullable|string|max:20',
+            'website' => 'nullable|url|max:255',
+            'social_instagram' => 'nullable|string|max:100',
+            'avatar' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120|dimensions:max_width=4096,max_height=4096', // OOM Pixel Flood protection
         ]);
 
         $user->name = $request->name;
+        if ($request->has('bio')) $user->bio = $request->bio;
+        if ($request->has('city')) $user->city = $request->city;
+        if ($request->filled('phone_number')) $user->phone_number = $request->phone_number;
+        if ($request->filled('whatsapp')) $user->whatsapp = $request->whatsapp;
+        if ($request->has('website')) $user->website = $request->website;
+        if ($request->has('social_instagram')) $user->social_instagram = $request->social_instagram;
 
         // Обработка загрузки аватарки
         if ($request->hasFile('avatar')) {
