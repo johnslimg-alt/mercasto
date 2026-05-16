@@ -1,13 +1,66 @@
-import React, { useMemo } from 'react';
-import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User } from 'lucide-react';
+
+function OwnerControls({ ad, API_URL, setViewedAd }) {
+  const [status, setStatus] = useState(ad.status);
+  const [loading, setLoading] = useState(false);
+  const token = localStorage.getItem('auth_token');
+
+  const pause = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/${ad.id}/pause`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      if (res.ok) { setStatus('paused'); ad.status = 'paused'; }
+      else { const d = await res.json(); alert(d.message || 'Error al pausar'); }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  const activate = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/${ad.id}/activate`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      if (res.ok) { setStatus('active'); ad.status = 'active'; }
+      else { const d = await res.json(); alert(d.message || 'Error al reactivar'); }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  if (status === 'active') {
+    return (
+      <button onClick={pause} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
+        {loading ? <Loader2 size={15} className="animate-spin" /> : <Pause size={15} />} Pausar
+      </button>
+    );
+  }
+  if (status === 'paused') {
+    return (
+      <button onClick={activate} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-lime-100 hover:bg-lime-200 text-[#65A30D] rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
+        {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} Reactivar
+      </button>
+    );
+  }
+  return null;
+}
+
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2 } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 
 export default function AdDetailScreen({
   ad, API_URL, getImageUrl, getImageUrls, getCatName, t, lang, favoriteIds, categoriesData,
   sliderAutoplay, handleShareAd, handleToggleFavorite, setReportingAd, setShowReportModal,
-  handleViewCompany, handleWhatsAppClick, allAds, setViewedAd, onBack, MediaSlider, renderAdCard, AdSenseBanner
+  handleViewCompany, handleWhatsAppClick, allAds, setViewedAd, onBack, MediaSlider, renderAdCard, AdSenseBanner,
+  currentUser
 }) {
   if (!ad) return null;
+
+  const isOwner = currentUser && currentUser.id === ad.user_id;
   
   const isFav = favoriteIds.includes(ad.id);
   const images = getImageUrls(ad.image_url, ad.image).map(url => ({ type: 'image', url }));
@@ -22,9 +75,22 @@ export default function AdDetailScreen({
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
-      <button onClick={() => (onBack ? onBack() : setViewedAd(null))} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 mb-6 font-medium transition-colors w-fit">
-        <ChevronLeft size={20} /> Volver a resultados
-      </button>
+      <div className="flex items-center justify-between mb-6">
+        <button onClick={() => (onBack ? onBack() : setViewedAd(null))} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium transition-colors">
+          <ChevronLeft size={20} /> Volver a resultados
+        </button>
+        {isOwner && (
+          <div className="flex items-center gap-2">
+            <OwnerControls ad={ad} API_URL={API_URL} setViewedAd={setViewedAd} />
+            <Link
+              to={`/anuncio/${ad.id}/editar`}
+              className="flex items-center gap-1.5 px-4 py-2 bg-lime-500 hover:bg-[#65A30D] text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-lime-500/20"
+            >
+              <Pencil size={15} /> Editar
+            </Link>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">

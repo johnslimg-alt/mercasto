@@ -1,12 +1,21 @@
 import AdSenseBanner from '../common/AdSenseBanner';
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
 import SidebarFilters from '../common/SidebarFilters';
 
 export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
+    const navigate = useNavigate();
+    const VERTICAL_SLUGS = {
+      'coches-y-motor': '/autos',
+      'motor': '/autos',
+      'inmobiliaria': '/inmuebles',
+      'empleo': '/empleos',
+      'servicios': '/servicios',
+    };
 
     // Заглушка (Fallback) на случай, если база данных категорий пуста
     const defaultCats = [
@@ -202,7 +211,10 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   return (
 
-                    <button key={cat.slug} onClick={() => setActiveCat(cat.slug)} className="category-pill group min-w-[150px] sm:min-w-[168px]">
+                    <button key={cat.slug} onClick={() => {
+                        const vpath = VERTICAL_SLUGS[cat.slug];
+                        if (vpath) { navigate(vpath); } else { setActiveCat(cat.slug); }
+                      }} className="category-pill group min-w-[150px] sm:min-w-[168px]">
 
                       <div className="w-11 h-11 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] group-hover:bg-[#84CC16]/10 transition-all">
 

@@ -3,17 +3,23 @@ import { Link } from 'react-router-dom';
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, PieChart as PieChartIcon } from "lucide-react";
-export default function UserDashboard({ accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole }) {
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, PieChart as PieChartIcon } from "lucide-react";
+export default function UserDashboard({ accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole }) {
     const activeAds = userAds.filter(ad => ad.status === 'active' || ad.status === 'pending');
 
-    const inactiveAds = userAds.filter(ad => ad.status === 'inactive' || ad.status === 'rejected');
+    const getDaysUntilExpiry = (expiresAt) => {
+      if (!expiresAt) return null;
+      const diff = new Date(expiresAt) - new Date();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    };
+
+    const totalViews = userAds.reduce((sum, ad) => sum + (ad.views || 0), 0);
+
+    const inactiveAds = userAds.filter(ad => ['inactive', 'rejected', 'paused', 'expired'].includes(ad.status));
 
     const displayedAds = dashboardTab === 'my_ads' ? (adStatusFilter === 'active' ? activeAds : inactiveAds) : favoriteAds;
 
     const totalContactClicks = userAds.reduce((sum, ad) => sum + (ad.whatsapp_clicks || 0), 0);
-
-    const totalViews = userAds.reduce((sum, ad) => sum + (ad.views || 0), 0);
 
     const conversionRate = (() => {
 
@@ -819,7 +825,7 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
 
                     {paginatedAds.map((ad) => (
 
-                      <div key={ad.id} className={`p-5 border-b border-slate-100 last:border-0 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:bg-slate-50 transition-colors ${ad.status === 'inactive' ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                      <div key={ad.id} className={`p-5 border-b border-slate-100 last:border-0 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:bg-slate-50 transition-colors ${(ad.status === 'inactive' || ad.status === 'paused' || ad.status === 'expired') ? 'opacity-60 grayscale-[0.5]' : ''}`}>
 
                       <div className="flex gap-4 flex-1 w-full">
 
@@ -833,9 +839,15 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
 
                             {ad.status === 'inactive' && <span className="badge bg-slate-200 text-slate-600">Inactivo</span>}
 
+                            {ad.status === 'paused' && <span className="badge bg-amber-100 text-amber-700">Pausado</span>}
+
+                            {ad.status === 'expired' && <span className="badge bg-red-100 text-red-700">Expirado</span>}
+
                             {ad.status === 'pending' && <span className="badge bg-amber-100 text-amber-700">En revisión</span>}
 
                             {ad.status === 'rejected' && <span className="badge bg-red-100 text-red-700">Rechazado</span>}
+
+                            {ad.status === 'active' && (() => { const d = getDaysUntilExpiry(ad.expires_at); return d !== null && d <= 15 ? <span className={`badge ${d <= 5 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>Expira en {d}d</span> : null; })()}
 
                           </div>
 
@@ -853,35 +865,58 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
 
                       </div>
 
-                      <div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0">
+                      <div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0 flex-wrap">
 
                         {ad.user_id === user?.id ? (
 
                           <>
 
-                          <button onClick={() => handleEditAd(ad)} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-2" title="Editar">
+                          {/* Ver anuncio */}
+                          <Link to={`/?ad=${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs" title="Ver">
+                            <ExternalLink className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Ver</span>
+                          </Link>
 
-                          <Pencil className="w-4 h-4" />
+                          {/* Editar — active, paused, rejected */}
+                          {(ad.status === 'active' || ad.status === 'paused' || ad.status === 'rejected' || ad.status === 'inactive') && (
+                            <Link to={`/anuncio/${ad.id}/editar`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs" title="Editar">
+                              <Pencil className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Editar</span>
+                            </Link>
+                          )}
 
-                        </button>
+                          {/* Pausar — only if active */}
+                          {ad.status === 'active' && (
+                            <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1.5 text-xs" title="Pausar">
+                              <Zap className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Pausar</span>
+                            </button>
+                          )}
 
-                          <button onClick={() => handleToggleAdStatus(ad)} disabled={ad.status === 'pending' || ad.status === 'rejected'} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-2 disabled:opacity-50" title={ad.status === 'inactive' ? 'Activar' : 'Pausar'}>
+                          {/* Reactivar — only if paused */}
+                          {ad.status === 'paused' && (
+                            <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1.5 text-xs" title="Reactivar">
+                              <Zap className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Reactivar</span>
+                            </button>
+                          )}
 
-                          <Zap className="w-4 h-4" />
+                          {/* Republicar — only if expired */}
+                          {ad.status === 'expired' && (
+                            <button onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1.5 text-xs" title={`Republicar (${3 - (ad.republish_count || 0)}/3 gratis)`}>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Republicar</span>
+                              <span className="ml-1 text-[10px] font-bold bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full">{3 - (ad.republish_count || 0)}/3</span>
+                            </button>
+                          )}
 
-                        </button>
+                          {/* Promote — active only */}
+                          {ad.status === 'active' && (
+                            <button onClick={() => handlePromoteAd(ad)} className="btn-sm flex-1 sm:flex-none bg-[#0F172A] hover:bg-black text-white flex items-center justify-center gap-1.5 text-xs shadow-sm">
+                              <TrendingUp className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t.promote}</span>
+                            </button>
+                          )}
 
-                          <button onClick={() => handlePromoteAd(ad)} className="btn-sm flex-1 sm:flex-none bg-[#0F172A] hover:bg-black text-white flex items-center justify-center gap-2 shadow-sm">
-
-                          <TrendingUp className="w-4 h-4" /> <span className="hidden sm:inline">{t.promote}</span>
-
-                        </button>
-
-                          <button onClick={() => handleDeleteAd(ad.id)} className="btn-sm flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center gap-2" title={t.delete_ad}>
-
-                          <Trash2 className="w-4 h-4" />
-
-                        </button>
+                          {/* Eliminar — always */}
+                          <button onClick={() => handleDeleteAd(ad.id)} className="btn-sm flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center gap-1.5 text-xs" title={t.delete_ad}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
 
                           </>
 

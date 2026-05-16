@@ -56,40 +56,44 @@ class ProfileController extends Controller
      */
     public function publicProfile($id)
     {
-        $user = User::select(
-            'id',
-            'name',
-            'avatar_url',
-            'role',
-            'is_verified',
-            'created_at',
-            'phone_number',
-            'whatsapp',
-            'bio',
-            'city',
-            'website',
-            'social_instagram'
-        )->findOrFail($id);
+        // Кэшируем публичный профиль на 10 минут (active_ads + review stats — дорогие агрегатные запросы)
+        $profileData = Cache::remember("public_profile_{$id}", 600, function () use ($id) {
+            $user = User::select(
+                'id',
+                'name',
+                'avatar_url',
+                'role',
+                'is_verified',
+                'created_at',
+                'phone_number',
+                'whatsapp',
+                'bio',
+                'city',
+                'website',
+                'social_instagram'
+            )->findOrFail($id);
 
-        $reviewStats = DB::table('reviews')
-            ->where('seller_id', $user->id)
-            ->selectRaw('COUNT(*) as count, AVG(rating) as avg')
-            ->first();
+            $reviewStats = DB::table('reviews')
+                ->where('seller_id', $user->id)
+                ->selectRaw('COUNT(*) as count, AVG(rating) as avg')
+                ->first();
 
-        $user->active_ads = $user->ads()->where('status', 'active')->count();
-        $user->rating_count = (int) ($reviewStats->count ?? 0);
-        $user->rating_avg = round((float) ($reviewStats->avg ?? 0), 1);
-        $user->member_since = $user->created_at?->format('Y-m-d');
-        
-        // GDPR & Privacy Leak Fix: Скрываем номер телефона, если продавец не является PRO-компанией
-        if ($user->role !== 'business') {
-            $user->phone_number = null;
-            $user->whatsapp = null;
-        }
-        
-        return response()->json($user);
+            $user->active_ads = $user->ads()->where('status', 'active')->count();
+            $user->rating_count = (int) ($reviewStats->count ?? 0);
+            $user->rating_avg = round((float) ($reviewStats->avg ?? 0), 1);
+            $user->member_since = $user->created_at?->format('Y-m-d');
+
+            // GDPR & Privacy Leak Fix: Скрываем номер телефона, если продавец не является PRO-компанией
+            if ($user->role !== 'business') {
+                $user->phone_number = null;
+                $user->whatsapp = null;
+            }
+
+            return $user;
+        });
+
+        return response()->json($profileData);
     }
-
     public function getProfile(Request $request)
     {
         $user = $request->user();
@@ -196,6 +200,7 @@ class ProfileController extends Controller
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
         Cache::forget('ads_index_page_1');
+        Cache::forget("public_profile_{$user->id}"); // Сбрасываем кэш публичного профиля
 
         // Защита от утечки секретов 2FA при обновлении профиля
         return response()->json($user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password']));

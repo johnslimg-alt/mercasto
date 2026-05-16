@@ -34,3 +34,5 @@ Schedule::call(function () {
         \Illuminate\Support\Facades\Log::info("Revoked VIP status for " . $expiredPromotions->count() . " ads.");
     }
 })->hourly();
+// Expire ads that passed their expires_at date, notify owners
+Schedule::command('ads:expire')->daily();

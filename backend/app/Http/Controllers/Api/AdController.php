@@ -301,6 +301,7 @@ class AdController extends Controller
             'video_url' => $videoPath,
             'video_processing_status' => $videoProcessingStatus,
             'status' => 'pending', // Отправляем на модерацию
+            'expires_at' => now()->addDays(30),
         ]);
 
         // Если видео было загружено, отправляем его в очередь на обработку
@@ -581,7 +582,7 @@ class AdController extends Controller
             return response()->json(['message' => 'Нет прав для изменения статуса'], 403);
         }
 
-        $request->validate(['status' => 'required|in:active,inactive,archived,pending']);
+        $request->validate(['status' => 'required|in:active,inactive,archived,pending,paused,expired']);
 
         // Защита от обхода модерации: только админ может активировать объявление со статусом pending/rejected
         if ($request->status === 'active' && in_array($ad->status, ['pending', 'rejected']) && $request->user()->role !== 'admin') {
@@ -1536,4 +1537,105 @@ class AdController extends Controller
 
         return response()->json(['message' => 'Error de conexión con el agente UI'], 500);
     }
+
+    /**
+     * Pause an active ad (owner only)
+     */
+    public function pause(Request $request, $id)
+    {
+        $ad = Ad::findOrFail($id);
+
+        if ($request->user()->id !== $ad->user_id) {
+            return response()->json(['message' => 'No tienes permisos para pausar este anuncio'], 403);
+        }
+        if ($ad->status !== 'active') {
+            return response()->json(['message' => 'Solo puedes pausar anuncios activos'], 422);
+        }
+
+        $ad->status = 'paused';
+        $ad->save();
+
+        Cache::forget("ad_{$id}");
+        Cache::forget('sitemap_xml');
+        for ($i = 1; $i <= 10; $i++) { Cache::forget("ads_index_page_{$i}"); }
+
+        return response()->json($ad->fresh('user'));
+    }
+
+    /**
+     * Reactivate a paused ad (owner only)
+     */
+    public function activate(Request $request, $id)
+    {
+        $ad = Ad::findOrFail($id);
+
+        if ($request->user()->id !== $ad->user_id) {
+            return response()->json(['message' => 'No tienes permisos para reactivar este anuncio'], 403);
+        }
+        if ($ad->status !== 'paused') {
+            return response()->json(['message' => 'Solo puedes reactivar anuncios pausados'], 422);
+        }
+
+        $ad->status = 'active';
+        $ad->save();
+
+        Cache::forget("ad_{$id}");
+        Cache::forget('sitemap_xml');
+        for ($i = 1; $i <= 10; $i++) { Cache::forget("ads_index_page_{$i}"); }
+
+        return response()->json($ad->fresh('user'));
+    }
+
+    /**
+     * Republish an expired ad (free tier: max 3 times)
+     */
+    public function republish(Request $request, $id)
+    {
+        $ad = Ad::findOrFail($id);
+
+        if ($request->user()->id !== $ad->user_id) {
+            return response()->json(['message' => 'No tienes permisos para republicar este anuncio'], 403);
+        }
+        if ($ad->status !== 'expired') {
+            return response()->json(['message' => 'Solo puedes republicar anuncios expirados'], 422);
+        }
+
+        $maxRepublishes = ($request->user()->role === 'business' || $request->user()->role === 'admin') ? 100 : 3;
+        if ($ad->republish_count >= $maxRepublishes) {
+            return response()->json([
+                'message' => 'Has alcanzado el límite de republicaciones gratuitas. Crea un nuevo anuncio o actualiza a PRO.',
+                'republish_count' => $ad->republish_count,
+                'max' => $maxRepublishes
+            ], 402);
+        }
+
+        $ad->update([
+            'status' => 'active',
+            'expires_at' => now()->addDays(30),
+            'republish_count' => $ad->republish_count + 1,
+            'republished_at' => now(),
+        ]);
+
+        Cache::forget("ad_{$id}");
+        Cache::forget('sitemap_xml');
+        for ($i = 1; $i <= 10; $i++) { Cache::forget("ads_index_page_{$i}"); }
+
+        return response()->json($ad->fresh('user'));
+    }
+
+    /**
+     * Get full ad data for editing (owner or admin only, any status)
+     */
+    public function editForm(Request $request, $id)
+    {
+        $ad = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')->findOrFail($id);
+
+        $user = $request->user();
+        if ($user->id !== $ad->user_id && $user->role !== 'admin') {
+            return response()->json(['message' => 'No tienes permisos para editar este anuncio'], 403);
+        }
+
+        return response()->json($ad);
+    }
+
 }

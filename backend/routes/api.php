@@ -90,6 +90,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ads/bulk-upload', [AdController::class, 'bulkUpload']); // Массовая загрузка CSV
     Route::post('/ads/{ad}', [AdController::class, 'update']); // Для обработки FormData с изображениями
     Route::patch('/ads/{id}/status', [AdController::class, 'updateStatus']); // Изменение статуса (пауза/активация)
+    Route::get('/ads/{id}/edit', [AdController::class, 'editForm']); // Full ad data for editing (owner only)
+    Route::put('/ads/{id}/pause', [AdController::class, 'pause']); // Pause active ad
+    Route::put('/ads/{id}/activate', [AdController::class, 'activate']); // Reactivate paused ad
+    Route::post('/ads/{id}/republish', [AdController::class, 'republish']); // Republish expired ad
     Route::post('/ads/{id}/promote/credits', [AdController::class, 'promoteWithCredits']); // Продвижение за кредиты
     Route::delete('/ads/{id}', [AdController::class, 'destroy']);
     Route::post('/logout', [AuthController::class, 'logout']);

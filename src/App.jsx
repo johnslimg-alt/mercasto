@@ -192,7 +192,12 @@ const UserDashboard = React.lazy(() => import('./components/screens/UserDashboar
 const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el anuncio. Inténtalo de nuevo más tarde.</div> })));
 const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta tienda. Inténtalo de nuevo más tarde.</div> })));
 const StaticPages = React.lazy(() => import('./components/screens/StaticPages').catch(() => ({ default: ({currentTab}) => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-2xl font-bold capitalize text-slate-400">No pudimos cargar esta página. Inténtalo de nuevo más tarde.</div> })));
+const EditAdScreen = React.lazy(() => import('./components/screens/EditAdScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor.</div> })));
 const SellerProfileScreen = React.lazy(() => import('./components/screens/SellerProfileScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar este perfil.</div> })));
+const AutosLanding = React.lazy(() => import('./components/screens/verticals/AutosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const InmueblesLanding = React.lazy(() => import('./components/screens/verticals/InmueblesLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const EmpleosLanding = React.lazy(() => import('./components/screens/verticals/EmpleosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const ServiciosLanding = React.lazy(() => import('./components/screens/verticals/ServiciosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor de perfil.</div> })));
 
 export default function AppWrapper() {
@@ -1770,19 +1775,46 @@ function App() {
       alert('Este anuncio está en revisión o fue rechazado y no puede ser activado manualmente.');
       return;
     }
-    const newStatus = ad.status === 'inactive' ? 'active' : 'inactive';
-    // Оптимистичное обновление UI
+    const newStatus = ad.status === 'active' ? 'paused' : (ad.status === 'paused' ? 'active' : (ad.status === 'inactive' ? 'active' : 'paused'));
+    // Optimistic UI update
     setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: newStatus } : a));
     setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: newStatus } : a));
 
     try {
       const token = localStorage.getItem('auth_token');
-      await fetch(`${API_URL}/ads/${ad.id}/status`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+      const endpoint = newStatus === 'paused' ? `${API_URL}/ads/${ad.id}/pause` : `${API_URL}/ads/${ad.id}/activate`;
+      await fetch(endpoint, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-    } catch (err) { console.error("Error updating status", err); }
+    } catch (err) {
+      console.error("Error updating status", err);
+      // Revert on error
+      setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: ad.status } : a));
+      setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: ad.status } : a));
+    }
+  };
+
+  // --- REPUBLICAR ANUNCIO EXPIRADO ---
+  const handleRepublishAd = async (ad) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_URL}/ads/${ad.id}/republish`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, republish_count: data.republish_count } : a));
+        setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active' } : a));
+        alert('¡Anuncio republicado exitosamente! Estará activo 30 días más.');
+      } else {
+        alert(data.message || 'No se pudo republicar el anuncio.');
+      }
+    } catch (err) {
+      console.error("Republish error", err);
+      alert('Error de conexión al republicar.');
+    }
   };
 
   // --- ПОЖАЛОВАТЬСЯ НА ОБЪЯВЛЕНИЕ ---
@@ -2028,7 +2060,7 @@ function App() {
   );
 
   // --- РЕНДЕР СТРАНИЦЫ ТОВАРА ---
-  const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} />;
+  const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} currentUser={user} />;
 
   // --- РЕНДЕР ПУБЛИЧНОГО ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
   const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
@@ -2274,7 +2306,7 @@ function App() {
   const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
   const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
 
-  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} />;
+  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
@@ -2548,6 +2580,11 @@ function App() {
               <Route path="/safety" element={<StaticPages currentTab="safety" />} />
               <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
               <Route path="/perfil/editar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense>} />
+              <Route path="/anuncio/:id/editar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen /></React.Suspense>} />
+              <Route path="/autos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding /></React.Suspense>} />
+              <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding /></React.Suspense>} />
+              <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding /></React.Suspense>} />
+              <Route path="/servicios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ServiciosLanding /></React.Suspense>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           )}

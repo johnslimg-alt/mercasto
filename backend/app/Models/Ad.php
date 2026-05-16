@@ -28,6 +28,10 @@ class Ad extends Model
         'promoted',
         'views',
         'expires_at',
+        'republished_at',
+        'republish_count',
+        'boost_type',
+        'boost_expires_at',
     ];
 
     protected function casts(): array
@@ -37,6 +41,9 @@ class Ad extends Model
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
             'views' => 'integer',
+            'republish_count' => 'integer',
+            'expires_at' => 'datetime',
+            'republished_at' => 'datetime',
         ];
     }
 
