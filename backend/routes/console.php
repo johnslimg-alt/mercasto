@@ -10,8 +10,9 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Автоматический бэкап базы данных каждый день в 3:00 ночи
-Schedule::command('db:backup')->dailyAt('03:00');
+// Database backups are handled by the dedicated docker-compose `db-backup`
+// service, which uses the matching PostgreSQL/pgvector client image.
+// Keep `db:backup` manual-only so the backend container does not need pg_dump.
 
 // Финансовый контроль (The Eternal VIP Fix): Ежечасно снимаем продвижение с просроченных объявлений
 Schedule::call(function () {
