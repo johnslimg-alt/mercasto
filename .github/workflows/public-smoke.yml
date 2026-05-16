@@ -24,18 +24,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSIL --max-time 30 https://mercasto.com/
-          curl -fsSL --max-time 30 https://mercasto.com/ | grep -i "Mercasto"
-          curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers | grep -Eq 'google|\{'
-          curl -fsSL --max-time 30 https://mercasto.com/api/categories | grep -q '"slug"'
-          curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | grep -Eq '"data"|"id"|\['
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if "$@"; then
+                return 0
+              fi
+              echo "attempt ${attempt} failed: $*" >&2
+              sleep 8
+            done
+            return 1
+          }
+
+          retry curl -fsSIL --max-time 30 https://mercasto.com/
+          retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/ | grep -i Mercasto"
+          retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers | grep -Eq 'google|\\{'"
+          retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/categories | grep -q '\"slug\"'"
+          retry bash -c "curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | grep -Eq '\"data\"|\"id\"|\\['"
 
       - name: Check protected public paths
         shell: bash
         run: |
           set -euo pipefail
           for path in /.env /.git/config /backend/.env /composer.json /package.json /horizon /vendor/horizon; do
-            status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "https://mercasto.com${path}")
+            status=$(curl -sS --retry 4 --retry-delay 8 --retry-connrefused -o /dev/null -w '%{http_code}' --max-time 30 "https://mercasto.com${path}")
             echo "${path} -> ${status}"
             case "$status" in
               403|404|410) ;;
