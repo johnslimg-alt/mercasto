@@ -215,15 +215,15 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
                     <button key={cat.slug} onClick={() => {
                         const vpath = VERTICAL_SLUGS[cat.slug];
                         if (vpath) { navigate(vpath); } else { setActiveCat(cat.slug); }
-                      }} className="category-pill group min-w-[116px] sm:min-w-[128px] max-w-[150px]">
+                      }} className="category-pill group min-w-[104px] sm:min-w-[116px] max-w-[142px]">
 
-                      <div className="w-8 h-8 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] group-hover:bg-[#84CC16]/10 transition-all">
+                      <div className="category-icon w-7 h-7 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] group-hover:bg-[#84CC16]/10 transition-all">
 
-                        <Icon size={17} />
+                        <Icon size={15} />
 
                       </div>
 
-                      <h3 className="font-semibold text-[12px] text-left text-slate-700 group-hover:text-[#365314] line-clamp-1 leading-tight">
+                      <h3 className="font-semibold text-[11px] text-left text-slate-700 group-hover:text-[#365314] line-clamp-1 leading-tight">
                         {cat.name?.[lang] || cat.name?.['es'] || cat.name}
                       </h3>
 

@@ -65,10 +65,10 @@ export default function AdDetailScreen({
   handleViewCompany, handleWhatsAppClick, allAds, setViewedAd, onBack, MediaSlider, renderAdCard, AdSenseBanner,
   currentUser
 }) {
-  if (!ad) return null;
-
   // Track recently viewed
   React.useEffect(() => { if (ad) addRecentlyViewed(ad); }, [ad?.id]);
+
+  if (!ad) return null;
 
   const isOwner = currentUser && currentUser.id === ad.user_id;
   

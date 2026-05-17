@@ -112,15 +112,15 @@ html.dark .btn-lg.bg-white:hover {
   .market-shell { @apply rounded-[28px] border border-slate-200 bg-white/90 shadow-sm shadow-slate-200/70; }
   .market-card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-200/80; }
   .category-rail {
-    @apply flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2;
+    @apply flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-2;
     scroll-padding-inline: 1rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
   .category-rail::-webkit-scrollbar { display: none; }
   .category-pill {
-    @apply snap-start shrink-0 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-[#0F172A] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#84CC16] hover:text-[#365314] hover:shadow-md;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    @apply snap-start shrink-0 flex h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[#0F172A] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#84CC16] hover:bg-[#F7FEE7] hover:text-[#365314] hover:shadow-md;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.045);
   }
   .location-chip {
     @apply inline-flex items-center gap-1.5 rounded-full border border-[#84CC16]/30 bg-[#84CC16]/10 px-3 py-1 text-[12px] font-semibold text-[#365314];
@@ -428,5 +428,11 @@ html.dark .btn-lg.bg-white:hover {
     background-color: #1E293B;
     color: #F8FAFC;
     border-color: #334155;
+  }
+
+  html.dark .category-icon {
+    background-color: #0F172A;
+    border-color: #334155;
+    color: #CBD5E1;
   }
 }
