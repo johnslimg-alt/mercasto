@@ -17,6 +17,20 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
       'empleo': '/empleos',
       'servicios': '/servicios',
     };
+    const getVerticalPath = React.useCallback((slug = '') => {
+      if (VERTICAL_SLUGS[slug]) return VERTICAL_SLUGS[slug];
+      if (slug.startsWith('coches-y-motor/')) return '/autos';
+      if (slug.startsWith('inmobiliaria/')) return '/inmuebles';
+      if (slug.startsWith('empleo/')) return '/empleos';
+      if (slug.startsWith('servicios/')) return '/servicios';
+      return null;
+    }, []);
+    const verticalCategoryCards = React.useMemo(() => ([
+      { slug: 'motor', verticalPath: '/autos', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
+      { slug: 'inmobiliaria', verticalPath: '/inmuebles', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
+      { slug: 'empleo', verticalPath: '/empleos', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
+      { slug: 'servicios', verticalPath: '/servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
+    ]), []);
 
     // Заглушка (Fallback) на случай, если база данных категорий пуста
     const defaultCats = [
@@ -34,6 +48,12 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
       { slug: 'boletos', name: { es: 'Boletos' }, icon: 'Ticket' }
     ];
     const displayCategories = categoriesData && categoriesData.length > 0 ? categoriesData : defaultCats;
+    const homeCategories = React.useMemo(() => {
+      return [
+        ...verticalCategoryCards,
+        ...displayCategories.filter(cat => !getVerticalPath(cat.slug)),
+      ];
+    }, [displayCategories, getVerticalPath, verticalCategoryCards]);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
       return [...(serverAds || []), ...mockAds]
@@ -198,7 +218,10 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   <button className="text-[13px] font-medium text-slate-600 hover:text-slate-900 hidden sm:block">{t.sort_popular || 'Ordenar: Popular'}</button>
 
-                  <a className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer" onClick={() => setShowAllCategories(prev => !prev)}>{showAllCategories ? (t.show_less || 'Ver menos') : (t.view_all_cat || 'Ver todas las categorías →')}</a>
+                  <a className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer whitespace-nowrap" onClick={() => setShowAllCategories(prev => !prev)}>
+                    <span className="sm:hidden">{showAllCategories ? (t.show_less || 'Ver menos') : 'Todas →'}</span>
+                    <span className="hidden sm:inline">{showAllCategories ? (t.show_less || 'Ver menos') : (t.view_all_cat || 'Ver todas las categorías →')}</span>
+                  </a>
 
                 </div>
 
@@ -206,24 +229,24 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
               <div className="category-rail rail-fade -mx-4 px-4 lg:mx-0 lg:px-0">
 
-                {displayCategories.slice(0, showAllCategories ? displayCategories.length : 16).map(cat => {
+                {homeCategories.slice(0, showAllCategories ? homeCategories.length : 16).map(cat => {
 
                   const Icon = IconMap[cat.icon] || Star;
 
                   return (
 
                     <button key={cat.slug} onClick={() => {
-                        const vpath = VERTICAL_SLUGS[cat.slug];
+                        const vpath = cat.verticalPath || getVerticalPath(cat.slug);
                         if (vpath) { navigate(vpath); } else { setActiveCat(cat.slug); }
-                      }} className="category-pill group min-w-[104px] sm:min-w-[116px] max-w-[142px]">
+                      }} className="category-pill group min-w-[82px] sm:min-w-[88px] max-w-[96px]">
 
-                      <div className="category-icon w-7 h-7 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] group-hover:bg-[#84CC16]/10 transition-all">
+                      <div className="category-icon w-9 h-9 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] group-hover:bg-[#84CC16]/10 transition-all">
 
-                        <Icon size={15} />
+                        <Icon size={17} strokeWidth={2.2} />
 
                       </div>
 
-                      <h3 className="font-semibold text-[11px] text-left text-slate-700 group-hover:text-[#365314] line-clamp-1 leading-tight">
+                      <h3 className="font-semibold text-[11px] text-center text-slate-700 group-hover:text-[#365314] line-clamp-2 leading-tight">
                         {cat.name?.[lang] || cat.name?.['es'] || cat.name}
                       </h3>
 
@@ -522,7 +545,12 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${job.logo}`}>
 
-                                {job.initial === 'MD' ? <div className="p-1"><MercastoLogo className="w-full h-full" /></div> : job.initial}
+                                {job.initial === 'MD' ? (
+                                  <svg viewBox="0 0 100 100" className="w-6 h-6" aria-hidden="true">
+                                    <path d="M50 5 C27.9 5 10 22.9 10 45 C10 75 50 95 50 95 C50 95 90 75 90 45 C90 22.9 72.1 5 50 5 Z" fill="#84CC16" />
+                                    <path d="M30 60 L30 35 L50 50 L70 35 L70 60" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                ) : job.initial}
 
                               </div>
 

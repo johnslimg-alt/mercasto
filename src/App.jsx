@@ -52,6 +52,24 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+function RequireAuth({ user, authReady, setAuthMode, setShowAuthModal, admin = false, children }) {
+  const hasToken = Boolean(localStorage.getItem('auth_token'));
+
+  useEffect(() => {
+    if (authReady && (!user || !hasToken)) {
+      setAuthMode('login');
+      setShowAuthModal(true);
+    }
+  }, [authReady, hasToken, setAuthMode, setShowAuthModal, user]);
+
+  if (!authReady) {
+    return <div className="flex min-h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#84CC16]" /></div>;
+  }
+  if (!user || !hasToken) return <Navigate to="/" replace />;
+  if (admin && user.role !== 'admin') return <Navigate to="/profile" replace />;
+  return children;
+}
+
 // --- ЛОГОТИП И ИКОНКИ ---
 const MercastoLogo = ({ className = "h-11" }) => (
   <div className={`flex items-center gap-2 ${className}`}>
@@ -258,7 +276,10 @@ function App() {
     try { return JSON.parse(localStorage.getItem('user')) || null; }
     catch (e) { localStorage.removeItem('user'); return null; }
   };
-  const [user, setUser] = useState(getSafeUser());
+  const initialAuthToken = localStorage.getItem('auth_token');
+  const initialUser = initialAuthToken ? getSafeUser() : null;
+  const [authReady, setAuthReady] = useState(!initialAuthToken);
+  const [user, setUser] = useState(initialUser);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [resetToken, setResetToken] = useState('');
@@ -269,7 +290,7 @@ function App() {
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState('');
 
   const [accountType, setAccountType] = useState('particular');
-  const [userRole, setUserRole] = useState('admin');
+  const [userRole, setUserRole] = useState(() => initialUser?.role || 'individual');
 
   const [form, setForm] = useState({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
   const [debouncedLocation, setDebouncedLocation] = useState('');
@@ -399,6 +420,7 @@ function App() {
   const [showMobileLocationPicker, setShowMobileLocationPicker] = useState(false);
   const [locState, setLocState] = useState('');
   const [locCity, setLocCity] = useState('');
+  const mobileSearchInputRef = useRef(null);
   const skipFilterUrlSyncRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -516,6 +538,50 @@ function App() {
       }));
     }
   }, [user]);
+
+  // Keep restored local sessions honest without logging users out on transient network errors.
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+      setUserRole('individual');
+      setAuthReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+          setUserRole(userData.role || 'individual');
+          localStorage.setItem('user', JSON.stringify(userData));
+          setAuthReady(true);
+          return;
+        }
+
+        if (res.status === 401) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('token');
+          setUser(null);
+          setUserRole('individual');
+          setFavoriteIds([]);
+          setUserAds([]);
+          setFavoriteAds([]);
+        }
+        setAuthReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setAuthReady(true);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
 
   // --- ИСПРАВЛЕНИЕ "ВЫЛЕТОВ" С САЙТА ---
   // Обрабатываем кнопку "Назад" в браузере, чтобы не было пустых экранов
@@ -845,6 +911,10 @@ function App() {
   // --- WEBSOCKETS LISTENER ---
   useEffect(() => {
     if (user?.id && echo) {
+        const token = localStorage.getItem('auth_token');
+        if (token && echo.connector?.pusher?.config?.auth?.headers) {
+            echo.connector.pusher.config.auth.headers.Authorization = `Bearer ${token}`;
+        }
         const channel = echo.private(`App.Models.User.${user.id}`);
 
         channel.listen('.NewNotification', (e) => {
@@ -1426,8 +1496,10 @@ function App() {
     const token = localStorage.getItem('auth_token');
     // Clear local state first for immediate UX response
     setUser(null);
+    setUserRole('individual');
     localStorage.removeItem('user');
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('token');
     setFavoriteIds([]);
     setUserAds([]);
     setFavoriteAds([]);
@@ -2455,7 +2527,7 @@ function App() {
       <button onClick={() => setCurrentTab('home')} className={`flex flex-col items-center p-1 ${currentTab === 'home' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(true); window.scrollTo(0,0); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
+      <button onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
       <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-8"><div className="flex flex-col items-center justify-center bg-[#84CC16] text-white p-3.5 rounded-full shadow-lg border-4 border-[#f5f5f5]"><PlusCircle className="w-7 h-7" /></div></button>
@@ -2472,9 +2544,9 @@ function App() {
       {/* GLOBAL HEADER */}
       <header className="site-header sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-          <div className="flex items-center gap-3 h-[56px] lg:h-[60px]">
+          <div className="relative flex items-center gap-3 h-[56px] lg:h-[60px]">
             <a href="#" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
-              <MercastoLogo className="h-9 lg:h-10" />
+              <MercastoLogo className="h-8 sm:h-9 lg:h-10" />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
               <div className="header-search-shell flex w-full max-w-[860px] items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
@@ -2536,15 +2608,16 @@ function App() {
                 <button type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
-                <div className="mobile-language-switcher mobile-language-switcher--compact" aria-label="Language switcher">
-                  {Object.keys(translations).map(l => (
-                    <button key={l} type="button" onClick={() => setLang(l)} className={lang === l ? 'active' : ''}>
-                      {l.toUpperCase()}
-                    </button>
-                  ))}
+                <div className="mobile-language-select" aria-label="Language switcher">
+                  <Globe className="w-3.5 h-3.5" />
+                  <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
+                    {Object.keys(translations).map(l => (
+                      <option key={l} value={l}>{l.toUpperCase()}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-              <button type="button" onClick={() => setIsDarkMode(v => !v)} className="header-icon-button hidden md:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
+              <button type="button" onClick={() => setIsDarkMode(v => !v)} className="header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               <div className="header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
@@ -2607,7 +2680,7 @@ function App() {
             <div className="relative min-w-0">
               <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2.5 text-sm outline-none"/>
+                <input ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2.5 text-sm outline-none"/>
                 <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
@@ -2661,16 +2734,16 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={renderHomeScreen()} />
-              <Route path="/post" element={renderPostScreen()} />
-              <Route path="/profile" element={renderUserDashboard()} />
-              <Route path="/admin" element={renderAdminScreen()} />
+              <Route path="/post" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderPostScreen()}</RequireAuth>} />
+              <Route path="/profile" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderUserDashboard()}</RequireAuth>} />
+              <Route path="/admin" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} admin>{renderAdminScreen()}</RequireAuth>} />
               <Route path="/terms" element={<StaticPages currentTab="terms" />} />
               <Route path="/privacy" element={<StaticPages currentTab="privacy" />} />
               <Route path="/help" element={<StaticPages currentTab="help" />} />
               <Route path="/safety" element={<StaticPages currentTab="safety" />} />
               <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
-              <Route path="/perfil/editar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense>} />
-              <Route path="/anuncio/:id/editar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen /></React.Suspense>} />
+              <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense></RequireAuth>} />
+              <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen /></React.Suspense></RequireAuth>} />
               <Route path="/autos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding /></React.Suspense>} />
               <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding /></React.Suspense>} />
               <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding /></React.Suspense>} />
