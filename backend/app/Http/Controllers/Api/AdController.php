@@ -112,6 +112,10 @@ class AdController extends Controller
             });
         }
 
+        if ($request->filled('state')) {
+            $query->where('state', $request->state);
+        }
+
         // Глобальный фильтр: Цена
         if ($request->filled('min_price')) {
             $query->where('price', '>=', (float) $request->min_price);
@@ -154,6 +158,7 @@ class AdController extends Controller
             'category',
             'search',
             'location',
+            'state',
             'min_price',
             'max_price',
             'condition',
@@ -214,6 +219,7 @@ class AdController extends Controller
             'price' => 'required|numeric|min:0',
             'description' => 'required|string',
             'location' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:60',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД, защита от Data Integrity Bypass
             'images' => 'nullable|array|max:10', // Максимум 10 картинок
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Максимум 5МБ и защита от OOM-бомб (Pixel Flooding)
@@ -293,6 +299,7 @@ class AdController extends Controller
             'condition' => $request->input('condition', 'usado'),
             'description' => $request->description,
             'location' => $request->location,
+            'state' => $request->state,
             'latitude' => $lat,
             'longitude' => $lng,
             'category' => $request->category,
@@ -499,6 +506,7 @@ class AdController extends Controller
             'condition' => $validated['condition'] ?? $ad->condition,
             'description' => $validated['description'],
             'location' => $validated['location'],
+            'state' => $request->state,
             'latitude' => $lat,
             'longitude' => $lng,
             'category' => $validated['category'],

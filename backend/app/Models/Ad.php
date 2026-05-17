@@ -32,6 +32,7 @@ class Ad extends Model
         'republish_count',
         'boost_type',
         'boost_expires_at',
+        'state',
     ];
 
     protected function casts(): array

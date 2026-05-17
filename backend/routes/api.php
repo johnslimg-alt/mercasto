@@ -23,6 +23,17 @@ Route::middleware('throttle:10,1')->group(function () {
 Route::get('/sitemap.xml', [AdController::class, 'sitemap']);
 Route::get('/google-merchant.xml', [AdController::class, 'googleMerchantFeed']);
 Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/states/counts', function () {
+    $counts = \Illuminate\Support\Facades\DB::table('ads')
+        ->where('status', 'active')
+        ->whereNotNull('state')
+        ->where('state', '!=', '')
+        ->select('state', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+        ->groupBy('state')
+        ->orderByDesc('count')
+        ->get();
+    return response()->json($counts);
+});
 Route::get('/users/{id}/reviews', [ReviewController::class, 'index']);
 Route::get('/users/{id}/profile', [ProfileController::class, 'publicProfile']); // Публичный профиль продавца (Storefront)
 
