@@ -2,6 +2,12 @@ name: Backend PHPUnit Gate
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
   pull_request:
     branches:
       - main

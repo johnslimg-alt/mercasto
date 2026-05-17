@@ -10,7 +10,9 @@ export default defineConfig({
     sentryVitePlugin({
       org: "mercasto",
       project: "frontend",
-      telemetry: false
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
+      disable: !process.env.SENTRY_AUTH_TOKEN
     })
   ],
   build: {

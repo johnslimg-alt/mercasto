@@ -49,8 +49,8 @@ docker compose "${COMPOSE_FILES[@]}" ps
 echo "== Public HTTP smoke =="
 check_http_status "${BASE_URL}/up" '^200$'
 check_http_status "${BASE_URL}/" '^(200|301|302)$'
-check_http_status "${BASE_URL}/api/categories" '^(200|204|301|302|401|403|404)$'
-check_http_status "${BASE_URL}/api/ads?page=1" '^(200|204|301|302|401|403|404)$'
+check_http_status "${BASE_URL}/api/categories" '^200$'
+check_http_status "${BASE_URL}/api/ads?page=1" '^200$'
 
 echo "== Sensitive path probes =="
 check_http_status "${BASE_URL}/.env" '^(403|404|410)$'

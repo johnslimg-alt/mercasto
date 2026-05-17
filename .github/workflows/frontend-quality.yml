@@ -62,6 +62,8 @@ jobs:
         run: npm ci
       - name: Run recovery guards
         run: npm run check:recovery
+      - name: Run frontend lint gate
+        run: npm run lint:ci
       - name: Run public copy scan
         run: bash scripts/public-copy-scan.sh
       - name: Build frontend

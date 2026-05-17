@@ -27,16 +27,23 @@ class ErrorBoundary extends React.Component {
 
     // Автоматическая защита от устаревшего кэша Vite (после новых деплоев)
     if (error && error.message && error.message.includes('Failed to fetch dynamically imported module')) {
-      // Принудительно перезагружаем страницу, чтобы получить новые файлы с сервера
-      window.location.reload();
+      const reloadKey = 'mercasto_chunk_reload_attempted';
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, '1');
+        window.location.reload();
+      }
     }
   }
   render() {
     if (this.state.hasError) {
+      const showDetails = import.meta.env.DEV;
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6 text-center w-full">
           <h1 className="text-[24px] font-bold text-slate-900 mb-2">No pudimos cargar esta sección</h1>
-          <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.errorInfo?.componentStack}</div>
+          <p className="text-slate-500 mb-6 max-w-md">Recarga la página. Si el problema continúa, vuelve a intentarlo en unos minutos.</p>
+          {showDetails && (
+            <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.errorInfo?.componentStack}</div>
+          )}
           <button onClick={() => window.location.reload()} className="px-6 py-3 bg-slate-900 text-white rounded-xl shadow-md hover:bg-black transition-colors">Recargar página</button>
         </div>
       );
@@ -297,6 +304,24 @@ function App() {
     if (tab === 'home') navigate('/'); else navigate(`/${tab}`);
   }, [navigate, currentTab, images]);
 
+  const handleHeaderCategoryClick = useCallback((slug = '') => {
+    setViewedAd(null);
+    setViewedCompany(null);
+    setActiveCat(slug);
+    setSearchQuery('');
+    setDebouncedSearch('');
+    navigate(slug ? `/?category=${encodeURIComponent(slug)}` : '/');
+    window.scrollTo(0, 0);
+  }, [navigate]);
+
+  const handleAdBack = useCallback(() => {
+    setViewedAd(null);
+    if (window.location.hash.startsWith('#ad-')) {
+      window.history.replaceState({}, '', `${window.location.pathname}${window.location.search}`);
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api'}/auth/providers`)
       .then(res => res.json())
@@ -508,12 +533,50 @@ function App() {
     } catch (err) { console.error("Export error", err); alert('Error de conexión'); }
   };
 
+  useEffect(() => {
+    if (location.pathname !== '/') return;
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get('search') || params.get('q');
+    const categoryParam = params.get('category') || params.get('cat');
+    const locationParam = params.get('location') || params.get('city') || params.get('state');
+    const minPriceParam = params.get('min_price');
+    const maxPriceParam = params.get('max_price');
+    const conditionParam = params.get('condition');
+    if (!searchParam && !categoryParam && !locationParam && !minPriceParam && !maxPriceParam && !conditionParam) return;
+
+    setViewedAd(null);
+    setViewedCompany(null);
+    setSearchQuery(searchParam || '');
+    setDebouncedSearch(searchParam || '');
+    setActiveCat(categoryParam || '');
+    if (locationParam) {
+      setSearchLocation(null);
+      setSearchLocationInput(locationParam);
+      setSelectedState(locationParam);
+      setDebouncedLocInput(locationParam);
+    } else {
+      setSearchLocation(null);
+      setSearchLocationInput('');
+      setSelectedState('');
+      setDebouncedLocInput('');
+    }
+    setMinPrice(minPriceParam || '');
+    setMaxPrice(maxPriceParam || '');
+    setConditionFilter(conditionParam ? conditionParam.split(',').filter(Boolean) : []);
+  }, [location.pathname, location.search]);
+
   // --- ПЕРЕХВАТ OAuth ТОКЕНА ИЗ URL ---
   useEffect(() => {
     // 1. Отработка прямых ссылок на объявления (Google Merchant, Sitemap, Web Push)
     const urlParams = new URLSearchParams(window.location.search);
     const adIdParam = urlParams.get('ad');
     const companyIdParam = urlParams.get('store');
+    const searchParam = urlParams.get('search') || urlParams.get('q');
+    const categoryParam = urlParams.get('category') || urlParams.get('cat');
+    const locationParam = urlParams.get('location') || urlParams.get('city') || urlParams.get('state');
+    const minPriceParam = urlParams.get('min_price');
+    const maxPriceParam = urlParams.get('max_price');
+    const conditionParam = urlParams.get('condition');
     const hash = window.location.hash;
 
     let targetAdId = null;
@@ -523,6 +586,28 @@ function App() {
     else if (hash.startsWith('#ad-')) targetAdId = hash.replace('#ad-', '');
     else if (companyIdParam) targetCompanyId = companyIdParam;
     else if (hash.startsWith('#company-')) targetCompanyId = hash.replace('#company-', '');
+
+    if (!targetAdId && !targetCompanyId && (searchParam || categoryParam || locationParam || minPriceParam || maxPriceParam || conditionParam)) {
+      setViewedAd(null);
+      setViewedCompany(null);
+      setSearchQuery(searchParam || '');
+      setDebouncedSearch(searchParam || '');
+      setActiveCat(categoryParam || '');
+      if (locationParam) {
+        setSearchLocation(null);
+        setSearchLocationInput(locationParam);
+        setSelectedState(locationParam);
+        setDebouncedLocInput(locationParam);
+      } else {
+        setSearchLocation(null);
+        setSearchLocationInput('');
+        setSelectedState('');
+        setDebouncedLocInput('');
+      }
+      setMinPrice(minPriceParam || '');
+      setMaxPrice(maxPriceParam || '');
+      setConditionFilter(conditionParam ? conditionParam.split(',').filter(Boolean) : []);
+    }
 
     if (targetAdId) {
       fetch(`${API_URL}/ads/${targetAdId}`)
@@ -2060,7 +2145,7 @@ function App() {
   );
 
   // --- РЕНДЕР СТРАНИЦЫ ТОВАРА ---
-  const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} currentUser={user} />;
+  const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} onBack={handleAdBack} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} currentUser={user} />;
 
   // --- РЕНДЕР ПУБЛИЧНОГО ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
   const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
@@ -2383,7 +2468,7 @@ function App() {
       <button onClick={() => setCurrentTab('home')} className={`flex flex-col items-center p-1 ${currentTab === 'home' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => { setCurrentTab('home'); window.scrollTo(0,0); setTimeout(() => mobileLocationInputRef.current?.focus(), 100); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
+      <button onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(true); window.scrollTo(0,0); setTimeout(() => mobileLocationInputRef.current?.focus(), 100); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
       <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-8"><div className="flex flex-col items-center justify-center bg-[#84CC16] text-white p-3.5 rounded-full shadow-lg border-4 border-[#f5f5f5]"><PlusCircle className="w-7 h-7" /></div></button>
@@ -2522,7 +2607,7 @@ function App() {
           <div className="lg:hidden pb-3 flex flex-col gap-2">
             <div className="flex items-center gap-2 bg-slate-100 rounded-2xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
               <Search className="w-4 h-4 text-slate-500" />
-            <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent w-full text-sm outline-none"/>
+            <input ref={mobileLocationInputRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent w-full text-sm outline-none"/>
             </div>
 
             {/* МОБИЛЬНЫЙ ВЫБОР ЛОКАЦИИ */}
@@ -2552,9 +2637,9 @@ function App() {
         <div className="border-t border-slate-100 bg-white">
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
             <nav className="flex items-center gap-6 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600 whitespace-nowrap">
-              <a onClick={() => setActiveCat('')} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === '' ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{t.all || 'All'}</a>
+              <a onClick={() => handleHeaderCategoryClick('')} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === '' ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{t.all || 'All'}</a>
               {categoriesData.map(c => (
-                <a key={c.slug} onClick={() => setActiveCat(c.slug)} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === c.slug ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{getCatName(c, lang)}</a>
+                <a key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === c.slug ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{getCatName(c, lang)}</a>
               ))}
             </nav>
           </div>
