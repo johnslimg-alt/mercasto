@@ -14,13 +14,25 @@ require_cmd() {
 check_http_status() {
   local url="$1"
   local expected_pattern="$2"
+  local attempts="${SMOKE_HTTP_ATTEMPTS:-6}"
+  local delay="${SMOKE_HTTP_RETRY_DELAY:-5}"
+  local attempt
   local status
-  status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url")"
-  echo "$url -> $status"
-  if [[ ! "$status" =~ $expected_pattern ]]; then
-    echo "unexpected status for $url: $status" >&2
-    exit 1
-  fi
+
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
+    status="${status:-000}"
+    echo "$url -> $status (attempt $attempt/$attempts)"
+    if [[ "$status" =~ $expected_pattern ]]; then
+      return 0
+    fi
+    if (( attempt < attempts )); then
+      sleep "$delay"
+    fi
+  done
+
+  echo "unexpected status for $url after $attempts attempts: $status" >&2
+  exit 1
 }
 
 require_cmd docker

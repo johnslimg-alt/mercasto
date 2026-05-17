@@ -67,12 +67,56 @@ compose_ps() {
   docker compose -f docker-compose.yml -f docker-compose.override.yml ps
 }
 
+retry_command() {
+  local attempts="${SERVER_OPERATOR_RETRY_ATTEMPTS:-6}"
+  local delay="${SERVER_OPERATOR_RETRY_DELAY:-5}"
+  local attempt
+
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    if "$@"; then
+      return 0
+    fi
+    if [ "$attempt" -lt "$attempts" ]; then
+      echo "command failed; retrying in ${delay}s ($attempt/$attempts): $*" >&2
+      sleep "$delay"
+    fi
+  done
+
+  echo "command failed after $attempts attempts: $*" >&2
+  return 1
+}
+
+download_with_retry() {
+  local url="$1"
+  local output="$2"
+  local attempts="${SERVER_OPERATOR_RETRY_ATTEMPTS:-6}"
+  local delay="${SERVER_OPERATOR_RETRY_DELAY:-5}"
+  local attempt
+  local tmp
+
+  tmp="$(mktemp)"
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    if curl -fsS --max-time 30 "$url" >"$tmp"; then
+      mv "$tmp" "$output"
+      return 0
+    fi
+    if [ "$attempt" -lt "$attempts" ]; then
+      echo "download failed; retrying in ${delay}s ($attempt/$attempts): $url" >&2
+      sleep "$delay"
+    fi
+  done
+
+  rm -f "$tmp"
+  echo "download failed after $attempts attempts: $url" >&2
+  return 1
+}
+
 public_smoke() {
   print_header "Public HTTP smoke"
-  curl -fsSI --max-time 30 https://mercasto.com/ | head -n 20
-  curl -fsSI --max-time 30 https://mercasto.com/api/categories | head -n 20
-  curl -fsSI --max-time 30 https://mercasto.com/horizon | head -n 20 || true
-  curl -fsSI --max-time 30 https://mercasto.com/vendor/horizon | head -n 20 || true
+  retry_command curl -fsSI --max-time 30 https://mercasto.com/ | head -n 20
+  retry_command curl -fsSI --max-time 30 https://mercasto.com/api/categories | head -n 20
+  retry_command curl -fsSI --max-time 30 https://mercasto.com/horizon | head -n 20 || true
+  retry_command curl -fsSI --max-time 30 https://mercasto.com/vendor/horizon | head -n 20 || true
 }
 
 nginx_config_test() {
@@ -82,9 +126,9 @@ nginx_config_test() {
 
 seo_aeo_probe() {
   print_header "SEO/AEO smoke"
-  curl -fsS https://mercasto.com/ >/tmp/mercasto-home.html
-  curl -fsS https://mercasto.com/sitemap.xml >/tmp/mercasto-sitemap.xml
-  curl -fsS https://mercasto.com/robots.txt >/tmp/mercasto-robots.txt
+  download_with_retry https://mercasto.com/ /tmp/mercasto-home.html
+  download_with_retry https://mercasto.com/sitemap.xml /tmp/mercasto-sitemap.xml
+  download_with_retry https://mercasto.com/robots.txt /tmp/mercasto-robots.txt
   grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/mercasto-home.html
   grep -Eiq 'name="description"|property="og:description"' /tmp/mercasto-home.html
   grep -Eiq 'application/ld\+json|schema.org' /tmp/mercasto-home.html

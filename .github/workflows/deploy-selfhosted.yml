@@ -30,5 +30,10 @@ jobs:
           docker exec mercasto_backend_container php artisan optimize:clear
           docker exec mercasto_backend_container php artisan optimize
 
+      - name: Production smoke
+        run: |
+          cd /var/www/mercasto
+          SMOKE_HTTP_ATTEMPTS=12 SMOKE_HTTP_RETRY_DELAY=5 bash scripts/production-smoke.sh
+
       - name: Очистка
         run: docker image prune -f

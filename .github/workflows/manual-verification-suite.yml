@@ -34,9 +34,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSIL --max-time 30 https://mercasto.com/
-          curl -fsSL --max-time 30 https://mercasto.com/api/categories | grep -q '"slug"'
-          curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | grep -Eq '"data"|"id"|\['
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5 6; do
+              "$@" && return 0
+              echo "retrying smoke command in 8s ($attempt/6): $*" >&2
+              sleep 8
+            done
+            "$@"
+          }
+          retry curl -fsSIL --max-time 30 https://mercasto.com/
+          retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/categories | grep -q '\"slug\"'"
+          retry bash -c "curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | grep -Eq '\"data\"|\"id\"|\\['"
 
       - name: Docker Compose config
         shell: bash
