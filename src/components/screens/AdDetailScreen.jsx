@@ -57,6 +57,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2 } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
+import { addRecentlyViewed } from '../../utils/recentlyViewed';
 
 export default function AdDetailScreen({
   ad, API_URL, getImageUrl, getImageUrls, getCatName, t, lang, favoriteIds, categoriesData,
@@ -65,6 +66,9 @@ export default function AdDetailScreen({
   currentUser
 }) {
   if (!ad) return null;
+
+  // Track recently viewed
+  React.useEffect(() => { if (ad) addRecentlyViewed(ad); }, [ad?.id]);
 
   const isOwner = currentUser && currentUser.id === ad.user_id;
   
@@ -111,7 +115,7 @@ export default function AdDetailScreen({
             <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-6">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 font-medium">MXN</span></p>
             
             <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 font-medium">
-              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><MapPin size={16}/> {ad.location || 'México'}</span>
+              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><MapPin size={16}/> {[ad.state, ad.location].filter(Boolean).join(' · ') || 'México'}</span>
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>

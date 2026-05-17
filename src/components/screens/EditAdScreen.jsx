@@ -34,7 +34,7 @@ export default function EditAdScreen() {
 
   // Form state
   const [form, setForm] = useState({
-    title: '', description: '', price: '', location: '',
+    title: '', description: '', price: '', location: '', state: '',
     category: '', condition: 'usado', attributes: {}
   });
 
@@ -74,6 +74,7 @@ export default function EditAdScreen() {
           description: adData.description || '',
           price: adData.price ?? '',
           location: adData.location || '',
+          state: adData.state || '',
           category: adData.category || '',
           condition: adData.condition || 'usado',
           attributes: parsedAttrs
@@ -154,6 +155,7 @@ export default function EditAdScreen() {
       formData.append('description', form.description);
       formData.append('price', form.price);
       formData.append('location', form.location);
+      formData.append('state', form.state || '');
       formData.append('category', form.category);
       formData.append('condition', form.condition);
 
@@ -296,6 +298,51 @@ export default function EditAdScreen() {
             {categories.map(cat => (
               <option key={cat.slug} value={cat.slug}>{cat.name || cat.slug}</option>
             ))}
+          </select>
+        </div>
+
+
+        {/* State */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Estado</label>
+          <select
+            value={form.state || ''}
+            onChange={e => setForm(p => ({ ...p, state: e.target.value }))}
+            className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white"
+          >
+            <option value="">Seleccionar estado</option>
+            <option value="Aguascalientes">Aguascalientes</option>
+            <option value="Baja California">Baja California</option>
+            <option value="Baja California Sur">Baja California Sur</option>
+            <option value="Campeche">Campeche</option>
+            <option value="Chiapas">Chiapas</option>
+            <option value="Chihuahua">Chihuahua</option>
+            <option value="Ciudad de México">Ciudad de México</option>
+            <option value="Coahuila">Coahuila</option>
+            <option value="Colima">Colima</option>
+            <option value="Durango">Durango</option>
+            <option value="Guanajuato">Guanajuato</option>
+            <option value="Guerrero">Guerrero</option>
+            <option value="Hidalgo">Hidalgo</option>
+            <option value="Jalisco">Jalisco</option>
+            <option value="México">México</option>
+            <option value="Michoacán">Michoacán</option>
+            <option value="Morelos">Morelos</option>
+            <option value="Nayarit">Nayarit</option>
+            <option value="Nuevo León">Nuevo León</option>
+            <option value="Oaxaca">Oaxaca</option>
+            <option value="Puebla">Puebla</option>
+            <option value="Querétaro">Querétaro</option>
+            <option value="Quintana Roo">Quintana Roo</option>
+            <option value="San Luis Potosí">San Luis Potosí</option>
+            <option value="Sinaloa">Sinaloa</option>
+            <option value="Sonora">Sonora</option>
+            <option value="Tabasco">Tabasco</option>
+            <option value="Tamaulipas">Tamaulipas</option>
+            <option value="Tlaxcala">Tlaxcala</option>
+            <option value="Veracruz">Veracruz</option>
+            <option value="Yucatán">Yucatán</option>
+            <option value="Zacatecas">Zacatecas</option>
           </select>
         </div>
 

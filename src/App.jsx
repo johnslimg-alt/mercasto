@@ -271,7 +271,7 @@ function App() {
   const [accountType, setAccountType] = useState('particular');
   const [userRole, setUserRole] = useState('admin');
 
-  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
+  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
   const [debouncedLocation, setDebouncedLocation] = useState('');
   const [isMapUpdating, setIsMapUpdating] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
@@ -302,7 +302,7 @@ function App() {
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
-        setForm({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
+        setForm({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
     }
 
     if (tab === 'home') navigate('/'); else navigate(`/${tab}`);
@@ -1652,6 +1652,7 @@ function App() {
     formData.append('price', form.price);
     formData.append('description', form.description);
     formData.append('location', form.location || 'México');
+    formData.append('state', form.state || '');
     formData.append('category', form.category || 'general');
     if (user && user.id) formData.append('user_id', user.id);
 
@@ -1752,6 +1753,7 @@ function App() {
       price: ad.price,
       description: ad.description || '',
       location: ad.location || '',
+      state: ad.state || '',
       category: ad.category || '',
       condition: ad.condition || 'usado',
       attributes: parsedAttributes
@@ -2105,7 +2107,7 @@ function App() {
           <div className="text-[20px] font-bold leading-none text-[#0F172A]">${Number(ad.price).toLocaleString()} <span className="text-[11px] font-medium text-slate-500">MXN</span></div>
           <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700">{ad.title}</h3>
           <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500">
-            <span className="truncate pr-2">{ad.location?.split(',')[0] || 'México'}</span>
+            <span className="truncate pr-2">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || 'México')}</span>
           </div>
         {ad.user?.role !== 'business' && (
             <button className="w-full mt-3 btn-md bg-[#0F172A] text-white hover:bg-black" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
