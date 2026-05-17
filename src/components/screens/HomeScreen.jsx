@@ -240,38 +240,6 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
 
 
-            {/* EXPLORAR POR ESTADO */}
-            <section className="col-span-12 -mt-2">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[18px] font-bold tracking-tight">Explorar por estado</h2>
-                <a onClick={() => setSelectedState('')} className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer">Todo México →</a>
-              </div>
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 flex-wrap">
-                {[
-                  { label: 'CDMX', value: 'Ciudad de México' },
-                  { label: 'Jalisco', value: 'Jalisco' },
-                  { label: 'Nuevo León', value: 'Nuevo León' },
-                  { label: 'Edo. México', value: 'México' },
-                  { label: 'Veracruz', value: 'Veracruz' },
-                  { label: 'Puebla', value: 'Puebla' },
-                  { label: 'Guanajuato', value: 'Guanajuato' },
-                  { label: 'Yucatán', value: 'Yucatán' },
-                  { label: 'Querétaro', value: 'Querétaro' },
-                  { label: 'Sonora', value: 'Sonora' },
-                  { label: 'Chihuahua', value: 'Chihuahua' },
-                  { label: 'Baja California', value: 'Baja California' },
-                ].map(({ label, value }) => (
-                  <button
-                    key={value}
-                    onClick={() => { setSelectedState(value); executeSearch?.(null, value); setCurrentTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold border transition-all ${selectedState === value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-700 hover:border-[#84CC16] hover:text-[#65A30D]'}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </section>
-
             {/* 3. TRENDING NOW */}
 
             <section className="col-span-12 mt-2">
