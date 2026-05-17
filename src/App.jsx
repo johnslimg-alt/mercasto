@@ -542,7 +542,6 @@ function App() {
     const minPriceParam = params.get('min_price');
     const maxPriceParam = params.get('max_price');
     const conditionParam = params.get('condition');
-    if (!searchParam && !categoryParam && !locationParam && !minPriceParam && !maxPriceParam && !conditionParam) return;
 
     setViewedAd(null);
     setViewedCompany(null);
@@ -563,6 +562,7 @@ function App() {
     setMinPrice(minPriceParam || '');
     setMaxPrice(maxPriceParam || '');
     setConditionFilter(conditionParam ? conditionParam.split(',').filter(Boolean) : []);
+    setDynamicFilters({});
   }, [location.pathname, location.search]);
 
   // --- ПЕРЕХВАТ OAuth ТОКЕНА ИЗ URL ---
@@ -607,6 +607,7 @@ function App() {
       setMinPrice(minPriceParam || '');
       setMaxPrice(maxPriceParam || '');
       setConditionFilter(conditionParam ? conditionParam.split(',').filter(Boolean) : []);
+      setDynamicFilters({});
     }
 
     if (targetAdId) {
