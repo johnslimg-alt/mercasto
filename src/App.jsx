@@ -289,7 +289,6 @@ function App() {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [availableProviders, setAvailableProviders] = useState({ google: false, apple: false, telegram: false });
-  const [mapsApiKey, setMapsApiKey] = useState('');
 
   const setCurrentTab = useCallback((tab) => {
     // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
@@ -344,7 +343,6 @@ function App() {
           apple:    p?.apple?.enabled   ?? p?.apple   ?? false,
           telegram: p?.telegram?.enabled ?? p?.telegram ?? false,
         });
-        setMapsApiKey(data?.maps_api_key || '');
       })
       .catch(() => {});
   }, []);
@@ -401,8 +399,6 @@ function App() {
   const [showMobileLocationPicker, setShowMobileLocationPicker] = useState(false);
   const [locState, setLocState] = useState('');
   const [locCity, setLocCity] = useState('');
-  const desktopLocationInputRef = useRef(null);
-  const mobileLocationInputRef = useRef(null);
   const skipFilterUrlSyncRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -896,55 +892,6 @@ function App() {
       }
     } catch (error) { console.error('Push unsubscribe error:', error); }
   };
-
-  // --- GOOGLE PLACES AUTOCOMPLETE ---
-  useEffect(() => {
-    if (!mapsApiKey) return;
-
-    const initAutocomplete = (ref) => {
-      if (window.google?.maps?.places && ref.current && !ref.current.dataset.autocompleteReady) {
-          const autocomplete = new window.google.maps.places.Autocomplete(ref.current, {
-              types: ['(cities)'],
-              componentRestrictions: { country: 'mx' }
-          });
-          autocomplete.addListener('place_changed', () => {
-              const place = autocomplete.getPlace();
-              if (place.geometry) {
-                  setSearchLocation({
-                      lat: place.geometry.location.lat(),
-                      lng: place.geometry.location.lng(),
-                  });
-                  setSearchLocationInput(place.formatted_address);
-              }
-          });
-          ref.current.dataset.autocompleteReady = 'true';
-      }
-    };
-
-    const bindAutocomplete = () => {
-      // Google Maps Autocomplete отключен в Header, так как мы используем кастомные выпадающие списки
-      // Он остался доступен для других компонентов (например, PostScreen)
-    };
-
-    if (window.google?.maps?.places) {
-      bindAutocomplete();
-      return;
-    }
-
-    const scriptId = 'google-maps-places-script';
-    let script = document.getElementById(scriptId);
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsApiKey)}&libraries=places&callback=Function.prototype`;
-      script.async = true;
-      script.defer = true;
-      script.addEventListener('load', bindAutocomplete, { once: true });
-      document.head.appendChild(script);
-    } else {
-      script.addEventListener('load', bindAutocomplete, { once: true });
-    }
-  }, [mapsApiKey]);
 
   useEffect(() => {
     if (user && user.notification_preferences) {
@@ -2658,7 +2605,7 @@ function App() {
             <div className="relative min-w-0">
               <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input ref={mobileLocationInputRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2.5 text-sm outline-none"/>
+                <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2.5 text-sm outline-none"/>
                 <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
