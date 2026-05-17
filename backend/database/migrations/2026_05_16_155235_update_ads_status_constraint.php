@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         // Drop existing check constraint (name may vary — drop both common names)
         DB::statement("ALTER TABLE ads DROP CONSTRAINT IF EXISTS ads_status_check");
 
@@ -19,6 +23,10 @@ return new class extends Migration {
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement("ALTER TABLE ads DROP CONSTRAINT IF EXISTS ads_status_check");
 
         DB::statement("
