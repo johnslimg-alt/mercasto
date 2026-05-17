@@ -11,6 +11,26 @@
   --color-paper: #F8FAFC;
 }
 
+.btn-sm.bg-white,
+.btn-md.bg-white,
+.btn-lg.bg-white {
+  color: #334155;
+}
+
+html.dark .btn-sm.bg-white,
+html.dark .btn-md.bg-white,
+html.dark .btn-lg.bg-white {
+  background: #1E293B;
+  border-color: #475569;
+  color: #F8FAFC;
+}
+
+html.dark .btn-sm.bg-white:hover,
+html.dark .btn-md.bg-white:hover,
+html.dark .btn-lg.bg-white:hover {
+  background: #334155;
+}
+
 @layer base {
   
   html { scroll-behavior: smooth; }
