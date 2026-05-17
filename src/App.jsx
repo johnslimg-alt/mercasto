@@ -2523,9 +2523,9 @@ function App() {
       {/* GLOBAL HEADER */}
       <header className="site-header sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-          <div className="flex items-center gap-3 h-[68px]">
+          <div className="flex items-center gap-3 h-[56px] lg:h-[60px]">
             <a href="#" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
-              <MercastoLogo />
+              <MercastoLogo className="h-9 lg:h-10" />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
               <div className="header-search-shell flex w-full max-w-[860px] items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
@@ -2653,19 +2653,17 @@ function App() {
               </button>
             </div>
           </div>
-          {/* Mobile Search & Location */}
-          <div className="lg:hidden pb-3 flex flex-col gap-2">
-            <div className="mobile-search-box flex items-center gap-2 rounded-2xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
-              <Search className="w-4 h-4 text-slate-500" />
-            <input ref={mobileLocationInputRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent w-full text-sm outline-none"/>
-            </div>
-
-            {/* МОБИЛЬНЫЙ ВЫБОР ЛОКАЦИИ */}
-            <div className="relative">
-              <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-trigger flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 cursor-pointer text-left">
-                <MapPin className="w-4 h-4 text-slate-500" />
-                <span className={`text-sm ${searchLocationInput ? 'text-slate-900' : 'text-slate-500'}`}>{searchLocationInput || t.all_mexico || "Todo México"}</span>
-              </button>
+          {/* Mobile Search + Location + Account */}
+          <div className="mobile-search-row lg:hidden pb-2">
+            <div className="relative min-w-0">
+              <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
+                <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
+                <input ref={mobileLocationInputRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2.5 text-sm outline-none"/>
+                <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
+                  <MapPin className="w-4 h-4 shrink-0" />
+                  <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
+                </button>
+              </div>
               {showMobileLocationPicker && (
                 <div className="header-popover absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl border p-4 z-50">
                   <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
@@ -2682,14 +2680,22 @@ function App() {
                 </div>
               )}
             </div>
+            <button type="button" onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="mobile-account-button">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-7 h-7 rounded-full object-cover" alt=""/>
+              ) : (
+                <User className="w-5 h-5" />
+              )}
+              <span>{user ? (t.profile || 'Perfil') : (t.login || 'Entrar')}</span>
+            </button>
           </div>
         </div>
         <div className="header-category-bar border-t">
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-            <nav className="flex items-center gap-6 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600 whitespace-nowrap">
-              <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
+            <nav className="flex items-center gap-5 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600 whitespace-nowrap">
+              <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-2.5 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
               {categoriesData.map(c => (
-                <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{getCatName(c, lang)}</button>
+                <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2.5 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{getCatName(c, lang)}</button>
               ))}
             </nav>
           </div>

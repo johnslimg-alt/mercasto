@@ -138,6 +138,8 @@
   .header-search-shell,
   .mobile-search-box,
   .mobile-location-trigger,
+  .mobile-location-chip,
+  .mobile-account-button,
   .header-lang-select,
   .header-icon-button,
   .header-user-button,
@@ -162,6 +164,8 @@
   html.dark .header-search-shell,
   html.dark .mobile-search-box,
   html.dark .mobile-location-trigger,
+  html.dark .mobile-location-chip,
+  html.dark .mobile-account-button,
   html.dark .header-lang-select,
   html.dark .header-icon-button,
   html.dark .header-user-button,
@@ -178,7 +182,9 @@
   .header-user-button:hover,
   .mobile-theme-toggle:hover,
   .mobile-theme-icon:hover,
-  .mobile-location-trigger:hover {
+  .mobile-location-trigger:hover,
+  .mobile-location-chip:hover,
+  .mobile-account-button:hover {
     background: rgba(226, 232, 240, 0.9);
     color: #0F172A;
   }
@@ -187,7 +193,9 @@
   html.dark .header-user-button:hover,
   html.dark .mobile-theme-toggle:hover,
   html.dark .mobile-theme-icon:hover,
-  html.dark .mobile-location-trigger:hover {
+  html.dark .mobile-location-trigger:hover,
+  html.dark .mobile-location-chip:hover,
+  html.dark .mobile-account-button:hover {
     background: rgba(51, 65, 85, 0.95);
     color: #FFFFFF;
   }
@@ -243,6 +251,73 @@
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
+  }
+
+  .mobile-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .mobile-search-combo {
+    min-height: 2.75rem;
+    overflow: hidden;
+  }
+
+  .mobile-location-chip {
+    align-self: stretch;
+    max-width: 8.5rem;
+    border-left: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 0;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 800;
+    min-width: 0;
+  }
+
+  .mobile-location-chip span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  html.dark .mobile-location-chip {
+    border-left-color: rgba(100, 116, 139, 0.55);
+    color: #CBD5E1;
+  }
+
+  .mobile-account-button {
+    display: inline-flex;
+    min-width: 3.1rem;
+    max-width: 4.5rem;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    padding: 0.35rem 0.45rem;
+    color: #334155;
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .mobile-account-button span {
+    display: none;
+  }
+
+  @media (min-width: 390px) {
+    .mobile-account-button {
+      max-width: 5.5rem;
+      padding-inline: 0.55rem;
+    }
+
+    .mobile-account-button span {
+      display: inline;
+    }
   }
 
   .mobile-language-switcher {
