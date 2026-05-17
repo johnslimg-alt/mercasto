@@ -113,7 +113,7 @@ export const translations = {
     verified_id: 'Identidad verificada', high_rep: 'Alta reputación', product_desc: 'Descripción del producto', no_desc: 'El vendedor no ha proporcionado una descripción.',
     download_pdf: 'Descargar Ficha PDF', contacts_qr: 'Contactos (QR)', conversion: 'Conversión',
     share_whatsapp: 'Compartir por WhatsApp', check_this_ad: '¡Mira este anuncio en Mercasto!',
-    all: 'Todo', state: 'Estado', city: 'Ciudad / Municipio', all_cities: 'Todas las ciudades', apply: 'Aplicar',
+    all: 'Todo', language: 'Idioma', state: 'Estado', city: 'Ciudad / Municipio', all_cities: 'Todas las ciudades', apply: 'Aplicar',
     search_btn: 'Buscar', search_placeholder_short: 'Buscar producto...', guest: 'Invitado', post_ad: 'Publicar',
     mark_all_read: 'Marcar todas leídas', no_notifications: 'No tienes notificaciones',
     footer_desc: 'El marketplace local de más rápido crecimiento en México. Compra, vende, renta y encuentra empleo de forma segura.',
@@ -210,7 +210,7 @@ export const translations = {
     report_seller: 'Report this seller', verified_id: 'Verified identity', high_rep: 'High reputation', product_desc: 'Product Description', 
     no_desc: 'The seller did not provide a description.', download_pdf: 'Download PDF Brochure', contacts_qr: 'Contacts (QR)', conversion: 'Conversion',
     share_whatsapp: 'Share on WhatsApp', check_this_ad: 'Check this listing on Mercasto!',
-    all: 'All', state: 'State', city: 'City / Municipality', all_cities: 'All cities', apply: 'Apply',
+    all: 'All', language: 'Language', state: 'State', city: 'City / Municipality', all_cities: 'All cities', apply: 'Apply',
     search_btn: 'Search', search_placeholder_short: 'Search product...', guest: 'Guest', post_ad: 'Post',
     mark_all_read: 'Mark all read', no_notifications: 'You have no notifications',
     footer_desc: 'Mexico’s fast-growing local marketplace. Buy, sell, rent and find work safely.',
@@ -307,7 +307,7 @@ export const translations = {
     report_seller: 'Denunciar vendedor', verified_id: 'Identidade verificada', high_rep: 'Alta reputação', product_desc: 'Descrição do produto', 
     no_desc: 'O vendedor não forneceu uma descrição.', download_pdf: 'Baixar Folheto PDF', contacts_qr: 'Contatos (QR)', conversion: 'Conversão',
     share_whatsapp: 'Compartilhar no WhatsApp', check_this_ad: 'Veja este anúncio no Mercasto!',
-    all: 'Tudo', state: 'Estado', city: 'Cidade / Município', all_cities: 'Todas as cidades', apply: 'Aplicar',
+    all: 'Tudo', language: 'Idioma', state: 'Estado', city: 'Cidade / Município', all_cities: 'Todas as cidades', apply: 'Aplicar',
     search_btn: 'Pesquisar', search_placeholder_short: 'Buscar produto...', guest: 'Convidado', post_ad: 'Publicar',
     mark_all_read: 'Marcar todas como lidas', no_notifications: 'Você não tem notificações',
     footer_desc: 'O marketplace local que mais cresce no México. Compre, venda, alugue e encontre trabalho com segurança.',
@@ -359,11 +359,11 @@ export const translations = {
 };
 
 export const spotlightRealEstate = [
-  { type: 'BUY', color: 'bg-slate-900', price: '$3,250,000', specs: '3 bed • 2 bath • 145m² Condo Marina', location: 'PV • 1d ago', img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
-  { type: 'RENT', color: 'bg-[#84CC16]', price: '$28,000/mo', specs: '2 bed • 2 bath • 98m² Versalles', location: 'GDL • 5h ago', img: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600', badge: { label: 'Top seller', color: 'bg-blue-100 text-blue-700' } },
+  { type: 'BUY', color: 'bg-slate-900', price: '$3,250,000', specs: '3 bed • 2 bath • 145m² Condo Centro', location: 'CDMX • 1d ago', img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
+  { type: 'RENT', color: 'bg-[#84CC16]', price: '$28,000/mo', specs: '2 bed • 2 bath • 98m² Providencia', location: 'GDL • 5h ago', img: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600', badge: { label: 'Top seller', color: 'bg-blue-100 text-blue-700' } },
   { type: 'BUY', color: 'bg-slate-900', price: '$1,850,000', specs: 'Casa 3 rec • 180m² • Jardín', location: 'Tlaquepaque • 2d ago', img: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?w=600' },
-  { type: 'RENT', color: 'bg-[#84CC16]', price: '$18,500/mo', specs: 'Loft 1 bed • Zona Romántica', location: 'PV • 3h ago', img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600', badge: { label: 'Urgent', color: 'bg-red-500 text-white' } },
-  { type: 'BUY', color: 'bg-slate-900', price: '$4,900,000', specs: 'Penthouse 4 bed • Vista mar', location: 'Marina • 6h ago', img: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
+  { type: 'RENT', color: 'bg-[#84CC16]', price: '$18,500/mo', specs: 'Loft 1 bed • Colonia Roma', location: 'CDMX • 3h ago', img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600', badge: { label: 'Urgent', color: 'bg-red-500 text-white' } },
+  { type: 'BUY', color: 'bg-slate-900', price: '$4,900,000', specs: 'Penthouse 4 bed • Vista ciudad', location: 'Monterrey • 6h ago', img: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
   { type: 'RENT', color: 'bg-[#84CC16]', price: '$12,000/mo', specs: 'Studio amueblado • Providencia', location: 'GDL • 1d ago', img: 'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=600' }
 ];
 
@@ -379,11 +379,11 @@ export const jobsBoard = [
 ];
 
 export const servicesMarketplace = [
-  { title: 'House Cleaning Pro', stars: '4.9 (342)', price: '$450', img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=100', desc: 'Deep cleaning, apartments & houses. Same-day available in PV.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
+  { title: 'House Cleaning Pro', stars: '4.9 (342)', price: '$450', img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=100', desc: 'Deep cleaning, apartments & houses. Same-day availability in major cities.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
   { title: 'AC Repair 24/7', stars: '4.8 (189)', price: '$650', img: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=100', desc: 'Installation, maintenance, emergency repair. 1yr warranty.', badge: { label: 'Top', color: 'bg-blue-100 text-blue-700' } },
   { title: 'Personal Trainer', stars: '5.0 (97)', price: '$300/hr', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100', desc: 'Home or gym sessions. Weight loss & strength programs.' },
   { title: 'Event Photographer', stars: '4.7 (156)', price: '$2,500', img: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=100', desc: 'Weddings, corporate, real estate. Drone included.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
-  { title: 'Plumber Expert', stars: '4.9 (423)', price: '$400', img: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=100', desc: 'Leaks, installations, 24h emergency service Vallarta.' },
+  { title: 'Plumber Expert', stars: '4.9 (423)', price: '$400', img: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=100', desc: 'Leaks, installations, 24h emergency service across Mexico.' },
   { title: 'Web Design Studio', stars: '5.0 (64)', price: '$8,900', img: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=100', desc: 'Landing pages, e-commerce, SEO. 7-day delivery.', badge: { label: 'Top', color: 'bg-blue-100 text-blue-700' } },
   { title: 'Dog Walker & Sitting', stars: '4.9 (201)', price: '$150', img: 'https://images.unsplash.com/photo-1588943211346-0908a1fb0b01?w=100', desc: 'Daily walks, pet sitting, vet visits. Insured.' },
   { title: 'Electrician Certified', stars: '4.8 (178)', price: '$500', img: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=100', desc: 'Wiring, panels, smart home installation. Licensed.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } }
@@ -391,16 +391,16 @@ export const servicesMarketplace = [
 
 export const automotiveDeals = [
   { price: '$235,000', title: 'Nissan Versa 2021 Advance', specs: '45,000 km • Auto • GDL', img: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=600', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
-  { price: '$289,000', title: 'VW Jetta 2019 Comfortline', specs: '62,300 km • Auto • PV', img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600', badge: { label: 'Top seller', color: 'bg-blue-100 text-blue-700' } },
+  { price: '$289,000', title: 'VW Jetta 2019 Comfortline', specs: '62,300 km • Auto • QRO', img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600', badge: { label: 'Top seller', color: 'bg-blue-100 text-blue-700' } },
   { price: '$345,000', title: 'Toyota Corolla 2020 Hybrid', specs: '38,100 km • Hybrid • GDL', img: 'https://images.unsplash.com/photo-1542362567-b07e54358753?w=600', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
   { price: '$285,000', title: 'Honda Civic 2019 Touring', specs: '71,200 km • Auto • Zapopan', img: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600' },
-  { price: '$195,000', title: 'Chevrolet Aveo 2022 LT', specs: '29,500 km • Manual • PV', img: 'https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=600', badge: { label: 'New', color: 'bg-[#84CC16] text-white' } },
+  { price: '$195,000', title: 'Chevrolet Aveo 2022 LT', specs: '29,500 km • Manual • Puebla', img: 'https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?w=600', badge: { label: 'New', color: 'bg-[#84CC16] text-white' } },
   { price: '$420,000', title: 'Mazda CX-5 2021 i Sport', specs: '41,000 km • SUV • GDL', img: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } }
 ];
 
 export const recentlyViewed = [
   { name: 'iPhone 15 Pro', price: '$18,999', img: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=200' },
-  { name: '2BR Marina', price: '$32k/mo', img: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=200' },
+  { name: '2BR Centro', price: '$32k/mo', img: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=200' },
   { name: 'Yamaha MT-07', price: '$145k', img: 'https://images.unsplash.com/photo-1558981282-6f5f7d5a2b8f?w=200' },
   { name: 'MacBook Air M2', price: '$24,500', img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=200' },
   { name: 'Condo 3 bed', price: '$3.25M', img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200' },

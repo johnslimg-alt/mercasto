@@ -54,7 +54,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
     const runSearch = React.useCallback((term = '', category = null) => {
       if (category !== null) setActiveCat(category);
       setSearchQuery(term);
-      executeSearch?.(term);
+      executeSearch?.(term, null, category ?? undefined);
     }, [executeSearch, setActiveCat, setSearchQuery]);
 
     if (activeCat || searchQuery || selectedState) {
@@ -1008,10 +1008,6 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
                   { name: 'Hermosillo', count: '38,991' },
 
                   { name: 'Chihuahua', count: '44,221' },
-
-                  { name: 'Aguascalientes', count: '36,774' },
-
-                  { name: 'San Luis Potosí', count: '42,119' },
 
                   { name: 'Cabo San Lucas', count: '31,882' }
 

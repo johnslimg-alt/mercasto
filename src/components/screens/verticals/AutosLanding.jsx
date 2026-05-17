@@ -25,12 +25,12 @@ export default function AutosLanding() {
   }, []);
 
   const handleSearch = (q) => {
-    navigate(`/?search=${encodeURIComponent(q)}&category=coches-y-motor`);
+    navigate(`/?search=${encodeURIComponent(q)}&category=motor`);
   };
 
   const applyFilters = () => {
     const params = new URLSearchParams();
-    params.set('category', 'coches-y-motor');
+    params.set('category', 'motor');
     if (condition) params.set('condition', condition);
     if (priceRange?.min) params.set('min_price', priceRange.min);
     if (priceRange?.max) params.set('max_price', priceRange.max);
@@ -89,14 +89,14 @@ export default function AutosLanding() {
         <section>
           <div className="flex items-baseline justify-between mb-5">
             <h2 className="text-2xl font-bold text-slate-900">Vehículos destacados</h2>
-            <a onClick={() => navigate('/?category=coches-y-motor')}
+            <a onClick={() => navigate('/?category=motor')}
               className="text-[13px] font-semibold text-blue-600 hover:underline cursor-pointer">
               Ver todos →
             </a>
           </div>
           <VerticalAdGrid
-            apiUrl={`${API_URL}/ads?category=coches-y-motor&per_page=8`}
-            viewAllUrl="/?category=coches-y-motor"
+            apiUrl={`${API_URL}/ads?category=motor&per_page=8`}
+            viewAllUrl="/?category=motor"
             viewAllLabel="Ver todos los vehículos →"
             cols={4}
           />
@@ -123,7 +123,7 @@ export default function AutosLanding() {
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
             {BRANDS.map(b => (
               <button key={b}
-                onClick={() => navigate(`/?search=${encodeURIComponent(b)}&category=coches-y-motor`)}
+                onClick={() => navigate(`/?search=${encodeURIComponent(b)}&category=motor`)}
                 className="bg-white border border-slate-200 rounded-xl p-3 text-center hover:border-blue-400 hover:shadow-md transition-all group">
                 <div className="text-2xl mb-1">🚗</div>
                 <div className="text-[12px] font-semibold text-slate-700 group-hover:text-blue-700">{b}</div>

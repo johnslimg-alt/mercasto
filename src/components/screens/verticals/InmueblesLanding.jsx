@@ -39,10 +39,10 @@ export default function InmueblesLanding() {
   };
 
   const applyFilters = () => {
-    const parts = ['/?category=inmobiliaria'];
-    if (operacion) parts.push(`&search=${encodeURIComponent(operacion)}`);
-    if (tipo) parts.push(`&search=${encodeURIComponent(tipo)}`);
-    navigate(parts.join(''));
+    const params = new URLSearchParams({ category: 'inmobiliaria' });
+    const query = [operacion, tipo].filter(Boolean).join(' ');
+    if (query) params.set('search', query);
+    navigate(`/?${params.toString()}`);
   };
 
   return (

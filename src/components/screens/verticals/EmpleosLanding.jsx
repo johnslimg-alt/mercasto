@@ -34,8 +34,8 @@ export default function EmpleosLanding() {
 
   const applyFilters = () => {
     const params = new URLSearchParams({ category: 'empleo' });
-    if (area) params.set('search', area);
-    if (modalidad) params.append('search', modalidad);
+    const query = [area, modalidad].filter(Boolean).join(' ');
+    if (query) params.set('search', query);
     navigate(`/?${params.toString()}`);
   };
 

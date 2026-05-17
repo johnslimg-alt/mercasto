@@ -121,23 +121,216 @@
       radial-gradient(circle at 86% 12%, rgba(148, 163, 184, 0.08), transparent 24rem),
       var(--paper);
   }
-  html.dark header.bg-white\/\[0\.92\] { background-color: rgba(15, 23, 42, 0.94) !important; }
-  html.dark header .bg-white { background-color: #1E293B !important; }
-  html.dark header .bg-slate-100 { background-color: rgba(30, 41, 59, 0.9) !important; }
-  html.dark .category-pill { background-color: #FFFFFF !important; color: #0F172A !important; border-color: #E2E8F0 !important; }
-  html.dark .category-pill h3 { color: #0F172A !important; }
-  html.dark .market-card { background-color: #FFFFFF !important; color: #0F172A !important; }
-  html.dark .market-card .bg-white { background-color: #FFFFFF !important; }
-  html.dark .market-card .text-slate-900,
-  html.dark .market-card .text-slate-800,
-  html.dark .market-card .text-slate-700 { color: #0F172A !important; }
-  html.dark .market-card .text-slate-600,
-  html.dark .market-card .text-slate-500 { color: #475569 !important; }
-  html.dark .bg-white { background-color: #1E293B !important; }
-  html.dark .bg-slate-50, html.dark .bg-slate-100 { background-color: #0F172A !important; }
-  html.dark .border-slate-100, html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #334155 !important; }
-  html.dark .text-slate-900, html.dark .text-slate-800, html.dark .text-slate-700 { color: #F8FAFC !important; }
-  html.dark .text-slate-600, html.dark .text-slate-500, html.dark .text-slate-400 { color: #94A3B8 !important; }
-  html.dark .bg-white\/90 { background-color: rgba(30, 41, 59, 0.9) !important; }
-  html.dark input, html.dark textarea, html.dark select { background-color: #0F172A !important; color: #F8FAFC !important; border-color: #334155 !important; }
+  .site-header {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(226, 232, 240, 0.9);
+    box-shadow: 0 1px 18px rgba(15, 23, 42, 0.08);
+    color: #0F172A;
+  }
+
+  html.dark .site-header {
+    background: rgba(15, 23, 42, 0.94);
+    border-color: rgba(51, 65, 85, 0.95);
+    box-shadow: 0 1px 22px rgba(0, 0, 0, 0.24);
+    color: #F8FAFC;
+  }
+
+  .header-search-shell,
+  .mobile-search-box,
+  .mobile-location-trigger,
+  .header-lang-select,
+  .header-icon-button,
+  .header-user-button,
+  .mobile-theme-toggle,
+  .mobile-theme-icon,
+  .mobile-language-switcher,
+  .mobile-tabbar {
+    background: rgba(248, 250, 252, 0.9);
+    border-color: rgba(226, 232, 240, 0.95);
+    color: #334155;
+  }
+
+  .header-search-shell,
+  .header-lang-select,
+  .mobile-language-switcher,
+  .mobile-theme-toggle,
+  .mobile-theme-icon {
+    border-width: 1px;
+    border-style: solid;
+  }
+
+  html.dark .header-search-shell,
+  html.dark .mobile-search-box,
+  html.dark .mobile-location-trigger,
+  html.dark .header-lang-select,
+  html.dark .header-icon-button,
+  html.dark .header-user-button,
+  html.dark .mobile-theme-toggle,
+  html.dark .mobile-theme-icon,
+  html.dark .mobile-language-switcher,
+  html.dark .mobile-tabbar {
+    background: rgba(30, 41, 59, 0.86);
+    border-color: rgba(71, 85, 105, 0.9);
+    color: #E2E8F0;
+  }
+
+  .header-icon-button:hover,
+  .header-user-button:hover,
+  .mobile-theme-toggle:hover,
+  .mobile-theme-icon:hover,
+  .mobile-location-trigger:hover {
+    background: rgba(226, 232, 240, 0.9);
+    color: #0F172A;
+  }
+
+  html.dark .header-icon-button:hover,
+  html.dark .header-user-button:hover,
+  html.dark .mobile-theme-toggle:hover,
+  html.dark .mobile-theme-icon:hover,
+  html.dark .mobile-location-trigger:hover {
+    background: rgba(51, 65, 85, 0.95);
+    color: #FFFFFF;
+  }
+
+  .header-search-shell input,
+  .mobile-search-box input,
+  .header-lang-select select,
+  .header-popover select {
+    background: transparent !important;
+    color: inherit;
+  }
+
+  .mobile-search-box input::placeholder {
+    color: #64748B;
+  }
+
+  html.dark .mobile-search-box input::placeholder {
+    color: #94A3B8;
+  }
+
+  .header-popover {
+    background: #FFFFFF;
+    border-color: #E2E8F0;
+    color: #0F172A;
+  }
+
+  html.dark .header-popover {
+    background: #1E293B;
+    border-color: #475569;
+    color: #F8FAFC;
+  }
+
+  html.dark .header-popover label,
+  html.dark .header-popover .text-slate-700,
+  html.dark .mobile-location-trigger span {
+    color: #E2E8F0 !important;
+  }
+
+  html.dark .header-popover select {
+    background: #0F172A;
+    border-color: #475569;
+    color: #F8FAFC;
+  }
+
+  .mobile-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .mobile-top-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .mobile-language-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 999px;
+  }
+
+  .mobile-language-switcher button {
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: inherit;
+  }
+
+  .mobile-language-switcher button.active {
+    background: #84CC16;
+    color: #0F172A;
+  }
+
+  .mobile-language-switcher--compact {
+    gap: 0.1rem;
+    padding: 0.18rem;
+  }
+
+  .mobile-language-switcher--compact button {
+    min-width: 2rem;
+    padding: 0.32rem 0.45rem;
+    font-size: 0.68rem;
+  }
+
+  .mobile-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.42rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  .mobile-theme-icon {
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+  }
+
+  .header-category-bar {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(226, 232, 240, 0.9);
+  }
+
+  html.dark .header-category-bar {
+    background: rgba(15, 23, 42, 0.94);
+    border-color: rgba(51, 65, 85, 0.95);
+  }
+
+  .header-category-link {
+    color: #475569;
+  }
+
+  .header-category-link:hover,
+  .header-category-link.is-active {
+    border-color: #84CC16;
+    color: #0F172A;
+  }
+
+  html.dark .header-category-link {
+    color: #CBD5E1;
+  }
+
+  html.dark .header-category-link:hover,
+  html.dark .header-category-link.is-active {
+    border-color: #84CC16;
+    color: #F8FAFC;
+  }
+
+  html.dark .category-pill,
+  html.dark .market-card {
+    background-color: #1E293B;
+    color: #F8FAFC;
+    border-color: #334155;
+  }
 }

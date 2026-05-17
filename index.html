@@ -21,6 +21,13 @@
     <meta name="twitter:image" content="https://mercasto.com/icon-512x512.png" />
     <link rel="manifest" href="/manifest.json">
     <title>Mercasto | Compra, Vende y Renta en Todo México</title>
+    <script>
+      try {
+        var theme = localStorage.getItem('theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', theme === 'dark' || (!theme && prefersDark));
+      } catch (e) {}
+    </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",

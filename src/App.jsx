@@ -130,6 +130,11 @@ const MEXICO_STATES_CITIES = {
   "Zacatecas": ["Zacatecas", "Fresnillo", "Guadalupe", "Jerez", "Río Grande", "Víctor Rosales", "Sombrerete", "Loreto", "Pinos", "Ojocaliente"]
 };
 
+const CATEGORY_ACTIVE_ALIASES = {
+  motor: ['motor', 'coches-y-motor'],
+  'coches-y-motor': ['coches-y-motor', 'motor'],
+};
+
 const getRelativePath = (url) => {
     if (!url) return null;
     if (url.startsWith(STORAGE_URL)) return url.replace(`${STORAGE_URL}/`, '');
@@ -314,6 +319,11 @@ function App() {
     window.scrollTo(0, 0);
   }, [navigate]);
 
+  const isHeaderCategoryActive = useCallback((slug = '') => {
+    if (activeCat === slug) return true;
+    return (CATEGORY_ACTIVE_ALIASES[activeCat] || []).includes(slug);
+  }, [activeCat]);
+
   const handleAdBack = useCallback(() => {
     setViewedAd(null);
     if (window.location.hash.startsWith('#ad-')) {
@@ -393,18 +403,44 @@ function App() {
   const [locCity, setLocCity] = useState('');
   const desktopLocationInputRef = useRef(null);
   const mobileLocationInputRef = useRef(null);
+  const skipFilterUrlSyncRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [debouncedLocInput, setDebouncedLocInput] = useState('');
 
-  // FIX: Функция executeSearch отсутствовала, что приводило к фатальному сбою (WSOD) при нажатии Enter
-  const executeSearch = useCallback((overrideSearch = null, overrideLoc = null) => {
-    setDebouncedSearch(typeof overrideSearch === 'string' ? overrideSearch : searchQuery);
-    setDebouncedLocInput(typeof overrideLoc === 'string' ? overrideLoc : searchLocationInput);
+  const buildHomeFilterPath = useCallback((overrides = {}) => {
+    const nextSearch = overrides.search ?? debouncedSearch;
+    const nextCategory = overrides.category ?? activeCat;
+    const nextLocation = overrides.location ?? (debouncedLocInput || selectedState);
+    const nextMinPrice = overrides.minPrice ?? minPrice;
+    const nextMaxPrice = overrides.maxPrice ?? maxPrice;
+    const nextCondition = overrides.condition ?? conditionFilter;
+    const params = new URLSearchParams();
+
+    if (String(nextSearch || '').trim()) params.set('search', String(nextSearch).trim());
+    if (String(nextCategory || '').trim()) params.set('category', String(nextCategory).trim());
+    if (String(nextLocation || '').trim()) params.set('location', String(nextLocation).trim());
+    if (String(nextMinPrice || '').trim()) params.set('min_price', String(nextMinPrice).trim());
+    if (String(nextMaxPrice || '').trim()) params.set('max_price', String(nextMaxPrice).trim());
+    if (Array.isArray(nextCondition) && nextCondition.length > 0) params.set('condition', nextCondition.join(','));
+
+    const query = params.toString();
+    return query ? `/?${query}` : '/';
+  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, maxPrice, minPrice, selectedState]);
+
+  // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
+  const executeSearch = useCallback((overrideSearch = null, overrideLoc = null, overrideCategory = undefined) => {
+    const nextSearch = typeof overrideSearch === 'string' ? overrideSearch : searchQuery;
+    const nextLoc = typeof overrideLoc === 'string' ? overrideLoc : searchLocationInput;
+    const nextCategory = typeof overrideCategory === 'string' ? overrideCategory : activeCat;
+    setDebouncedSearch(nextSearch);
+    setDebouncedLocInput(nextLoc);
+    if (typeof overrideCategory === 'string') setActiveCat(overrideCategory);
     setCurrentTab('home');
     setViewedAd(null);
     setViewedCompany(null);
-  }, [searchQuery, searchLocationInput, setCurrentTab]);
+    navigate(buildHomeFilterPath({ search: nextSearch, location: nextLoc, category: nextCategory }));
+  }, [activeCat, buildHomeFilterPath, navigate, searchQuery, searchLocationInput, setCurrentTab]);
 
   // Защита от логических сбоев UI: сбрасываем специфичные для категории фильтры (ОЗУ, двигатель) при смене самой категории
   useEffect(() => {
@@ -536,6 +572,10 @@ function App() {
   useEffect(() => {
     if (location.pathname !== '/') return;
     const params = new URLSearchParams(location.search);
+    const hash = location.hash || window.location.hash;
+    if (params.has('ad') || params.has('store') || hash.startsWith('#ad-') || hash.startsWith('#company-')) return;
+
+    skipFilterUrlSyncRef.current = true;
     const searchParam = params.get('search') || params.get('q');
     const categoryParam = params.get('category') || params.get('cat');
     const locationParam = params.get('location') || params.get('city') || params.get('state');
@@ -565,78 +605,75 @@ function App() {
     setDynamicFilters({});
   }, [location.pathname, location.search]);
 
-  // --- ПЕРЕХВАТ OAuth ТОКЕНА ИЗ URL ---
   useEffect(() => {
-    // 1. Отработка прямых ссылок на объявления (Google Merchant, Sitemap, Web Push)
-    const urlParams = new URLSearchParams(window.location.search);
-    const adIdParam = urlParams.get('ad');
-    const companyIdParam = urlParams.get('store');
-    const searchParam = urlParams.get('search') || urlParams.get('q');
-    const categoryParam = urlParams.get('category') || urlParams.get('cat');
-    const locationParam = urlParams.get('location') || urlParams.get('city') || urlParams.get('state');
-    const minPriceParam = urlParams.get('min_price');
-    const maxPriceParam = urlParams.get('max_price');
-    const conditionParam = urlParams.get('condition');
-    const hash = window.location.hash;
+    if (location.pathname !== '/') return;
+    if (viewedAd || viewedCompany) return;
+    const params = new URLSearchParams(location.search);
+    const hash = location.hash || window.location.hash;
+    if (params.has('ad') || params.has('store') || hash.startsWith('#ad-') || hash.startsWith('#company-')) return;
 
-    let targetAdId = null;
-    let targetCompanyId = null;
-
-    if (adIdParam) targetAdId = adIdParam;
-    else if (hash.startsWith('#ad-')) targetAdId = hash.replace('#ad-', '');
-    else if (companyIdParam) targetCompanyId = companyIdParam;
-    else if (hash.startsWith('#company-')) targetCompanyId = hash.replace('#company-', '');
-
-    if (!targetAdId && !targetCompanyId && (searchParam || categoryParam || locationParam || minPriceParam || maxPriceParam || conditionParam)) {
-      setViewedAd(null);
-      setViewedCompany(null);
-      setSearchQuery(searchParam || '');
-      setDebouncedSearch(searchParam || '');
-      setActiveCat(categoryParam || '');
-      if (locationParam) {
-        setSearchLocation(null);
-        setSearchLocationInput(locationParam);
-        setSelectedState(locationParam);
-        setDebouncedLocInput(locationParam);
-      } else {
-        setSearchLocation(null);
-        setSearchLocationInput('');
-        setSelectedState('');
-        setDebouncedLocInput('');
-      }
-      setMinPrice(minPriceParam || '');
-      setMaxPrice(maxPriceParam || '');
-      setConditionFilter(conditionParam ? conditionParam.split(',').filter(Boolean) : []);
-      setDynamicFilters({});
+    if (skipFilterUrlSyncRef.current) {
+      skipFilterUrlSyncRef.current = false;
+      return;
     }
+
+    const nextPath = buildHomeFilterPath();
+    const currentPath = `${location.pathname}${location.search}`;
+    if (nextPath !== currentPath) navigate(nextPath, { replace: true });
+  }, [activeCat, buildHomeFilterPath, debouncedLocInput, debouncedSearch, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const adIdParam = params.get('ad');
+    const storeIdParam = params.get('store');
+    const hash = location.hash || window.location.hash;
+    const targetAdId = adIdParam || (hash.startsWith('#ad-') ? hash.replace('#ad-', '') : null);
+    const targetStoreId = storeIdParam || (hash.startsWith('#company-') ? hash.replace('#company-', '') : null);
+    if (!targetAdId && !targetStoreId) return;
+
+    let cancelled = false;
 
     if (targetAdId) {
       fetch(`${API_URL}/ads/${targetAdId}`)
         .then(res => res.ok ? res.json() : null)
         .then(adData => {
-           if (adData) {
-             setViewedAd(adData);
-             if (currentTab !== 'home') setCurrentTab('home');
-             // Конвертируем ?ad=123 в красивый hash-формат для консистентности
-             if (adIdParam) window.history.replaceState({}, '', `/#ad-${targetAdId}`);
-           }
+          if (cancelled || !adData) return;
+          setViewedCompany(null);
+          setViewedAd(adData);
+          if (adIdParam) navigate(`/#ad-${targetAdId}`, { replace: true });
         })
         .catch(() => console.error("Error loading deep link ad"));
-    }
-    else if (targetCompanyId) {
-      // Защита UX: Обработка прямых ссылок на магазины PRO-продавцов
-      fetch(`${API_URL}/users/${targetCompanyId}/profile`)
+    } else if (targetStoreId) {
+      fetch(`${API_URL}/users/${targetStoreId}/profile`)
         .then(res => res.ok ? res.json() : null)
         .then(sellerData => {
-           if (sellerData) {
-             handleViewCompany(sellerData);
-             if (companyIdParam) window.history.replaceState({}, '', `/#company-${targetCompanyId}`);
-           }
+          if (cancelled || !sellerData) return;
+          setViewedAd(null);
+          setViewedCompany(sellerData);
+          window.scrollTo(0, 0);
+          setLoadingCompanyAds(true);
+          Promise.all([
+            fetch(`${API_URL}/ads?user_id=${sellerData.id}`).then(res => res.ok ? res.json() : { data: [] }),
+            fetch(`${API_URL}/users/${sellerData.id}/reviews`).then(res => res.ok ? res.json() : { reviews: [], average: 0, total: 0 })
+          ]).then(([adsData, reviewsData]) => {
+            if (cancelled) return;
+            setCompanyAds(adsData.data || (Array.isArray(adsData) ? adsData : []));
+            setCompanyReviews(reviewsData.reviews || []);
+            setCompanyRatingStats({ average: reviewsData.average || 0, total: reviewsData.total || 0 });
+          }).catch(err => console.error(err)).finally(() => {
+            if (!cancelled) setLoadingCompanyAds(false);
+          });
+          if (storeIdParam) navigate(`/#company-${targetStoreId}`, { replace: true });
         })
-        .catch(() => console.error("Error loading deep link company"));
+        .catch(() => console.error("Error loading deep link store"));
     }
 
-    // 2. Отработка токенов и платежей
+    return () => { cancelled = true; };
+  }, [location.hash, location.search, navigate, setCurrentTab]);
+
+  // --- ПЕРЕХВАТ OAuth ТОКЕНА ИЗ URL ---
+  useEffect(() => {
+    // Отработка токенов, платежей и OAuth-переходов выполняется один раз после загрузки.
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
     const rToken = params.get('reset_token');
@@ -2465,11 +2502,11 @@ function App() {
 
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (
-    <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[84px] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+    <div className="mobile-tabbar md:hidden fixed bottom-0 w-full border-t pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[84px] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
       <button onClick={() => setCurrentTab('home')} className={`flex flex-col items-center p-1 ${currentTab === 'home' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(true); window.scrollTo(0,0); setTimeout(() => mobileLocationInputRef.current?.focus(), 100); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
+      <button onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(true); window.scrollTo(0,0); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
       <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-8"><div className="flex flex-col items-center justify-center bg-[#84CC16] text-white p-3.5 rounded-full shadow-lg border-4 border-[#f5f5f5]"><PlusCircle className="w-7 h-7" /></div></button>
@@ -2484,14 +2521,14 @@ function App() {
     <div className="w-full min-h-screen bg-[var(--paper)] font-sans text-[var(--ink)] selection:bg-[#84CC16]/20">
 
       {/* GLOBAL HEADER */}
-      <header className="sticky top-0 z-40 bg-white/[0.92] backdrop-blur-2xl border-b border-slate-200 shadow-sm shadow-slate-200/60">
+      <header className="site-header sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
           <div className="flex items-center gap-3 h-[68px]">
             <a href="#" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
               <MercastoLogo />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
-              <div className="flex w-full max-w-[860px] items-center bg-white border border-slate-200 rounded-2xl shadow-sm shadow-slate-200/70 focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
+              <div className="header-search-shell flex w-full max-w-[860px] items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
               <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
@@ -2504,7 +2541,7 @@ function App() {
                   </button>
 
                   {showLocationPicker && (
-                    <div className="absolute top-full left-0 mt-3 w-[260px] bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50">
+                    <div className="header-popover absolute top-full left-0 mt-3 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
                       <div className="mb-3">
                         <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
                         <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
@@ -2546,19 +2583,31 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-1 ml-auto">
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100/50 hover:bg-slate-200/50 border border-slate-200/50 text-slate-500 hover:text-slate-900 transition-colors mr-1">
+              <div className="mobile-top-controls sm:hidden">
+                <button type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
+                  {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
+                <div className="mobile-language-switcher mobile-language-switcher--compact" aria-label="Language switcher">
+                  {Object.keys(translations).map(l => (
+                    <button key={l} type="button" onClick={() => setLang(l)} className={lang === l ? 'active' : ''}>
+                      {l.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button type="button" onClick={() => setIsDarkMode(v => !v)} className="header-icon-button hidden md:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <div className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 bg-slate-100/70 px-2.5 py-1.5 rounded-xl border border-slate-200/70">
+              <div className="header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
-                <select value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
+                <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
                   {Object.keys(translations).map(l => (
                     <option key={l} value={l}>{l.toUpperCase()}</option>
                   ))}
                 </select>
               </div>
               <div className="relative hidden sm:block">
-              <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="relative p-2.5 hover:bg-slate-100 rounded-xl text-slate-700">
+              <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl">
                   <Bell className="w-[22px] h-[22px]" />
                   {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
                 </button>
@@ -2587,11 +2636,11 @@ function App() {
                   </div>
                 )}
               </div>
-            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="relative p-2.5 hover:bg-slate-100 rounded-xl hidden sm:block">
-                <Heart className="w-[22px] h-[22px] text-slate-700" />
+            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block">
+                <Heart className="w-[22px] h-[22px]" />
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
-            <button onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="hidden sm:flex items-center gap-2 pl-1 pr-2.5 py-1 hover:bg-slate-100 rounded-xl">
+            <button onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="header-user-button hidden sm:flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl">
                 {user?.avatar_url ? (
                   <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-lg object-cover" alt=""/>
                 ) : (
@@ -2606,19 +2655,19 @@ function App() {
           </div>
           {/* Mobile Search & Location */}
           <div className="lg:hidden pb-3 flex flex-col gap-2">
-            <div className="flex items-center gap-2 bg-slate-100 rounded-2xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
+            <div className="mobile-search-box flex items-center gap-2 rounded-2xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-[#84CC16]/30">
               <Search className="w-4 h-4 text-slate-500" />
             <input ref={mobileLocationInputRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent w-full text-sm outline-none"/>
             </div>
 
             {/* МОБИЛЬНЫЙ ВЫБОР ЛОКАЦИИ */}
             <div className="relative">
-              <div onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="flex items-center gap-2 bg-slate-100 rounded-2xl px-3 py-2.5 cursor-pointer">
+              <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-trigger flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 cursor-pointer text-left">
                 <MapPin className="w-4 h-4 text-slate-500" />
                 <span className={`text-sm ${searchLocationInput ? 'text-slate-900' : 'text-slate-500'}`}>{searchLocationInput || t.all_mexico || "Todo México"}</span>
-              </div>
+              </button>
               {showMobileLocationPicker && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50">
+                <div className="header-popover absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl border p-4 z-50">
                   <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
                   <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white">
                     <option value="">{t.all_mexico || 'Todo México'}</option>
@@ -2635,12 +2684,12 @@ function App() {
             </div>
           </div>
         </div>
-        <div className="border-t border-slate-100 bg-white">
+        <div className="header-category-bar border-t">
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
             <nav className="flex items-center gap-6 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600 whitespace-nowrap">
-              <a onClick={() => handleHeaderCategoryClick('')} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === '' ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{t.all || 'All'}</a>
+              <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
               {categoriesData.map(c => (
-                <a key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors ${activeCat === c.slug ? 'border-[#84CC16] text-[#0F172A] font-bold' : 'border-transparent hover:text-[#0F172A]'}`}>{getCatName(c, lang)}</a>
+                <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-3.5 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{getCatName(c, lang)}</button>
               ))}
             </nav>
           </div>
