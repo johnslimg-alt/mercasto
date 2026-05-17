@@ -301,6 +301,31 @@ class AuthController extends Controller
         ]);
     }
 
+    public function exchangeOAuthCode(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|min:32|max:128',
+        ]);
+
+        $userId = Cache::pull('oauth_exchange:' . $request->code);
+        if (!$userId) {
+            return response()->json(['message' => 'Código OAuth inválido o expirado.'], 422);
+        }
+
+        $user = User::find($userId);
+        if (!$user) {
+            return response()->json(['message' => 'Usuario no encontrado.'], 404);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password']),
+        ]);
+    }
+
     /**
      * Перенаправление на страницу авторизации провайдера
      */
@@ -360,8 +385,10 @@ class AuthController extends Controller
                 return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?oauth_2fa=' . $tempToken);
             }
 
-            $token = $user->createToken('auth_token')->plainTextToken;
-            return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?token=' . $token);
+            $exchangeCode = Str::random(64);
+            Cache::put('oauth_exchange:' . $exchangeCode, $user->id, now()->addMinutes(5));
+
+            return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?oauth_code=' . $exchangeCode);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error(ucfirst($provider) . ' OAuth Error: ' . $e->getMessage());
             return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=oauth_failed');

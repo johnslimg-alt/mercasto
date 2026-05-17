@@ -20,6 +20,7 @@ RUN set -eux; \
     libxml2-dev \
     libzip-dev \
     libpq-dev \
+    ffmpeg \
     nodejs \
     npm \
     zip \

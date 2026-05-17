@@ -190,7 +190,7 @@ class PaymentController extends Controller
                 $notifId = DB::table('user_notifications')->insertGetId($notificationData);
                 $notificationData['id'] = $notifId;
                 
-                broadcast(new NewNotification($notificationData));
+                broadcast(new NewNotification((int) $payment->user_id, $notificationData));
                 }
             }
         }

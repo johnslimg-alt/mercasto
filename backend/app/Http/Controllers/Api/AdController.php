@@ -603,7 +603,7 @@ class AdController extends Controller
             $notificationData['id'] = $id;
 
             // Broadcast the event
-            broadcast(new NewNotification($notificationData))->toOthers();
+            broadcast(new NewNotification((int) $ad->user_id, $notificationData))->toOthers();
 
             // Send Web Push Notification
             $pushSubscribers = DB::table('push_subscriptions')->where('user_id', $ad->user_id)->get();
