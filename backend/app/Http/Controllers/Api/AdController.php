@@ -294,10 +294,10 @@ class AdController extends Controller
 
         $ad = Ad::create([
             'user_id' => $request->user()->id, // ID авторизованного пользователя
-            'title' => $request->title,
+            'title' => strip_tags($request->title),
             'price' => $request->price,
             'condition' => $request->input('condition', 'usado'),
-            'description' => $request->description,
+            'description' => strip_tags($request->description, '<p><br><b><i><ul><ol><li>'),
             'location' => $request->location,
             'state' => $request->state,
             'latitude' => $lat,
@@ -501,10 +501,10 @@ class AdController extends Controller
 
         // 4. Обновляем объявление
         $ad->update([
-            'title' => $validated['title'],
+            'title' => strip_tags($validated['title']),
             'price' => $validated['price'],
             'condition' => $validated['condition'] ?? $ad->condition,
-            'description' => $validated['description'],
+            'description' => strip_tags($validated['description'], '<p><br><b><i><ul><ol><li>'),
             'location' => $validated['location'],
             'state' => $request->state,
             'latitude' => $lat,

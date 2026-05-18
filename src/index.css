@@ -520,6 +520,17 @@ html.dark .btn-lg.bg-white:hover {
     background-color: #0F172A !important;
   }
 
+  html.dark .bg-emerald-50,
+  html.dark .bg-orange-50,
+  html.dark .bg-blue-50 {
+    background-color: #162033 !important;
+    border-color: #334155 !important;
+  }
+
+  html.dark .footer-logo span:first-child {
+    color: #F8FAFC !important;
+  }
+
   html.dark .border-slate-100,
   html.dark .border-slate-200,
   html.dark .border-slate-300,

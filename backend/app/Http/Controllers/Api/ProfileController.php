@@ -66,6 +66,7 @@ class ProfileController extends Controller
                 'is_verified',
                 'created_at',
                 'phone_number',
+                'phone_verified',
                 'whatsapp',
                 'bio',
                 'city',
@@ -112,7 +113,7 @@ class ProfileController extends Controller
         if ($isPhoneAuth) $isOAuthOnly = true;
 
         return response()->json(array_merge(
-            $user->makeHidden(["two_factor_secret", "two_factor_recovery_codes", "email_verification_token", "password"])->toArray(),
+            $user->makeHidden(["two_factor_secret", "two_factor_recovery_codes", "email_verification_token", "password", "phone_otp", "phone_otp_expires_at"])->toArray(),
             [
                 "total_ads" => $totalAds,
                 "active_ads" => $activeAds,
@@ -171,7 +172,15 @@ class ProfileController extends Controller
         $user->name = $request->name;
         if ($request->has('bio')) $user->bio = $request->bio;
         if ($request->has('city')) $user->city = $request->city;
-        if ($request->filled('phone_number')) $user->phone_number = $request->phone_number;
+        if ($request->has('phone_number')) {
+            $nextPhone = $request->filled('phone_number') ? $request->phone_number : null;
+            if ($nextPhone !== $user->phone_number) {
+                $user->phone_verified = false;
+                $user->phone_otp = null;
+                $user->phone_otp_expires_at = null;
+            }
+            $user->phone_number = $nextPhone;
+        }
         if ($request->filled('whatsapp')) $user->whatsapp = $request->whatsapp;
         if ($request->has('website')) $user->website = $request->website;
         if ($request->has('social_instagram')) $user->social_instagram = $request->social_instagram;

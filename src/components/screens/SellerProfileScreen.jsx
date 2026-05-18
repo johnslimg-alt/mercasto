@@ -102,6 +102,9 @@ export default function SellerProfileScreen({ currentUser }) {
             <ChevronLeft size={20} />
           </button>
           <span className="font-semibold text-slate-900 truncate">{seller?.name}</span>
+          {seller?.phone_verified && (
+            <span title="Teléfono verificado" className="text-green-500 text-base leading-none flex-shrink-0">📱</span>
+          )}
           {isOwner && (
             <Link to="/perfil/editar" className="ml-auto flex items-center gap-1.5 text-sm text-lime-600 hover:underline font-medium">
               <Pencil size={14} /> Editar perfil
@@ -130,6 +133,9 @@ export default function SellerProfileScreen({ currentUser }) {
                   <h1 className="text-lg font-bold text-slate-900">{seller?.name}</h1>
                   {seller?.is_verified && (
                     <ShieldCheck size={16} className="text-blue-500 flex-shrink-0" title="Verificado" />
+                  )}
+                  {seller?.phone_verified && (
+                    <span title="Teléfono verificado" className="text-green-500 flex-shrink-0 text-base leading-none">📱</span>
                   )}
                 </div>
                 {seller?.city && (

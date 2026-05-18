@@ -11,9 +11,10 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\TwoFactorAuthenticationController;
+use App\Http\Controllers\Api\PhoneVerificationController;
 
 // Public routes
-Route::get('/ads', [AdController::class, 'index']);
+Route::middleware('throttle:search')->get('/ads', [AdController::class, 'index']);
 Route::get('/ads/{id}', [AdController::class, 'show']); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
 
 // Защита от CPU DDoS: генерация PDF очень ресурсоемкая, ставим лимит 10 в минуту
@@ -51,7 +52,7 @@ if (app()->environment('local', 'staging')) {
 }
 
 // Группа для защиты от перебора (Rate Limiting)
-Route::middleware('throttle:10,1')->group(function () {
+Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/login/two-factor', [AuthController::class, 'loginTwoFactor']);
@@ -91,7 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chat/conversations', [\App\Http\Controllers\Api\ChatController::class, 'getConversations']);
     Route::get('/chat/{userId}', [\App\Http\Controllers\Api\ChatController::class, 'getMessages']);
     Route::post('/chat', [\App\Http\Controllers\Api\ChatController::class, 'sendMessage']);
-    Route::post('/ads', [AdController::class, 'store']);
+    Route::middleware('throttle:ads')->post('/ads', [AdController::class, 'store']);
     // Защита ИИ от спама и истощения лимитов API (максимум 5 генераций в минуту на пользователя)
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('/ads/generate-description', [AdController::class, 'generateDescription']); // Gemini AI
@@ -188,5 +189,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/agents/ceo-ui', [AdController::class, 'askCeoUiAgent']); // AI CEO UI Agent
         Route::post('/agents/ceo-ux', [AdController::class, 'askCeoUxAgent']); // AI CEO UX Agent
         Route::post('/agents/ui', [AdController::class, 'askUiAgent']); // AI UI Agent
+    });
+
+    // Phone Verification (Confianza — proves real person)
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/phone/send-otp',  [PhoneVerificationController::class, 'sendOtp']);
+        Route::post('/phone/verify-otp', [PhoneVerificationController::class, 'verifyOtp']);
     });
 });

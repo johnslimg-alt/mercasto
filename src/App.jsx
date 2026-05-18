@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
+import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { translations } from './constants/mockData';
 import ChartTooltip from './components/common/ChartTooltip';
 import AdSenseBanner from './components/common/AdSenseBanner';
+import OnboardingModal from './components/OnboardingModal';
 import {
   Search, Home, PlusCircle, User, Users, Settings, Shield,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
@@ -241,6 +243,12 @@ export default function AppWrapper() {
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // GA4 page-view tracking
+  useEffect(() => {
+    trackPageView(location.pathname + location.search, document.title);
+  }, [location]);
+
   const currentTab = location.pathname.split('/')[1] || 'home';
 
   // Защита от Prototype Pollution (WSOD Crash): проверяем, что язык действительно существует в словаре
@@ -282,6 +290,14 @@ function App() {
   const [user, setUser] = useState(initialUser);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Show onboarding only after auth state has been initialized.
+  useEffect(() => {
+    if (user && localStorage.getItem('just_registered') === '1' && !user.phone_verified) {
+      setTimeout(() => setShowOnboarding(true), 500);
+    }
+  }, [user]);
   const [resetToken, setResetToken] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -458,6 +474,10 @@ function App() {
     setViewedAd(null);
     setViewedCompany(null);
     navigate(buildHomeFilterPath({ search: nextSearch, location: nextLoc, category: nextCategory }));
+    // GA4 search event
+    if (nextSearch && nextSearch.trim()) {
+      events.searchPerformed(nextSearch.trim(), nextCategory || "");
+    }
   }, [activeCat, buildHomeFilterPath, navigate, searchQuery, searchLocationInput, setCurrentTab]);
 
   // Защита от логических сбоев UI: сбрасываем специфичные для категории фильтры (ОЗУ, двигатель) при смене самой категории
@@ -1404,6 +1424,8 @@ function App() {
           setUserRole(result.user.role || 'individual');
           localStorage.setItem('user', JSON.stringify(result.user));
           if (result.access_token) localStorage.setItem('auth_token', result.access_token);
+          // Mark new registrations for onboarding
+          if (authMode === 'register') localStorage.setItem('just_registered', '1');
           setShowAuthModal(false);
         }
       } else {
@@ -1782,6 +1804,8 @@ function App() {
         setVideoFile(null);
         setEditingAd(null);
         setCurrentTab('home');
+        // GA4 ad posted event
+        if (!editingAd) events.adPosted(form.category || "general");
         loadAds(1); // Reload after create/update
         loadUserAds(); // Обновляем список моих объявлений
       } else {
@@ -2759,7 +2783,7 @@ function App() {
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div>
-              <div className="flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
+              <div className="footer-logo flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
                 <MercastoLogo className="h-8" />
               </div>
               <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'El marketplace local de más rápido crecimiento en México. Compra, vende, renta y encuentra empleo de forma segura.'}</p>
@@ -2791,6 +2815,17 @@ function App() {
         <button onClick={() => setShowAiModal(true)} className="fixed bottom-24 right-6 md:bottom-10 md:right-10 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-[0_0_20px_rgba(99,102,241,0.5)] flex items-center justify-center hover:bg-indigo-500 transition-all hover:scale-110 z-50 group">
           <Sparkles className="w-6 h-6 group-hover:animate-pulse" />
         </button>
+      )}
+
+      {/* ONBOARDING MODAL */}
+      {showOnboarding && (
+        <OnboardingModal
+          user={user}
+          onClose={() => {
+            localStorage.setItem('onboarding_done', '1');
+            setShowOnboarding(false);
+          }}
+        />
       )}
 
       {/* AUTH MODAL */}

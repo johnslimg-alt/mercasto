@@ -53,6 +53,8 @@ class User extends Authenticatable
         'two_factor_confirmed_at',
         'email_verification_token',
         'pending_email',
+        'phone_otp',
+        'phone_otp_expires_at',
     ];
 
     /**
@@ -70,6 +72,8 @@ class User extends Authenticatable
             'two_factor_recovery_codes' => 'encrypted',
             'notification_preferences' => 'array',
             'is_verified' => 'boolean',
+            'phone_verified' => 'boolean',
+            'phone_otp_expires_at' => 'datetime',
             'balance' => 'decimal:2',
             'last_active_at' => 'datetime',
         ];

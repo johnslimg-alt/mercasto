@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) use ($trustedProxies) {
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->trustProxies(at: $trustedProxies);
         $middleware->redirectGuestsTo(function (Request $request) {
             return $request->is('api/*') || $request->expectsJson() ? null : route('login');
@@ -34,6 +35,15 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
             return $request->is('api/*') || $request->expectsJson();
+        });
+
+        $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'error' => 'Demasiadas solicitudes. Intenta de nuevo en un momento.',
+                    'retry_after' => $e->getHeaders()['Retry-After'] ?? 60,
+                ], 429);
+            }
         });
 
         $exceptions->render(function (AuthenticationException $e, Request $request) {

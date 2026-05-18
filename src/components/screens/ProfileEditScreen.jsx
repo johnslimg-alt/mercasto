@@ -84,6 +84,11 @@ export default function ProfileEditScreen() {
   const [form, setForm] = useState({ name: '', bio: '', city: '', phone_number: '', whatsapp: '', website: '', social_instagram: '' });
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [notifForm, setNotifForm] = useState({ email_new_message: true, email_ad_reply: true, push_enabled: false });
+  // Phone verification state
+  const [phoneInput, setPhoneInput] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [phoneVerifying, setPhoneVerifying] = useState(false);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -97,6 +102,7 @@ export default function ProfileEditScreen() {
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(data => {
         setProfile(data);
+        setPhoneInput(data.phone_number || '');
         setForm({
           name: data.name || '',
           bio: data.bio || '',
@@ -199,6 +205,59 @@ export default function ProfileEditScreen() {
       showToast('Error de red', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+
+  const handleSendOtp = async () => {
+    if (!phoneInput || phoneInput.length < 10) {
+      showToast('Ingresa un número válido (mín. 10 dígitos)', 'error'); return;
+    }
+    setPhoneVerifying(true);
+    try {
+      const r = await fetch(`${API_URL}/phone/send-otp`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneInput }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        setOtpSent(true);
+        showToast('Código enviado. Revisa tu teléfono.');
+      } else {
+        showToast(data.error || 'Error al enviar el código', 'error');
+      }
+    } catch {
+      showToast('Error de red', 'error');
+    } finally {
+      setPhoneVerifying(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpInput.length !== 6) {
+      showToast('El código debe tener 6 dígitos', 'error'); return;
+    }
+    setPhoneVerifying(true);
+    try {
+      const r = await fetch(`${API_URL}/phone/verify-otp`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp: otpInput }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        showToast(data.message || '¡Teléfono verificado!');
+        setProfile(prev => ({ ...prev, phone_verified: true, phone_number: phoneInput }));
+        setOtpSent(false);
+        setOtpInput('');
+      } else {
+        showToast(data.error || 'Código incorrecto', 'error');
+      }
+    } catch {
+      showToast('Error de red', 'error');
+    } finally {
+      setPhoneVerifying(false);
     }
   };
 
@@ -344,6 +403,79 @@ export default function ProfileEditScreen() {
             Guardar información
           </button>
         </form>
+
+
+        {/* Phone Verification — Confianza */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4 border border-slate-100">
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+            <Phone size={16} className="text-lime-500" /> Verificación de teléfono
+          </h2>
+
+          {profile?.phone_verified ? (
+            <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-xl px-4 py-3">
+              <CheckCircle size={18} />
+              <span className="text-sm font-medium">{profile.phone_number} — Verificado ✓</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500">
+                Verifica tu teléfono para ganar confianza con los compradores. Recibirás un código SMS.
+              </p>
+              {!otpSent ? (
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    placeholder="+52 55 1234 5678"
+                    value={phoneInput}
+                    onChange={e => setPhoneInput(e.target.value)}
+                    className="flex-1 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
+                  />
+                  <button
+                    onClick={handleSendOtp}
+                    disabled={phoneVerifying}
+                    className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    {phoneVerifying
+                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : 'Enviar código'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-500">
+                    Código enviado a <span className="font-medium text-slate-700">{phoneInput}</span>. Válido por 10 min.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="123456"
+                      value={otpInput}
+                      onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                      className="flex-1 border border-slate-300 rounded-xl px-3 py-2.5 text-center text-2xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-lime-400"
+                    />
+                    <button
+                      onClick={handleVerifyOtp}
+                      disabled={phoneVerifying || otpInput.length !== 6}
+                      className="bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 whitespace-nowrap"
+                    >
+                      {phoneVerifying
+                        ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        : 'Verificar'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => { setOtpSent(false); setOtpInput(''); }}
+                    className="text-xs text-slate-400 hover:text-slate-600 underline"
+                  >
+                    Cambiar número
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Links */}
         <form onSubmit={handleSaveProfile} className="bg-white rounded-2xl p-6 shadow-sm space-y-4">

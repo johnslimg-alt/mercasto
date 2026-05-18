@@ -58,6 +58,7 @@ import { Link } from 'react-router-dom';
 import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2 } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { addRecentlyViewed } from '../../utils/recentlyViewed';
+import { events } from '../../utils/analytics';
 
 export default function AdDetailScreen({
   ad, API_URL, getImageUrl, getImageUrls, getCatName, t, lang, favoriteIds, categoriesData,
@@ -66,7 +67,12 @@ export default function AdDetailScreen({
   currentUser
 }) {
   // Track recently viewed
-  React.useEffect(() => { if (ad) addRecentlyViewed(ad); }, [ad?.id]);
+  React.useEffect(() => {
+    if (ad) {
+      addRecentlyViewed(ad);
+      events.adViewed(ad.id, ad.category);
+    }
+  }, [ad?.id]);
 
   if (!ad) return null;
 
