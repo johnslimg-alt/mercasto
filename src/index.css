@@ -33,9 +33,16 @@ html.dark .btn-lg.bg-white:hover {
 
 @layer base {
   
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
   body { 
     @apply bg-[var(--color-paper)] text-[var(--color-ink)] antialiased font-sans; 
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
     --paper: #F6F8FB;
     --ink: #0F172A;
     --surface: #FFFFFF;
@@ -51,6 +58,11 @@ html.dark .btn-lg.bg-white:hover {
   }
   html.dark body { 
     @apply bg-[var(--color-ink)] text-[var(--color-paper)]; 
+  }
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
   :focus-visible {
     outline: 3px solid rgba(132, 204, 22, 0.55);
@@ -283,12 +295,9 @@ html.dark .btn-lg.bg-white:hover {
 
   @media (max-width: 639px) {
     .mobile-top-controls {
-      position: fixed;
-      top: 0.62rem;
-      right: 0.75rem;
-      width: 6.7rem;
+      position: static;
+      width: auto;
       justify-content: flex-end;
-      z-index: 60;
     }
   }
 
@@ -441,6 +450,13 @@ html.dark .btn-lg.bg-white:hover {
     align-items: center;
     justify-content: center;
     border-radius: 999px;
+  }
+
+  .mobile-tabbar {
+    left: 0;
+    right: 0;
+    width: auto !important;
+    max-width: 100vw;
   }
 
   .header-category-bar {

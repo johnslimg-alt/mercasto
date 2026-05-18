@@ -35,7 +35,15 @@ export default function CookieBanner() {
       aria-label="Aviso de cookies"
       aria-live="polite"
     >
-      <div className="max-w-4xl mx-auto bg-[#0F172A] text-white rounded-2xl shadow-2xl border border-white/10 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div className="relative max-w-4xl mx-auto bg-[#0F172A] text-white rounded-2xl shadow-2xl border border-white/10 px-5 py-4 pr-12 sm:pr-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <button
+          onClick={essential}
+          className="absolute top-3 right-3 p-2 text-slate-500 hover:text-slate-300 transition-colors rounded-xl hover:bg-white/10"
+          aria-label="Cerrar"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         {/* Icon + text */}
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <div className="w-9 h-9 bg-lime-500/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -58,25 +66,18 @@ export default function CookieBanner() {
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+        <div className="grid grid-cols-2 gap-2 flex-shrink-0 w-full sm:flex sm:w-auto sm:pr-9">
           <button
             onClick={essential}
-            className="flex-1 sm:flex-none px-4 py-2 text-xs font-medium text-slate-300 bg-white/10 hover:bg-white/15 rounded-xl transition-colors border border-white/10"
+            className="px-3 sm:px-4 py-2 text-xs font-medium text-slate-300 bg-white/10 hover:bg-white/15 rounded-xl transition-colors border border-white/10"
           >
             Solo esenciales
           </button>
           <button
             onClick={accept}
-            className="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold text-white bg-lime-500 hover:bg-lime-400 rounded-xl transition-colors shadow-sm"
+            className="px-3 sm:px-4 py-2 text-xs font-semibold text-white bg-lime-500 hover:bg-lime-400 rounded-xl transition-colors shadow-sm"
           >
             Aceptar todas
-          </button>
-          <button
-            onClick={essential}
-            className="p-2 text-slate-500 hover:text-slate-300 transition-colors rounded-xl hover:bg-white/10"
-            aria-label="Cerrar"
-          >
-            <X className="w-4 h-4" />
           </button>
         </div>
       </div>

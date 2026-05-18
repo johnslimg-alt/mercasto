@@ -2899,7 +2899,7 @@ function App() {
             <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.help || 'Ayuda'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" className="hover:text-white cursor-pointer">{t.help_center || 'Centro de Ayuda'}</a></li><li><a href="/safety" className="hover:text-white cursor-pointer">{t.safety_center || 'Centro de Seguridad'}</a></li><li><a href="/privacidad" className="hover:text-white cursor-pointer">{t.privacy_policy || 'Aviso de Privacidad'}</a></li></ul></div>
           </div>
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4 text-[12px] text-slate-400">
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-[12px] text-slate-400">
               <span>© 2026 Mercasto México S.A. de C.V.</span>
         <span className="text-slate-600">·</span>
         <a href="/acerca-de" className="hover:text-white cursor-pointer transition-colors">Acerca de</a>
