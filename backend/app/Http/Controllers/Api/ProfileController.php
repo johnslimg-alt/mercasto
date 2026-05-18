@@ -48,7 +48,10 @@ class ProfileController extends Controller
     public function show(Request $request)
     {
         // Защита от утечки секретов 2FA на клиенте
-        return response()->json($request->user()->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token']));
+        $user = $request->user()->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token']);
+        $data = $user->toArray();
+        $data['email_verified'] = (bool) $user->email_verified_at;
+        return response()->json($data);
     }
 
     /**
@@ -64,6 +67,7 @@ class ProfileController extends Controller
                 'avatar_url',
                 'role',
                 'is_verified',
+                'email_verified_at',
                 'created_at',
                 'phone_number',
                 'phone_verified',
@@ -83,6 +87,8 @@ class ProfileController extends Controller
             $user->rating_count = (int) ($reviewStats->count ?? 0);
             $user->rating_avg = round((float) ($reviewStats->avg ?? 0), 1);
             $user->member_since = $user->created_at?->format('Y-m-d');
+            $user->email_verified = (bool) $user->email_verified_at;
+            unset($user->email_verified_at);
 
             // GDPR & Privacy Leak Fix: Скрываем номер телефона, если продавец не является PRO-компанией
             if ($user->role !== 'business') {

@@ -12,8 +12,11 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\TwoFactorAuthenticationController;
 use App\Http\Controllers\Api\PhoneVerificationController;
+use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\EmailVerificationController;
 
 // Public routes
+Route::middleware('throttle:search')->get('/search/suggestions', [SearchController::class, 'suggestions']);
 Route::middleware('throttle:search')->get('/ads', [AdController::class, 'index']);
 Route::get('/ads/{id}', [AdController::class, 'show']); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
 
@@ -196,4 +199,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/phone/send-otp',  [PhoneVerificationController::class, 'sendOtp']);
         Route::post('/phone/verify-otp', [PhoneVerificationController::class, 'verifyOtp']);
     });
+
+    // Email Verification
+    Route::middleware('throttle:3,60')->post('/email/send-verification', [EmailVerificationController::class, 'send']);
 });
+
+// Email Verification (public — no auth required)
+Route::middleware('throttle:10,1')->post('/email/verify', [EmailVerificationController::class, 'verify']);
+// Contact form (public — rate limited to 3 per hour per IP)
+Route::post('/contact', function(Illuminate\Http\Request $request) {
+    $data = $request->validate([
+        'name'    => 'required|string|max:100',
+        'email'   => 'required|email',
+        'subject' => 'required|string|max:200',
+        'message' => 'required|string|max:2000',
+    ]);
+    \Illuminate\Support\Facades\Log::info('Contact form submission', [
+        'email_hash' => hash('sha256', strtolower($data['email'])),
+        'subject' => $data['subject'],
+        'message_length' => strlen($data['message']),
+    ]);
+    return response()->json(['ok' => true, 'message' => 'Mensaje recibido. Te responderemos pronto.']);
+})->middleware('throttle:3,60');

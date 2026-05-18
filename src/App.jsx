@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import echo from './echo';
+import CookieBanner from './components/CookieBanner';
+import SearchSuggestions from './components/common/SearchSuggestions';
 
 // Глобальный перехватчик фатальных ошибок (Защита от белого экрана)
 class ErrorBoundary extends React.Component {
@@ -231,6 +233,14 @@ const InmueblesLanding = React.lazy(() => import('./components/screens/verticals
 const EmpleosLanding = React.lazy(() => import('./components/screens/verticals/EmpleosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ServiciosLanding = React.lazy(() => import('./components/screens/verticals/ServiciosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor de perfil.</div> })));
+const TerminosScreen = React.lazy(() => import('./components/screens/legal/TerminosScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const PrivacidadScreen = React.lazy(() => import('./components/screens/legal/PrivacidadScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const CookiesScreen = React.lazy(() => import('./components/screens/legal/CookiesScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const NotFoundScreen = React.lazy(() => import('./components/screens/NotFoundScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Página no encontrada.</div> })));
+const VerificarEmailScreen = React.lazy(() => import('./components/screens/VerificarEmailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const AcercaDeScreen = React.lazy(() => import('./components/screens/AcercaDeScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 
 export default function AppWrapper() {
   return (
@@ -261,6 +271,13 @@ function App() {
   const [serverAds, setServerAds] = useState([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [recentSearches, setRecentSearches] = useState(() => { try { return JSON.parse(localStorage.getItem('mercasto_recent_searches') || '[]').slice(0, 5); } catch { return []; } });
+  const suggestionDebounceRef = useRef(null);
+  const desktopSearchRef = useRef(null);
+  const mobileSearchRef = useRef(null);
   const [selectedState, setSelectedState] = useState('');
   const [activeCat, setActiveCat] = useState(''); // Фильтр по категории
 
@@ -291,6 +308,8 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
+  const [emailBannerSent, setEmailBannerSent] = useState(false);
 
   // Show onboarding only after auth state has been initialized.
   useEffect(() => {
@@ -479,6 +498,51 @@ function App() {
       events.searchPerformed(nextSearch.trim(), nextCategory || "");
     }
   }, [activeCat, buildHomeFilterPath, navigate, searchQuery, searchLocationInput, setCurrentTab]);
+
+  const fetchSuggestions = useCallback((q) => {
+    if (!q || q.length < 2) { setSuggestions([]); return; }
+    clearTimeout(suggestionDebounceRef.current);
+    suggestionDebounceRef.current = setTimeout(() => {
+      fetch('/api/search/suggestions?q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => setSuggestions(Array.isArray(data) ? data : []))
+        .catch(() => setSuggestions([]));
+    }, 250);
+  }, []);
+
+  const saveRecentSearch = useCallback((q) => {
+    if (!q?.trim()) return;
+    let recent;
+    try {
+      recent = JSON.parse(localStorage.getItem('mercasto_recent_searches') || '[]');
+    } catch {
+      recent = [];
+    }
+    if (!Array.isArray(recent)) recent = [];
+    const updated = [q, ...recent.filter(r => r !== q)].slice(0, 8);
+    localStorage.setItem('mercasto_recent_searches', JSON.stringify(updated));
+    setRecentSearches(updated.slice(0, 5));
+  }, []);
+
+  const handleSuggestionSelect = useCallback((suggestion) => {
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+    saveRecentSearch(suggestion);
+    executeSearch(suggestion);
+  }, [executeSearch, saveRecentSearch, setSearchQuery]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((!desktopSearchRef.current || !desktopSearchRef.current.contains(e.target)) &&
+          (!mobileSearchRef.current || !mobileSearchRef.current.contains(e.target))) {
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Защита от логических сбоев UI: сбрасываем специфичные для категории фильтры (ОЗУ, двигатель) при смене самой категории
   useEffect(() => {
@@ -1512,6 +1576,21 @@ function App() {
       } else alert(result.message || 'Código SMS inválido');
     } catch (err) { alert('Error de conexión'); }
     finally { setAuthLoading(false); }
+  };
+
+  const resendVerificationEmail = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token || !user) return;
+    try {
+      const res = await fetch(`${API_URL}/email/send-verification`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setEmailBannerSent(true);
+        setTimeout(() => setEmailBannerSent(false), 5000);
+      }
+    } catch (e) { /* silent */ }
   };
 
   const handleLogout = async () => {
@@ -2565,6 +2644,21 @@ function App() {
   return (
     <div className="w-full min-h-screen bg-[var(--paper)] font-sans text-[var(--ink)] selection:bg-[#84CC16]/20">
 
+      {/* EMAIL VERIFICATION BANNER */}
+      {user && !user.email_verified && !emailBannerDismissed && (
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center justify-between text-sm z-50 relative">
+          <span className="text-yellow-800">
+            {emailBannerSent
+              ? `✅ Email enviado a ${user.email}. Revisa tu bandeja de entrada.`
+              : <>⚠️ Verifica tu email para aumentar tu confianza en Mercasto.{' '}
+                  <button onClick={resendVerificationEmail} className="underline text-yellow-700 font-medium hover:text-yellow-900">Reenviar email</button>
+                </>
+            }
+          </span>
+          <button onClick={() => setEmailBannerDismissed(true)} className="ml-4 text-yellow-600 hover:text-yellow-900 font-bold text-base leading-none">✕</button>
+        </div>
+      )}
+
       {/* GLOBAL HEADER */}
       <header className="site-header sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
@@ -2573,9 +2667,10 @@ function App() {
               <MercastoLogo className="h-8 sm:h-9 lg:h-10" />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
-              <div className="header-search-shell flex w-full max-w-[860px] items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
+              <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
+              <div className="header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-              <input value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
+              <input value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
 
                 {/* КАСТОМНЫЙ ПОПАП ВЫБОРА ЛОКАЦИИ (ШТАТ + ГОРОД) */}
@@ -2621,10 +2716,12 @@ function App() {
                     </select>
                   </>
                 )}
-              <button onClick={executeSearch} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
+              <button onClick={() => { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); }} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn || "Buscar"}
                 </button>
+              </div>
+              <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               </div>
             </div>
             <div className="flex items-center gap-1 ml-auto">
@@ -2701,15 +2798,16 @@ function App() {
           </div>
           {/* Mobile Search + Location + Account */}
           <div className="mobile-search-row lg:hidden pb-2">
-            <div className="relative min-w-0">
+            <div ref={mobileSearchRef} className="relative min-w-0">
               <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); }} onKeyDown={e => e.key === 'Enter' && executeSearch()} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2.5 text-sm outline-none"/>
+                <input ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2.5 text-sm outline-none"/>
                 <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
                 </button>
               </div>
+              <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               {showMobileLocationPicker && (
                 <div className="header-popover absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl border p-4 z-50">
                   <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
@@ -2772,7 +2870,14 @@ function App() {
               <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding /></React.Suspense>} />
               <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding /></React.Suspense>} />
               <Route path="/servicios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ServiciosLanding /></React.Suspense>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="/terminos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><TerminosScreen /></React.Suspense>} />
+  <Route path="/privacidad" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><PrivacidadScreen /></React.Suspense>} />
+  <Route path="/cookies" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CookiesScreen /></React.Suspense>} />
+  <Route path="/acerca-de" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AcercaDeScreen /></React.Suspense>} />
+  <Route path="/contacto"  element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ContactoScreen  /></React.Suspense>} />
+  <Route path="/ayuda"     element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AyudaScreen     /></React.Suspense>} />
+  <Route path="/verificar-email" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><VerificarEmailScreen /></React.Suspense>} />
+  <Route path="*" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotFoundScreen /></React.Suspense>} />
             </Routes>
           )}
         </Suspense>
@@ -2796,6 +2901,18 @@ function App() {
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-[12px] text-slate-400">
               <span>© 2026 Mercasto México S.A. de C.V.</span>
+        <span className="text-slate-600">·</span>
+        <a href="/acerca-de" className="hover:text-white cursor-pointer transition-colors">Acerca de</a>
+        <span className="text-slate-600">·</span>
+        <a href="/contacto" className="hover:text-white cursor-pointer transition-colors">Contacto</a>
+        <span className="text-slate-600">·</span>
+        <a href="/ayuda" className="hover:text-white cursor-pointer transition-colors">Ayuda</a>
+        <span className="text-slate-600">·</span>
+        <a href="/terminos" className="hover:text-white cursor-pointer transition-colors">Términos de uso</a>
+        <span className="text-slate-600">·</span>
+        <a href="/privacidad" className="hover:text-white cursor-pointer transition-colors">Privacidad</a>
+        <span className="text-slate-600">·</span>
+        <a href="/cookies" className="hover:text-white cursor-pointer transition-colors">Cookies</a>
             </div>
           </div>
         </div>
@@ -2947,6 +3064,8 @@ function App() {
           )}
         </div>
       )}
+
+      <CookieBanner />
     </div>
   );
 }

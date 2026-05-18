@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use App\Mail\EmailVerifyMail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -56,6 +57,20 @@ class AuthController extends Controller
         $user->role = $role;
         $user->ip_address = $ip;
         $user->save();
+
+        // Enviar email de verificación
+        try {
+            $token = bin2hex(random_bytes(32));
+            $user->email_verification_token = $token;
+            $user->save();
+            $baseUrl = rtrim(config('app.url', 'https://mercasto.com'), '/');
+            $verificationUrl = $baseUrl . '/verificar-email'
+                . '?token=' . $token
+                . '&email=' . urlencode($user->email);
+            Mail::to($user->email)->send(new EmailVerifyMail($user->name, $verificationUrl));
+        } catch (\Throwable $e) {
+            \Log::warning('Could not send verification email on register: ' . $e->getMessage());
+        }
 
         // Кошелек (Wallet) будет создан автоматически благодаря событию booted() в модели User, которое мы обсуждали
 

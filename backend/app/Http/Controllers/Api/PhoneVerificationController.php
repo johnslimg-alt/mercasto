@@ -34,6 +34,7 @@ class PhoneVerificationController extends Controller
             'phone_otp'            => $otp,
             'phone_otp_expires_at' => $expiresAt,
         ]);
+        $user->refresh();
 
         // Try Twilio if configured, else log it
         $twilioSid   = config('services.twilio.sid');
@@ -85,6 +86,8 @@ class PhoneVerificationController extends Controller
             'phone_otp'            => null,
             'phone_otp_expires_at' => null,
         ]);
+        // Refresh model so UpdateLastActive middleware save() doesn't overwrite our changes
+        $user->refresh();
 
         // Upgrade verification_level to 'phone' if still at 'none'
         try {
@@ -95,6 +98,7 @@ class PhoneVerificationController extends Controller
             Log::warning('Could not upgrade verification_level: ' . $e->getMessage());
         }
 
-        return response()->json(['ok' => true, 'message' => '¡Teléfono verificado correctamente!']);
+        Cache::forget("public_profile_{$user->id}");
+        return response()->json(["ok" => true, "message" => "¡Teléfono verificado correctamente!"]);
     }
 }

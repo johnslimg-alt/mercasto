@@ -14,7 +14,6 @@
     </div>
 
     <div class="info-box">
-        ⏰ <strong>Este enlace expira en 60 minutos.</strong><br>
         Si no solicitaste esto, puedes ignorar este correo de forma segura.
     </div>
 

@@ -105,6 +105,9 @@ export default function SellerProfileScreen({ currentUser }) {
           {seller?.phone_verified && (
             <span title="Teléfono verificado" className="text-green-500 text-base leading-none flex-shrink-0">📱</span>
           )}
+          {seller?.email_verified && (
+            <span title="Email verificado" className="text-blue-400 text-base leading-none flex-shrink-0">✉️</span>
+          )}
           {isOwner && (
             <Link to="/perfil/editar" className="ml-auto flex items-center gap-1.5 text-sm text-lime-600 hover:underline font-medium">
               <Pencil size={14} /> Editar perfil
@@ -136,6 +139,9 @@ export default function SellerProfileScreen({ currentUser }) {
                   )}
                   {seller?.phone_verified && (
                     <span title="Teléfono verificado" className="text-green-500 flex-shrink-0 text-base leading-none">📱</span>
+                  )}
+                  {seller?.email_verified && (
+                    <span title="Email verificado" className="text-blue-400 flex-shrink-0 text-base leading-none">✉️</span>
                   )}
                 </div>
                 {seller?.city && (
