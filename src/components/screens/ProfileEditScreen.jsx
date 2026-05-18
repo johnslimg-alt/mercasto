@@ -67,6 +67,13 @@ const MEXICAN_CITIES = [
   { state: 'Baja California Sur', cities: ['La Paz', 'Los Cabos', 'Comondú'] },
 ];
 
+const MEXICAN_LOCATION_OPTIONS = Array.from(new Set(
+  MEXICAN_CITIES.flatMap(({ state, cities }) => [
+    state,
+    ...cities.map(city => `${city}, ${state}`),
+  ])
+));
+
 export default function ProfileEditScreen() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -364,17 +371,18 @@ export default function ProfileEditScreen() {
 
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1"><MapPin size={11} className="inline mr-1" />Ciudad</label>
-            <select
+            <input
+              type="text"
+              list="mexico-location-options"
+              maxLength={120}
               value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
               className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white"
-            >
-              <option value="">Sin especificar</option>
-              {MEXICAN_CITIES.map(g => (
-                <optgroup key={g.state} label={g.state}>
-                  {g.cities.map(c => <option key={c} value={c}>{c}</option>)}
-                </optgroup>
-              ))}
-            </select>
+              placeholder="Escribe cualquier ciudad de México"
+            />
+            <datalist id="mexico-location-options">
+              {MEXICAN_LOCATION_OPTIONS.map(option => <option key={option} value={option} />)}
+            </datalist>
+            <p className="mt-1 text-[11px] text-slate-400">Puedes escribir cualquier ciudad, municipio o estado de México.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

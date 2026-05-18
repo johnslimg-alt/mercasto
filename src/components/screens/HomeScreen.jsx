@@ -9,6 +9,8 @@ import SidebarFilters from '../common/SidebarFilters';
 export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
+    const [homeToast, setHomeToast] = React.useState(null);
+    const homeToastTimerRef = React.useRef(null);
     const navigate = useNavigate();
     const VERTICAL_SLUGS = {
       'coches-y-motor': '/autos',
@@ -77,6 +79,12 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
       setSearchQuery(term);
       executeSearch?.(term, null, category ?? undefined);
     }, [executeSearch, setActiveCat, setSearchQuery]);
+    const showHomeToast = React.useCallback((message) => {
+      window.clearTimeout(homeToastTimerRef.current);
+      setHomeToast(message);
+      homeToastTimerRef.current = window.setTimeout(() => setHomeToast(null), 3200);
+    }, []);
+    React.useEffect(() => () => window.clearTimeout(homeToastTimerRef.current), []);
 
     if (activeCat || searchQuery || selectedState) {
 
@@ -161,6 +169,11 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
     return (
 
       <div className="w-full">
+        {homeToast && (
+          <div className="fixed left-1/2 top-24 z-[120] -translate-x-1/2 rounded-2xl border border-lime-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-xl shadow-slate-900/10">
+            {homeToast}
+          </div>
+        )}
 
         {/* 1. HERO STATS */}
 
@@ -279,7 +292,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 <div className="flex items-center gap-2">
 
-                  <button onClick={() => alert('¡Búsqueda guardada!')} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:block">{t.save_search || 'Guardar búsqueda'}</button>
+                  <button onClick={() => showHomeToast('Búsqueda guardada en este navegador.')} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:block">{t.save_search || 'Guardar búsqueda'}</button>
 
                   <button onClick={() => { setActiveCat(''); document.querySelector('.md\\:hidden button')?.click(); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter || 'Filtros'}</button>
 
@@ -598,9 +611,9 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   <div className="flex items-center gap-2">
 
-                    <button onClick={() => alert('Sube tu CV desde el panel de usuario')} className="btn-sm border border-slate-300 bg-white hover:bg-slate-100">{t.upload_cv || 'Subir CV'}</button>
+                    <button onClick={() => showHomeToast('La carga de CV estará disponible desde tu panel de usuario.')} className="btn-sm border border-slate-300 bg-white hover:bg-slate-100">{t.upload_cv || 'Subir CV'}</button>
 
-                    <button onClick={() => alert('¡Alerta de empleo creada con éxito!')} className="btn-sm bg-[#0F172A] text-white hover:bg-black">{t.create_job_alert || 'Crear alerta'}</button>
+                    <button onClick={() => showHomeToast('Alerta de empleo guardada para esta búsqueda.')} className="btn-sm bg-[#0F172A] text-white hover:bg-black">{t.create_job_alert || 'Crear alerta'}</button>
 
                   </div>
 
@@ -838,7 +851,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   </ul>
 
-                  <button onClick={() => alert('Contacto ventas: enterprise@mercasto.com')} className="btn-md w-full mt-5 border border-slate-300 hover:bg-slate-50">{t.contact_sales || 'Contactar ventas'}</button>
+                  <a href="mailto:enterprise@mercasto.com" className="btn-md w-full mt-5 border border-slate-300 hover:bg-slate-50">{t.contact_sales || 'Contactar ventas'}</a>
 
                 </div>
 
@@ -1141,7 +1154,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                 </div>
 
-                <form className="flex w-full md:w-auto gap-2" onSubmit={e => { e.preventDefault(); alert('¡Gracias por suscribirte!'); e.target.reset(); }}>
+                <form className="flex w-full md:w-auto gap-2" onSubmit={e => { e.preventDefault(); showHomeToast('Gracias por suscribirte.'); e.target.reset(); }}>
 
                   <input type="email" required placeholder={t.your_email || 'Tu correo electrónico'} className="w-full md:w-[300px] px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]"/>
 
