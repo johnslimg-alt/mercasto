@@ -935,7 +935,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
           <p className="text-[13px] text-slate-600 mt-1">{t.avoid_scams_desc || 'Nunca pagues por adelantado. Revisa las insignias.'}</p>
 
-                  <button onClick={() => setCurrentTab('safety')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
+                  <button onClick={() => navigate('/safety')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
 
                 </div>
 
@@ -947,7 +947,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   <p className="text-[13px] text-slate-600 mt-1">{t.safe_payments_desc || 'Reúnete en público. Cuenta el dinero antes de irte.'}</p>
 
-                  <button onClick={() => setCurrentTab('safety')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
+                  <button onClick={() => navigate('/safety')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
 
                 </div>
 
@@ -959,7 +959,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   <p className="text-[13px] text-slate-600 mt-1">{t.verified_sellers_desc || 'Busca la insignia azul de identidad confirmada (KYC).'}</p>
 
-                  <button onClick={() => setCurrentTab('help')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
+                  <button onClick={() => navigate('/ayuda')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
 
                 </div>
 
