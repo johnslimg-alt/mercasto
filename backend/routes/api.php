@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AdController;
+use App\Http\Controllers\Api\AdIndexController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\BusinessProfileController;
@@ -20,7 +21,7 @@ use App\Http\Controllers\Api\NotificationController;
 
 // Public routes
 Route::middleware('throttle:search')->get('/search/suggestions', [SearchController::class, 'suggestions']);
-Route::middleware('throttle:search')->get('/ads', [AdController::class, 'index']);
+Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'index']);
 Route::middleware('throttle:api')->get('/ads/{id}', [AdController::class, 'show'])->whereNumber('id'); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
 
 // Защита от CPU DDoS: генерация PDF очень ресурсоемкая, ставим лимит 10 в минуту
@@ -119,8 +120,7 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
-// Returns which OAuth providers are actually configured (credentials present in env)
-// IMPORTANT: must be defined BEFORE the {provider} wildcard routes
+// OAuth provider availability endpoint must be defined BEFORE provider wildcard routes.
 Route::middleware('throttle:api')->get('/auth/providers', [AuthController::class, 'getProviders']);
 
 // OAuth wildcard routes (must come AFTER static /auth/providers)
