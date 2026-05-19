@@ -5,6 +5,7 @@ OPERATION="${OPERATION:-${1:-status}}"
 CONFIRM="${CONFIRM:-${2:-}}"
 TAIL_LINES="${TAIL_LINES:-160}"
 PROJECT_DIR="${PROJECT_DIR:-}"
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
 
 case "$TAIL_LINES" in
   ''|*[!0-9]*) TAIL_LINES=160 ;;
@@ -50,6 +51,8 @@ resolve_project_dir() {
 PROJECT_DIR="$(resolve_project_dir)"
 cd "$PROJECT_DIR"
 git config --global --add safe.directory "$PROJECT_DIR" || true
+COMPOSE_BASE=(docker compose --env-file "$COMPOSE_ENV_FILE")
+COMPOSE_PROD=(docker compose --env-file "$COMPOSE_ENV_FILE" -f docker-compose.yml -f docker-compose.override.yml)
 
 require_confirm() {
   if [ "${CONFIRM:-}" != "MERCASTO" ]; then
@@ -64,7 +67,7 @@ print_header() {
 }
 
 compose_ps() {
-  docker compose -f docker-compose.yml -f docker-compose.override.yml ps
+  "${COMPOSE_PROD[@]}" ps
 }
 
 retry_command() {
@@ -115,13 +118,13 @@ public_smoke() {
   print_header "Public HTTP smoke"
   retry_command curl -fsSI --max-time 30 https://mercasto.com/ | head -n 20
   retry_command curl -fsSI --max-time 30 https://mercasto.com/api/categories | head -n 20
-  retry_command curl -fsSI --max-time 30 https://mercasto.com/horizon | head -n 20 || true
-  retry_command curl -fsSI --max-time 30 https://mercasto.com/vendor/horizon | head -n 20 || true
+  curl -ksSI --max-time 30 https://mercasto.com/horizon | head -n 20 || true
+  curl -ksSI --max-time 30 https://mercasto.com/vendor/horizon | head -n 20 || true
 }
 
 nginx_config_test() {
   print_header "Validate nginx config"
-  docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-frontend nginx -t
+  "${COMPOSE_PROD[@]}" exec -T mercasto-frontend nginx -t
 }
 
 seo_aeo_probe() {
@@ -146,8 +149,8 @@ run_verify_quick() {
 
   echo "npm not found; running server-compatible verify:quick fallback"
   find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
-  docker compose config >/tmp/mercasto_compose_base.out
-  docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out
+  "${COMPOSE_BASE[@]}" config >/tmp/mercasto_compose_base.out
+  "${COMPOSE_PROD[@]}" config >/tmp/mercasto_compose_override.out
   bash scripts/static-safety-scans.sh
   bash scripts/production-smoke.sh
   bash scripts/auth-providers-smoke.sh
@@ -181,17 +184,17 @@ case "$OPERATION" in
     git reset --hard origin/main
     git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
     print_header "Build and start stack"
-    docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build --remove-orphans
+    "${COMPOSE_PROD[@]}" up -d --build --remove-orphans
     nginx_config_test
     print_header "Run migrations"
-    docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-backend php artisan migrate --force
+    "${COMPOSE_PROD[@]}" exec -T mercasto-backend php artisan migrate --force
     run_verify_quick
     ;;
 
   restart_frontend)
     require_confirm
     print_header "Restart frontend"
-    docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --no-deps --force-recreate mercasto-frontend
+    "${COMPOSE_PROD[@]}" up -d --no-deps --force-recreate mercasto-frontend
     nginx_config_test
     compose_ps
     public_smoke
@@ -200,7 +203,7 @@ case "$OPERATION" in
   restart_stack)
     require_confirm
     print_header "Restart stack"
-    docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --remove-orphans
+    "${COMPOSE_PROD[@]}" up -d --remove-orphans
     nginx_config_test
     compose_ps
     public_smoke
@@ -226,7 +229,7 @@ PY
     grep -n "client_max_body_size" default.conf
     nginx_config_test
     print_header "Restart frontend with aligned config"
-    docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --no-deps --force-recreate mercasto-frontend
+    "${COMPOSE_PROD[@]}" up -d --no-deps --force-recreate mercasto-frontend
     compose_ps
     public_smoke
     run_verify_quick

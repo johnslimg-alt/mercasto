@@ -34,6 +34,8 @@ resolve_project_dir() {
 PROJECT_DIR="$(resolve_project_dir)"
 cd "$PROJECT_DIR"
 git config --global --add safe.directory "$PROJECT_DIR" || true
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
+COMPOSE_PROD=(docker compose --env-file "$COMPOSE_ENV_FILE" -f docker-compose.yml -f docker-compose.override.yml)
 
 case "$MODE" in
   quick)
@@ -73,7 +75,7 @@ case "$MODE" in
     git status --short
     git log -1 --oneline
     print_header "Docker compose status"
-    docker compose -f docker-compose.yml -f docker-compose.override.yml ps
+    "${COMPOSE_PROD[@]}" ps
     ;;
 
   *)
