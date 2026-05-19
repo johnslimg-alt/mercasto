@@ -42,6 +42,17 @@ class User extends Authenticatable implements MustVerifyEmail
         'referral_code',
         'referred_by',
         'referral_credits',
+        'business_name',
+        'business_rfc',
+        'business_logo_url',
+        'business_website',
+        'business_phone',
+        'business_whatsapp',
+        'business_hours',
+        'business_address',
+        'business_description',
+        'business_profile_enabled',
+        'business_rfc_verified_at',
     ];
 
     /**
@@ -80,6 +91,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'phone_otp_expires_at' => 'datetime',
             'balance' => 'decimal:2',
             'last_active_at' => 'datetime',
+            'business_hours' => 'array',
+            'business_profile_enabled' => 'boolean',
+            'business_rfc_verified_at' => 'datetime',
         ];
     }
 
