@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const CITIES = [
   { name: 'Ciudad de México', emoji: '🏙️' },

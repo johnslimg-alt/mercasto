@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Loader2, CheckCircle, XCircle, Mail } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function VerificarEmailScreen() {
   const [searchParams] = useSearchParams();

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, AlertTriangle, Loader2, X, Plus, Image, GripVertical, Pencil } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
 
 const getImageUrl = (path) => {

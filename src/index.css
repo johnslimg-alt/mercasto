@@ -543,6 +543,7 @@ html.dark .btn-lg.bg-white:hover {
     border-color: #334155 !important;
   }
 
+  .footer-logo span:first-child,
   html.dark .footer-logo span:first-child {
     color: #F8FAFC !important;
   }

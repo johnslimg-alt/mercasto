@@ -41,31 +41,31 @@ class ReferralController extends Controller
         $user = Auth::user();
         $code = strtoupper(trim((string) $request->code));
 
-        if ($user->referred_by !== null) {
-            return response()->json(['success' => false, 'message' => 'Ya tienes un referido aplicado.'], 400);
-        }
+        $result = DB::transaction(function () use ($user, $code) {
+            $currentUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-        $referrer = User::where('referral_code', $code)->first();
+            if ($currentUser->referred_by !== null) {
+                return ['status' => 400, 'body' => ['success' => false, 'message' => 'Ya tienes un referido aplicado.']];
+            }
 
-        if (!$referrer) {
-            return response()->json(['success' => false, 'message' => 'Código de referido inválido.'], 404);
-        }
+            $referrer = User::where('referral_code', $code)->lockForUpdate()->first();
 
-        if ($referrer->id === $user->id) {
-            return response()->json(['success' => false, 'message' => 'No puedes usar tu propio código.'], 400);
-        }
+            if (!$referrer) {
+                return ['status' => 404, 'body' => ['success' => false, 'message' => 'Código de referido inválido.']];
+            }
 
-        $updated = User::whereKey($user->id)
-            ->whereNull('referred_by')
-            ->update(['referred_by' => $referrer->id, 'updated_at' => now()]);
+            if ($referrer->id === $currentUser->id) {
+                return ['status' => 400, 'body' => ['success' => false, 'message' => 'No puedes usar tu propio código.']];
+            }
 
-        if ($updated !== 1) {
-            return response()->json(['success' => false, 'message' => 'Ya tienes un referido aplicado.'], 400);
-        }
+            $currentUser->referred_by = $referrer->id;
+            $currentUser->save();
+            $referrer->increment('referral_credits');
 
-        DB::table('users')->where('id', $referrer->id)->increment('referral_credits');
+            return ['status' => 200, 'body' => ['success' => true, 'message' => '¡Código aplicado! Tu amigo ha ganado 1 crédito destacado.']];
+        });
 
-        return response()->json(['success' => true, 'message' => '¡Código aplicado! Tu amigo ha ganado 1 crédito destacado.']);
+        return response()->json($result['body'], $result['status']);
     }
 
     private function ensureReferralCode(User $user): string
