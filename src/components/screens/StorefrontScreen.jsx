@@ -1,5 +1,25 @@
-import React from 'react';
-import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCode, User, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCode, User, Loader2, Globe, Phone, Clock, Building2 } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
+
+function businessAssetUrl(url) {
+  if (!url) return null;
+  if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+  return `${STORAGE_URL}/${url}`;
+}
+
+function formatHours(hours = []) {
+  if (!Array.isArray(hours) || hours.length === 0) return [];
+  return hours
+    .filter(item => item && item.day)
+    .map(item => {
+      if (item.closed) return `${item.day}: Cerrado`;
+      if (item.open && item.close) return `${item.day}: ${item.open}–${item.close}`;
+      return `${item.day}: Consultar horario`;
+    });
+}
 
 export default function StorefrontScreen({
   company, t, getImageUrl, companyRatingStats, companyAds, companyReviews,
@@ -7,7 +27,36 @@ export default function StorefrontScreen({
   setViewedCompany, renderAdCard, renderSkeletonCard, handleReviewSubmit, reviewForm, setReviewForm,
   user, handleViewCompany
 }) {
+  const [businessProfile, setBusinessProfile] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBusinessProfile() {
+      if (!company?.id) return;
+      try {
+        const response = await fetch(`${API_URL}/users/${company.id}/business-profile`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!cancelled) setBusinessProfile(data);
+      } catch {
+        if (!cancelled) setBusinessProfile(null);
+      }
+    }
+
+    setBusinessProfile(null);
+    loadBusinessProfile();
+
+    return () => { cancelled = true; };
+  }, [company?.id]);
+
   if (!company) return null;
+
+  const isBusinessEnabled = businessProfile?.enabled || businessProfile?.is_business || company.role === 'business';
+  const displayName = isBusinessEnabled && businessProfile?.business_name ? businessProfile.business_name : (company.name || 'Vendedor');
+  const logoUrl = businessProfile?.business_logo_url ? businessAssetUrl(businessProfile.business_logo_url) : null;
+  const phoneForQr = businessProfile?.business_whatsapp || businessProfile?.business_phone || company.phone_number;
+  const businessHours = formatHours(businessProfile?.business_hours);
 
   return (
   <div className="bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
@@ -23,16 +72,24 @@ export default function StorefrontScreen({
            <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=400&fit=crop" loading="lazy" className="w-full h-full object-cover opacity-90 mix-blend-multiply" alt="Cover" />
         </div>
         <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start md:items-center relative">
-           <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center font-bold text-3xl shadow-lg border-4 border-white -mt-14 md:-mt-16 z-10 relative shrink-0">
-             {company.avatar_url ? <img src={getImageUrl(company.avatar_url)} className="w-full h-full rounded-xl object-cover"/> : (company.name ? company.name[0].toUpperCase() : <User size={32}/>)}
+           <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center font-bold text-3xl shadow-lg border-4 border-white -mt-14 md:-mt-16 z-10 relative shrink-0 overflow-hidden">
+             {logoUrl ? <img src={logoUrl} className="w-full h-full rounded-xl object-cover" alt={displayName}/> : company.avatar_url ? <img src={getImageUrl(company.avatar_url)} className="w-full h-full rounded-xl object-cover" alt={displayName}/> : (displayName ? displayName[0].toUpperCase() : <User size={32}/>)}
            </div>
            <div className="flex-1 pt-2 md:pt-0">
-             <h1 className="text-[24px] font-bold text-slate-900 flex items-center gap-2">
-               {company.name || 'Vendedor'} 
+             <h1 className="text-[24px] font-bold text-slate-900 flex flex-wrap items-center gap-2">
+               {displayName}
                {company.is_verified && <CheckCircle className="w-5 h-5 text-[#84CC16]" />}
-               {company.role === 'business' && <span className="badge bg-slate-900 text-white ml-1">PRO</span>}
+               {isBusinessEnabled && <span className="badge bg-slate-900 text-white ml-1">PRO</span>}
+               {businessProfile?.business_rfc_verified && (
+                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 border border-emerald-100">
+                   <CheckCircle className="w-3 h-3" /> RFC verificado
+                 </span>
+               )}
              </h1>
-             <p className="text-[14px] text-slate-500 mt-1 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> México</p>
+             <p className="text-[14px] text-slate-500 mt-1 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {businessProfile?.business_address || 'México'}</p>
+             {businessProfile?.business_description && (
+               <p className="text-[14px] text-slate-600 mt-3 max-w-2xl leading-relaxed">{businessProfile.business_description}</p>
+             )}
              <div className="flex items-center gap-1 mt-2">
                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
                <span className="font-bold text-slate-900 text-[14px]">{Number(companyRatingStats.average || 0).toFixed(1)}</span>
@@ -43,6 +100,11 @@ export default function StorefrontScreen({
                {company.is_verified && (
                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-emerald-50 border-emerald-100 text-emerald-700 text-[12px] font-semibold">
                    <CheckCircle className="w-3.5 h-3.5"/> {t.verified_id}
+                 </div>
+               )}
+               {isBusinessEnabled && (
+                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 border-slate-200 text-slate-700 text-[12px] font-semibold">
+                   <Building2 className="w-3.5 h-3.5"/> Perfil de negocio
                  </div>
                )}
                {companyAds.length >= 10 && (
@@ -56,13 +118,32 @@ export default function StorefrontScreen({
                  </div>
                )}
              </div>
+             {isBusinessEnabled && (businessProfile?.business_website || businessProfile?.business_phone || businessProfile?.business_whatsapp || businessHours.length > 0) && (
+               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px] text-slate-600">
+                 {businessProfile?.business_website && (
+                   <a href={businessProfile.business_website} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
+                     <Globe className="w-4 h-4 text-slate-400" /> Sitio web
+                   </a>
+                 )}
+                 {(businessProfile?.business_phone || businessProfile?.business_whatsapp) && (
+                   <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                     <Phone className="w-4 h-4 text-slate-400" /> {businessProfile.business_whatsapp || businessProfile.business_phone}
+                   </div>
+                 )}
+                 {businessHours.slice(0, 4).map(line => (
+                   <div key={line} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                     <Clock className="w-4 h-4 text-slate-400" /> {line}
+                   </div>
+                 ))}
+               </div>
+             )}
              <button onClick={() => setShowUserReportModal(true)} className="mt-4 text-[12px] text-slate-400 hover:text-red-500 flex items-center gap-1.5 underline underline-offset-4 font-medium transition-colors w-fit">
                <AlertTriangle size={14} /> {t.report_seller}
              </button>
            </div>
            <div className="w-full md:w-auto">
              <button 
-               onClick={() => setQrModalData(company.phone_number ? `https://wa.me/${company.phone_number.replace(/\D/g, '')}` : 'tel:+521234567890')}
+               onClick={() => setQrModalData(phoneForQr ? `https://wa.me/${phoneForQr.replace(/\D/g, '')}` : 'tel:+521234567890')}
                className="btn-md w-full border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2 shadow-sm"
              >
                <QrCode className="w-4 h-4" /> {t.scan_qr}
@@ -115,7 +196,7 @@ export default function StorefrontScreen({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
-                      {rev.reviewer_avatar ? <img src={getImageUrl(rev.reviewer_avatar)} className="w-full h-full object-cover"/> : <User className="w-5 h-5 m-1.5 text-slate-400"/>}
+                      {rev.reviewer_avatar ? <img src={getImageUrl(rev.reviewer_avatar)} className="w-full h-full object-cover" alt={rev.reviewer_name}/> : <User className="w-5 h-5 m-1.5 text-slate-400"/>}
                     </div>
                     <div>
                       <p className="text-[13px] font-semibold text-slate-900">{rev.reviewer_name}</p>
