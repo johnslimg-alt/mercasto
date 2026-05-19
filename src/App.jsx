@@ -1875,6 +1875,7 @@ function App() {
           title:      form.title,
           category:   form.category   || undefined,
           condition:  form.condition  || undefined,
+          location:   form.location   || undefined,
           price:      form.price      || undefined,
           attributes: attrs,
         }),

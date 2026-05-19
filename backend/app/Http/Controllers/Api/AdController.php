@@ -1306,6 +1306,7 @@ class AdController extends Controller
             'title'      => 'required|string|max:200',
             'category'   => 'nullable|string|max:100',
             'condition'  => 'nullable|string|max:50',
+            'location'   => 'nullable|string|max:255',
             'price'      => 'nullable|numeric',
             'attributes' => 'nullable|array',
         ]);
@@ -1323,14 +1324,17 @@ class AdController extends Controller
         // Build Spanish prompt
         $prompt  = "Eres un experto en redacción de anuncios para el marketplace mexicano Mercasto.com. ";
         $prompt .= "Escribe una descripción atractiva y honesta en español mexicano para el siguiente anuncio. ";
-        $prompt .= "Máximo 150 palabras. Solo devuelve la descripción, sin títulos ni etiquetas.\n\n";
+        $prompt .= "No inventes datos que no estén abajo: color, batería, accesorios, garantía, ubicación, estado físico, documentos o entregas. ";
+        $prompt .= "Si faltan detalles, usa lenguaje neutral e invita a preguntar. Máximo 120 palabras. ";
+        $prompt .= "Solo devuelve la descripción, sin títulos ni etiquetas.\n\n";
         $prompt .= "Título: {$request->title}\n";
         if ($request->category)  $prompt .= "Categoría: {$request->category}\n";
         if ($request->condition) $prompt .= "Condición: {$request->condition}\n";
+        if ($request->location)  $prompt .= "Ubicación: {$request->location}\n";
         if ($request->price)     $prompt .= "Precio: \${$request->price} MXN\n";
         if ($request->attributes) {
             foreach ($request->attributes as $attrKey => $attrValue) {
-                if ($attrValue) {
+                if (is_scalar($attrValue) && $attrValue !== '') {
                     $prompt .= ucfirst($attrKey) . ": {$attrValue}\n";
                 }
             }
@@ -1341,7 +1345,7 @@ class AdController extends Controller
             $client = app(\App\Services\DeepSeekClient::class);
             $result = $client->chatFlash(
                 [['role' => 'user', 'content' => $prompt]],
-                ['max_tokens' => 250, 'temperature' => 0.7]
+                ['max_tokens' => 190, 'temperature' => 0.35]
             );
 
             $text = $result['choices'][0]['message']['content'] ?? null;
