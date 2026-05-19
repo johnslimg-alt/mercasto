@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { trackPageView, events } from './utils/analytics';
-import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { translations } from './constants/mockData';
 import ChartTooltip from './components/common/ChartTooltip';
 import AdSenseBanner from './components/common/AdSenseBanner';
@@ -241,6 +241,17 @@ const VerificarEmailScreen = React.lazy(() => import('./components/screens/Verif
 const AcercaDeScreen = React.lazy(() => import('./components/screens/AcercaDeScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const ReferralScreen = React.lazy(() => import('./components/screens/ReferralScreen').catch(() => ({ default: () => <div className='flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500'>No pudimos cargar esta página.</div> })));
+
+function ReferralRedirect() {
+  const { code } = useParams();
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    localStorage.setItem('pendingReferral', code);
+    navigate('/');
+  }, [code, navigate]);
+  return null;
+}
 
 export default function AppWrapper() {
   return (
@@ -908,6 +919,7 @@ function App() {
           setUser(data.user);
           setUserRole(data.user.role || 'individual');
           localStorage.setItem('user', JSON.stringify(data.user));
+          if (!data.user.referred_by) applyPendingReferral(data.access_token);
         })
         .catch(err => {
           console.error(err);
@@ -926,6 +938,7 @@ function App() {
         setUser(userData);
         setUserRole(userData.role || 'individual');
         localStorage.setItem('user', JSON.stringify(userData));
+        if (!userData.referred_by) applyPendingReferral(token);
         setShowAuthModal(false);
       })
       .catch(err => {
@@ -1445,6 +1458,25 @@ function App() {
   // В Production мы используем только реальные объявления из БД. Убираем mockAds, чтобы поиск мог корректно показывать "Ничего не найдено"
   const allAds = serverAds;
 
+  const applyPendingReferral = async (token) => {
+    const code = localStorage.getItem('pendingReferral');
+    if (!code || !token) return;
+
+    try {
+      const res = await fetch(`${API_URL}/referral/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ code })
+      });
+
+      if (res.ok || [400, 404].includes(res.status)) {
+        localStorage.removeItem('pendingReferral');
+      }
+    } catch (err) {
+      console.error('Referral apply failed', err);
+    }
+  };
+
   // --- ЛОГИКА АВТОРИЗАЦИИ (API) ---
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
@@ -1454,7 +1486,11 @@ function App() {
 
     try {
       let endpoint = '';
-      if (authMode === 'register') endpoint = '/register';
+      if (authMode === 'register') {
+        endpoint = '/register';
+        const pendingReferral = localStorage.getItem('pendingReferral');
+        if (pendingReferral) data.referral_code = pendingReferral;
+      }
       else if (authMode === 'login') endpoint = '/login';
       else if (authMode === 'forgot_password') endpoint = '/forgot-password';
       else if (authMode === 'reset_password') {
@@ -1487,7 +1523,10 @@ function App() {
           setUser(result.user);
           setUserRole(result.user.role || 'individual');
           localStorage.setItem('user', JSON.stringify(result.user));
-          if (result.access_token) localStorage.setItem('auth_token', result.access_token);
+          if (result.access_token) {
+            localStorage.setItem('auth_token', result.access_token);
+            if (authMode === 'register') await applyPendingReferral(result.access_token);
+          }
           // Mark new registrations for onboarding
           if (authMode === 'register') localStorage.setItem('just_registered', '1');
           setShowAuthModal(false);
@@ -2877,6 +2916,8 @@ function App() {
   <Route path="/contacto"  element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ContactoScreen  /></React.Suspense>} />
   <Route path="/ayuda"     element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AyudaScreen     /></React.Suspense>} />
   <Route path="/verificar-email" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><VerificarEmailScreen /></React.Suspense>} />
+  <Route path="/referidos" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReferralScreen /></React.Suspense></RequireAuth>} />
+  <Route path="/r/:code" element={<ReferralRedirect />} />
   <Route path="*" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotFoundScreen /></React.Suspense>} />
             </Routes>
           )}

@@ -29,6 +29,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:8', // Можно добавить |confirmed, если на фронтенде есть поле password_confirmation
             'phone_number' => 'nullable|string|max:20|unique:users',
             'avatar_url' => 'nullable|string|url',
+            'referral_code' => 'nullable|string|max:10',
         ]);
 
         // GDPR/LFPDPPP Compliance: Хешируем IP-адрес (PII) перед сохранением/поиском в БД
@@ -58,6 +59,21 @@ class AuthController extends Controller
         $user->ip_address = $ip;
         $user->save();
 
+        $this->ensureReferralCode($user);
+
+        $incomingReferralCode = strtoupper(trim((string) $request->input('referral_code', '')));
+        if ($incomingReferralCode !== '') {
+            $referrer = User::where('referral_code', $incomingReferralCode)
+                ->where('id', '!=', $user->id)
+                ->first();
+
+            if ($referrer) {
+                $user->referred_by = $referrer->id;
+                $user->save();
+                $referrer->increment('referral_credits');
+            }
+        }
+
         // Enviar email de verificación
         try {
             $token = bin2hex(random_bytes(32));
@@ -78,7 +94,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Пользователь успешно зарегистрирован',
+            'message' => 'Usuario registrado correctamente',
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])
@@ -332,6 +348,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Usuario no encontrado.'], 404);
         }
 
+        $this->ensureReferralCode($user);
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -385,12 +402,14 @@ class AuthController extends Controller
                 $user->{"{$provider}_id"} = $socialUser->id;
                 $user->avatar_url = $socialUser->avatar;
                 $user->role = 'individual';
-                $user->ip_address = $request->ip();
+                $user->ip_address = hash('sha256', $request->ip());
                 $user->save();
             } elseif (!$user->{"{$provider}_id"}) {
                 $user->{"{$provider}_id"} = $socialUser->id;
                 $user->save();
             }
+
+            $this->ensureReferralCode($user);
 
             // Защита от обхода 2FA через социальные сети (OAuth Zero-Day Bypass)
             if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
@@ -408,5 +427,19 @@ class AuthController extends Controller
             \Illuminate\Support\Facades\Log::error(ucfirst($provider) . ' OAuth Error: ' . $e->getMessage());
             return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=oauth_failed');
         }
+    }
+
+    private function ensureReferralCode(User $user): void
+    {
+        if ($user->referral_code) {
+            return;
+        }
+
+        do {
+            $referralCode = strtoupper(Str::random(8));
+        } while (User::where('referral_code', $referralCode)->exists());
+
+        $user->referral_code = $referralCode;
+        $user->save();
     }
 }

@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Cache;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Events\NewNotification;
 use App\Jobs\ProcessVideoWatermark;
+use App\Jobs\NotifyPriceDropJob;
 use App\Mail\NewAdInCategory;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
@@ -499,6 +500,11 @@ class AdController extends Controller
             }
         }
 
+        // 4. Detect price drop before updating
+        $oldPrice = (float) $ad->price;
+        $newPrice = (float) $validated['price'];
+        $isPriceDrop = $newPrice < $oldPrice && $oldPrice > 0;
+
         // 4. Обновляем объявление
         $ad->update([
             'title' => strip_tags($validated['title']),
@@ -516,6 +522,15 @@ class AdController extends Controller
             'video_processing_status' => $videoProcessingStatus,
             'status' => $needsReModeration ? 'pending' : $ad->status, // Сбрасываем статус, если были критичные изменения
         ]);
+
+        // Handle price drop: persist old price and dispatch fan-out notifications
+        if ($isPriceDrop) {
+            $ad->update([
+                'old_price'        => $oldPrice,
+                'price_dropped_at' => now(),
+            ]);
+            NotifyPriceDropJob::dispatch($ad->id, $oldPrice, $newPrice);
+        }
 
         // Если было загружено новое видео, отправляем его в очередь на обработку
         if ($request->hasFile('video_file')) {
@@ -1644,6 +1659,84 @@ class AdController extends Controller
         }
 
         return response()->json($ad);
+    }
+
+
+    /**
+     * Bulk action: pause, activate, or delete multiple ads (owner only)
+     * Rate limited to 10 requests/minute via route middleware
+     */
+    public function bulkAction(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => 'required|in:pause,activate,delete',
+            'ad_ids' => 'required|array|min:1|max:100',
+            'ad_ids.*' => 'integer|min:1',
+        ]);
+
+        $userId = $request->user()->id;
+        $adIds  = array_unique($validated['ad_ids']);
+        $action = $validated['action'];
+
+        // Security: ensure every requested ad belongs to this user
+        $ownedCount = Ad::whereIn('id', $adIds)->where('user_id', $userId)->count();
+        if ($ownedCount !== count($adIds)) {
+            return response()->json(['message' => 'No tienes permisos para modificar uno o más de estos anuncios'], 403);
+        }
+
+        if ($action === 'pause') {
+            Ad::whereIn('id', $adIds)->where('user_id', $userId)
+               ->where('status', 'active')
+               ->update(['status' => 'paused', 'updated_at' => now()]);
+
+        } elseif ($action === 'activate') {
+            Ad::whereIn('id', $adIds)->where('user_id', $userId)
+               ->whereIn('status', ['paused', 'inactive'])
+               ->update(['status' => 'active', 'updated_at' => now()]);
+
+        } elseif ($action === 'delete') {
+            // Mirror destroy() cleanup for multiple ads
+            try {
+                $ads = Ad::whereIn('id', $adIds)->where('user_id', $userId)->get();
+                foreach ($ads as $ad) {
+                    if ($ad->image_url) {
+                        $images = json_decode($ad->image_url, true);
+                        if (is_array($images)) {
+                            Storage::disk('public')->delete($images);
+                        } elseif (is_string($images)) {
+                            Storage::disk('public')->delete($images);
+                        }
+                    }
+                    if ($ad->video_url) {
+                        Storage::disk('public')->delete($ad->video_url);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Bulk Delete S3 Error: ' . $e->getMessage());
+            }
+            DB::table('favorites')->whereIn('ad_id', $adIds)->delete();
+            DB::table('ad_views')->whereIn('ad_id', $adIds)->delete();
+            DB::table('ad_clicks')->whereIn('ad_id', $adIds)->delete();
+            DB::table('reports')->whereIn('ad_id', $adIds)->delete();
+            DB::table('payments')->whereIn('ad_id', $adIds)->update(['ad_id' => null]);
+            Ad::whereIn('id', $adIds)->where('user_id', $userId)->delete();
+        }
+
+        // Bust caches
+        Cache::forget('sitemap_xml');
+        Cache::forget('google_merchant_xml');
+        for ($i = 1; $i <= 10; $i++) {
+            Cache::forget("ads_index_page_{$i}");
+        }
+        foreach ($adIds as $id) {
+            Cache::forget("ad_{$id}");
+        }
+
+        return response()->json([
+            'success'  => true,
+            'affected' => count($adIds),
+            'action'   => $action,
+        ]);
     }
 
 }

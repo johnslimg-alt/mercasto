@@ -10,10 +10,12 @@ use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\AdminAnalyticsController;
 use App\Http\Controllers\Api\TwoFactorAuthenticationController;
 use App\Http\Controllers\Api\PhoneVerificationController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\EmailVerificationController;
+use App\Http\Controllers\Api\NotificationController;
 
 // Public routes
 Route::middleware('throttle:search')->get('/search/suggestions', [SearchController::class, 'suggestions']);
@@ -103,6 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/categories', [CategoryController::class, 'store']); // Создание категории (только для админов)
     Route::put('/categories/{id}', [CategoryController::class, 'update']); // Редактирование категории
     Route::post('/ads/bulk-upload', [AdController::class, 'bulkUpload']); // Массовая загрузка CSV
+    Route::middleware('throttle:10,1')->post('/ads/bulk-action', [AdController::class, 'bulkAction']); // Массовые действия с объявлениями
     Route::post('/ads/{ad}', [AdController::class, 'update']); // Для обработки FormData с изображениями
     Route::patch('/ads/{id}/status', [AdController::class, 'updateStatus']); // Изменение статуса (пауза/активация)
     Route::get('/ads/{id}/edit', [AdController::class, 'editForm']); // Full ad data for editing (owner only)
@@ -129,6 +132,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/notifications/list', [ProfileController::class, 'getNotifications']); // Получить уведомления
     Route::post('/user/notifications/{id}/read', [ProfileController::class, 'markNotificationRead']); // Прочитать уведомление
     Route::post('/user/notifications/read-all', [ProfileController::class, 'markAllNotificationsRead']); // Прочитать все уведомления
+    // Price-drop notification API (polled by frontend bell every 60s)
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
     Route::post('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений
     Route::delete('/user/notifications/{id}', [ProfileController::class, 'deleteNotification']); // Удалить уведомление
     Route::post('/user/push-subscribe', [ProfileController::class, 'pushSubscribe']); // Подписка на Web Push
@@ -161,6 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/admin/reports/{id}', [AdController::class, 'deleteReport']); // Удалить жалобу (Админ)
     Route::get('/admin/user-reports', [ProfileController::class, 'getUserReports']); // Жалобы на пользователей
     Route::delete('/admin/user-reports/{id}', [ProfileController::class, 'deleteUserReport']); // Удалить жалобу на пользователя
+    Route::get('/admin/analytics', [AdminAnalyticsController::class, 'analytics']); // Admin analytics
     Route::post('/users/{id}/role', [ProfileController::class, 'changeRole']); // Изменение роли (Админ)
     Route::delete('/users/{id}', [ProfileController::class, 'destroy']); // Удаление пользователя (Админ)
     Route::get('/favorites', [AdController::class, 'favorites']);
@@ -199,6 +208,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/phone/send-otp',  [PhoneVerificationController::class, 'sendOtp']);
         Route::post('/phone/verify-otp', [PhoneVerificationController::class, 'verifyOtp']);
     });
+
+
+    // Referral Routes
+    Route::get("/referral", [\App\Http\Controllers\Api\ReferralController::class, "index"]);
+    Route::post("/referral/apply", [\App\Http\Controllers\Api\ReferralController::class, "apply"]);
 
     // Email Verification
     Route::middleware('throttle:3,60')->post('/email/send-verification', [EmailVerificationController::class, 'send']);

@@ -15,6 +15,7 @@ class Ad extends Model
         'description',
         'price',
         'old_price',
+        'price_dropped_at',
         'location',
         'latitude',
         'longitude',
@@ -45,6 +46,7 @@ class Ad extends Model
             'republish_count' => 'integer',
             'expires_at' => 'datetime',
             'republished_at' => 'datetime',
+            'price_dropped_at' => 'datetime',
         ];
     }
 

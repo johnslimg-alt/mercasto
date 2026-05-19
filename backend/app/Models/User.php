@@ -39,6 +39,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_id',
         'apple_id',
         'telegram_id',
+        'referral_code',
+        'referred_by',
+        'referral_credits',
     ];
 
     /**
