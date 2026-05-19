@@ -1321,21 +1321,15 @@ class AdController extends Controller
         }
         \Illuminate\Support\Facades\RateLimiter::hit($rateLimitKey, 3600);
 
-        // Build Spanish prompt
-        $prompt  = "Eres un experto en redacción de anuncios para el marketplace mexicano Mercasto.com. ";
-        $prompt .= "Escribe una descripción atractiva y honesta en español mexicano para el siguiente anuncio. ";
-        $prompt .= "No inventes datos que no estén abajo: color, batería, accesorios, garantía, ubicación, estado físico, documentos o entregas. ";
-        $prompt .= "Si faltan detalles, usa lenguaje neutral e invita a preguntar. Máximo 120 palabras. ";
-        $prompt .= "Solo devuelve la descripción, sin títulos ni etiquetas.\n\n";
-        $prompt .= "Título: {$request->title}\n";
-        if ($request->category)  $prompt .= "Categoría: {$request->category}\n";
-        if ($request->condition) $prompt .= "Condición: {$request->condition}\n";
-        if ($request->location)  $prompt .= "Ubicación: {$request->location}\n";
-        if ($request->price)     $prompt .= "Precio: \${$request->price} MXN\n";
+        $facts  = "Título: {$request->title}\n";
+        if ($request->category)  $facts .= "Categoría: {$request->category}\n";
+        if ($request->condition) $facts .= "Condición: {$request->condition}\n";
+        if ($request->location)  $facts .= "Ubicación: {$request->location}\n";
+        if ($request->price)     $facts .= "Precio: \${$request->price} MXN\n";
         if ($request->attributes) {
             foreach ($request->attributes as $attrKey => $attrValue) {
                 if (is_scalar($attrValue) && $attrValue !== '') {
-                    $prompt .= ucfirst($attrKey) . ": {$attrValue}\n";
+                    $facts .= ucfirst($attrKey) . ": {$attrValue}\n";
                 }
             }
         }
@@ -1344,8 +1338,17 @@ class AdController extends Controller
             /** @var \App\Services\DeepSeekClient $client */
             $client = app(\App\Services\DeepSeekClient::class);
             $result = $client->chatFlash(
-                [['role' => 'user', 'content' => $prompt]],
-                ['max_tokens' => 190, 'temperature' => 0.35]
+                [
+                    [
+                        'role' => 'system',
+                        'content' => 'Redactas anuncios para Mercasto.com. Regla principal: usa SOLO los datos confirmados por el usuario. Prohibido inventar color, batería, accesorios, garantía, factura, caja, cargador, rayones, golpes, envíos o entregas si no están en los datos. Si faltan detalles, invita a preguntar. Responde solo la descripción en español mexicano profesional.',
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => "Datos confirmados:\n{$facts}\nEscribe una descripción atractiva, honesta y breve. Máximo 100 palabras.",
+                    ],
+                ],
+                ['max_tokens' => 160, 'temperature' => 0]
             );
 
             $text = $result['choices'][0]['message']['content'] ?? null;
@@ -1353,13 +1356,66 @@ class AdController extends Controller
                 throw new \RuntimeException('Empty response from DeepSeek.');
             }
 
-            return response()->json(['description' => trim($text)]);
+            $description = trim($text);
+            if ($this->containsUnsupportedAiClaims($description, $request)) {
+                $description = $this->safeGeneratedDescription($request);
+            }
+
+            return response()->json(['description' => $description]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('DeepSeek generateDescription error: ' . $e->getMessage());
             return response()->json([
                 'error' => 'No se pudo generar la descripción. Inténtalo de nuevo.',
             ], 500);
         }
+    }
+
+    private function containsUnsupportedAiClaims(string $description, Request $request): bool
+    {
+        $source = Str::lower(implode(' ', array_filter([
+            $request->title,
+            $request->category,
+            $request->condition,
+            $request->location,
+            $request->price,
+            is_array($request->attributes) ? json_encode($request->attributes, JSON_UNESCAPED_UNICODE) : null,
+        ])));
+        $text = Str::lower($description);
+
+        foreach ([
+            'batería', 'bateria', 'caja', 'cable', 'cargador', 'garantía', 'garantia',
+            'factura', 'rayones', 'golpes', 'funda', 'mica', 'color', 'negro', 'blanco',
+            'morado', 'azul', 'rojo', 'dorado', 'plata', 'gris', 'envío', 'envio',
+            'entrega', 'original',
+        ] as $term) {
+            if (Str::contains($text, $term) && ! Str::contains($source, $term)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function safeGeneratedDescription(Request $request): string
+    {
+        $title = trim(strip_tags((string) $request->title));
+        $parts = ["Vendo {$title} en Mercasto."];
+
+        if ($request->condition) {
+            $parts[] = 'Condición: ' . trim(strip_tags((string) $request->condition)) . '.';
+        }
+
+        if ($request->price) {
+            $parts[] = 'Precio: $' . number_format((float) $request->price, 0) . ' MXN.';
+        }
+
+        if ($request->location) {
+            $parts[] = 'Disponible en ' . trim(strip_tags((string) $request->location)) . '.';
+        }
+
+        $parts[] = 'Escríbeme para resolver dudas, pedir más información o coordinar la compra.';
+
+        return implode(' ', $parts);
     }
 
     /**
