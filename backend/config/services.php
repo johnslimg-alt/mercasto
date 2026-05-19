@@ -60,6 +60,13 @@ return [
         'webhook_secret' => env('CLIP_WEBHOOK_SECRET'),
     ],
 
+    'deepseek' => [
+        'api_key'    => env('DEEPSEEK_API_KEY'),
+        'base_url'   => env('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
+        'fast_model' => env('DEEPSEEK_FAST_MODEL', 'deepseek-v4-flash'),
+        'pro_model'  => env('DEEPSEEK_PRO_MODEL', 'deepseek-v4-pro'),
+    ],
+
     'webpush' => [
         'vapid_public_key'  => env('VAPID_PUBLIC_KEY'),
         'vapid_private_key' => env('VAPID_PRIVATE_KEY'),
