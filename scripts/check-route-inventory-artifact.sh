@@ -30,4 +30,14 @@ if ! grep -q "Commit:" "$ARTIFACT"; then
   exit 1
 fi
 
+if grep -qE "pending-server-export|Pending generation" "$ARTIFACT"; then
+  echo "route inventory artifact is still a placeholder; regenerate it on the server" >&2
+  exit 1
+fi
+
+if ! grep -qE "GET|POST|PUT|PATCH|DELETE" "$ARTIFACT"; then
+  echo "route inventory artifact does not contain route rows" >&2
+  exit 1
+fi
+
 echo "route inventory artifact OK: $ARTIFACT"

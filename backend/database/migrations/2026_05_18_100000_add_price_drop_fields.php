@@ -8,21 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasColumn('ads', 'price_dropped_at')) {
-            Schema::table('ads', function (Blueprint $table) {
-                $table->timestamp('price_dropped_at')->nullable()->after('old_price');
-            });
-        }
+        Schema::table('ads', function (Blueprint $table) {
+            if (!Schema::hasColumn('ads', 'price_dropped_at')) {
+                $table->timestamp('price_dropped_at')->nullable();
+            }
+        });
 
         Schema::table('user_notifications', function (Blueprint $table) {
             if (!Schema::hasColumn('user_notifications', 'type')) {
-                $table->string('type')->nullable()->default(null)->after('is_read');
+                $table->string('type', 50)->nullable();
             }
             if (!Schema::hasColumn('user_notifications', 'data')) {
-                $table->jsonb('data')->nullable()->default(null)->after('type');
+                $table->jsonb('data')->nullable();
             }
             if (!Schema::hasColumn('user_notifications', 'link')) {
-                $table->string('link')->nullable()->default(null)->after('data');
+                $table->string('link', 500)->nullable();
             }
         });
     }

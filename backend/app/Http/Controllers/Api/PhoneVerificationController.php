@@ -17,15 +17,41 @@ class PhoneVerificationController extends Controller
         $user = auth()->user();
         $phone = preg_replace('/[^0-9+]/', '', $request->phone);
 
+        $twilioSid   = config('services.twilio.sid');
+        $twilioToken = config('services.twilio.token');
+        $twilioFrom  = config('services.twilio.from');
+
+        if (!$twilioSid || !$twilioToken || !$twilioFrom) {
+            Log::warning('Phone verification SMS provider is not configured', [
+                'user_id' => $user->id,
+                'phone_hash' => hash('sha256', $phone),
+            ]);
+            return response()->json(['error' => 'La verificación por SMS no está disponible en este momento.'], 503);
+        }
+
         // Rate limit: max 3 OTPs per phone per hour
         $rateKey = "otp_rate:{$phone}";
         if (Cache::get($rateKey, 0) >= 3) {
             return response()->json(['error' => 'Demasiados intentos. Espera una hora.'], 429);
         }
-        Cache::put($rateKey, Cache::get($rateKey, 0) + 1, 3600);
 
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expiresAt = now()->addMinutes(10);
+
+        try {
+            $client = new \Twilio\Rest\Client($twilioSid, $twilioToken);
+            $client->messages->create($phone, [
+                'from' => $twilioFrom,
+                'body' => "Tu código de verificación de Mercasto es: {$otp}. Válido por 10 minutos.",
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Phone verification SMS delivery failed', [
+                'user_id' => $user->id,
+                'phone_hash' => hash('sha256', $phone),
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['error' => 'No pudimos enviar el SMS. Intenta de nuevo más tarde.'], 503);
+        }
 
         // Save OTP to the existing profile phone field.
         DB::table('users')->where('id', $user->id)->update([
@@ -35,27 +61,7 @@ class PhoneVerificationController extends Controller
             'phone_otp_expires_at' => $expiresAt,
         ]);
         $user->refresh();
-
-        // Try Twilio if configured, else log it
-        $twilioSid   = config('services.twilio.sid');
-        $twilioToken = config('services.twilio.token');
-        $twilioFrom  = config('services.twilio.from');
-
-        if ($twilioSid && $twilioToken && $twilioFrom) {
-            try {
-                $client = new \Twilio\Rest\Client($twilioSid, $twilioToken);
-                $client->messages->create($phone, [
-                    'from' => $twilioFrom,
-                    'body' => "Tu código de verificación de Mercasto es: {$otp}. Válido por 10 minutos.",
-                ]);
-            } catch (\Exception $e) {
-                Log::error('Twilio SMS error: ' . $e->getMessage());
-                Log::info("OTP for {$phone}: {$otp}");
-            }
-        } else {
-            // Development mode — log the OTP
-            Log::info("[PhoneVerification] OTP for {$phone}: {$otp}");
-        }
+        Cache::put($rateKey, Cache::get($rateKey, 0) + 1, 3600);
 
         return response()->json(['ok' => true, 'expires_in' => 600]);
     }

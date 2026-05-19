@@ -392,6 +392,7 @@ class AdController extends Controller
             'price' => 'required|numeric|min:0',
             'description' => 'required|string',
             'location' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:60',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД
             'existing_images' => 'nullable|array',
             'existing_images.*' => 'string',
@@ -512,7 +513,7 @@ class AdController extends Controller
             'condition' => $validated['condition'] ?? $ad->condition,
             'description' => strip_tags($validated['description'], '<p><br><b><i><ul><ol><li>'),
             'location' => $validated['location'],
-            'state' => $request->state,
+            'state' => $validated['state'] ?? $ad->state,
             'latitude' => $lat,
             'longitude' => $lng,
             'category' => $validated['category'],
@@ -687,44 +688,64 @@ class AdController extends Controller
      */
     public function promoteWithCredits(Request $request, $id)
     {
-        $ad = Ad::findOrFail($id);
         $user = $request->user();
 
-        if ($user->id !== $ad->user_id && $user->role !== 'admin') {
-            return response()->json(['message' => 'Нет прав'], 403);
+        $result = DB::transaction(function () use ($id, $user) {
+            $ad = Ad::whereKey($id)->lockForUpdate()->firstOrFail();
+
+            if ($user->id !== $ad->user_id && $user->role !== 'admin') {
+                return ['response' => response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403)];
+            }
+
+            // Lock user + ad together so concurrent requests cannot double-spend credits.
+            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            if ($ad->promoted === 'destacado') {
+                return ['response' => response()->json(['message' => 'Este anuncio ya se encuentra destacado.'], 400)];
+            }
+
+            $cost = 50; // Стоимость продвижения в créditos pagados
+            $usedReferralCredit = false;
+
+            if ((int) $creditUser->referral_credits > 0) {
+                $creditUser->referral_credits = (int) $creditUser->referral_credits - 1;
+                $usedReferralCredit = true;
+            } elseif ((float) $creditUser->balance >= $cost) {
+                $creditUser->balance = (float) $creditUser->balance - $cost;
+            } else {
+                return ['response' => response()->json(['message' => 'No tienes suficientes créditos'], 400)];
+            }
+
+            $creditUser->save();
+            $ad->promoted = 'destacado';
+            $ad->save();
+
+            // Финансовый Аудит (Recurring Revenue): ограничиваем услугу 7 днями, чтобы продавец платил снова
+            DB::table('ad_promotions')->insert([
+                'ad_id' => $ad->id,
+                'type' => 'highlight',
+                'expires_at' => now()->addDays(7),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            return [
+                'balance' => $creditUser->balance,
+                'referral_credits' => $creditUser->referral_credits,
+                'used_referral_credit' => $usedReferralCredit,
+            ];
+        });
+
+        if (isset($result['response'])) {
+            return $result['response'];
         }
 
-        // Защита баланса: предотвращаем повторное списание кредитов за уже продвинутое объявление
-        if ($ad->promoted === 'destacado') {
-            return response()->json(['message' => 'Este anuncio ya se encuentra destacado.'], 400);
-        }
-
-        $cost = 50; // Стоимость продвижения в кредитах
-
-        // Атомарное списание для предотвращения ухода в минус при параллельных DdoS запросах
-        $updated = DB::table('users')
-            ->where('id', $user->id)
-            ->where('balance', '>=', $cost)
-            ->decrement('balance', $cost);
-
-        if (!$updated) {
-            return response()->json(['message' => 'No tienes suficientes créditos'], 400);
-        }
-
-        $ad->promoted = 'destacado';
-        $ad->save();
-
-        // Финансовый Аудит (Recurring Revenue): ограничиваем услугу 7 днями, чтобы продавец платил снова
-        DB::table('ad_promotions')->insert([
-            'ad_id' => $ad->id,
-            'type' => 'highlight',
-            'expires_at' => now()->addDays(7),
-            'created_at' => now(),
-            'updated_at' => now()
+        return response()->json([
+            'success' => true,
+            'balance' => $result['balance'],
+            'referral_credits' => $result['referral_credits'],
+            'used_referral_credit' => $result['used_referral_credit'],
         ]);
-
-        $newBalance = DB::table('users')->where('id', $user->id)->value('balance');
-        return response()->json(['success' => true, 'balance' => $newBalance]);
     }
 
     /**

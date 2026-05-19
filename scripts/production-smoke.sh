@@ -3,6 +3,8 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.override.yml)
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
+COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -49,14 +51,14 @@ if [[ ! -f docker-compose.override.yml ]]; then
 fi
 
 echo "== Compose validation =="
-docker compose "${COMPOSE_FILES[@]}" config >/tmp/mercasto_compose_config.out
+"${COMPOSE[@]}" config >/tmp/mercasto_compose_config.out
 grep -q 'mercasto-scheduler:' /tmp/mercasto_compose_config.out
 grep -q 'mercasto-reverb:' /tmp/mercasto_compose_config.out
 grep -q 'condition: service_healthy' /tmp/mercasto_compose_config.out
 echo "compose config OK"
 
 echo "== Container status =="
-docker compose "${COMPOSE_FILES[@]}" ps
+"${COMPOSE[@]}" ps
 
 echo "== Public HTTP smoke =="
 check_http_status "${BASE_URL}/up" '^200$'
@@ -72,8 +74,8 @@ check_http_status "${BASE_URL}/composer.json" '^(403|404|410)$'
 check_http_status "${BASE_URL}/package.json" '^(403|404|410)$'
 
 echo "== PHP upload limit settings =="
-PHP_UPLOAD_MAX="$(docker compose "${COMPOSE_FILES[@]}" exec -T mercasto-backend php -r 'echo ini_get("upload_max_filesize");')"
-PHP_POST_MAX="$(docker compose "${COMPOSE_FILES[@]}" exec -T mercasto-backend php -r 'echo ini_get("post_max_size");')"
+PHP_UPLOAD_MAX="$("${COMPOSE[@]}" exec -T mercasto-backend php -r 'echo ini_get("upload_max_filesize");')"
+PHP_POST_MAX="$("${COMPOSE[@]}" exec -T mercasto-backend php -r 'echo ini_get("post_max_size");')"
 echo "upload_max_filesize=$PHP_UPLOAD_MAX"
 echo "post_max_size=$PHP_POST_MAX"
 if [[ "$PHP_UPLOAD_MAX" != "64M" ]]; then

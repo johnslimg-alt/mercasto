@@ -19,6 +19,9 @@ fi
 mkdir -p "$DOCS_DIR"
 
 COMMIT_SHA="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+if ! git -C "$ROOT_DIR" diff-index --quiet HEAD -- 2>/dev/null; then
+  COMMIT_SHA="${COMMIT_SHA}-dirty"
+fi
 GENERATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 TMP_ROUTE_LIST="$(mktemp)"

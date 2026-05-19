@@ -36,14 +36,27 @@ class SearchController extends Controller
                 ->pluck('title');
 
             $categories = DB::table('categories')
-                ->whereRaw("LOWER(COALESCE(name->>'es', name->>'en', name::text)) LIKE ?", [$term])
-                ->selectRaw("COALESCE(name->>'es', name->>'en') as title")
-                ->limit(3)
-                ->pluck('title');
+                ->select('name', 'slug')
+                ->get()
+                ->map(fn ($category) => $this->localizedCategoryName($category->name, $category->slug))
+                ->filter(fn ($title) => str_contains(mb_strtolower($title, 'UTF-8'), $normalizedQuery))
+                ->take(3)
+                ->values();
 
             return $ads->merge($categories)->unique()->take(8)->values();
         });
 
         return response()->json($suggestions);
+    }
+
+    private function localizedCategoryName($rawName, string $fallback): string
+    {
+        $decodedName = is_string($rawName) ? json_decode($rawName, true) : $rawName;
+
+        if (is_array($decodedName)) {
+            return (string) ($decodedName['es'] ?? $decodedName['en'] ?? reset($decodedName) ?: $fallback);
+        }
+
+        return (string) ($rawName ?: $fallback);
     }
 }

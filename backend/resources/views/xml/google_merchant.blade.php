@@ -16,9 +16,8 @@
         @endphp
         @if($mainImage)
         @php
-            // Защита от битых ссылок при использовании AWS S3 / Cloudflare R2
-            $imageUrl = str_starts_with($mainImage, 'http') 
-                ? $mainImage 
+            $imageUrl = str_starts_with($mainImage, 'http')
+                ? $mainImage
                 : \Illuminate\Support\Facades\Storage::disk('public')->url($mainImage);
         @endphp
         <g:image_link><![CDATA[{{ $imageUrl }}]]></g:image_link>

@@ -118,7 +118,16 @@ export default function AdDetailScreen({
           {/* AD DETAILS */}
           <div className="mt-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4 leading-tight">{ad.title}</h1>
-            <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-6">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 font-medium">MXN</span></p>
+            <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 font-medium">MXN</span></p>
+            {ad.old_price && ad.price_dropped_at && Number(ad.old_price) > Number(ad.price) && (
+              <div className="inline-flex flex-wrap items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-xl px-3 py-1.5 mb-5 text-[13px] font-semibold dark:bg-green-950/30 dark:border-green-500/30 dark:text-green-200">
+                <span>Bajó de precio</span>
+                <span>Antes: <span className="line-through text-green-600 dark:text-green-300">${Number(ad.old_price).toLocaleString("es-MX")}</span></span>
+                <span className="bg-green-200 text-green-900 rounded-full px-1.5 py-0.5 text-[11px] font-bold dark:bg-green-500/20 dark:text-green-100">
+                  {Math.round(((Number(ad.old_price) - Number(ad.price)) / Number(ad.old_price)) * 100)}% menos
+                </span>
+              </div>
+            )}
             
             <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 font-medium">
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><MapPin size={16}/> {[ad.state, ad.location].filter(Boolean).join(' · ') || 'México'}</span>

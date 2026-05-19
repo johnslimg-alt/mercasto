@@ -185,15 +185,38 @@ class AuthController extends Controller
     public function requestPhoneCode(Request $request)
     {
         $request->validate(['phone_number' => 'required|string|min:10|max:20']);
-        
+
+        $phoneNumber = preg_replace('/[^0-9+]/', '', $request->phone_number);
         $code = random_int(100000, 999999); // Используем криптографически надежный генератор
-        Cache::put('phone_auth_' . $request->phone_number, $code, now()->addMinutes(10));
 
-        // Для продакшена: здесь вызывается сервис отправки SMS (например, Twilio или AWS SNS)
-        // Для разработки мы просто логируем код
-        Log::info("SMS Code for {$request->phone_number}: {$code}");
+        $twilioSid = config('services.twilio.sid');
+        $twilioToken = config('services.twilio.token');
+        $twilioFrom = config('services.twilio.from');
 
-        return response()->json(['message' => 'Código SMS enviado. (Revisa los logs del servidor)']);
+        if (!$twilioSid || !$twilioToken || !$twilioFrom) {
+            Log::warning('Phone auth SMS provider is not configured', [
+                'phone_hash' => hash('sha256', $phoneNumber),
+            ]);
+            return response()->json(['message' => 'La autenticación por SMS no está disponible en este momento.'], 503);
+        }
+
+        try {
+            $client = new \Twilio\Rest\Client($twilioSid, $twilioToken);
+            $client->messages->create($phoneNumber, [
+                'from' => $twilioFrom,
+                'body' => "Tu código de acceso de Mercasto es: {$code}. Válido por 10 minutos.",
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Phone auth SMS delivery failed', [
+                'phone_hash' => hash('sha256', $phoneNumber),
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['message' => 'No pudimos enviar el SMS. Intenta de nuevo más tarde.'], 503);
+        }
+
+        Cache::put('phone_auth_' . $phoneNumber, $code, now()->addMinutes(10));
+
+        return response()->json(['message' => 'Código SMS enviado.']);
     }
 
     /**
@@ -203,19 +226,20 @@ class AuthController extends Controller
     {
         $request->validate(['phone_number' => 'required|string|min:10|max:20', 'code' => 'required|string|size:6']);
 
-        $cachedCode = Cache::get('phone_auth_' . $request->phone_number);
+        $phoneNumber = preg_replace('/[^0-9+]/', '', $request->phone_number);
+        $cachedCode = Cache::get('phone_auth_' . $phoneNumber);
 
         if (!$cachedCode || $cachedCode != $request->code) {
             throw ValidationException::withMessages(['code' => ['Código SMS inválido o expirado.']]);
         }
-        Cache::forget('phone_auth_' . $request->phone_number);
+        Cache::forget('phone_auth_' . $phoneNumber);
 
-        $user = User::where('phone_number', $request->phone_number)->first();
+        $user = User::where('phone_number', $phoneNumber)->first();
         if (!$user) {
             $user = new User();
-            $user->phone_number = $request->phone_number;
-            $user->name = 'Usuario ' . substr($request->phone_number, -4);
-            $user->email = $request->phone_number . '@mercasto.local';
+            $user->phone_number = $phoneNumber;
+            $user->name = 'Usuario ' . substr($phoneNumber, -4);
+            $user->email = $phoneNumber . '@mercasto.local';
             $user->password = Hash::make(Str::random(16));
             $user->role = 'individual';
             $user->ip_address = hash('sha256', $request->ip());

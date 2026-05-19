@@ -1,10 +1,11 @@
 import ChartTooltip from '../common/ChartTooltip';
 import { Link } from 'react-router-dom';
+import MyAdsScreen from './MyAdsScreen';
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, PieChart as PieChartIcon } from "lucide-react";
-export default function UserDashboard({ accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole }) {
     const activeAds = userAds.filter(ad => ad.status === 'active' || ad.status === 'pending');
 
     const getDaysUntilExpiry = (expiresAt) => {
@@ -28,6 +29,16 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
       return ((totalContactClicks / totalViews) * 100).toFixed(1);
 
     })();
+
+    const businessName = companyForm?.name?.trim()
+      || user?.company_name
+      || user?.name
+      || t.complete_business_profile
+      || 'Completa tu perfil de empresa';
+    const businessSubtitle = companyForm?.website?.trim()
+      || user?.email
+      || t.complete_business_profile_hint
+      || 'Agrega los datos de tu negocio para vender como PRO';
 
     
 
@@ -113,7 +124,7 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
 
               <h2 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
 
-                {accountType === 'pro' ? 'AutoMotors México S.A.' : (user?.name || 'Invitado')}
+                {accountType === 'pro' ? businessName : (user?.name || 'Invitado')}
 
                 {accountType === 'pro' && <span className="badge bg-slate-900 text-white">PRO</span>}
 
@@ -121,7 +132,7 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
 
               </h2>
 
-              <p className="text-[14px] text-slate-500 mt-1">{accountType === 'pro' ? 'contacto@automotors.mx' : (user?.email || 'N/A')}</p>
+              <p className="text-[14px] text-slate-500 mt-1">{accountType === 'pro' ? businessSubtitle : (user?.email || 'N/A')}</p>
 
             </div>
 
@@ -216,6 +227,10 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
                   </>
 
                 )}
+
+                <Link to="/referidos" className="p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#65A30D]">
+                  <Share2 className="w-5 h-5 text-slate-400"/> Referidos
+                </Link>
 
                 <div onClick={() => setDashboardTab('settings')} className={`p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium ${dashboardTab === 'settings' ? 'text-[#65A30D] bg-lime-50/50' : 'text-slate-700 hover:bg-slate-50'}`}>
 
@@ -771,6 +786,21 @@ export default function UserDashboard({ accountType, adStatusFilter, analyticsDa
 
                 </div>
 
+          ) : dashboardTab === 'my_ads' ? (
+            <MyAdsScreen
+              userAds={userAds}
+              getImageUrl={getImageUrl}
+              handleDeleteAd={handleDeleteAd}
+              handleToggleAdStatus={handleToggleAdStatus}
+              handlePromoteAd={handlePromoteAd}
+              handleRepublishAd={handleRepublishAd}
+              user={user}
+              t={t}
+              accountType={accountType}
+              setCurrentTab={setCurrentTab}
+              setShowPricingModal={setShowPricingModal}
+              onRefreshAds={onRefreshAds}
+            />
           ) : (
 
             <>

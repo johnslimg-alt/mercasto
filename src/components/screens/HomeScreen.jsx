@@ -1,6 +1,6 @@
 import AdSenseBanner from '../common/AdSenseBanner';
 import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyViewed';
-import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
+import { mexicoLocations, subcategoriesMap, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
@@ -58,7 +58,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
     }, [displayCategories, getVerticalPath, verticalCategoryCards]);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
-      return [...(serverAds || []), ...mockAds]
+      return (serverAds || [])
         .filter(ad => {
           if (!ad?.id || seen.has(ad.id)) return false;
           seen.add(ad.id);
@@ -757,12 +757,12 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
                     {recentAds.map(ad => {
                       const imgSrc = ad.thumbnail
                         ? (ad.thumbnail.startsWith('http') ? ad.thumbnail : `https://mercasto.com/storage/${ad.thumbnail}`)
-                        : 'https://mercasto.com/placeholder-image.jpg';
+                        : '/placeholder-ad.svg';
                       const locationStr = ad.state || ad.location?.split(',')[0] || 'México';
                       return (
                         <div key={ad.id} onClick={() => { runSearch(ad.title); }} className="shrink-0 w-[160px] bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
                           <div className="w-full h-[100px] bg-slate-100 overflow-hidden">
-                            <img src={imgSrc} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { e.target.src='https://mercasto.com/placeholder-image.jpg'; }} alt={ad.title}/>
+                            <img src={imgSrc} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { if (!e.currentTarget.src.endsWith('/placeholder-ad.svg')) e.currentTarget.src='/placeholder-ad.svg'; }} alt={ad.title}/>
                           </div>
                           <div className="p-2">
                             <div className="text-[13px] font-bold text-[#0F172A] leading-tight line-clamp-1">{ad.title}</div>

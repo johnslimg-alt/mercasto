@@ -94,6 +94,20 @@ const IconMap = { Car, Home, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
+const ENABLE_AI_PANEL = import.meta.env.VITE_ENABLE_AI_PANEL === 'true';
+const AI_PLACEHOLDERS = {
+  postgresql: 'Напр: Сколько сейчас активных объявлений?',
+  react: 'Напр: Создай анимированную кнопку входа на Tailwind 4...',
+  lawyer: 'Напр: Составь новые правила возврата средств...',
+  notary: 'Напр: Какие требования к KYC документам?',
+  advocate: 'Напр: Как ответить на жалобу о мошенничестве?',
+  marketing: 'Напр: Как нам увеличить конверсию на главной?',
+  seo: 'Напр: Какие мета-теги добавить для карточки товара?',
+  ceo_ui: 'Напр: Какие цвета лучше использовать для премиум-товаров?',
+  ceo_ux: 'Напр: Как нам улучшить воронку оформления заказа?',
+  ui: 'Напр: Напиши классы Tailwind для красивого хедера...',
+  ceo: 'Напр: Алекс, какая у нас стратегия на Q3?',
+};
 
 const getImageUrl = (path, fallback = null) => {
   if (!path) return fallback || '/placeholder-ad.svg';
@@ -239,6 +253,7 @@ const CookiesScreen = React.lazy(() => import('./components/screens/legal/Cookie
 const NotFoundScreen = React.lazy(() => import('./components/screens/NotFoundScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Página no encontrada.</div> })));
 const VerificarEmailScreen = React.lazy(() => import('./components/screens/VerificarEmailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const AcercaDeScreen = React.lazy(() => import('./components/screens/AcercaDeScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const NotificationsScreen = React.lazy(() => import('./components/screens/NotificationsScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar las notificaciones.</div> })));
 const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ReferralScreen = React.lazy(() => import('./components/screens/ReferralScreen').catch(() => ({ default: () => <div className='flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500'>No pudimos cargar esta página.</div> })));
@@ -421,6 +436,7 @@ function App() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [sliderAutoplay, setSliderAutoplay] = useState(() => localStorage.getItem('sliderAutoplay') !== 'false');
   const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, push_notifications: true, marketing: false });
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -615,11 +631,11 @@ function App() {
   const fileInputRef = useRef(null);
   const [adStatusFilter, setAdStatusFilter] = useState('active');
   const [companyForm, setCompanyForm] = useState({
-    name: user?.name || 'AutoMotors México S.A.',
-    description: 'Somos una agencia de autos seminuevos certificados con más de 10 años de experiencia en el mercado...',
-    website: 'https://automotors.mx',
-    phone: user?.phone_number || '+52 322 123 4567',
-    address: 'Av. Insurgentes Sur 1234, Ciudad de México',
+    name: user?.name || '',
+    description: '',
+    website: '',
+    phone: user?.phone_number || '',
+    address: '',
     coverPreview: ''
   });
 
@@ -1123,6 +1139,30 @@ function App() {
 
   useEffect(() => { loadNotifications(); }, [loadNotifications]);
 
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return undefined;
+    }
+
+    const fetchUnreadCount = () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      fetch(`${API_URL}/notifications/unread-count`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data && typeof data.count === 'number') setUnreadCount(data.count);
+        })
+        .catch(() => {});
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const handleMarkNotificationRead = async (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
     try {
@@ -1133,6 +1173,7 @@ function App() {
 
   const handleMarkAllNotificationsRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    setUnreadCount(0);
     try {
       const token = localStorage.getItem('auth_token');
       await fetch(`${API_URL}/user/notifications/read-all`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
@@ -2451,23 +2492,6 @@ function App() {
             </div>
           </div>
 
-          {/* Dynamic Placeholders Helper */}
-          {(() => {
-            window.aiPlaceholders = {
-              postgresql: "Напр: Сколько сейчас активных объявлений?",
-              react: "Напр: Создай анимированную кнопку входа на Tailwind 4...",
-              lawyer: "Напр: Составь новые правила возврата средств...",
-              notary: "Напр: Какие требования к KYC документам?",
-              advocate: "Напр: Как ответить на жалобу о мошенничестве?",
-              marketing: "Напр: Как нам увеличить конверсию на главной?",
-              seo: "Напр: Какие мета-теги добавить для карточки товара?",
-              ceo_ui: "Напр: Какие цвета лучше использовать для премиум-товаров?",
-              ceo_ux: "Напр: Как нам улучшить воронку оформления заказа?",
-              ui: "Напр: Напиши классы Tailwind для красивого хедера...",
-              ceo: "Напр: Алекс, какая у нас стратегия на Q3?"
-            };
-          })()}
-
           <div className="flex flex-wrap gap-2 mb-4 bg-slate-800 p-1 rounded-xl w-fit">
             <button type="button" onClick={() => {setAiAgentType('postgresql'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'postgresql' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🐘 Базы данных</button>
             <button type="button" onClick={() => {setAiAgentType('react'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'react' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚛️ UX Разработчик</button>
@@ -2500,7 +2524,7 @@ function App() {
           </div>
 
           <form onSubmit={handleAiSubmit} className="flex gap-2">
-            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={window.aiPlaceholders?.[aiAgentType] || window.aiPlaceholders?.ceo} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
+            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={AI_PLACEHOLDERS[aiAgentType] || AI_PLACEHOLDERS.ceo} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
             <button type="submit" disabled={isAiProcessing || !aiPrompt.trim()} className="px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]">
               {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Выполнить'}
             </button>
@@ -2592,7 +2616,7 @@ function App() {
   const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
   const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
 
-  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} />;
+  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
@@ -2791,29 +2815,68 @@ function App() {
               <div className="relative hidden sm:block">
               <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl">
                   <Bell className="w-[22px] h-[22px]" />
-                  {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white leading-none">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </button>
                 {showNotifications && user && (
-                  <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50">
-                    <div className="p-4 border-b border-slate-100 font-bold text-slate-900 flex justify-between items-center">
-                    <span>{t.notifications || "Notificaciones"}</span>
-                      {notifications.filter(n => !n.is_read).length > 0 && (
-                      <button onClick={handleMarkAllNotificationsRead} className="text-[11px] text-[#65A30D] hover:underline font-medium font-sans">{t.mark_all_read || "Marcar todas leídas"}</button>
-                      )}
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 font-bold text-slate-900 dark:text-white flex justify-between items-center">
+                      <span>{t.notifications || "Notificaciones"}</span>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
-                    {notifications.length === 0 ? <div className="p-6 text-center text-slate-500 text-[13px]">{t.no_notifications || "No tienes notificaciones"}</div> :
-                        notifications.map(n => (
-                          <div key={n.id} onClick={() => handleMarkNotificationRead(n.id)} className={`p-4 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors relative group ${!n.is_read ? 'bg-[#84CC16]/5' : ''}`}>
-                            <h4 className={`text-[13px] pr-6 ${!n.is_read ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>{n.title}</h4>
-                            <p className="text-[12px] text-slate-600 mt-1">{n.message}</p>
-                            <span className="text-[10px] text-slate-400 block mt-2">{new Date(n.created_at).toLocaleString()}</span>
-                            <button onClick={(e) => handleDeleteNotification(e, n.id)} className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        ))
-                      }
+                    {notifications.length === 0
+                      ? <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-[13px]">{t.no_notifications || "No tienes notificaciones"}</div>
+                      : notifications.slice(0, 5).map(n => {
+                          let notificationData = null;
+                          if (n.type === 'price_drop' && n.data) {
+                            try {
+                              notificationData = typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
+                            } catch {
+                              notificationData = null;
+                            }
+                          }
+
+                          return (
+                            <div
+                              key={n.id}
+                              onClick={() => {
+                                handleMarkNotificationRead(n.id);
+                                if (notificationData?.ad_url) navigate(notificationData.ad_url);
+                              }}
+                              className={`p-4 border-b border-slate-50 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors relative group ${!n.is_read ? 'bg-[#84CC16]/5 dark:bg-[#84CC16]/10' : ''}`}
+                            >
+                              {notificationData ? (
+                                <>
+                                  <h4 className={`text-[12px] pr-6 ${!n.is_read ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-200'}`}>
+                                    Bajó de precio: {notificationData.ad_title}
+                                  </h4>
+                                  <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
+                                    Antes ${Number(notificationData.old_price).toLocaleString("es-MX")} → Ahora ${Number(notificationData.new_price).toLocaleString("es-MX")}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <h4 className={`text-[13px] pr-6 ${!n.is_read ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-200'}`}>{n.title}</h4>
+                                  <p className="text-[12px] text-slate-600 dark:text-slate-300 mt-1">{n.message}</p>
+                                </>
+                              )}
+                              <span className="text-[10px] text-slate-400 block mt-2">{new Date(n.created_at).toLocaleString("es-MX")}</span>
+                              <button onClick={(e) => handleDeleteNotification(e, n.id)} className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          );
+                        })
+                    }
+                    </div>
+                    <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                      <button onClick={() => { setShowNotifications(false); navigate("/notificaciones"); }} className="text-[12px] text-[#65A30D] hover:underline font-medium">Ver todos</button>
+                      {notifications.filter(n => !n.is_read).length > 0 && (
+                        <button onClick={handleMarkAllNotificationsRead} className="text-[11px] text-slate-500 dark:text-slate-300 hover:underline">{t.mark_all_read || "Marcar todas leídas"}</button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2896,6 +2959,7 @@ function App() {
             <Routes>
               <Route path="/" element={renderHomeScreen()} />
               <Route path="/post" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderPostScreen()}</RequireAuth>} />
+              <Route path="/notificaciones" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotificationsScreen user={user} /></React.Suspense></RequireAuth>} />
               <Route path="/profile" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderUserDashboard()}</RequireAuth>} />
               <Route path="/admin" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} admin>{renderAdminScreen()}</RequireAuth>} />
               <Route path="/terms" element={<StaticPages currentTab="terms" />} />
@@ -2916,7 +2980,7 @@ function App() {
   <Route path="/contacto"  element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ContactoScreen  /></React.Suspense>} />
   <Route path="/ayuda"     element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AyudaScreen     /></React.Suspense>} />
   <Route path="/verificar-email" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><VerificarEmailScreen /></React.Suspense>} />
-  <Route path="/referidos" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReferralScreen /></React.Suspense></RequireAuth>} />
+  <Route path="/referidos" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReferralScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
   <Route path="/r/:code" element={<ReferralRedirect />} />
   <Route path="*" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotFoundScreen /></React.Suspense>} />
             </Routes>
@@ -2969,7 +3033,7 @@ function App() {
       {renderAiModal()}
 
       {/* AI COMMAND CENTER FLOATING BUTTON (ADMIN ONLY) */}
-      {user?.role === 'admin' && !viewedAd && !viewedCompany && (
+      {ENABLE_AI_PANEL && user?.role === 'admin' && !viewedAd && !viewedCompany && (
         <button onClick={() => setShowAiModal(true)} className="fixed bottom-24 right-6 md:bottom-10 md:right-10 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-[0_0_20px_rgba(99,102,241,0.5)] flex items-center justify-center hover:bg-indigo-500 transition-all hover:scale-110 z-50 group">
           <Sparkles className="w-6 h-6 group-hover:animate-pulse" />
         </button>

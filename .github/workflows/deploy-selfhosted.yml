@@ -8,32 +8,49 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted # ← главное изменение
+    timeout-minutes: 30
 
     steps:
       - name: Обновить код
         run: |
           cd /var/www/mercasto
+          docker exec mercasto_backend_container php artisan down --retry=60 || true
+          docker compose --env-file backend/.env stop mercasto-worker mercasto-scheduler mercasto-reverb || true
           git fetch origin
           git reset --hard origin/main
           git clean -fd
 
+      - name: Миграции
+        run: |
+          cd /var/www/mercasto
+          docker exec mercasto_backend_container php artisan migrate --force
+
       - name: Собрать и поднять
         run: |
           cd /var/www/mercasto
-          docker compose build --parallel mercasto-frontend mercasto-backend
-          docker compose up -d --no-deps mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb
+          docker compose --env-file backend/.env build --parallel mercasto-frontend mercasto-backend
+          docker compose --env-file backend/.env up -d --no-deps mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb
 
-      - name: Миграции
+      - name: Кэш и очереди
         run: |
-          sleep 5
-          docker exec mercasto_backend_container php artisan migrate --force
+          cd /var/www/mercasto
           docker exec mercasto_backend_container php artisan optimize:clear
           docker exec mercasto_backend_container php artisan optimize
+          docker exec mercasto_backend_container php artisan queue:restart
+          docker exec mercasto_backend_container php artisan up
+          docker compose --env-file backend/.env restart mercasto-frontend
 
       - name: Production smoke
         run: |
           cd /var/www/mercasto
           SMOKE_HTTP_ATTEMPTS=12 SMOKE_HTTP_RETRY_DELAY=5 bash scripts/production-smoke.sh
+
+      - name: Recovery on failure
+        if: failure()
+        run: |
+          cd /var/www/mercasto
+          docker exec mercasto_backend_container php artisan up || true
+          docker compose --env-file backend/.env up -d mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb || true
 
       - name: Очистка
         run: docker image prune -f

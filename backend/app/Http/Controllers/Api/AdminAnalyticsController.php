@@ -38,13 +38,11 @@ class AdminAnalyticsController extends Controller
             ->where('status', 'paid')
             ->sum('amount');
 
-        // GROUP BY slug only (unique); MIN() satisfies PostgreSQL aggregate rules for name
         $topCategories = DB::table('ads')
             ->join('categories', 'ads.category', '=', 'categories.slug')
             ->where('ads.status', 'active')
             ->whereNotNull('ads.category')
             ->select(
-                DB::raw("MIN(categories.name::jsonb->>'es') as name"),
                 'categories.slug',
                 DB::raw('count(*) as count')
             )
@@ -52,6 +50,23 @@ class AdminAnalyticsController extends Controller
             ->orderByDesc('count')
             ->limit(8)
             ->get();
+
+        $categoryNames = DB::table('categories')
+            ->whereIn('slug', $topCategories->pluck('slug')->filter()->values())
+            ->pluck('name', 'slug');
+
+        $topCategories = $topCategories->map(function ($category) use ($categoryNames) {
+            $rawName = $categoryNames[$category->slug] ?? null;
+            $decodedName = is_string($rawName) ? json_decode($rawName, true) : $rawName;
+
+            if (is_array($decodedName)) {
+                $category->name = $decodedName['es'] ?? $decodedName['en'] ?? reset($decodedName) ?: $category->slug;
+            } else {
+                $category->name = $rawName ?: $category->slug;
+            }
+
+            return $category;
+        });
 
         $topStates = DB::table('ads')
             ->where('status', 'active')
