@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, User, Globe, Lock, Bell, Trash2, ChevronLeft, CheckCircle, AlertCircle, MapPin, Phone, Save } from 'lucide-react';
+import { AlertCircle, Bell, Camera, CheckCircle, ChevronLeft, Globe, Lock, MapPin, Phone, Save, Trash2, User } from 'lucide-react';
+import BusinessProfileEditor from '../profile/BusinessProfileEditor';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -32,48 +33,6 @@ function Toggle({ value, onChange, label }) {
   );
 }
 
-const MEXICAN_CITIES = [
-  { state: 'Aguascalientes', cities: ['Aguascalientes', 'Asientos', 'Calvillo', 'Cosío', 'Jesús María', 'Pabellón de Arteaga', 'Rincón de Romos', 'San José de Gracia', 'Tepezalá', 'El Llano', 'San Francisco de los Romo'] },
-  { state: 'Baja California', cities: ['Ensenada', 'Mexicali', 'Tecate', 'Tijuana', 'Playas de Rosarito', 'San Quintín', 'San Felipe'] },
-  { state: 'Baja California Sur', cities: ['Comondú', 'Mulegé', 'La Paz', 'Los Cabos', 'Loreto'] },
-  { state: 'Campeche', cities: ['Calkiní', 'Campeche', 'Carmen', 'Champotón', 'Hecelchakán', 'Hopelchén', 'Palizada', 'Tenabo', 'Escárcega', 'Calakmul', 'Candelaria', 'Seybaplaya', 'Dzitbalché'] },
-  { state: 'Chiapas', cities: ['Tuxtla Gutiérrez', 'Tapachula', 'San Cristóbal de las Casas', 'Comitán de Domínguez', 'Chiapa de Corzo', 'Palenque', 'Ocosingo', 'Tonalá', 'Villaflores', 'Huixtla', 'Reforma'] },
-  { state: 'Chihuahua', cities: ['Chihuahua', 'Ciudad Juárez', 'Cuauhtémoc', 'Delicias', 'Hidalgo del Parral', 'Nuevo Casas Grandes', 'Camargo', 'Jiménez', 'Ojinaga', 'Meoqui'] },
-  { state: 'Ciudad de México', cities: ['Álvaro Obregón', 'Azcapotzalco', 'Benito Juárez', 'Coyoacán', 'Cuajimalpa de Morelos', 'Cuauhtémoc', 'Gustavo A. Madero', 'Iztacalco', 'Iztapalapa', 'La Magdalena Contreras', 'Miguel Hidalgo', 'Milpa Alta', 'Tláhuac', 'Tlalpan', 'Venustiano Carranza', 'Xochimilco'] },
-  { state: 'Coahuila', cities: ['Saltillo', 'Torreón', 'Monclova', 'Piedras Negras', 'Acuña', 'Matamoros', 'San Pedro', 'Frontera', 'Ramos Arizpe', 'Sabinas', 'Múzquiz'] },
-  { state: 'Colima', cities: ['Colima', 'Manzanillo', 'Tecomán', 'Villa de Álvarez', 'Armería', 'Coquimatlán', 'Cuauhtémoc', 'Comala', 'Ixtlahuacán', 'Minatitlán'] },
-  { state: 'Durango', cities: ['Durango', 'Gómez Palacio', 'Lerdo', 'Pueblo Nuevo', 'Santiago Papasquiaro', 'Guadalupe Victoria', 'Cuencamé', 'Canatlán', 'Nuevo Ideal'] },
-  { state: 'Estado de México', cities: ['Ecatepec de Morelos', 'Nezahualcóyotl', 'Toluca', 'Naucalpan de Juárez', 'Chimalhuacán', 'Tlalnepantla de Baz', 'Cuautitlán Izcalli', 'Tecámac', 'Ixtapaluca', 'Atizapán de Zaragoza', 'Tultitlán', 'Valle de Chalco Solidaridad', 'Chalco', 'Coacalco de Berriozábal', 'La Paz', 'Huixquilucan', 'Texcoco', 'Metepec'] },
-  { state: 'Guanajuato', cities: ['León', 'Irapuato', 'Celaya', 'Salamanca', 'Silao de la Victoria', 'Guanajuato', 'San Miguel de Allende', 'Pénjamo', 'Valle de Santiago', 'San Francisco del Rincón', 'Dolores Hidalgo', 'Acámbaro'] },
-  { state: 'Guerrero', cities: ['Acapulco de Juárez', 'Chilpancingo de los Bravo', 'Iguala de la Independencia', 'Zihuatanejo de Azueta', 'Taxco de Alarcón', 'Chilapa de Álvarez', 'Tlapa de Comonfort'] },
-  { state: 'Hidalgo', cities: ['Pachuca de Soto', 'Tulancingo de Bravo', 'Mineral de la Reforma', 'Tizayuca', 'Tula de Allende', 'Huejutla de Reyes', 'Tepeji del Río de Ocampo', 'Ixmiquilpan'] },
-  { state: 'Jalisco', cities: ['Guadalajara', 'Zapopan', 'San Pedro Tlaquepaque', 'Tlajomulco de Zúñiga', 'Tonalá', 'Puerto Vallarta', 'Lagos de Moreno', 'Tepatitlán de Morelos', 'Zapotlán el Grande', 'Ocotlán', 'Tala', 'Arandas'] },
-  { state: 'Michoacán', cities: ['Morelia', 'Uruapan', 'Zamora', 'Lázaro Cárdenas', 'Zitácuaro', 'Apatzingán', 'Hidalgo', 'Tarímbaro', 'La Piedad', 'Pátzcuaro', 'Los Reyes', 'Sahuayo'] },
-  { state: 'Morelos', cities: ['Cuernavaca', 'Jiutepec', 'Cuautla', 'Temixco', 'Yautepec', 'Emiliano Zapata', 'Ayala', 'Xochitepec', 'Puente de Ixtla', 'Jojutla'] },
-  { state: 'Nayarit', cities: ['Tepic', 'Bahía de Banderas', 'Santiago Ixcuintla', 'Compostela', 'Tecuala', 'Acaponeta', 'Xalisco', 'San Blas', 'Ruiz'] },
-  { state: 'Nuevo León', cities: ['Monterrey', 'Apodaca', 'Guadalupe', 'General Escobedo', 'Juárez', 'San Nicolás de los Garza', 'Santa Catarina', 'San Pedro Garza García', 'García', 'Cadereyta Jiménez', 'Linares', 'Pesquería'] },
-  { state: 'Oaxaca', cities: ['Oaxaca de Juárez', 'San Juan Bautista Tuxtepec', 'Juchitán de Zaragoza', 'Heroica Ciudad de Huajuapan de León', 'Salina Cruz', 'Santa Cruz Xoxocotlán', 'Loma Bonita', 'Heroica Ciudad de Tlaxiaco'] },
-  { state: 'Puebla', cities: ['Puebla', 'Tehuacán', 'San Martín Texmelucan', 'San Andrés Cholula', 'Atlixco', 'San Pedro Cholula', 'Amozoc', 'Teziutlán', 'Huauchinango', 'Zacatlán'] },
-  { state: 'Querétaro', cities: ['Santiago de Querétaro', 'San Juan del Río', 'Corregidora', 'El Marqués', 'Tequisquiapan', 'Amealco de Bonfil', 'Pedro Escobedo', 'Ezequiel Montes'] },
-  { state: 'Quintana Roo', cities: ['Benito Juárez', 'Solidaridad', 'Othón P. Blanco', 'Cozumel', 'Tulum', 'Felipe Carrillo Puerto', 'Isla Mujeres', 'Bacalar', 'José María Morelos', 'Lázaro Cárdenas', 'Puerto Morelos'] },
-  { state: 'San Luis Potosí', cities: ['San Luis Potosí', 'Soledad de Graciano Sánchez', 'Ciudad Valles', 'Rioverde', 'Matehuala', 'Tamazunchale', 'Ciudad Fernández', 'Mexquitic de Carmona'] },
-  { state: 'Sinaloa', cities: ['Culiacán', 'Mazatlán', 'Ahome', 'Guasave', 'Navolato', 'Salvador Alvarado', 'El Fuerte', 'Sinaloa', 'Rosario', 'Escuinapa'] },
-  { state: 'Sonora', cities: ['Hermosillo', 'Cajeme', 'Nogales', 'San Luis Río Colorado', 'Navojoa', 'Guaymas', 'Caborca', 'Agua Prieta', 'Huatabampo', 'Puerto Peñasco'] },
-  { state: 'Tabasco', cities: ['Centro', 'Cárdenas', 'Comalcalco', 'Macuspana', 'Huimanguillo', 'Cunduacán', 'Centla', 'Paraíso', 'Teapa', 'Balancán'] },
-  { state: 'Tamaulipas', cities: ['Reynosa', 'Matamoros', 'Nuevo Laredo', 'Tampico', 'Ciudad Victoria', 'Ciudad Madero', 'Altamira', 'Río Bravo', 'El Mante', 'Valle Hermoso'] },
-  { state: 'Tlaxcala', cities: ['Tlaxcala', 'Huamantla', 'Apizaco', 'San Pablo del Monte', 'Chiautempan', 'Zacatelco', 'Calpulalpan', 'Contla de Juan Cuamatzi'] },
-  { state: 'Veracruz', cities: ['Veracruz', 'Xalapa', 'Coatzacoalcos', 'Córdoba', 'Poza Rica de Hidalgo', 'Papantla', 'Minatitlán', 'San Andrés Tuxtla', 'Boca del Río', 'Orizaba', 'Tuxpan', 'Martínez de la Torre'] },
-  { state: 'Yucatán', cities: ['Mérida', 'Kanasín', 'Valladolid', 'Tizimín', 'Progreso', 'Umán', 'Tekax', 'Ticul', 'Chemax', 'Motul', 'Hunucmá', 'Oxkutzcab'] },
-  { state: 'Zacatecas', cities: ['Zacatecas', 'Fresnillo', 'Guadalupe', 'Jerez', 'Río Grande', 'Víctor Rosales', 'Sombrerete', 'Loreto', 'Pinos', 'Ojocaliente'] },
-];
-
-const MEXICAN_LOCATION_OPTIONS = Array.from(new Set(
-  MEXICAN_CITIES.flatMap(({ state, cities }) => [
-    state,
-    ...cities.map(city => `${city}, ${state}`),
-  ])
-));
-
 export default function ProfileEditScreen() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -86,12 +45,9 @@ export default function ProfileEditScreen() {
   const [toast, setToast] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
-
-  // Form state
   const [form, setForm] = useState({ name: '', bio: '', city: '', phone_number: '', whatsapp: '', website: '', social_instagram: '' });
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [notifForm, setNotifForm] = useState({ email_new_message: true, email_ad_reply: true, push_enabled: false });
-  // Phone verification state
   const [phoneInput, setPhoneInput] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpInput, setOtpInput] = useState('');
@@ -104,9 +60,13 @@ export default function ProfileEditScreen() {
 
   useEffect(() => {
     const token = getToken();
-    if (!token) { navigate('/'); return; }
+    if (!token) {
+      navigate('/');
+      return;
+    }
+
     fetch(`${API_URL}/user/profile`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(response => response.ok ? response.json() : Promise.reject(response.status))
       .then(data => {
         setProfile(data);
         setPhoneInput(data.phone_number || '');
@@ -121,33 +81,33 @@ export default function ProfileEditScreen() {
         });
         if (data.notification_preferences) {
           try {
-            const np = typeof data.notification_preferences === 'string'
+            const preferences = typeof data.notification_preferences === 'string'
               ? JSON.parse(data.notification_preferences)
               : data.notification_preferences;
-            setNotifForm(prev => ({ ...prev, ...np }));
+            setNotifForm(prev => ({ ...prev, ...preferences }));
           } catch {}
         }
         setAvatarPreview(getAvatarSrc(data.avatar_url));
       })
-      .catch(() => { showToast('Error al cargar el perfil', 'error'); setLoading(false); })
+      .catch(() => showToast('Error al cargar el perfil', 'error'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [navigate]);
 
-  const handleAvatarChange = async (e) => {
-    const file = e.target.files?.[0];
+  const handleAvatarChange = async event => {
+    const file = event.target.files?.[0];
     if (!file) return;
     setAvatarPreview(URL.createObjectURL(file));
     setAvatarUploading(true);
-    const fd = new FormData();
-    fd.append('avatar', file);
+    const body = new FormData();
+    body.append('avatar', file);
     try {
-      const r = await fetch(`${API_URL}/user/avatar`, {
+      const response = await fetch(`${API_URL}/user/avatar`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getToken()}` },
-        body: fd,
+        body,
       });
-      const data = await r.json();
-      if (r.ok) {
+      const data = await response.json();
+      if (response.ok) {
         setAvatarPreview(getAvatarSrc(data.avatar_url));
         showToast('Foto actualizada');
       } else {
@@ -157,25 +117,26 @@ export default function ProfileEditScreen() {
       showToast('Error de red al subir la foto', 'error');
     } finally {
       setAvatarUploading(false);
+      event.target.value = '';
     }
   };
 
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
+  const handleSaveProfile = async event => {
+    event.preventDefault();
     setSaving(true);
     try {
-      const r = await fetch(`${API_URL}/user/profile`, {
+      const response = await fetch(`${API_URL}/user/profile`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      const data = await r.json();
-      if (r.ok) {
+      const data = await response.json();
+      if (response.ok) {
         showToast('Perfil guardado correctamente');
         setProfile(prev => ({ ...prev, ...data }));
       } else {
-        const msgs = data.errors ? Object.values(data.errors).flat().join(' ') : data.message;
-        showToast(msgs || 'Error al guardar', 'error');
+        const message = data.errors ? Object.values(data.errors).flat().join(' ') : data.message;
+        showToast(message || 'Error al guardar', 'error');
       }
     } catch {
       showToast('Error de red', 'error');
@@ -184,25 +145,27 @@ export default function ProfileEditScreen() {
     }
   };
 
-  const handleSavePassword = async (e) => {
-    e.preventDefault();
+  const handleSavePassword = async event => {
+    event.preventDefault();
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      showToast('Las contraseñas no coinciden', 'error'); return;
+      showToast('Las contraseñas no coinciden', 'error');
+      return;
     }
     if (passwordForm.new_password.length < 8) {
-      showToast('La contraseña debe tener al menos 8 caracteres', 'error'); return;
+      showToast('La contraseña debe tener al menos 8 caracteres', 'error');
+      return;
     }
     setSaving(true);
     try {
       const body = { new_password: passwordForm.new_password };
       if (passwordForm.current_password) body.current_password = passwordForm.current_password;
-      const r = await fetch(`${API_URL}/user/password`, {
+      const response = await fetch(`${API_URL}/user/password`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const data = await r.json();
-      if (r.ok) {
+      const data = await response.json();
+      if (response.ok) {
         showToast('Contraseña actualizada');
         setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       } else {
@@ -215,20 +178,20 @@ export default function ProfileEditScreen() {
     }
   };
 
-
   const handleSendOtp = async () => {
     if (!phoneInput || phoneInput.length < 10) {
-      showToast('Ingresa un número válido (mín. 10 dígitos)', 'error'); return;
+      showToast('Ingresa un número válido (mín. 10 dígitos)', 'error');
+      return;
     }
     setPhoneVerifying(true);
     try {
-      const r = await fetch(`${API_URL}/phone/send-otp`, {
+      const response = await fetch(`${API_URL}/phone/send-otp`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneInput }),
       });
-      const data = await r.json();
-      if (r.ok) {
+      const data = await response.json();
+      if (response.ok) {
         setOtpSent(true);
         showToast('Código enviado. Revisa tu teléfono.');
       } else {
@@ -243,17 +206,18 @@ export default function ProfileEditScreen() {
 
   const handleVerifyOtp = async () => {
     if (otpInput.length !== 6) {
-      showToast('El código debe tener 6 dígitos', 'error'); return;
+      showToast('El código debe tener 6 dígitos', 'error');
+      return;
     }
     setPhoneVerifying(true);
     try {
-      const r = await fetch(`${API_URL}/phone/verify-otp`, {
+      const response = await fetch(`${API_URL}/phone/verify-otp`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp: otpInput }),
       });
-      const data = await r.json();
-      if (r.ok) {
+      const data = await response.json();
+      if (response.ok) {
         showToast(data.message || '¡Teléfono verificado!');
         setProfile(prev => ({ ...prev, phone_verified: true, phone_number: phoneInput }));
         setOtpSent(false);
@@ -270,369 +234,131 @@ export default function ProfileEditScreen() {
 
   const handleSaveNotifications = async () => {
     try {
-      const r = await fetch(`${API_URL}/user/notifications`, {
+      const response = await fetch(`${API_URL}/user/notifications`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(notifForm),
       });
-      if (r.ok) showToast('Preferencias guardadas');
-      else showToast('Error al guardar preferencias', 'error');
+      showToast(response.ok ? 'Preferencias guardadas' : 'Error al guardar preferencias', response.ok ? 'success' : 'error');
     } catch {
       showToast('Error de red', 'error');
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin" />
-    </div>
-  );
+  if (loading) {
+    return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin" /></div>;
+  }
 
   const isOAuth = profile?.is_oauth_only;
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${toast.type === 'error' ? 'bg-red-500' : 'bg-lime-500'}`}>
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === 'error' ? 'bg-red-500' : 'bg-lime-500'}`}>
           {toast.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
           {toast.msg}
         </div>
       )}
 
-      {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
-            <ChevronLeft size={20} />
-          </button>
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronLeft size={20} /></button>
           <h1 className="font-semibold text-slate-900">Editar perfil</h1>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-
-        {/* Avatar */}
         <div className="bg-white rounded-2xl p-6 shadow-sm flex flex-col items-center gap-4">
           <div className="relative">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-200 ring-4 ring-white shadow">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-600 text-3xl font-bold">
-                  {(profile?.name || 'U')[0].toUpperCase()}
-                </div>
-              )}
+              {avatarPreview ? <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-600 text-3xl font-bold">{(profile?.name || 'U')[0].toUpperCase()}</div>}
             </div>
-            {avatarUploading && (
-              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 w-8 h-8 bg-lime-500 hover:bg-lime-600 rounded-full flex items-center justify-center shadow text-white"
-            >
-              <Camera size={14} />
-            </button>
+            {avatarUploading && <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>}
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-8 h-8 bg-lime-500 hover:bg-lime-600 rounded-full flex items-center justify-center shadow text-white"><Camera size={14} /></button>
           </div>
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
-          <button onClick={() => fileInputRef.current?.click()} className="text-sm text-lime-600 font-medium hover:underline">
-            Cambiar foto
-          </button>
-          {profile?.member_since && (
-            <p className="text-xs text-slate-400">Miembro desde {profile.member_since}</p>
-          )}
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-lime-600 font-medium hover:underline">Cambiar foto</button>
+          {profile?.member_since && <p className="text-xs text-slate-400">Miembro desde {profile.member_since}</p>}
         </div>
 
-        {/* Basic info */}
         <form onSubmit={handleSaveProfile} className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
           <h2 className="font-semibold text-slate-800 flex items-center gap-2"><User size={16} className="text-lime-500" /> Información básica</h2>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Nombre completo *</label>
-            <input
-              type="text" required maxLength={255}
-              value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Biografía</label>
-            <textarea
-              rows={3} maxLength={1000}
-              value={form.bio} onChange={e => setForm(p => ({ ...p, bio: e.target.value }))}
-              placeholder="Cuéntanos algo sobre ti..."
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 resize-none"
-            />
-            <p className="text-right text-xs text-slate-400 mt-0.5">{form.bio.length}/1000</p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1"><MapPin size={11} className="inline mr-1" />Ciudad</label>
-            <input
-              type="text"
-              list="mexico-location-options"
-              maxLength={120}
-              value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white"
-              placeholder="Escribe cualquier ciudad de México"
-            />
-            <datalist id="mexico-location-options">
-              {MEXICAN_LOCATION_OPTIONS.map(option => <option key={option} value={option} />)}
-            </datalist>
-            <p className="mt-1 text-[11px] text-slate-400">Puedes escribir cualquier ciudad, municipio o estado de México.</p>
-          </div>
-
+          <input required maxLength={255} value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="Nombre completo" />
+          <textarea rows={3} maxLength={1000} value={form.bio} onChange={event => setForm(prev => ({ ...prev, bio: event.target.value }))} className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm resize-none" placeholder="Biografía" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1"><Phone size={11} className="inline mr-1" />Teléfono</label>
-              <input
-                type="tel" maxLength={20}
-                value={form.phone_number} onChange={e => setForm(p => ({ ...p, phone_number: e.target.value }))}
-                placeholder="+52 55 1234 5678"
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">WhatsApp</label>
-              <input
-                type="tel" maxLength={20}
-                value={form.whatsapp} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))}
-                placeholder="+52 55 1234 5678"
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
-              />
-            </div>
+            <input maxLength={120} value={form.city} onChange={event => setForm(prev => ({ ...prev, city: event.target.value }))} className="border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="Ciudad" />
+            <input type="tel" maxLength={20} value={form.phone_number} onChange={event => setForm(prev => ({ ...prev, phone_number: event.target.value }))} className="border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="Teléfono" />
+            <input type="tel" maxLength={20} value={form.whatsapp} onChange={event => setForm(prev => ({ ...prev, whatsapp: event.target.value }))} className="border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="WhatsApp" />
+            <input type="url" maxLength={255} value={form.website} onChange={event => setForm(prev => ({ ...prev, website: event.target.value }))} className="border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="Sitio web" />
           </div>
-
-          <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
-            {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save size={15} />}
-            Guardar información
-          </button>
+          <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden">
+            <span className="px-3 text-slate-400 text-sm bg-slate-50 border-r border-slate-300 py-2.5">@</span>
+            <input maxLength={100} value={form.social_instagram} onChange={event => setForm(prev => ({ ...prev, social_instagram: event.target.value.replace(/^@/, '') }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none" placeholder="Instagram" />
+          </div>
+          <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">{saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save size={15} />} Guardar información</button>
         </form>
 
+        <BusinessProfileEditor showToast={showToast} />
 
-        {/* Phone Verification — Confianza */}
         <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4 border border-slate-100">
-          <h2 className="font-semibold text-slate-800 flex items-center gap-2">
-            <Phone size={16} className="text-lime-500" /> Verificación de teléfono
-          </h2>
-
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Phone size={16} className="text-lime-500" /> Verificación de teléfono</h2>
           {profile?.phone_verified ? (
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-xl px-4 py-3">
-              <CheckCircle size={18} />
-              <span className="text-sm font-medium">{profile.phone_number} — Verificado ✓</span>
-            </div>
+            <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-xl px-4 py-3"><CheckCircle size={18} /><span className="text-sm font-medium">{profile.phone_number} — Verificado ✓</span></div>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-slate-500">
-                Verifica tu teléfono para ganar confianza con los compradores. Recibirás un código SMS.
-              </p>
+              <p className="text-xs text-slate-500">Verifica tu teléfono para ganar confianza con los compradores. Recibirás un código SMS.</p>
               {!otpSent ? (
-                <div className="flex gap-2">
-                  <input
-                    type="tel"
-                    placeholder="+52 55 1234 5678"
-                    value={phoneInput}
-                    onChange={e => setPhoneInput(e.target.value)}
-                    className="flex-1 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
-                  />
-                  <button
-                    onClick={handleSendOtp}
-                    disabled={phoneVerifying}
-                    className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 whitespace-nowrap"
-                  >
-                    {phoneVerifying
-                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      : 'Enviar código'}
-                  </button>
-                </div>
+                <div className="flex gap-2"><input type="tel" placeholder="+52 55 1234 5678" value={phoneInput} onChange={event => setPhoneInput(event.target.value)} className="flex-1 border border-slate-300 rounded-xl px-3 py-2.5 text-sm" /><button type="button" onClick={handleSendOtp} disabled={phoneVerifying} className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap">Enviar código</button></div>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-slate-500">
-                    Código enviado a <span className="font-medium text-slate-700">{phoneInput}</span>. Válido por 10 min.
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="123456"
-                      value={otpInput}
-                      onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
-                      className="flex-1 border border-slate-300 rounded-xl px-3 py-2.5 text-center text-2xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-lime-400"
-                    />
-                    <button
-                      onClick={handleVerifyOtp}
-                      disabled={phoneVerifying || otpInput.length !== 6}
-                      className="bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 whitespace-nowrap"
-                    >
-                      {phoneVerifying
-                        ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        : 'Verificar'}
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => { setOtpSent(false); setOtpInput(''); }}
-                    className="text-xs text-slate-400 hover:text-slate-600 underline"
-                  >
-                    Cambiar número
-                  </button>
-                </div>
+                <div className="space-y-3"><input inputMode="numeric" maxLength={6} placeholder="123456" value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\D/g, ''))} className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-center text-2xl tracking-widest font-mono" /><button type="button" onClick={handleVerifyOtp} disabled={phoneVerifying || otpInput.length !== 6} className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">Verificar</button></div>
               )}
             </div>
           )}
         </div>
 
-        {/* Links */}
-        <form onSubmit={handleSaveProfile} className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Globe size={16} className="text-lime-500" /> Redes y sitio web</h2>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Sitio web</label>
-            <input
-              type="url" maxLength={255}
-              value={form.website} onChange={e => setForm(p => ({ ...p, website: e.target.value }))}
-              placeholder="https://mi-sitio.com"
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Instagram</label>
-            <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-lime-400">
-              <span className="px-3 text-slate-400 text-sm bg-slate-50 border-r border-slate-300 py-2.5">@</span>
-              <input
-                type="text" maxLength={100}
-                value={form.social_instagram} onChange={e => setForm(p => ({ ...p, social_instagram: e.target.value.replace(/^@/, '') }))}
-                placeholder="usuario"
-                className="flex-1 px-3 py-2.5 text-sm focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
-            {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save size={15} />}
-            Guardar enlaces
-          </button>
-        </form>
-
-        {/* Password — hidden for OAuth accounts */}
         {!isOAuth && (
           <form onSubmit={handleSavePassword} className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
             <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Lock size={16} className="text-lime-500" /> Cambiar contraseña</h2>
-
-            {profile?.password_set && (
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Contraseña actual</label>
-                <input
-                  type="password"
-                  value={passwordForm.current_password} onChange={e => setPasswordForm(p => ({ ...p, current_password: e.target.value }))}
-                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Nueva contraseña</label>
-              <input
-                type="password" minLength={8} required
-                value={passwordForm.new_password} onChange={e => setPasswordForm(p => ({ ...p, new_password: e.target.value }))}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Confirmar contraseña</label>
-              <input
-                type="password" required
-                value={passwordForm.confirm_password} onChange={e => setPasswordForm(p => ({ ...p, confirm_password: e.target.value }))}
-                className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 ${passwordForm.confirm_password && passwordForm.confirm_password !== passwordForm.new_password ? 'border-red-400' : 'border-slate-300'}`}
-              />
-              {passwordForm.confirm_password && passwordForm.confirm_password !== passwordForm.new_password && (
-                <p className="text-xs text-red-500 mt-1">Las contraseñas no coinciden</p>
-              )}
-            </div>
-
-            <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
-              {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Lock size={15} />}
-              Actualizar contraseña
-            </button>
+            {profile?.password_set && <input type="password" value={passwordForm.current_password} onChange={event => setPasswordForm(prev => ({ ...prev, current_password: event.target.value }))} className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="Contraseña actual" />}
+            <input type="password" minLength={8} required value={passwordForm.new_password} onChange={event => setPasswordForm(prev => ({ ...prev, new_password: event.target.value }))} className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="Nueva contraseña" />
+            <input type="password" required value={passwordForm.confirm_password} onChange={event => setPasswordForm(prev => ({ ...prev, confirm_password: event.target.value }))} className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="Confirmar contraseña" />
+            <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"><Lock size={15} /> Actualizar contraseña</button>
           </form>
         )}
 
-        {/* Notifications */}
         <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
           <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Bell size={16} className="text-lime-500" /> Notificaciones</h2>
-          <div className="space-y-3">
-            <Toggle
-              value={notifForm.email_new_message}
-              onChange={v => setNotifForm(p => ({ ...p, email_new_message: v }))}
-              label="Correo cuando reciba un mensaje"
-            />
-            <Toggle
-              value={notifForm.email_ad_reply}
-              onChange={v => setNotifForm(p => ({ ...p, email_ad_reply: v }))}
-              label="Correo cuando alguien pregunte por mi anuncio"
-            />
-          </div>
-          <button onClick={handleSaveNotifications} className="w-full border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-xl py-2.5 text-sm">
-            Guardar preferencias
-          </button>
+          <Toggle value={notifForm.email_new_message} onChange={value => setNotifForm(prev => ({ ...prev, email_new_message: value }))} label="Correo cuando reciba un mensaje" />
+          <Toggle value={notifForm.email_ad_reply} onChange={value => setNotifForm(prev => ({ ...prev, email_ad_reply: value }))} label="Correo cuando alguien pregunte por mi anuncio" />
+          <button type="button" onClick={handleSaveNotifications} className="w-full border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-xl py-2.5 text-sm">Guardar preferencias</button>
         </div>
 
-        {/* Danger zone */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-red-100 space-y-3">
           <h2 className="font-semibold text-red-700 flex items-center gap-2"><Trash2 size={16} /> Zona de peligro</h2>
-          <p className="text-sm text-slate-600">Eliminar tu cuenta es una acción permanente. Todos tus anuncios y datos serán eliminados.</p>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium rounded-xl py-2.5 text-sm"
-          >
-            Eliminar mi cuenta
-          </button>
+          <p className="text-sm text-slate-600">Eliminar tu cuenta es una acción permanente.</p>
+          <button type="button" onClick={() => setShowDeleteModal(true)} className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium rounded-xl py-2.5 text-sm">Eliminar mi cuenta</button>
         </div>
-
       </div>
 
-      {/* Delete account modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
             <h3 className="font-bold text-slate-900 text-lg mb-2">¿Eliminar tu cuenta?</h3>
             <p className="text-sm text-slate-600 mb-4">Esta acción es irreversible. Escribe <strong>ELIMINAR</strong> para confirmar.</p>
-            <input
-              type="text"
-              value={deleteConfirmText}
-              onChange={e => setDeleteConfirmText(e.target.value)}
-              placeholder="ELIMINAR"
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
+            <input value={deleteConfirmText} onChange={event => setDeleteConfirmText(event.target.value)} placeholder="ELIMINAR" className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm mb-4" />
             <div className="flex gap-3">
-              <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} className="flex-1 border border-slate-300 rounded-xl py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                Cancelar
-              </button>
-              <button
-                disabled={deleteConfirmText !== 'ELIMINAR'}
-                onClick={async () => {
-                  const r = await fetch(`${API_URL}/user`, {
-                    method: 'DELETE',
-                    headers: { Authorization: `Bearer ${getToken()}` },
-                  });
-                  if (r.ok) {
-                    localStorage.removeItem('auth_token');
-                    localStorage.removeItem('token');
-                    window.location.href = '/';
-                  } else {
-                    showToast('Error al eliminar la cuenta', 'error');
-                    setShowDeleteModal(false);
-                  }
-                }}
-                className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium"
-              >
-                Eliminar
-              </button>
+              <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} className="flex-1 border border-slate-300 rounded-xl py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancelar</button>
+              <button type="button" disabled={deleteConfirmText !== 'ELIMINAR'} onClick={async () => {
+                const response = await fetch(`${API_URL}/user`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
+                if (response.ok) {
+                  localStorage.removeItem('auth_token');
+                  localStorage.removeItem('token');
+                  window.location.href = '/';
+                } else {
+                  showToast('Error al eliminar la cuenta', 'error');
+                  setShowDeleteModal(false);
+                }
+              }} className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium">Eliminar</button>
             </div>
           </div>
         </div>
