@@ -30,15 +30,64 @@ Route::middleware('throttle:api')->get('/sitemap.xml', [AdController::class, 'si
 Route::middleware('throttle:api')->get('/google-merchant.xml', [AdController::class, 'googleMerchantFeed']);
 Route::middleware('throttle:api')->get('/categories', [CategoryController::class, 'index']);
 Route::middleware('throttle:api')->get('/states/counts', function () {
+    $mexicoStates = [
+        'Aguascalientes',
+        'Baja California',
+        'Baja California Sur',
+        'Campeche',
+        'Chiapas',
+        'Chihuahua',
+        'Ciudad de México',
+        'Coahuila',
+        'Colima',
+        'Durango',
+        'Estado de México',
+        'Guanajuato',
+        'Guerrero',
+        'Hidalgo',
+        'Jalisco',
+        'Michoacán',
+        'Morelos',
+        'Nayarit',
+        'Nuevo León',
+        'Oaxaca',
+        'Puebla',
+        'Querétaro',
+        'Quintana Roo',
+        'San Luis Potosí',
+        'Sinaloa',
+        'Sonora',
+        'Tabasco',
+        'Tamaulipas',
+        'Tlaxcala',
+        'Veracruz',
+        'Yucatán',
+        'Zacatecas',
+    ];
+
     $counts = \Illuminate\Support\Facades\DB::table('ads')
         ->where('status', 'active')
         ->whereNotNull('state')
         ->where('state', '!=', '')
         ->select('state', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
         ->groupBy('state')
-        ->orderByDesc('count')
-        ->get();
-    return response()->json($counts);
+        ->pluck('count', 'state');
+
+    $states = collect($mexicoStates)
+        ->map(fn ($state) => [
+            'state' => $state,
+            'count' => (int) ($counts[$state] ?? 0),
+        ]);
+
+    $extraStates = collect($counts)
+        ->reject(fn ($_count, $state) => in_array($state, $mexicoStates, true))
+        ->map(fn ($count, $state) => [
+            'state' => $state,
+            'count' => (int) $count,
+        ])
+        ->values();
+
+    return response()->json($states->merge($extraStates)->values());
 });
 Route::middleware('throttle:api')->get('/users/{id}/reviews', [ReviewController::class, 'index'])->whereNumber('id');
 Route::middleware('throttle:api')->get('/users/{id}/profile', [ProfileController::class, 'publicProfile'])->whereNumber('id'); // Публичный профиль продавца (Storefront)
@@ -100,7 +149,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:ads')->post('/ads', [AdController::class, 'store']);
     // Защита ИИ от спама и истощения лимитов API (максимум 5 генераций в минуту на пользователя)
     Route::middleware('throttle:5,1')->group(function () {
-        Route::post('/ads/generate-description', [AdController::class, 'generateDescription']); // Gemini AI
+        Route::post('/ads/generate-description', [AdController::class, 'generateDescription']); // DeepSeek/Qwen AI
     });
     Route::post('/categories', [CategoryController::class, 'store']); // Создание категории (только для админов)
     Route::put('/categories/{id}', [CategoryController::class, 'update']); // Редактирование категории

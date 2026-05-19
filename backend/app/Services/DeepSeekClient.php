@@ -33,16 +33,16 @@ class DeepSeekClient
         $apiKey = (string) config('services.deepseek.api_key', '');
         $baseUrl = rtrim((string) config('services.deepseek.base_url', 'https://api.deepseek.com'), '/');
 
+        if ($messages === []) {
+            throw new RuntimeException('DeepSeek messages cannot be empty.');
+        }
+
         if ($apiKey === '') {
-            throw new RuntimeException('DeepSeek API key is not configured.');
+            return $this->chatOllama($messages, $options, $timeout, 'DeepSeek API key is not configured.');
         }
 
         if ($model === '') {
-            throw new RuntimeException('DeepSeek model is not configured.');
-        }
-
-        if ($messages === []) {
-            throw new RuntimeException('DeepSeek messages cannot be empty.');
+            return $this->chatOllama($messages, $options, $timeout, 'DeepSeek model is not configured.');
         }
 
         $payload = array_filter([
@@ -65,18 +65,65 @@ class DeepSeekClient
             ->post($baseUrl . '/chat/completions', $payload);
 
         if ($response->failed()) {
-            throw new RuntimeException(sprintf(
-                'DeepSeek request failed with status %s.',
-                $response->status()
-            ));
+            return $this->chatOllama(
+                $messages,
+                $options,
+                $timeout,
+                sprintf('DeepSeek request failed with status %s.', $response->status())
+            );
         }
 
         $json = $response->json();
 
         if (! is_array($json)) {
-            throw new RuntimeException('DeepSeek response was not valid JSON.');
+            return $this->chatOllama($messages, $options, $timeout, 'DeepSeek response was not valid JSON.');
         }
 
         return $json;
+    }
+
+    private function chatOllama(array $messages, array $options, int $timeout, string $reason): array
+    {
+        $baseUrl = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
+        $model = (string) config('services.ollama.chat_model', 'qwen2.5:1.5b');
+
+        if ($baseUrl === '' || $model === '') {
+            throw new RuntimeException($reason . ' Ollama fallback is not configured.');
+        }
+
+        $response = Http::acceptJson()
+            ->asJson()
+            ->timeout(max($timeout, 45))
+            ->post($baseUrl . '/api/chat', [
+                'model' => $model,
+                'messages' => $messages,
+                'stream' => false,
+                'options' => [
+                    'temperature' => Arr::get($options, 'temperature', 0.2),
+                    'num_predict' => Arr::get($options, 'max_tokens', 700),
+                ],
+            ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException($reason . ' Ollama fallback failed with status ' . $response->status() . '.');
+        }
+
+        $content = $response->json('message.content');
+
+        if (! is_string($content) || trim($content) === '') {
+            throw new RuntimeException($reason . ' Ollama fallback returned empty content.');
+        }
+
+        return [
+            'choices' => [
+                [
+                    'message' => [
+                        'content' => trim($content),
+                    ],
+                ],
+            ],
+            'provider' => 'ollama',
+            'model' => $model,
+        ];
     }
 }

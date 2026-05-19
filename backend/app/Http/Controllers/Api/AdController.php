@@ -1297,47 +1297,65 @@ class AdController extends Controller
     }
 
     /**
-     * Автоматическая генерация описания товара с помощью Google Gemini AI
+     * Generate ad description using DeepSeek AI (text fields, no image required)
+     * POST /api/ads/generate-description
      */
     public function generateDescription(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|max:5120',
+            'title'      => 'required|string|max:200',
+            'category'   => 'nullable|string|max:100',
+            'condition'  => 'nullable|string|max:50',
+            'price'      => 'nullable|numeric',
+            'attributes' => 'nullable|array',
         ]);
 
-        // Защита от сбоя в продакшене (Config Cache Bug): env() возвращает null при кэшировании конфигов
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) {
-            return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
+        // Rate limiting: max 10 requests per user per hour
+        $rateLimitKey = 'ai-desc:' . $request->user()->id;
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($rateLimitKey, 10)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($rateLimitKey);
+            return response()->json([
+                'error' => "Límite de generaciones alcanzado. Inténtalo en {$seconds} segundos.",
+            ], 429);
+        }
+        \Illuminate\Support\Facades\RateLimiter::hit($rateLimitKey, 3600);
+
+        // Build Spanish prompt
+        $prompt  = "Eres un experto en redacción de anuncios para el marketplace mexicano Mercasto.com. ";
+        $prompt .= "Escribe una descripción atractiva y honesta en español mexicano para el siguiente anuncio. ";
+        $prompt .= "Máximo 150 palabras. Solo devuelve la descripción, sin títulos ni etiquetas.\n\n";
+        $prompt .= "Título: {$request->title}\n";
+        if ($request->category)  $prompt .= "Categoría: {$request->category}\n";
+        if ($request->condition) $prompt .= "Condición: {$request->condition}\n";
+        if ($request->price)     $prompt .= "Precio: \${$request->price} MXN\n";
+        if ($request->attributes) {
+            foreach ($request->attributes as $attrKey => $attrValue) {
+                if ($attrValue) {
+                    $prompt .= ucfirst($attrKey) . ": {$attrValue}\n";
+                }
+            }
         }
 
-        $mimeType = $request->file('image')->getMimeType();
-        $base64Image = base64_encode(file_get_contents($request->file('image')->getRealPath()));
+        try {
+            /** @var \App\Services\DeepSeekClient $client */
+            $client = app(\App\Services\DeepSeekClient::class);
+            $result = $client->chatFlash(
+                [['role' => 'user', 'content' => $prompt]],
+                ['max_tokens' => 250, 'temperature' => 0.7]
+            );
 
-        // Защита от зависания PHP-воркеров (Worker Starvation) при сбое серверов Google
-        $response = Http::timeout(15)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => 'Escribe una descripción atractiva y altamente optimizada para SEO y AEO (Answer Engine Optimization) para vender este producto en un mercado de clasificados. Incluye palabras clave relevantes de forma natural, destaca sus mejores características visuales y responde implícitamente a las preguntas más comunes que tendría un comprador. Usa un tono vendedor, persuasivo y estructurado (puedes usar viñetas cortas si es necesario) para que sea fácil de indexar por Google y leer por IAs conversacionales. Solo devuelve la descripción sin introducciones ni comillas. Idioma: Español.'],
-                        [
-                            'inline_data' => [
-                                'mime_type' => $mimeType,
-                                'data' => $base64Image
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ]);
+            $text = $result['choices'][0]['message']['content'] ?? null;
+            if (!$text) {
+                throw new \RuntimeException('Empty response from DeepSeek.');
+            }
 
-        if ($response->successful()) {
-            $text = $response->json('candidates.0.content.parts.0.text');
             return response()->json(['description' => trim($text)]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('DeepSeek generateDescription error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'No se pudo generar la descripción. Inténtalo de nuevo.',
+            ], 500);
         }
-
-        \Illuminate\Support\Facades\Log::error('Gemini API Error: ' . $response->body());
-        return response()->json(['message' => 'Error al analizar la imagen con IA.'], 500);
     }
 
     /**

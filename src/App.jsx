@@ -1853,31 +1853,36 @@ function App() {
       setShowAuthModal(true);
       return;
     }
-
-    const firstNewImage = images.find(img => img.source === 'new' && img.file);
-    if (!firstNewImage?.file) {
-      alert('Agrega al menos una foto nueva para generar la descripción con IA.');
+    if (!form.title) {
+      alert('Agrega un título primero para generar la descripción con IA.');
       return;
     }
 
     setAiLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
-      const formData = new FormData();
-      formData.append('image', firstNewImage.file);
-      if (form.title) formData.append('title', form.title);
-      if (form.category) formData.append('category', form.category);
-      if (form.condition) formData.append('condition', form.condition);
+      const attrs = form.attributes && Object.keys(form.attributes).length > 0
+        ? form.attributes
+        : undefined;
 
       const res = await fetch(`${API_URL}/ads/generate-description`, {
         method: 'POST',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          title:      form.title,
+          category:   form.category   || undefined,
+          condition:  form.condition  || undefined,
+          price:      form.price      || undefined,
+          attributes: attrs,
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.message || 'No se pudo generar la descripción.');
+        alert(data.error || data.message || 'No se pudo generar la descripción.');
         return;
       }
 

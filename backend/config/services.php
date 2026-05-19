@@ -67,6 +67,11 @@ return [
         'pro_model'  => env('DEEPSEEK_PRO_MODEL', 'deepseek-v4-pro'),
     ],
 
+    'ollama' => [
+        'base_url'   => env('OLLAMA_BASE_URL', 'http://ollama:11434'),
+        'chat_model' => env('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b'),
+    ],
+
     'webpush' => [
         'vapid_public_key'  => env('VAPID_PUBLIC_KEY'),
         'vapid_private_key' => env('VAPID_PRIVATE_KEY'),

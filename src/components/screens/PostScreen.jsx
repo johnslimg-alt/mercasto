@@ -2,7 +2,7 @@ import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightReal
 import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
 
-export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, setEditingAd, setForm, setVideoFile, t, videoFile }) {
+export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, setEditingAd, setForm, setVideoFile, t, videoFile, aiLoading, handleGenerateDescription }) {
     const mapQuery = debouncedLocation ? encodeURIComponent(debouncedLocation) : "Mexico";
 
     const mapUrl = `https://maps.google.com/maps?q=${mapQuery}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
@@ -221,7 +221,13 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
               <div>
 
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.ad_desc}</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-[13px] font-semibold text-slate-700">{t.ad_desc}</label>
+                    <button type="button" onClick={handleGenerateDescription} disabled={aiLoading} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-medium text-[#65A30D] hover:bg-[#84CC16]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      {aiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                      {aiLoading ? 'Generando…' : '✨ Generar con IA'}
+                    </button>
+                  </div>
 
                   <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all min-h-[140px]" placeholder={t.ad_desc}></textarea>
 
