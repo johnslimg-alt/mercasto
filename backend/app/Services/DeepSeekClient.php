@@ -48,6 +48,10 @@ class DeepSeekClient
         $payload = array_filter([
             'model' => $model,
             'messages' => $messages,
+            'thinking' => [
+                'type' => Arr::get($options, 'thinking', 'disabled'),
+            ],
+            'response_format' => Arr::get($options, 'response_format'),
             'temperature' => Arr::get($options, 'temperature', 0.2),
             'max_tokens' => Arr::get($options, 'max_tokens', 700),
             'stream' => false,
