@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AdController;
+use App\Http\Controllers\Api\AiDescriptionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\AccountDeletionController;
@@ -100,7 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:ads')->post('/ads', [AdController::class, 'store']);
     // Защита ИИ от спама и истощения лимитов API (максимум 5 генераций в минуту на пользователя)
     Route::middleware('throttle:5,1')->group(function () {
-        Route::post('/ads/generate-description', [AdController::class, 'generateDescription']); // Gemini AI
+        Route::post('/ads/generate-description', AiDescriptionController::class); // DeepSeek AI
     });
     Route::post('/categories', [CategoryController::class, 'store']); // Создание категории (только для админов)
     Route::put('/categories/{id}', [CategoryController::class, 'update']); // Редактирование категории
