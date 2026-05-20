@@ -379,7 +379,7 @@ function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [couponInput, setCouponInput] = useState('');
-  const [availableProviders, setAvailableProviders] = useState({ google: false, apple: false, telegram: false });
+  const [availableProviders, setAvailableProviders] = useState({ google: false, apple: false, telegram: false, sms: false });
 
   const setCurrentTab = useCallback((tab) => {
     // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
@@ -433,6 +433,7 @@ function App() {
           google:   p?.google?.enabled  ?? p?.google  ?? false,
           apple:    p?.apple?.enabled   ?? p?.apple   ?? false,
           telegram: p?.telegram?.enabled ?? p?.telegram ?? false,
+          sms:      p?.sms?.enabled      ?? p?.sms      ?? p?.phone?.enabled ?? p?.phone ?? false,
         });
       })
       .catch(() => {});
@@ -3139,10 +3140,12 @@ function App() {
                             Google
                         </button>
                       )}
-                      <button type="button" onClick={() => setAuthMode('phone_request')} className="btn-md w-full bg-[#10B981] text-white hover:bg-[#059669] flex items-center justify-center gap-3">
-                          <Phone className="w-4 h-4" />
-                          Teléfono (SMS)
-                      </button>
+                      {availableProviders?.sms && (
+                        <button type="button" onClick={() => setAuthMode('phone_request')} className="btn-md w-full bg-[#10B981] text-white hover:bg-[#059669] flex items-center justify-center gap-3">
+                            <Phone className="w-4 h-4" />
+                            Teléfono (SMS)
+                        </button>
+                      )}
                       {availableProviders?.apple && (
                       <button type="button" onClick={() => window.location.href = `${API_URL}/auth/apple/redirect`} className="btn-md w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-3">
                           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">

@@ -349,10 +349,17 @@ class AuthController extends Controller
     {
         // Using config() instead of env() because env() returns null when config is cached in production.
         // This safely checks the Socialite configurations mapping.
+        $twilioFrom = config('services.twilio.from');
+        $smsConfigured = !empty(config('services.twilio.sid'))
+            && !empty(config('services.twilio.token'))
+            && !empty($twilioFrom)
+            && $twilioFrom !== '+15005550006';
+
         return response()->json([
             'google'   => !empty(config('services.google.client_id')) && !empty(config('services.google.client_secret')),
             'apple'    => !empty(config('services.apple.client_id')) && !empty(config('services.apple.client_secret')),
             'telegram' => !empty(config('services.telegram.client_id')) && !empty(config('services.telegram.client_secret')),
+            'sms'      => $smsConfigured,
         ]);
     }
 
