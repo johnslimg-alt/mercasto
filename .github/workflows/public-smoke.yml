@@ -18,7 +18,7 @@ jobs:
   smoke:
     name: Public site and API smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - name: Check public endpoints
         shell: bash
@@ -26,12 +26,12 @@ jobs:
           set -euo pipefail
           if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
             echo "Waiting for push deploy window before public smoke..."
-            sleep 75
+            sleep 180
           fi
 
           retry() {
             local attempt
-            for attempt in 1 2 3 4 5 6; do
+            for attempt in 1 2 3 4 5 6 7 8; do
               if "$@"; then
                 return 0
               fi
