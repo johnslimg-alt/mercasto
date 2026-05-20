@@ -105,17 +105,17 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
 const ENABLE_AI_PANEL = import.meta.env.VITE_ENABLE_AI_PANEL === 'true';
 const AI_PLACEHOLDERS = {
-  postgresql: 'Напр: Сколько сейчас активных объявлений?',
-  react: 'Напр: Создай анимированную кнопку входа на Tailwind 4...',
-  lawyer: 'Напр: Составь новые правила возврата средств...',
-  notary: 'Напр: Какие требования к KYC документам?',
-  advocate: 'Напр: Как ответить на жалобу о мошенничестве?',
-  marketing: 'Напр: Как нам увеличить конверсию на главной?',
-  seo: 'Напр: Какие мета-теги добавить для карточки товара?',
-  ceo_ui: 'Напр: Какие цвета лучше использовать для премиум-товаров?',
-  ceo_ux: 'Напр: Как нам улучшить воронку оформления заказа?',
-  ui: 'Напр: Напиши классы Tailwind для красивого хедера...',
-  ceo: 'Напр: Алекс, какая у нас стратегия на Q3?',
+  postgresql: 'Ej: ¿Cuántos anuncios activos tenemos ahora?',
+  react: 'Ej: Crea un botón de acceso animado con Tailwind 4...',
+  lawyer: 'Ej: Redacta nuevas reglas de reembolso...',
+  notary: 'Ej: ¿Qué requisitos aplican para documentos KYC?',
+  advocate: 'Ej: ¿Cómo responder a una denuncia por fraude?',
+  marketing: 'Ej: ¿Cómo aumentar la conversión en la portada?',
+  seo: 'Ej: ¿Qué meta tags faltan para una ficha de producto?',
+  ceo_ui: 'Ej: ¿Qué colores usar para productos premium?',
+  ceo_ux: 'Ej: ¿Cómo mejorar el flujo de compra?',
+  ui: 'Ej: Escribe clases Tailwind para un header elegante...',
+  ceo: 'Ej: Alex, ¿cuál es nuestra estrategia para Q3?',
 };
 
 const getImageUrl = (path, fallback = null) => {
@@ -1989,7 +1989,7 @@ function App() {
         loadUserAds(); // Обновляем список моих объявлений
       } else {
         const errorData = await res.json();
-        alert(`Error: ${errorData.message || 'Ошибка при сохранении объявления.'}`);
+        alert(`Error: ${errorData.message || 'No se pudo guardar el anuncio.'}`);
       }
     } catch (err) { console.error("Post error"); }
     finally { setPostLoading(false); }
@@ -2241,7 +2241,7 @@ function App() {
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        setAiResult({ error: '🚨 Системная ошибка: Токен авторизации не найден (Unauthenticated). Пожалуйста, выйдите из аккаунта и зайдите снова.' });
+        setAiResult({ error: 'Error del sistema: token de autorización no encontrado. Cierra sesión e inicia sesión de nuevo.' });
         setIsAiProcessing(false);
         return;
       }
@@ -2268,7 +2268,7 @@ function App() {
       }
       setAiResult(data);
     } catch (err) {
-      setAiResult({ error: `Ошибка сети: ${err.message}` });
+      setAiResult({ error: `Error de red: ${err.message}` });
     } finally {
       setIsAiProcessing(false);
     }
@@ -2507,28 +2507,28 @@ function App() {
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center"><Sparkles className="text-indigo-400 w-6 h-6"/></div>
             <div>
-              <h2 className="text-[20px] font-bold text-white leading-none">Центр Командования ИИ</h2>
-              <span className="text-[12px] text-slate-400">Автономные Агенты Mercasto</span>
+              <h2 className="text-[20px] font-bold text-white leading-none">Centro de Comando IA</h2>
+              <span className="text-[12px] text-slate-400">Agentes autónomos Mercasto</span>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mb-4 bg-slate-800 p-1 rounded-xl w-fit">
-            <button type="button" onClick={() => {setAiAgentType('postgresql'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'postgresql' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🐘 Базы данных</button>
-            <button type="button" onClick={() => {setAiAgentType('react'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'react' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚛️ UX Разработчик</button>
-            <button type="button" onClick={() => {setAiAgentType('ceo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>👔 CEO Алекс</button>
-            <button type="button" onClick={() => {setAiAgentType('lawyer'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'lawyer' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚖️ Юрист</button>
-            <button type="button" onClick={() => {setAiAgentType('notary'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'notary' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📝 Нотариус</button>
-            <button type="button" onClick={() => {setAiAgentType('advocate'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'advocate' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🛡️ Адвокат</button>
-            <button type="button" onClick={() => {setAiAgentType('marketing'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'marketing' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📈 Маркетолог</button>
+            <button type="button" onClick={() => {setAiAgentType('postgresql'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'postgresql' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🐘 Base de datos</button>
+            <button type="button" onClick={() => {setAiAgentType('react'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'react' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚛️ UX Builder</button>
+            <button type="button" onClick={() => {setAiAgentType('ceo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>👔 CEO Alex</button>
+            <button type="button" onClick={() => {setAiAgentType('lawyer'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'lawyer' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚖️ Legal</button>
+            <button type="button" onClick={() => {setAiAgentType('notary'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'notary' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📝 Notaría</button>
+            <button type="button" onClick={() => {setAiAgentType('advocate'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'advocate' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🛡️ Defensa</button>
+            <button type="button" onClick={() => {setAiAgentType('marketing'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'marketing' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📈 Marketing</button>
             <button type="button" onClick={() => {setAiAgentType('seo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'seo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🔍 SEO</button>
             <button type="button" onClick={() => {setAiAgentType('ceo_ui'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo_ui' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🎨 CEO UI</button>
             <button type="button" onClick={() => {setAiAgentType('ceo_ux'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo_ux' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🧠 CEO UX</button>
-            <button type="button" onClick={() => {setAiAgentType('ui'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ui' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>✨ UI Разработчик</button>
+            <button type="button" onClick={() => {setAiAgentType('ui'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ui' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>✨ UI Builder</button>
           </div>
 
           <div className="flex-1 overflow-y-auto mb-4 bg-slate-950 rounded-xl p-4 border border-slate-800 font-mono text-[13px] text-slate-300">
             {isAiProcessing ? (
-              <div className="flex items-center gap-3 text-indigo-400"><Loader2 className="animate-spin w-5 h-5"/> Агент анализирует ваш запрос...</div>
+              <div className="flex items-center gap-3 text-indigo-400"><Loader2 className="animate-spin w-5 h-5"/> El agente analiza tu solicitud...</div>
             ) : aiResult ? (
               <pre className="overflow-x-auto whitespace-pre-wrap">
                 {aiResult.error
@@ -2539,14 +2539,14 @@ function App() {
                 }
               </pre>
             ) : (
-              <div className="text-slate-600 italic">Ожидаю приказов, Командир... Напишите ваш запрос ниже.</div>
+              <div className="text-slate-600 italic">Listo para ayudar. Escribe tu solicitud abajo.</div>
             )}
           </div>
 
           <form onSubmit={handleAiSubmit} className="flex gap-2">
             <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={AI_PLACEHOLDERS[aiAgentType] || AI_PLACEHOLDERS.ceo} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
             <button type="submit" disabled={isAiProcessing || !aiPrompt.trim()} className="px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]">
-              {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Выполнить'}
+              {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Ejecutar'}
             </button>
           </form>
         </div>
