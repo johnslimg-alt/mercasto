@@ -99,22 +99,54 @@ class AdController extends Controller
 
         // Фильтрация по локации
         if ($request->filled('location')) {
-            $locationParts = collect(explode(',', (string) $request->location))
+            $location = trim((string) $request->location);
+            $normalizedLocation = mb_strtolower($location);
+            $allMexicoAliases = ['todo mexico', 'todo méxico', 'all mexico', 'mexico', 'méxico'];
+
+            if (! in_array($normalizedLocation, $allMexicoAliases, true)) {
+                $locationParts = collect([$location])
+                    ->merge(explode(',', $location))
+                    ->merge(explode('·', $location))
+                    ->merge(explode('-', $location))
+                    ->map(fn ($part) => trim($part))
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                $query->where(function ($q) use ($locationParts) {
+                    foreach ($locationParts as $index => $part) {
+                        $like = '%' . $part . '%';
+                        $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
+
+                        $q->{$method}('location ILIKE ? OR state ILIKE ?', [$like, $like]);
+                    }
+                });
+            }
+        }
+
+        if ($request->filled('state')) {
+            $state = trim((string) $request->state);
+
+            if ($state !== '') {
+                $query->whereRaw('state ILIKE ?', [$state]);
+            }
+        }
+
+        if ($request->filled('city')) {
+            $cityParts = collect(explode(',', (string) $request->city))
                 ->map(fn ($part) => trim($part))
                 ->filter()
                 ->unique()
                 ->values();
 
-            $query->where(function ($q) use ($locationParts, $request) {
-                $q->where('location', 'like', '%' . $request->location . '%');
-                foreach ($locationParts as $part) {
-                    $q->orWhere('location', 'like', '%' . $part . '%');
+            $query->where(function ($q) use ($cityParts) {
+                foreach ($cityParts as $index => $part) {
+                    $like = '%' . $part . '%';
+                    $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
+
+                    $q->{$method}('location ILIKE ?', [$like]);
                 }
             });
-        }
-
-        if ($request->filled('state')) {
-            $query->where('state', $request->state);
         }
 
         // Глобальный фильтр: Цена
