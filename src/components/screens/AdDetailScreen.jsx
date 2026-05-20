@@ -53,7 +53,7 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
   return null;
 }
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2 } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
@@ -88,6 +88,16 @@ export default function AdDetailScreen({
   } catch(e) {}
 
   const catConfig = filterConfig[ad.category] || [];
+
+  const [similarAds, setSimilarAds] = useState([]);
+  useEffect(() => {
+    if (!ad?.id) return;
+    setSimilarAds([]);
+    fetch(`${API_URL}/ads/${ad.id}/similar`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setSimilarAds(Array.isArray(data) ? data.slice(0, 8) : []))
+      .catch(() => setSimilarAds([]));
+  }, [ad?.id]);
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
@@ -212,6 +222,21 @@ export default function AdDetailScreen({
           </div>
         </div>
       </div>
+    </div>
+
+      {/* ПОХОЖИЕ ОБЪЯВЛЕНИЯ */}
+      {similarAds.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-[20px] font-bold text-slate-900 mb-5">Te puede interesar</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {similarAds.map(simAd => (
+              <div key={simAd.id} className="cursor-pointer" onClick={() => setViewedAd(simAd)}>
+                {renderAdCard(simAd)}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
