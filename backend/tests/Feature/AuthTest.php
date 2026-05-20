@@ -59,6 +59,9 @@ class AuthTest extends TestCase
         Config::set('services.apple.client_secret', null);
         Config::set('services.telegram.client_id', 'telegram-client');
         Config::set('services.telegram.client_secret', 'telegram-secret');
+        Config::set('services.twilio.sid', null);
+        Config::set('services.twilio.token', null);
+        Config::set('services.twilio.from', null);
 
         $response = $this->getJson('/api/auth/providers');
 
@@ -66,6 +69,7 @@ class AuthTest extends TestCase
             'google' => true,
             'apple' => false,
             'telegram' => true,
+            'sms' => false,
         ]);
     }
 }
