@@ -222,7 +222,6 @@ export default function AdDetailScreen({
           </div>
         </div>
       </div>
-    </div>
 
       {/* ПОХОЖИЕ ОБЪЯВЛЕНИЯ */}
       {similarAds.length > 0 && (
