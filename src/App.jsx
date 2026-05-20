@@ -1041,7 +1041,6 @@ function App() {
         const channel = echo.private(`App.Models.User.${user.id}`);
 
         channel.listen('.NewNotification', (e) => {
-            console.log('Real-time event received:', e);
             // The actual notification data is inside e.notification
             setNotifications(prev => [e.notification, ...prev]);
         });
@@ -2049,7 +2048,7 @@ function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ channel: 'whatsapp' })
-    }).catch(err => console.log("Analytics error", err));
+    }).catch(() => {});
 
       // GTM Event push para conversiones
       if (typeof window !== 'undefined') {
