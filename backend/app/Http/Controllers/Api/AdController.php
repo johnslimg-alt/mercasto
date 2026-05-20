@@ -1874,4 +1874,52 @@ class AdController extends Controller
         ]);
     }
 
+    /**
+     * Похожие объявления через pgvector (косинусное сходство)
+     */
+    public function similar(Request $request, $id)
+    {
+        $ad = Ad::findOrFail($id);
+
+        // Если вектора нет — fallback на ту же категорию
+        if (!$ad->embedding) {
+            $fallback = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')
+                ->where('status', 'active')
+                ->where('category', $ad->category)
+                ->where('id', '!=', $ad->id)
+                ->latest()
+                ->limit(8)
+                ->get();
+            return response()->json($fallback);
+        }
+
+        $embeddingString = $ad->embedding;
+
+        // pgvector: сортировка по косинусному расстоянию (<=>)
+        $similar = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')
+            ->selectRaw("*, (embedding <=> ?) AS vec_distance", [$embeddingString])
+            ->where('status', 'active')
+            ->where('id', '!=', $ad->id)
+            ->whereNotNull('embedding')
+            ->orderBy('vec_distance')
+            ->limit(8)
+            ->get();
+
+        // Если pgvector вернул меньше 4 — дополняем той же категорией
+        if ($similar->count() < 4) {
+            $extra = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')
+                ->where('status', 'active')
+                ->where('category', $ad->category)
+                ->where('id', '!=', $ad->id)
+                ->whereNotIn('id', $similar->pluck('id'))
+                ->latest()
+                ->limit(8 - $similar->count())
+                ->get();
+            $similar = $similar->merge($extra);
+        }
+
+        return response()->json($similar->values());
+    }
+
+
 }

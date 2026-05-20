@@ -1,4 +1,5 @@
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
+import { filterConfig } from '../../constants/filterConfig';
 import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
 
@@ -148,6 +149,50 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                   </div>
 
               </div>
+
+              {/* DYNAMIC CATEGORY ATTRIBUTES */}
+              {form.category && filterConfig[form.category] && filterConfig[form.category].length > 0 && (
+                <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/50">
+                  <h3 className="text-[14px] font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <Settings2 size={16} className="text-[#84CC16]" /> Características del anuncio
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filterConfig[form.category].map(field => (
+                      <div key={field.id}>
+                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">{field.label}</label>
+                        {(field.type === 'select' || field.type === 'checkbox') && (
+                          <select
+                            value={form.attributes?.[field.id] || ''}
+                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [field.id]: e.target.value}})}
+                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all"
+                          >
+                            <option value="">Seleccionar...</option>
+                            {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          </select>
+                        )}
+                        {field.type === 'text' && (
+                          <input
+                            type="text"
+                            value={form.attributes?.[field.id] || ''}
+                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [field.id]: e.target.value}})}
+                            placeholder={field.placeholder || ''}
+                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"
+                          />
+                        )}
+                        {field.type === 'range' && (
+                          <input
+                            type="number"
+                            value={form.attributes?.[field.id] || ''}
+                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [field.id]: e.target.value}})}
+                            placeholder={field.minPlaceholder || '0'}
+                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
 
 

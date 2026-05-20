@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\BusinessProfileController;
 use App\Http\Controllers\Api\AccountDeletionController;
 use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CategoryAttributeController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\AdminAnalyticsController;
@@ -23,7 +24,9 @@ use App\Http\Controllers\Api\NotificationController;
 // Public routes
 Route::middleware('throttle:search')->get('/search/suggestions', [SearchController::class, 'suggestions']);
 Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'index']);
+Route::middleware('throttle:search')->get('/category-attributes', [CategoryAttributeController::class, 'index']); // Динамические атрибуты категории для PostScreen + SidebarFilters
 Route::middleware('throttle:api')->get('/ads/{id}', [AdController::class, 'show'])->whereNumber('id'); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
+Route::middleware('throttle:search')->get('/ads/{id}/similar', [AdController::class, 'similar'])->whereNumber('id'); // Похожие объявления через pgvector
 
 // Защита от CPU DDoS: генерация PDF очень ресурсоемкая, ставим лимит 10 в минуту
 Route::middleware('throttle:10,1')->group(function () {
