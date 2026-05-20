@@ -1,0 +1,339 @@
+openapi: 3.1.0
+info:
+  title: Mercasto Public API
+  version: 0.1.0
+  description: Public read-only API contract for Mercasto marketplace discovery endpoints.
+servers:
+  - url: https://mercasto.com
+paths:
+  /api/categories:
+    get:
+      summary: List categories
+      operationId: listCategories
+      tags: [Categories]
+      responses:
+        '200':
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+  /api/ads:
+    get:
+      summary: Search public ads
+      operationId: listAds
+      tags: [Ads]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: price_min
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: price_max
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: verified_only
+          in: query
+          schema:
+            type: boolean
+        - name: published_days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Paginated public ads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAds'
+  /api/ads/{id}:
+    get:
+      summary: Get public ad detail
+      operationId: getAd
+      tags: [Ads]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Public ad detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ad'
+        '404':
+          description: Ad not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/search/suggestions:
+    get:
+      summary: Get search autocomplete suggestions
+      operationId: getSearchSuggestions
+      tags: [Search]
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Suggestion list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/states/counts:
+    get:
+      summary: List ad counts by Mexican state
+      operationId: listStateCounts
+      tags: [Discovery]
+      responses:
+        '200':
+          description: State counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                  properties:
+                    state:
+                      type: string
+                    count:
+                      type: integer
+                      minimum: 0
+  /api/users/{id}/profile:
+    get:
+      summary: Get public seller profile
+      operationId: getPublicUserProfile
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Public seller profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUserProfile'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/users/{id}/business-profile:
+    get:
+      summary: Get public business profile
+      operationId: getPublicBusinessProfile
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Public business profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessProfile'
+        '404':
+          description: Business profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/providers:
+    get:
+      summary: List enabled public auth providers
+      operationId: listAuthProviders
+      tags: [Auth]
+      responses:
+        '200':
+          description: Enabled auth providers
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+components:
+  schemas:
+    Category:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name:
+          oneOf:
+            - type: string
+            - type: object
+              additionalProperties:
+                type: string
+        icon:
+          type: string
+        parent_id:
+          type:
+            - integer
+            - 'null'
+    Ad:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type:
+            - string
+            - number
+            - 'null'
+        location:
+          type:
+            - string
+            - 'null'
+        category:
+          type:
+            - string
+            - 'null'
+        state:
+          type:
+            - string
+            - 'null'
+        status:
+          type: string
+        image_url:
+          type:
+            - string
+            - 'null'
+        condition:
+          type:
+            - string
+            - 'null'
+        attributes:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    PaginatedAds:
+      type: object
+      additionalProperties: true
+      properties:
+        current_page:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ad'
+        per_page:
+          type: integer
+        total:
+          type: integer
+    PublicUserProfile:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        city:
+          type:
+            - string
+            - 'null'
+        is_verified:
+          type: boolean
+        rating_avg:
+          type:
+            - number
+            - 'null'
+        rating_count:
+          type:
+            - integer
+            - 'null'
+    BusinessProfile:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+        company_name:
+          type:
+            - string
+            - 'null'
+        website:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        whatsapp:
+          type:
+            - string
+            - 'null'
+        business_hours:
+          type:
+            - object
+            - array
+            - string
+            - 'null'
+        is_verified:
+          type: boolean
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        message:
+          type: string
