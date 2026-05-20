@@ -248,18 +248,18 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                   return (
 
-                    <button key={cat.slug} onClick={() => {
+                    <button key={cat.slug} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
                         const vpath = cat.verticalPath || getVerticalPath(cat.slug);
                         if (vpath) { navigate(vpath); } else { setActiveCat(cat.slug); }
-                      }} className="category-pill group min-w-[82px] sm:min-w-[88px] max-w-[96px]">
+                      }} className="category-pill group min-w-[74px] sm:min-w-[80px] max-w-[88px]">
 
-                      <div className="category-icon w-9 h-9 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] group-hover:bg-[#84CC16]/10 transition-all">
+                      <div className="category-icon flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] transition-all">
 
-                        <Icon size={17} strokeWidth={2.2} />
+                        <Icon size={16} strokeWidth={2.2} />
 
                       </div>
 
-                      <h3 className="font-semibold text-[11px] text-center text-slate-700 group-hover:text-[#365314] line-clamp-2 leading-tight">
+                      <h3 className="font-semibold text-[10.5px] text-center text-slate-700 group-hover:text-[#365314] line-clamp-2 leading-tight">
                         {cat.name?.[lang] || cat.name?.['es'] || cat.name}
                       </h3>
 
@@ -556,7 +556,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, categorie
 
                             <div className="flex items-center gap-3">
 
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${job.logo}`}>
+                              <div className={`job-logo-badge ${job.logo}`}>
 
                                 {job.initial === 'MD' ? (
                                   <svg viewBox="0 0 100 100" className="w-6 h-6" aria-hidden="true">

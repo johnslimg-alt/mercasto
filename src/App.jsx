@@ -10,7 +10,10 @@ import {
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
   CheckCircle, XCircle, BarChart3, LogOut, Globe, Sparkles, Loader2, Play, Video, Phone, AlertTriangle, Activity,
   Car, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Pencil, Moon, Sun, BadgeCheck,
-  Star, Zap, Building2, Crown, Store, TrendingUp, UploadCloud, Cpu, ShieldCheck, Camera, Trash2, Download, PieChart as PieChartIcon, QrCode, Share2, Bell
+  Star, Zap, Building2, Crown, Store, TrendingUp, UploadCloud, Cpu, ShieldCheck, Camera, Trash2, Download, PieChart as PieChartIcon, QrCode, Share2, Bell,
+  Anchor, Archive, BarChart, Bed, Bird, Book, BookOpen, Box, Building, Cable, Circle, Coffee, Droplets, Dumbbell, Factory, FileText,
+  Film, Fish, Footprints, Gamepad, Gem, GraduationCap, Hammer, Laptop, Leaf, MoreHorizontal, Mountain, Mouse, Music, Package,
+  Paintbrush, Pen, Printer, Projector, ShoppingBag, Tablet, Truck, Tv, Utensils, Volume2, Watch, Waves, Worm, Dices
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import echo from './echo';
@@ -90,7 +93,13 @@ const MercastoLogo = ({ className = "h-11" }) => (
 );
 
 // --- КАРТА ИКОНОК ---
-const IconMap = { Car, Home, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Star, Store, Activity, Cpu };
+const IconMap = {
+  Anchor, Archive, Baby, BarChart, Bed, Bike, Bird, Book, BookOpen, Box, Briefcase, Building, Building2, Cable, Camera, Car, Circle,
+  Coffee, Cpu, Dice: Dices, Droplets, Dumbbell, Factory, FileText, Film, Fish, Footprints, Gamepad, Gem, GraduationCap, Hammer, Home,
+  Laptop, Leaf, MapPin, Monitor, MoreHorizontal, Mountain, Mouse, Music, Package, Paintbrush, PawPrint, Pen, Pencil, Printer, Projector,
+  Shield, Shirt, ShoppingBag, Smartphone, Sofa, Sparkles, Star, Store, Tablet, Ticket, TrendingUp, Truck, Tv, Utensils, Volume2, Watch,
+  Waves, Worm, Wrench, Zap, Activity,
+};
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
@@ -2731,21 +2740,21 @@ function App() {
       {/* GLOBAL HEADER */}
       <header className="site-header sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-          <div className="relative flex items-center gap-3 h-[56px] lg:h-[60px]">
+          <div className="relative flex items-center gap-2.5 h-[50px] lg:h-[56px]">
             <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
-              <MercastoLogo className="h-8 sm:h-9 lg:h-10" />
+              <MercastoLogo className="h-7 sm:h-8 lg:h-9" />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
               <div className="header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-              <input value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2.5 bg-transparent outline-none text-[14px]" />
+              <input value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
 
                 {/* КАСТОМНЫЙ ПОПАП ВЫБОРА ЛОКАЦИИ (ШТАТ + ГОРОД) */}
                 <div className="relative flex items-center w-full max-w-[220px]">
                   <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
-                  <button onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2.5 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
+                  <button onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
                     {searchLocationInput || t.all_mexico || "Todo México"}
                   </button>
 
@@ -2794,7 +2803,7 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-1 ml-auto">
-              <div className="mobile-top-controls sm:hidden">
+              <div className="mobile-top-controls sm:hidden" aria-label="Theme and language controls">
                 <button type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
@@ -2905,11 +2914,11 @@ function App() {
             </div>
           </div>
           {/* Mobile Search + Location + Account */}
-          <div className="mobile-search-row lg:hidden pb-2">
+          <div className="mobile-search-row lg:hidden pb-1.5">
             <div ref={mobileSearchRef} className="relative min-w-0">
               <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2.5 text-sm outline-none"/>
+                <input ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
                 <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
@@ -2946,8 +2955,8 @@ function App() {
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
             <nav className="flex items-center gap-5 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600 whitespace-nowrap">
               <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-2.5 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
-              {categoriesData.map(c => (
-                <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2.5 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{getCatName(c, lang)}</button>
+              {categoriesData.slice(0, 24).map(c => (
+                <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{getCatName(c, lang)}</button>
               ))}
             </nav>
           </div>
