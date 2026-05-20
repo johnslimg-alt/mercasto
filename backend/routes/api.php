@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AdController;
+use App\Http\Controllers\Api\AiDescriptionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\BusinessProfileController;
@@ -119,8 +120,7 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
-// Returns which OAuth providers are actually configured (credentials present in env)
-// IMPORTANT: must be defined BEFORE the {provider} wildcard routes
+// OAuth provider availability endpoint must be defined BEFORE provider wildcard routes.
 Route::middleware('throttle:api')->get('/auth/providers', [AuthController::class, 'getProviders']);
 
 // OAuth wildcard routes (must come AFTER static /auth/providers)
@@ -151,7 +151,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:ads')->post('/ads', [AdController::class, 'store']);
     // Защита ИИ от спама и истощения лимитов API (максимум 5 генераций в минуту на пользователя)
     Route::middleware('throttle:5,1')->group(function () {
-        Route::post('/ads/generate-description', [AdController::class, 'generateDescription']); // DeepSeek/Qwen AI
+        Route::post('/ads/generate-description', AiDescriptionController::class); // DeepSeek primary + Ollama/Qwen fallback
     });
     Route::post('/categories', [CategoryController::class, 'store']); // Создание категории (только для админов)
     Route::put('/categories/{id}', [CategoryController::class, 'update']); // Редактирование категории
