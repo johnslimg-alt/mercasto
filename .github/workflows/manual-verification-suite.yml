@@ -49,4 +49,4 @@ jobs:
 
       - name: Docker Compose config
         shell: bash
-        run: docker compose config >/tmp/mercasto_compose.out
+        run: DB_PASSWORD=ci REDIS_PASSWORD=ci docker compose config >/tmp/mercasto_compose.out
