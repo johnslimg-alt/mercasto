@@ -65,6 +65,9 @@
         "laravel": {
             "dont-discover": [
                 "laravel/dusk",
+                "laravel/pail",
+                "laravel/sail",
+                "nunomaduro/collision",
                 "spatie/laravel-ignition"
             ]
         }

@@ -19,10 +19,12 @@ jobs:
           git fetch origin
           git reset --hard origin/main
           git clean -fd
+          rm -f backend/bootstrap/cache/*.php
 
       - name: Миграции
         run: |
           cd /var/www/mercasto
+          rm -f backend/bootstrap/cache/*.php
           docker exec mercasto_backend_container php artisan migrate --force
 
       - name: Собрать и поднять
