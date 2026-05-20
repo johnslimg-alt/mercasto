@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AdController;
+use App\Http\Controllers\Api\AdIndexController;
 use App\Http\Controllers\Api\AiDescriptionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
@@ -21,7 +22,7 @@ use App\Http\Controllers\Api\NotificationController;
 
 // Public routes
 Route::middleware('throttle:search')->get('/search/suggestions', [SearchController::class, 'suggestions']);
-Route::middleware('throttle:search')->get('/ads', [AdController::class, 'index']);
+Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'index']);
 Route::middleware('throttle:api')->get('/ads/{id}', [AdController::class, 'show'])->whereNumber('id'); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
 
 // Защита от CPU DDoS: генерация PDF очень ресурсоемкая, ставим лимит 10 в минуту
