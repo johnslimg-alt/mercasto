@@ -150,6 +150,7 @@ class AdIndexController extends Controller
             'category',
             'search',
             'location',
+            'city',
             'state',
             'min_price',
             'max_price',
