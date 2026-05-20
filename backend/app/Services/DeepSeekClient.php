@@ -79,6 +79,11 @@ class DeepSeekClient
             return $this->chatOllama($messages, $options, $timeout, 'DeepSeek response was not valid JSON.');
         }
 
+        $content = data_get($json, 'choices.0.message.content');
+        if (! is_string($content) || trim($content) === '') {
+            return $this->chatOllama($messages, $options, $timeout, 'DeepSeek response did not include usable content.');
+        }
+
         return $json;
     }
 

@@ -1423,39 +1423,30 @@ class AdController extends Controller
      */
     public function askPostgresAgent(Request $request)
     {
-        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
-        $request->validate(['query' => 'required|string']);
+        if ($denied = $this->denyNonAdmin($request)) return $denied;
+        $request->validate(['query' => 'required|string|max:1000']);
+        $query = (string) $request->input('query');
 
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) {
-            return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
+        $schema = "Tables: ads(id, title, price, status, views, category, created_at), users(id, name, role, created_at), ad_clicks(ad_id, channel, created_at).";
+        $prompt = "Schema: {$schema}\nRequest: {$query}\nReturn ONLY one safe PostgreSQL SELECT query using only these tables and columns. Include LIMIT 50 or less. No markdown. No semicolon.";
+
+        try {
+            $sql = $this->askAiText(
+                'You are a PostgreSQL DBA. Generate read-only SQL only. Never modify data.',
+                $prompt,
+                220
+            );
+            $sql = $this->safeAgentSelectSql($sql);
+
+            return response()->json([
+                'agent' => 'PostgreSQL DBA AI',
+                'sql' => $sql,
+                'data' => $this->runAgentSelect($sql),
+                'status' => 'success',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['agent' => 'PostgreSQL DBA AI', 'error' => $e->getMessage()], 400);
         }
-
-        $schema = "Tables: ads(id, title, price, status, views, category, created_at), users(id, name, email, role, created_at), ad_clicks(ad_id, channel, created_at).";
-        $prompt = "You are a PostgreSQL DBA. Schema: {$schema}. Translate this request to SQL: '{$request->query}'. Return ONLY the raw SELECT query without markdown formatting.";
-
-        $response = Http::timeout(15)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
-            'contents' => [['parts' => [['text' => $prompt]]]]
-        ]);
-
-        if ($response->successful()) {
-            $sql = trim(str_replace(['```sql', '```', '`'], '', $response->json('candidates.0.content.parts.0.text')));
-
-            try {
-                if (!preg_match('/^\s*SELECT/i', $sql)) throw new \Exception("Solo se permiten consultas SELECT por seguridad.");
-                $data = DB::select($sql);
-                return response()->json([
-                    'agent' => '🐘 PostgreSQL DBA AI',
-                    'sql' => $sql,
-                    'data' => $data,
-                    'status' => 'success'
-                ]);
-            } catch (\Exception $e) {
-                return response()->json(['agent' => '🐘 PostgreSQL DBA AI', 'error' => $e->getMessage(), 'sql' => $sql], 400);
-            }
-        }
-
-        return response()->json(['message' => 'Error al analizar la base de datos'], 500);
     }
 
     /**
@@ -1463,30 +1454,16 @@ class AdController extends Controller
      */
     public function generateReactComponent(Request $request)
     {
-        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
-        $request->validate(['prompt' => 'required|string']);
+        if ($denied = $this->denyNonAdmin($request)) return $denied;
+        $request->validate(['prompt' => 'required|string|max:1500']);
+        $prompt = (string) $request->input('prompt');
 
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) {
-            return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
-        }
-
-        $prompt = "You are an expert React + Tailwind CSS v4 developer. Create a component based on this request: '{$request->prompt}'. Use Lucide React for icons. Return ONLY valid raw JSX code, NO markdown blocks, NO explanations.";
-
-        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
-            'contents' => [['parts' => [['text' => $prompt]]]]
-        ]);
-
-        if ($response->successful()) {
-            $jsx = trim(str_replace(['```jsx', '```react', '```', 'javascriptreact'], '', $response->json('candidates.0.content.parts.0.text')));
-            return response()->json([
-                'agent' => '⚛️ React UI Engineer AI',
-                'response' => $jsx,
-                'status' => 'success'
-            ]);
-        }
-
-        return response()->json(['message' => 'Error al generar el componente'], 500);
+        return $this->agentTextResponse(
+            'React UI Engineer AI',
+            'You are an expert React 19 + Tailwind CSS v4 developer. Return only raw JSX code. No markdown, no explanations.',
+            "Create a safe component for this request: {$prompt}",
+            1200
+        );
     }
 
     /**
@@ -1494,30 +1471,22 @@ class AdController extends Controller
      */
     public function askCeoAgent(Request $request)
     {
-        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
-        $request->validate(['query' => 'required|string']);
+        return $this->roleAgentResponse($request, 'CEO Alex', 'You are Alex, CEO of Mercasto, a Mexico-wide marketplace. Reply in Russian with strategic, concrete, production-focused advice.');
+    }
 
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) {
-            return response()->json(['message' => 'La clave de API de Gemini no está configurada.'], 501);
-        }
+    public function askLawyerAgent(Request $request)
+    {
+        return $this->roleAgentResponse($request, 'Lawyer AI', 'You are a Mexico-focused marketplace legal risk assistant. Reply in Russian. Give practical compliance steps, but state this is not legal advice and final review needs a licensed lawyer.');
+    }
 
-        $prompt = "You are Alex, the visionary CEO and founder of Mercasto (a fast-growing marketplace in Mexico). You are talking to your technical administrator. Answer their question or request strategically, professionally, but with a visionary and encouraging tone. Use Russian language since the admin interface is in Russian. Request: '{$request->query}'";
+    public function askNotaryAgent(Request $request)
+    {
+        return $this->roleAgentResponse($request, 'Notary AI', 'You are a Mexico-focused notary workflow assistant for marketplace documents, identity checks, and transaction evidence. Reply in Russian. Do not claim to replace a real notary.');
+    }
 
-        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
-            'contents' => [['parts' => [['text' => $prompt]]]]
-        ]);
-
-        if ($response->successful()) {
-            $text = trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text')));
-            return response()->json([
-                'agent' => '👔 CEO Alex',
-                'response' => $text,
-                'status' => 'success'
-            ]);
-        }
-
-        return response()->json(['message' => 'Error de conexión con el CEO'], 500);
+    public function askAdvocateAgent(Request $request)
+    {
+        return $this->roleAgentResponse($request, 'Advocate AI', 'You are a consumer-protection and dispute-resolution assistant for Mercasto. Reply in Russian with safe escalation steps, evidence checklists, and risk controls.');
     }
 
     /**
@@ -1525,27 +1494,7 @@ class AdController extends Controller
      */
     public function askMarketingAgent(Request $request)
     {
-        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
-        $request->validate(['query' => 'required|string']);
-
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
-
-        $prompt = "You are the Chief Marketing Officer (CMO) of Mercasto. Provide expert advice on digital marketing, user acquisition, conversion rate optimization, and advertising campaigns. Use Russian language. Request: '{$request->query}'";
-
-        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
-            'contents' => [['parts' => [['text' => $prompt]]]]
-        ]);
-
-        if ($response->successful()) {
-            return response()->json([
-                'agent' => '📈 Маркетолог',
-                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
-                'status' => 'success'
-            ]);
-        }
-
-        return response()->json(['message' => 'Error de conexión con el Marketer'], 500);
+        return $this->roleAgentResponse($request, 'Marketing AI', 'You are CMO of Mercasto. Reply in Russian with acquisition, SEO, retention, conversion, and ad-marketplace growth tactics for Mexico.');
     }
 
     /**
@@ -1553,27 +1502,7 @@ class AdController extends Controller
      */
     public function askSeoAgent(Request $request)
     {
-        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
-        $request->validate(['query' => 'required|string']);
-
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
-
-        $prompt = "You are the Lead SEO Specialist of Mercasto. Provide expert advice on search engine optimization, keywords, technical SEO, structured data, and content strategy for the marketplace. Use Russian language. Request: '{$request->query}'";
-
-        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
-            'contents' => [['parts' => [['text' => $prompt]]]]
-        ]);
-
-        if ($response->successful()) {
-            return response()->json([
-                'agent' => '🔍 SEO-специалист',
-                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
-                'status' => 'success'
-            ]);
-        }
-
-        return response()->json(['message' => 'Error de conexión con el SEO'], 500);
+        return $this->roleAgentResponse($request, 'SEO AI', 'You are lead SEO/AEO specialist for Mercasto Mexico. Reply in Russian with technical SEO, schema, city/category landing pages, indexation, and content recommendations.');
     }
 
     /**
@@ -1581,27 +1510,7 @@ class AdController extends Controller
      */
     public function askCeoUiAgent(Request $request)
     {
-        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
-        $request->validate(['query' => 'required|string']);
-
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
-
-        $prompt = "You are the Chief UI Officer (Head of User Interface) of Mercasto. Provide expert advice on visual design, color palettes, typography, component styling, and overall aesthetics for the marketplace. Use Russian language. Request: '{$request->query}'";
-
-        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
-            'contents' => [['parts' => [['text' => $prompt]]]]
-        ]);
-
-        if ($response->successful()) {
-            return response()->json([
-                'agent' => '🎨 CEO UI',
-                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
-                'status' => 'success'
-            ]);
-        }
-
-        return response()->json(['message' => 'Error de conexión con el CEO UI'], 500);
+        return $this->roleAgentResponse($request, 'CEO UI AI', 'You are Chief UI Officer for Mercasto. Reply in Russian with visual design, typography, color, spacing, component styling, and dark/light mode guidance.');
     }
 
     /**
@@ -1609,27 +1518,7 @@ class AdController extends Controller
      */
     public function askCeoUxAgent(Request $request)
     {
-        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
-        $request->validate(['query' => 'required|string']);
-
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
-
-        $prompt = "You are the Chief UX Officer (Head of User Experience) of Mercasto. Provide expert advice on user flows, wireframing, usability, accessibility, interaction design, and overall user journey optimization for the marketplace. Use Russian language. Request: '{$request->query}'";
-
-        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
-            'contents' => [['parts' => [['text' => $prompt]]]]
-        ]);
-
-        if ($response->successful()) {
-            return response()->json([
-                'agent' => '🧠 CEO UX',
-                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
-                'status' => 'success'
-            ]);
-        }
-
-        return response()->json(['message' => 'Error de conexión con el CEO UX'], 500);
+        return $this->roleAgentResponse($request, 'CEO UX AI', 'You are Chief UX Officer for Mercasto. Reply in Russian with user flows, mobile usability, accessibility, conversion friction, and marketplace trust improvements.');
     }
 
     /**
@@ -1637,27 +1526,141 @@ class AdController extends Controller
      */
     public function askUiAgent(Request $request)
     {
-        if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
-        $request->validate(['query' => 'required|string']);
+        return $this->roleAgentResponse($request, 'UI Developer AI', 'You are a senior UI developer for Mercasto React/Tailwind. Reply in Russian with concrete CSS/JSX implementation steps and safe code suggestions.');
+    }
 
-        $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$apiKey) return response()->json(['message' => 'La clave de API no está configurada.'], 501);
+    private function safeAgentSelectSql(string $sql): string
+    {
+        $sql = trim(str_replace(['```sql', '```', '`'], '', $sql));
+        $sql = trim(preg_replace('/\s+/', ' ', $sql) ?? $sql);
+        $sql = rtrim($sql, " \t\n\r\0\x0B;");
 
-        $prompt = "You are an expert UI Developer for Mercasto. Provide specific, actionable code and advice on styling, CSS, Tailwind v4 classes, and visual components. Use Russian language. Request: '{$request->query}'";
-
-        $response = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$apiKey}", [
-            'contents' => [['parts' => [['text' => $prompt]]]]
-        ]);
-
-        if ($response->successful()) {
-            return response()->json([
-                'agent' => '✨ UI Разработчик',
-                'response' => trim(str_replace(['```markdown', '```'], '', $response->json('candidates.0.content.parts.0.text'))),
-                'status' => 'success'
-            ]);
+        if (! preg_match('/^\s*select\s/i', $sql)) {
+            throw new \RuntimeException('Solo se permiten consultas SELECT por seguridad.');
         }
 
-        return response()->json(['message' => 'Error de conexión con el agente UI'], 500);
+        if (preg_match('/(;|--|\/\*|\*\/)/', $sql)) {
+            throw new \RuntimeException('La consulta contiene sintaxis no permitida.');
+        }
+
+        $blockedKeywords = 'insert|update|delete|drop|alter|truncate|grant|revoke|copy|create|replace|execute|call|do|listen|notify|vacuum|analyze|attach|detach';
+        if (preg_match('/\b(' . $blockedKeywords . ')\b/i', $sql)) {
+            throw new \RuntimeException('La consulta generada no es de solo lectura.');
+        }
+
+        $blockedFields = 'email|password|token|secret|phone|two_factor|remember_token|pending_email|api_key|webhook|clip|payment';
+        if (preg_match('/\b(' . $blockedFields . ')\b/i', $sql)) {
+            throw new \RuntimeException('La consulta intenta leer campos sensibles.');
+        }
+
+        preg_match_all('/\b(?:from|join)\s+([a-zA-Z_][a-zA-Z0-9_.]*)/i', $sql, $matches);
+        $tables = $matches[1] ?? [];
+        if ($tables === []) {
+            throw new \RuntimeException('La consulta debe leer una tabla permitida.');
+        }
+
+        $allowedTables = ['ads', 'users', 'ad_clicks'];
+        foreach ($tables as $table) {
+            $table = strtolower((string) Str::of($table)->afterLast('.'));
+            if (! in_array($table, $allowedTables, true)) {
+                throw new \RuntimeException('La consulta usa una tabla no permitida.');
+            }
+        }
+
+        if (preg_match('/\b(pg_|pg_catalog|information_schema|sqlite_|mysql)\b/i', $sql)) {
+            throw new \RuntimeException('La consulta intenta leer metadatos internos.');
+        }
+
+        if (preg_match('/\blimit\s+(\d+)\b/i', $sql, $limit) && (int) $limit[1] > 100) {
+            throw new \RuntimeException('El límite máximo permitido es 100 filas.');
+        }
+
+        if (! preg_match('/\blimit\s+\d+\b/i', $sql)) {
+            $sql .= ' LIMIT 50';
+        }
+
+        return $sql;
+    }
+
+    private function runAgentSelect(string $sql): array
+    {
+        return DB::transaction(function () use ($sql) {
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement("SET LOCAL statement_timeout = '3000ms'");
+            }
+
+            return DB::select($sql);
+        });
+    }
+
+    private function roleAgentResponse(Request $request, string $agent, string $system)
+    {
+        if ($denied = $this->denyNonAdmin($request)) return $denied;
+        $request->validate(['query' => 'required|string|max:1500']);
+
+        return $this->agentTextResponse($agent, $system, (string) $request->input('query'), 900);
+    }
+
+    private function agentTextResponse(string $agent, string $system, string $prompt, int $maxTokens = 900)
+    {
+        try {
+            $text = $this->askAiText($system, $prompt, $maxTokens);
+
+            return response()->json([
+                'agent' => $agent,
+                'response' => $this->cleanAiOutput($text),
+                'status' => 'success',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Admin AI agent failed', [
+                'agent' => $agent,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'agent' => $agent,
+                'error' => 'AI no está disponible en este momento. Inténtalo de nuevo.',
+            ], 503);
+        }
+    }
+
+    private function askAiText(string $system, string $prompt, int $maxTokens): string
+    {
+        /** @var \App\Services\DeepSeekClient $client */
+        $client = app(\App\Services\DeepSeekClient::class);
+        $result = $client->chatFlash(
+            [
+                ['role' => 'system', 'content' => $system],
+                ['role' => 'user', 'content' => $prompt],
+            ],
+            [
+                'max_tokens' => $maxTokens,
+                'temperature' => 0.2,
+                'timeout' => 45,
+                'thinking' => 'disabled',
+            ]
+        );
+
+        $text = trim((string) ($result['choices'][0]['message']['content'] ?? ''));
+        if ($text === '') {
+            throw new \RuntimeException('AI returned empty response.');
+        }
+
+        return $text;
+    }
+
+    private function cleanAiOutput(string $text): string
+    {
+        return trim(str_replace(['```markdown', '```jsx', '```react', '```sql', '```', 'javascriptreact'], '', $text));
+    }
+
+    private function denyNonAdmin(Request $request)
+    {
+        if (! $request->user() || $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Acceso denegado'], 403);
+        }
+
+        return null;
     }
 
     /**
