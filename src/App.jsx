@@ -1245,10 +1245,15 @@ function App() {
         if (maxPrice) params.append('max_price', maxPrice);
         if (conditionFilter.length > 0) params.append('condition', conditionFilter.join(','));
         Object.keys(dynamicFilters).forEach(key => {
-            if (Array.isArray(dynamicFilters[key]) && dynamicFilters[key].length > 0) {
-                dynamicFilters[key].forEach(v => params.append(`filters[${key}][]`, v));
-            } else if (typeof dynamicFilters[key] === 'string' && dynamicFilters[key]) {
-                params.append(`filters[${key}]`, dynamicFilters[key]);
+            const value = dynamicFilters[key];
+
+            if (Array.isArray(value) && value.length > 0) {
+                value.forEach(v => params.append(`filters[${key}][]`, v));
+            } else if (value && typeof value === 'object') {
+                if (value.min !== undefined && value.min !== '') params.append(`filters[${key}][min]`, value.min);
+                if (value.max !== undefined && value.max !== '') params.append(`filters[${key}][max]`, value.max);
+            } else if (typeof value === 'string' && value) {
+                params.append(`filters[${key}]`, value);
             }
         });
 

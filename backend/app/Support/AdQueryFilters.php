@@ -5,6 +5,9 @@ namespace App\Support;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class AdQueryFilters
@@ -128,6 +131,11 @@ class AdQueryFilters
 
     private static function allowedFilterMap(string $category): array
     {
+        $databaseMap = self::databaseFilterMap($category);
+        if ($databaseMap !== []) {
+            return $databaseMap;
+        }
+
         $verticals = (array) config('category_attributes.verticals', []);
         $map = [];
 
@@ -154,6 +162,43 @@ class AdQueryFilters
         }
 
         return $map;
+    }
+
+    private static function databaseFilterMap(string $category): array
+    {
+        if ($category === '') {
+            return [];
+        }
+
+        try {
+            if (! Schema::hasTable('categories') || ! Schema::hasTable('category_attributes')) {
+                return [];
+            }
+
+            return Cache::remember('ad_filter_map_' . sha1($category), 3600, static function () use ($category): array {
+                return DB::table('category_attributes')
+                    ->join('categories', 'categories.id', '=', 'category_attributes.category_id')
+                    ->where('categories.slug', $category)
+                    ->select('category_attributes.key', 'category_attributes.type')
+                    ->get()
+                    ->reduce(static function (array $map, object $attribute): array {
+                        $key = (string) $attribute->key;
+                        $dbType = (string) $attribute->type;
+
+                        $field = [
+                            'key' => $key,
+                            'type' => $dbType === 'range' ? 'number' : ($dbType === 'boolean' ? 'boolean' : 'string'),
+                            'filter' => $dbType === 'range' ? 'range' : 'exact',
+                        ];
+
+                        $map[self::normalizeKey($key)] = $field;
+
+                        return $map;
+                    }, []);
+            });
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     private static function sanitizeValue(mixed $value, string $type): mixed
