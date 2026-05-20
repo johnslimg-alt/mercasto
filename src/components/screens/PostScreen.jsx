@@ -3,10 +3,58 @@ import { filterConfig } from '../../constants/filterConfig';
 import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
 export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, setEditingAd, setForm, setVideoFile, t, videoFile, aiLoading, handleGenerateDescription }) {
     const mapQuery = debouncedLocation ? encodeURIComponent(debouncedLocation) : "Mexico";
+    const [apiCategoryFields, setApiCategoryFields] = React.useState(null);
+    const [loadingCategoryFields, setLoadingCategoryFields] = React.useState(false);
 
     const mapUrl = `https://maps.google.com/maps?q=${mapQuery}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+
+    React.useEffect(() => {
+      if (!form.category) {
+        setApiCategoryFields(null);
+        setLoadingCategoryFields(false);
+        return;
+      }
+
+      let cancelled = false;
+      setLoadingCategoryFields(true);
+
+      fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(form.category)}`)
+        .then(response => response.ok ? response.json() : [])
+        .then(data => {
+          if (cancelled) return;
+          setApiCategoryFields(Array.isArray(data) && data.length > 0 ? data : null);
+        })
+        .catch(() => {
+          if (!cancelled) setApiCategoryFields(null);
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingCategoryFields(false);
+        });
+
+      return () => { cancelled = true; };
+    }, [form.category]);
+
+    const categoryFields = React.useMemo(() => {
+      if (!form.category) return [];
+      return apiCategoryFields ?? filterConfig[form.category] ?? [];
+    }, [apiCategoryFields, form.category]);
+
+    React.useEffect(() => {
+      if (!form.category || categoryFields.length === 0 || !form.attributes) return;
+
+      const allowedKeys = new Set(categoryFields.map(field => field.id || field.key));
+      const cleanedAttributes = Object.fromEntries(
+        Object.entries(form.attributes).filter(([key]) => allowedKeys.has(key))
+      );
+
+      if (Object.keys(cleanedAttributes).length !== Object.keys(form.attributes).length) {
+        setForm(prev => ({ ...prev, attributes: cleanedAttributes }));
+      }
+    }, [categoryFields, form.attributes, form.category, setForm]);
 
 
 
@@ -151,19 +199,23 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               </div>
 
               {/* DYNAMIC CATEGORY ATTRIBUTES */}
-              {form.category && filterConfig[form.category] && filterConfig[form.category].length > 0 && (
+              {form.category && (loadingCategoryFields || categoryFields.length > 0) && (
                 <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/50">
                   <h3 className="text-[14px] font-bold text-slate-800 mb-4 flex items-center gap-2">
                     <Settings2 size={16} className="text-[#84CC16]" /> Características del anuncio
+                    {loadingCategoryFields && <Loader2 size={14} className="animate-spin text-slate-400" />}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filterConfig[form.category].map(field => (
-                      <div key={field.id}>
+                    {categoryFields.map(field => {
+                      const fieldId = field.id || field.key;
+                      return (
+                      <div key={fieldId}>
                         <label className="block text-[13px] font-semibold text-slate-700 mb-2">{field.label}</label>
                         {(field.type === 'select' || field.type === 'checkbox') && (
                           <select
-                            value={form.attributes?.[field.id] || ''}
-                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [field.id]: e.target.value}})}
+                            value={form.attributes?.[fieldId] || ''}
+                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [fieldId]: e.target.value}})}
+                            required={field.required}
                             className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all"
                           >
                             <option value="">Seleccionar...</option>
@@ -173,23 +225,28 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                         {field.type === 'text' && (
                           <input
                             type="text"
-                            value={form.attributes?.[field.id] || ''}
-                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [field.id]: e.target.value}})}
+                            value={form.attributes?.[fieldId] || ''}
+                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [fieldId]: e.target.value}})}
                             placeholder={field.placeholder || ''}
+                            required={field.required}
                             className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"
                           />
                         )}
                         {field.type === 'range' && (
                           <input
                             type="number"
-                            value={form.attributes?.[field.id] || ''}
-                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [field.id]: e.target.value}})}
-                            placeholder={field.minPlaceholder || '0'}
+                            value={form.attributes?.[fieldId] || ''}
+                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [fieldId]: e.target.value}})}
+                            min={field.range?.min}
+                            max={field.range?.max}
+                            step={field.range?.step}
+                            placeholder={field.minPlaceholder || field.range?.min || '0'}
+                            required={field.required}
                             className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"
                           />
                         )}
                       </div>
-                    ))}
+                    )})}
                   </div>
                 </div>
               )}
