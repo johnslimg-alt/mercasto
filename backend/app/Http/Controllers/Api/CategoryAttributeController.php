@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CategoryAttributeController extends Controller
 {
@@ -20,6 +21,10 @@ class CategoryAttributeController extends Controller
         $category = trim((string) $request->query('category', ''));
 
         if ($category === '') {
+            return response()->json([]);
+        }
+
+        if (! Schema::hasTable('categories') || ! Schema::hasTable('category_attributes')) {
             return response()->json([]);
         }
 
