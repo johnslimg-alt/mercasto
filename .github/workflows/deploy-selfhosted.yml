@@ -14,7 +14,7 @@ jobs:
       - name: Обновить код
         run: |
           cd /var/www/mercasto
-          docker exec mercasto_backend_container php artisan down --retry=60 || true
+          docker exec mercasto_backend_container php artisan up || true
           docker compose --env-file backend/.env stop mercasto-worker mercasto-scheduler mercasto-reverb || true
           git fetch origin
           git reset --hard origin/main
@@ -41,6 +41,15 @@ jobs:
           docker exec mercasto_backend_container php artisan queue:restart
           docker exec mercasto_backend_container php artisan up
           docker compose --env-file backend/.env restart mercasto-frontend
+
+          for attempt in $(seq 1 30); do
+            if curl -fsS --max-time 5 https://mercasto.com/api/auth/providers >/dev/null; then
+              exit 0
+            fi
+            sleep 3
+          done
+
+          curl -fsS --max-time 10 https://mercasto.com/api/auth/providers >/dev/null
 
       - name: Production smoke
         run: |
