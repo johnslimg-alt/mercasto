@@ -66,6 +66,8 @@ export default function AdDetailScreen({
   handleViewCompany, handleWhatsAppClick, allAds, setViewedAd, onBack, MediaSlider, renderAdCard, AdSenseBanner,
   currentUser
 }) {
+  const [similarAds, setSimilarAds] = useState([]);
+
   // Track recently viewed
   React.useEffect(() => {
     if (ad) {
@@ -74,30 +76,31 @@ export default function AdDetailScreen({
     }
   }, [ad?.id]);
 
+  useEffect(() => {
+    if (!ad?.id) {
+      setSimilarAds([]);
+      return;
+    }
+
+    setSimilarAds([]);
+    fetch(`${API_URL}/ads/${ad.id}/similar`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setSimilarAds(Array.isArray(data) ? data.slice(0, 8) : []))
+      .catch(() => setSimilarAds([]));
+  }, [API_URL, ad?.id]);
+
   if (!ad) return null;
 
   const isOwner = currentUser && currentUser.id === ad.user_id;
-  
   const isFav = favoriteIds.includes(ad.id);
   const images = getImageUrls(ad.image_url, ad.image).map(url => ({ type: 'image', url }));
   if (ad.video_url) images.unshift({ type: 'video', url: getImageUrl(ad.video_url) });
-
   let attributes = {};
   try {
     attributes = typeof ad.attributes === 'string' ? JSON.parse(ad.attributes) : (ad.attributes || {});
   } catch(e) {}
 
   const catConfig = filterConfig[ad.category] || [];
-
-  const [similarAds, setSimilarAds] = useState([]);
-  useEffect(() => {
-    if (!ad?.id) return;
-    setSimilarAds([]);
-    fetch(`${API_URL}/ads/${ad.id}/similar`)
-      .then(r => r.ok ? r.json() : [])
-      .then(data => setSimilarAds(Array.isArray(data) ? data.slice(0, 8) : []))
-      .catch(() => setSimilarAds([]));
-  }, [ad?.id]);
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
