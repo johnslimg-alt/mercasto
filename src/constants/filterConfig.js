@@ -1,72 +1,124 @@
+const autoBrands = [
+  'Chevrolet', 'Nissan', 'Volkswagen', 'Toyota', 'Honda', 'Ford', 'BMW', 'Mercedes-Benz',
+  'Audi', 'Kia', 'Hyundai', 'Mazda', 'Jeep', 'Tesla', 'MG', 'BYD', 'Otra'
+];
+
+const electronicsBrands = [
+  'Apple', 'Samsung', 'Xiaomi', 'Motorola', 'Huawei', 'Oppo', 'Google Pixel', 'Honor',
+  'Vivo', 'Dell', 'HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Otra'
+];
+
+const autoFilters = [
+  { id: 'marca', label: 'Marca', type: 'select', options: autoBrands },
+  { id: 'modelo', label: 'Modelo', type: 'text', placeholder: 'Ej. Versa, Civic, Tacoma' },
+  { id: 'year', label: 'Año', type: 'range', minPlaceholder: 'Desde', maxPlaceholder: 'Hasta' },
+  { id: 'km', label: 'Kilometraje', type: 'range', minPlaceholder: 'Mín.', maxPlaceholder: 'Máx.' },
+  { id: 'transmision', label: 'Transmisión', type: 'checkbox', options: ['Manual', 'Automática', 'CVT'] },
+  { id: 'combustible', label: 'Combustible', type: 'checkbox', options: ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico', 'Gas'] },
+];
+
+const propertyFilters = [
+  { id: 'tipo', label: 'Tipo de inmueble', type: 'select', options: ['Casa', 'Departamento', 'Terreno', 'Local comercial', 'Oficina', 'Bodega'] },
+  { id: 'operacion', label: 'Operación', type: 'checkbox', options: ['Venta', 'Renta', 'Traspaso'] },
+  { id: 'm2', label: 'Superficie (m²)', type: 'range', minPlaceholder: 'Desde', maxPlaceholder: 'Hasta' },
+  { id: 'habitaciones', label: 'Habitaciones', type: 'range', minPlaceholder: 'Mín.', maxPlaceholder: 'Máx.' },
+  { id: 'banos', label: 'Baños', type: 'range', minPlaceholder: 'Mín.', maxPlaceholder: 'Máx.' },
+];
+
+const jobFilters = [
+  { id: 'salario', label: 'Salario mensual (MXN)', type: 'range', minPlaceholder: 'Desde', maxPlaceholder: 'Hasta' },
+  { id: 'tipo_empleo', label: 'Tipo de empleo', type: 'checkbox', options: ['Tiempo completo', 'Medio tiempo', 'Freelance', 'Temporal', 'Prácticas'] },
+  { id: 'modalidad', label: 'Modalidad', type: 'checkbox', options: ['Presencial', 'Remoto', 'Híbrido'] },
+  { id: 'experiencia', label: 'Experiencia', type: 'select', options: ['Sin experiencia', '1-2 años', '3-5 años', '+5 años'] },
+];
+
+const electronicsFilters = [
+  { id: 'marca', label: 'Marca', type: 'select', options: electronicsBrands },
+  { id: 'modelo', label: 'Modelo', type: 'text', placeholder: 'Ej. iPhone 14, ThinkPad, Galaxy S' },
+  { id: 'condicion', label: 'Condición', type: 'checkbox', options: ['Nuevo', 'Usado', 'Reacondicionado'] },
+  { id: 'almacenamiento', label: 'Almacenamiento', type: 'checkbox', options: ['32 GB', '64 GB', '128 GB', '256 GB', '512 GB', '1 TB', '2 TB'] },
+];
+
 export const filterConfig = {
-  motor: [
-    { id: 'brand', label: 'Marca', type: 'select', options: ['Chevrolet', 'Nissan', 'Volkswagen', 'Toyota', 'Honda', 'Ford', 'BMW', 'Mercedes-Benz', 'Audi', 'Kia', 'Hyundai', 'Mazda', 'Jeep', 'Tesla', 'MG', 'BYD'] },
-    { id: 'year', label: 'Año', type: 'select', options: ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015 o anterior'] },
-    { id: 'body_type', label: 'Tipo de carrocería', type: 'checkbox', options: ['Sedán', 'Hatchback', 'SUV', 'Pickup', 'Miniván', 'Coupé'] },
-    { id: 'transmission', label: 'Transmisión', type: 'checkbox', options: ['Manual', 'Automática', 'CVT', 'DCT'] },
-    { id: 'fuel', label: 'Combustible', type: 'checkbox', options: ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico'] },
-    { id: 'doors', label: 'Puertas', type: 'checkbox', options: ['2', '3', '4', '5'] },
-    { id: 'mileage', label: 'Kilometraje', type: 'select', options: ['0 km (Nuevo)', 'Hasta 10,000 km', '10,000 - 30,000 km', '30,000 - 60,000 km', '60,000 - 100,000 km', 'Más de 100,000 km'] },
-  ],
-  inmobiliaria: [
-    { id: 'type', label: 'Tipo de Propiedad', type: 'select', options: ['Casa', 'Departamento', 'Terreno', 'Local Comercial', 'Oficina', 'Bodega'] },
-    { id: 'operation', label: 'Operación', type: 'checkbox', options: ['Venta', 'Renta', 'Traspaso'] },
-    { id: 'bedrooms', label: 'Recámaras', type: 'checkbox', options: ['1', '2', '3', '4', '5+'] },
-    { id: 'bathrooms', label: 'Baños', type: 'checkbox', options: ['1', '1.5', '2', '3', '4+'] },
-    { id: 'parking', label: 'Estacionamiento', type: 'checkbox', options: ['1 auto', '2 autos', '3+ autos', 'No'] },
-    { id: 'construction_area', label: 'Área construida (m²)', type: 'select', options: ['Hasta 50 m²', '50 - 100 m²', '100 - 150 m²', '150 - 200 m²', 'Más de 200 m²'] },
-    { id: 'amenities', label: 'Amenidades', type: 'checkbox', options: ['Piscina', 'Gimnasio', 'Seguridad 24/7', 'Terraza', 'Elevador', 'Amueblado'] },
-  ],
-  empleo: [
-    { id: 'industry', label: 'Sector', type: 'select', options: ['Tecnología e IT', 'Ventas y Marketing', 'Administración', 'Educación', 'Salud', 'Construcción', 'Hostelería', 'Transporte'] },
-    { id: 'type', label: 'Tipo de empleo', type: 'checkbox', options: ['Tiempo completo', 'Medio tiempo', 'Remoto', 'Híbrido', 'Freelance'] },
-    { id: 'experience', label: 'Experiencia', type: 'select', options: ['Sin experiencia', '1-2 años', '3-5 años', '+5 años'] },
-    { id: 'education', label: 'Educación', type: 'select', options: ['Secundaria', 'Preparatoria', 'Licenciatura', 'Maestría'] },
-  ],
+  motor: autoFilters,
+  'coches-y-motor': autoFilters,
+  'coches-y-motor/coches': autoFilters,
+  'coches-y-motor/motos': autoFilters,
+  'coches-y-motor/refacciones': autoFilters,
+
+  inmobiliaria: propertyFilters,
+  inmuebles: propertyFilters,
+  'inmuebles/casas-en-venta': propertyFilters,
+  'inmuebles/casas-en-renta': propertyFilters,
+  'inmuebles/departamentos': propertyFilters,
+  'inmuebles/terrenos': propertyFilters,
+  'inmuebles/locales-comerciales': propertyFilters,
+  'inmuebles/oficinas': propertyFilters,
+  'inmuebles/bodegas': propertyFilters,
+  'inmuebles/renta-vacacional': propertyFilters,
+
+  empleo: jobFilters,
+  empleos: jobFilters,
+  'empleos/ventas': jobFilters,
+  'empleos/chofer': jobFilters,
+  'empleos/construccion': jobFilters,
+  'empleos/administracion': jobFilters,
+  'empleos/atencion-al-cliente': jobFilters,
+  'empleos/tecnologia': jobFilters,
+  'empleos/hoteleria': jobFilters,
+  'empleos/medio-tiempo': jobFilters,
+
+  electronica: electronicsFilters,
+  electrónica: electronicsFilters,
+  informatica: electronicsFilters,
+  telefonia: electronicsFilters,
+  'moviles-y-telefonia': electronicsFilters,
+  'electronica/laptops': electronicsFilters,
+  'electronica/tablets': electronicsFilters,
+  'electronica/tv-y-video': electronicsFilters,
+  'electronica/audio': electronicsFilters,
+  'electronica/camaras': electronicsFilters,
+  'electronica/drones': electronicsFilters,
+  'electronica/accesorios': electronicsFilters,
+  'moviles-y-telefonia/iphone': electronicsFilters,
+  'moviles-y-telefonia/android': electronicsFilters,
+  'moviles-y-telefonia/smartwatch': electronicsFilters,
+  'moviles-y-telefonia/accesorios': electronicsFilters,
+  'moviles-y-telefonia/tablets': electronicsFilters,
+  'moviles-y-telefonia/repuestos': electronicsFilters,
+
   servicios: [
-    { id: 'type', label: 'Tipo de Servicio', type: 'select', options: ['Hogar', 'Profesionales', 'Tecnología', 'Transporte', 'Clases', 'Eventos', 'Belleza'] },
-    { id: 'home_service', label: 'A domicilio', type: 'checkbox', options: ['Sí', 'No'] },
+    { id: 'tipo', label: 'Tipo de servicio', type: 'select', options: ['Hogar', 'Profesionales', 'Tecnología', 'Transporte', 'Clases', 'Eventos', 'Belleza'] },
+    { id: 'modalidad', label: 'Modalidad', type: 'checkbox', options: ['A domicilio', 'En local', 'En línea'] },
   ],
-  informatica: [
-    { id: 'type', label: 'Tipo de equipo', type: 'select', options: ['Laptop', 'PC de Escritorio', 'Componentes', 'Impresoras', 'Redes', 'Monitores'] },
-    { id: 'brand', label: 'Marca', type: 'select', options: ['Apple', 'Dell', 'HP', 'Lenovo', 'Asus', 'Acer', 'MSI'] },
-    { id: 'ram', label: 'Memoria RAM', type: 'checkbox', options: ['4 GB', '8 GB', '16 GB', '32 GB', '64 GB'] },
-    { id: 'storage', label: 'Almacenamiento', type: 'checkbox', options: ['128 GB', '256 GB', '512 GB', '1 TB', '2 TB'] },
-    { id: 'processor', label: 'Procesador', type: 'select', options: ['Intel Core i3', 'Intel Core i5', 'Intel Core i7', 'Intel Core i9', 'AMD Ryzen 5', 'AMD Ryzen 7', 'Apple M1/M2/M3'] },
-    { id: 'gpu', label: 'Tarjeta Gráfica', type: 'checkbox', options: ['Integrada', 'NVIDIA GTX', 'NVIDIA RTX', 'AMD Radeon'] },
-  ],
-  telefonia: [
-    { id: 'brand', label: 'Marca', type: 'select', options: ['Apple', 'Samsung', 'Xiaomi', 'Motorola', 'Huawei', 'Oppo', 'Google Pixel', 'Honor', 'Vivo'] },
-    { id: 'storage', label: 'Almacenamiento', type: 'checkbox', options: ['32 GB', '64 GB', '128 GB', '256 GB', '512 GB', '1 TB'] },
-    { id: 'ram', label: 'RAM', type: 'checkbox', options: ['2 GB', '3 GB', '4 GB', '6 GB', '8 GB', '12 GB', '16 GB'] },
-    { id: 'os', label: 'Sistema Operativo', type: 'checkbox', options: ['iOS', 'Android', 'HarmonyOS'] },
-    { id: 'network', label: 'Red', type: 'checkbox', options: ['5G', '4G LTE'] },
-  ],
+
   hogar: [
-    { id: 'type', label: 'Categoría', type: 'select', options: ['Muebles', 'Electrodomésticos', 'Decoración', 'Herramientas', 'Seguridad'] },
-    { id: 'material', label: 'Material', type: 'checkbox', options: ['Madera', 'Metal', 'Plástico', 'Vidrio', 'Tela', 'Piel'] },
+    { id: 'tipo', label: 'Categoría', type: 'select', options: ['Muebles', 'Electrodomésticos', 'Decoración', 'Herramientas', 'Seguridad'] },
+    { id: 'condicion', label: 'Condición', type: 'checkbox', options: ['Nuevo', 'Usado'] },
   ],
+
   moda: [
-    { id: 'gender', label: 'Género', type: 'checkbox', options: ['Hombre', 'Mujer', 'Unisex', 'Niños'] },
-    { id: 'type', label: 'Tipo de prenda', type: 'select', options: ['Tops/Camisas', 'Pantalones/Jeans', 'Vestidos/Faldas', 'Zapatos/Tenis', 'Accesorios', 'Ropa interior'] },
-    { id: 'size', label: 'Talla', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '24', '26', '28', '30', '32', '34'] },
-    { id: 'brand', label: 'Marca', type: 'select', options: ['Zara', 'H&M', 'Nike', 'Adidas', 'Puma', 'Levi\'s', 'Shein'] },
+    { id: 'tipo', label: 'Tipo de prenda', type: 'select', options: ['Ropa mujer', 'Ropa hombre', 'Calzado', 'Bolsos', 'Accesorios', 'Joyería'] },
+    { id: 'talla', label: 'Talla', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '24', '26', '28', '30', '32', '34'] },
   ],
+
   bebes: [
-    { id: 'type', label: 'Tipo', type: 'select', options: ['Carriolas', 'Sillas de auto', 'Cunas/Camas', 'Alimentación', 'Ropa', 'Juguetes'] },
-    { id: 'age', label: 'Edad recomendada', type: 'select', options: ['0-6 meses', '6-12 meses', '1-2 años', '2-3 años', '+3 años'] },
+    { id: 'tipo', label: 'Tipo', type: 'select', options: ['Carriolas', 'Autoasientos', 'Cunas', 'Ropa bebé', 'Juguetes bebé'] },
+    { id: 'edad', label: 'Edad recomendada', type: 'select', options: ['0-6 meses', '6-12 meses', '1-2 años', '2-3 años', '+3 años'] },
   ],
+
   mascotas: [
-    { id: 'species', label: 'Especie', type: 'checkbox', options: ['Perro', 'Gato', 'Ave', 'Pez', 'Reptil'] },
-    { id: 'age', label: 'Edad', type: 'select', options: ['Cachorro', 'Adulto joven', 'Adulto mayor'] },
-    { id: 'size', label: 'Tamaño', type: 'select', options: ['Pequeño', 'Mediano', 'Grande'] },
+    { id: 'especie', label: 'Especie', type: 'checkbox', options: ['Perro', 'Gato', 'Ave', 'Pez', 'Reptil'] },
+    { id: 'tamano', label: 'Tamaño', type: 'select', options: ['Pequeño', 'Mediano', 'Grande'] },
   ],
+
   ocio: [
-    { id: 'type', label: 'Categoría', type: 'select', options: ['Deportes', 'Videojuegos', 'Libros/Música', 'Coleccionismo', 'Fotografía', 'Instrumentos', 'Camping', 'Viajes'] },
-    { id: 'console', label: 'Consola', type: 'checkbox', options: ['PlayStation 5', 'PlayStation 4', 'Xbox Series X|S', 'Xbox One', 'Nintendo Switch', 'PC'] },
+    { id: 'tipo', label: 'Categoría', type: 'select', options: ['Deportes', 'Videojuegos', 'Libros/Música', 'Coleccionismo', 'Fotografía', 'Instrumentos', 'Camping', 'Viajes'] },
+    { id: 'formato', label: 'Formato', type: 'checkbox', options: ['Digital', 'Físico'] },
   ],
+
   boletos: [
-    { id: 'type', label: 'Tipo de evento', type: 'select', options: ['Conciertos', 'Deportes', 'Teatro/Cultura', 'Festivales', 'Cine'] },
-    { id: 'format', label: 'Formato', type: 'checkbox', options: ['Digital', 'Físico'] },
-  ]
+    { id: 'tipo', label: 'Tipo de evento', type: 'select', options: ['Conciertos', 'Deportes', 'Teatro/Cultura', 'Festivales', 'Cine'] },
+    { id: 'formato', label: 'Formato', type: 'checkbox', options: ['Digital', 'Físico'] },
+  ],
 };
