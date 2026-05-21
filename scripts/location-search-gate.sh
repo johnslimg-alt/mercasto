@@ -51,7 +51,7 @@ grep -qF "params.append('location', selectedState)" "$APP"
 # Backend listing search must support active-only, radius, location, city, state, price, condition and dynamic filters.
 grep -qF "where('ads.status', 'active')" "$CONTROLLER"
 grep -qF "whereNotNull('latitude')" "$CONTROLLER"
-grep -qF "whereRaw(\"{$haversine} < ?\"" "$CONTROLLER"
+grep -qF "orderBy('distance')" "$CONTROLLER"
 grep -qF "filled('location')" "$CONTROLLER"
 grep -qF "todo méxico" "$CONTROLLER"
 grep -qF "location ILIKE ? OR state ILIKE ?" "$CONTROLLER"
