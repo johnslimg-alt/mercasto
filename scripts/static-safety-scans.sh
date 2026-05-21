@@ -14,5 +14,6 @@ bash scripts/media-upload-validation-scan.sh
 bash scripts/listing-lifecycle-gate.sh
 bash scripts/location-search-gate.sh
 bash scripts/auth-account-gate.sh
+bash scripts/payment-launch-gate.sh
 
 echo "static safety scans OK"
