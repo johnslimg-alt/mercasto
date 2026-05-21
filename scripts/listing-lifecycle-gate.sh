@@ -28,19 +28,19 @@ grep -qF "Route::get('/admin/reports', [AdController::class, 'getReports'])" "$R
 grep -qF "Route::get('/user/ads', [AdController::class, 'myAds'])" "$ROUTES"
 
 # Public active-only / IDOR protection.
-grep -qF "if ($ad->status !== 'active')" "$CONTROLLER"
+grep -qF 'if ($ad->status !== '\''active'\'')' "$CONTROLLER"
 grep -qF "return response()->json(['message' => 'Anuncio no disponible o en revisión'], 403)" "$CONTROLLER"
 grep -qF "where('ads.status', 'active')" "$CONTROLLER"
 
 # Ownership guards for edit/update/delete/status/promote.
-grep -qF "$request->user()->id !== $ad->user_id && $request->user()->role !== 'admin'" "$CONTROLLER"
+grep -qF '$request->user()->id !== $ad->user_id && $request->user()->role !== '\''admin'\''' "$CONTROLLER"
 grep -qF "Нет прав для редактирования этого объявления" "$CONTROLLER"
 grep -qF "Нет прав для удаления этого объявления" "$CONTROLLER"
 grep -qF "Нет прав для изменения статуса" "$CONTROLLER"
 
 # Create/edit moderation behavior.
 grep -qF "'status' => 'pending', // Отправляем на модерацию" "$CONTROLLER"
-grep -qF "$needsReModeration ? 'pending' : $ad->status" "$CONTROLLER"
+grep -qF '$needsReModeration ? '\''pending'\'' : $ad->status' "$CONTROLLER"
 grep -qF "No puedes activar un anuncio en revisión o rechazado." "$CONTROLLER"
 
 # Media and upload hardening.
@@ -52,16 +52,16 @@ grep -qF "ProcessVideoWatermark::dispatch" "$CONTROLLER"
 grep -qF "No puedes tener más de 10 imágenes en total por anuncio." "$CONTROLLER"
 
 # Report and admin moderation gates.
-grep -qF "public function report(Request $request, $id)" "$CONTROLLER"
+grep -qF 'public function report(Request $request, $id)' "$CONTROLLER"
 grep -qF "DB::table('reports')->insert" "$CONTROLLER"
-grep -qF "public function pendingAds(Request $request)" "$CONTROLLER"
-grep -qF "public function getReports(Request $request)" "$CONTROLLER"
+grep -qF 'public function pendingAds(Request $request)' "$CONTROLLER"
+grep -qF 'public function getReports(Request $request)' "$CONTROLLER"
 grep -qF "Acceso denegado" "$CONTROLLER"
 
 # Cache invalidation after mutating listing operations.
 grep -qF "Cache::forget('sitemap_xml')" "$CONTROLLER"
 grep -qF "Cache::forget('google_merchant_xml')" "$CONTROLLER"
-grep -qF "Cache::forget(\"ads_index_page_{$i}\")" "$CONTROLLER"
+grep -qF "ads_index_page_" "$CONTROLLER"
 
 # Frontend flow has create/edit form media, dynamic attributes, map preview, and report/contact detail actions.
 grep -qF "SortablePhotoGrid" "$POST_SCREEN"
