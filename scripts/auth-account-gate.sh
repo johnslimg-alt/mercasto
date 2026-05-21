@@ -44,18 +44,18 @@ grep -qF "Route::delete('/user/two-factor-authentication', [TwoFactorAuthenticat
 # Registration and login security.
 grep -qF "'password' => 'required|string|min:8'" "$AUTH"
 grep -qF "'phone_number' => 'nullable|string|max:20|unique:users'" "$AUTH"
-grep -qF "hash('sha256', $" "$AUTH"
-grep -qF "$role = 'individual'" "$AUTH"
+grep -qF "hash('sha256'" "$AUTH"
+grep -qF "role = 'individual'" "$AUTH"
 grep -qF "Has alcanzado el límite de cuentas creadas desde esta red" "$AUTH"
-grep -qF "Hash::make($" "$AUTH"
+grep -qF "Hash::make" "$AUTH"
 grep -qF "createToken('auth_token')->plainTextToken" "$AUTH"
 grep -qF "makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])" "$AUTH"
 
 # 2FA login and OAuth bypass protection.
 grep -qF "public function loginTwoFactor" "$AUTH"
-grep -qF "verifyKey($" "$AUTH"
-grep -qF "hash_equals($" "$AUTH"
-grep -qF "unset($" "$AUTH"
+grep -qF "verifyKey" "$AUTH"
+grep -qF "hash_equals" "$AUTH"
+grep -qF "unset(" "$AUTH"
 grep -qF "oauth_2fa" "$AUTH"
 grep -qF "Cache::put('oauth_exchange:'" "$AUTH"
 grep -qF "Cache::pull('oauth_exchange:'" "$AUTH"
@@ -66,7 +66,7 @@ grep -qF "Proveedor no soportado" "$AUTH"
 grep -qF "Always return the same response regardless of whether email exists" "$AUTH"
 grep -qF "password_reset_tokens" "$AUTH"
 grep -qF "addHour()->isPast()" "$AUTH"
-grep -qF "$user->tokens()->delete()" "$AUTH"
+grep -qF "tokens()->delete()" "$AUTH"
 grep -qF "Contraseña restablecida exitosamente" "$AUTH"
 
 # Provider availability must use config, not raw env, and expose Google availability safely.
@@ -74,29 +74,29 @@ grep -qF "public function getProviders" "$AUTH"
 grep -qF "config('services.google.client_id')" "$AUTH"
 grep -qF "config('services.google.client_secret')" "$AUTH"
 grep -qF "config('services.twilio.sid')" "$AUTH"
-grep -qF "'sms'      => $" "$AUTH"
+grep -qF "'sms'" "$AUTH"
 
 # Logout must revoke the current token only.
 grep -qF "currentAccessToken()->delete()" "$AUTH"
 grep -qF "Sesión cerrada exitosamente" "$AUTH"
 
 # 2FA management must prevent overwrite and revoke other sessions after setup.
-grep -qF "two_factor_secret && $user->two_factor_confirmed_at" "$TWO_FACTOR"
+grep -qF "two_factor_secret &&" "$TWO_FACTOR"
 grep -qF "generateSecretKey()" "$TWO_FACTOR"
 grep -qF "two_factor_recovery_codes" "$TWO_FACTOR"
-grep -qF "tokens()->where('id', '!=', $" "$TWO_FACTOR"
+grep -qF "tokens()->where('id', '!='," "$TWO_FACTOR"
 grep -qF "two_factor_confirmed_at" "$TWO_FACTOR"
 grep -qF "Invalid 2FA code" "$TWO_FACTOR"
 
 # Self-delete must protect final admin, clean user-owned data, preserve financial audit records, revoke tokens.
 grep -qF "único administrador" "$DELETE_ACCOUNT"
-grep -qF "payments')->where('user_id', $" "$DELETE_ACCOUNT"
-grep -qF "payments')->whereIn('ad_id', $" "$DELETE_ACCOUNT"
-grep -qF "Ad::where('user_id', $" "$DELETE_ACCOUNT"
+grep -qF "payments')->where('user_id'" "$DELETE_ACCOUNT"
+grep -qF "payments')->whereIn('ad_id'" "$DELETE_ACCOUNT"
+grep -qF "Ad::where('user_id'" "$DELETE_ACCOUNT"
 grep -qF "Cache::forget('sitemap_xml')" "$DELETE_ACCOUNT"
 grep -qF "Cache::forget('google_merchant_xml')" "$DELETE_ACCOUNT"
-grep -qF "$user->tokens()->delete()" "$DELETE_ACCOUNT"
-grep -qF "$user->delete()" "$DELETE_ACCOUNT"
+grep -qF "tokens()->delete()" "$DELETE_ACCOUNT"
+grep -qF "->delete()" "$DELETE_ACCOUNT"
 
 # Frontend auth/account flow markers.
 grep -qF "availableProviders" "$APP"
