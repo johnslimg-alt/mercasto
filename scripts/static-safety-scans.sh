@@ -12,5 +12,6 @@ bash scripts/payment-retention-scan.sh
 bash scripts/payment-webhook-idempotency-scan.sh
 bash scripts/media-upload-validation-scan.sh
 bash scripts/listing-lifecycle-gate.sh
+bash scripts/location-search-gate.sh
 
 echo "static safety scans OK"
