@@ -45,7 +45,7 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
   }
   if (status === 'paused') {
     return (
-      <button onClick={activate} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-lime-100 hover:bg-lime-200 text-[#65A30D] rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
+      <button onClick={activate} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-lime-100 hover:bg-[#65A30D]/20 text-[#65A30D] rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
         {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} Reactivar
       </button>
     );
@@ -55,10 +55,52 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2 } from 'lucide-react';
+import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2, Send } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { addRecentlyViewed } from '../../utils/recentlyViewed';
 import { events } from '../../utils/analytics';
+
+const buildPublicLocationLabel = (ad) => {
+  const parts = [ad?.location, ad?.city, ad?.municipality, ad?.state]
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+  const uniqueParts = [...new Set(parts)];
+  return uniqueParts.join(' · ');
+};
+
+const buildMapEmbedUrl = (locationLabel) => {
+  if (!locationLabel) return null;
+  return `https://www.google.com/maps?q=${encodeURIComponent(`${locationLabel}, México`)}&output=embed`;
+};
+
+const getSafeTelegramUsername = (ad) => {
+  const candidates = [
+    ad?.telegram_username,
+    ad?.telegram,
+    ad?.telegram_url,
+    ad?.user?.telegram_username,
+    ad?.user?.telegram,
+    ad?.user?.telegram_url,
+  ];
+
+  for (const rawCandidate of candidates) {
+    const candidate = String(rawCandidate || '').trim();
+    if (!candidate) continue;
+
+    const cleaned = candidate
+      .replace(/^@/, '')
+      .replace(/^https?:\/\/(www\.)?(t\.me|telegram\.me)\//i, '')
+      .replace(/^t\.me\//i, '')
+      .split(/[/?#]/)[0]
+      .trim();
+
+    if (/^[A-Za-z0-9_]{5,32}$/.test(cleaned)) {
+      return cleaned;
+    }
+  }
+
+  return null;
+};
 
 export default function AdDetailScreen({
   ad, API_URL, getImageUrl, getImageUrls, getCatName, t, lang, favoriteIds, categoriesData,
@@ -101,6 +143,10 @@ export default function AdDetailScreen({
   } catch(e) {}
 
   const catConfig = filterConfig[ad.category] || [];
+  const locationLabel = buildPublicLocationLabel(ad);
+  const mapEmbedUrl = buildMapEmbedUrl(locationLabel);
+  const telegramUsername = getSafeTelegramUsername(ad);
+  const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
@@ -143,11 +189,37 @@ export default function AdDetailScreen({
             )}
             
             <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 font-medium">
-              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><MapPin size={16}/> {[ad.state, ad.location].filter(Boolean).join(' · ') || 'México'}</span>
+              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>
             </div>
+
+            {locationLabel && (
+              <div className="mb-10 overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-700 dark:bg-slate-900/30">
+                <div className="flex items-start gap-3 p-4 md:p-5">
+                  <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#84CC16]/15 text-[#65A30D]">
+                    <MapPin size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">Ubicación del anuncio</h3>
+                    <p className="mt-1 text-[14px] font-medium text-slate-600 dark:text-slate-300">{locationLabel}</p>
+                    <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">La ubicación es aproximada y se muestra solo con datos públicos del anuncio.</p>
+                  </div>
+                </div>
+                {mapEmbedUrl && (
+                  <div className="h-[220px] w-full border-t border-slate-200 dark:border-slate-700 md:h-[280px]">
+                    <iframe
+                      title={`Mapa de ${locationLabel}`}
+                      src={mapEmbedUrl}
+                      className="h-full w-full"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* DYNAMIC EAV ATTRIBUTES (Отображение фильтров) */}
             {Object.keys(attributes).length > 0 && (
@@ -201,6 +273,21 @@ export default function AdDetailScreen({
             <button onClick={() => { handleWhatsAppClick(ad); window.open(`https://wa.me/52${ad.user?.phone_number || '1234567890'}?text=Hola, me interesa tu anuncio "${ad.title}" en Mercasto`, '_blank'); }} className="btn-lg w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center gap-2 mb-3 shadow-md shadow-[#25D366]/20">
               <MessageCircle size={20} /> Contactar por WhatsApp
             </button>
+
+            {telegramUrl ? (
+              <a
+                href={telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-lg mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 text-white shadow-md shadow-sky-500/20 transition-colors hover:bg-sky-600"
+              >
+                <Send size={19} /> Escribir por Telegram
+              </a>
+            ) : (
+              <div className="mb-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-center text-[12px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-400">
+                Telegram no disponible para este anuncio.
+              </div>
+            )}
 
             <div className="flex gap-3 mt-4">
               <button onClick={(e) => handleToggleFavorite(e, ad.id)} className={`btn-md flex-1 flex items-center justify-center gap-2 border transition-colors ${isFav ? 'bg-red-50 border-red-100 text-red-600' : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}>
