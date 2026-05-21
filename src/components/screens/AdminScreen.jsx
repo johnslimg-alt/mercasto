@@ -1,11 +1,17 @@
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
-import { Shield, Pencil, PlusCircle, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, Users, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, Users, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, CreditCard } from "lucide-react";
 
-export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, adminLoading, adminPendingAds, adminReportTab, adminReports, adminTab, adminUserReports, adminUserSearch, adminUsers, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole }) {
+export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, adminLoading, adminPendingAds, adminReportTab, adminReports, adminTab, adminUserReports, adminUserSearch, adminUsers, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments }) {
     if (userRole !== 'admin') return <div className="p-10 text-center font-bold text-red-500">Acceso denegado</div>;
 
 
+
+    React.useEffect(() => {
+        if (adminTab === 'payments') {
+            loadAdminPayments(1);
+        }
+    }, [adminTab, loadAdminPayments]);
 
     const filteredAdminUsers = adminUsers.filter(u => 
 
@@ -40,6 +46,8 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                <button onClick={() => {setAdminTab('coupons'); loadCoupons();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'coupons' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.coupons_tab}</button>
 
                <button onClick={() => {setAdminTab('reports'); loadAdminReports();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'reports' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.reports_tab}</button>
+
+               <button onClick={() => {setAdminTab('payments'); loadAdminPayments(1);}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'payments' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Pagos</button>
 
             </div>
 
@@ -451,6 +459,266 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
               )}
 
+            </div>
+
+          ) : adminTab === 'payments' ? (
+
+            <div className="space-y-6">
+              {/* Header Stats Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <div>
+                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                      Transacciones Registradas
+                    </span>
+                    <span className="text-3xl font-black text-slate-900 dark:text-white mt-1 block">
+                      {adminPaymentsTotal}
+                    </span>
+                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
+                      Volumen total de transacciones Clip
+                    </span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <CreditCard size={24} />
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <div>
+                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                      Ingresos Aprobados (Pág. Actual)
+                    </span>
+                    <span className="text-3xl font-black text-[#84CC16] mt-1 block">
+                      ${adminPayments.filter(p => ['paid', 'succeeded', 'approved'].includes(p.status?.toLowerCase())).reduce((sum, p) => sum + parseFloat(p.amount || 0), 0).toFixed(2)} MXN
+                    </span>
+                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
+                      Monto de pagos exitosos mostrados
+                    </span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-lime-50 dark:bg-lime-950/20 flex items-center justify-center text-[#84CC16] shadow-sm border border-lime-100/55 dark:border-lime-900/30">
+                    <Zap size={24} className="fill-[#84CC16]/20" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Audit Table Section */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                  <div>
+                    <h3 className="text-[18px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <CreditCard className="text-[#84CC16]" size={20}/> Auditoría de Pagos
+                    </h3>
+                    <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1">
+                      Monitorea y valida las transacciones procesadas a través de la pasarela de pagos Clip.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => loadAdminPayments(adminPaymentsPage)}
+                    disabled={loadingAdminPayments}
+                    className="btn-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 self-end sm:self-auto"
+                  >
+                    {loadingAdminPayments ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-[#84CC16]" />
+                    ) : (
+                      <Zap className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                    )}
+                    Actualizar
+                  </button>
+                </div>
+
+                {loadingAdminPayments ? (
+                  <div className="space-y-4 py-4">
+                    {[1, 2, 3, 4].map((n) => (
+                      <div key={n} className="border border-slate-100 dark:border-slate-700/60 rounded-2xl p-4 animate-pulse flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                            <div className="w-5 h-5 bg-slate-200 dark:bg-slate-600 rounded-full" />
+                          </div>
+                          <div>
+                            <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded-md w-40 mb-2" />
+                            <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded-md w-28" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                          <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded-md w-20" />
+                          <div className="h-6 bg-slate-100 dark:bg-slate-700 rounded-full w-24" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : adminPayments.length === 0 ? (
+                  <div className="py-16 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center p-6 bg-slate-50/30 dark:bg-slate-900/10">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center text-amber-500 mb-4 shadow-sm">
+                      <CreditCard className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-[16px] font-bold text-slate-900 dark:text-white mb-1">Sin pagos registrados</h3>
+                    <p className="text-[13px] text-slate-500 dark:text-slate-400 max-w-sm">
+                      No se encontraron transacciones en el historial del sistema. Todos los pagos iniciados aparecerán aquí.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Desktop View */}
+                    <div className="hidden md:block overflow-x-auto border border-slate-100 dark:border-slate-700/60 rounded-2xl">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/70 dark:bg-slate-700/30 text-slate-500 dark:text-slate-400 font-semibold text-[12px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700/60">
+                            <th className="py-4 px-5">Usuario</th>
+                            <th className="py-4 px-5">Concepto</th>
+                            <th className="py-4 px-5">Referencia Clip</th>
+                            <th className="py-4 px-5">Fecha</th>
+                            <th className="py-4 px-5">Monto</th>
+                            <th className="py-4 px-5 text-right">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-[14px]">
+                          {adminPayments.map((payment) => (
+                            <tr key={payment.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors">
+                              <td className="py-4 px-5">
+                                <div className="flex flex-col">
+                                  <span className="font-semibold text-slate-900 dark:text-white">
+                                    {payment.user_name || `Usuario ID: ${payment.user_id}`}
+                                  </span>
+                                  <span className="text-[12px] text-slate-500 dark:text-slate-400 font-medium">
+                                    {payment.user_email || 'Email no disponible'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-5 font-semibold text-slate-900 dark:text-white">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                                    {payment.description?.toLowerCase().includes('crédito') || payment.description?.toLowerCase().includes('credito') ? (
+                                      <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                                    ) : (
+                                      <CreditCard className="w-4 h-4 text-blue-500" />
+                                    )}
+                                  </div>
+                                  <span className="line-clamp-1">{payment.description || 'Servicios Mercasto'}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-5 text-slate-600 dark:text-slate-300 font-mono text-[12px]">
+                                {payment.clip_checkout_id ? (
+                                  <span className="bg-slate-100 dark:bg-slate-700/80 px-2 py-1 rounded text-slate-700 dark:text-slate-300 select-all" title="Click para seleccionar todo">
+                                    {payment.clip_checkout_id.length > 16 ? `${payment.clip_checkout_id.substring(0, 16)}...` : payment.clip_checkout_id}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 dark:text-slate-500">N/A</span>
+                                )}
+                              </td>
+                              <td className="py-4 px-5 text-slate-500 dark:text-slate-400">
+                                {payment.created_at ? new Date(payment.created_at).toLocaleString('es-MX', {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                  hour: '2-digit', minute: '2-digit'
+                                }) : 'N/A'}
+                              </td>
+                              <td className="py-4 px-5 font-black text-slate-900 dark:text-white">
+                                ${parseFloat(payment.amount).toFixed(2)} MXN
+                              </td>
+                              <td className="py-4 px-5 text-right">
+                                {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full text-[12px] font-bold border border-emerald-100 dark:border-emerald-900/30">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Aprobado
+                                  </span>
+                                ) : payment.status === 'pending' ? (
+                                  <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full text-[12px] font-bold border border-amber-100 dark:border-amber-900/30">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                    Pendiente
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 px-2.5 py-1 rounded-full text-[12px] font-bold border border-red-100 dark:border-red-900/30">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                    Fallido
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile View */}
+                    <div className="md:hidden space-y-3">
+                      {adminPayments.map((payment) => (
+                        <div key={payment.id} className="border border-slate-100 dark:border-slate-700/60 rounded-2xl p-4 bg-white dark:bg-slate-800 shadow-sm flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                                {payment.description?.toLowerCase().includes('crédito') || payment.description?.toLowerCase().includes('credito') ? (
+                                  <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                ) : (
+                                  <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+                                )}
+                              </div>
+                              <span className="font-semibold text-slate-900 dark:text-white text-[13px] line-clamp-1">{payment.description || 'Servicios Mercasto'}</span>
+                            </div>
+                            {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
+                              <span className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold border border-emerald-100 dark:border-emerald-900/30">
+                                Aprobado
+                              </span>
+                            ) : payment.status === 'pending' ? (
+                              <span className="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full text-[11px] font-bold border border-amber-100 dark:border-amber-900/30">
+                                Pendiente
+                              </span>
+                            ) : (
+                              <span className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full text-[11px] font-bold border border-red-100 dark:border-red-900/30">
+                                Fallido
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="text-[12px] text-slate-500 dark:text-slate-400 space-y-1 pt-1 border-t border-slate-50 dark:border-slate-700/60">
+                            <div className="flex justify-between">
+                              <span className="font-medium">Usuario:</span>
+                              <span className="font-semibold text-slate-900 dark:text-white">{payment.user_name || `ID: ${payment.user_id}`}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="font-medium">Ref. Clip:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300 select-all">{payment.clip_checkout_id ? (payment.clip_checkout_id.length > 12 ? `${payment.clip_checkout_id.substring(0, 12)}...` : payment.clip_checkout_id) : 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>{payment.created_at ? new Date(payment.created_at).toLocaleDateString('es-MX', {
+                                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                              }) : 'N/A'}</span>
+                              <span className="font-bold text-slate-900 dark:text-white">
+                                ${parseFloat(payment.amount).toFixed(2)} MXN
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {adminPaymentsLastPage > 1 && (
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 -mx-6 -mb-6 md:-mx-8 md:-mb-8 px-6 py-4 md:px-8">
+                        <span className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">
+                          Página {adminPaymentsPage} de {adminPaymentsLastPage} ({adminPaymentsTotal} total)
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => loadAdminPayments(adminPaymentsPage - 1)}
+                            disabled={adminPaymentsPage === 1}
+                            className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all font-semibold flex items-center gap-1"
+                          >
+                            <ChevronLeft size={16} />
+                            Anterior
+                          </button>
+                          <button 
+                            onClick={() => loadAdminPayments(adminPaymentsPage + 1)}
+                            disabled={adminPaymentsPage === adminPaymentsLastPage}
+                            className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all font-semibold flex items-center gap-1"
+                          >
+                            Siguiente
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
           ) : (

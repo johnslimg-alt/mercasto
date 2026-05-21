@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, AlertTriangle, Loader2, X, Plus, Image, GripVertical, Pencil } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
+import SortablePhotoGrid from '../SortablePhotoGrid';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -40,7 +41,6 @@ export default function EditAdScreen() {
 
   // Images: { source: 'existing'|'new', url: string, path: string|null, file: File|null, preview: string }
   const [images, setImages] = useState([]);
-  const [dragIndex, setDragIndex] = useState(null);
 
   const token = localStorage.getItem('auth_token');
 
@@ -83,6 +83,7 @@ export default function EditAdScreen() {
         // Load existing images
         setImages(getImageUrls(adData.image_url).map(url => ({
           source: 'existing',
+          id: url,
           url,
           path: url.replace(`${STORAGE_URL}/`, ''),
           file: null,
@@ -118,31 +119,18 @@ export default function EditAdScreen() {
       alert('Máximo 10 imágenes por anuncio'); return;
     }
     const newImgs = files.map(file => ({
-      source: 'new', url: null, path: null, file,
+      source: 'new', id: crypto.randomUUID(), url: null, path: null, file,
       preview: URL.createObjectURL(file)
     }));
     setImages(prev => [...prev, ...newImgs]);
     e.target.value = '';
   };
 
-  const handleRemoveImage = (idx) => {
-    setImages(prev => prev.filter((_, i) => i !== idx));
+  const handleRemoveImage = (id) => {
+    setImages(prev => prev.filter(img => img.id !== id));
   };
 
-  // Drag-to-reorder
-  const handleDragStart = (idx) => setDragIndex(idx);
-  const handleDragOver = (e, idx) => {
-    e.preventDefault();
-    if (dragIndex === null || dragIndex === idx) return;
-    setImages(prev => {
-      const next = [...prev];
-      const [moved] = next.splice(dragIndex, 1);
-      next.splice(idx, 0, moved);
-      return next;
-    });
-    setDragIndex(idx);
-  };
-  const handleDragEnd = () => setDragIndex(null);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -438,45 +426,21 @@ export default function EditAdScreen() {
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Imágenes ({images.length}/10) — arrastra para reordenar
           </label>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-            {images.map((img, idx) => (
-              <div
-                key={idx}
-                draggable
-                onDragStart={() => handleDragStart(idx)}
-                onDragOver={e => handleDragOver(e, idx)}
-                onDragEnd={handleDragEnd}
-                className={`relative aspect-square rounded-2xl overflow-hidden border-2 cursor-grab transition-all ${dragIndex === idx ? 'opacity-50 border-lime-400 scale-95' : 'border-slate-200 hover:border-slate-300'}`}
-              >
-                <img src={img.preview} alt="" className="w-full h-full object-cover" />
-                {idx === 0 && (
-                  <span className="absolute bottom-1 left-1 bg-lime-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-lg">
-                    Principal
-                  </span>
-                )}
-                <div className="absolute top-1 right-1 flex gap-1">
-                  <div className="bg-white/80 rounded-lg p-1 cursor-grab">
-                    <GripVertical size={12} className="text-slate-500" />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(idx)}
-                    className="bg-red-500 rounded-lg p-1 hover:bg-red-600 transition-colors"
-                  >
-                    <X size={12} className="text-white" />
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="space-y-3">
+            <SortablePhotoGrid
+              photos={images}
+              onReorder={setImages}
+              onDelete={handleRemoveImage}
+            />
 
             {images.length < 10 && (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="aspect-square rounded-2xl border-2 border-dashed border-slate-300 hover:border-lime-400 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-lime-500 transition-all bg-slate-50 hover:bg-lime-50"
+                className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-300 hover:border-lime-400 flex items-center justify-center gap-2 text-slate-400 hover:text-lime-500 transition-all bg-slate-50 hover:bg-lime-50"
               >
                 <Plus size={20} />
-                <span className="text-xs font-medium">Agregar</span>
+                <span className="text-xs font-medium">Agregar foto</span>
               </button>
             )}
           </div>

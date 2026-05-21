@@ -40,6 +40,9 @@
     "check:cache-policy": "bash scripts/cache-policy-scan.sh"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@sentry/react": "^10.49.0",
     "dotenv": "^17.4.2",
     "laravel-echo": "^2.3.4",

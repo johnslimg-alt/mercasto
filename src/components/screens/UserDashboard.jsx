@@ -4,9 +4,15 @@ import MyAdsScreen from './MyAdsScreen';
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, PieChart as PieChartIcon } from "lucide-react";
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole }) {
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, PieChart as PieChartIcon, CreditCard } from "lucide-react";
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments }) {
     const activeAds = userAds.filter(ad => ad.status === 'active' || ad.status === 'pending');
+
+    React.useEffect(() => {
+        if (dashboardTab === 'transactions') {
+            loadUserPayments(1);
+        }
+    }, [dashboardTab, loadUserPayments]);
 
     const getDaysUntilExpiry = (expiresAt) => {
       if (!expiresAt) return null;
@@ -232,6 +238,10 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   <Share2 className="w-5 h-5 text-slate-400"/> Referidos
                 </Link>
 
+                <div onClick={() => setDashboardTab('transactions')} className={`p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium ${dashboardTab === 'transactions' ? 'text-[#65A30D] bg-lime-50/50' : 'text-slate-700 hover:bg-slate-50'}`}>
+                  <CreditCard className={`w-5 h-5 ${dashboardTab === 'transactions' ? 'text-[#84CC16]' : 'text-slate-400'}`}/> Transacciones
+                </div>
+
                 <div onClick={() => setDashboardTab('settings')} className={`p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium ${dashboardTab === 'settings' ? 'text-[#65A30D] bg-lime-50/50' : 'text-slate-700 hover:bg-slate-50'}`}>
 
                   <Settings className={`w-5 h-5 ${dashboardTab === 'settings' ? 'text-[#84CC16]' : 'text-slate-400'}`}/> {t.settings}
@@ -264,7 +274,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
             <div className="md:w-2/3 lg:w-3/4 flex flex-col gap-6">
 
-              {accountType === 'pro' && dashboardTab !== 'company' && dashboardTab !== 'settings' && (
+              {accountType === 'pro' && dashboardTab !== 'company' && dashboardTab !== 'settings' && dashboardTab !== 'transactions' && (
 
                 <>
 
@@ -801,6 +811,206 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               setShowPricingModal={setShowPricingModal}
               onRefreshAds={onRefreshAds}
             />
+          ) : dashboardTab === 'transactions' ? (
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex-1 p-6 md:p-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-[#84CC16]" /> Historial de Transacciones
+                  </h2>
+                  <p className="text-[13px] text-slate-500 mt-1">
+                    Consulta el registro de tus compras de créditos, promociones y recargas en Mercasto.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => loadUserPayments(1)} 
+                  disabled={loadingUserPayments}
+                  className="btn-sm border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 self-end sm:self-auto"
+                >
+                  {loadingUserPayments ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#84CC16]" />
+                  ) : (
+                    <Activity className="w-4 h-4 text-slate-500" />
+                  )}
+                  Actualizar
+                </button>
+              </div>
+
+              {loadingUserPayments ? (
+                <div className="space-y-4 py-4">
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="border border-slate-100 rounded-2xl p-4 animate-pulse flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <div className="w-5 h-5 bg-slate-200 rounded-full" />
+                        </div>
+                        <div>
+                          <div className="h-4 bg-slate-200 rounded-md w-40 mb-2" />
+                          <div className="h-3 bg-slate-100 rounded-md w-24" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                        <div className="h-4 bg-slate-200 rounded-md w-20" />
+                        <div className="h-6 bg-slate-100 rounded-full w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : userPayments.length === 0 ? (
+                <div className="py-16 text-center border border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center p-6 bg-slate-50/30">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-4 shadow-sm">
+                    <CreditCard className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-[16px] font-bold text-slate-900 mb-1">Sin transacciones registradas</h3>
+                  <p className="text-[13px] text-slate-500 max-w-sm mb-6">
+                    Aún no has realizado ninguna compra de créditos. Puedes recargar saldo para destacar tus anuncios o acceder a funciones PRO.
+                  </p>
+                  <button 
+                    onClick={() => handleClipPayment(100, '100 Créditos Mercasto')}
+                    className="btn-md bg-[#0F172A] hover:bg-black text-white flex items-center gap-2 shadow-sm font-semibold text-[13px]"
+                  >
+                    <Zap size={16} className="text-amber-500 fill-amber-500" />
+                    Comprar 100 Créditos ($100 MXN)
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="hidden md:block overflow-x-auto border border-slate-100 rounded-2xl">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/70 text-slate-500 font-semibold text-[12px] uppercase tracking-wider border-b border-slate-100">
+                          <th className="py-4 px-5">Concepto</th>
+                          <th className="py-4 px-5">Referencia Clip</th>
+                          <th className="py-4 px-5">Fecha</th>
+                          <th className="py-4 px-5">Monto</th>
+                          <th className="py-4 px-5 text-right">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-[14px]">
+                        {userPayments.map((payment) => (
+                          <tr key={payment.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-4 px-5 font-semibold text-slate-900">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                                  {payment.description?.toLowerCase().includes('crédito') || payment.description?.toLowerCase().includes('credito') ? (
+                                    <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                                  ) : (
+                                    <CreditCard className="w-4 h-4 text-blue-500" />
+                                  )}
+                                </div>
+                                <span className="line-clamp-1">{payment.description || 'Compra de Servicios'}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-5 text-slate-600 font-mono text-[12px]">
+                              {payment.clip_checkout_id ? (
+                                <span className="bg-slate-100 px-2 py-1 rounded text-slate-700 select-all" title="Click para seleccionar">
+                                  {payment.clip_checkout_id.substring(0, 16)}...
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">N/A</span>
+                              )}
+                            </td>
+                            <td className="py-4 px-5 text-slate-500">
+                              {payment.created_at ? new Date(payment.created_at).toLocaleString('es-MX', {
+                                year: 'numeric', month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              }) : 'N/A'}
+                            </td>
+                            <td className="py-4 px-5 font-black text-slate-900">
+                              ${parseFloat(payment.amount).toFixed(2)} MXN
+                            </td>
+                            <td className="py-4 px-5 text-right">
+                              {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
+                                <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-[12px] font-bold border border-emerald-100">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Aprobado
+                                </span>
+                              ) : payment.status === 'pending' ? (
+                                <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full text-[12px] font-bold border border-amber-100">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                  Pendiente
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-full text-[12px] font-bold border border-red-100">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                  Fallido
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="md:hidden space-y-3">
+                    {userPayments.map((payment) => (
+                      <div key={payment.id} className="border border-slate-100 rounded-2xl p-4 bg-white shadow-sm flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                              {payment.description?.toLowerCase().includes('crédito') || payment.description?.toLowerCase().includes('credito') ? (
+                                <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                              ) : (
+                                <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+                              )}
+                            </div>
+                            <span className="font-semibold text-slate-900 text-[13px] line-clamp-1">{payment.description || 'Compra de Servicios'}</span>
+                          </div>
+                          {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
+                            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full text-[11px] font-bold border border-emerald-100">
+                              Aprobado
+                            </span>
+                          ) : payment.status === 'pending' ? (
+                            <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-[11px] font-bold border border-amber-100">
+                              Pendiente
+                            </span>
+                          ) : (
+                            <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[11px] font-bold border border-red-100">
+                              Fallido
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-[12px] text-slate-500 pt-1 border-t border-slate-50">
+                          <span>
+                            {payment.created_at ? new Date(payment.created_at).toLocaleDateString('es-MX', {
+                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            }) : 'N/A'}
+                          </span>
+                          <span className="font-bold text-slate-900">
+                            ${parseFloat(payment.amount).toFixed(2)} MXN
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {userPaymentsLastPage > 1 && (
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100 bg-slate-50/50 -mx-6 -mb-6 md:-mx-8 md:-mb-8 px-6 py-4 md:px-8">
+                      <span className="text-[13px] text-slate-500 font-medium">
+                        Página {userPaymentsPage} de {userPaymentsLastPage} ({userPaymentsTotal} total)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => loadUserPayments(userPaymentsPage - 1)}
+                          disabled={userPaymentsPage === 1}
+                          className="btn-sm border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-white text-slate-700 transition-all font-semibold"
+                        >
+                          Anterior
+                        </button>
+                        <button 
+                          onClick={() => loadUserPayments(userPaymentsPage + 1)}
+                          disabled={userPaymentsPage === userPaymentsLastPage}
+                          className="btn-sm border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-white text-slate-700 transition-all font-semibold"
+                        >
+                          Siguiente
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
 
             <>

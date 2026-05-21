@@ -36,3 +36,10 @@ Schedule::call(function () {
 })->hourly();
 // Expire ads that passed their expires_at date, notify owners
 Schedule::command('ads:expire')->daily();
+
+// Weekly digest email — every Monday at 08:00 Mexico City time
+Schedule::command('digest:weekly')
+    ->weeklyOn(1, '08:00')
+    ->timezone('America/Mexico_City')
+    ->withoutOverlapping()
+    ->runInBackground();

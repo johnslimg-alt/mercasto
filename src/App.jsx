@@ -478,6 +478,19 @@ function App() {
   const [userReportForm, setUserReportForm] = useState({ reason: '', comments: '' });
   const [authPhone, setAuthPhone] = useState('');
 
+  // --- CLIP PAYMENTS STATE ---
+  const [userPayments, setUserPayments] = useState([]);
+  const [loadingUserPayments, setLoadingUserPayments] = useState(false);
+  const [userPaymentsPage, setUserPaymentsPage] = useState(1);
+  const [userPaymentsLastPage, setUserPaymentsLastPage] = useState(1);
+  const [userPaymentsTotal, setUserPaymentsTotal] = useState(0);
+
+  const [adminPayments, setAdminPayments] = useState([]);
+  const [loadingAdminPayments, setLoadingAdminPayments] = useState(false);
+  const [adminPaymentsPage, setAdminPaymentsPage] = useState(1);
+  const [adminPaymentsLastPage, setAdminPaymentsLastPage] = useState(1);
+  const [adminPaymentsTotal, setAdminPaymentsTotal] = useState(0);
+
   // --- AI COMMAND CENTER STATE ---
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiAgentType, setAiAgentType] = useState('postgresql');
@@ -1407,6 +1420,49 @@ function App() {
     } catch (err) { console.error(err); }
   };
 
+  // --- HISTORIAL DE PAGOS DE CLIP ---
+  const loadUserPayments = useCallback(async (page = 1) => {
+    setLoadingUserPayments(true);
+    setUserPaymentsPage(page);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_URL}/user/payments?page=${page}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserPayments(data.data || []);
+        setUserPaymentsLastPage(data.last_page || 1);
+        setUserPaymentsTotal(data.total || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching user payments", err);
+    } finally {
+      setLoadingUserPayments(false);
+    }
+  }, []);
+
+  const loadAdminPayments = useCallback(async (page = 1) => {
+    setLoadingAdminPayments(true);
+    setAdminPaymentsPage(page);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_URL}/admin/payments?page=${page}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminPayments(data.data || []);
+        setAdminPaymentsLastPage(data.last_page || 1);
+        setAdminPaymentsTotal(data.total || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching admin payments", err);
+    } finally {
+      setLoadingAdminPayments(false);
+    }
+  }, []);
+
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: КУПОНЫ ---
   const loadCoupons = useCallback(async () => {
     setLoadingCoupons(true);
@@ -1847,6 +1903,7 @@ function App() {
     const files = Array.from(e.target.files);
     const newImageObjects = files.map(file => ({
       source: 'new',
+      id: crypto.randomUUID(),
       file: file,
       preview: URL.createObjectURL(file)
     }));
@@ -1860,6 +1917,14 @@ function App() {
       URL.revokeObjectURL(imageToRemove.preview);
     }
     setImages(prev => prev.filter((_, i) => i !== idxToRemove));
+  };
+
+  const removeImageById = (id) => {
+    const imageToRemove = images.find(img => img.id === id);
+    if (imageToRemove && imageToRemove.source === 'new') {
+      URL.revokeObjectURL(imageToRemove.preview);
+    }
+    setImages(prev => prev.filter(img => img.id !== id));
   };
 
   const handleGenerateDescription = async () => {
@@ -2035,6 +2100,7 @@ function App() {
     });
     setImages(getImageUrls(ad.image_url, ad.image).map(url => ({
       source: 'existing',
+      id: url,
       url: url,
       preview: url
     })));
@@ -2636,13 +2702,13 @@ function App() {
   const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
   const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
 
-  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} />;
+  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
-  const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
+  const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
 
   const renderCouponModal = () => {
     if (!showCouponModal) return null;
@@ -2705,7 +2771,7 @@ function App() {
   };
 
   // --- РЕНДЕР ПАНЕЛИ АДМИНИСТРАТОРА ---
-  const renderAdminScreen = () => <AdminScreen IconMap={IconMap} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} />;
+  const renderAdminScreen = () => <AdminScreen IconMap={IconMap} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} adminPayments={adminPayments} loadingAdminPayments={loadingAdminPayments} adminPaymentsPage={adminPaymentsPage} adminPaymentsLastPage={adminPaymentsLastPage} adminPaymentsTotal={adminPaymentsTotal} loadAdminPayments={loadAdminPayments} />;
 
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (

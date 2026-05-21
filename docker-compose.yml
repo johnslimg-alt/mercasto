@@ -133,7 +133,8 @@ services:
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -159,7 +160,8 @@ services:
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: "json-file"

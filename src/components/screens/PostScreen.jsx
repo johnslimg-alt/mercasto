@@ -3,9 +3,10 @@ import { filterConfig } from '../../constants/filterConfig';
 import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
 
+import SortablePhotoGrid from '../SortablePhotoGrid';
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, setEditingAd, setForm, setVideoFile, t, videoFile, aiLoading, handleGenerateDescription }) {
+export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, removeImageById, reorderImages, setEditingAd, setForm, setVideoFile, t, videoFile, aiLoading, handleGenerateDescription }) {
     const mapQuery = debouncedLocation ? encodeURIComponent(debouncedLocation) : "Mexico";
     const [apiCategoryFields, setApiCategoryFields] = React.useState(null);
     const [loadingCategoryFields, setLoadingCategoryFields] = React.useState(false);
@@ -82,31 +83,23 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                  {images.length > 0 ? (
 
-                    <div className="w-full grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    <div className="w-full space-y-3">
 
-                       {images.map((img, idx) => (
-
-                          <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200">
-
-                             <img src={img.preview} className="w-full h-full object-cover" alt={`Preview ${idx}`} />
-
-                             <button type="button" onClick={(e) => { e.preventDefault(); removeImage(idx); }} className="absolute top-1.5 right-1.5 bg-white/90 backdrop-blur rounded-full p-1 text-slate-500 hover:text-red-500 hover:bg-white shadow-sm transition-colors">
-
-                               <Trash2 size={14}/>
-
-                             </button>
-
-                          </div>
-
-                       ))}
+                       <SortablePhotoGrid
+                         photos={images}
+                         onReorder={reorderImages}
+                         onDelete={removeImageById}
+                       />
 
                        {images.length < 10 && (
 
-                          <label className="aspect-square border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50">
+                          <label className="aspect-square border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50 w-full py-4">
 
                              <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
 
                              <PlusCircle className="text-slate-400" size={24} />
+
+                             <span className="text-xs text-slate-400 mt-1">Agregar más fotos</span>
 
                           </label>
 

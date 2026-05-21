@@ -276,4 +276,37 @@ class PaymentController extends Controller
             return response()->json(['success' => true, 'message' => "¡Has recibido {$coupon->credits} créditos!", 'balance' => $newBalance]);
         });
     }
+
+    /**
+     * Получить историю платежей текущего пользователя
+     */
+    public function getUserPayments(Request $request)
+    {
+        $user = $request->user();
+        $payments = DB::table('payments')
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+            
+        return response()->json($payments);
+    }
+
+    /**
+     * Получить историю всех платежей (только для админов)
+     */
+    public function getAdminPayments(Request $request)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Acceso denegado'], 403);
+        }
+        
+        $payments = DB::table('payments')
+            ->join('users', 'payments.user_id', '=', 'users.id')
+            ->select('payments.*', 'users.name as user_name', 'users.email as user_email')
+            ->orderBy('payments.created_at', 'desc')
+            ->paginate(50);
+            
+        return response()->json($payments);
+    }
 }
+
