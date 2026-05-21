@@ -96,7 +96,7 @@ grep -qF "Ad::where('user_id'" "$DELETE_ACCOUNT"
 grep -qF "Cache::forget('sitemap_xml')" "$DELETE_ACCOUNT"
 grep -qF "Cache::forget('google_merchant_xml')" "$DELETE_ACCOUNT"
 grep -qF "tokens()->delete()" "$DELETE_ACCOUNT"
-grep -qF "->delete()" "$DELETE_ACCOUNT"
+grep -qF "user->delete()" "$DELETE_ACCOUNT"
 
 # Frontend auth/account flow markers.
 grep -qF "availableProviders" "$APP"
