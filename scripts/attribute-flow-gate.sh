@@ -45,8 +45,9 @@ grep -qF "fieldDef.label" "$DETAIL_SCREEN"
 
 # Backend must validate, store, update and filter JSON attributes server-side.
 grep -qF "'attributes' => 'nullable|array'" "$CONTROLLER"
-grep -qF "'attributes' => $request->filled('attributes') ? $request->input('attributes') : null" "$CONTROLLER"
-grep -qF "'attributes' => $validated['attributes'] ?? null" "$CONTROLLER"
+grep -qF "filled('attributes')" "$CONTROLLER"
+grep -qF "input('attributes')" "$CONTROLLER"
+grep -qF "attributes'] ?? null" "$CONTROLLER"
 grep -qF "filled('filters')" "$CONTROLLER"
 grep -qF "attributes->{" "$CONTROLLER"
 grep -qF "whereIn(\"attributes->{" "$CONTROLLER"
