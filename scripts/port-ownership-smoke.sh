@@ -3,18 +3,35 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 EXPECTED_FRONTEND="${EXPECTED_FRONTEND_CONTAINER:-mercasto_frontend_container}"
+REQUIRE_PORT_OWNERSHIP="${REQUIRE_PORT_OWNERSHIP:-0}"
+PROD_ROOT="${PROD_ROOT:-/var/www/mercasto}"
+
+echo "== Port ownership smoke =="
+
+# This is a live-server gate. Keep local CI and non-production smoke jobs from
+# failing when Docker or the production containers are intentionally absent.
+if [[ "$REQUIRE_PORT_OWNERSHIP" != "1" && "$(pwd)" != "$PROD_ROOT" ]]; then
+  echo "port ownership smoke skipped outside production root: $(pwd)"
+  exit 0
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "docker is required for port ownership smoke" >&2
-  exit 1
+  if [[ "$REQUIRE_PORT_OWNERSHIP" == "1" ]]; then
+    echo "FAIL: docker is required for port ownership smoke" >&2
+    exit 1
+  fi
+  echo "port ownership smoke skipped: docker not available"
+  exit 0
 fi
 
 if ! command -v ss >/dev/null 2>&1; then
-  echo "ss is required for port ownership smoke" >&2
-  exit 1
+  if [[ "$REQUIRE_PORT_OWNERSHIP" == "1" ]]; then
+    echo "FAIL: ss is required for port ownership smoke" >&2
+    exit 1
+  fi
+  echo "port ownership smoke skipped: ss not available"
+  exit 0
 fi
-
-echo "== Port ownership smoke =="
 
 owners="$(ss -ltnp '( sport = :80 or sport = :443 )' || true)"
 echo "$owners"
