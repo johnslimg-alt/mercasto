@@ -31,6 +31,7 @@
     "smoke:full": "npm run smoke:all && npm run maintenance:precheck",
     "verify:quick": "npm run smoke:all",
     "verify:prod": "npm run smoke:full",
+    "verify:launch": "REQUIRE_SMS_READY=1 npm run smoke:all",
     "gate:prod": "npm run check:scripts && npm run check:compose && npm run check:recovery && npm run check:static-safety && npm run check:ai-description-editor && npm run smoke:auth-providers && npm run smoke:sms-readiness && npm run smoke:business-profile && npm run smoke:share-og && npm run smoke:public-manifests && npm run smoke:cache-headers && npm run build && npm run verify:quick",
     "maintenance:precheck": "bash scripts/os-maintenance-precheck.sh",
     "smoke": "npm run smoke:prod",
