@@ -7,6 +7,8 @@ COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 USER_ID="${BUSINESS_PROFILE_USER_ID:-1}"
 TMP_FILE="${TMPDIR:-/tmp}/mercasto-business-profile-smoke.json"
+ROUTES_FILE="${TMPDIR:-/tmp}/mercasto-business-profile-routes.out"
+MIGRATE_PRETEND_FILE="${TMPDIR:-/tmp}/mercasto-business-profile-migrate-pretend.out"
 
 if [[ ! -f docker-compose.yml ]]; then
   echo "run this script from the Mercasto repository root" >&2
@@ -24,11 +26,12 @@ echo "== Business profile smoke =="
 "${COMPOSE[@]}" exec -T mercasto-backend php -l app/Models/User.php
 "${COMPOSE[@]}" exec -T mercasto-backend php -l database/migrations/2026_05_19_180000_add_business_profile_fields_to_users_table.php
 
-"${COMPOSE[@]}" exec -T mercasto-backend php artisan route:list --path=business-profile | grep -q "business-profile"
-"${COMPOSE[@]}" exec -T mercasto-backend php artisan migrate --pretend --no-interaction >/tmp/mercasto-business-profile-migrate-pretend.out
+"${COMPOSE[@]}" exec -T mercasto-backend php artisan route:list --path=business-profile >"$ROUTES_FILE"
+grep -qF "business-profile" "$ROUTES_FILE"
+"${COMPOSE[@]}" exec -T mercasto-backend php artisan migrate --pretend --force --no-interaction >"$MIGRATE_PRETEND_FILE"
 
 url="${BASE_URL%/}/api/users/${USER_ID}/business-profile"
-code="$(curl -k -sS --max-time 20 -o "$TMP_FILE" -w '%{http_code}' "$url" || true)"
+code="$(curl -k -sS --retry 6 --retry-delay 5 --retry-connrefused --max-time 20 -o "$TMP_FILE" -w '%{http_code}' "$url" || true)"
 echo "$url -> $code"
 
 case "$code" in
