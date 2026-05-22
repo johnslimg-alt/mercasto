@@ -34,7 +34,7 @@ grep -qF "almacenamiento" "$FILTER_CONFIG"
 grep -qF "filterConfig" "$POST_SCREEN"
 grep -qF "category-attributes" "$POST_SCREEN"
 grep -qF "form.attributes" "$POST_SCREEN"
-grep -qF "attributes[" "$POST_SCREEN"
+grep -qF "form.attributes?.[" "$POST_SCREEN"
 grep -qF "handleGenerateDescription" "$POST_SCREEN"
 
 # Detail page must render saved attributes in a structured block.
