@@ -1,0 +1,42 @@
+# Optional VPS resource limits override for Hostinger CPU/resource limitation events.
+#
+# Usage:
+#   docker compose --env-file backend/.env \
+#     -f docker-compose.yml \
+#     -f docker-compose.override.yml \
+#     -f docker-compose.resource-limits.yml \
+#     up -d
+#
+# This file intentionally does not change Mercasto core services. It only caps
+# optional/background services that are safe to reduce during provider limits.
+
+services:
+  ollama:
+    cpus: "0.50"
+    mem_limit: 1g
+    mem_reservation: 256m
+
+  cadvisor:
+    cpus: "0.20"
+    mem_limit: 256m
+    mem_reservation: 64m
+
+  prometheus:
+    cpus: "0.30"
+    mem_limit: 512m
+    mem_reservation: 128m
+
+  grafana:
+    cpus: "0.20"
+    mem_limit: 384m
+    mem_reservation: 96m
+
+  db-backup:
+    cpus: "0.25"
+    mem_limit: 512m
+    mem_reservation: 128m
+
+  certbot:
+    cpus: "0.10"
+    mem_limit: 128m
+    mem_reservation: 32m
