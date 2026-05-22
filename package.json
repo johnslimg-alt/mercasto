@@ -24,6 +24,9 @@
     "smoke:share-og": "bash scripts/share-og-smoke.sh",
     "smoke:public-manifests": "bash scripts/public-manifest-smoke.sh",
     "smoke:port-ownership": "bash scripts/port-ownership-smoke.sh",
+    "e2e:install": "npx playwright install --with-deps chromium",
+    "e2e:public": "npx playwright test tests/e2e/public-smoke.spec.js",
+    "e2e:public:ci": "CI=1 npx playwright test tests/e2e/public-smoke.spec.js",
     "check:session-config": "bash scripts/session-config-scan.sh",
     "check:payment-webhook-idempotency": "bash scripts/payment-webhook-idempotency-scan.sh",
     "check:media-upload-validation": "bash scripts/media-upload-validation-scan.sh",
@@ -59,6 +62,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.57.0",
     "@sentry/vite-plugin": "^5.2.0",
     "@tailwindcss/vite": "^4.2.4",
     "@types/react": "^19.2.14",
