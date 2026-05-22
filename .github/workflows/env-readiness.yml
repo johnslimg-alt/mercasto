@@ -1,0 +1,26 @@
+name: Env Readiness Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/env-readiness-smoke.sh'
+      - 'backend/config/**'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  env-readiness:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Run env readiness smoke
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          git fetch origin main
+          git reset --hard origin/main
+          REQUIRE_ENV_READY=1 bash scripts/env-readiness-smoke.sh
