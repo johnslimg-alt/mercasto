@@ -30,6 +30,8 @@ services:
     depends_on:
       mercasto-backend:
         condition: service_healthy
+      mercasto-reverb:
+        condition: service_started
     # УЛУЧШЕНИЕ 1: реальный healthcheck
     healthcheck:
       test: ["CMD-SHELL", "pidof nginx >/dev/null 2>&1 || exit 1"]
