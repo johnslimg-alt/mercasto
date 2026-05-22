@@ -1,0 +1,36 @@
+name: Launch Status Summary
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'scripts/**'
+      - 'tests/e2e/**'
+      - '.github/workflows/**'
+      - 'playwright.config.mjs'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run launch status summary
+        run: bash scripts/launch-status-summary.sh
+
+      - name: Upload launch inventory output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launch-artifact-inventory
+          path: /tmp/mercasto-launch-artifact-inventory.out
+          if-no-files-found: ignore
+          retention-days: 7
