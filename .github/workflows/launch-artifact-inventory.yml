@@ -1,0 +1,35 @@
+name: Launch Artifact Inventory
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'scripts/**'
+      - 'tests/e2e/**'
+      - 'playwright.config.mjs'
+      - '.github/workflows/**'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'scripts/**'
+      - 'tests/e2e/**'
+      - 'playwright.config.mjs'
+      - '.github/workflows/**'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check launch artifact inventory
+        run: bash scripts/launch-artifact-inventory.sh
