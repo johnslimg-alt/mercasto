@@ -13,7 +13,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Подключаем наши кастомные генераторы данных!
-        $this->call([MercastoCategoriesSeeder::class]);
+        $this->call([
+            MercastoCategoriesSeeder::class,
+            CategoryAttributeSeeder::class,
+        ]);
         
         // Защита продакшена: предотвращаем случайную заливку 1000 тестовых объявлений в реальную БД
         if (!app()->environment('production')) {
