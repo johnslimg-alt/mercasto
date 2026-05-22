@@ -45,21 +45,17 @@ export default function ReferralScreen({ t = {}, lang = 'es' }) {
   };
 
   const copy = {
-    title: t.referral_title || (lang === 'en' ? 'Referral Program' : lang === 'pt' ? 'Programa de Indicações' : 'Programa de Referidos'),
-    description: t.referral_desc || (lang === 'en'
-      ? 'Each friend who registers with your link gives you 1 free featured boost for your listings.'
-      : lang === 'pt'
-      ? 'Cada amigo que se cadastra com seu link dá a você 1 destaque grátis para seus anúncios.'
-      : 'Cada amigo que se registre con tu enlace te da 1 destacado gratis para tus anuncios.'),
-    linkLabel: t.referral_link || (lang === 'en' ? 'Your referral link' : lang === 'pt' ? 'Seu link de indicação' : 'Tu enlace de referido'),
-    copied: t.copied || (lang === 'en' ? 'Copied!' : lang === 'pt' ? 'Copiado!' : '¡Copiado!'),
-    copy: t.copy || (lang === 'en' ? 'Copy' : lang === 'pt' ? 'Copiar' : 'Copiar'),
-    shareWhatsApp: t.share_whatsapp || (lang === 'en' ? 'Share on WhatsApp' : lang === 'pt' ? 'Compartilhar no WhatsApp' : 'Compartir por WhatsApp'),
-    friends: t.referral_friends || (lang === 'en' ? 'Friends invited' : lang === 'pt' ? 'Amigos convidados' : 'Amigos invitados'),
-    credits: t.referral_credits || (lang === 'en' ? 'Credits earned' : lang === 'pt' ? 'Créditos ganhos' : 'Créditos ganados'),
-    history: t.referral_history || (lang === 'en' ? 'Referral history' : lang === 'pt' ? 'Histórico de indicações' : 'Historial de referidos'),
-    empty: t.referral_empty || (lang === 'en' ? 'You have not invited anyone yet. Share your link!' : lang === 'pt' ? 'Você ainda não convidou ninguém. Compartilhe seu link!' : 'Aún no has invitado a nadie. ¡Comparte tu enlace!'),
-    credit: t.credit || (lang === 'en' ? 'credit' : lang === 'pt' ? 'crédito' : 'crédito'),
+    title: t.referral_title || 'Programa de Referidos',
+    description: t.referral_desc || 'Invita a tus amigos a Mercasto y ambos ganarán créditos cuando publiquen su primer anuncio.',
+    linkLabel: t.referral_link || 'Tu enlace de referido',
+    copied: t.copied || '¡Copiado!',
+    copy: t.copy || 'Copiar',
+    shareWhatsApp: t.share_whatsapp || 'Compartir por WhatsApp',
+    friends: t.referral_friends || 'Amigos invitados',
+    credits: t.referral_credits || 'Créditos ganados',
+    history: t.referral_history || 'Historial de referidos',
+    empty: t.referral_empty || 'Aún no has invitado a ningún amigo. ¡Comparte tu enlace para comenzar a ganar!',
+    credit: t.credit || 'Crédito',
   };
 
   if (error) return (

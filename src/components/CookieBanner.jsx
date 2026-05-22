@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cookie, X } from 'lucide-react';
 
-export default function CookieBanner() {
+export default function CookieBanner({ t, lang }) {
   const [visible, setVisible] = useState(false);
   const navigate = useNavigate();
 
@@ -11,8 +11,8 @@ export default function CookieBanner() {
     const consent = localStorage.getItem('cookie_consent');
     if (!consent) {
       // Small delay so it doesn't flash on first paint
-      const t = setTimeout(() => setVisible(true), 800);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setVisible(true), 800);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -28,18 +28,20 @@ export default function CookieBanner() {
 
   if (!visible) return null;
 
+  const dictionary = t || {};
+
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-5"
       role="dialog"
-      aria-label="Aviso de cookies"
+      aria-label={dictionary.cookies_aria_label || "Aviso de cookies"}
       aria-live="polite"
     >
       <div className="relative max-w-4xl mx-auto bg-[#0F172A] text-white rounded-2xl shadow-2xl border border-white/10 px-5 py-4 pr-12 sm:pr-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <button
           onClick={essential}
           className="absolute top-3 right-3 p-2 text-slate-500 hover:text-slate-300 transition-colors rounded-xl hover:bg-white/10"
-          aria-label="Cerrar"
+          aria-label={dictionary.close_btn || "Cerrar"}
         >
           <X className="w-4 h-4" />
         </button>
@@ -51,15 +53,15 @@ export default function CookieBanner() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-white leading-snug">
-              Usamos cookies para mejorar tu experiencia.
+              {dictionary.cookies_title || "Usamos cookies para mejorar tu experiencia."}
             </p>
             <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-              Algunas son esenciales; otras nos ayudan a entender cómo usas Mercasto.{' '}
+              {dictionary.cookies_desc || "Algunas son esenciales; otras nos ayudan a entender cómo usas Mercasto."}{' '}
               <button
                 onClick={() => navigate('/cookies')}
                 className="text-[#8be0d2] hover:text-[#b6f0e8] underline underline-offset-2 transition-colors"
               >
-                Más información
+                {dictionary.learn_more || "Más información"}
               </button>
             </p>
           </div>
@@ -71,13 +73,13 @@ export default function CookieBanner() {
             onClick={essential}
             className="px-3 sm:px-4 py-2 text-xs font-medium text-slate-300 bg-white/10 hover:bg-white/15 rounded-xl transition-colors border border-white/10"
           >
-            Solo esenciales
+            {dictionary.cookies_essential || "Solo esenciales"}
           </button>
           <button
             onClick={accept}
             className="px-3 sm:px-4 py-2 text-xs font-semibold text-white bg-[#0f8f7d] hover:bg-[#0b6f61] rounded-xl transition-colors shadow-sm"
           >
-            Aceptar todas
+            {dictionary.cookies_accept_all || "Aceptar todas"}
           </button>
         </div>
       </div>

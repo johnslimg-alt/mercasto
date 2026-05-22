@@ -10,19 +10,19 @@ function businessAssetUrl(url) {
   return `${STORAGE_URL}/${url}`;
 }
 
-function formatHours(hours = []) {
+function formatHours(hours = [], t = {}) {
   if (!Array.isArray(hours) || hours.length === 0) return [];
   return hours
     .filter(item => item && item.day)
     .map(item => {
-      if (item.closed) return `${item.day}: Cerrado`;
+      if (item.closed) return `${item.day}: ${t.closed_hours || 'Cerrado'}`;
       if (item.open && item.close) return `${item.day}: ${item.open}–${item.close}`;
-      return `${item.day}: Consultar horario`;
+      return `${item.day}: ${t.check_hours || 'Consultar horario'}`;
     });
 }
 
 export default function StorefrontScreen({
-  company, t, getImageUrl, companyRatingStats, companyAds, companyReviews,
+  company, t, lang, getImageUrl, companyRatingStats, companyAds, companyReviews,
   loadingCompanyAds, submittingReview, setShowUserReportModal, setQrModalData,
   setViewedCompany, renderAdCard, renderSkeletonCard, handleReviewSubmit, reviewForm, setReviewForm,
   user, handleViewCompany
@@ -53,10 +53,10 @@ export default function StorefrontScreen({
   if (!company) return null;
 
   const isBusinessEnabled = businessProfile?.enabled || businessProfile?.is_business || company.role === 'business';
-  const displayName = isBusinessEnabled && businessProfile?.business_name ? businessProfile.business_name : (company.name || 'Vendedor');
+  const displayName = isBusinessEnabled && businessProfile?.business_name ? businessProfile.business_name : (company.name || (t.seller_role || 'Vendedor'));
   const logoUrl = businessProfile?.business_logo_url ? businessAssetUrl(businessProfile.business_logo_url) : null;
   const phoneForQr = businessProfile?.business_whatsapp || businessProfile?.business_phone || company.phone_number;
-  const businessHours = formatHours(businessProfile?.business_hours);
+  const businessHours = formatHours(businessProfile?.business_hours, t);
 
   return (
   <div className="bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
@@ -82,7 +82,7 @@ export default function StorefrontScreen({
                {isBusinessEnabled && <span className="badge bg-slate-900 text-white ml-1">PRO</span>}
                {businessProfile?.business_rfc_verified && (
                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 border border-emerald-100">
-                   <CheckCircle className="w-3 h-3" /> RFC verificado
+                   <CheckCircle className="w-3 h-3" /> {t.rfc_verified || 'RFC verificado'}
                  </span>
                )}
              </h1>
@@ -93,7 +93,7 @@ export default function StorefrontScreen({
              <div className="flex items-center gap-1 mt-2">
                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
                <span className="font-bold text-slate-900 text-[14px]">{Number(companyRatingStats.average || 0).toFixed(1)}</span>
-               <span className="text-slate-500 text-[13px]">({companyRatingStats.total} reseñas)</span>
+               <span className="text-slate-500 text-[13px]">({companyRatingStats.total} {t.reviews_count || 'reseñas'})</span>
              </div>
              
              <div className="flex flex-wrap gap-2 mt-4">
@@ -104,7 +104,7 @@ export default function StorefrontScreen({
                )}
                {isBusinessEnabled && (
                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 border-slate-200 text-slate-700 text-[12px] font-semibold">
-                   <Building2 className="w-3.5 h-3.5"/> Perfil de negocio
+                   <Building2 className="w-3.5 h-3.5"/> {t.business_profile_tag || 'Perfil de negocio'}
                  </div>
                )}
                {companyAds.length >= 10 && (
@@ -122,7 +122,7 @@ export default function StorefrontScreen({
                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px] text-slate-600">
                  {businessProfile?.business_website && (
                    <a href={businessProfile.business_website} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
-                     <Globe className="w-4 h-4 text-slate-400" /> Sitio web
+                     <Globe className="w-4 h-4 text-slate-400" /> {t.website || 'Sitio web'}
                    </a>
                  )}
                  {(businessProfile?.business_phone || businessProfile?.business_whatsapp) && (
@@ -180,7 +180,7 @@ export default function StorefrontScreen({
                 </button>
               ))}
             </div>
-            <textarea value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} placeholder="¿Cómo fue tu experiencia con este vendedor?" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[14px] mb-3 min-h-[80px]"></textarea>
+            <textarea value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} placeholder={t.review_placeholder || '¿Cómo fue tu experiencia con este vendedor?'} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[14px] mb-3 min-h-[80px]"></textarea>
             <button type="submit" disabled={submittingReview} className="btn-sm bg-[#0F172A] text-white hover:bg-black flex items-center gap-2">
               {submittingReview ? <Loader2 className="w-4 h-4 animate-spin"/> : t.publish_review}
             </button>
@@ -205,7 +205,7 @@ export default function StorefrontScreen({
                       </div>
                     </div>
                   </div>
-                  <span className="text-[11px] text-slate-400">{new Date(rev.created_at).toLocaleDateString()}</span>
+                  <span className="text-[11px] text-slate-400">{new Date(rev.created_at).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US')}</span>
                 </div>
                 {rev.comment && <p className="text-[13px] text-slate-600 mt-2">{rev.comment}</p>}
               </div>

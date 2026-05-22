@@ -67,7 +67,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
           <h2 className="text-[22px] font-bold tracking-tight text-slate-900 mb-6 flex items-center gap-2 cursor-pointer" onClick={() => editingAd && setEditingAd(null)}>
 
-              <PlusCircle className="text-[#84CC16]" size={26} /> {editingAd ? 'Editar anuncio' : t.post_title}
+              <PlusCircle className="text-[#84CC16]" size={26} /> {editingAd ? (t.edit_ad || 'Editar anuncio') : t.post_title}
 
           </h2>
 
@@ -79,7 +79,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
               <div>
 
-                 <label className="block text-[13px] font-semibold text-slate-700 mb-2">Fotos del anuncio</label>
+                 <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.ad_photos || 'Fotos del anuncio'}</label>
 
                  {images.length > 0 ? (
 
@@ -99,7 +99,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                              <PlusCircle className="text-slate-400" size={24} />
 
-                             <span className="text-xs text-slate-400 mt-1">Agregar más fotos</span>
+                             <span className="text-xs text-slate-400 mt-1">{t.add_more_photos || 'Agregar más fotos'}</span>
 
                           </label>
 
@@ -119,9 +119,9 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                        </div>
 
-                       <p className="text-[14px] font-medium text-slate-700 mb-1">Arrastra tus fotos aquí o <span className="text-[#65A30D]">explora</span></p>
+                       <p className="text-[14px] font-medium text-slate-700 mb-1">{(t.drag_photos_hint || 'Arrastra tus fotos aquí o')} <span className="text-[#65A30D]">{(t.browse_label || 'explora')}</span></p>
 
-                       <p className="text-[12px] text-slate-500">Máximo 10 fotos (JPG, PNG)</p>
+                       <p className="text-[12px] text-slate-500">{(t.max_photos_hint || 'Máximo 10 fotos (JPG, PNG)')}</p>
 
                     </label>
 
@@ -149,11 +149,11 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                   <div>
 
-                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">Categoría</label>
+                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.category || 'Categoría'}</label>
 
                       <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
 
-                          <option value="">Seleccionar...</option>
+                          <option value="">{(t.select || 'Seleccionar')}...</option>
 
                           {categoriesData.map(c => <option key={c.slug} value={c.slug}>{c.name[lang] || c.name['es']}</option>)}
 
@@ -163,13 +163,13 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                   <div>
 
-                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">Estado</label>
+                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.condition || 'Estado'}</label>
 
                       <select value={form.condition} onChange={e => setForm({...form, condition: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
 
-                          <option value="nuevo">Nuevo</option>
+                          <option value="nuevo">{(t.new || 'Nuevo')}</option>
 
-                          <option value="usado">Usado</option>
+                          <option value="usado">{(t.used || 'Usado')}</option>
 
                       </select>
 
@@ -195,7 +195,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               {form.category && (loadingCategoryFields || categoryFields.length > 0) && (
                 <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/50">
                   <h3 className="text-[14px] font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Settings2 size={16} className="text-[#84CC16]" /> Características del anuncio
+                    <Settings2 size={16} className="text-[#84CC16]" /> {t.ad_attributes || 'Características del anuncio'}
                     {loadingCategoryFields && <Loader2 size={14} className="animate-spin text-slate-400" />}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -211,7 +211,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                             required={field.required}
                             className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all"
                           >
-                            <option value="">Seleccionar...</option>
+                            <option value="">{(t.select || 'Seleccionar')}...</option>
                             {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                           </select>
                         )}
@@ -250,9 +250,9 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
               {/* STATE DROPDOWN */}
               <div className="mb-3">
-                <label className="block text-[13px] font-semibold text-slate-700 mb-2">Estado <span className="text-red-500">*</span></label>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-2">{(t.state || 'Estado')} <span className="text-red-500">*</span></label>
                 <select value={form.state || ''} onChange={e => setForm({...form, state: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
-                  <option value="">Seleccionar estado</option>
+                  <option value="">{t.select_state || 'Seleccionar estado'}</option>
                 <option value="Aguascalientes">Aguascalientes</option>
                 <option value="Baja California">Baja California</option>
                 <option value="Baja California Sur">Baja California Sur</option>
@@ -290,13 +290,13 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
               <div>
 
-                 <label className="block text-[13px] font-semibold text-slate-700 mb-2">Ubicación</label>
+                 <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.location || 'Ubicación'}</label>
 
                  <div className="relative mb-3">
 
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
 
-                    <input value={form.location} onChange={e => setForm({...form, location: e.target.value})} required className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" placeholder="Escribe tu ciudad, colonia o código postal" />
+                    <input value={form.location} onChange={e => setForm({...form, location: e.target.value})} required className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" placeholder={t.loc_placeholder || "Escribe tu ciudad, colonia o código postal"} />
 
                  </div>
 
@@ -320,7 +320,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                     <label className="block text-[13px] font-semibold text-slate-700">{t.ad_desc}</label>
                     <button type="button" onClick={handleGenerateDescription} disabled={aiLoading} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-medium text-[#65A30D] hover:bg-[#84CC16]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                       {aiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                      {aiLoading ? 'Generando…' : '✨ Generar con IA'}
+                      {aiLoading ? (t.generating || 'Generando…') : (t.generate_ai || '✨ Generar con IA')}
                     </button>
                   </div>
 
@@ -334,7 +334,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
               <div>
 
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Video (Opcional, MP4, max 50MB)</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.video_hint || 'Video (Opcional, MP4, max 50MB)'}</label>
 
                   {videoFile ? (
 
@@ -362,7 +362,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                 <button type="submit" disabled={postLoading} className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-2">
 
-                    {postLoading ? <Loader2 className="animate-spin" size={20}/> : <><Sparkles size={18}/> {editingAd ? 'Guardar cambios' : t.publish_btn}</>}
+                    {postLoading ? <Loader2 className="animate-spin" size={20}/> : <><Sparkles size={18}/> {editingAd ? (t.save_changes || 'Guardar cambios') : t.publish_btn}</>}
 
                 </button>
 

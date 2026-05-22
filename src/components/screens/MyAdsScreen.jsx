@@ -12,6 +12,7 @@ export default function MyAdsScreen({
   handlePromoteAd,
   handleRepublishAd,
   t,
+  lang,
   accountType,
   setCurrentTab,
   setShowPricingModal,
@@ -68,11 +69,11 @@ export default function MyAdsScreen({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Error');
-      setToast({ type: 'success', text: `${data.affected || selectedIds.size} anuncios actualizados` });
+      setToast({ type: 'success', text: `${data.affected || selectedIds.size} ${t.ads_updated || 'anuncios actualizados'}` });
       cancelSelection();
       onRefreshAds?.();
     } catch (error) {
-      setToast({ type: 'error', text: error.message || 'Error de red' });
+      setToast({ type: 'error', text: error.message || t.connection_error || 'Error de red' });
     } finally {
       setBulkLoading(false);
       setTimeout(() => setToast(null), 3000);
@@ -80,10 +81,10 @@ export default function MyAdsScreen({
   };
 
   const filters = [
-    ['all', 'Todos', counts.all],
-    ['active', 'Activos', counts.active],
-    ['paused', 'Pausados', counts.paused],
-    ['featured', 'Destacados', counts.featured],
+    ['all', t.all_filter || 'Todos', counts.all],
+    ['active', t.active_status || 'Activos', counts.active],
+    ['paused', t.paused_status || 'Pausados', counts.paused],
+    ['featured', t.featured_status || 'Destacados', counts.featured],
   ];
 
   return (
@@ -103,7 +104,7 @@ export default function MyAdsScreen({
           <div className="flex items-center gap-2">
             <button onClick={() => selectionMode ? cancelSelection() : setSelectionMode(true)} className="btn-sm border border-slate-300 text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
               {selectionMode ? <X className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{selectionMode ? 'Cancelar' : 'Seleccionar'}</span>
+              <span className="hidden sm:inline">{selectionMode ? (t.cancel || 'Cancelar') : (t.select || 'Seleccionar')}</span>
             </button>
             <button onClick={() => setCurrentTab('post')} className="text-[13px] font-semibold text-[#65A30D] hover:text-[#84CC16] flex items-center gap-1">
               <PlusCircle className="w-4 h-4" /> {t.post}
@@ -118,7 +119,7 @@ export default function MyAdsScreen({
               className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-600 mr-4 shrink-0 pb-3"
             >
               {allVisibleSelected ? <CheckSquare className="w-4 h-4 text-[#84CC16]" /> : <Square className="w-4 h-4 text-slate-400" />}
-              Seleccionar todo
+              {t.select_all || 'Seleccionar todo'}
             </button>
           )}
           {filters.map(([key, label, count]) => (
@@ -142,21 +143,27 @@ export default function MyAdsScreen({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="font-semibold text-slate-900 text-[15px] line-clamp-1">{ad.title}</h4>
-                    {ad.status !== 'active' && <span className="badge bg-slate-200 text-slate-600">{ad.status}</span>}
-                    {(ad.promoted === 'destacado' || ad.is_featured) && <span className="badge bg-lime-100 text-lime-700">Destacado</span>}
+                    {ad.status !== 'active' && (
+                      <span className="badge bg-slate-200 text-slate-600">
+                        {ad.status === 'paused' ? (t.paused_status || 'Pausado') : ad.status === 'expired' ? (t.expired_status || 'Expirado') : ad.status}
+                      </span>
+                    )}
+                    {(ad.promoted === 'destacado' || ad.is_featured) && <span className="badge bg-lime-100 text-lime-700">{t.destacado || 'Destacado'}</span>}
                   </div>
-                  <p className="text-[#65A30D] text-[16px] font-bold mt-1">${Number(ad.price).toLocaleString('es-MX')}</p>
+                  <p className="text-[#65A30D] text-[16px] font-bold mt-1">
+                    ${Number(ad.price).toLocaleString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US')}
+                  </p>
                   <p className="text-[12px] text-slate-500 flex items-center gap-1 mt-2"><BarChart3 className="w-3.5 h-3.5" /> {ad.views || 0} {t.views}</p>
                 </div>
               </div>
 
               {!selectionMode && (
                 <div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0 flex-wrap" onClick={e => e.stopPropagation()}>
-                  <Link to={`/?ad=${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs"><ExternalLink className="w-3.5 h-3.5" /> Ver</Link>
-                  <Link to={`/anuncio/${ad.id}/editar`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs"><Pencil className="w-3.5 h-3.5" /> Editar</Link>
-                  {ad.status === 'active' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> Pausar</button>}
-                  {ad.status === 'paused' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> Reactivar</button>}
-                  {ad.status === 'expired' && <button onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1.5 text-xs">Republicar</button>}
+                  <Link to={`/?ad=${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs"><ExternalLink className="w-3.5 h-3.5" /> {t.view || 'Ver'}</Link>
+                  <Link to={`/anuncio/${ad.id}/editar`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs"><Pencil className="w-3.5 h-3.5" /> {t.edit || 'Editar'}</Link>
+                  {ad.status === 'active' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> {t.pause || 'Pausar'}</button>}
+                  {ad.status === 'paused' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> {t.reactivate || 'Reactivar'}</button>}
+                  {ad.status === 'expired' && <button onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1.5 text-xs">{t.republish || 'Republicar'}</button>}
                   {ad.status === 'active' && <button onClick={() => handlePromoteAd(ad)} className="btn-sm flex-1 sm:flex-none bg-[#0F172A] hover:bg-black text-white flex items-center justify-center gap-1.5 text-xs"><TrendingUp className="w-3.5 h-3.5" /> {t.promote}</button>}
                   <button onClick={() => handleDeleteAd(ad.id)} className="btn-sm flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center gap-1.5 text-xs"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
@@ -168,11 +175,11 @@ export default function MyAdsScreen({
 
       {selectionMode && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-slate-200 shadow-2xl px-4 py-3 flex items-center justify-between gap-3">
-          <span className="text-[13px] font-semibold text-slate-700 shrink-0">{selectedIds.size} seleccionados</span>
+          <span className="text-[13px] font-semibold text-slate-700 shrink-0">{selectedIds.size} {t.selected || 'seleccionados'}</span>
           <div className="flex items-center gap-2">
-            <button onClick={() => doBulkAction('pause')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-amber-50 text-amber-700 border border-amber-200 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : 'Pausar'}</button>
-            <button onClick={() => doBulkAction('activate')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-lime-50 text-[#65A30D] border border-lime-200 disabled:opacity-40">Activar</button>
-            <button onClick={() => doBulkAction('delete')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-red-50 text-red-600 border border-red-200 disabled:opacity-40">Eliminar</button>
+            <button onClick={() => doBulkAction('pause')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-amber-50 text-amber-700 border border-amber-200 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : (t.pause || 'Pausar')}</button>
+            <button onClick={() => doBulkAction('activate')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-lime-50 text-[#65A30D] border border-lime-200 disabled:opacity-40">{t.reactivate || 'Activar'}</button>
+            <button onClick={() => doBulkAction('delete')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-red-50 text-red-600 border border-red-200 disabled:opacity-40">{t.delete || 'Eliminar'}</button>
           </div>
         </div>
       )}

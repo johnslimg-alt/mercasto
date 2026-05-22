@@ -150,13 +150,13 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                   <Zap size={18} className="text-amber-500 fill-amber-500"/>
 
-                  {parseFloat(user?.balance || 0).toFixed(0)} Créditos
+                  {parseFloat(user?.balance || 0).toFixed(0)} {t.credits_unit || 'Créditos'}
 
-                  <button onClick={() => handleClipPayment(100, '100 Créditos Mercasto')} className="ml-1 bg-amber-500 text-white w-6 h-6 rounded-md flex items-center justify-center hover:bg-amber-600 transition-colors shadow-sm" title="Comprar créditos">+</button>
+                  <button onClick={() => handleClipPayment(100, `100 ${t.credits_unit || 'Créditos'} Mercasto`)} className="ml-1 bg-amber-500 text-white w-6 h-6 rounded-md flex items-center justify-center hover:bg-amber-600 transition-colors shadow-sm" title={t.credits_btn_title || 'Comprar créditos'}>+</button>
 
                   <div className="absolute top-full right-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto">
 
-                    <button onClick={() => setShowCouponModal(true)} className="bg-white border border-slate-200 text-slate-700 text-[12px] px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap hover:bg-slate-50 flex items-center gap-1.5"><Ticket size={14}/> Canjear cupón</button>
+                    <button onClick={() => setShowCouponModal(true)} className="bg-white border border-slate-200 text-slate-700 text-[12px] px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap hover:bg-slate-50 flex items-center gap-1.5"><Ticket size={14}/> {t.redeem_coupon || 'Canjear cupón'}</button>
 
                   </div>
 
@@ -224,7 +224,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                       {isUploadingBulk ? <Loader2 className="w-5 h-5 text-purple-500 animate-spin"/> : <UploadCloud className="w-5 h-5 text-purple-500"/>} 
 
-                      {isUploadingBulk ? 'Subiendo...' : t.mass_upload}
+                      {isUploadingBulk ? (t.uploading_word || 'Subiendo...') : t.mass_upload}
 
                       <input type="file" accept=".csv,.xml" className="hidden" ref={fileInputRef} onChange={handleBulkUpload} />
 
@@ -235,11 +235,11 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 )}
 
                 <Link to="/referidos" className="p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:text-[#65A30D]">
-                  <Share2 className="w-5 h-5 text-slate-400"/> Referidos
+                  <Share2 className="w-5 h-5 text-slate-400"/> {t.referrals_tab || 'Referidos'}
                 </Link>
 
                 <div onClick={() => setDashboardTab('transactions')} className={`p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium ${dashboardTab === 'transactions' ? 'text-[#65A30D] bg-lime-50/50' : 'text-slate-700 hover:bg-slate-50'}`}>
-                  <CreditCard className={`w-5 h-5 ${dashboardTab === 'transactions' ? 'text-[#84CC16]' : 'text-slate-400'}`}/> Transacciones
+                  <CreditCard className={`w-5 h-5 ${dashboardTab === 'transactions' ? 'text-[#84CC16]' : 'text-slate-400'}`}/> {t.transactions_tab || 'Transacciones'}
                 </div>
 
                 <div onClick={() => setDashboardTab('settings')} className={`p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium ${dashboardTab === 'settings' ? 'text-[#65A30D] bg-lime-50/50' : 'text-slate-700 hover:bg-slate-50'}`}>
@@ -806,6 +806,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               handleRepublishAd={handleRepublishAd}
               user={user}
               t={t}
+              lang={lang}
               accountType={accountType}
               setCurrentTab={setCurrentTab}
               setShowPricingModal={setShowPricingModal}
@@ -816,10 +817,10 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-[#84CC16]" /> Historial de Transacciones
+                    <CreditCard className="w-5 h-5 text-[#84CC16]" /> {t.transactions_title || 'Historial de Transacciones'}
                   </h2>
                   <p className="text-[13px] text-slate-500 mt-1">
-                    Consulta el registro de tus compras de créditos, promociones y recargas en Mercasto.
+                    {t.transactions_desc || 'Consulta el registro de tus compras de créditos, promociones y recargas en Mercasto.'}
                   </p>
                 </div>
                 <button 
@@ -832,7 +833,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   ) : (
                     <Activity className="w-4 h-4 text-slate-500" />
                   )}
-                  Actualizar
+                  {t.refresh_btn || 'Actualizar'}
                 </button>
               </div>
 
@@ -861,16 +862,16 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-4 shadow-sm">
                     <CreditCard className="w-8 h-8" />
                   </div>
-                  <h3 className="text-[16px] font-bold text-slate-900 mb-1">Sin transacciones registradas</h3>
+                  <h3 className="text-[16px] font-bold text-slate-900 mb-1">{t.no_transactions || 'Sin transacciones registradas'}</h3>
                   <p className="text-[13px] text-slate-500 max-w-sm mb-6">
-                    Aún no has realizado ninguna compra de créditos. Puedes recargar saldo para destacar tus anuncios o acceder a funciones PRO.
+                    {t.no_transactions_desc || 'Aún no has realizado ninguna compra de créditos. Puedes recargar saldo para destacar tus anuncios o acceder a funciones PRO.'}
                   </p>
                   <button 
-                    onClick={() => handleClipPayment(100, '100 Créditos Mercasto')}
+                    onClick={() => handleClipPayment(100, `100 ${t.credits_unit || 'Créditos'} Mercasto`)}
                     className="btn-md bg-[#0F172A] hover:bg-black text-white flex items-center gap-2 shadow-sm font-semibold text-[13px]"
                   >
                     <Zap size={16} className="text-amber-500 fill-amber-500" />
-                    Comprar 100 Créditos ($100 MXN)
+                    {t.buy_credits_offer || 'Comprar 100 Créditos ($100 MXN)'}
                   </button>
                 </div>
               ) : (
@@ -879,11 +880,11 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50/70 text-slate-500 font-semibold text-[12px] uppercase tracking-wider border-b border-slate-100">
-                          <th className="py-4 px-5">Concepto</th>
-                          <th className="py-4 px-5">Referencia Clip</th>
-                          <th className="py-4 px-5">Fecha</th>
-                          <th className="py-4 px-5">Monto</th>
-                          <th className="py-4 px-5 text-right">Estado</th>
+                          <th className="py-4 px-5">{t.concept || 'Concepto'}</th>
+                          <th className="py-4 px-5">{t.clip_ref || 'Referencia Clip'}</th>
+                          <th className="py-4 px-5">{t.date || 'Fecha'}</th>
+                          <th className="py-4 px-5">{t.amount || 'Monto'}</th>
+                          <th className="py-4 px-5 text-right">{t.status || 'Estado'}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-[14px]">
@@ -898,12 +899,12 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                     <CreditCard className="w-4 h-4 text-blue-500" />
                                   )}
                                 </div>
-                                <span className="line-clamp-1">{payment.description || 'Compra de Servicios'}</span>
+                                <span className="line-clamp-1">{payment.description || t.payment_service_fallback || 'Compra de Servicios'}</span>
                               </div>
                             </td>
                             <td className="py-4 px-5 text-slate-600 font-mono text-[12px]">
                               {payment.clip_checkout_id ? (
-                                <span className="bg-slate-100 px-2 py-1 rounded text-slate-700 select-all" title="Click para seleccionar">
+                                <span className="bg-slate-100 px-2 py-1 rounded text-slate-700 select-all" title={t.click_to_select || 'Click para seleccionar'}>
                                   {payment.clip_checkout_id.substring(0, 16)}...
                                 </span>
                               ) : (
@@ -911,7 +912,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                               )}
                             </td>
                             <td className="py-4 px-5 text-slate-500">
-                              {payment.created_at ? new Date(payment.created_at).toLocaleString('es-MX', {
+                              {payment.created_at ? new Date(payment.created_at).toLocaleString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US', {
                                 year: 'numeric', month: 'short', day: 'numeric',
                                 hour: '2-digit', minute: '2-digit'
                               }) : 'N/A'}
@@ -923,17 +924,17 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                               {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
                                 <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-[12px] font-bold border border-emerald-100">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                  Aprobado
+                                  {t.payment_status_approved || 'Aprobado'}
                                 </span>
                               ) : payment.status === 'pending' ? (
                                 <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full text-[12px] font-bold border border-amber-100">
                                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                  Pendiente
+                                  {t.payment_status_pending || 'Pendiente'}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-full text-[12px] font-bold border border-red-100">
                                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                  Fallido
+                                  {t.payment_status_failed || 'Fallido'}
                                 </span>
                               )}
                             </td>
@@ -955,25 +956,25 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                 <CreditCard className="w-3.5 h-3.5 text-blue-500" />
                               )}
                             </div>
-                            <span className="font-semibold text-slate-900 text-[13px] line-clamp-1">{payment.description || 'Compra de Servicios'}</span>
+                            <span className="font-semibold text-slate-900 text-[13px] line-clamp-1">{payment.description || t.payment_service_fallback || 'Compra de Servicios'}</span>
                           </div>
                           {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
                             <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full text-[11px] font-bold border border-emerald-100">
-                              Aprobado
+                              {t.payment_status_approved || 'Aprobado'}
                             </span>
                           ) : payment.status === 'pending' ? (
                             <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-[11px] font-bold border border-amber-100">
-                              Pendiente
+                              {t.payment_status_pending || 'Pendiente'}
                             </span>
                           ) : (
                             <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[11px] font-bold border border-red-100">
-                              Fallido
+                              {t.payment_status_failed || 'Fallido'}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center justify-between text-[12px] text-slate-500 pt-1 border-t border-slate-50">
                           <span>
-                            {payment.created_at ? new Date(payment.created_at).toLocaleDateString('es-MX', {
+                            {payment.created_at ? new Date(payment.created_at).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US', {
                               month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                             }) : 'N/A'}
                           </span>
@@ -988,7 +989,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   {userPaymentsLastPage > 1 && (
                     <div className="flex items-center justify-between pt-4 border-t border-slate-100 bg-slate-50/50 -mx-6 -mb-6 md:-mx-8 md:-mb-8 px-6 py-4 md:px-8">
                       <span className="text-[13px] text-slate-500 font-medium">
-                        Página {userPaymentsPage} de {userPaymentsLastPage} ({userPaymentsTotal} total)
+                        {t.page_word || 'Página'} {userPaymentsPage} {t.of_word || 'de'} {userPaymentsLastPage} ({userPaymentsTotal} {t.total_word || 'total'})
                       </span>
                       <div className="flex items-center gap-2">
                         <button 
@@ -996,14 +997,14 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                           disabled={userPaymentsPage === 1}
                           className="btn-sm border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-white text-slate-700 transition-all font-semibold"
                         >
-                          Anterior
+                          {t.prev_btn || 'Anterior'}
                         </button>
                         <button 
                           onClick={() => loadUserPayments(userPaymentsPage + 1)}
                           disabled={userPaymentsPage === userPaymentsLastPage}
                           className="btn-sm border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-white text-slate-700 transition-all font-semibold"
                         >
-                          Siguiente
+                          {t.next_btn || 'Siguiente'}
                         </button>
                       </div>
                     </div>

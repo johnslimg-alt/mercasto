@@ -896,7 +896,7 @@ function App() {
     } else if (paymentStatus === 'error') {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        alert('El pago no se pudo completar o fue cancelado.');
+        alert(t.payment_failed_or_canceled || 'El pago no se pudo completar o fue cancelado.');
       }
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -2294,8 +2294,8 @@ function App() {
       const data = await res.json();
       if (res.ok && data.payment_url) {
         window.location.href = data.payment_url;
-      } else alert('Error al generar el pago');
-    } catch (err) { console.error("Payment error", err); alert('Error de conexión'); }
+      } else alert(t.payment_error_generating || 'Error al generar el pago');
+    } catch (err) { console.error("Payment error", err); alert(t.connection_error || 'Error de conexión'); }
   };
 
   // --- AI COMMAND CENTER LOGIC ---
@@ -2363,7 +2363,7 @@ function App() {
         } catch (e) { console.error(e); alert('Error de conexión'); }
       }
     } else {
-      handleClipPayment(50, `Promoción de anuncio: ${ad.title}`, ad.id);
+      handleClipPayment(50, `${t.ad_promotion_description || 'Promoción de anuncio'}: ${ad.title}`, ad.id);
     }
   };
 
@@ -2476,7 +2476,7 @@ function App() {
   const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} onBack={handleAdBack} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} currentUser={user} />;
 
   // --- РЕНДЕР ПУБЛИЧНОГО ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
-  const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
+  const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} lang={lang} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
 
   // --- РЕНДЕР МОДАЛКИ С QR-КОДОМ ---
   const renderQRModal = () => {
@@ -2657,7 +2657,7 @@ function App() {
                     <li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> 2 Subidas a TOP gratis</li>
                     <li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> Más visibilidad</li>
                   </ul>
-                  <button onClick={() => handleClipPayment(99, 'Suscripción Paquete Plus')} className="btn-lg w-full bg-white text-[#65A30D] hover:bg-slate-50 shadow-sm">{t.buy_plan}</button>
+                  <button onClick={() => handleClipPayment(99, t.plus_subscription_description || 'Suscripción Paquete Plus')} className="btn-lg w-full bg-white text-[#65A30D] hover:bg-slate-50 shadow-sm">{t.buy_plan}</button>
                 </div>
               </div>
             ) : (
@@ -2671,7 +2671,7 @@ function App() {
                     <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Página de Empresa</li>
                     <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Estadísticas avanzadas</li>
                   </ul>
-                  <button onClick={() => handleClipPayment(500, 'Suscripción PRO Estándar')} className="btn-lg w-full border-2 border-[#84CC16] text-[#65A30D] hover:bg-[#84CC16]/5">{t.buy_plan}</button>
+                  <button onClick={() => handleClipPayment(500, t.pro_basic_subscription_description || 'Suscripción PRO Estándar')} className="btn-lg w-full border-2 border-[#84CC16] text-[#65A30D] hover:bg-[#84CC16]/5">{t.buy_plan}</button>
                 </div>
                 <div className="bg-[#0F172A] rounded-3xl p-6 md:p-8 flex flex-col relative shadow-xl transform md:-translate-y-2 ring-2 ring-[#84CC16]">
                   <div className="absolute top-0 right-6 -translate-y-1/2 bg-[#84CC16] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-md">POPULAR</div>
@@ -2683,7 +2683,7 @@ function App() {
                     <li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> 10 Destacados incluidos</li>
                     <li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Soporte dedicado</li>
                   </ul>
-                  <button onClick={() => handleClipPayment(1500, 'Suscripción PRO Ilimitado')} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] shadow-md">{t.buy_plan}</button>
+                  <button onClick={() => handleClipPayment(1500, t.pro_max_subscription_description || 'Suscripción PRO Ilimitado')} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] shadow-md">{t.buy_plan}</button>
                 </div>
               </div>
             )}
@@ -3054,7 +3054,7 @@ function App() {
               <Route path="/safety" element={<StaticPages currentTab="safety" />} />
               <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
               <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense></RequireAuth>} />
-              <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen /></React.Suspense></RequireAuth>} />
+              <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
               <Route path="/autos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding /></React.Suspense>} />
               <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding /></React.Suspense>} />
               <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding /></React.Suspense>} />
@@ -3129,6 +3129,8 @@ function App() {
       {showOnboarding && (
         <OnboardingModal
           user={user}
+          t={t}
+          lang={lang}
           onClose={() => {
             localStorage.setItem('onboarding_done', '1');
             setShowOnboarding(false);
@@ -3258,7 +3260,7 @@ function App() {
         </div>
       )}
 
-      <CookieBanner />
+      <CookieBanner t={t} lang={lang} />
     </div>
   );
 }

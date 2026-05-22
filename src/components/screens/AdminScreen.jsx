@@ -47,7 +47,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
                <button onClick={() => {setAdminTab('reports'); loadAdminReports();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'reports' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.reports_tab}</button>
 
-               <button onClick={() => {setAdminTab('payments'); loadAdminPayments(1);}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'payments' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>Pagos</button>
+               <button onClick={() => {setAdminTab('payments'); loadAdminPayments(1);}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'payments' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.admin_payments_tab || 'Pagos'}</button>
 
             </div>
 
@@ -469,13 +469,13 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
                     <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                      Transacciones Registradas
+                      {t.admin_transactions_registered || 'Transacciones Registradas'}
                     </span>
                     <span className="text-3xl font-black text-slate-900 dark:text-white mt-1 block">
                       {adminPaymentsTotal}
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
-                      Volumen total de transacciones Clip
+                      {t.admin_volume_desc || 'Volumen total de transacciones Clip'}
                     </span>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
@@ -486,13 +486,13 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
                     <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                      Ingresos Aprobados (Pág. Actual)
+                      {t.admin_approved_revenue || 'Ingresos Aprobados (Pág. Actual)'}
                     </span>
                     <span className="text-3xl font-black text-[#84CC16] mt-1 block">
                       ${adminPayments.filter(p => ['paid', 'succeeded', 'approved'].includes(p.status?.toLowerCase())).reduce((sum, p) => sum + parseFloat(p.amount || 0), 0).toFixed(2)} MXN
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
-                      Monto de pagos exitosos mostrados
+                      {t.admin_approved_revenue_desc || 'Monto de pagos exitosos mostrados'}
                     </span>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-lime-50 dark:bg-lime-950/20 flex items-center justify-center text-[#84CC16] shadow-sm border border-lime-100/55 dark:border-lime-900/30">
@@ -506,10 +506,10 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                   <div>
                     <h3 className="text-[18px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <CreditCard className="text-[#84CC16]" size={20}/> Auditoría de Pagos
+                      <CreditCard className="text-[#84CC16]" size={20}/> {t.admin_payments_audit || 'Auditoría de Pagos'}
                     </h3>
                     <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1">
-                      Monitorea y valida las transacciones procesadas a través de la pasarela de pagos Clip.
+                      {t.admin_payments_audit_desc || 'Monitorea y valida las transacciones procesadas a través de la pasarela de pagos Clip.'}
                     </p>
                   </div>
                   <button 
@@ -522,7 +522,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                     ) : (
                       <Zap className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                     )}
-                    Actualizar
+                    {t.refresh_btn || 'Actualizar'}
                   </button>
                 </div>
 
@@ -551,9 +551,9 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                     <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center text-amber-500 mb-4 shadow-sm">
                       <CreditCard className="w-8 h-8" />
                     </div>
-                    <h3 className="text-[16px] font-bold text-slate-900 dark:text-white mb-1">Sin pagos registrados</h3>
+                    <h3 className="text-[16px] font-bold text-slate-900 dark:text-white mb-1">{t.admin_no_payments || 'Sin pagos registrados'}</h3>
                     <p className="text-[13px] text-slate-500 dark:text-slate-400 max-w-sm">
-                      No se encontraron transacciones en el historial del sistema. Todos los pagos iniciados aparecerán aquí.
+                      {t.admin_no_payments_desc || 'No se encontraron transacciones en el historial del sistema. Todos los pagos iniciados aparecerán aquí.'}
                     </p>
                   </div>
                 ) : (
@@ -563,12 +563,12 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/70 dark:bg-slate-700/30 text-slate-500 dark:text-slate-400 font-semibold text-[12px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700/60">
-                            <th className="py-4 px-5">Usuario</th>
-                            <th className="py-4 px-5">Concepto</th>
-                            <th className="py-4 px-5">Referencia Clip</th>
-                            <th className="py-4 px-5">Fecha</th>
-                            <th className="py-4 px-5">Monto</th>
-                            <th className="py-4 px-5 text-right">Estado</th>
+                            <th className="py-4 px-5">{t.admin_user || 'Usuario'}</th>
+                            <th className="py-4 px-5">{t.concept || 'Concepto'}</th>
+                            <th className="py-4 px-5">{t.clip_ref || 'Referencia Clip'}</th>
+                            <th className="py-4 px-5">{t.date || 'Fecha'}</th>
+                            <th className="py-4 px-5">{t.amount || 'Monto'}</th>
+                            <th className="py-4 px-5 text-right">{t.status || 'Estado'}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-[14px]">
@@ -577,10 +577,10 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                               <td className="py-4 px-5">
                                 <div className="flex flex-col">
                                   <span className="font-semibold text-slate-900 dark:text-white">
-                                    {payment.user_name || `Usuario ID: ${payment.user_id}`}
+                                    {payment.user_name || `${t.admin_user_id || 'Usuario ID:'} ${payment.user_id}`}
                                   </span>
                                   <span className="text-[12px] text-slate-500 dark:text-slate-400 font-medium">
-                                    {payment.user_email || 'Email no disponible'}
+                                    {payment.user_email || (t.admin_email_not_available || 'Email no disponible')}
                                   </span>
                                 </div>
                               </td>
@@ -593,12 +593,12 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                                       <CreditCard className="w-4 h-4 text-blue-500" />
                                     )}
                                   </div>
-                                  <span className="line-clamp-1">{payment.description || 'Servicios Mercasto'}</span>
+                                  <span className="line-clamp-1">{payment.description || (t.admin_services_fallback || 'Servicios Mercasto')}</span>
                                 </div>
                               </td>
                               <td className="py-4 px-5 text-slate-600 dark:text-slate-300 font-mono text-[12px]">
                                 {payment.clip_checkout_id ? (
-                                  <span className="bg-slate-100 dark:bg-slate-700/80 px-2 py-1 rounded text-slate-700 dark:text-slate-300 select-all" title="Click para seleccionar todo">
+                                  <span className="bg-slate-100 dark:bg-slate-700/80 px-2 py-1 rounded text-slate-700 dark:text-slate-300 select-all" title={t.admin_click_to_select_all || 'Click para seleccionar todo'}>
                                     {payment.clip_checkout_id.length > 16 ? `${payment.clip_checkout_id.substring(0, 16)}...` : payment.clip_checkout_id}
                                   </span>
                                 ) : (
@@ -606,7 +606,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                                 )}
                               </td>
                               <td className="py-4 px-5 text-slate-500 dark:text-slate-400">
-                                {payment.created_at ? new Date(payment.created_at).toLocaleString('es-MX', {
+                                {payment.created_at ? new Date(payment.created_at).toLocaleString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US', {
                                   year: 'numeric', month: 'short', day: 'numeric',
                                   hour: '2-digit', minute: '2-digit'
                                 }) : 'N/A'}
@@ -618,17 +618,17 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                                 {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
                                   <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full text-[12px] font-bold border border-emerald-100 dark:border-emerald-900/30">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    Aprobado
+                                    {t.payment_status_approved || 'Aprobado'}
                                   </span>
                                 ) : payment.status === 'pending' ? (
                                   <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full text-[12px] font-bold border border-amber-100 dark:border-amber-900/30">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                    Pendiente
+                                    {t.payment_status_pending || 'Pendiente'}
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 px-2.5 py-1 rounded-full text-[12px] font-bold border border-red-100 dark:border-red-900/30">
                                     <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                    Fallido
+                                    {t.payment_status_failed || 'Fallido'}
                                   </span>
                                 )}
                               </td>
@@ -651,34 +651,34 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                                   <CreditCard className="w-3.5 h-3.5 text-blue-500" />
                                 )}
                               </div>
-                              <span className="font-semibold text-slate-900 dark:text-white text-[13px] line-clamp-1">{payment.description || 'Servicios Mercasto'}</span>
+                              <span className="font-semibold text-slate-900 dark:text-white text-[13px] line-clamp-1">{payment.description || (t.admin_services_fallback || 'Servicios Mercasto')}</span>
                             </div>
                             {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
                               <span className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold border border-emerald-100 dark:border-emerald-900/30">
-                                Aprobado
+                                {t.payment_status_approved || 'Aprobado'}
                               </span>
                             ) : payment.status === 'pending' ? (
                               <span className="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full text-[11px] font-bold border border-amber-100 dark:border-amber-900/30">
-                                Pendiente
+                                {t.payment_status_pending || 'Pendiente'}
                               </span>
                             ) : (
                               <span className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full text-[11px] font-bold border border-red-100 dark:border-red-900/30">
-                                Fallido
+                                {t.payment_status_failed || 'Fallido'}
                               </span>
                             )}
                           </div>
                           
                           <div className="text-[12px] text-slate-500 dark:text-slate-400 space-y-1 pt-1 border-t border-slate-50 dark:border-slate-700/60">
                             <div className="flex justify-between">
-                              <span className="font-medium">Usuario:</span>
+                              <span className="font-medium">{t.admin_user || 'Usuario'}:</span>
                               <span className="font-semibold text-slate-900 dark:text-white">{payment.user_name || `ID: ${payment.user_id}`}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="font-medium">Ref. Clip:</span>
+                              <span className="font-medium">{t.clip_ref || 'Ref. Clip'}:</span>
                               <span className="font-mono text-slate-700 dark:text-slate-300 select-all">{payment.clip_checkout_id ? (payment.clip_checkout_id.length > 12 ? `${payment.clip_checkout_id.substring(0, 12)}...` : payment.clip_checkout_id) : 'N/A'}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>{payment.created_at ? new Date(payment.created_at).toLocaleDateString('es-MX', {
+                              <span>{payment.created_at ? new Date(payment.created_at).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US', {
                                 month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                               }) : 'N/A'}</span>
                               <span className="font-bold text-slate-900 dark:text-white">
@@ -694,7 +694,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                     {adminPaymentsLastPage > 1 && (
                       <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 -mx-6 -mb-6 md:-mx-8 md:-mb-8 px-6 py-4 md:px-8">
                         <span className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">
-                          Página {adminPaymentsPage} de {adminPaymentsLastPage} ({adminPaymentsTotal} total)
+                          {t.page_word || 'Página'} {adminPaymentsPage} {t.of_word || 'de'} {adminPaymentsLastPage} ({adminPaymentsTotal} {t.total_word || 'total'})
                         </span>
                         <div className="flex items-center gap-2">
                           <button 
@@ -703,14 +703,14 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                             className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all font-semibold flex items-center gap-1"
                           >
                             <ChevronLeft size={16} />
-                            Anterior
+                            {t.prev_btn || 'Anterior'}
                           </button>
                           <button 
                             onClick={() => loadAdminPayments(adminPaymentsPage + 1)}
                             disabled={adminPaymentsPage === adminPaymentsLastPage}
                             className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all font-semibold flex items-center gap-1"
                           >
-                            Siguiente
+                            {t.next_btn || 'Siguiente'}
                             <ChevronRight size={16} />
                           </button>
                         </div>
