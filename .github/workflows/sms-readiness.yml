@@ -1,0 +1,26 @@
+name: SMS Readiness Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/sms-readiness-smoke.sh'
+      - 'backend/config/**'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  sms-readiness:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Run SMS readiness smoke
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          git fetch origin main
+          git reset --hard origin/main
+          REQUIRE_SMS_READY=1 bash scripts/sms-readiness-smoke.sh
