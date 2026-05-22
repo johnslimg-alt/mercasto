@@ -1,0 +1,22 @@
+name: Backup Freshness Evidence
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 5 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  backup-freshness:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Run backup freshness smoke
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          git fetch origin main
+          git reset --hard origin/main
+          REQUIRE_BACKUP_FRESHNESS=1 bash scripts/backup-freshness-smoke.sh
