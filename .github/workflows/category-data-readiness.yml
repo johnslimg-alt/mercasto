@@ -1,0 +1,28 @@
+name: Category Data Readiness
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/database/**'
+      - 'backend/app/**'
+      - 'scripts/category-data-smoke.sh'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  category-data-readiness:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: Run category data readiness smoke
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          git fetch origin main
+          git reset --hard origin/main
+          docker exec mercasto_backend_container php artisan migrate --force
+          REQUIRE_CATEGORY_DATA_READY=1 bash scripts/category-data-smoke.sh
