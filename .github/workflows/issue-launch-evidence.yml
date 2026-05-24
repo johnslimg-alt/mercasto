@@ -2,6 +2,8 @@ name: Issue Launch Evidence Trigger
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
   issues:
     types: [opened]
   issue_comment:
@@ -17,7 +19,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Run launch artifact inventory
-        run: bash scripts/launch-artifact-inventory.sh
+        run: |
+          set -o pipefail
+          bash scripts/launch-artifact-inventory.sh | tee /tmp/mercasto-launch-artifact-inventory.out
+
       - name: Run launch status summary
-        run: bash scripts/launch-status-summary.sh
+        run: |
+          set -o pipefail
+          bash scripts/launch-status-summary.sh | tee /tmp/mercasto-launch-status-summary.out
+
+      - name: Upload launch evidence outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-launch-evidence
+          path: |
+            /tmp/mercasto-launch-artifact-inventory.out
+            /tmp/mercasto-launch-status-summary.out
+          if-no-files-found: ignore
+          retention-days: 7
