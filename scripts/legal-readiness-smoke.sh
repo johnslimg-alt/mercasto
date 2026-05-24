@@ -21,6 +21,14 @@ STRICT_LEGAL_PATHS=(
   "/moderacion"
 )
 
+strict_marker_for_path() {
+  case "$1" in
+    "/reembolsos") printf '%s' "Política de pagos y reembolsos" ;;
+    "/moderacion") printf '%s' "Política de moderación" ;;
+    *) printf '%s' "" ;;
+  esac
+}
+
 probe_status() {
   local path="$1"
   local expected="${2:-200}"
@@ -30,6 +38,17 @@ probe_status() {
   if [ -z "$code" ]; then code="000"; fi
   printf '%s -> %s\n' "$url" "$code"
   [ "$code" = "$expected" ]
+}
+
+probe_static_marker() {
+  local path="$1"
+  local marker
+  local url
+  marker="$(strict_marker_for_path "$path")"
+  [ -n "$marker" ] || return 0
+  url="${BASE_URL}${path}"
+  printf 'checking content marker for %s: %s\n' "$url" "$marker"
+  curl -k -fsS --max-time 20 "$url" | grep -Fqi "$marker"
 }
 
 echo "== Mercasto legal/business readiness smoke =="
@@ -44,11 +63,13 @@ if [ "$REQUIRE_LEGAL_READY" = "1" ]; then
   echo "== Strict legal launch routes =="
   for path in "${STRICT_LEGAL_PATHS[@]}"; do
     probe_status "$path"
+    probe_static_marker "$path"
   done
 else
   echo "== Strict legal launch routes are pending inventory only =="
   for path in "${STRICT_LEGAL_PATHS[@]}"; do
     probe_status "$path" || true
+    probe_static_marker "$path" || true
   done
   echo "Set REQUIRE_LEGAL_READY=1 to make refund/payment and moderation policy routes blocking."
 fi
