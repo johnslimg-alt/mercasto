@@ -36,22 +36,42 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://mercasto.com/terms</loc>
+    <loc>https://mercasto.com/terminos</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://mercasto.com/privacidad</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://mercasto.com/cookies</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://mercasto.com/privacy</loc>
+    <loc>https://mercasto.com/contacto</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://mercasto.com/help</loc>
+    <loc>https://mercasto.com/ayuda</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://mercasto.com/safety</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://mercasto.com/reembolsos</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://mercasto.com/moderacion</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
