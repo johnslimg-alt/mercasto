@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   issues:
     types: [opened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
