@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es-MX">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Política de moderación | Mercasto</title>
+    <meta name="description" content="Conoce las reglas de publicación, revisión de anuncios, reportes, apelaciones y medidas de seguridad de Mercasto." />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://mercasto.com/moderacion/" />
+    <style>
+      :root { color-scheme: light; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --lime:#84cc16; --lime-dark:#65a30d; --paper:#f8fafc; --danger:#dc2626; }
+      * { box-sizing: border-box; }
+      body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:var(--paper); line-height:1.65; }
+      a { color:var(--lime-dark); text-decoration:none; font-weight:700; }
+      a:hover { text-decoration:underline; }
+      .shell { width:min(1040px, 100%); margin:0 auto; padding:32px 20px 56px; }
+      .top { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 0 28px; }
+      .brand { display:flex; align-items:center; gap:10px; font-weight:950; letter-spacing:-.04em; font-size:24px; }
+      .pin { width:34px; height:34px; border-radius:16px 16px 18px 18px; background:var(--lime); display:grid; place-items:center; color:white; box-shadow:0 10px 30px rgba(132,204,22,.24); }
+      .nav { display:flex; gap:14px; flex-wrap:wrap; font-size:14px; }
+      .hero { background:linear-gradient(135deg, #052e16, #0f172a); color:white; border-radius:28px; padding:38px; box-shadow:0 20px 60px rgba(15,23,42,.16); }
+      .eyebrow { display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:#bef264; }
+      h1 { margin:10px 0 12px; font-size:clamp(34px, 6vw, 56px); line-height:1; letter-spacing:-.06em; }
+      .hero p { color:#d9f99d; max-width:780px; margin:0; }
+      .meta { margin-top:18px; color:#bbf7d0; font-size:14px; }
+      .grid { display:grid; grid-template-columns: 260px 1fr; gap:24px; margin-top:24px; }
+      .toc, .card { background:white; border:1px solid var(--line); border-radius:22px; box-shadow:0 10px 30px rgba(15,23,42,.05); }
+      .toc { position:sticky; top:20px; align-self:start; padding:18px; }
+      .toc strong { display:block; margin-bottom:10px; font-size:13px; text-transform:uppercase; letter-spacing:.1em; color:#475569; }
+      .toc a { display:block; padding:8px 10px; border-radius:12px; color:#475569; font-weight:700; font-size:14px; }
+      .toc a:hover { background:#f1f5f9; color:var(--lime-dark); text-decoration:none; }
+      .card { padding:30px; }
+      section + section { margin-top:34px; padding-top:26px; border-top:1px solid var(--line); }
+      h2 { margin:0 0 12px; font-size:24px; letter-spacing:-.03em; }
+      h3 { margin:22px 0 8px; font-size:18px; }
+      p { margin:0 0 12px; color:#334155; }
+      ul { margin:10px 0 0; padding-left:22px; color:#334155; }
+      li { margin:7px 0; }
+      .notice { border:1px solid #fde68a; background:#fffbeb; color:#92400e; padding:16px; border-radius:18px; margin:18px 0; }
+      .danger { border:1px solid #fecaca; background:#fef2f2; color:#991b1b; padding:16px; border-radius:18px; margin:18px 0; }
+      .ok { border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; padding:16px; border-radius:18px; }
+      .cards { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-top:14px; }
+      .mini { background:#f8fafc; border:1px solid var(--line); border-radius:18px; padding:16px; }
+      .mini strong { display:block; margin-bottom:6px; }
+      footer { margin-top:28px; color:#64748b; font-size:13px; text-align:center; }
+      @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } .cards { grid-template-columns:1fr; } .toc { position:static; } .hero { padding:28px 22px; } .top { align-items:flex-start; flex-direction:column; } }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="top">
+        <a class="brand" href="/" aria-label="Mercasto"><span class="pin">M</span><span>Mercasto</span></a>
+        <nav class="nav" aria-label="Legal">
+          <a href="/terminos">Términos</a>
+          <a href="/safety">Seguridad</a>
+          <a href="/privacidad">Privacidad</a>
+          <a href="/contacto">Contacto</a>
+        </nav>
+      </header>
+
+      <main>
+        <div class="hero">
+          <span class="eyebrow">Confianza, seguridad y calidad</span>
+          <h1>Política de moderación</h1>
+          <p>Mercasto busca mantener un marketplace útil y seguro. Esta política explica qué contenido no está permitido, cómo revisamos reportes, qué medidas podemos tomar y cómo solicitar una revisión.</p>
+          <div class="meta">Última actualización: 23 de mayo de 2026 · Aplicable a Mercasto México</div>
+        </div>
+
+        <div class="grid">
+          <aside class="toc" aria-label="Contenido">
+            <strong>Contenido</strong>
+            <a href="#principios">1. Principios</a>
+            <a href="#prohibido">2. Contenido prohibido</a>
+            <a href="#revision">3. Revisión de anuncios</a>
+            <a href="#medidas">4. Medidas aplicables</a>
+            <a href="#reportes">5. Reportes de usuarios</a>
+            <a href="#apelaciones">6. Apelaciones</a>
+          </aside>
+
+          <article class="card">
+            <section id="principios">
+              <h2>1. Principios de moderación</h2>
+              <p>La moderación de Mercasto se basa en cuatro objetivos: proteger a los usuarios, cumplir la ley aplicable, reducir fraude y mantener anuncios claros, verificables y relevantes.</p>
+              <div class="cards">
+                <div class="mini"><strong>Seguridad</strong><span>Priorizamos señales de fraude, riesgo físico, abuso o contenido ilegal.</span></div>
+                <div class="mini"><strong>Claridad</strong><span>Buscamos que los anuncios tengan título, descripción, precio, ubicación e imágenes coherentes.</span></div>
+                <div class="mini"><strong>Proporcionalidad</strong><span>Aplicamos medidas según gravedad, reincidencia y riesgo para la comunidad.</span></div>
+                <div class="mini"><strong>Revisión humana</strong><span>Podemos combinar filtros automáticos con revisión manual para decisiones sensibles.</span></div>
+              </div>
+              <div class="notice">Esta página es una política operativa de producto. La versión final debe ser revisada por asesoría legal antes de un lanzamiento comercial amplio.</div>
+            </section>
+
+            <section id="prohibido">
+              <h2>2. Contenido y conductas prohibidas</h2>
+              <p>No se permite publicar, vender, promover o facilitar contenido relacionado con:</p>
+              <ul>
+                <li>Productos robados, falsificados, ilegales o que infrinjan propiedad intelectual.</li>
+                <li>Armas de fuego, municiones, explosivos, drogas, estupefacientes o sustancias controladas.</li>
+                <li>Medicamentos controlados, documentos oficiales falsos o servicios ilegales.</li>
+                <li>Contenido sexual explícito, explotación, acoso, odio, discriminación o violencia.</li>
+                <li>Fraude, phishing, esquemas piramidales, spam, bots o manipulación de búsquedas.</li>
+                <li>Animales o especies cuya venta esté prohibida o regulada sin autorización.</li>
+                <li>Publicación de datos personales de terceros sin consentimiento.</li>
+              </ul>
+              <div class="danger">Mercasto puede retirar de inmediato contenido que represente riesgo legal, financiero, físico o de seguridad para los usuarios.</div>
+            </section>
+
+            <section id="revision">
+              <h2>3. Cómo revisamos anuncios y cuentas</h2>
+              <p>La revisión puede ocurrir antes o después de publicar un anuncio. Algunos anuncios pueden quedar pendientes de aprobación si contienen palabras, imágenes, categorías o patrones asociados a riesgo.</p>
+              <p>Podemos revisar señales como historial de cuenta, reportes recibidos, duplicados, inconsistencias de precio, imágenes, ubicación, datos de contacto y comportamiento de mensajería o clics.</p>
+              <p>Mercasto no garantiza que todos los anuncios sean revisados manualmente antes de aparecer, por lo que los usuarios deben actuar con precaución y reportar actividad sospechosa.</p>
+            </section>
+
+            <section id="medidas">
+              <h2>4. Medidas que podemos aplicar</h2>
+              <p>Según la gravedad y recurrencia, Mercasto puede aplicar una o más medidas:</p>
+              <ul>
+                <li>Solicitar edición del anuncio o información adicional.</li>
+                <li>Reducir visibilidad o desactivar temporalmente un anuncio.</li>
+                <li>Eliminar un anuncio o rechazar su publicación.</li>
+                <li>Pausar funciones de contacto, promoción o pagos.</li>
+                <li>Suspender o cerrar cuentas vinculadas a fraude, abuso o reincidencia.</li>
+                <li>Conservar evidencia y colaborar con autoridades cuando exista obligación legal.</li>
+              </ul>
+              <div class="ok">Cuando sea posible, explicaremos el motivo general de la medida y daremos una vía para corregir o apelar.</div>
+            </section>
+
+            <section id="reportes">
+              <h2>5. Reportes de usuarios</h2>
+              <p>Los usuarios pueden reportar anuncios o cuentas sospechosas desde la plataforma o escribiendo a <a href="mailto:soporte@mercasto.com">soporte@mercasto.com</a>.</p>
+              <p>Para acelerar la revisión, incluye enlace del anuncio, motivo del reporte, capturas si existen y cualquier comunicación relevante. No compartas documentos sensibles por canales no seguros.</p>
+              <p>Los reportes falsos, abusivos o usados para dañar competidores también pueden generar medidas sobre la cuenta que los emite.</p>
+            </section>
+
+            <section id="apelaciones">
+              <h2>6. Correcciones y apelaciones</h2>
+              <p>Si consideras que un anuncio o cuenta fue moderado por error, puedes solicitar revisión en <a href="mailto:soporte@mercasto.com">soporte@mercasto.com</a>. Incluye el correo de tu cuenta, ID o enlace del anuncio y una explicación breve.</p>
+              <p>Mercasto revisará la información disponible y podrá restaurar el contenido, solicitar cambios adicionales o mantener la decisión. En casos de riesgo grave, fraude o requerimientos legales, la decisión puede ser definitiva.</p>
+              <p>Esta política complementa los <a href="/terminos">Términos de Uso</a>, el <a href="/privacidad">Aviso de Privacidad</a> y el <a href="/safety">Centro de Seguridad</a>.</p>
+            </section>
+          </article>
+        </div>
+      </main>
+
+      <footer>© 2026 Mercasto México S.A. de C.V. · Esta política puede actualizarse para proteger mejor a la comunidad.</footer>
+    </div>
+  </body>
+</html>
