@@ -39,6 +39,12 @@ async function checkStatus(path, allowedStatuses) {
   return { status, text };
 }
 
+function requireSitemapUrl(sitemapText, path) {
+  const normalizedBase = baseUrl.replace(/\/$/, '');
+  const escaped = `${normalizedBase}${path}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  requireMatch(`sitemap includes ${path}`, sitemapText, new RegExp(`<loc>${escaped}<\\/loc>`, 'i'));
+}
+
 console.log('== Mercasto public SEO audit ==');
 console.log(`BASE_URL=${baseUrl}`);
 
@@ -59,6 +65,16 @@ if (robots.status === 200) {
 const sitemap = await checkStatus('/sitemap.xml', [200, 403, 404]);
 if (sitemap.status === 200) {
   requireMatch('sitemap content', sitemap.text, /<urlset|<sitemapindex/i);
+  [
+    '/terminos',
+    '/privacidad',
+    '/cookies',
+    '/contacto',
+    '/ayuda',
+    '/safety',
+    '/reembolsos',
+    '/moderacion',
+  ].forEach((path) => requireSitemapUrl(sitemap.text, path));
 }
 
 console.log('public SEO audit OK');
