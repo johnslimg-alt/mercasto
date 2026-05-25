@@ -87,6 +87,7 @@ jobs:
   frontend-docker-build:
     name: Build frontend Docker image
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -97,6 +98,7 @@ jobs:
   backend-docker-build:
     name: Build backend Docker image
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -110,10 +112,7 @@ jobs:
     needs:
       - repository-gates
       - compose-config
-      - frontend-build
       - seo-aeo-smoke
-      - frontend-docker-build
-      - backend-docker-build
     timeout-minutes: 20
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
