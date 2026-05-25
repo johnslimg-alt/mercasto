@@ -44,10 +44,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate compose file
-        run: DB_PASSWORD=ci REDIS_PASSWORD=ci docker compose config
+        run: docker compose config --no-interpolate
 
       - name: Validate compose file with override
-        run: DB_PASSWORD=ci REDIS_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml config
+        run: docker compose -f docker-compose.yml -f docker-compose.override.yml config --no-interpolate
 
   frontend-build:
     name: Build frontend
