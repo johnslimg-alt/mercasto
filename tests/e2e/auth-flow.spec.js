@@ -23,16 +23,19 @@ const randomEmail = () => `e2e_${Date.now()}_${Math.floor(Math.random() * 9999)}
  * Mobile:  .mobile-account-button (visible on mobile bottom nav)
  */
 async function openAuthModal(page) {
-  // Use viewport width to deterministically choose the right button:
-  //   .header-user-button  has class "hidden sm:flex" → visible at ≥640 px (desktop project: 1440px)
-  //   .mobile-account-button                          → visible at  <640 px (Pixel 7 project:  412px)
-  await page.waitForLoadState('load');
+  // Viewport width determines which button is CSS-visible:
+  //   .header-user-button  → "hidden sm:flex" → visible at ≥640px (desktop: 1440px)
+  //   .mobile-account-button               → visible at  <640px (Pixel 7: 412px)
+  //
+  // No waitForLoadState: 'networkidle' never fires on live API traffic,
+  // and 'load' can block 30s+ if the transient maintenance fallback page is served
+  // and redirects. We let toBeVisible() handle the full React-mount wait instead.
   const viewport = page.viewportSize();
   const btn = (viewport && viewport.width >= 640)
     ? page.locator('.header-user-button')
     : page.locator('.mobile-account-button');
 
-  await expect(btn).toBeVisible({ timeout: 10000 });
+  await expect(btn).toBeVisible({ timeout: 25000 });
   await btn.click();
 
   await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 8000 });
