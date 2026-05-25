@@ -6,6 +6,11 @@ import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, PieChart as PieChartIcon, CreditCard } from "lucide-react";
 export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments }) {
+  const [dashToast, setDashToast] = React.useState(null);
+  const showDashToast = (msg, type = 'success') => {
+    setDashToast({ msg, type });
+    setTimeout(() => setDashToast(null), 3000);
+  };
     const activeAds = userAds.filter(ad => ad.status === 'active' || ad.status === 'pending');
 
     React.useEffect(() => {
@@ -706,7 +711,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                   </div>
 
-                  <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); alert('Perfil de empresa actualizado exitosamente.'); }}>
+                  <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); showDashToast('Perfil de empresa actualizado exitosamente.'); }}>
 
                     <div>
 
@@ -1265,6 +1270,11 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
       </div>
 
+      {dashToast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${dashToast.type === 'error' ? 'bg-red-500' : 'bg-[#25D366]'}`}>
+          {dashToast.msg}
+        </div>
+      )}
     );
 
 }

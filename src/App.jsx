@@ -370,6 +370,11 @@ function App() {
   const [images, setImages] = useState([]); // { source: 'new' | 'existing', file?: File, url?: string, preview: string }
   const [videoFile, setVideoFile] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [appToast, setAppToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setAppToast({ message, type });
+    setTimeout(() => setAppToast(null), 3500);
+  };
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [priceTab, setPriceTab] = useState(accountType);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -761,8 +766,8 @@ function App() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = `mercasto_company_${userData.id}.json`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-      } else alert('Error al obtener datos del backend');
-    } catch (err) { console.error("Export error", err); alert('Error de conexión'); }
+      } else showToast('Error al obtener datos del backend', 'error');
+    } catch (err) { console.error("Export error", err); showToast('Error de conexión', 'error'); }
   };
 
   useEffect(() => {
@@ -896,7 +901,7 @@ function App() {
     } else if (paymentStatus === 'error') {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        alert(t.payment_failed_or_canceled || 'El pago no se pudo completar o fue cancelado.');
+        showToast(t.payment_failed_or_canceled || 'El pago no se pudo completar o fue cancelado.', 'error');
       }
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -914,13 +919,13 @@ function App() {
           if (data.user) {
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
-            alert(data.message || 'Correo actualizado con éxito.');
-          } else alert(data.message || 'Error al confirmar el correo.');
+            showToast(data.message || 'Correo actualizado con éxito.');
+          } else showToast(data.message || 'Error al confirmar el correo.', 'error');
         })
         .catch(err => console.error(err))
         .finally(() => window.history.replaceState({}, document.title, window.location.pathname));
       } else {
-        alert('Debes iniciar sesión primero para confirmar tu correo.');
+        showToast('Debes iniciar sesión primero para confirmar tu correo.', 'error');
         window.history.replaceState({}, document.title, window.location.pathname);
         setShowAuthModal(true);
       }
@@ -962,7 +967,7 @@ function App() {
         })
         .catch(err => {
           console.error(err);
-          alert('Error de autenticación con Google');
+          showToast('Error de autenticación con Google', 'error');
         });
     } else if (params.get('token')) {
       const token = params.get('token');
@@ -982,10 +987,10 @@ function App() {
       })
       .catch(err => {
         console.error(err);
-        alert('Error al cargar el perfil. Inicia sesión de nuevo.');
+        showToast('Error al cargar el perfil. Inicia sesión de nuevo.', 'error');
       });
     } else if (error) {
-      alert('Error de autenticación con Google');
+      showToast('Error de autenticación con Google', 'error');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
@@ -1336,7 +1341,7 @@ function App() {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/users/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setAdminUsers(prev => prev.filter(u => u.id !== id));
-      else alert('Error al eliminar usuario');
+      else showToast('Error al eliminar usuario', 'error');
     } catch (err) { console.error("Error deleting user", err); }
   };
 
@@ -1350,7 +1355,7 @@ function App() {
         body: JSON.stringify({ role: newRole })
       });
       if (res.ok) setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, role: newRole } : u));
-      else alert('Error al cambiar rol');
+      else showToast('Error al cambiar rol', 'error');
     } catch (err) { console.error("Error changing role", err); }
   };
 
@@ -1489,12 +1494,12 @@ function App() {
       if (res.ok) {
         setCouponForm({ code: '', credits: 100, max_uses: 10 });
         loadCoupons();
-        alert('Cupón creado exitosamente');
+        showToast('Cupón creado exitosamente');
       } else {
         const errData = await res.json();
-        alert(errData.message || 'Error al crear cupón');
+        showToast(errData.message || 'Error al crear cupón', 'error');
       }
-    } catch (err) { console.error(err); alert('Error de conexión'); }
+    } catch (err) { console.error(err); showToast('Error de conexión', 'error'); }
   };
 
   const handleDeleteCoupon = async (id) => {
@@ -1550,9 +1555,9 @@ function App() {
         const catRes = await fetch(`${API_URL}/categories`);
         setCategoriesData(await catRes.json());
         cancelCatEdit();
-        alert('Categoría guardada exitosamente');
-      } else alert('Error al guardar la categoría');
-    } catch (err) { console.error(err); alert('Error de conexión'); }
+        showToast('Categoría guardada exitosamente');
+      } else showToast('Error al guardar la categoría', 'error');
+    } catch (err) { console.error(err); showToast('Error de conexión', 'error'); }
     finally { setAdminLoading(false); }
   };
 
@@ -1620,7 +1625,7 @@ function App() {
 
       if (res.ok) {
         if (authMode === 'forgot_password' || authMode === 'reset_password') {
-          alert(result.message);
+          showToast(result.message, result.message.toLowerCase().includes('error') ? 'error' : 'success');
           setAuthMode('login');
         } else if (result.two_factor) {
           setTwoFactorEmail(result.email || data.email || '');
@@ -1628,7 +1633,7 @@ function App() {
           setRequiresTwoFactor(true);
         } else {
           if (!result.user) {
-            alert('Error de servidor: respuesta inesperada.');
+            showToast('Error de servidor: respuesta inesperada.', 'error');
             return;
           }
           setUser(result.user);
@@ -1643,11 +1648,11 @@ function App() {
           setShowAuthModal(false);
         }
       } else {
-        alert(result.message || result.error || "Credenciales incorrectas");
+        showToast(result.message || result.error || "Credenciales incorrectas", 'error');
       }
     } catch (err) {
       console.error("Auth error", err);
-      alert("Error de conexión");
+      showToast("Error de conexión", 'error');
     } finally {
       setAuthLoading(false);
     }
@@ -1680,9 +1685,9 @@ function App() {
         setTwoFactorChallengeToken('');
         setTwoFactorEmail('');
       } else {
-        alert(result.message || 'Código 2FA inválido.');
+        showToast(result.message || 'Código 2FA inválido.', 'error');
       }
-    } catch (err) { alert('Error de conexión.'); }
+    } catch (err) { showToast('Error de conexión.', 'error'); }
     finally { setAuthLoading(false); }
   };
 
@@ -1700,10 +1705,10 @@ function App() {
       });
       const result = await res.json();
       if (res.ok) {
-        alert(result.message || 'SMS enviado');
+        showToast(result.message || 'SMS enviado');
         setAuthMode('phone_verify');
-      } else alert(result.message || 'Error al enviar SMS');
-    } catch (err) { alert('Error de conexión'); }
+      } else showToast(result.message || 'Error al enviar SMS', 'error');
+    } catch (err) { showToast('Error de conexión', 'error'); }
     finally { setAuthLoading(false); }
   };
 
@@ -1723,8 +1728,8 @@ function App() {
         localStorage.setItem('user', JSON.stringify(result.user));
         if (result.access_token) localStorage.setItem('auth_token', result.access_token);
         setShowAuthModal(false);
-      } else alert(result.message || 'Código SMS inválido');
-    } catch (err) { alert('Error de conexión'); }
+      } else showToast(result.message || 'Código SMS inválido', 'error');
+    } catch (err) { showToast('Error de conexión', 'error'); }
     finally { setAuthLoading(false); }
   };
 
@@ -1801,7 +1806,7 @@ function App() {
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
         setShowProfileModal(false);
-      } else alert('Error al actualizar el perfil');
+      } else showToast('Error al actualizar el perfil', 'error');
     } catch (err) { console.error("Profile update error", err); }
     finally { setProfileLoading(false); }
   };
@@ -1809,7 +1814,7 @@ function App() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      alert('Las contraseñas nuevas no coinciden.');
+      showToast('Las contraseñas nuevas no coinciden.', 'error');
       return;
     }
     setPasswordLoading(true);
@@ -1825,12 +1830,12 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert(data.message || 'Contraseña actualizada exitosamente.');
+        showToast(data.message || 'Contraseña actualizada exitosamente.');
         setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       } else {
-        alert(`Error: ${data.message || 'No se pudo actualizar la contraseña.'}`);
+        showToast(`Error: ${data.message || 'No se pudo actualizar la contraseña.'}`, 'error');
       }
-    } catch (err) { console.error("Password update error", err); alert('Error de conexión'); }
+    } catch (err) { console.error("Password update error", err); showToast('Error de conexión', 'error'); }
     finally { setPasswordLoading(false); }
   };
 
@@ -1846,12 +1851,12 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert(data.message || 'Se ha enviado un enlace de confirmación a tu nuevo correo.');
+        showToast(data.message || 'Se ha enviado un enlace de confirmación a tu nuevo correo.');
         setEmailForm({ new_email: '', password: '' });
       } else {
-        alert(`Error: ${data.message || 'No se pudo procesar la solicitud.'}`);
+        showToast(`Error: ${data.message || 'No se pudo procesar la solicitud.'}`, 'error');
       }
-    } catch (err) { console.error("Email update error", err); alert('Error de conexión'); }
+    } catch (err) { console.error("Email update error", err); showToast('Error de conexión', 'error'); }
     finally { setEmailLoading(false); }
   };
 
@@ -1875,9 +1880,9 @@ function App() {
         } else {
            unsubscribeFromPush();
         }
-        alert('Preferencias de notificación guardadas.');
-      } else alert('Error al guardar preferencias.');
-    } catch (err) { console.error("Notifications update error", err); alert('Error de conexión'); }
+        showToast('Preferencias de notificación guardadas.');
+      } else showToast('Error al guardar preferencias.', 'error');
+    } catch (err) { console.error("Notifications update error", err); showToast('Error de conexión', 'error'); }
     finally { setNotificationsLoading(false); }
   };
 
@@ -1891,10 +1896,10 @@ function App() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        alert('Cuenta eliminada exitosamente.');
+        showToast('Cuenta eliminada exitosamente.');
         handleLogout();
       } else {
-        alert('Error al eliminar la cuenta.');
+        showToast('Error al eliminar la cuenta.', 'error');
       }
     } catch (err) { console.error("Account deletion error", err); }
   };
@@ -1933,7 +1938,7 @@ function App() {
       return;
     }
     if (!form.title) {
-      alert('Agrega un título primero para generar la descripción con IA.');
+      showToast('Agrega un título primero para generar la descripción con IA.', 'error');
       return;
     }
 
@@ -1962,7 +1967,7 @@ function App() {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || data.message || 'No se pudo generar la descripción.');
+        showToast(data.error || data.message || 'No se pudo generar la descripción.', 'error');
         return;
       }
 
@@ -1971,7 +1976,7 @@ function App() {
       }
     } catch (err) {
       console.error('AI description error', err);
-      alert('Error de conexión al generar la descripción.');
+      showToast('Error de conexión al generar la descripción.', 'error');
     } finally {
       setAiLoading(false);
     }
@@ -2054,7 +2059,7 @@ function App() {
         loadUserAds(); // Обновляем список моих объявлений
       } else {
         const errorData = await res.json();
-        alert(`Error: ${errorData.message || 'No se pudo guardar el anuncio.'}`);
+        showToast(`Error: ${errorData.message || 'No se pudo guardar el anuncio.'}`, 'error');
       }
     } catch (err) { console.error("Post error"); }
     finally { setPostLoading(false); }
@@ -2073,7 +2078,7 @@ function App() {
         loadAds(1); // Reload after delete
         loadUserAds(); // Обновляем список моих объявлений
       } else {
-        alert("Error al eliminar el anuncio.");
+        showToast("Error al eliminar el anuncio.", 'error');
       }
     } catch (err) {
       console.error("Delete error", err);
@@ -2143,9 +2148,9 @@ function App() {
         handleViewCompany(viewedCompany); // Перезагружаем профиль продавца для обновления отзывов
       } else {
         const errData = await res.json();
-        alert(`Error: ${errData.message}`);
+        showToast(`Error: ${errData.message}`, 'error');
       }
-    } catch (err) { console.error("Review error", err); alert('Error de conexión'); }
+    } catch (err) { console.error("Review error", err); showToast('Error de conexión', 'error'); }
     finally { setSubmittingReview(false); }
   };
 
@@ -2168,14 +2173,14 @@ function App() {
 
       const data = await res.json();
       if (res.ok) {
-        alert(data.message || 'Subida masiva completada');
+        showToast(data.message || 'Subida masiva completada');
         window.location.reload(); // Recargar para mostrar los nuevos anuncios en el dashboard
       } else {
-        alert(`Error: ${data.message || 'No se pudo procesar el archivo.'}`);
+        showToast(`Error: ${data.message || 'No se pudo procesar el archivo.'}`, 'error');
       }
     } catch (err) {
       console.error("Bulk upload error", err);
-      alert('Error de conexión al subir el archivo.');
+      showToast('Error de conexión al subir el archivo.', 'error');
     } finally {
       setIsUploadingBulk(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -2185,7 +2190,7 @@ function App() {
   // --- ПЕРЕКЛЮЧЕНИЕ СТАТУСА ОБЪЯВЛЕНИЯ (АКТИВНО/НЕАКТИВНО) ---
   const handleToggleAdStatus = async (ad) => {
     if (ad.status === 'pending' || ad.status === 'rejected') {
-      alert('Este anuncio está en revisión o fue rechazado y no puede ser activado manualmente.');
+      showToast('Este anuncio está en revisión o fue rechazado y no puede ser activado manualmente.', 'error');
       return;
     }
     const newStatus = ad.status === 'active' ? 'paused' : (ad.status === 'paused' ? 'active' : (ad.status === 'inactive' ? 'active' : 'paused'));
@@ -2220,13 +2225,13 @@ function App() {
       if (res.ok) {
         setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, republish_count: data.republish_count } : a));
         setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active' } : a));
-        alert('¡Anuncio republicado exitosamente! Estará activo 30 días más.');
+        showToast('¡Anuncio republicado exitosamente! Estará activo 30 días más.');
       } else {
-        alert(data.message || 'No se pudo republicar el anuncio.');
+        showToast(data.message || 'No se pudo republicar el anuncio.', 'error');
       }
     } catch (err) {
       console.error("Republish error", err);
-      alert('Error de conexión al republicar.');
+      showToast('Error de conexión al republicar.', 'error');
     }
   };
 
@@ -2244,11 +2249,11 @@ function App() {
         body: JSON.stringify(reportForm)
       });
       const data = await res.json();
-      alert(data.message || 'Reporte enviado.');
+      showToast(data.message || 'Reporte enviado.');
       setShowReportModal(false);
       setReportForm({ reason: '', comments: '' });
       setReportingAd(null);
-    } catch (err) { console.error("Report error", err); alert('Error de conexión'); }
+    } catch (err) { console.error("Report error", err); showToast('Error de conexión', 'error'); }
   };
 
   // --- ПОЖАЛОВАТЬСЯ НА ПОЛЬЗОВАТЕЛЯ ---
@@ -2265,10 +2270,10 @@ function App() {
         body: JSON.stringify(userReportForm)
       });
       const data = await res.json();
-      alert(data.message || 'Reporte de usuario enviado.');
+      showToast(data.message || 'Reporte de usuario enviado.');
       setShowUserReportModal(false);
       setUserReportForm({ reason: '', comments: '' });
-    } catch (err) { console.error("Report error", err); alert('Error de conexión'); }
+    } catch (err) { console.error("Report error", err); showToast('Error de conexión', 'error'); }
   };
 
   // --- ПОДЕЛИТЬСЯ ОБЪЯВЛЕНИЕМ ---
@@ -2277,7 +2282,7 @@ function App() {
       navigator.share({ title: ad.title, text: `Mira este anuncio en Mercasto: ${ad.title}`, url: window.location.href }).catch(console.error);
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('¡Enlace copiado al portapapeles!');
+      showToast('¡Enlace copiado al portapapeles!');
     }
   };
 
@@ -2294,8 +2299,8 @@ function App() {
       const data = await res.json();
       if (res.ok && data.payment_url) {
         window.location.href = data.payment_url;
-      } else alert(t.payment_error_generating || 'Error al generar el pago');
-    } catch (err) { console.error("Payment error", err); alert(t.connection_error || 'Error de conexión'); }
+      } else showToast(t.payment_error_generating || 'Error al generar el pago', 'error');
+    } catch (err) { console.error("Payment error", err); showToast(t.connection_error || 'Error de conexión', 'error'); }
   };
 
   // --- AI COMMAND CENTER LOGIC ---
@@ -2353,14 +2358,14 @@ function App() {
           });
           const data = await res.json();
           if (res.ok) {
-            alert('¡Anuncio promocionado con éxito!');
+            showToast('¡Anuncio promocionado con éxito!');
             const updatedUser = { ...user, balance: data.balance };
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
             setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, promoted: 'destacado' } : a));
             setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, promoted: 'destacado' } : a));
-          } else alert(data.message || 'Error al promocionar');
-        } catch (e) { console.error(e); alert('Error de conexión'); }
+          } else showToast(data.message || 'Error al promocionar', 'error');
+        } catch (e) { console.error(e); showToast('Error de conexión', 'error'); }
       }
     } else {
       handleClipPayment(50, `${t.ad_promotion_description || 'Promoción de anuncio'}: ${ad.title}`, ad.id);
@@ -2379,7 +2384,7 @@ function App() {
         body: JSON.stringify({ code: couponInput.trim() })
       });
       const data = await res.json();
-      alert(data.message);
+      showToast(data.message, 'error');
       if (res.ok && data.balance !== undefined) {
         setShowCouponModal(false);
         setCouponInput('');
@@ -2387,7 +2392,7 @@ function App() {
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
       }
-    } catch (e) { console.error(e); alert('Error de conexión'); }
+    } catch (e) { console.error(e); showToast('Error de conexión', 'error'); }
   };
 
   // --- ПРОСМОТР ОБЪЯВЛЕНИЯ И АНАЛИТИКА ---
@@ -2792,6 +2797,13 @@ function App() {
 
   return (
     <div className="w-full min-h-screen bg-[var(--paper)] font-sans text-[var(--ink)] selection:bg-[#84CC16]/20">
+
+      {/* GLOBAL TOAST */}
+      {appToast && (
+        <div className={`fixed bottom-6 right-6 z-[9999] px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all max-w-xs ${appToast.type === 'error' ? 'bg-red-500' : 'bg-[#25D366]'}`}>
+          {appToast.message}
+        </div>
+      )}
 
       {/* EMAIL VERIFICATION BANNER */}
       {user && !user.email_verified && !emailBannerDismissed && (

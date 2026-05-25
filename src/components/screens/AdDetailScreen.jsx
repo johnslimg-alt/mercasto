@@ -2,10 +2,11 @@
 function OwnerControls({ ad, API_URL, setViewedAd }) {
   const [status, setStatus] = useState(ad.status);
   const [loading, setLoading] = useState(false);
+  const [errMsg, setErrMsg] = useState(null);
   const token = localStorage.getItem('auth_token');
 
   const pause = async () => {
-    setLoading(true);
+    setLoading(true); setErrMsg(null);
     try {
       const res = await fetch(`${API_URL}/ads/${ad.id}/pause`, {
         method: 'PUT',
@@ -15,13 +16,13 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
         setStatus('paused');
         setViewedAd?.(prev => prev && prev.id === ad.id ? { ...prev, status: 'paused' } : prev);
       }
-      else { const d = await res.json(); alert(d.message || 'Error al pausar'); }
+      else { const d = await res.json(); setErrMsg(d.message || 'Error al pausar'); }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
   const activate = async () => {
-    setLoading(true);
+    setLoading(true); setErrMsg(null);
     try {
       const res = await fetch(`${API_URL}/ads/${ad.id}/activate`, {
         method: 'PUT',
@@ -31,26 +32,26 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
         setStatus('active');
         setViewedAd?.(prev => prev && prev.id === ad.id ? { ...prev, status: 'active' } : prev);
       }
-      else { const d = await res.json(); alert(d.message || 'Error al reactivar'); }
+      else { const d = await res.json(); setErrMsg(d.message || 'Error al reactivar'); }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
 
-  if (status === 'active') {
-    return (
-      <button onClick={pause} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
-        {loading ? <Loader2 size={15} className="animate-spin" /> : <Pause size={15} />} Pausar
-      </button>
-    );
-  }
-  if (status === 'paused') {
-    return (
-      <button onClick={activate} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-lime-100 hover:bg-[#65A30D]/20 text-[#65A30D] rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
-        {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} Reactivar
-      </button>
-    );
-  }
-  return null;
+  return (
+    <div className="flex flex-col gap-2">
+      {errMsg && <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">{errMsg}</p>}
+      {status === 'active' && (
+        <button onClick={pause} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Pause size={15} />} Pausar
+        </button>
+      )}
+      {status === 'paused' && (
+        <button onClick={activate} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-lime-100 hover:bg-[#65A30D]/20 text-[#65A30D] rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} Reactivar
+        </button>
+      )}
+    </div>
+  );
 }
 
 import React, { useMemo, useState, useEffect } from 'react';
