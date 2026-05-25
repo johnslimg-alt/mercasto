@@ -212,8 +212,6 @@ export const translations = {
 
     // General UI
     close_btn: 'Cerrar',
-    cancel: 'Cancelar',
-    select: 'Seleccionar',
     edit: 'Editar',
     delete: 'Eliminar',
     view: 'Ver',
@@ -230,7 +228,6 @@ export const translations = {
     cookies_desc: 'Algunas son esenciales; otras nos ayudan a entender cómo usas Mercasto.',
     cookies_essential: 'Solo esenciales',
     cookies_accept_all: 'Aceptar todas',
-    learn_more: 'Saber más',
 
     // Onboarding Modal
     onboarding_welcome_title: '¡Bienvenido a Mercasto!',
@@ -456,8 +453,6 @@ export const translations = {
 
     // General UI
     close_btn: 'Close',
-    cancel: 'Cancel',
-    select: 'Select',
     edit: 'Edit',
     delete: 'Delete',
     view: 'View',
@@ -467,7 +462,6 @@ export const translations = {
     selected: 'selected',
     generating: 'Generating...',
     generate_ai: '✨ Generate with AI',
-    save_changes: 'Save changes',
 
     // Cookie Banner
     cookies_aria_label: 'Cookie Notice',
@@ -475,7 +469,6 @@ export const translations = {
     cookies_desc: 'Some are essential; others help us understand how you use Mercasto.',
     cookies_essential: 'Only essential',
     cookies_accept_all: 'Accept all',
-    learn_more: 'Learn more',
 
     // Onboarding Modal
     onboarding_welcome_title: 'Welcome to Mercasto!',
@@ -701,8 +694,6 @@ export const translations = {
 
     // General UI
     close_btn: 'Fechar',
-    cancel: 'Cancelar',
-    select: 'Selecionar',
     edit: 'Editar',
     delete: 'Excluir',
     view: 'Ver',
@@ -712,7 +703,6 @@ export const translations = {
     selected: 'selecionados',
     generating: 'Gerando...',
     generate_ai: '✨ Gerar com IA',
-    save_changes: 'Salvar alterações',
 
     // Cookie Banner
     cookies_aria_label: 'Aviso de cookies',
@@ -720,7 +710,6 @@ export const translations = {
     cookies_desc: 'Algumas são essenciais; outras nos ajudam a entender como você usa o Mercasto.',
     cookies_essential: 'Apenas essenciais',
     cookies_accept_all: 'Aceitar todas',
-    learn_more: 'Saber mais',
 
     // Onboarding Modal
     onboarding_welcome_title: 'Bem-vindo ao Mercasto!',

@@ -22,7 +22,7 @@ let hasError = false;
 locales.forEach(locale => {
   const missing = [];
   allKeys.forEach(key => {
-    if (!translations[locale].hasOwnProperty(key)) {
+    if (!Object.prototype.hasOwnProperty.call(translations[locale], key)) {
       missing.push(key);
     }
   });
