@@ -13,6 +13,11 @@ on:
           - verify_quick
           - security_smoke
           - seo_aeo_smoke
+  workflow_run:
+    workflows:
+      - Production checks
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -29,6 +34,11 @@ jobs:
     name: Manual server gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.event == 'pull_request' &&
+           github.event.workflow_run.head_repository.full_name == github.repository) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,5 +60,5 @@ jobs:
           SSH_PORT: ${{ secrets.MERCASTO_SSH_PORT }}
           SSH_USER: ${{ secrets.MERCASTO_SSH_USER }}
           SSH_KEY: ${{ secrets.MERCASTO_SSH_PRIVATE_KEY }}
-          OPERATION: ${{ inputs.operation }}
+          OPERATION: ${{ github.event.inputs.operation || 'verify_quick' }}
         run: bash scripts/live-server-gate.sh "${OPERATION}"
