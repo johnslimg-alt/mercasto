@@ -23,9 +23,17 @@ const randomEmail = () => `e2e_${Date.now()}_${Math.floor(Math.random() * 9999)}
  * Mobile:  .mobile-account-button (visible on mobile bottom nav)
  */
 async function openAuthModal(page) {
-  await page.waitForLoadState('networkidle');
+  // Wait for React to mount (load state, not networkidle — live homepage has continuous API traffic)
+  await page.waitForLoadState('load');
+
   const desktopBtn = page.locator('.header-user-button');
   const mobileBtn  = page.locator('.mobile-account-button');
+
+  // Wait for whichever button is present, then click the visible one
+  await Promise.race([
+    desktopBtn.waitFor({ state: 'attached', timeout: 10000 }),
+    mobileBtn.waitFor({ state: 'attached', timeout: 10000 }),
+  ]);
 
   if (await desktopBtn.isVisible()) {
     await desktopBtn.click();
