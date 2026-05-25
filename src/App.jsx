@@ -3188,7 +3188,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="bg-white w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="bg-white w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
                 <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
                 <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}

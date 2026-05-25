@@ -3,41 +3,57 @@ import { expect, test } from '@playwright/test';
 /**
  * Auth E2E — modal-based auth flow.
  * Mercasto uses a modal triggered from the header, not dedicated /login or /register routes.
+ *
+ * App fix applied: the main login/register/forgot modal div now has
+ * onClick={e => e.stopPropagation()} so inner button clicks don't close the modal.
  */
 
 const randomEmail = () => `e2e_${Date.now()}_${Math.floor(Math.random() * 9999)}@mailinator.com`;
+
+/**
+ * Opens the auth modal regardless of viewport (desktop or mobile).
+ * Desktop: .header-user-button (hidden sm:flex — visible on desktop)
+ * Mobile:  .mobile-account-button (always visible on mobile nav)
+ */
+async function openAuthModal(page) {
+  await page.waitForLoadState('networkidle');
+  const desktopBtn = page.locator('.header-user-button');
+  const mobileBtn  = page.locator('.mobile-account-button');
+
+  if (await desktopBtn.isVisible()) {
+    await desktopBtn.click();
+  } else {
+    await mobileBtn.click();
+  }
+
+  await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 8000 });
+}
 
 test.describe('Authentication E2E Flow', () => {
 
   test('auth modal opens from header and shows login form', async ({ page }) => {
     await page.goto('/');
+    await openAuthModal(page);
 
-    // Trigger modal via header user button (desktop) or mobile account button
-    const headerBtn = page.locator('.header-user-button, .mobile-account-button').first();
-    await expect(headerBtn).toBeVisible({ timeout: 10000 });
-    await headerBtn.click();
-
-    // Modal should appear with email + password fields in login mode
-    await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 5000 });
+    // Email + password fields in login mode
+    await expect(page.locator('input[name="email"]')).toBeVisible();
     await expect(page.locator('input[name="password"]')).toBeVisible();
 
-    // Should show "login" mode text
+    // Login mode heading/text
     await expect(page.locator('body')).toContainText(/Iniciar|Entrar|Login/i);
   });
 
   test('switch between login and register mode', async ({ page }) => {
     await page.goto('/');
-    const headerBtn = page.locator('.header-user-button, .mobile-account-button').first();
-    await headerBtn.click();
+    await openAuthModal(page);
 
-    // Should start in login mode — no name field
-    await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 5000 });
+    // Login mode: name field absent
     const nameField = page.locator('input[name="name"]');
     await expect(nameField).not.toBeVisible();
 
-    // Click "¿No tienes cuenta? Únete" to switch to register
+    // Switch to register
     await page.getByText('¿No tienes cuenta? Únete').click();
-    await expect(nameField).toBeVisible({ timeout: 3000 });
+    await expect(nameField).toBeVisible({ timeout: 5000 });
     await expect(page.locator('body')).toContainText(/Registr|Register/i);
 
     // Switch back to login
@@ -47,16 +63,13 @@ test.describe('Authentication E2E Flow', () => {
 
   test('forgot password link shows forgot_password form', async ({ page }) => {
     await page.goto('/');
-    const headerBtn = page.locator('.header-user-button, .mobile-account-button').first();
-    await headerBtn.click();
+    await openAuthModal(page);
 
-    await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 5000 });
-
-    // Click "¿Olvidaste tu contraseña?"
+    // Click forgot password
     await page.getByText('¿Olvidaste tu contraseña?').click();
 
-    // Should now show email-only form for forgot_password mode
-    await expect(page.locator('input[name="email"]')).toBeVisible();
+    // forgot_password mode: email shown, password hidden, back link shown
+    await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('input[name="password"]')).not.toBeVisible();
     await expect(page.getByText('Volver a iniciar sesión')).toBeVisible();
   });
@@ -64,10 +77,7 @@ test.describe('Authentication E2E Flow', () => {
   test('register with new account and verify post-register state', async ({ page }) => {
     const email = randomEmail();
     await page.goto('/');
-
-    // Open modal
-    const headerBtn = page.locator('.header-user-button, .mobile-account-button').first();
-    await headerBtn.click();
+    await openAuthModal(page);
 
     // Switch to register
     await page.getByText('¿No tienes cuenta? Únete').click();
@@ -78,18 +88,17 @@ test.describe('Authentication E2E Flow', () => {
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', 'E2eTestPass99!');
 
-    // Submit
-    await page.locator('form button[type="submit"]').click();
+    // Submit — use role to avoid strict-mode violation from other form buttons on page
+    await page.getByRole('button', { name: /Registr/i }).click();
 
-    // Should either redirect to email verification or close modal and show user
     await page.waitForTimeout(3000);
 
-    // Either modal closed (user logged in) OR verification message shown
-    const modalVisible = await page.locator('input[name="email"]').isVisible().catch(() => false);
+    // Either modal closed (logged in) or verification message shown
+    const modalEmailVisible = await page.locator('input[name="email"]').isVisible().catch(() => false);
     const bodyText = await page.locator('body').textContent();
 
     const registrationHandled =
-      !modalVisible ||  // modal closed = logged in
+      !modalEmailVisible ||
       /Verificar|Confirmar|enviado|verif/i.test(bodyText || '');
 
     expect(registrationHandled, 'Registration should close modal or show verification state').toBe(true);
@@ -97,15 +106,15 @@ test.describe('Authentication E2E Flow', () => {
 
   test('login with invalid credentials shows error', async ({ page }) => {
     await page.goto('/');
-    const headerBtn = page.locator('.header-user-button, .mobile-account-button').first();
-    await headerBtn.click();
+    await openAuthModal(page);
 
-    await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 5000 });
     await page.fill('input[name="email"]', 'nonexistent@example.com');
     await page.fill('input[name="password"]', 'WrongPassword123!');
-    await page.locator('form button[type="submit"]').click();
 
-    // Should show error, modal stays open
+    // Scope submit to the auth modal (avoid newsletter form button elsewhere on page)
+    await page.getByRole('button', { name: /Iniciar Sesión/i }).click();
+
+    // Modal stays open with email field still visible after bad creds
     await page.waitForTimeout(2000);
     await expect(page.locator('input[name="email"]')).toBeVisible();
   });
@@ -119,13 +128,9 @@ test.describe('Authentication E2E Flow', () => {
 
   test('Google OAuth button is visible in auth modal', async ({ page }) => {
     await page.goto('/');
-    const headerBtn = page.locator('.header-user-button, .mobile-account-button').first();
-    await headerBtn.click();
+    await openAuthModal(page);
 
-    await expect(page.locator('input[name="email"]')).toBeVisible({ timeout: 5000 });
-
-    // Google button should appear (provider is configured)
-    const googleBtn = page.getByText('Google');
-    await expect(googleBtn).toBeVisible({ timeout: 5000 });
+    // Google button should appear (provider configured)
+    await expect(page.getByText('Google')).toBeVisible({ timeout: 5000 });
   });
 });
