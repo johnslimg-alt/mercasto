@@ -36,7 +36,7 @@ grep -qF "services.twilio" "$AUTH_CONTROLLER"
 grep -qF "Phone verification service is not configured" "$AUTH_CONTROLLER"
 
 # Guardrail: no unthrottled duplicate phone-auth routes outside api.php.
-if grep -sRIn --exclude='api.php' --exclude-dir='vendor' --exclude-dir='storage' --exclude-dir='node_modules' "/auth/phone/" backend routes scripts; then
+if grep -sRIn --exclude="api.php" --exclude-dir="vendor" --exclude-dir="storage" --exclude-dir="node_modules" --exclude-dir="cache" --exclude="otp-abuse-control-gate.sh" "/auth/phone/" backend routes scripts; then
   echo "Phone auth routes must remain centralized and throttled in backend/routes/api.php." >&2
   exit 1
 fi
