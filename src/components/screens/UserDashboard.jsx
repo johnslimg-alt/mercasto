@@ -1267,14 +1267,13 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
           </div>
 
         </div>
-
-      </div>
-
       {dashToast && (
         <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${dashToast.type === 'error' ? 'bg-red-500' : 'bg-[#25D366]'}`}>
           {dashToast.msg}
         </div>
       )}
-    );
+    </div>
+
+  );
 
 }
