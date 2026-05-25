@@ -4,8 +4,15 @@ import { expect, test } from '@playwright/test';
  * Auth E2E — modal-based auth flow.
  * Mercasto uses a modal triggered from the header, not dedicated /login or /register routes.
  *
- * App fix applied: the main login/register/forgot modal div now has
- * onClick={e => e.stopPropagation()} so inner button clicks don't close the modal.
+ * Translation notes (es):
+ *   login mode heading  → t.login       = "Iniciar Sesión"
+ *   register mode heading → t.register  = "Crear Cuenta"
+ *   forgot_password heading → t.forgot_password = "¿Olvidaste tu contraseña?" or similar
+ *
+ * Selector notes:
+ *   - Auth modal submit button: button.btn-lg[type="submit"]
+ *   - Newsletter subscribe button: button.btn-md[type="submit"]  (different class → no conflict)
+ *   - Mobile header button: .mobile-account-button (type="button", not submit)
  */
 
 const randomEmail = () => `e2e_${Date.now()}_${Math.floor(Math.random() * 9999)}@mailinator.com`;
@@ -13,7 +20,7 @@ const randomEmail = () => `e2e_${Date.now()}_${Math.floor(Math.random() * 9999)}
 /**
  * Opens the auth modal regardless of viewport (desktop or mobile).
  * Desktop: .header-user-button (hidden sm:flex — visible on desktop)
- * Mobile:  .mobile-account-button (always visible on mobile nav)
+ * Mobile:  .mobile-account-button (visible on mobile bottom nav)
  */
 async function openAuthModal(page) {
   await page.waitForLoadState('networkidle');
@@ -39,8 +46,8 @@ test.describe('Authentication E2E Flow', () => {
     await expect(page.locator('input[name="email"]')).toBeVisible();
     await expect(page.locator('input[name="password"]')).toBeVisible();
 
-    // Login mode heading/text
-    await expect(page.locator('body')).toContainText(/Iniciar|Entrar|Login/i);
+    // Login mode heading (Spanish: "Iniciar Sesión")
+    await expect(page.locator('body')).toContainText(/Iniciar Ses/i);
   });
 
   test('switch between login and register mode', async ({ page }) => {
@@ -51,10 +58,9 @@ test.describe('Authentication E2E Flow', () => {
     const nameField = page.locator('input[name="name"]');
     await expect(nameField).not.toBeVisible();
 
-    // Switch to register
+    // Switch to register — heading becomes "Crear Cuenta" in Spanish
     await page.getByText('¿No tienes cuenta? Únete').click();
     await expect(nameField).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('body')).toContainText(/Registr|Register/i);
 
     // Switch back to login
     await page.getByText('Ya tengo cuenta').click();
@@ -88,8 +94,8 @@ test.describe('Authentication E2E Flow', () => {
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', 'E2eTestPass99!');
 
-    // Submit — use role to avoid strict-mode violation from other form buttons on page
-    await page.getByRole('button', { name: /Registr/i }).click();
+    // Submit — use btn-lg class to scope to modal (newsletter form uses btn-md)
+    await page.locator('button.btn-lg[type="submit"]').click();
 
     await page.waitForTimeout(3000);
 
@@ -111,8 +117,8 @@ test.describe('Authentication E2E Flow', () => {
     await page.fill('input[name="email"]', 'nonexistent@example.com');
     await page.fill('input[name="password"]', 'WrongPassword123!');
 
-    // Scope submit to the auth modal (avoid newsletter form button elsewhere on page)
-    await page.getByRole('button', { name: /Iniciar Sesión/i }).click();
+    // Use btn-lg to scope to modal submit (avoids newsletter btn-md and mobile header button)
+    await page.locator('button.btn-lg[type="submit"]').click();
 
     // Modal stays open with email field still visible after bad creds
     await page.waitForTimeout(2000);
