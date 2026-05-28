@@ -19,7 +19,7 @@ Public launch requires:
 
 Current hard execution blocker:
 
-- #282 — live server gate cannot yet capture current production `verify_quick` evidence.
+- #282 — the Actions runner offers the expected live-gate ED25519 key, but the production server rejects that offered key before current production `verify_quick` evidence can be captured. This is currently narrowed to server-side SSH authorization, root-login, account policy, or authorized-key configuration.
 
 Current open P0 evidence blockers:
 
@@ -51,7 +51,7 @@ Closed but conditional/stale evidence gates:
 
 | Gate | Status | Evidence owner | Evidence location |
 | --- | --- | --- | --- |
-| Production health / live gate | Blocked | Ops | #282, Production checks live server gate |
+| Production health / live gate | Blocked by server-side SSH key rejection | Ops | #282, #288, Production checks artifact `7259667613` |
 | Direct 80/443 ownership | Open | Ops | #261, `smoke:port-ownership` |
 | Production sync after autonomous commits | Conditional / stale | Ops | #262 plus fresh current server output required |
 | Env readiness | Open | Ops | `smoke:env-readiness` output |
@@ -127,6 +127,7 @@ Public launch must stop if any of these are true:
 
 - `UP` is not `200`;
 - `VERIFY_EXIT` is not `0`;
+- the live gate cannot authenticate and capture current `/var/www/mercasto` output;
 - `verify:launch` fails;
 - SMS readiness is not ready;
 - payment webhook evidence is missing;
