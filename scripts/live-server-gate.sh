@@ -6,6 +6,7 @@ SSH_HOST="${SSH_HOST:-}"
 SSH_PORT="${SSH_PORT:-22}"
 SSH_USER="${SSH_USER:-}"
 SSH_KEY="${SSH_KEY:-}"
+LIVE_GATE_SSH_DEBUG="${LIVE_GATE_SSH_DEBUG:-0}"
 
 case "${OPERATION}" in
   status|verify_quick|security_smoke|seo_aeo_smoke) ;;
@@ -35,14 +36,22 @@ fi
 echo "== Live gate SSH public key fingerprint =="
 ssh-keygen -lf "${pub_file}"
 
-ssh \
-  -i "${key_file}" \
-  -p "${SSH_PORT}" \
-  -o BatchMode=yes \
-  -o IdentitiesOnly=yes \
-  -o StrictHostKeyChecking=accept-new \
-  -o ServerAliveInterval=15 \
-  -o ServerAliveCountMax=4 \
+ssh_args=(
+  -i "${key_file}"
+  -p "${SSH_PORT}"
+  -o BatchMode=yes
+  -o IdentitiesOnly=yes
+  -o StrictHostKeyChecking=accept-new
+  -o ServerAliveInterval=15
+  -o ServerAliveCountMax=4
+)
+
+if [ "${LIVE_GATE_SSH_DEBUG}" = "1" ]; then
+  echo "== Live gate SSH debug enabled =="
+  ssh_args=(-vvv "${ssh_args[@]}")
+fi
+
+ssh "${ssh_args[@]}" \
   "${SSH_USER}@${SSH_HOST}" \
   "OPERATION='${OPERATION}' bash -s" <<'REMOTE'
 set -euo pipefail
