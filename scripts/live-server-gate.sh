@@ -22,9 +22,18 @@ esac
 
 install -m 700 -d ~/.ssh
 key_file="$(mktemp)"
-trap 'rm -f "${key_file}"' EXIT
+pub_file="${key_file}.pub"
+trap 'rm -f "${key_file}" "${pub_file}"' EXIT
 printf '%s\n' "${SSH_KEY}" >"${key_file}"
 chmod 600 "${key_file}"
+
+if ! ssh-keygen -y -f "${key_file}" >"${pub_file}" 2>/dev/null; then
+  echo "Invalid SSH private key format for live gate secret" >&2
+  exit 65
+fi
+
+echo "== Live gate SSH public key fingerprint =="
+ssh-keygen -lf "${pub_file}"
 
 ssh \
   -i "${key_file}" \
