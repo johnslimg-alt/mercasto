@@ -13,24 +13,65 @@ Public launch requires:
 - Playwright public smoke passing;
 - soft-launch 48-hour monitoring completed without Sev1/Sev2 incidents.
 
+## Current launch status
+
+**NO-GO.**
+
+Current hard execution blocker:
+
+- #282 — live server gate cannot yet capture current production `verify_quick` evidence.
+
+Current open P0 evidence blockers:
+
+- #260 — SMS readiness.
+- #225 — SMS OTP delivery/user-flow smoke.
+- #263 — auth/account E2E coverage.
+- #264 — ads lifecycle E2E coverage.
+- #265 — payments E2E and webhook recovery.
+- #269 — legal and business readiness.
+- #272 — master launch go/no-go tracker.
+- #273 — third-party AI evidence validation.
+- #287 — security, privacy and anti-abuse hardening.
+
+Current P1 / public marketing / launch-quality gates:
+
+- #270 — SEO and AEO readiness.
+- #271 — Lighthouse and performance baseline.
+- #286 — production UI polish and Spanish classifieds consistency.
+- #289 — stale open PR triage before launch cleanup.
+
+Closed but conditional/stale evidence gates:
+
+- #262 — production sync evidence exists for an older commit; fresh current `VERIFY_EXIT=0` is still required.
+- #266 — category attribute seeder exists, but fresh current Docker-based category data smoke output is still required for final GO evidence.
+- #267 — restore/rollback evidence exists, but fresh current backup/rollback/alert posture evidence is still required.
+- #268 — older security evidence exists, but #287 supersedes final security/privacy/anti-abuse readiness.
+
 ## Evidence index
 
 | Gate | Status | Evidence owner | Evidence location |
 | --- | --- | --- | --- |
-| Production health | Green last verified | Ops | issue #262 or latest server output |
-| Direct 80/443 ownership | Guarded | Ops | issue #261, `smoke:port-ownership` |
+| Production health / live gate | Blocked | Ops | #282, Production checks live server gate |
+| Direct 80/443 ownership | Open | Ops | #261, `smoke:port-ownership` |
+| Production sync after autonomous commits | Conditional / stale | Ops | #262 plus fresh current server output required |
 | Env readiness | Open | Ops | `smoke:env-readiness` output |
-| SMS readiness | Blocked | Ops/Product | issue #260 |
-| Auth/account E2E | Blocked | QA/Product | issue #263 |
-| Ads lifecycle E2E | Blocked | QA/Product | issue #264 |
-| Payments/webhooks | Blocked | Ops/Payments | issue #265 |
-| Category seed/fresh DB | Blocked | Backend/Data | issue #266 |
-| Restore/rollback/alerts | Blocked | Ops | issue #267 |
-| Security pass | Blocked | Security/Ops | issue #268 |
-| Legal/business | Blocked | Founder/Ops | issue TBD |
-| SEO/AEO | Open | Growth/Ops | issue TBD |
-| Performance/Lighthouse | Open | Frontend/Ops | issue TBD |
+| SMS readiness | Blocked | Ops/Product | #260 |
+| SMS OTP delivery/user flow | Blocked | QA/Product | #225 |
+| Auth/account E2E | Blocked | QA/Product | #263 |
+| Ads lifecycle E2E | Blocked | QA/Product | #264 |
+| Payments/webhooks | Blocked | Ops/Payments | #265 |
+| Category seed/fresh DB | Conditional / needs fresh output | Backend/Data | #266, `smoke:category-data` |
+| Restore/rollback/alerts | Conditional / needs fresh output | Ops | #267, `smoke:backup-freshness` |
+| Security pass | Conditional / superseded by #287 | Security/Ops | #268, #287 |
+| Security/privacy/anti-abuse | Blocked | Security/Ops | #287 |
+| Legal/business | Blocked | Founder/Ops | #269 |
+| SEO/AEO | Open | Growth/Ops | #270 |
+| Performance/Lighthouse | Open | Frontend/Ops | #271 |
+| UI polish / Spanish consistency | Open | Frontend/Ops | #286 |
+| Third-party AI evidence validation | Blocked | Ops | #273 |
+| Master launch decision | Blocked | Ops/Founder | #272 |
 | Soft launch monitoring | Not started | Ops/Product | `docs/soft-launch-48h-monitoring-plan.md` |
+| Stale PR triage | Open hygiene | Ops | #289 |
 
 ## Required command evidence
 
@@ -47,9 +88,21 @@ npm run e2e:public:ci
 npm run verify:launch
 ```
 
+Additional issue-specific evidence:
+
+```bash
+REQUIRE_BACKUP_FRESHNESS=1 npm run smoke:backup-freshness
+REQUIRE_PORT_OWNERSHIP=1 npm run smoke:port-ownership
+npm run smoke:seo
+npm run smoke:security
+npm run smoke:public-manifests
+npm run smoke:route-audit
+npm run check:static-safety
+```
+
 ## Public launch decision log
 
-Add final go/no-go note here or in a launch issue.
+Add final go/no-go note here or in #272.
 
 Template:
 
@@ -78,7 +131,12 @@ Public launch must stop if any of these are true:
 - SMS readiness is not ready;
 - payment webhook evidence is missing;
 - auth/account E2E evidence is missing;
+- ads lifecycle E2E evidence is missing;
 - backup restore/rollback evidence is missing;
-- security pass evidence is missing;
+- current security/privacy/anti-abuse evidence is missing;
+- legal/business readiness is missing;
+- category/fresh database proof is missing;
+- third-party AI evidence validation remains open;
 - secrets or stack traces are found in public output;
-- frontend loses ownership of ports `80/443` under the current non-Traefik topology.
+- frontend loses ownership of ports `80/443` under the current non-Traefik topology;
+- public UI/marketing starts before #272 is resolved as GO.
