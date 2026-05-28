@@ -6,7 +6,7 @@ SSH_HOST="${SSH_HOST:-}"
 SSH_PORT="${SSH_PORT:-22}"
 SSH_USER="${SSH_USER:-}"
 SSH_KEY="${SSH_KEY:-}"
-LIVE_GATE_SSH_DEBUG="${LIVE_GATE_SSH_DEBUG:-0}"
+LIVE_GATE_SSH_DEBUG="${LIVE_GATE_SSH_DEBUG:-1}"
 
 case "${OPERATION}" in
   status|verify_quick|security_smoke|seo_aeo_smoke) ;;
