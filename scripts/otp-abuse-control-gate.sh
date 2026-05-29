@@ -33,7 +33,7 @@ grep -qF "Route::post('/auth/phone/verify', [AuthController::class, 'verifyPhone
 grep -qF "requestPhoneCode" "$AUTH_CONTROLLER"
 grep -qF "verifyPhoneCode" "$AUTH_CONTROLLER"
 grep -qF "services.twilio" "$AUTH_CONTROLLER"
-grep -qF "Phone verification service is not configured" "$AUTH_CONTROLLER"
+grep -qF "Phone auth SMS provider is not configured" "$AUTH_CONTROLLER"
 
 # Guardrail: no unthrottled duplicate phone-auth routes outside api.php.
 if grep -sRIn --exclude="api.php" --exclude-dir="vendor" --exclude-dir="storage" --exclude-dir="node_modules" --exclude-dir="cache" --exclude="otp-abuse-control-gate.sh" "/auth/phone/" backend routes scripts; then
