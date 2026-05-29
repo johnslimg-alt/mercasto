@@ -34,9 +34,9 @@ grep -qF "where('ads.status', 'active')" "$CONTROLLER"
 
 # Ownership guards for edit/update/delete/status/promote.
 grep -qF '$request->user()->id !== $ad->user_id && $request->user()->role !== '\''admin'\''' "$CONTROLLER"
-grep -qF "Нет прав для редактирования этого объявления" "$CONTROLLER"
-grep -qF "Нет прав для удаления этого объявления" "$CONTROLLER"
-grep -qF "Нет прав для изменения статуса" "$CONTROLLER"
+grep -qF "No tienes permisos para editar este anuncio" "$CONTROLLER"
+grep -qF "No tienes permisos para eliminar este anuncio" "$CONTROLLER"
+grep -qF "No tienes permisos para cambiar el estado de este anuncio" "$CONTROLLER"
 
 # Create/edit moderation behavior.
 grep -qF "'status' => 'pending', // Отправляем на модерацию" "$CONTROLLER"
