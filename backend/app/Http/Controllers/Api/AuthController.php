@@ -33,7 +33,8 @@ class AuthController extends Controller
         ]);
 
         // GDPR/LFPDPPP Compliance: Хешируем IP-адрес (PII) перед сохранением/поиском в БД
-        $ip = hash('sha256', $request->ip());
+        // Ограничиваем до 45 символов для соответствия varchar(45) в таблице users
+        $ip = substr(hash('sha256', $request->ip()), 0, 45);
         // Защита от Privilege Escalation (Уязвимость "Бесплатный PRO"): жестко фиксируем начальную роль
         $role = 'individual';
 
@@ -242,7 +243,7 @@ class AuthController extends Controller
             $user->email = $phoneNumber . '@mercasto.local';
             $user->password = Hash::make(Str::random(16));
             $user->role = 'individual';
-            $user->ip_address = hash('sha256', $request->ip());
+            $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
             $user->save();
         }
 
@@ -433,7 +434,7 @@ class AuthController extends Controller
                 $user->{"{$provider}_id"} = $socialUser->id;
                 $user->avatar_url = $socialUser->avatar;
                 $user->role = 'individual';
-                $user->ip_address = hash('sha256', $request->ip());
+                $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
                 $user->save();
             } elseif (!$user->{"{$provider}_id"}) {
                 $user->{"{$provider}_id"} = $socialUser->id;
