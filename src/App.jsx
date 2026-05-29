@@ -2831,9 +2831,9 @@ function App() {
       {/* GLOBAL HEADER */}
       <header className="site-header sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-          <div className="relative flex items-center gap-2.5 h-[50px] lg:h-[56px]">
+          <div className="relative flex items-center gap-2 h-[44px] sm:h-[48px] lg:h-[54px]">
             <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
-              <MercastoLogo className="h-7 sm:h-8 lg:h-9" />
+              <MercastoLogo className="h-6 sm:h-7 lg:h-9" />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
@@ -3005,7 +3005,7 @@ function App() {
             </div>
           </div>
           {/* Mobile Search + Location + Account */}
-          <div className="mobile-search-row lg:hidden pb-1.5">
+          <div className="mobile-search-row lg:hidden pb-1">
             <div ref={mobileSearchRef} className="relative min-w-0">
               <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
@@ -3044,8 +3044,8 @@ function App() {
         </div>
         <div className="header-category-bar border-t">
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-            <nav className="flex items-center gap-5 overflow-x-auto no-scrollbar text-[13.5px] font-medium text-slate-600 whitespace-nowrap">
-              <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-2.5 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
+            <nav className="flex items-center gap-4 overflow-x-auto no-scrollbar font-medium text-slate-600 whitespace-nowrap">
+              <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
               {categoriesData.slice(0, 24).map(c => (
                 <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{getCatName(c, lang)}</button>
               ))}
