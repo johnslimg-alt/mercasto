@@ -2,6 +2,15 @@ name: Autonomous Production Watch
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/autonomous-production-watch.yml'
+      - 'docker-compose.yml'
+      - 'docker-compose.override.yml'
+      - 'package.json'
+      - 'scripts/static-safety-scans.sh'
   schedule:
     - cron: '17 */6 * * *'
 
