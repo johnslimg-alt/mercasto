@@ -17,17 +17,49 @@ class TestAdsSeeder extends Seeder
             return;
         }
 
+        $demoPassword = env('E2E_DEMO_PASSWORD');
+        $sellerEmail = env('E2E_SELLER_EMAIL');
+        $sellerPassword = env('E2E_SELLER_PASSWORD');
+        $adminEmail = env('E2E_ADMIN_EMAIL');
+        $adminPassword = env('E2E_ADMIN_PASSWORD');
+
         // Создаем фейкового PRO-продавца для тестовых товаров
         $user = User::firstOrCreate(
             ['email' => 'tienda_demo@mercasto.com'],
             [
                 'name' => 'Tienda Oficial (Demo)',
-                'password' => bcrypt('password123'),
+                'password' => bcrypt($demoPassword ?: Str::password(32)),
                 'role' => 'business',
                 'is_verified' => true,
                 'ip_address' => '127.0.0.1'
             ]
         );
+
+        if ($sellerEmail && $sellerPassword) {
+            User::firstOrCreate(
+                ['email' => $sellerEmail],
+                [
+                    'name' => 'Seller Demo',
+                    'password' => bcrypt($sellerPassword),
+                    'role' => 'individual',
+                    'is_verified' => true,
+                    'ip_address' => '127.0.0.1'
+                ]
+            );
+        }
+
+        if ($adminEmail && $adminPassword) {
+            User::firstOrCreate(
+                ['email' => $adminEmail],
+                [
+                    'name' => 'Admin Demo',
+                    'password' => bcrypt($adminPassword),
+                    'role' => 'admin',
+                    'is_verified' => true,
+                    'ip_address' => '127.0.0.1'
+                ]
+            );
+        }
 
         $locations = [
             'Aguascalientes, AGS', 'Tijuana, BC', 'Mexicali, BC', 'La Paz, BCS', 'Los Cabos, BCS',
