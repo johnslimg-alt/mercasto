@@ -58,6 +58,30 @@ class CategoryAttributeController extends Controller
                         $options = $decoded ?? $options;
                     }
 
+                    if (is_array($options)) {
+                        $formattedOptions = [];
+                        foreach ($options as $opt) {
+                            if (is_array($opt)) {
+                                if (isset($opt['label'])) {
+                                    $lbl = $opt['label'];
+                                    if (is_array($lbl)) {
+                                        $lblVal = $lbl['es'] ?? $lbl['en'] ?? reset($lbl);
+                                    } else {
+                                        $lblVal = $lbl;
+                                    }
+                                    $formattedOptions[] = $lblVal;
+                                } elseif (isset($opt['value'])) {
+                                    $formattedOptions[] = $opt['value'];
+                                } else {
+                                    $formattedOptions[] = reset($opt);
+                                }
+                            } else {
+                                $formattedOptions[] = $opt;
+                            }
+                        }
+                        $options = $formattedOptions;
+                    }
+
                     return [
                         'id'         => $attr->key,        // используем key как id для совместимости с filterConfig
                         'key'        => $attr->key,
@@ -84,6 +108,7 @@ class CategoryAttributeController extends Controller
         if ($dbType === 'checkbox') return 'checkbox';
         if ($dbType === 'boolean') return 'checkbox';
         if ($dbType === 'text' || $dbType === 'input') return 'text';
+        if ($dbType === 'number') return 'range';
         return 'select';
     }
 }

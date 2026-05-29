@@ -242,7 +242,9 @@ export default function EditAdScreen({ t, lang }) {
           <select value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value, attributes: {}}))}
             required className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white">
             <option value="">{t.select_category || 'Seleccionar categoría'}</option>
-            {categories.map(cat => <option key={cat.slug} value={cat.slug}>{cat.name || cat.slug}</option>)}
+            {categories.map(cat => (
+              <option key={cat.slug} value={cat.slug}>{typeof cat.name === 'object' && cat.name ? (cat.name[lang] || cat.name['es'] || cat.slug) : (cat.name || cat.slug)}</option>
+            ))}
           </select>
         </div>
 

@@ -40,6 +40,7 @@ const electronicsFilters = [
 ];
 
 export const filterConfig = {
+  coches: autoFilters,
   motor: autoFilters,
   'coches-y-motor': autoFilters,
   'coches-y-motor/coches': autoFilters,
@@ -72,6 +73,7 @@ export const filterConfig = {
   electrónica: electronicsFilters,
   informatica: electronicsFilters,
   telefonia: electronicsFilters,
+  telefonos: electronicsFilters,
   'moviles-y-telefonia': electronicsFilters,
   'electronica/laptops': electronicsFilters,
   'electronica/tablets': electronicsFilters,

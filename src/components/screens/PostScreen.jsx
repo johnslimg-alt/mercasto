@@ -42,7 +42,55 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
     const categoryFields = React.useMemo(() => {
       if (!form.category) return [];
-      return apiCategoryFields ?? filterConfig[form.category] ?? [];
+      const apiFields = apiCategoryFields;
+      if (!apiFields) {
+        return filterConfig[form.category] ?? [];
+      }
+
+      const localFields = filterConfig[form.category] ?? [];
+      return apiFields.map(apiField => {
+        const apiFieldId = apiField.id || apiField.key;
+
+        // Normalize backend key to match frontend key consistently
+        let normalizedApiId = apiFieldId;
+        if (apiFieldId === 'brand') normalizedApiId = 'marca';
+        else if (apiFieldId === 'model') normalizedApiId = 'modelo';
+        else if (apiFieldId === 'kms') normalizedApiId = 'km';
+        else if (apiFieldId === 'fuel') normalizedApiId = 'combustible';
+
+        const localField = localFields.find(f => {
+          const localFieldId = f.id || f.key;
+          return localFieldId === normalizedApiId;
+        });
+
+        let resolvedMinPlaceholder = apiField.minPlaceholder;
+        if (!resolvedMinPlaceholder) {
+          if (apiField.key === 'year') resolvedMinPlaceholder = 'Desde';
+          else if (apiField.key === 'kms' || apiField.key === 'km') resolvedMinPlaceholder = 'Mín.';
+          else if (localField) resolvedMinPlaceholder = localField.minPlaceholder;
+        }
+
+        if (localField) {
+          return {
+            ...localField,
+            ...apiField,
+            id: normalizedApiId,
+            key: normalizedApiId,
+            type: apiField.type || localField.type,
+            options: apiField.options || localField.options,
+            placeholder: apiField.placeholder || localField.placeholder,
+            minPlaceholder: resolvedMinPlaceholder,
+            maxPlaceholder: apiField.maxPlaceholder || localField.maxPlaceholder,
+          };
+        }
+
+        return {
+          ...apiField,
+          id: normalizedApiId,
+          key: normalizedApiId,
+          minPlaceholder: resolvedMinPlaceholder,
+        };
+      });
     }, [apiCategoryFields, form.category]);
 
     React.useEffect(() => {
