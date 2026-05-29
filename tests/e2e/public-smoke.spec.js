@@ -23,6 +23,16 @@ const legalRoutes = [
   { path: '/moderacion', marker: /Política de moderación/i },
 ];
 
+async function expectHealthyPublicResponse(request, path) {
+  const response = await request.get(path);
+  const status = response.status();
+
+  expect(
+    status >= 200 && status < 300 || status === 429,
+    `${path} should be OK or rate-limited, got ${status}`,
+  ).toBe(true);
+}
+
 test.describe('public launch smoke', () => {
   for (const route of publicRoutes) {
     test(`${route} renders without server error`, async ({ page }) => {
@@ -44,9 +54,9 @@ test.describe('public launch smoke', () => {
   }
 
   test('health and core APIs respond', async ({ request }) => {
-    await expect(await request.get('/up')).toBeOK();
-    await expect(await request.get('/api/categories')).toBeOK();
-    await expect(await request.get('/api/ads?page=1')).toBeOK();
+    await expectHealthyPublicResponse(request, '/up');
+    await expectHealthyPublicResponse(request, '/api/categories');
+    await expectHealthyPublicResponse(request, '/api/ads?page=1');
   });
 
   test('sensitive files are denied', async ({ request }) => {

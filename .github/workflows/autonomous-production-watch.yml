@@ -104,7 +104,7 @@ jobs:
       - name: Validate compose config
         run: |
           DB_PASSWORD=ci REDIS_PASSWORD=ci docker compose config >/tmp/mercasto-compose-base.yml
-          DB_PASSWORD=ci REDIS_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto-compose-prod.yml
+          DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto-compose-prod.yml
 
   report-failure:
     name: Report watch failure
