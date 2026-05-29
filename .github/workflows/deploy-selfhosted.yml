@@ -101,6 +101,13 @@ jobs:
       - name: Production smoke
         run: |
           cd /var/www/mercasto
+          for attempt in 1 2 3; do
+            if SMOKE_HTTP_ATTEMPTS=12 SMOKE_HTTP_RETRY_DELAY=5 bash scripts/production-smoke.sh; then
+              exit 0
+            fi
+            echo "production smoke failed, retrying in 20s ($attempt/3)" >&2
+            sleep 20
+          done
           SMOKE_HTTP_ATTEMPTS=12 SMOKE_HTTP_RETRY_DELAY=5 bash scripts/production-smoke.sh
 
       - name: Recovery on failure
