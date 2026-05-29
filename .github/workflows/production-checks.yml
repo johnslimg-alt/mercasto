@@ -75,9 +75,18 @@ jobs:
       - name: Check public search signals
         run: |
           set -euo pipefail
-          curl -fsS https://mercasto.com/ >/tmp/home.html
-          curl -fsS https://mercasto.com/sitemap.xml >/tmp/sitemap.xml
-          curl -fsS https://mercasto.com/robots.txt >/tmp/robots.txt
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5 6; do
+              "$@" && return 0
+              echo "retrying SEO smoke command in 8s ($attempt/6): $*" >&2
+              sleep 8
+            done
+            "$@"
+          }
+          retry curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/home.html
+          retry curl -fsS --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/sitemap.xml
+          retry curl -fsS --max-time 30 https://mercasto.com/robots.txt -o /tmp/robots.txt
           grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/home.html
           grep -Eiq 'name="description"|property="og:description"' /tmp/home.html
           grep -Eiq 'application/ld\+json|schema.org' /tmp/home.html
