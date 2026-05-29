@@ -38,13 +38,19 @@ jobs:
           check_head() {
             local url="$1"
             local pattern="$2"
+            local attempt
             local status
-            status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url")"
-            echo "$url -> $status"
-            if [[ ! "$status" =~ $pattern ]]; then
-              echo "unexpected status for $url: $status" >&2
-              exit 1
-            fi
+            for attempt in 1 2 3 4 5 6; do
+              status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
+              status="${status:-000}"
+              echo "$url -> $status (attempt $attempt/6)"
+              if [[ "$status" =~ $pattern ]]; then
+                return 0
+              fi
+              sleep 8
+            done
+            echo "unexpected status for $url after retries: $status" >&2
+            exit 1
           }
           check_head https://mercasto.com/up '^200$'
           check_head https://mercasto.com/ '^(200|301|302)$'
@@ -56,9 +62,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --max-time 30 https://mercasto.com/ >/tmp/home.html
-          curl -fsS --max-time 30 https://mercasto.com/sitemap.xml >/tmp/sitemap.xml
-          curl -fsS --max-time 30 https://mercasto.com/robots.txt >/tmp/robots.txt
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5 6; do
+              "$@" && return 0
+              echo "retrying public search command in 8s ($attempt/6): $*" >&2
+              sleep 8
+            done
+            "$@"
+          }
+          retry curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/home.html
+          retry curl -fsS --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/sitemap.xml
+          retry curl -fsS --max-time 30 https://mercasto.com/robots.txt -o /tmp/robots.txt
           grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/home.html
           grep -Eiq 'name="description"|property="og:description"' /tmp/home.html
           grep -Eiq 'application/ld\+json|schema.org' /tmp/home.html
@@ -69,6 +84,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          check_head() {
+            local url="$1"
+            local pattern="$2"
+            local attempt
+            local status
+            for attempt in 1 2 3 4 5 6; do
+              status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
+              status="${status:-000}"
+              echo "$url -> $status (attempt $attempt/6)"
+              if [[ "$status" =~ $pattern ]]; then
+                return 0
+              fi
+              sleep 8
+            done
+            echo "unexpected status for $url after retries: $status" >&2
+            exit 1
+          }
           for path in \
             /.env \
             /.git/config \
@@ -88,12 +120,7 @@ jobs:
             /horizon \
             /vendor/horizon
           do
-            status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "https://mercasto.com${path}")"
-            echo "$path -> $status"
-            case "$status" in
-              403|404|410) ;;
-              *) echo "unexpected public denial status for $path: $status" >&2; exit 1 ;;
-            esac
+            check_head "https://mercasto.com${path}" '^(403|404|410)$'
           done
 
   repository-watch:
