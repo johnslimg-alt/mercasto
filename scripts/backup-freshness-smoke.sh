@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BACKUP_ROOT="${BACKUP_ROOT:-/var/www/mercasto/backups}"
+BACKUP_ROOT="${BACKUP_ROOT:-/var/www/mercasto/postgres-backups}"
 MAX_BACKUP_AGE_HOURS="${MAX_BACKUP_AGE_HOURS:-30}"
 REQUIRE_BACKUP_FRESHNESS="${REQUIRE_BACKUP_FRESHNESS:-0}"
 
