@@ -15,7 +15,6 @@ jobs:
         run: |
           cd /var/www/mercasto
           docker exec mercasto_backend_container php artisan up || true
-          docker compose --env-file backend/.env stop mercasto-worker mercasto-scheduler || true
           git fetch origin
           git reset --hard origin/main
           git clean -fd
@@ -57,13 +56,8 @@ jobs:
               add_service mercasto-frontend
               UP_SERVICES="$UP_SERVICES mercasto-frontend"
             fi
-            if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(docker-compose\.yml|docker-compose\.override\.yml)'; then
-              UP_SERVICES="$UP_SERVICES mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
-            fi
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/Dockerfile|backend/composer\.(json|lock)|backend/package(-lock)?\.json|backend/vite\.config)'; then
               add_service mercasto-backend
-              UP_SERVICES="$UP_SERVICES mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
-            elif printf '%s\n' "$CHANGED_FILES" | grep -Eq '^backend/'; then
               UP_SERVICES="$UP_SERVICES mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
             fi
           fi
@@ -87,7 +81,12 @@ jobs:
           docker exec mercasto_backend_container php artisan optimize
           docker exec mercasto_backend_container php artisan queue:restart
           docker exec mercasto_backend_container php artisan up
+          docker restart mercasto_backend_container mercasto_worker_container mercasto_scheduler_container mercasto_reverb_container || true
           docker start mercasto_reverb_container || true
+          docker exec mercasto_backend_container getent hosts mercasto-reverb >/dev/null 2>&1 || {
+            docker network disconnect mercasto_default mercasto_reverb_container 2>/dev/null || true
+            docker network connect --alias mercasto-reverb --alias mercasto_reverb_container mercasto_default mercasto_reverb_container || true
+          }
           docker compose --env-file backend/.env restart mercasto-frontend
 
           for attempt in $(seq 1 30); do
