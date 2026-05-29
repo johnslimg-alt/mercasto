@@ -107,8 +107,6 @@ const getSafeWhatsAppNumber = (ad) => {
   const candidates = [
     ad?.user?.business_whatsapp,
     ad?.user?.whatsapp,
-    ad?.user?.phone_verified ? ad?.user?.phone_number : null,
-    ad?.user?.business_phone,
   ];
 
   for (const rawCandidate of candidates) {

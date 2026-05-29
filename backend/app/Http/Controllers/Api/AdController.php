@@ -25,7 +25,7 @@ use Minishlink\WebPush\Subscription;
 
 class AdController extends Controller
 {
-    private const PUBLIC_AD_USER_COLUMNS = 'id,name,role,avatar_url,is_verified,created_at,whatsapp,phone_number,phone_verified,telegram_username,business_whatsapp,business_phone';
+    private const PUBLIC_AD_USER_COLUMNS = 'id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp';
 
     private function imageManager(): ImageManager
     {
