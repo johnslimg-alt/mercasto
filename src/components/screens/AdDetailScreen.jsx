@@ -103,6 +103,25 @@ const getSafeTelegramUsername = (ad) => {
   return null;
 };
 
+const getSafeWhatsAppNumber = (ad) => {
+  const candidates = [
+    ad?.user?.business_whatsapp,
+    ad?.user?.whatsapp,
+    ad?.user?.phone_verified ? ad?.user?.phone_number : null,
+    ad?.user?.business_phone,
+  ];
+
+  for (const rawCandidate of candidates) {
+    const digits = String(rawCandidate || '').replace(/\D/g, '');
+    if (!digits) continue;
+
+    if (digits.length === 10) return `52${digits}`;
+    if (digits.length >= 11 && digits.length <= 15) return digits;
+  }
+
+  return null;
+};
+
 export default function AdDetailScreen({
   ad, API_URL, getImageUrl, getImageUrls, getCatName, t, lang, favoriteIds, categoriesData,
   sliderAutoplay, handleShareAd, handleToggleFavorite, setReportingAd, setShowReportModal,
@@ -149,6 +168,9 @@ export default function AdDetailScreen({
   const mapEmbedUrl = buildMapEmbedUrl(locationLabel);
   const telegramUsername = getSafeTelegramUsername(ad);
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
+  const whatsappNumber = getSafeWhatsAppNumber(ad);
+  const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${ad.title}" en Mercasto`);
+  const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/#ad-${ad.id}` : '';
   const shareText = `${t.check_this_ad || 'Mira este anuncio en Mercasto'}: ${ad.title || ''}`;
   const encodedShareUrl = encodeURIComponent(shareUrl);
@@ -293,9 +315,17 @@ export default function AdDetailScreen({
               </div>
             </div>
 
-            <button onClick={() => { handleWhatsAppClick(ad); window.open(`https://wa.me/52${ad.user?.phone_number || '1234567890'}?text=Hola, me interesa tu anuncio "${ad.title}" en Mercasto`, '_blank'); }} className="btn-lg w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center gap-2 mb-3 shadow-md shadow-[#25D366]/20">
-              <MessageCircle size={20} /> Contactar por WhatsApp
-            </button>
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => handleWhatsAppClick(ad)}
+                className="btn-lg w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center gap-2 mb-3 shadow-md shadow-[#25D366]/20"
+              >
+                <MessageCircle size={20} /> Contactar por WhatsApp
+              </a>
+            )}
 
             {telegramUrl ? (
               <a
@@ -306,9 +336,11 @@ export default function AdDetailScreen({
               >
                 <Send size={19} /> Escribir por Telegram
               </a>
-            ) : (
+            ) : null}
+
+            {!whatsappUrl && !telegramUrl && (
               <div className="mb-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-center text-[12px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-400">
-                Telegram no disponible para este anuncio.
+                Este vendedor aún no tiene un canal de contacto público.
               </div>
             )}
 

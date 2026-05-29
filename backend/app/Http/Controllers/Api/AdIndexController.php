@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Http;
 
 class AdIndexController extends Controller
 {
+    private const PUBLIC_AD_USER_COLUMNS = 'id,name,role,avatar_url,is_verified,created_at,whatsapp,phone_number,phone_verified,telegram_username,business_whatsapp,business_phone';
+
     /**
      * Public ad listing endpoint with global and category-specific filters.
      */
@@ -21,7 +23,7 @@ class AdIndexController extends Controller
             return response()->json(['message' => 'Límite de paginación excedido para proteger la base de datos.'], 400);
         }
 
-        $query = Ad::with('user:id,name,role,avatar_url,is_verified,created_at');
+        $query = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS);
 
         if ($request->filled('lat') && $request->filled('lng') && $request->filled('radius')) {
             $lat = (float) $request->lat;

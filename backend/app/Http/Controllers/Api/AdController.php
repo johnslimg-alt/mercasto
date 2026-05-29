@@ -25,6 +25,8 @@ use Minishlink\WebPush\Subscription;
 
 class AdController extends Controller
 {
+    private const PUBLIC_AD_USER_COLUMNS = 'id,name,role,avatar_url,is_verified,created_at,whatsapp,phone_number,phone_verified,telegram_username,business_whatsapp,business_phone';
+
     private function imageManager(): ImageManager
     {
         return ImageManager::usingDriver(Driver::class);
@@ -42,7 +44,7 @@ class AdController extends Controller
         }
 
         // Защита приватности: убираем утечку whatsapp_clicks в публичной выдаче
-        $query = Ad::with('user:id,name,role,avatar_url,is_verified,created_at');
+        $query = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS);
 
         // Поиск по радиусу
         if ($request->filled('lat') && $request->filled('lng') && $request->filled('radius')) {
@@ -219,7 +221,7 @@ class AdController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $ad = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')->findOrFail($id);
+        $ad = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)->findOrFail($id);
 
         // Защита от IDOR: скрытые объявления могут видеть только их авторы или администраторы
         if ($ad->status !== 'active') {
@@ -1119,7 +1121,7 @@ class AdController extends Controller
      */
     public function myAds(Request $request)
     {
-        $ads = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')
+        $ads = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
             ->addSelect(['whatsapp_clicks' => DB::table('ad_clicks')
                 ->selectRaw('count(*)')
                 ->whereColumn('ad_id', 'ads.id')
@@ -1139,7 +1141,7 @@ class AdController extends Controller
     {
         $userId = $request->user()->id;
         // Защита приватности: не отдаем статистику кликов чужих объявлений
-        $ads = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')
+        $ads = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
             ->whereIn('id', function($query) use ($userId) {
                 $query->select('ad_id')->from('favorites')->where('user_id', $userId);
             })
@@ -1786,7 +1788,7 @@ class AdController extends Controller
      */
     public function editForm(Request $request, $id)
     {
-        $ad = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')->findOrFail($id);
+        $ad = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)->findOrFail($id);
 
         $user = $request->user();
         if ($user->id !== $ad->user_id && $user->role !== 'admin') {
@@ -1883,7 +1885,7 @@ class AdController extends Controller
 
         // Если вектора нет — fallback на ту же категорию
         if (!$ad->embedding) {
-            $fallback = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')
+            $fallback = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
                 ->where('status', 'active')
                 ->where('category', $ad->category)
                 ->where('id', '!=', $ad->id)
@@ -1896,7 +1898,7 @@ class AdController extends Controller
         $embeddingString = $ad->embedding;
 
         // pgvector: сортировка по косинусному расстоянию (<=>)
-        $similar = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')
+        $similar = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
             ->selectRaw("*, (embedding <=> ?) AS vec_distance", [$embeddingString])
             ->where('status', 'active')
             ->where('id', '!=', $ad->id)
@@ -1907,7 +1909,7 @@ class AdController extends Controller
 
         // Если pgvector вернул меньше 4 — дополняем той же категорией
         if ($similar->count() < 4) {
-            $extra = Ad::with('user:id,name,role,avatar_url,is_verified,created_at')
+            $extra = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
                 ->where('status', 'active')
                 ->where('category', $ad->category)
                 ->where('id', '!=', $ad->id)
