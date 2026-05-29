@@ -475,7 +475,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                       {adminPaymentsTotal}
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
-                      {t.admin_volume_desc || 'Volumen total de transacciones Clip'}
+                      {t.admin_volume_desc || 'Volumen total de transacciones de pago'}
                     </span>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
@@ -509,7 +509,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                       <CreditCard className="text-[#84CC16]" size={20}/> {t.admin_payments_audit || 'Auditoría de Pagos'}
                     </h3>
                     <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1">
-                      {t.admin_payments_audit_desc || 'Monitorea y valida las transacciones procesadas a través de la pasarela de pagos Clip.'}
+                      {t.admin_payments_audit_desc || 'Monitorea y valida las transacciones procesadas a través de la pasarela de pagos.'}
                     </p>
                   </div>
                   <button 
@@ -565,7 +565,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                           <tr className="bg-slate-50/70 dark:bg-slate-700/30 text-slate-500 dark:text-slate-400 font-semibold text-[12px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700/60">
                             <th className="py-4 px-5">{t.admin_user || 'Usuario'}</th>
                             <th className="py-4 px-5">{t.concept || 'Concepto'}</th>
-                            <th className="py-4 px-5">{t.clip_ref || 'Referencia Clip'}</th>
+                            <th className="py-4 px-5">{t.clip_ref || 'Referencia de pago'}</th>
                             <th className="py-4 px-5">{t.date || 'Fecha'}</th>
                             <th className="py-4 px-5">{t.amount || 'Monto'}</th>
                             <th className="py-4 px-5 text-right">{t.status || 'Estado'}</th>
@@ -674,7 +674,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                               <span className="font-semibold text-slate-900 dark:text-white">{payment.user_name || `ID: ${payment.user_id}`}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="font-medium">{t.clip_ref || 'Ref. Clip'}:</span>
+                              <span className="font-medium">{t.clip_ref || 'Ref. pago'}:</span>
                               <span className="font-mono text-slate-700 dark:text-slate-300 select-all">{payment.clip_checkout_id ? (payment.clip_checkout_id.length > 12 ? `${payment.clip_checkout_id.substring(0, 12)}...` : payment.clip_checkout_id) : 'N/A'}</span>
                             </div>
                             <div className="flex justify-between">

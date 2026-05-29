@@ -886,7 +886,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                       <thead>
                         <tr className="bg-slate-50/70 text-slate-500 font-semibold text-[12px] uppercase tracking-wider border-b border-slate-100">
                           <th className="py-4 px-5">{t.concept || 'Concepto'}</th>
-                          <th className="py-4 px-5">{t.clip_ref || 'Referencia Clip'}</th>
+                          <th className="py-4 px-5">{t.clip_ref || 'Referencia de pago'}</th>
                           <th className="py-4 px-5">{t.date || 'Fecha'}</th>
                           <th className="py-4 px-5">{t.amount || 'Monto'}</th>
                           <th className="py-4 px-5 text-right">{t.status || 'Estado'}</th>
