@@ -34,7 +34,7 @@ probe_status() {
   local expected="${2:-200}"
   local url="${BASE_URL}${path}"
   local code
-  code="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)"
+  code="$(curl -k -L -sS -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)"
   if [ -z "$code" ]; then code="000"; fi
   printf '%s -> %s\n' "$url" "$code"
   [ "$code" = "$expected" ]
@@ -48,7 +48,7 @@ probe_static_marker() {
   [ -n "$marker" ] || return 0
   url="${BASE_URL}${path}"
   printf 'checking content marker for %s: %s\n' "$url" "$marker"
-  curl -k -fsS --max-time 20 "$url" | grep -Fqi "$marker"
+  curl -k -L -fsS --max-time 20 "$url" | grep -Fqi "$marker"
 }
 
 echo "== Mercasto legal/business readiness smoke =="
