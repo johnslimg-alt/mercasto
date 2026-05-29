@@ -42,19 +42,30 @@ COPY --from=composer:2.9.7 /usr/bin/composer /usr/bin/composer
 # Устанавливаем рабочую директорию
 WORKDIR /var/www
 
-# Копируем файлы проекта
-COPY . .
-
-# Устанавливаем зависимости Composer. composer.lock обязателен для воспроизводимого production build.
-RUN if [ ! -f composer.lock ]; then echo "composer.lock is required for production build" >&2; exit 1; fi \
-    && composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress \
+# Копируем dependency manifests отдельно, чтобы PHP/Node зависимости кешировались между deploy.
+COPY composer.json composer.lock ./
+RUN --mount=type=cache,target=/tmp/composer-cache \
+    if [ ! -f composer.lock ]; then echo "composer.lock is required for production build" >&2; exit 1; fi \
+    && COMPOSER_CACHE_DIR=/tmp/composer-cache composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress --no-scripts \
     && composer clear-cache
 
-# Собираем frontend assets, если backend содержит Vite/package-lock.json.
-# Если package-lock.json есть, production build должен падать при ошибке сборки, а не выходить без CSS/JS.
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f package-lock.json ]; then \
+        npm ci --no-audit --no-fund; \
+    elif [ -f package.json ]; then \
+        echo "package.json found but package-lock.json is missing; skipping npm install for reproducibility" >&2; \
+    fi
+
+# Копируем файлы проекта после установки зависимостей.
+COPY . .
+
+# Завершаем Laravel discovery после появления app/config/routes.
+RUN composer dump-autoload --no-dev --optimize --no-interaction
+
+# Собираем backend Vite assets, если backend содержит package-lock.json.
 RUN if [ -f package-lock.json ]; then \
-        npm ci --no-audit --no-fund \
-        && npm run build \
+        npm run build \
         && npm cache clean --force \
         && rm -rf node_modules; \
     elif [ -f package.json ]; then \

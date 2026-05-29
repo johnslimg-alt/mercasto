@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted # ← главное изменение
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - name: Обновить код
@@ -28,10 +28,52 @@ jobs:
           docker exec mercasto_backend_container php artisan migrate --force
 
       - name: Собрать и поднять
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
           cd /var/www/mercasto
-          docker compose --env-file backend/.env build --parallel mercasto-frontend mercasto-backend
-          docker compose --env-file backend/.env up -d --no-deps mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb
+          CHANGED_FILES=""
+          if [ -n "${BEFORE_SHA:-}" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            CHANGED_FILES="$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA")"
+          fi
+
+          add_service() {
+            case " $BUILD_SERVICES " in
+              *" $1 "*) ;;
+              *) BUILD_SERVICES="$BUILD_SERVICES $1" ;;
+            esac
+          }
+
+          BUILD_SERVICES=""
+          UP_SERVICES=""
+
+          if [ -z "$CHANGED_FILES" ]; then
+            BUILD_SERVICES="mercasto-frontend mercasto-backend"
+            UP_SERVICES="mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
+          else
+            echo "$CHANGED_FILES"
+            if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(Dockerfile|src/|public/|index.html|package\.json|package-lock\.json|vite\.config|tailwind\.config|postcss\.config|default\.conf|docker-compose\.yml|docker-compose\.override\.yml)'; then
+              add_service mercasto-frontend
+              UP_SERVICES="$UP_SERVICES mercasto-frontend"
+            fi
+            if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/|docker-compose\.yml|docker-compose\.override\.yml)'; then
+              add_service mercasto-backend
+              UP_SERVICES="$UP_SERVICES mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
+            fi
+          fi
+
+          if [ -n "$BUILD_SERVICES" ]; then
+            docker compose --env-file backend/.env build --parallel $BUILD_SERVICES
+          else
+            echo "No Docker rebuild required for changed files."
+          fi
+
+          if [ -n "$UP_SERVICES" ]; then
+            docker compose --env-file backend/.env up -d --no-deps $UP_SERVICES
+          else
+            echo "No service restart required for changed files."
+          fi
 
       - name: Кэш и очереди
         run: |
