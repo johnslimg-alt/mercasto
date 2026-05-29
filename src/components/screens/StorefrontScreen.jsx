@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCode, User, Loader2, Globe, Phone, Clock, Building2 } from 'lucide-react';
+import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCode, User, Loader2, Globe, MessageCircle, Clock, Building2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -55,7 +55,7 @@ export default function StorefrontScreen({
   const isBusinessEnabled = businessProfile?.enabled || businessProfile?.is_business || company.role === 'business';
   const displayName = isBusinessEnabled && businessProfile?.business_name ? businessProfile.business_name : (company.name || (t.seller_role || 'Vendedor'));
   const logoUrl = businessProfile?.business_logo_url ? businessAssetUrl(businessProfile.business_logo_url) : null;
-  const phoneForQr = businessProfile?.business_whatsapp || businessProfile?.business_phone || company.phone_number;
+  const whatsAppForQr = businessProfile?.business_whatsapp || company.whatsapp;
   const businessHours = formatHours(businessProfile?.business_hours, t);
 
   return (
@@ -118,16 +118,16 @@ export default function StorefrontScreen({
                  </div>
                )}
              </div>
-             {isBusinessEnabled && (businessProfile?.business_website || businessProfile?.business_phone || businessProfile?.business_whatsapp || businessHours.length > 0) && (
+             {isBusinessEnabled && (businessProfile?.business_website || businessProfile?.business_whatsapp || businessHours.length > 0) && (
                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px] text-slate-600">
                  {businessProfile?.business_website && (
                    <a href={businessProfile.business_website} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
                      <Globe className="w-4 h-4 text-slate-400" /> {t.website || 'Sitio web'}
                    </a>
                  )}
-                 {(businessProfile?.business_phone || businessProfile?.business_whatsapp) && (
+                 {businessProfile?.business_whatsapp && (
                    <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
-                     <Phone className="w-4 h-4 text-slate-400" /> {businessProfile.business_whatsapp || businessProfile.business_phone}
+                     <MessageCircle className="w-4 h-4 text-slate-400" /> WhatsApp
                    </div>
                  )}
                  {businessHours.slice(0, 4).map(line => (
@@ -143,7 +143,8 @@ export default function StorefrontScreen({
            </div>
            <div className="w-full md:w-auto">
              <button 
-               onClick={() => setQrModalData(phoneForQr ? `https://wa.me/${phoneForQr.replace(/\D/g, '')}` : 'tel:+521234567890')}
+               onClick={() => whatsAppForQr && setQrModalData(`https://wa.me/${whatsAppForQr.replace(/\D/g, '')}`)}
+               disabled={!whatsAppForQr}
                className="btn-md w-full border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2 shadow-sm"
              >
                <QrCode className="w-4 h-4" /> {t.scan_qr}

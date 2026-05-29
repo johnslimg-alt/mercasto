@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { MapPin, Globe, Phone, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, Package } from 'lucide-react';
+import { MapPin, Globe, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, Package } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -177,7 +177,7 @@ export default function SellerProfileScreen({ currentUser }) {
             )}
 
             {/* Links & contact */}
-            {(seller?.website || seller?.social_instagram || seller?.phone_number || seller?.whatsapp) && (
+            {(seller?.website || seller?.social_instagram || seller?.whatsapp) && (
               <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
                 <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contacto</h3>
                 {seller?.website && (
@@ -196,12 +196,6 @@ export default function SellerProfileScreen({ currentUser }) {
                   <a href={`https://wa.me/${seller.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-slate-700 hover:text-green-600">
                     <MessageCircle size={14} className="text-slate-400 flex-shrink-0" />
                     WhatsApp
-                  </a>
-                )}
-                {seller?.phone_number && (
-                  <a href={`tel:${seller.phone_number}`} className="flex items-center gap-2 text-sm text-slate-700 hover:text-lime-600">
-                    <Phone size={14} className="text-slate-400 flex-shrink-0" />
-                    {seller.phone_number}
                   </a>
                 )}
               </div>

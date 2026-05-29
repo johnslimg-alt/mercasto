@@ -119,7 +119,7 @@ class BusinessProfileController extends Controller
             'business_name' => $user->business_name,
             'business_logo_url' => $user->business_logo_url,
             'business_website' => $user->business_website ?: $user->website,
-            'business_phone' => $isBusiness ? ($user->business_phone ?: $user->phone_number) : null,
+            'business_phone' => $includePrivate ? $user->business_phone : null,
             'business_whatsapp' => $isBusiness ? ($user->business_whatsapp ?: $user->whatsapp) : null,
             'business_hours' => $user->business_hours ?: [],
             'business_address' => $user->business_address,

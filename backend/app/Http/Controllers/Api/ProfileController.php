@@ -69,7 +69,6 @@ class ProfileController extends Controller
                 'is_verified',
                 'email_verified_at',
                 'created_at',
-                'phone_number',
                 'phone_verified',
                 'whatsapp',
                 'bio',
@@ -92,7 +91,6 @@ class ProfileController extends Controller
 
             // GDPR & Privacy Leak Fix: Скрываем номер телефона, если продавец не является PRO-компанией
             if ($user->role !== 'business') {
-                $user->phone_number = null;
                 $user->whatsapp = null;
             }
 
