@@ -114,7 +114,7 @@ class AuthController extends Controller
 
         if (!Auth::attempt($request->only('email', 'password'))) {
             throw ValidationException::withMessages([
-                'email' => ['Предоставленные учетные данные неверны.'],
+                'email' => ['Las credenciales proporcionadas son incorrectas.'],
             ]);
         }
 
@@ -131,7 +131,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Успешный вход',
+            'message' => 'Inicio de sesión exitoso',
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])
@@ -156,7 +156,7 @@ class AuthController extends Controller
         if ($google2fa->verifyKey($user->two_factor_secret, $request->code)) {
             $token = $user->createToken('auth_token')->plainTextToken;
             return response()->json([
-                'message' => 'Успешный вход',
+                'message' => 'Inicio de sesión exitoso',
                 'access_token' => $token,
                 'token_type' => 'Bearer',
                 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])
@@ -177,7 +177,7 @@ class AuthController extends Controller
             }
         }
 
-        return response()->json(['message' => 'Invalid 2FA code.'], 422);
+        return response()->json(['message' => 'Código 2FA inválido.'], 422);
     }
 
     /**
@@ -247,7 +247,7 @@ class AuthController extends Controller
             $user->save();
         }
 
-        return response()->json(['message' => 'Успешный вход', 'access_token' => $user->createToken('auth_token')->plainTextToken, 'token_type' => 'Bearer', 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])]);
+        return response()->json(['message' => 'Inicio de sesión exitoso', 'access_token' => $user->createToken('auth_token')->plainTextToken, 'token_type' => 'Bearer', 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])]);
     }
 
     /**

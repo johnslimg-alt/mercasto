@@ -418,7 +418,7 @@ class AdController extends Controller
     {
         // 1. Авторизация
         if ($request->user()->id !== $ad->user_id && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Нет прав для редактирования этого объявления'], 403);
+            return response()->json(['message' => 'No tienes permisos para editar este anuncio'], 403);
         }
 
         // 2. Валидация
@@ -638,7 +638,7 @@ class AdController extends Controller
         $ad = Ad::findOrFail($id);
 
         if ($request->user()->id !== $ad->user_id && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Нет прав для изменения статуса'], 403);
+            return response()->json(['message' => 'No tienes permisos para cambiar el estado de este anuncio'], 403);
         }
 
         $request->validate(['status' => 'required|in:active,inactive,archived,pending,paused,expired']);
@@ -792,7 +792,7 @@ class AdController extends Controller
 
         // Проверяем, что объявление удаляет его владелец (или администратор)
         if ($request->user()->id !== $ad->user_id && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Нет прав для удаления этого объявления'], 403);
+            return response()->json(['message' => 'No tienes permisos para eliminar este anuncio'], 403);
         }
 
         // Защита от "бессмертных" объявлений: игнорируем сбои AWS S3, чтобы объявление удалилось из БД в любом случае
@@ -830,7 +830,7 @@ class AdController extends Controller
             Cache::forget("ads_index_page_{$i}");
         }
 
-        return response()->json(['message' => 'Объявление успешно удалено']);
+        return response()->json(['message' => 'Anuncio eliminado exitosamente']);
     }
 
     /**
@@ -1044,7 +1044,7 @@ class AdController extends Controller
 
             return response()->json(['success' => true, 'views' => $ad->views, 'ignored' => true]);
         }
-        return response()->json(['message' => 'Ad not found'], 404);
+        return response()->json(['message' => 'Anuncio no encontrado'], 404);
     }
 
     /**
@@ -1259,7 +1259,7 @@ class AdController extends Controller
 
         // Генерируем PDF только для категории "недвижимость"
         if ($ad->category !== 'inmobiliaria') {
-            return response()->json(['message' => 'PDF брошюры доступны только для недвижимости.'], 403);
+            return response()->json(['message' => 'Los folletos PDF solo están disponibles para inmuebles.'], 403);
         }
 
         $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode(config('app.frontend_url', 'https://mercasto.com') . '/?ad=' . $ad->id);
