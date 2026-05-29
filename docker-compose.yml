@@ -154,6 +154,11 @@ services:
     command: php artisan reverb:start --host=0.0.0.0 --port=8082
     expose:
       - "8082"
+    networks:
+      default:
+        aliases:
+          - mercasto-reverb
+          - mercasto_reverb_container
     volumes:
       - ./backend:/var/www
       - /var/www/vendor
