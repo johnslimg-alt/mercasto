@@ -41,6 +41,7 @@ COPY --from=composer:2.9.7 /usr/bin/composer /usr/bin/composer
 
 # Устанавливаем рабочую директорию
 WORKDIR /var/www
+ARG BUILD_BACKEND_ASSETS=false
 
 # Копируем dependency manifests отдельно, чтобы PHP/Node зависимости кешировались между deploy.
 COPY composer.json composer.lock ./
@@ -51,10 +52,10 @@ RUN --mount=type=cache,target=/tmp/composer-cache \
 
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    if [ -f package-lock.json ]; then \
+    if [ "$BUILD_BACKEND_ASSETS" = "true" ] && [ -f package-lock.json ]; then \
         npm ci --no-audit --no-fund; \
     elif [ -f package.json ]; then \
-        echo "package.json found but package-lock.json is missing; skipping npm install for reproducibility" >&2; \
+        echo "Skipping backend npm install; set BUILD_BACKEND_ASSETS=true to build Laravel Vite assets."; \
     fi
 
 # Копируем файлы проекта после установки зависимостей.
@@ -65,7 +66,7 @@ RUN composer dump-autoload --no-dev --optimize --no-interaction
 
 # Собираем backend Vite assets, если backend содержит package-lock.json.
 RUN if [ -f package-lock.json ]; then \
-        npm run build \
+        if [ "$BUILD_BACKEND_ASSETS" = "true" ]; then npm run build; else echo "Skipping backend Vite build for API image."; fi \
         && npm cache clean --force \
         && rm -rf node_modules; \
     elif [ -f package.json ]; then \
