@@ -64,6 +64,18 @@ Thumbs.db
 # Local reports
 mercasto-report.txt
 scripts/ai_ci_audit.py
+test-results/
+playwright-report/
+
+# Local operator/MCP helper scripts (never commit server/tunnel tooling)
+disk-monitor.html
+disk-server.sh
+start_mcp.sh
+scripts/fast-deploy.sh
+scripts/mcp-sse-bridge.cjs
+scripts/sync-and-build.sh
+scripts/vps-mcp-server.cjs
+tests/e2e/debug.spec.js
 
 # Generated internal AI audit outputs
 backend/storage/app/ai-audits/
