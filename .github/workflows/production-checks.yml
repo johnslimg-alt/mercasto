@@ -137,4 +137,16 @@ jobs:
           SSH_USER: ${{ secrets.MERCASTO_SSH_USER }}
           SSH_KEY: ${{ secrets.MERCASTO_SSH_PRIVATE_KEY }}
           OPERATION: verify_quick
-        run: bash scripts/live-server-gate.sh "${OPERATION}"
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          bash scripts/live-server-gate.sh "${OPERATION}" 2>&1 | tee artifacts/live-server-gate-verify-quick.log
+
+      - name: Upload live server gate log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-server-gate-verify-quick-log
+          path: artifacts/live-server-gate-verify-quick.log
+          if-no-files-found: warn
+          retention-days: 7
