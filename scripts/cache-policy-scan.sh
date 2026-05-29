@@ -20,10 +20,25 @@ matches="$(grep -RInE 'serviceWorker\.register|register\([^)]*service-worker|reg
   2>/dev/null || true)"
 
 if [[ -n "$matches" ]]; then
-  echo "service worker registration detected" >&2
-  echo "Mercasto requires a dedicated PWA/cache gate and rollback plan before enabling service worker registration in production." >&2
-  echo "$matches" >&2
-  exit 1
+  test -f public/sw.js || {
+    echo "service worker registration detected but public/sw.js is missing" >&2
+    echo "$matches" >&2
+    exit 1
+  }
+
+  if grep -nE "addEventListener\\(['\"]fetch|caches\\.|CacheStorage|cacheName|CACHE_NAME|precache|addAll\\(" public/sw.js >&2; then
+    echo "service worker caching detected; Mercasto only allows Web Push service workers without fetch/cache handling." >&2
+    exit 1
+  fi
+
+  grep -qF "self.addEventListener('push'" public/sw.js || {
+    echo "service worker registration detected but push handler is missing" >&2
+    exit 1
+  }
+
+  echo "push-only service worker registration found"
+  echo "service worker cache policy scan OK"
+  exit 0
 fi
 
 echo "no frontend service worker registration found"

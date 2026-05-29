@@ -1,7 +1,5 @@
-// Чистый Service Worker 2026 (Без кэширования, только для Web Push)
-
 self.addEventListener('install', (event) => {
-    self.skipWaiting(); // Мгновенная активация
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -15,8 +13,23 @@ self.addEventListener('push', function(event) {
             self.registration.showNotification(data.title, {
                 body: data.body,
                 icon: '/icon-192x192.png',
-                data: data.url || '/'
+                badge: '/icon-192x192.png',
+                data: { url: data.url || '/' },
+                vibrate: [200, 100, 200]
             })
         );
     }
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const target = event.notification.data?.url || '/';
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+            for (const client of clients) {
+                if (client.url === target && 'focus' in client) return client.focus();
+            }
+            if (self.clients.openWindow) return self.clients.openWindow(target);
+        })
+    );
 });
