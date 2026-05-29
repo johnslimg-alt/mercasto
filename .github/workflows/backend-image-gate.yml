@@ -45,11 +45,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DB_PASSWORD=ci REDIS_PASSWORD=ci docker compose config >/tmp/mercasto_compose_base.out
-          DB_PASSWORD=ci REDIS_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out
+          DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose config >/tmp/mercasto_compose_base.out
+          DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out
 
       - name: Build backend image
         shell: bash
         run: |
           set -euo pipefail
-          DB_PASSWORD=ci REDIS_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml build mercasto-backend
+          DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml build mercasto-backend
