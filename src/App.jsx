@@ -120,23 +120,44 @@ const AI_PLACEHOLDERS = {
 
 const getImageUrl = (path, fallback = null) => {
   if (!path) return fallback || '/placeholder-ad.svg';
-  if (path.startsWith('http') || path.startsWith('data:')) return path;
-  if (path.startsWith('[')) {
-    try {
-      const arr = JSON.parse(path);
-      if (arr && arr.length > 0) return `${STORAGE_URL}/${arr[0]}`;
-    } catch (e) {}
+  if (Array.isArray(path)) {
+    if (path.length > 0) {
+      const first = path[0];
+      if (first && (first.startsWith('http') || first.startsWith('data:'))) return first;
+      return `${STORAGE_URL}/${first}`;
+    }
+    return fallback || '/placeholder-ad.svg';
   }
-  return `${STORAGE_URL}/${path}`;
+  if (typeof path === 'string') {
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
+    if (path.startsWith('[')) {
+      try {
+        const arr = JSON.parse(path);
+        if (arr && arr.length > 0) {
+          const first = arr[0];
+          if (first.startsWith('http') || first.startsWith('data:')) return first;
+          return `${STORAGE_URL}/${first}`;
+        }
+      } catch (e) {}
+    }
+    return `${STORAGE_URL}/${path}`;
+  }
+  return fallback || '/placeholder-ad.svg';
 };
 
 const getImageUrls = (pathStr, fallbackArr = []) => {
   if (!pathStr) return fallbackArr;
+  if (Array.isArray(pathStr)) {
+    return pathStr.map(p => p.startsWith('http') || p.startsWith('data:') ? p : `${STORAGE_URL}/${p}`);
+  }
   try {
     const arr = JSON.parse(pathStr);
-    if (Array.isArray(arr)) return arr.map(p => p.startsWith('http') || p.startsWith('data:') ? p : `${STORAGE_URL}/${p}`);
+    if (Array.isArray(arr)) {
+      return arr.map(p => p.startsWith('http') || p.startsWith('data:') ? p : `${STORAGE_URL}/${p}`);
+    }
   } catch(e) {}
-  return [getImageUrl(pathStr)];
+  const single = getImageUrl(pathStr);
+  return [single];
 };
 
 // База данных всех Штатов и основных Городов Мексики
@@ -2557,7 +2578,7 @@ function App() {
     return (
       <article key={ad.id} onClick={() => handleViewAd(ad)} className="market-card overflow-hidden cursor-pointer group flex flex-col h-full shrink-0">
         <div className="relative bg-slate-200 dark:bg-slate-800">
-          <img src={safeImage} loading="lazy" className="w-full h-[160px] md:h-[180px] object-cover group-hover:scale-105 transition-transform duration-500 opacity-0 transition-opacity duration-300" onLoad={handleAdImageLoad} onError={handleAdImageError} alt={ad.title}/>
+          <img src={safeImage} loading="lazy" className="w-full h-[160px] md:h-[180px] object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
           <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white z-10">
             <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700'}`} />
           </button>
@@ -2827,6 +2848,7 @@ function App() {
     { slug: 'inmobiliaria', label: lang === 'en' ? 'Real Estate' : 'Inmuebles' },
     { slug: 'servicios', label: lang === 'en' ? 'Services' : 'Servicios' },
     { slug: 'empleo', label: lang === 'en' ? 'Jobs' : 'Empleo' },
+    { slug: 'electronica', label: lang === 'en' ? 'Electronics' : 'Electrónica' },
     { slug: 'moda', label: lang === 'en' ? 'Fashion' : 'Moda' },
     { slug: 'hogar', label: lang === 'en' ? 'Home' : 'Hogar' },
     { slug: 'informatica', label: lang === 'en' ? 'Tech' : 'Tecnología' },
