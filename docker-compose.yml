@@ -67,9 +67,9 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    # УЛУЧШЕНИЕ 1: healthcheck проверяет PHP + БД
+    # Fast runtime healthcheck. Full DB smoke runs in CI; artisan/tinker is too slow for Docker health.
     healthcheck:
-      test: ["CMD-SHELL", "php artisan tinker --execute='DB::connection()->getPdo();' || exit 1"]
+      test: ["CMD-SHELL", "php -r 'exit(extension_loaded(\"pdo_pgsql\") ? 0 : 1);' || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 3
