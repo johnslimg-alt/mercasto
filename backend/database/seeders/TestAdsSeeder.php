@@ -27,7 +27,7 @@ class TestAdsSeeder extends Seeder
         $user = User::firstOrCreate(
             ['email' => 'tienda_demo@mercasto.com'],
             [
-                'name' => 'Tienda Oficial (Demo)',
+                'name' => 'Tienda Oficial',
                 'password' => bcrypt($demoPassword ?: Str::password(32)),
                 'role' => 'business',
                 'is_verified' => true,
@@ -39,7 +39,7 @@ class TestAdsSeeder extends Seeder
             User::firstOrCreate(
                 ['email' => $sellerEmail],
                 [
-                    'name' => 'Seller Demo',
+                    'name' => 'Vendedor Destacado',
                     'password' => bcrypt($sellerPassword),
                     'role' => 'individual',
                     'is_verified' => true,
@@ -52,7 +52,7 @@ class TestAdsSeeder extends Seeder
             User::firstOrCreate(
                 ['email' => $adminEmail],
                 [
-                    'name' => 'Admin Demo',
+                    'name' => 'Administrador',
                     'password' => bcrypt($adminPassword),
                     'role' => 'admin',
                     'is_verified' => true,
@@ -151,19 +151,64 @@ class TestAdsSeeder extends Seeder
             ]
         ];
 
-        $categoryImageQueries = [
-            'motor' => 'mexico car vehicle',
-            'inmobiliaria' => 'mexico house apartment interior',
-            'empleo' => 'office worker laptop business',
-            'servicios' => 'professional service repair tools',
-            'informatica' => 'laptop computer technology',
-            'telefonos' => 'smartphone mobile phone',
-            'hogar' => 'furniture home decor',
-            'moda' => 'fashion clothes shoes',
-            'bebes' => 'baby stroller toys',
-            'mascotas' => 'pets dog cat',
-            'deportes' => 'sports music games',
-            'formacion' => 'concert tickets event travel',
+        $categoryImages = [
+            'motor' => [
+                'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1542282088-fe8426682b8f?w=600&auto=format&fit=crop&q=80'
+            ],
+            'inmobiliaria' => [
+                'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&auto=format&fit=crop&q=80'
+            ],
+            'empleo' => [
+                'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=600&auto=format&fit=crop&q=80'
+            ],
+            'servicios' => [
+                'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80'
+            ],
+            'informatica' => [
+                'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1496181130204-755241544e35?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80'
+            ],
+            'telefonos' => [
+                'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1565849906660-af34a742a8b2?w=600&auto=format&fit=crop&q=80'
+            ],
+            'hogar' => [
+                'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=600&auto=format&fit=crop&q=80'
+            ],
+            'moda' => [
+                'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&auto=format&fit=crop&q=80'
+            ],
+            'bebes' => [
+                'https://images.unsplash.com/photo-1519689680058-324335c77ebe?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=600&auto=format&fit=crop&q=80'
+            ],
+            'mascotas' => [
+                'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&auto=format&fit=crop&q=80'
+            ],
+            'deportes' => [
+                'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&auto=format&fit=crop&q=80'
+            ],
+            'formacion' => [
+                'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=600&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=600&auto=format&fit=crop&q=80'
+            ],
         ];
 
         foreach ($catalog as $categorySlug => $subcategories) {
@@ -173,9 +218,8 @@ class TestAdsSeeder extends Seeder
                     $itemName = $items[array_rand($items)];
                     $location = $locations[array_rand($locations)];
                     
-                    $imageQuery = $categoryImageQueries[$categorySlug] ?? 'marketplace product';
-                    $imageLock = crc32($categorySlug . '|' . $subcatName . '|' . $itemName . '|' . $i . '|' . $location);
-                    $selectedImage = 'https://loremflickr.com/800/600/' . rawurlencode($imageQuery) . '?lock=' . $imageLock;
+                    $imgArray = $categoryImages[$categorySlug] ?? ['https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=600'];
+                    $selectedImage = $imgArray[array_rand($imgArray)];
                     
                     Ad::create([
                         'user_id' => $user->id,

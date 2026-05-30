@@ -3,12 +3,155 @@ import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyView
 import { mexicoLocations, subcategoriesMap, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List } from "lucide-react";
 import SidebarFilters from '../common/SidebarFilters';
 
-export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters }) {
+// --- LEAFLET MAP DYNAMIC LOADERS & COORDINATES ---
+const STATE_COORDS = {
+  "Aguascalientes": [21.8853, -102.2916],
+  "Baja California": [30.8406, -115.2838],
+  "Baja California Sur": [26.0444, -111.6661],
+  "Campeche": [19.8301, -90.5349],
+  "Chiapas": [16.7569, -93.1292],
+  "Chihuahua": [28.6330, -106.0691],
+  "Ciudad de México": [19.4326, -99.1332],
+  "CDMX": [19.4326, -99.1332],
+  "Coahuila": [27.0587, -101.7068],
+  "Colima": [19.2433, -103.7247],
+  "Durango": [24.0277, -104.6532],
+  "Guanajuato": [21.0190, -101.2574],
+  "Guerrero": [17.4392, -99.5451],
+  "Hidalgo": [20.0911, -98.7624],
+  "Jalisco": [20.6597, -103.3496],
+  "GDL": [20.6597, -103.3496],
+  "México": [19.3565, -99.6312],
+  "EdoMex": [19.3565, -99.6312],
+  "Michoacán": [19.5665, -101.7068],
+  "Morelos": [18.6813, -99.1013],
+  "Nayarit": [21.7514, -104.8455],
+  "Nuevo León": [25.5922, -100.0574],
+  "Oaxaca": [17.0732, -96.7266],
+  "OAX": [17.0732, -96.7266],
+  "Puebla": [19.0414, -98.2063],
+  "Querétaro": [20.5888, -100.3899],
+  "QRO": [20.5888, -100.3899],
+  "Quintana Roo": [19.1847, -88.4753],
+  "San Luis Potosí": [22.1565, -100.9855],
+  "Sinaloa": [25.1721, -107.4795],
+  "Sonora": [29.2972, -110.3309],
+  "Tabasco": [17.8409, -92.6189],
+  "Tamaulipas": [24.2669, -98.8363],
+  "Tlaxcala": [19.3182, -98.2375],
+  "Veracruz": [19.1738, -96.1342],
+  "Yucatán": [20.7099, -89.0943],
+  "Zacatecas": [22.7709, -102.5832]
+};
+
+const loadLeaflet = (callback) => {
+  if (window.L) {
+    callback();
+    return;
+  }
+  if (!document.getElementById('leaflet-css')) {
+    const link = document.createElement('link');
+    link.id = 'leaflet-css';
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+  }
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.onload = () => callback();
+  document.body.appendChild(script);
+};
+
+const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
+  const mapRef = React.useRef(null);
+  const mapInstanceRef = React.useRef(null);
+  const markersRef = React.useRef([]);
+
+  React.useEffect(() => {
+    loadLeaflet(() => {
+      if (!mapRef.current) return;
+      
+      if (!mapInstanceRef.current) {
+        mapInstanceRef.current = window.L.map(mapRef.current).setView([23.6345, -102.5528], 5);
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(mapInstanceRef.current);
+      }
+
+      const map = mapInstanceRef.current;
+
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
+
+      const bounds = [];
+      ads.forEach(ad => {
+        let coords = null;
+        if (ad.latitude && ad.longitude) {
+          coords = [parseFloat(ad.latitude), parseFloat(ad.longitude)];
+        } else {
+          const stateName = ad.state || ad.location?.split(',')[1]?.trim() || ad.location?.split('·')[0]?.trim() || ad.location?.split(',')[0]?.trim() || '';
+          const cleanedState = Object.keys(STATE_COORDS).find(k => 
+            stateName.toLowerCase().includes(k.toLowerCase()) || 
+            k.toLowerCase().includes(stateName.toLowerCase())
+          );
+          if (cleanedState && STATE_COORDS[cleanedState]) {
+            const base = STATE_COORDS[cleanedState];
+            const hash = (ad.id * 17) % 100 / 100;
+            const jitterLat = (hash - 0.5) * 0.12;
+            const jitterLng = (((ad.id * 31) % 100) / 100 - 0.5) * 0.12;
+            coords = [base[0] + jitterLat, base[1] + jitterLng];
+          }
+        }
+
+        if (coords) {
+          bounds.push(coords);
+          const imagesArr = isStringArray(ad.image_url) ? JSON.parse(ad.image_url) : [ad.image_url];
+          const imgUrl = getImageUrl(imagesArr ? imagesArr[0] : ad.image);
+          
+          const customPopup = `
+            <div style="width: 180px; font-family: sans-serif; cursor: pointer;" onclick="window.viewAd(${ad.id})">
+              <img src="${imgUrl}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />
+              <div style="font-weight: bold; font-size: 14px; color: #0f8f7d;">$${Number(ad.price).toLocaleString()} MXN</div>
+              <div style="font-size: 12px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">${ad.title}</div>
+            </div>
+          `;
+          
+          const marker = window.L.marker(coords).bindPopup(customPopup).addTo(map);
+          markersRef.current.push(marker);
+        }
+      });
+
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [40, 40] });
+      }
+    });
+  }, [ads, getImageUrl]);
+
+  React.useEffect(() => {
+    window.viewAd = (id) => {
+      const found = ads.find(a => a.id === id);
+      if (found) onViewAd(found);
+    };
+    return () => {
+      delete window.viewAd;
+    };
+  }, [ads, onViewAd]);
+
+  return <div ref={mapRef} className="w-full h-[320px] md:h-[380px] rounded-2xl border border-slate-200 shadow-md relative z-[1] mb-6 overflow-hidden" />;
+};
+
+function isStringArray(str) {
+  return typeof str === 'string' && str.startsWith('[');
+}
+
+export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
+    const [showMap, setShowMap] = React.useState(false);
+    const [viewLayout, setViewLayout] = React.useState('grid'); // 'grid' or 'list'
     const [homeToast, setHomeToast] = React.useState(null);
     const homeToastTimerRef = React.useRef(null);
     const navigate = useNavigate();
@@ -28,11 +171,17 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       return null;
     }, []);
     const verticalCategoryCards = React.useMemo(() => ([
-      { slug: '', name: { es: 'Clasificados', en: 'Classifieds' }, icon: 'Package', action: 'home' },
-      { slug: 'motor', verticalPath: '/autos', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
-      { slug: 'inmobiliaria', verticalPath: '/inmuebles', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
-      { slug: 'servicios', verticalPath: '/servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
-      { slug: 'empleo', verticalPath: '/empleos', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
+      { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets' }, icon: 'Ticket' },
+      { slug: 'motor', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
+      { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
+      { slug: 'electronica', name: { es: 'Electrónica', en: 'Electronics' }, icon: 'Cpu' },
+      { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
+      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
+      { slug: 'hogar', name: { es: 'Hogar', en: 'Home' }, icon: 'Sofa' },
+      { slug: 'moda', name: { es: 'Moda', en: 'Fashion' }, icon: 'Shirt' },
+      { slug: 'bebes', name: { es: 'Bebés', en: 'Babies' }, icon: 'Baby' },
+      { slug: 'mascotas', name: { es: 'Mascotas', en: 'Pets' }, icon: 'PawPrint' },
+      { slug: 'deportes', name: { es: 'Deportes', en: 'Sports' }, icon: 'Bike' },
       { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store', action: 'pricing' },
     ]), []);
 
@@ -111,6 +260,37 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
               <h2 className="text-[22px] font-bold tracking-tight text-slate-900">{t.search_results || 'Resultados de búsqueda'} <span className="text-slate-400 text-[14px] font-normal ml-2">({serverAds.length})</span></h2>
             </div>
 
+            {/* Map and Layout Control Panel */}
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+              <button 
+                onClick={() => setShowMap(prev => !prev)} 
+                className={`btn-sm flex items-center gap-2 border transition-all ${showMap ? 'bg-[#0f8f7d] text-white border-[#0f8f7d]' : 'bg-white text-slate-700 border-slate-300 hover:border-[#0f8f7d]'}`}
+              >
+                <MapPin size={16} /> {showMap ? 'Ocultar mapa' : 'Mostrar en mapa'}
+              </button>
+              
+              <div className="flex items-center gap-2 border border-slate-200 rounded-xl p-1 bg-white">
+                <button 
+                  onClick={() => setViewLayout('grid')} 
+                  className={`btn-sm px-2.5 py-1 rounded-lg transition-all ${viewLayout === 'grid' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                  title="Vista Cuadrícula"
+                >
+                  <LayoutGrid size={15} />
+                </button>
+                <button 
+                  onClick={() => setViewLayout('list')} 
+                  className={`btn-sm px-2.5 py-1 rounded-lg transition-all ${viewLayout === 'list' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                  title="Vista Lista"
+                >
+                  <List size={15} />
+                </button>
+              </div>
+            </div>
+
+            {showMap && serverAds.length > 0 && (
+              <LeafletMap ads={serverAds} getImageUrl={getImageUrl} onViewAd={handleViewAd} />
+            )}
+
           {loadingAds ? (
 
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#84CC16]" size={40}/></div>
@@ -129,7 +309,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
             <>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+              <div className={viewLayout === 'list' ? "list-layout" : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"}>
 
                 {serverAds.map((ad, index) => (
 
@@ -244,10 +424,10 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
                   return (
 
                     <button key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
-                        if (cat.action === 'home') { setActiveCat(''); executeSearch?.('', null, ''); return; }
+                        if (cat.action === 'home') { navigate('/'); setActiveCat(''); executeSearch?.('', null, ''); return; }
                         if (cat.action === 'pricing') { setShowPricingModal?.(true); return; }
                         const vpath = cat.verticalPath || getVerticalPath(cat.slug);
-                        if (vpath) { navigate(vpath); } else { setActiveCat(cat.slug); }
+                        if (vpath) { navigate(vpath); } else { executeSearch?.('', null, cat.slug); }
                       }} className="category-pill group min-w-[82px] sm:min-w-[96px] max-w-[108px]">
 
                       <div className="category-icon flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] transition-all">

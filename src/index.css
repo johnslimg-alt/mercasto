@@ -123,8 +123,66 @@ html.dark .btn-lg.bg-white:hover {
   .market-surface { @apply bg-white border border-slate-200 shadow-sm; }
   .market-shell { @apply rounded-[28px] border border-slate-200 bg-white/90 shadow-sm shadow-slate-200/70; }
   .market-card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-200/80; }
+  
+  /* Layout Switcher: Horizontal List Card Layouts */
+  .list-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+    width: 100% !important;
+  }
+  .list-layout article {
+    flex-direction: row !important;
+    height: 150px !important;
+    width: 100% !important;
+    align-items: stretch !important;
+  }
+  .list-layout article > div:first-child {
+    width: 220px !important;
+    height: 150px !important;
+    flex-shrink: 0 !important;
+  }
+  .list-layout article img {
+    height: 150px !important;
+    width: 220px !important;
+    object-fit: cover !important;
+  }
+  .list-layout article > div:last-child {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: 1.25rem !important;
+  }
+  .list-layout article button.btn-md,
+  .list-layout article button.w-full {
+    width: fit-content !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    margin-top: 0.5rem !important;
+  }
+  @media (max-width: 640px) {
+    .list-layout article {
+      height: 110px !important;
+    }
+    .list-layout article > div:first-child {
+      width: 120px !important;
+      height: 110px !important;
+    }
+    .list-layout article img {
+      height: 110px !important;
+      width: 120px !important;
+    }
+    .list-layout article > div:last-child {
+      padding: 0.5rem 0.75rem !important;
+    }
+    .list-layout article button.btn-md,
+    .list-layout article button.w-full {
+      display: none !important;
+    }
+  }
   .category-rail {
-    @apply flex gap-2 overflow-x-auto snap-x snap-mandatory pt-1 pb-3;
+    @apply flex gap-2 overflow-x-auto snap-x snap-mandatory pt-1 pb-3 lg:justify-center;
     scroll-padding-inline: 1rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
