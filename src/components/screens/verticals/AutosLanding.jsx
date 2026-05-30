@@ -81,8 +81,13 @@ export default function AutosLanding() {
     if (meta) meta.setAttribute('content', 'Encuentra autos nuevos y usados en México. Miles de vehículos con los mejores precios. Publica gratis en Mercasto.');
   }, []);
 
-  const handleSearch = (q) => {
-    navigate(`/?search=${encodeURIComponent(q)}&category=motor`);
+  const handleSearch = (q, location = {}) => {
+    const params = new URLSearchParams({ category: 'motor' });
+    if (q) params.set('search', q);
+    if (location.state) params.set('state', location.state);
+    if (location.city) params.set('location', location.city);
+    if (location.radius) params.set('radius_km', location.radius);
+    navigate(`/?${params.toString()}`);
   };
 
   const applyFilters = () => {
@@ -104,27 +109,9 @@ export default function AutosLanding() {
         color="blue"
         mapQuery="autos en México"
         onSearch={handleSearch}
+        subsections={SUBSECTIONS}
+        onSubsectionSelect={(item) => navigate(`/?category=motor&search=${encodeURIComponent(item.query)}`)}
       />
-
-      <section className="bg-white border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex gap-3 overflow-x-auto no-scrollbar">
-            {SUBSECTIONS.map(item => {
-              const Icon = item.Icon;
-              return (
-                <button key={item.name}
-                  onClick={() => navigate(`/?category=motor&search=${encodeURIComponent(item.query)}`)}
-                  className="min-w-[104px] rounded-2xl border border-blue-100 bg-gradient-to-b from-white to-blue-50/70 px-3 py-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md">
-                  <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm shadow-blue-200">
-                    <Icon size={20} strokeWidth={2.2} />
-                  </span>
-                  <span className="block text-[12px] font-bold text-slate-800">{item.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
       {/* Quick Filters bar */}
       <div className="bg-white border-b border-slate-100 sticky top-[148px] sm:top-[104px] z-10 shadow-sm">

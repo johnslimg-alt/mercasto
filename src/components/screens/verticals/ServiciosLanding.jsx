@@ -38,8 +38,13 @@ export default function ServiciosLanding() {
     if (meta) meta.setAttribute('content', 'Contrata plomeros, electricistas, diseñadores y más en México. Profesionales verificados con reseñas en Mercasto.');
   }, []);
 
-  const handleSearch = (q) => {
-    navigate(`/?search=${encodeURIComponent(q)}&category=servicios`);
+  const handleSearch = (q, location = {}) => {
+    const params = new URLSearchParams({ category: 'servicios' });
+    if (q) params.set('search', q);
+    if (location.state) params.set('state', location.state);
+    if (location.city) params.set('location', location.city);
+    if (location.radius) params.set('radius_km', location.radius);
+    navigate(`/?${params.toString()}`);
   };
 
   return (
@@ -51,27 +56,9 @@ export default function ServiciosLanding() {
         color="orange"
         mapQuery="servicios profesionales en México"
         onSearch={handleSearch}
+        subsections={SERVICE_CATS}
+        onSubsectionSelect={(item) => navigate(`/?category=servicios&search=${encodeURIComponent(item.query)}`)}
       />
-
-      <section className="bg-white border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex gap-3 overflow-x-auto no-scrollbar">
-            {SERVICE_CATS.map(s => {
-              const Icon = s.Icon;
-              return (
-                <button key={s.name}
-                  onClick={() => navigate(`/?category=servicios&search=${encodeURIComponent(s.query)}`)}
-                  className="min-w-[104px] rounded-2xl border border-orange-100 bg-gradient-to-b from-white to-orange-50/70 px-3 py-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
-                  <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-sm shadow-orange-200">
-                    <Icon size={20} strokeWidth={2.2} />
-                  </span>
-                  <span className="block text-[12px] font-bold text-slate-800">{s.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-14">
 
