@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { MapPin, Search } from 'lucide-react';
 
 const GRADIENT_MAP = {
   blue:   'from-blue-600 to-blue-800',
@@ -8,12 +8,16 @@ const GRADIENT_MAP = {
   orange: 'from-orange-500 to-orange-700',
 };
 
-export default function VerticalHero({ title, subtitle, searchPlaceholder, color = 'blue', onSearch, children }) {
+export default function VerticalHero({ title, subtitle, searchPlaceholder, color = 'blue', onSearch, mapQuery = 'México', children }) {
   const [query, setQuery] = React.useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (onSearch) onSearch(query);
+  };
+  const openMapSearch = () => {
+    const term = [query, mapQuery].filter(Boolean).join(' ');
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(term || 'México')}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -38,6 +42,13 @@ export default function VerticalHero({ title, subtitle, searchPlaceholder, color
             Buscar
           </button>
         </form>
+        <button
+          type="button"
+          onClick={openMapSearch}
+          className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/12 px-4 py-2 text-[13px] font-semibold text-white backdrop-blur hover:bg-white/20 transition-colors"
+        >
+          <MapPin size={16} /> Buscar en mapa
+        </button>
         {children && <div className="mt-4">{children}</div>}
       </div>
     </div>

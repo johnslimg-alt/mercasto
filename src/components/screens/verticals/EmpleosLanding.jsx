@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import { BriefcaseBusiness, ChartNoAxesCombined, GraduationCap, HeartPulse, Landmark, Laptop, Megaphone, Palette } from 'lucide-react';
+import { BriefcaseBusiness, ChartNoAxesCombined, Clock, GraduationCap, HeartPulse, Hotel, Landmark, Laptop, Megaphone, Palette, UserSearch } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -17,6 +17,17 @@ const AREAS = [
   { name: 'Diseño',         Icon: Palette },
 ];
 const MODALIDADES = ['Presencial', 'Remoto', 'Híbrido'];
+const SUBSECTIONS = [
+  { name: 'Vacantes', query: 'vacantes', Icon: BriefcaseBusiness },
+  { name: 'Busco empleo', query: 'busco empleo', Icon: UserSearch },
+  { name: 'Tecnología', query: 'tecnología', Icon: Laptop },
+  { name: 'Ventas', query: 'ventas', Icon: ChartNoAxesCombined },
+  { name: 'Administración', query: 'administración', Icon: Landmark },
+  { name: 'Salud', query: 'salud', Icon: HeartPulse },
+  { name: 'Turismo', query: 'hotelería turismo', Icon: Hotel },
+  { name: 'Medio tiempo', query: 'medio tiempo', Icon: Clock },
+  { name: 'Cursos', query: 'cursos capacitación', Icon: GraduationCap },
+];
 
 export default function EmpleosLanding() {
   const navigate = useNavigate();
@@ -47,8 +58,29 @@ export default function EmpleosLanding() {
         subtitle="Miles de oportunidades laborales en todo el país"
         searchPlaceholder="Buscar por puesto, empresa, ciudad…"
         color="purple"
+        mapQuery="empleos en México"
         onSearch={handleSearch}
       />
+
+      <section className="bg-white border-b border-slate-100">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar">
+            {SUBSECTIONS.map(item => {
+              const Icon = item.Icon;
+              return (
+                <button key={item.name}
+                  onClick={() => navigate(`/?category=empleo&search=${encodeURIComponent(item.query)}`)}
+                  className="min-w-[112px] rounded-2xl border border-purple-100 bg-gradient-to-b from-white to-purple-50/70 px-3 py-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-purple-300 hover:shadow-md">
+                  <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-sm shadow-purple-200">
+                    <Icon size={20} strokeWidth={2.2} />
+                  </span>
+                  <span className="block text-[12px] font-bold text-slate-800">{item.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Quick filters */}
       <div className="bg-white border-b border-slate-100 sticky top-[148px] sm:top-[104px] z-10 shadow-sm">

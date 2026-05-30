@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import { Building2, FileCheck2, Home, MapPinned, SearchCheck } from 'lucide-react';
+import { Building2, Castle, FileCheck2, Home, KeyRound, LandPlot, MapPinned, SearchCheck, Store } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -22,6 +22,15 @@ const TIPS = [
     body: 'INFONAVIT, FOVISSSTE y créditos bancarios — compara tasas y condiciones antes de comprometerte.' },
   { Icon: SearchCheck, title: 'Visita siempre en persona',
     body: 'Las fotos no lo cuentan todo. Programa una visita para verificar el estado real del inmueble.' },
+];
+const SUBSECTIONS = [
+  { name: 'Casas', query: 'casas', Icon: Home },
+  { name: 'Departamentos', query: 'departamentos', Icon: Building2 },
+  { name: 'Renta', query: 'renta', Icon: KeyRound },
+  { name: 'Terrenos', query: 'terrenos', Icon: LandPlot },
+  { name: 'Locales', query: 'locales comerciales', Icon: Store },
+  { name: 'Oficinas', query: 'oficinas', Icon: Building2 },
+  { name: 'Vacacional', query: 'renta vacacional', Icon: Castle },
 ];
 
 export default function InmueblesLanding() {
@@ -53,6 +62,7 @@ export default function InmueblesLanding() {
         subtitle="Compra, renta o invierte en los mejores inmuebles del país"
         searchPlaceholder="Buscar por ciudad, colonia, tipo de propiedad…"
         color="green"
+        mapQuery="inmuebles en México"
         onSearch={handleSearch}>
         <div className="flex justify-center gap-2 mt-2">
           {['Venta', 'Renta'].map(op => (
@@ -64,6 +74,26 @@ export default function InmueblesLanding() {
           ))}
         </div>
       </VerticalHero>
+
+      <section className="bg-white border-b border-slate-100">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar">
+            {SUBSECTIONS.map(item => {
+              const Icon = item.Icon;
+              return (
+                <button key={item.name}
+                  onClick={() => navigate(`/?category=inmobiliaria&search=${encodeURIComponent(item.query)}`)}
+                  className="min-w-[112px] rounded-2xl border border-emerald-100 bg-gradient-to-b from-white to-emerald-50/70 px-3 py-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md">
+                  <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm shadow-emerald-200">
+                    <Icon size={20} strokeWidth={2.2} />
+                  </span>
+                  <span className="block text-[12px] font-bold text-slate-800">{item.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Quick filter bar */}
       <div className="bg-white border-b border-slate-100 sticky top-[148px] sm:top-[104px] z-10 shadow-sm">

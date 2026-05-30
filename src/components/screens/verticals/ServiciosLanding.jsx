@@ -2,19 +2,22 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import { BadgeCheck, Brush, Camera, GraduationCap, Hammer, Leaf, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
+import { BadgeCheck, Brush, Camera, Car, GraduationCap, Hammer, HeartHandshake, Leaf, PawPrint, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const SERVICE_CATS = [
-  { name: 'Plomería',    Icon: Wrench },
-  { name: 'Electricidad', Icon: Plug },
-  { name: 'Carpintería', Icon: Hammer },
-  { name: 'Limpieza',    Icon: Sparkles },
-  { name: 'Clases',      Icon: GraduationCap },
-  { name: 'Diseño',      Icon: Brush },
-  { name: 'Fotografía',  Icon: Camera },
-  { name: 'Jardinería',  Icon: Leaf },
+  { name: 'Hogar', query: 'plomería electricidad carpintería', Icon: Wrench },
+  { name: 'Reparaciones', query: 'reparaciones mantenimiento', Icon: Hammer },
+  { name: 'Limpieza', query: 'limpieza', Icon: Sparkles },
+  { name: 'Clases', query: 'clases cursos', Icon: GraduationCap },
+  { name: 'Diseño', query: 'diseño marketing', Icon: Brush },
+  { name: 'Eventos', query: 'fotografía eventos', Icon: Camera },
+  { name: 'Jardinería', query: 'jardinería', Icon: Leaf },
+  { name: 'Transporte', query: 'mudanza transporte', Icon: Car },
+  { name: 'Mascotas', query: 'mascotas veterinario', Icon: PawPrint },
+  { name: 'Cuidado', query: 'cuidado enfermería', Icon: HeartHandshake },
+  { name: 'Electricidad', query: 'electricidad', Icon: Plug },
 ];
 
 const TRUST = [
@@ -46,8 +49,29 @@ export default function ServiciosLanding() {
         subtitle="Plomeros, electricistas, diseñadores y más — cerca de ti"
         searchPlaceholder="Buscar servicio, profesional o ciudad…"
         color="orange"
+        mapQuery="servicios profesionales en México"
         onSearch={handleSearch}
       />
+
+      <section className="bg-white border-b border-slate-100">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar">
+            {SERVICE_CATS.map(s => {
+              const Icon = s.Icon;
+              return (
+                <button key={s.name}
+                  onClick={() => navigate(`/?category=servicios&search=${encodeURIComponent(s.query)}`)}
+                  className="min-w-[104px] rounded-2xl border border-orange-100 bg-gradient-to-b from-white to-orange-50/70 px-3 py-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
+                  <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-sm shadow-orange-200">
+                    <Icon size={20} strokeWidth={2.2} />
+                  </span>
+                  <span className="block text-[12px] font-bold text-slate-800">{s.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-14">
 
@@ -59,7 +83,7 @@ export default function ServiciosLanding() {
               const Icon = s.Icon;
               return (
               <button key={s.name}
-                onClick={() => navigate(`/?category=servicios&search=${encodeURIComponent(s.name)}`)}
+                onClick={() => navigate(`/?category=servicios&search=${encodeURIComponent(s.query)}`)}
                 className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-orange-400 hover:shadow-md transition-all group text-center">
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors">
                   <Icon size={23} strokeWidth={2.2} />
