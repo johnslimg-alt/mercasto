@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, LocateFixed, MapPin, Search, SlidersHorizontal } from 'lucide-react';
-import MEXICO_STATES from '../../utils/mexicoStates';
+import { MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 
 const GRADIENT_MAP = {
   blue:   'from-blue-600 to-blue-800',
@@ -14,19 +14,6 @@ const ACCENT_MAP = {
   green:  { bg: 'bg-emerald-600', border: 'border-emerald-100', text: 'text-emerald-700', soft: 'from-white to-emerald-50/80', chip: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
   purple: { bg: 'bg-purple-600', border: 'border-purple-100', text: 'text-purple-700', soft: 'from-white to-purple-50/80', chip: 'bg-purple-50 text-purple-700 border-purple-100' },
   orange: { bg: 'bg-orange-500', border: 'border-orange-100', text: 'text-orange-700', soft: 'from-white to-orange-50/80', chip: 'bg-orange-50 text-orange-700 border-orange-100' },
-};
-
-const CITY_OPTIONS = {
-  'Ciudad de México': ['Benito Juárez', 'Coyoacán', 'Cuauhtémoc', 'Miguel Hidalgo', 'Polanco', 'Roma Norte'],
-  Jalisco: ['Guadalajara', 'Zapopan', 'Puerto Vallarta', 'Tlaquepaque', 'Tonalá'],
-  'Nuevo León': ['Monterrey', 'San Pedro Garza García', 'San Nicolás', 'Guadalupe'],
-  'Estado de México': ['Toluca', 'Naucalpan', 'Ecatepec', 'Metepec', 'Tlalnepantla'],
-  'Quintana Roo': ['Cancún', 'Playa del Carmen', 'Tulum', 'Chetumal'],
-  Puebla: ['Puebla', 'Cholula', 'Atlixco', 'Tehuacán'],
-  Querétaro: ['Querétaro', 'San Juan del Río', 'El Marqués'],
-  'Baja California': ['Tijuana', 'Mexicali', 'Ensenada', 'Rosarito'],
-  Veracruz: ['Veracruz', 'Xalapa', 'Boca del Río', 'Coatzacoalcos'],
-  Yucatán: ['Mérida', 'Valladolid', 'Progreso'],
 };
 
 const MAP_POINTS = {
@@ -72,7 +59,8 @@ export default function VerticalHero({
   const [radius, setRadius] = React.useState('25');
   const [showMap, setShowMap] = React.useState(false);
   const accent = ACCENT_MAP[color] || ACCENT_MAP.blue;
-  const cities = CITY_OPTIONS[state] || [];
+  const states = React.useMemo(() => Object.keys(MEXICO_STATES_CITIES).sort((a, b) => a.localeCompare(b, 'es')), []);
+  const cities = React.useMemo(() => (state ? [...(MEXICO_STATES_CITIES[state] || [])].sort((a, b) => a.localeCompare(b, 'es')) : []), [state]);
   const locationLabel = city || state || 'Todo México';
   const mapTerm = [query || mapQuery, city, state].filter(Boolean).join(' ');
   const osmQuery = encodeURIComponent(mapTerm || 'México');
@@ -129,7 +117,7 @@ export default function VerticalHero({
             <MapPin size={18} className="text-slate-400 shrink-0" />
             <select value={state} onChange={e => { setState(e.target.value); setCity(''); }} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
               <option value="">Todo México</option>
-              {MEXICO_STATES.map(item => <option key={item} value={item}>{item}</option>)}
+              {states.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
