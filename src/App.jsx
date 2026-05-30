@@ -277,6 +277,16 @@ function ReferralRedirect() {
   return null;
 }
 
+function useRefQueryParam() {
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref && ref.trim()) {
+      localStorage.setItem('pendingReferral', ref.trim().toUpperCase());
+    }
+  }, []);
+}
+
 export default function AppWrapper() {
   return (
     <ErrorBoundary>
@@ -342,6 +352,7 @@ function App() {
   const [authReady, setAuthReady] = useState(!initialAuthToken);
   const [user, setUser] = useState(initialUser);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  useRefQueryParam();
   const [authMode, setAuthMode] = useState('login');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
@@ -2243,6 +2254,32 @@ function App() {
     }
   };
 
+
+  // --- RENOVAR ANUNCIO (before expiry or republish expired with credit) ---
+  const handleRenewAd = async (ad) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_URL}/ads/${ad.id}/renew`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const newExpiry = data.expires_at ? new Date(data.expires_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+        setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, reminder_sent_at: null } : a));
+        showToast(`¡Anuncio renovado hasta ${newExpiry}!`);
+      } else if (res.status === 402) {
+        showToast('Necesitas créditos para republicar este anuncio.', 'error');
+        setCurrentTab('credits');
+      } else {
+        showToast(data.message || 'No se pudo renovar el anuncio.', 'error');
+      }
+    } catch (err) {
+      console.error('Renew error', err);
+      showToast('Error de conexión al renovar.', 'error');
+    }
+  };
+
   // --- ПОЖАЛОВАТЬСЯ НА ОБЪЯВЛЕНИЕ ---
   const handleReportAd = async (e) => {
     e.preventDefault();
@@ -2486,7 +2523,7 @@ function App() {
   );
 
   // --- РЕНДЕР СТРАНИЦЫ ТОВАРА ---
-  const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} onBack={handleAdBack} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} currentUser={user} />;
+  const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} onBack={handleAdBack} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} currentUser={user} handleRenewAd={handleRenewAd} />;
 
   // --- РЕНДЕР ПУБЛИЧНОГО ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
   const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} lang={lang} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
@@ -2715,7 +2752,7 @@ function App() {
   const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
   const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
 
-  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} />;
+  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem(auth_token)} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
@@ -3200,6 +3237,12 @@ function App() {
                 <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}
                 </h2>
+                {authMode === 'register' && localStorage.getItem('pendingReferral') && (
+                  <div className="bg-lime-50 border border-lime-200 rounded-2xl px-4 py-3 mb-2 flex items-center gap-2 text-sm text-lime-800 dark:bg-lime-900/20 dark:border-lime-400/30 dark:text-lime-300">
+                    <span className="text-lg">🎁</span>
+                    <span><strong>¡Fuiste invitado!</strong> Regístrate y obtén <strong>2 créditos gratis</strong> al publicar tu primer anuncio.</span>
+                  </div>
+                )}
                 <form onSubmit={handleAuthSubmit} className="space-y-3.5">
                     {authMode === 'register' && <input name="name" required placeholder={t.name} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all placeholder:text-slate-400"/>}
                     {authMode !== 'reset_password' && <input name="email" type="email" required placeholder={t.email} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all placeholder:text-slate-400"/>}

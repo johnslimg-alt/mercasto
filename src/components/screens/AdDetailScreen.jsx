@@ -120,14 +120,87 @@ const getSafeWhatsAppNumber = (ad) => {
   return null;
 };
 
+// ── Price Sparkline ──────────────────────────────────────────────────────────
+function PriceSparkline({ history }) {
+  const [tooltip, setTooltip] = React.useState(null);
+  const W = 280, H = 64, PAD = 8;
+  const prices = history.map(h => Number(h.new_price));
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const range = maxP - minP || 1;
+  const pts = prices.map((p, i) => {
+    const x = PAD + (i / (prices.length - 1)) * (W - PAD * 2);
+    const y = PAD + ((maxP - p) / range) * (H - PAD * 2);
+    return [x, y];
+  });
+  const polyline = pts.map(([x, y]) => `${x},${y}`).join(' ');
+  const area = `M${pts[0][0]},${pts[0][1]} ` +
+    pts.slice(1).map(([x, y]) => `L${x},${y}`).join(' ') +
+    ` L${pts[pts.length - 1][0]},${H} L${pts[0][0]},${H} Z`;
+
+  return (
+    <div className="mt-3 mb-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3">
+      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2">Historial de precio</p>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} className="overflow-visible">
+        <defs>
+          <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#84CC16" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#84CC16" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#spark-grad)" />
+        <polyline points={polyline} fill="none" stroke="#65A30D" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {pts.map(([x, y], i) => (
+          <circle
+            key={i}
+            cx={x} cy={y} r="4"
+            fill="white" stroke="#65A30D" strokeWidth="2"
+            className="cursor-pointer"
+            onMouseEnter={() => setTooltip({ x, y, price: prices[i], date: history[i].changed_at })}
+            onMouseLeave={() => setTooltip(null)}
+          />
+        ))}
+        {tooltip && (
+          <g>
+            <rect
+              x={Math.min(tooltip.x - 48, W - 100)} y={tooltip.y - 40}
+              width="96" height="30" rx="6"
+              fill="#1e293b" opacity="0.92"
+            />
+            <text
+              x={Math.min(tooltip.x - 48, W - 100) + 48}
+              y={tooltip.y - 26}
+              textAnchor="middle" fill="white"
+              fontSize="10" fontWeight="600"
+            >
+              ${Number(tooltip.price).toLocaleString('es-MX')}
+            </text>
+            <text
+              x={Math.min(tooltip.x - 48, W - 100) + 48}
+              y={tooltip.y - 14}
+              textAnchor="middle" fill="#94a3b8"
+              fontSize="9"
+            >
+              {new Date(tooltip.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
 export default function AdDetailScreen({
   ad, API_URL, getImageUrl, getImageUrls, getCatName, t, lang, favoriteIds, categoriesData,
   sliderAutoplay, handleShareAd, handleToggleFavorite, setReportingAd, setShowReportModal,
   handleViewCompany, handleWhatsAppClick, allAds, setViewedAd, onBack, MediaSlider, renderAdCard, AdSenseBanner,
-  currentUser
+  currentUser,
+  handleRenewAd
 }) {
   const [similarAds, setSimilarAds] = useState([]);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [priceHistory, setPriceHistory] = useState([]);
+  const [alertEnabled, setAlertEnabled] = useState(true);
 
   // Track recently viewed
   React.useEffect(() => {
@@ -148,6 +221,14 @@ export default function AdDetailScreen({
       .then(r => r.ok ? r.json() : [])
       .then(data => setSimilarAds(Array.isArray(data) ? data.slice(0, 8) : []))
       .catch(() => setSimilarAds([]));
+  }, [API_URL, ad?.id]);
+
+  useEffect(() => {
+    if (!ad?.id) { setPriceHistory([]); return; }
+    fetch(`${API_URL}/ads/${ad.id}/price-history`)
+      .then(r => r.ok ? r.json() : { history: [] })
+      .then(data => setPriceHistory(Array.isArray(data.history) ? data.history : []))
+      .catch(() => setPriceHistory([]));
   }, [API_URL, ad?.id]);
 
   if (!ad) return null;
@@ -210,6 +291,32 @@ export default function AdDetailScreen({
         )}
       </div>
 
+      {isOwner && (() => {
+        const exp = ad.expires_at ? new Date(ad.expires_at) : null;
+        if (!exp) return null;
+        const daysLeft = Math.ceil((exp - Date.now()) / (1000 * 60 * 60 * 24));
+        const expired = ad.status === 'expired' || daysLeft <= 0;
+        const expiring = !expired && daysLeft <= 7;
+        if (!expired && !expiring) return null;
+        const formattedDate = exp.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+        return (
+          <div className={`mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl px-5 py-4 border ${expired ? 'bg-red-50 border-red-200 text-red-800' : 'bg-orange-50 border-orange-200 text-orange-800'}`}>
+            <div className="text-sm font-medium">
+              {expired
+                ? 'Este anuncio ha expirado y no es visible para otros usuarios.'
+                : `Este anuncio expira el ${formattedDate} (en ${daysLeft <= 1 ? '1 día' : daysLeft + ' días'}).`}
+            </div>
+            {handleRenewAd && (
+              <button
+                onClick={() => handleRenewAd(ad)}
+                className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${expired ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
+              >
+                Renovar anuncio
+              </button>
+            )}
+          </div>
+        );
+      })()}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           {/* MEDIA SLIDER */}
@@ -230,7 +337,8 @@ export default function AdDetailScreen({
                 </span>
               </div>
             )}
-            
+            {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} />}
+
             <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 font-medium">
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>
@@ -391,6 +499,19 @@ export default function AdDetailScreen({
                 )}
               </div>
             </div>
+            {currentUser && !isOwner && (
+              <button
+                onClick={() => setAlertEnabled(v => !v)}
+                className={`mt-3 w-full flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-semibold transition-colors ${
+                  alertEnabled
+                    ? 'bg-lime-50 border-lime-300 text-lime-800 dark:bg-lime-950/30 dark:border-lime-500/30 dark:text-lime-200'
+                    : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-500 dark:text-slate-400 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-base">{alertEnabled ? '🔔' : '🔕'}</span>
+                {alertEnabled ? 'Alerta de precio activa' : 'Activar alerta de precio'}
+              </button>
+            )}
           </div>
         </div>
       </div>

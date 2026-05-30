@@ -29,6 +29,7 @@ class Ad extends Model
         'promoted',
         'views',
         'expires_at',
+        'reminder_sent_at',
         'republished_at',
         'republish_count',
         'boost_type',
@@ -45,6 +46,7 @@ class Ad extends Model
             'views' => 'integer',
             'republish_count' => 'integer',
             'expires_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
             'republished_at' => 'datetime',
             'price_dropped_at' => 'datetime',
         ];

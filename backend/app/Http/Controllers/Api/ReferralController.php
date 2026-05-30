@@ -17,21 +17,41 @@ class ReferralController extends Controller
         $code = $this->ensureReferralCode($user);
         $referralUrl = 'https://mercasto.com/r/' . $code;
 
-        $referred = User::where('referred_by', $user->id)->get();
-        $history = $referred->map(function ($u) {
+        // Load referrals with referred user info
+        $referrals = DB::table('referrals')
+            ->join('users', 'users.id', '=', 'referrals.referred_id')
+            ->where('referrals.referrer_id', $user->id)
+            ->select('users.name', 'referrals.created_at', 'referrals.reward_given_at')
+            ->orderByDesc('referrals.created_at')
+            ->get();
+
+        $history = $referrals->map(function ($r) {
+            $name = $r->name ?? '';
+            // Partial name for privacy: "Juan G."
+            $parts = explode(' ', trim($name));
+            $display = $parts[0] ?? '';
+            if (count($parts) > 1) {
+                $display .= ' ' . strtoupper(substr($parts[1], 0, 1)) . '.';
+            }
             return [
-                'user_name' => $u->name,
-                'joined_at' => $u->created_at->toDateString(),
-                'credit_earned' => 1,
+                'name'           => $display,
+                'joined_at'      => substr($r->created_at, 0, 10),
+                'reward_given_at'=> $r->reward_given_at,
+                'status'         => $r->reward_given_at ? 'completed' : 'pending',
             ];
         });
 
+        $pendingRewards = $referrals->whereNull('reward_given_at')->count();
+        $earnedCredits  = $referrals->whereNotNull('reward_given_at')->count() * 5;
+
         return response()->json([
-            'code' => $code,
-            'referral_url' => $referralUrl,
-            'total_referred' => $referred->count(),
-            'credits' => $user->referral_credits,
-            'history' => $history,
+            'code'            => $code,
+            'referral_url'    => $referralUrl,
+            'total_referrals' => $referrals->count(),
+            'pending_rewards' => $pendingRewards,
+            'earned_credits'  => $earnedCredits,
+            'credits'         => $user->referral_credits,
+            'referrals'       => $history->values(),
         ]);
     }
 
@@ -60,9 +80,15 @@ class ReferralController extends Controller
 
             $currentUser->referred_by = $referrer->id;
             $currentUser->save();
-            $referrer->increment('referral_credits');
 
-            return ['status' => 200, 'body' => ['success' => true, 'message' => '¡Código aplicado! Tu amigo ha ganado 1 crédito destacado.']];
+            // Create referrals log entry
+            DB::table('referrals')->insertOrIgnore([
+                'referrer_id' => $referrer->id,
+                'referred_id' => $currentUser->id,
+                'created_at'  => now(),
+            ]);
+
+            return ['status' => 200, 'body' => ['success' => true, 'message' => '¡Código aplicado! Publica tu primer anuncio para que ambos ganen créditos.']];
         });
 
         return response()->json($result['body'], $result['status']);

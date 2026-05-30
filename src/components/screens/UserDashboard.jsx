@@ -1,11 +1,12 @@
 import ChartTooltip from '../common/ChartTooltip';
 import { Link } from 'react-router-dom';
 import MyAdsScreen from './MyAdsScreen';
+import SellerStatsScreen from './SellerStatsScreen';
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, PieChart as PieChartIcon, CreditCard } from "lucide-react";
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
   const [dashToast, setDashToast] = React.useState(null);
   const showDashToast = (msg, type = 'success') => {
     setDashToast({ msg, type });
@@ -243,6 +244,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   <Share2 className="w-5 h-5 text-slate-400"/> {t.referrals_tab || 'Referidos'}
                 </Link>
 
+                <div onClick={() => setDashboardTab('stats')} className={`p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium ${dashboardTab === 'stats' ? 'text-[#65A30D] bg-lime-50/50' : 'text-slate-700 hover:bg-slate-50'}`}>
+                  <BarChart3 className={`w-5 h-5 ${dashboardTab === 'stats' ? 'text-[#84CC16]' : 'text-slate-400'}`}/> Estadísticas
+                </div>
                 <div onClick={() => setDashboardTab('transactions')} className={`p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium ${dashboardTab === 'transactions' ? 'text-[#65A30D] bg-lime-50/50' : 'text-slate-700 hover:bg-slate-50'}`}>
                   <CreditCard className={`w-5 h-5 ${dashboardTab === 'transactions' ? 'text-[#84CC16]' : 'text-slate-400'}`}/> {t.transactions_tab || 'Transacciones'}
                 </div>
@@ -801,6 +805,10 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                 </div>
 
+          ) : dashboardTab === 'stats' ? (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex-1 p-6 md:p-8">
+              <SellerStatsScreen token={token} />
+            </div>
           ) : dashboardTab === 'my_ads' ? (
             <MyAdsScreen
               userAds={userAds}
@@ -809,6 +817,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               handleToggleAdStatus={handleToggleAdStatus}
               handlePromoteAd={handlePromoteAd}
               handleRepublishAd={handleRepublishAd}
+              handleRenewAd={handleRenewAd}
               user={user}
               t={t}
               lang={lang}

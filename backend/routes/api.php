@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AdIndexController;
 use App\Http\Controllers\Api\AiDescriptionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\SellerStatsController;
 use App\Http\Controllers\Api\BusinessProfileController;
 use App\Http\Controllers\Api\AccountDeletionController;
 use Illuminate\Support\Facades\Broadcast;
@@ -27,6 +28,7 @@ Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'in
 Route::middleware('throttle:search')->get('/category-attributes', [CategoryAttributeController::class, 'index']); // Динамические атрибуты категории для PostScreen + SidebarFilters
 Route::middleware('throttle:api')->get('/ads/{id}', [AdController::class, 'show'])->whereNumber('id'); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
 Route::middleware('throttle:search')->get('/ads/{id}/similar', [AdController::class, 'similar'])->whereNumber('id'); // Похожие объявления через pgvector
+Route::middleware('throttle:api')->get('/ads/{id}/price-history', [AdController::class, 'priceHistory'])->whereNumber('id'); // Historial de precios
 
 // Защита от CPU DDoS: генерация PDF очень ресурсоемкая, ставим лимит 10 в минуту
 Route::middleware('throttle:10,1')->group(function () {
@@ -167,6 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/ads/{id}/pause', [AdController::class, 'pause'])->whereNumber('id'); // Pause active ad
     Route::put('/ads/{id}/activate', [AdController::class, 'activate'])->whereNumber('id'); // Reactivate paused ad
     Route::post('/ads/{id}/republish', [AdController::class, 'republish'])->whereNumber('id'); // Republish expired ad
+    Route::put('/ads/{id}/renew', [AdController::class, 'renew'])->whereNumber('id'); // Renew active or expired ad
     Route::post('/ads/{id}/promote/credits', [AdController::class, 'promoteWithCredits'])->whereNumber('id'); // Продвижение за кредиты
     Route::delete('/ads/{id}', [AdController::class, 'destroy'])->whereNumber('id');
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -244,6 +247,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Subscription Routes
+    Route::get('/seller/stats', [SellerStatsController::class, 'index']); // Estadísticas del vendedor
     Route::get('/user/subscriptions', [ProfileController::class, 'getSubscriptions']);
     Route::post('/user/subscriptions/toggle', [ProfileController::class, 'toggleSubscription']);
 

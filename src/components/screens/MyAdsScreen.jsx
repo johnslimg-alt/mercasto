@@ -4,6 +4,13 @@ import { BarChart3, CheckSquare, ExternalLink, Loader2, Pencil, PlusCircle, Squa
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
+// Returns days until expiry (negative = already expired)
+function daysUntilExpiry(expiresAt) {
+  if (!expiresAt) return null;
+  const diff = new Date(expiresAt) - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
 export default function MyAdsScreen({
   userAds,
   getImageUrl,
@@ -11,6 +18,7 @@ export default function MyAdsScreen({
   handleToggleAdStatus,
   handlePromoteAd,
   handleRepublishAd,
+  handleRenewAd,
   t,
   lang,
   accountType,
@@ -148,6 +156,7 @@ export default function MyAdsScreen({
                         {ad.status === 'paused' ? (t.paused_status || 'Pausado') : ad.status === 'expired' ? (t.expired_status || 'Expirado') : ad.status}
                       </span>
                     )}
+                    {(() => { const d = daysUntilExpiry(ad.expires_at); if (ad.status === 'expired' || d !== null && d <= 0) return <span className="badge bg-red-100 text-red-700">Expirado</span>; if (d !== null && d <= 7 && ad.status === 'active') return <span className="badge bg-orange-100 text-orange-700">Expira en {d <= 1 ? '1 día' : d + ' días'}</span>; return null; })()}
                     {(ad.promoted === 'destacado' || ad.is_featured) && <span className="badge bg-lime-100 text-lime-700">{t.destacado || 'Destacado'}</span>}
                   </div>
                   <p className="text-[#65A30D] text-[16px] font-bold mt-1">
@@ -163,6 +172,7 @@ export default function MyAdsScreen({
                   <Link to={`/anuncio/${ad.id}/editar`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs"><Pencil className="w-3.5 h-3.5" /> {t.edit || 'Editar'}</Link>
                   {ad.status === 'active' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> {t.pause || 'Pausar'}</button>}
                   {ad.status === 'paused' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> {t.reactivate || 'Reactivar'}</button>}
+                  {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1.5 text-xs">Renovar</button> : null; })()}
                   {ad.status === 'expired' && <button onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1.5 text-xs">{t.republish || 'Republicar'}</button>}
                   {ad.status === 'active' && <button onClick={() => handlePromoteAd(ad)} className="btn-sm flex-1 sm:flex-none bg-[#0F172A] hover:bg-black text-white flex items-center justify-center gap-1.5 text-xs"><TrendingUp className="w-3.5 h-3.5" /> {t.promote}</button>}
                   <button onClick={() => handleDeleteAd(ad.id)} className="btn-sm flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center gap-1.5 text-xs"><Trash2 className="w-3.5 h-3.5" /></button>

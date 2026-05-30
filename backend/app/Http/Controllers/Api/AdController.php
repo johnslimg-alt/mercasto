@@ -17,6 +17,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Events\NewNotification;
 use App\Jobs\ProcessVideoWatermark;
 use App\Jobs\NotifyPriceDropJob;
+use App\Jobs\ProcessReferralRewardJob;
 use App\Mail\NewAdInCategory;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
@@ -407,6 +408,15 @@ class AdController extends Controller
             Cache::forget("ads_index_page_{$i}");
         }
 
+        // Referral first-ad reward hook
+        $adUser = Auth::user();
+        if ($adUser && $adUser->referred_by) {
+            $adCount = \Illuminate\Support\Facades\DB::table('ads')->where('user_id', $adUser->id)->count();
+            if ($adCount === 1) {
+                ProcessReferralRewardJob::dispatch($adUser->id);
+            }
+        }
+
         // Подгружаем пользователя, чтобы вернуть полные данные для фронтенда
         return response()->json($ad, 201);
     }
@@ -564,6 +574,12 @@ class AdController extends Controller
             $ad->update([
                 'old_price'        => $oldPrice,
                 'price_dropped_at' => now(),
+            ]);
+            DB::table('price_history')->insert([
+                'ad_id'      => $ad->id,
+                'old_price'  => $oldPrice,
+                'new_price'  => $newPrice,
+                'changed_at' => now(),
             ]);
             NotifyPriceDropJob::dispatch($ad->id, $oldPrice, $newPrice);
         }
@@ -1924,4 +1940,69 @@ class AdController extends Controller
     }
 
 
+
+    /**
+     * GET /api/ads/{id}/price-history
+     * Returns the last 10 price changes for an ad (public endpoint)
+     */
+    public function priceHistory(Request $request, $id)
+    {
+        $history = DB::table('price_history')
+            ->where('ad_id', $id)
+            ->orderBy('changed_at', 'desc')
+            ->limit(10)
+            ->get(['old_price', 'new_price', 'changed_at']);
+
+        return response()->json([
+            'ad_id'   => (int) $id,
+            'history' => $history->reverse()->values(),
+        ]);
+    }
+
+    /**
+     * PUT /api/ads/{id}/renew
+     * Renew an ad's expiry by 30 days from now.
+     * - Free if the ad is still active (not expired).
+     * - Costs 1 referral_credit if the ad has already expired.
+     * Clears reminder_sent_at so reminders can fire again next cycle.
+     */
+    public function renew(Request $request, $id)
+    {
+        $ad = Ad::findOrFail($id);
+
+        if ($request->user()->id !== $ad->user_id) {
+            return response()->json(['message' => 'No tienes permisos para renovar este anuncio'], 403);
+        }
+
+        $user        = $request->user();
+        $wasExpired  = $ad->status === 'expired';
+
+        if ($wasExpired) {
+            if ($user->referral_credits < 1) {
+                return response()->json([
+                    'message'          => 'Necesitas créditos para republicar este anuncio.',
+                    'credits_remaining' => $user->referral_credits,
+                ], 402);
+            }
+            $user->decrement('referral_credits');
+        }
+
+        $ad->update([
+            'status'          => 'active',
+            'expires_at'      => now()->addDays(30),
+            'reminder_sent_at' => null,
+        ]);
+
+        Cache::forget("ad_{$id}");
+        Cache::forget('sitemap_xml');
+        for ($i = 1; $i <= 10; $i++) {
+            Cache::forget("ads_index_page_{$i}");
+        }
+
+        return response()->json([
+            'ok'               => true,
+            'expires_at'       => $ad->fresh()->expires_at,
+            'credits_remaining' => $user->fresh()->referral_credits,
+        ]);
+    }
 }
