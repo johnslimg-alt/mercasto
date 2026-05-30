@@ -81,6 +81,9 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       setHomeToast(message);
       homeToastTimerRef.current = window.setTimeout(() => setHomeToast(null), 3200);
     }, []);
+    const mapQuery = selectedState || 'México';
+    const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=${selectedState ? 8 : 5}&ie=UTF8&iwloc=&output=embed`;
+    const mapExternalUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
     React.useEffect(() => () => window.clearTimeout(homeToastTimerRef.current), []);
 
     if (activeCat || searchQuery || selectedState) {
@@ -464,7 +467,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   <div className="market-card h-full min-h-[360px] overflow-hidden relative">
 
-                    <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={`https://maps.google.com/maps?q=${encodeURIComponent(selectedState || 'México')}&t=&z=${selectedState ? 8 : 5}&ie=UTF8&iwloc=&output=embed`} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)', position: 'absolute', top: 0, left: 0 }} className="opacity-40 pointer-events-none"></iframe>
+                    <iframe title={`Mapa de ${mapQuery}`} width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={mapEmbedUrl} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)', position: 'absolute', top: 0, left: 0 }} className="opacity-45 pointer-events-none"></iframe>
 
                     <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-transparent pointer-events-none"></div>
 
@@ -474,7 +477,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                         <h3 className="font-semibold">{selectedState || t.all_mexico || 'Todo México'}</h3>
 
-                        <button onClick={() => setActiveCat('inmobiliaria')} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">{t.open_map || 'Abrir mapa'}</button>
+                        <button onClick={() => window.open(mapExternalUrl, '_blank', 'noopener,noreferrer')} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">{t.open_map || 'Abrir mapa'}</button>
 
                       </div>
 
