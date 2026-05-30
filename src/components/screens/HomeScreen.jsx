@@ -231,8 +231,21 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       homeToastTimerRef.current = window.setTimeout(() => setHomeToast(null), 3200);
     }, []);
     const mapQuery = selectedState || 'México';
-    const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=${selectedState ? 8 : 5}&ie=UTF8&iwloc=&output=embed`;
-    const mapExternalUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
+    const mapPoint = {
+      'Ciudad de México': [-99.1332, 19.4326],
+      Jalisco: [-103.3496, 20.6597],
+      'Nuevo León': [-100.3161, 25.6866],
+      'Estado de México': [-99.6557, 19.2925],
+      'Quintana Roo': [-86.8515, 21.1619],
+      Puebla: [-98.2063, 19.0414],
+      Querétaro: [-100.3899, 20.5888],
+      Veracruz: [-96.1342, 19.1738],
+      Yucatán: [-89.5926, 20.9674],
+    }[selectedState] || [-102.5528, 23.6345];
+    const mapSpan = selectedState ? 0.7 : 18;
+    const mapBbox = [mapPoint[0] - mapSpan, mapPoint[1] - mapSpan, mapPoint[0] + mapSpan, mapPoint[1] + mapSpan].join('%2C');
+    const mapEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${mapBbox}&layer=mapnik&marker=${mapPoint[1]}%2C${mapPoint[0]}`;
+    const mapExternalUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(mapQuery)}`;
     React.useEffect(() => () => window.clearTimeout(homeToastTimerRef.current), []);
 
     if (activeCat || searchQuery || selectedState) {

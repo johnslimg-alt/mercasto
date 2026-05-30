@@ -12,7 +12,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
     const [apiCategoryFields, setApiCategoryFields] = React.useState(null);
     const [loadingCategoryFields, setLoadingCategoryFields] = React.useState(false);
 
-    const mapUrl = `https://maps.google.com/maps?q=${mapQuery}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=-117.7%2C14.2%2C-86.0%2C32.8&layer=mapnik&marker=23.6345%2C-102.5528#${mapQuery}`;
 
     React.useEffect(() => {
       if (!form.category) {

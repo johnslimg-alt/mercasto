@@ -29,6 +29,32 @@ const CITY_OPTIONS = {
   Yucatán: ['Mérida', 'Valladolid', 'Progreso'],
 };
 
+const MAP_POINTS = {
+  'Ciudad de México': [-99.1332, 19.4326],
+  Jalisco: [-103.3496, 20.6597],
+  Guadalajara: [-103.3496, 20.6597],
+  'Puerto Vallarta': [-105.2253, 20.6534],
+  'Nuevo León': [-100.3161, 25.6866],
+  Monterrey: [-100.3161, 25.6866],
+  'Estado de México': [-99.6557, 19.2925],
+  'Quintana Roo': [-86.8515, 21.1619],
+  Cancún: [-86.8515, 21.1619],
+  Puebla: [-98.2063, 19.0414],
+  Querétaro: [-100.3899, 20.5888],
+  'Baja California': [-117.0382, 32.5149],
+  Tijuana: [-117.0382, 32.5149],
+  Veracruz: [-96.1342, 19.1738],
+  Yucatán: [-89.5926, 20.9674],
+  Mérida: [-89.5926, 20.9674],
+};
+
+const buildOsmEmbedUrl = (locationKey) => {
+  const [lon, lat] = MAP_POINTS[locationKey] || [-102.5528, 23.6345];
+  const span = locationKey && MAP_POINTS[locationKey] ? 0.35 : 18;
+  const bbox = [lon - span, lat - span, lon + span, lat + span].join('%2C');
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`;
+};
+
 export default function VerticalHero({
   title,
   subtitle,
@@ -50,7 +76,7 @@ export default function VerticalHero({
   const locationLabel = city || state || 'Todo México';
   const mapTerm = [query || mapQuery, city, state].filter(Boolean).join(' ');
   const osmQuery = encodeURIComponent(mapTerm || 'México');
-  const embedUrl = `https://www.openstreetmap.org/export/embed.html?layer=mapnik&query=${osmQuery}`;
+  const embedUrl = buildOsmEmbedUrl(city || state);
   const osmUrl = `https://www.openstreetmap.org/search?query=${osmQuery}`;
 
   const handleSubmit = (e) => {

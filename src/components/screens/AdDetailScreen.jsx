@@ -71,7 +71,7 @@ const buildPublicLocationLabel = (ad) => {
 
 const buildMapEmbedUrl = (locationLabel) => {
   if (!locationLabel) return null;
-  return `https://www.google.com/maps?q=${encodeURIComponent(`${locationLabel}, México`)}&output=embed`;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=-117.7%2C14.2%2C-86.0%2C32.8&layer=mapnik&marker=23.6345%2C-102.5528#${encodeURIComponent(`${locationLabel}, México`)}`;
 };
 
 const getSafeTelegramUsername = (ad) => {
