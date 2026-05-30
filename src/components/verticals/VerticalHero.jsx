@@ -49,7 +49,9 @@ export default function VerticalHero({
   const cities = CITY_OPTIONS[state] || [];
   const locationLabel = city || state || 'Todo México';
   const mapTerm = [query || mapQuery, city, state].filter(Boolean).join(' ');
-  const embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapTerm || 'México')}&z=${city ? 12 : state ? 8 : 5}&output=embed`;
+  const osmQuery = encodeURIComponent(mapTerm || 'México');
+  const embedUrl = `https://www.openstreetmap.org/export/embed.html?layer=mapnik&query=${osmQuery}`;
+  const osmUrl = `https://www.openstreetmap.org/search?query=${osmQuery}`;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -158,12 +160,12 @@ export default function VerticalHero({
                 Aplicar búsqueda
               </button>
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapTerm || 'México')}`}
+                href={osmUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 block text-center text-xs font-semibold text-white/60 hover:text-white"
               >
-                Abrir en Google Maps
+                Abrir en OpenStreetMap
               </a>
             </div>
           </div>
