@@ -201,6 +201,7 @@ export default function AdDetailScreen({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   const [alertEnabled, setAlertEnabled] = useState(true);
+  const [renderedAtMs] = useState(() => Date.now());
 
   // Track recently viewed
   React.useEffect(() => {
@@ -294,7 +295,7 @@ export default function AdDetailScreen({
       {isOwner && (() => {
         const exp = ad.expires_at ? new Date(ad.expires_at) : null;
         if (!exp) return null;
-        const daysLeft = Math.ceil((exp - Date.now()) / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.ceil((exp - renderedAtMs) / (1000 * 60 * 60 * 24));
         const expired = ad.status === 'expired' || daysLeft <= 0;
         const expiring = !expired && daysLeft <= 7;
         if (!expired && !expiring) return null;
