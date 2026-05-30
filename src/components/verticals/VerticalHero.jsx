@@ -58,6 +58,7 @@ export default function VerticalHero({
   const [city, setCity] = React.useState('');
   const [radius, setRadius] = React.useState('25');
   const [showMap, setShowMap] = React.useState(false);
+  const citySelectRef = React.useRef(null);
   const accent = ACCENT_MAP[color] || ACCENT_MAP.blue;
   const states = React.useMemo(() => Object.keys(MEXICO_STATES_CITIES).sort((a, b) => a.localeCompare(b, 'es')), []);
   const cities = React.useMemo(() => (state ? [...(MEXICO_STATES_CITIES[state] || [])].sort((a, b) => a.localeCompare(b, 'es')) : []), [state]);
@@ -70,6 +71,14 @@ export default function VerticalHero({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (onSearch) onSearch(query, { state, city, radius });
+  };
+
+  const handleStateChange = (e) => {
+    setState(e.target.value);
+    setCity('');
+    if (e.target.value) {
+      requestAnimationFrame(() => citySelectRef.current?.focus());
+    }
   };
 
   return (
@@ -115,14 +124,14 @@ export default function VerticalHero({
           </label>
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <MapPin size={18} className="text-slate-400 shrink-0" />
-            <select value={state} onChange={e => { setState(e.target.value); setCity(''); }} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
+            <select value={state} onChange={handleStateChange} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
               <option value="">Todo México</option>
               {states.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <LocateFixed size={18} className="text-slate-400 shrink-0" />
-            <select value={city} onChange={e => setCity(e.target.value)} disabled={!state} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none disabled:text-slate-400">
+            <select ref={citySelectRef} value={city} onChange={e => setCity(e.target.value)} disabled={!state} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none disabled:text-slate-400">
               <option value="">{state ? 'Toda la ciudad' : 'Ciudad'}</option>
               {cities.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
