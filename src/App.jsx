@@ -49,7 +49,7 @@ class ErrorBoundary extends React.Component {
           <h1 className="text-[24px] font-bold text-slate-900 mb-2">No pudimos cargar esta sección</h1>
           <p className="text-slate-500 mb-6 max-w-md">Recarga la página. Si el problema continúa, vuelve a intentarlo en unos minutos.</p>
           {showDetails && (
-            <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.errorInfo?.componentStack}</div>
+            <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
           )}
           <button onClick={() => window.location.reload()} className="px-6 py-3 bg-slate-900 text-white rounded-xl shadow-md hover:bg-black transition-colors">Recargar página</button>
         </div>
@@ -1038,12 +1038,22 @@ function App() {
   useEffect(() => {
     let title = "Mercasto | Compra, Vende y Renta en Todo México";
     let desc = "Únete a Mercasto, el mercado local de crecimiento más rápido en México. Compra autos, renta departamentos, busca empleo y ofrece servicios cerca de ti.";
+    let ogImage = "https://mercasto.com/icon-512x512.png";
+    let ogType = "website";
 
     if (viewedAd) {
       title = `${viewedAd.title} - ${viewedAd.location?.split(',')[0]} | Mercasto`;
       desc = viewedAd.description ? viewedAd.description.substring(0, 160) : desc;
+      ogImage = getImageUrl(viewedAd.image_url);
+      ogType = "product";
     } else if (viewedCompany) {
-      title = `${viewedCompany.name} - Tienda en Mercasto`;
+      const isBusiness = viewedCompany.role === 'business';
+      title = `${viewedCompany.name} - ${isBusiness ? 'Tienda Oficial' : 'Vendedor'} en Mercasto`;
+      desc = viewedCompany.bio
+        ? viewedCompany.bio.substring(0, 160)
+        : `${viewedCompany.name} en ${viewedCompany.city || 'México'}. ${isBusiness ? 'Mira sus anuncios clasificados activos, opiniones de clientes y contáctalos de forma segura en Mercasto.' : 'Mira sus anuncios clasificados en Mercasto.'}`;
+      ogImage = getImageUrl(viewedCompany.avatar_url, "https://mercasto.com/icon-512x512.png");
+      ogType = "profile";
     } else if (activeCat) {
       const catName = getCatName(categoriesData.find(c => c.slug === activeCat), lang) || activeCat;
       title = `${catName} en México | Anuncios Clasificados Mercasto`;
@@ -1053,6 +1063,60 @@ function App() {
     document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
     document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+    document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
+    document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', window.location.href);
+    document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
+
+    // Внедрение Schema.org JSON-LD структурированных данных
+    const existingScript = document.getElementById('schema-ld-json');
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    let schemaData = null;
+
+    if (viewedAd) {
+      schemaData = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": viewedAd.title,
+        "description": viewedAd.description || '',
+        "image": getImageUrl(viewedAd.image_url),
+        "offers": {
+          "@type": "Offer",
+          "price": viewedAd.price,
+          "priceCurrency": "MXN",
+          "itemCondition": viewedAd.condition === 'new' ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
+          "availability": "https://schema.org/InStock"
+        }
+      };
+    } else if (viewedCompany) {
+      const isBusiness = viewedCompany.role === 'business';
+      schemaData = {
+        "@context": "https://schema.org",
+        "@type": isBusiness ? "Store" : "Person",
+        "name": viewedCompany.name,
+        "description": viewedCompany.bio || (isBusiness ? `Tienda oficial de ${viewedCompany.name} en Mercasto` : `Perfil de ${viewedCompany.name} en Mercasto`),
+        "image": getImageUrl(viewedCompany.avatar_url),
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": viewedCompany.city || "México"
+        },
+        "url": window.location.href
+      };
+      if (viewedCompany.website) {
+        schemaData.sameAs = viewedCompany.website;
+      }
+    }
+
+    if (schemaData) {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.id = 'schema-ld-json';
+      script.text = JSON.stringify(schemaData);
+      document.head.appendChild(script);
+    }
 
     if (typeof window !== 'undefined') {
       window.dataLayer = window.dataLayer || [];
@@ -1062,6 +1126,13 @@ function App() {
         page_path: `/${currentTab}${activeCat ? `?cat=${activeCat}` : ''}${viewedAd ? `?ad=${viewedAd.id}` : ''}`
       });
     }
+
+    return () => {
+      const cleanupScript = document.getElementById('schema-ld-json');
+      if (cleanupScript) {
+        cleanupScript.remove();
+      }
+    };
   }, [currentTab, activeCat, viewedAd, viewedCompany, categoriesData, lang]);
 
   // --- WEBSOCKETS LISTENER ---
@@ -2751,8 +2822,20 @@ function App() {
   const conversionRate = useMemo(() => totalViews > 0 ? ((totalContactClicks / totalViews) * 100).toFixed(1) : 0, [totalViews, totalContactClicks]);
   const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
   const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
+  const headerCategories = useMemo(() => ([
+    { slug: 'motor', label: lang === 'en' ? 'Cars' : 'Autos' },
+    { slug: 'inmobiliaria', label: lang === 'en' ? 'Real Estate' : 'Inmuebles' },
+    { slug: 'servicios', label: lang === 'en' ? 'Services' : 'Servicios' },
+    { slug: 'empleo', label: lang === 'en' ? 'Jobs' : 'Empleo' },
+    { slug: 'moda', label: lang === 'en' ? 'Fashion' : 'Moda' },
+    { slug: 'hogar', label: lang === 'en' ? 'Home' : 'Hogar' },
+    { slug: 'informatica', label: lang === 'en' ? 'Tech' : 'Tecnología' },
+    { slug: 'telefonia', label: lang === 'en' ? 'Phones' : 'Teléfonos' },
+    { slug: 'mascotas', label: lang === 'en' ? 'Pets' : 'Mascotas' },
+    { slug: 'negocios', label: lang === 'en' ? 'Business' : 'Negocios' },
+  ]), [lang]);
 
-  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem(auth_token)} />;
+  const renderUserDashboard = () => <UserDashboard ChartTooltip={ChartTooltip} accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} IconMap={IconMap} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} />;
@@ -3083,8 +3166,8 @@ function App() {
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
             <nav className="flex items-center gap-4 overflow-x-auto no-scrollbar font-medium text-slate-600 whitespace-nowrap">
               <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
-              {categoriesData.slice(0, 24).map(c => (
-                <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{getCatName(c, lang)}</button>
+              {headerCategories.map(c => (
+                <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{c.label}</button>
               ))}
             </nav>
           </div>

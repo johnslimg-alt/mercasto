@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
+import { BriefcaseBusiness, ChartNoAxesCombined, GraduationCap, HeartPulse, Landmark, Laptop, Megaphone, Palette } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const AREAS = [
-  { name: 'Tecnología',     emoji: '💻' },
-  { name: 'Ventas',         emoji: '📈' },
-  { name: 'Administración', emoji: '🗂️' },
-  { name: 'Marketing',      emoji: '📣' },
-  { name: 'Finanzas',       emoji: '💰' },
-  { name: 'Educación',      emoji: '📚' },
-  { name: 'Salud',          emoji: '🏥' },
-  { name: 'Diseño',         emoji: '🎨' },
+  { name: 'Tecnología',     Icon: Laptop },
+  { name: 'Ventas',         Icon: ChartNoAxesCombined },
+  { name: 'Administración', Icon: BriefcaseBusiness },
+  { name: 'Marketing',      Icon: Megaphone },
+  { name: 'Finanzas',       Icon: Landmark },
+  { name: 'Educación',      Icon: GraduationCap },
+  { name: 'Salud',          Icon: HeartPulse },
+  { name: 'Diseño',         Icon: Palette },
 ];
 const MODALIDADES = ['Presencial', 'Remoto', 'Híbrido'];
 
@@ -112,14 +113,18 @@ export default function EmpleosLanding() {
         <section>
           <h2 className="text-2xl font-bold text-slate-900 mb-5">Explorar por área</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {AREAS.map(a => (
+            {AREAS.map(a => {
+              const Icon = a.Icon;
+              return (
               <button key={a.name}
                 onClick={() => navigate(`/?category=empleo&search=${encodeURIComponent(a.name)}`)}
                 className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3 hover:border-purple-400 hover:shadow-md transition-all group">
-                <span className="text-2xl">{a.emoji}</span>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-purple-100 bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                  <Icon size={20} strokeWidth={2.2} />
+                </span>
                 <span className="text-[13px] font-semibold text-slate-700 group-hover:text-purple-700">{a.name}</span>
               </button>
-            ))}
+            )})}
           </div>
         </section>
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
+import { Car } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -125,7 +126,9 @@ export default function AutosLanding() {
               <button key={b}
                 onClick={() => navigate(`/?search=${encodeURIComponent(b)}&category=motor`)}
                 className="bg-white border border-slate-200 rounded-xl p-3 text-center hover:border-blue-400 hover:shadow-md transition-all group">
-                <div className="text-2xl mb-1">🚗</div>
+                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <Car size={20} strokeWidth={2.2} />
+                </div>
                 <div className="text-[12px] font-semibold text-slate-700 group-hover:text-blue-700">{b}</div>
               </button>
             ))}

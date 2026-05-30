@@ -2,24 +2,25 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
+import { Building2, FileCheck2, Home, MapPinned, SearchCheck } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const CITIES = [
-  { name: 'Ciudad de México', emoji: '🏙️' },
-  { name: 'Guadalajara',      emoji: '🌇' },
-  { name: 'Monterrey',        emoji: '🏔️' },
-  { name: 'Cancún',           emoji: '🏖️' },
-  { name: 'Puebla',           emoji: '⛪' },
-  { name: 'Tijuana',          emoji: '🌉' },
+  { name: 'Ciudad de México', Icon: Building2 },
+  { name: 'Guadalajara',      Icon: Home },
+  { name: 'Monterrey',        Icon: MapPinned },
+  { name: 'Cancún',           Icon: Home },
+  { name: 'Puebla',           Icon: Building2 },
+  { name: 'Tijuana',          Icon: MapPinned },
 ];
 const TIPOS = ['Casa', 'Departamento', 'Local', 'Terreno'];
 const TIPS = [
-  { icon: '📋', title: 'Verifica el título de propiedad',
+  { Icon: FileCheck2, title: 'Verifica el título de propiedad',
     body: 'Solicita la escritura y confirma que esté libre de gravámenes antes de firmar cualquier contrato.' },
-  { icon: '🏦', title: 'Conoce tus opciones de crédito',
+  { Icon: Building2, title: 'Conoce tus opciones de crédito',
     body: 'INFONAVIT, FOVISSSTE y créditos bancarios — compara tasas y condiciones antes de comprometerte.' },
-  { icon: '🔍', title: 'Visita siempre en persona',
+  { Icon: SearchCheck, title: 'Visita siempre en persona',
     body: 'Las fotos no lo cuentan todo. Programa una visita para verificar el estado real del inmueble.' },
 ];
 
@@ -104,14 +105,18 @@ export default function InmueblesLanding() {
         <section>
           <h2 className="text-2xl font-bold text-slate-900 mb-5">Buscar por ciudad</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {CITIES.map(c => (
+            {CITIES.map(c => {
+              const Icon = c.Icon;
+              return (
               <button key={c.name}
                 onClick={() => navigate(`/?category=inmobiliaria&location=${encodeURIComponent(c.name)}`)}
                 className="bg-white border border-slate-200 rounded-2xl p-4 text-center hover:border-emerald-400 hover:shadow-md transition-all group">
-                <div className="text-3xl mb-2">{c.emoji}</div>
+                <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <Icon size={21} strokeWidth={2.2} />
+                </div>
                 <div className="text-[13px] font-semibold text-slate-700 group-hover:text-emerald-700">{c.name}</div>
               </button>
-            ))}
+            )})}
           </div>
         </section>
 
@@ -119,13 +124,17 @@ export default function InmueblesLanding() {
         <section className="bg-emerald-50 rounded-3xl p-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">Consejos para comprar o rentar</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TIPS.map(tip => (
+            {TIPS.map(tip => {
+              const Icon = tip.Icon;
+              return (
               <div key={tip.title} className="bg-white rounded-2xl p-5 shadow-sm">
-                <div className="text-3xl mb-3">{tip.icon}</div>
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-600">
+                  <Icon size={21} strokeWidth={2.2} />
+                </div>
                 <h3 className="font-bold text-[15px] text-slate-800 mb-2">{tip.title}</h3>
                 <p className="text-[13px] text-slate-500 leading-relaxed">{tip.body}</p>
               </div>
-            ))}
+            )})}
           </div>
         </section>
 

@@ -13,8 +13,11 @@ const autoFilters = [
   { id: 'modelo', label: 'Modelo', type: 'text', placeholder: 'Ej. Versa, Civic, Tacoma' },
   { id: 'year', label: 'Año', type: 'range', minPlaceholder: 'Desde', maxPlaceholder: 'Hasta' },
   { id: 'km', label: 'Kilometraje', type: 'range', minPlaceholder: 'Mín.', maxPlaceholder: 'Máx.' },
+  { id: 'carroceria', label: 'Carrocería', type: 'checkbox', options: ['Sedán', 'Hatchback', 'SUV', 'Pickup', 'Van', 'Coupé', 'Convertible'] },
   { id: 'transmision', label: 'Transmisión', type: 'checkbox', options: ['Manual', 'Automática', 'CVT'] },
   { id: 'combustible', label: 'Combustible', type: 'checkbox', options: ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico', 'Gas'] },
+  { id: 'traccion', label: 'Tracción', type: 'checkbox', options: ['FWD', 'RWD', 'AWD', '4x4'] },
+  { id: 'vendedor', label: 'Vendedor', type: 'checkbox', options: ['Particular', 'Agencia', 'Verificado'] },
 ];
 
 const propertyFilters = [
@@ -23,6 +26,9 @@ const propertyFilters = [
   { id: 'm2', label: 'Superficie (m²)', type: 'range', minPlaceholder: 'Desde', maxPlaceholder: 'Hasta' },
   { id: 'habitaciones', label: 'Habitaciones', type: 'range', minPlaceholder: 'Mín.', maxPlaceholder: 'Máx.' },
   { id: 'banos', label: 'Baños', type: 'range', minPlaceholder: 'Mín.', maxPlaceholder: 'Máx.' },
+  { id: 'estacionamientos', label: 'Estacionamientos', type: 'range', minPlaceholder: 'Mín.', maxPlaceholder: 'Máx.' },
+  { id: 'amenidades', label: 'Amenidades', type: 'checkbox', options: ['Seguridad', 'Alberca', 'Gimnasio', 'Elevador', 'Pet friendly', 'Amueblado', 'Jardín'] },
+  { id: 'antiguedad', label: 'Antigüedad', type: 'select', options: ['Nueva', '0-5 años', '6-10 años', '11-20 años', '+20 años'] },
 ];
 
 const jobFilters = [
@@ -30,6 +36,9 @@ const jobFilters = [
   { id: 'tipo_empleo', label: 'Tipo de empleo', type: 'checkbox', options: ['Tiempo completo', 'Medio tiempo', 'Freelance', 'Temporal', 'Prácticas'] },
   { id: 'modalidad', label: 'Modalidad', type: 'checkbox', options: ['Presencial', 'Remoto', 'Híbrido'] },
   { id: 'experiencia', label: 'Experiencia', type: 'select', options: ['Sin experiencia', '1-2 años', '3-5 años', '+5 años'] },
+  { id: 'turno', label: 'Turno', type: 'checkbox', options: ['Matutino', 'Vespertino', 'Nocturno', 'Mixto'] },
+  { id: 'contrato', label: 'Contrato', type: 'checkbox', options: ['Indefinido', 'Por proyecto', 'Temporal', 'Comisiones'] },
+  { id: 'beneficios', label: 'Beneficios', type: 'checkbox', options: ['Seguro', 'Prestaciones', 'Bonos', 'Vales', 'Capacitación'] },
 ];
 
 const electronicsFilters = [
@@ -37,6 +46,8 @@ const electronicsFilters = [
   { id: 'modelo', label: 'Modelo', type: 'text', placeholder: 'Ej. iPhone 14, ThinkPad, Galaxy S' },
   { id: 'condicion', label: 'Condición', type: 'checkbox', options: ['Nuevo', 'Usado', 'Reacondicionado'] },
   { id: 'almacenamiento', label: 'Almacenamiento', type: 'checkbox', options: ['32 GB', '64 GB', '128 GB', '256 GB', '512 GB', '1 TB', '2 TB'] },
+  { id: 'garantia', label: 'Garantía', type: 'checkbox', options: ['Con garantía', 'Factura', 'Caja original', 'Liberado'] },
+  { id: 'ram', label: 'RAM', type: 'checkbox', options: ['4 GB', '6 GB', '8 GB', '12 GB', '16 GB', '32 GB+'] },
 ];
 
 export const filterConfig = {
@@ -90,8 +101,11 @@ export const filterConfig = {
   'moviles-y-telefonia/repuestos': electronicsFilters,
 
   servicios: [
-    { id: 'tipo', label: 'Tipo de servicio', type: 'select', options: ['Hogar', 'Profesionales', 'Tecnología', 'Transporte', 'Clases', 'Eventos', 'Belleza'] },
+    { id: 'tipo', label: 'Tipo de servicio', type: 'select', options: ['Hogar', 'Profesionales', 'Tecnología', 'Transporte', 'Clases', 'Eventos', 'Belleza', 'Construcción', 'Mantenimiento'] },
     { id: 'modalidad', label: 'Modalidad', type: 'checkbox', options: ['A domicilio', 'En local', 'En línea'] },
+    { id: 'disponibilidad', label: 'Disponibilidad', type: 'checkbox', options: ['Hoy', 'Esta semana', '24/7', 'Fines de semana'] },
+    { id: 'confianza', label: 'Confianza', type: 'checkbox', options: ['Verificado', 'Con reseñas', 'Factura', 'Garantía'] },
+    { id: 'precio_servicio', label: 'Precio desde (MXN)', type: 'range', minPlaceholder: 'Desde', maxPlaceholder: 'Hasta' },
   ],
 
   hogar: [

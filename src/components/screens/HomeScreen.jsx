@@ -28,10 +28,12 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       return null;
     }, []);
     const verticalCategoryCards = React.useMemo(() => ([
+      { slug: '', name: { es: 'Clasificados', en: 'Classifieds' }, icon: 'Package', action: 'home' },
       { slug: 'motor', verticalPath: '/autos', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
       { slug: 'inmobiliaria', verticalPath: '/inmuebles', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
-      { slug: 'empleo', verticalPath: '/empleos', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
       { slug: 'servicios', verticalPath: '/servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
+      { slug: 'empleo', verticalPath: '/empleos', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
+      { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store', action: 'pricing' },
     ]), []);
 
     // Заглушка (Fallback) на случай, если база данных категорий пуста
@@ -50,12 +52,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       { slug: 'boletos', name: { es: 'Boletos' }, icon: 'Ticket' }
     ];
     const displayCategories = categoriesData && categoriesData.length > 0 ? categoriesData : defaultCats;
-    const homeCategories = React.useMemo(() => {
-      return [
-        ...verticalCategoryCards,
-        ...displayCategories.filter(cat => !getVerticalPath(cat.slug)),
-      ];
-    }, [displayCategories, getVerticalPath, verticalCategoryCards]);
+    const homeCategories = React.useMemo(() => verticalCategoryCards, [verticalCategoryCards]);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
       return (serverAds || [])
@@ -229,12 +226,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                 <div className="flex items-center gap-3">
 
-                  <button className="text-[13px] font-medium text-slate-600 hover:text-slate-900 hidden sm:block">{t.sort_popular || 'Ordenar: Popular'}</button>
-
-                  <a className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer whitespace-nowrap" onClick={() => setShowAllCategories(prev => !prev)}>
-                    <span className="sm:hidden">{showAllCategories ? (t.show_less || 'Ver menos') : 'Todas →'}</span>
-                    <span className="hidden sm:inline">{showAllCategories ? (t.show_less || 'Ver menos') : (t.view_all_cat || 'Ver todas las categorías →')}</span>
-                  </a>
+                  <span className="text-[13px] font-medium text-slate-500 hidden sm:block">{t.marketplace_verticals || 'Sitios principales de Mercasto'}</span>
 
                 </div>
 
@@ -242,16 +234,18 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
               <div className="category-rail rail-fade -mx-4 px-4 lg:mx-0 lg:px-0">
 
-                {homeCategories.slice(0, showAllCategories ? homeCategories.length : 16).map(cat => {
+                {homeCategories.map(cat => {
 
                   const Icon = IconMap[cat.icon] || Star;
 
                   return (
 
-                    <button key={cat.slug} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
+                    <button key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
+                        if (cat.action === 'home') { setActiveCat(''); executeSearch?.('', null, ''); return; }
+                        if (cat.action === 'pricing') { setShowPricingModal?.(true); return; }
                         const vpath = cat.verticalPath || getVerticalPath(cat.slug);
                         if (vpath) { navigate(vpath); } else { setActiveCat(cat.slug); }
-                      }} className="category-pill group min-w-[68px] sm:min-w-[74px] max-w-[82px]">
+                      }} className="category-pill group min-w-[82px] sm:min-w-[96px] max-w-[108px]">
 
                       <div className="category-icon flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] transition-all">
 

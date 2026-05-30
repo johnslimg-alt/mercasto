@@ -2,26 +2,27 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
+import { BadgeCheck, Brush, Camera, GraduationCap, Hammer, Leaf, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const SERVICE_CATS = [
-  { name: 'Plomería',    emoji: '🔧' },
-  { name: 'Electricidad', emoji: '⚡' },
-  { name: 'Carpintería', emoji: '🪚' },
-  { name: 'Limpieza',    emoji: '🧹' },
-  { name: 'Clases',      emoji: '📚' },
-  { name: 'Diseño',      emoji: '🎨' },
-  { name: 'Fotografía',  emoji: '📷' },
-  { name: 'Jardinería',  emoji: '🌿' },
+  { name: 'Plomería',    Icon: Wrench },
+  { name: 'Electricidad', Icon: Plug },
+  { name: 'Carpintería', Icon: Hammer },
+  { name: 'Limpieza',    Icon: Sparkles },
+  { name: 'Clases',      Icon: GraduationCap },
+  { name: 'Diseño',      Icon: Brush },
+  { name: 'Fotografía',  Icon: Camera },
+  { name: 'Jardinería',  Icon: Leaf },
 ];
 
 const TRUST = [
-  { icon: '✅', title: 'Profesionales verificados',
+  { Icon: BadgeCheck, title: 'Profesionales verificados',
     body: 'Revisamos la identidad y experiencia de cada proveedor antes de publicar.' },
-  { icon: '⭐', title: 'Con reseñas reales',
+  { Icon: ShieldCheck, title: 'Con reseñas reales',
     body: 'Lee opiniones de clientes anteriores antes de contratar a cualquier profesional.' },
-  { icon: '🤝', title: 'Sin intermediarios',
+  { Icon: Wrench, title: 'Sin intermediarios',
     body: 'Contacta directamente al profesional y negocia el precio sin comisiones.' },
 ];
 
@@ -54,14 +55,18 @@ export default function ServiciosLanding() {
         <section>
           <h2 className="text-2xl font-bold text-slate-900 mb-5">¿Qué servicio necesitas?</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {SERVICE_CATS.map(s => (
+            {SERVICE_CATS.map(s => {
+              const Icon = s.Icon;
+              return (
               <button key={s.name}
                 onClick={() => navigate(`/?category=servicios&search=${encodeURIComponent(s.name)}`)}
                 className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-orange-400 hover:shadow-md transition-all group text-center">
-                <span className="text-4xl">{s.emoji}</span>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                  <Icon size={23} strokeWidth={2.2} />
+                </span>
                 <span className="text-[14px] font-semibold text-slate-700 group-hover:text-orange-600">{s.name}</span>
               </button>
-            ))}
+            )})}
           </div>
         </section>
 
@@ -84,13 +89,17 @@ export default function ServiciosLanding() {
         <section className="bg-orange-50 rounded-3xl p-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">¿Por qué Mercasto?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TRUST.map(item => (
+            {TRUST.map(item => {
+              const Icon = item.Icon;
+              return (
               <div key={item.title} className="bg-white rounded-2xl p-6 shadow-sm text-center">
-                <div className="text-4xl mb-3">{item.icon}</div>
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-orange-600">
+                  <Icon size={23} strokeWidth={2.2} />
+                </div>
                 <h3 className="font-bold text-[15px] text-slate-800 mb-2">{item.title}</h3>
                 <p className="text-[13px] text-slate-500 leading-relaxed">{item.body}</p>
               </div>
-            ))}
+            )})}
           </div>
         </section>
 
