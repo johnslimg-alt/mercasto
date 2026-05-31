@@ -146,6 +146,10 @@ class PaymentController extends Controller
 
         if ($response->successful()) {
             $paymentUrl = $response->json('payment_request_url') ?: $response->json('payment_url');
+            $paymentRequestId = $response->json('payment_request_id')
+                ?: $response->json('id')
+                ?: $response->json('payment_request.id')
+                ?: $response->json('payment_request_id');
 
             if (! $paymentUrl) {
                 Log::error('Clip checkout response missing payment URL', [
@@ -158,6 +162,13 @@ class PaymentController extends Controller
                     'message' => 'Clip no devolvió un enlace de pago válido.',
                 ], 502);
             }
+
+            DB::table('payments')->where('clip_checkout_id', $checkoutId)->update([
+                'clip_payment_request_id' => $paymentRequestId,
+                'clip_payment_request_url' => $paymentUrl,
+                'clip_checkout_response' => json_encode($response->json()),
+                'updated_at' => now(),
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -189,6 +200,10 @@ class PaymentController extends Controller
         $checkoutId = $payload['reference']
             ?? data_get($payload, 'metadata.external_reference')
             ?? data_get($payload, 'payment_request.metadata.external_reference');
+        $paymentRequestId = $payload['payment_request_id']
+            ?? $payload['id']
+            ?? data_get($payload, 'payment_request.id')
+            ?? data_get($payload, 'payment_request.payment_request_id');
         $paymentStatus = strtolower((string) ($payload['status'] ?? data_get($payload, 'payment_request.status', '')));
 
         $signature = $request->header('X-Clip-Signature') ?? $request->header('X-Webhook-Signature');
@@ -213,12 +228,17 @@ class PaymentController extends Controller
             $knownCheckout = $checkoutId
                 ? DB::table('payments')->where('clip_checkout_id', $checkoutId)->exists()
                 : false;
+            $knownPaymentRequest = $paymentRequestId
+                ? DB::table('payments')->where('clip_payment_request_id', $paymentRequestId)->exists()
+                : false;
 
-            if (!$knownCheckout) {
+            if (!$knownCheckout && !$knownPaymentRequest) {
                 Log::info('Unsigned or invalid Clip webhook test/unknown checkout accepted', [
                     'ip_hash' => hash('sha256', (string) $request->ip()),
                     'path' => $request->path(),
+                    'payload_keys' => array_keys($payload),
                     'checkout_id_present' => (bool) $checkoutId,
+                    'payment_request_id_present' => (bool) $paymentRequestId,
                     'status' => $paymentStatus ?: null,
                     'signature_present' => (bool) $signature,
                 ]);
@@ -232,15 +252,25 @@ class PaymentController extends Controller
                 'path' => $request->path(),
                 'payload_keys' => array_keys($payload),
                 'checkout_id_present' => (bool) $checkoutId,
+                'payment_request_id_present' => (bool) $paymentRequestId,
                 'status' => $paymentStatus ?: null,
                 'signature_present' => (bool) $signature,
             ]);
             return response()->json(['status' => 'invalid_signature'], 401);
         }
-        if ($checkoutId && in_array($paymentStatus, $paidStatuses, true)) {
+        if (($checkoutId || $paymentRequestId) && in_array($paymentStatus, $paidStatuses, true)) {
             // Атомарное обновление для абсолютной защиты от Race Condition (Double-Spend)
             $updated = DB::table('payments')
-                ->where('clip_checkout_id', $checkoutId)
+                ->where(function ($query) use ($checkoutId, $paymentRequestId) {
+                    if ($checkoutId) {
+                        $query->where('clip_checkout_id', $checkoutId);
+                    }
+
+                    if ($paymentRequestId) {
+                        $method = $checkoutId ? 'orWhere' : 'where';
+                        $query->{$method}('clip_payment_request_id', $paymentRequestId);
+                    }
+                })
                 ->where('status', '!=', 'paid')
                 ->update([
                     'status' => 'paid',
@@ -249,7 +279,18 @@ class PaymentController extends Controller
                 ]);
 
             if ($updated) {
-                $payment = DB::table('payments')->where('clip_checkout_id', $checkoutId)->first();
+                $payment = DB::table('payments')
+                    ->where(function ($query) use ($checkoutId, $paymentRequestId) {
+                        if ($checkoutId) {
+                            $query->where('clip_checkout_id', $checkoutId);
+                        }
+
+                        if ($paymentRequestId) {
+                            $method = $checkoutId ? 'orWhere' : 'where';
+                            $query->{$method}('clip_payment_request_id', $paymentRequestId);
+                        }
+                    })
+                    ->first();
                 if ($payment && $payment->user_id) {
 
                 // Бизнес-логика: Выдаем PRO статус (роль 'business'), если оплачен тариф «PRO» или «Plus»
