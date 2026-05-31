@@ -6,7 +6,7 @@ services:
     container_name: autoheal
     environment:
       - AUTOHEAL_CONTAINER_LABEL=all
-      - AUTOHEAL_INTERVAL=30
+      - AUTOHEAL_INTERVAL=120
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: always
@@ -35,7 +35,7 @@ services:
     # УЛУЧШЕНИЕ 1: реальный healthcheck
     healthcheck:
       test: ["CMD-SHELL", "pidof nginx >/dev/null 2>&1 || exit 1"]
-      interval: 15s
+      interval: 60s
       timeout: 5s
       retries: 3
       start_period: 20s
@@ -70,7 +70,7 @@ services:
     # Fast runtime healthcheck. Full DB smoke runs in CI; artisan/tinker is too slow for Docker health.
     healthcheck:
       test: ["CMD-SHELL", "php -r 'exit(extension_loaded(\"pdo_pgsql\") ? 0 : 1);' || exit 1"]
-      interval: 20s
+      interval: 60s
       timeout: 10s
       retries: 3
       start_period: 40s
@@ -109,6 +109,8 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      disable: true
     deploy:
       resources:
         limits:
@@ -119,7 +121,7 @@ services:
         max-size: "10m"
         max-file: "3"
     labels:
-      - autoheal=true
+      - autoheal=false
 
   mercasto-scheduler:
     build:
@@ -138,13 +140,15 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      disable: true
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
     labels:
-      - autoheal=true
+      - autoheal=false
 
   mercasto-reverb:
     build:
@@ -170,13 +174,15 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      disable: true
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
     labels:
-      - autoheal=true
+      - autoheal=false
 
   ollama:
     image: ollama/ollama:latest
@@ -190,7 +196,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "ollama", "list"]
-      interval: 30s
+      interval: 300s
       timeout: 10s
       retries: 3
       start_period: 30s
@@ -216,7 +222,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-mercasto_user} -d ${DB_DATABASE:-mercasto}"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
     logging:
@@ -261,7 +267,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
-      interval: 15s
+      interval: 60s
       timeout: 5s
       retries: 5
     logging:
@@ -280,6 +286,8 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     restart: unless-stopped
+    healthcheck:
+      disable: true
     logging:
       driver: "json-file"
       options:
