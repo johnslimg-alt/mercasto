@@ -484,6 +484,7 @@ function App() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sliderAutoplay, setSliderAutoplay] = useState(() => localStorage.getItem('sliderAutoplay') !== 'false');
   const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, push_notifications: true, marketing: false });
@@ -3053,6 +3054,23 @@ function App() {
                     ))}
                   </select>
                 </div>
+                <div className="relative">
+                  <button type="button" onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
+                    {user?.avatar_url ? (
+                      <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-7 h-7 rounded-full object-cover" alt=""/>
+                    ) : (
+                      <User className="w-5 h-5" />
+                    )}
+                  </button>
+                  {showProfileMenu && user && (
+                    <div className="header-popover profile-menu-popover absolute top-full right-0 mt-2 w-48 rounded-2xl shadow-xl border p-2 z-50">
+                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
+                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
+                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
+                      <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
+                    </div>
+                  )}
+                </div>
               </div>
               <button type="button" onClick={() => setIsDarkMode(v => !v)} className="header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -3138,7 +3156,8 @@ function App() {
                 <Heart className="w-[22px] h-[22px]" />
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
-            <button onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="header-user-button hidden sm:flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl">
+            <div className="relative hidden sm:block">
+            <button onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
                 {user?.avatar_url ? (
                   <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-lg object-cover" alt=""/>
                 ) : (
@@ -3146,6 +3165,15 @@ function App() {
                 )}
               <span className="text-[13px] font-medium hidden lg:block">{user?.name || t.guest || 'Invitado'}</span>
               </button>
+              {showProfileMenu && user && (
+                <div className="header-popover profile-menu-popover absolute top-full right-0 mt-2 w-52 rounded-2xl shadow-xl border p-2 z-50">
+                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
+                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
+                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
+                  <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
+                </div>
+              )}
+              </div>
               <button onClick={() => { setCurrentTab('post'); setViewedAd(null); setViewedCompany(null); }} className="btn-lg bg-[#84CC16] hover:bg-[#65A30D] text-white shadow-md shadow-[#84CC16]/20 ml-1 hidden sm:inline-flex items-center gap-1.5">
               <PlusCircle className="w-4 h-4" /> {t.post_ad || "Publicar"}
               </button>
@@ -3179,14 +3207,6 @@ function App() {
                 </div>
               )}
             </div>
-            <button type="button" onClick={() => { if(user) { setCurrentTab('profile'); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="mobile-account-button">
-              {user?.avatar_url ? (
-                <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-7 h-7 rounded-full object-cover" alt=""/>
-              ) : (
-                <User className="w-5 h-5" />
-              )}
-              <span>{user ? (t.profile || 'Perfil') : (t.login || 'Entrar')}</span>
-            </button>
           </div>
         </div>
         <div className="header-category-bar border-t">

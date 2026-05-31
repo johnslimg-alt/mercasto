@@ -450,6 +450,23 @@ html.dark .btn-lg.bg-white:hover {
     line-height: 1;
   }
 
+  .mobile-account-button--top {
+    width: 1.95rem;
+    height: 1.95rem;
+    min-width: 1.95rem;
+    min-height: 1.95rem;
+    padding: 0.12rem;
+    border-radius: 999px;
+    border-color: rgba(132, 204, 22, 0.55);
+    background: rgba(132, 204, 22, 0.08);
+  }
+
+  .mobile-account-button--top img {
+    width: 1.55rem;
+    height: 1.55rem;
+    border: 1px solid rgba(132, 204, 22, 0.58);
+  }
+
   .mobile-account-button span {
     display: none;
   }
@@ -517,6 +534,46 @@ html.dark .btn-lg.bg-white:hover {
     background: transparent !important;
     border: 0 !important;
     color: #E2E8F0 !important;
+  }
+
+  .profile-menu-popover {
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .profile-menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.55rem;
+    border-radius: 0.85rem;
+    padding: 0.65rem 0.75rem;
+    color: #334155;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: left;
+    transition: background-color 0.16s ease, color 0.16s ease;
+  }
+
+  .profile-menu-item:hover {
+    background: rgba(132, 204, 22, 0.12);
+    color: #365314;
+  }
+
+  .profile-menu-item--danger {
+    color: #dc2626;
+  }
+
+  html.dark .profile-menu-popover {
+    background: rgba(15, 23, 42, 0.98) !important;
+  }
+
+  html.dark .profile-menu-item {
+    color: #E2E8F0;
+  }
+
+  html.dark .profile-menu-item:hover {
+    background: rgba(132, 204, 22, 0.16);
+    color: #BEF264;
   }
 
   .mobile-language-switcher--compact {
@@ -643,9 +700,15 @@ html.dark .btn-lg.bg-white:hover {
   html.dark .category-icon {
     background:
       radial-gradient(circle at 30% 20%, rgba(132, 204, 22, 0.18), transparent 44%),
-      linear-gradient(145deg, #1E293B, #0F172A);
-    border-color: #334155;
-    color: #CBD5E1;
+      linear-gradient(145deg, #1E293B, #0F172A) !important;
+    border-color: rgba(132, 204, 22, 0.34) !important;
+    color: #BEF264 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 14px rgba(0, 0, 0, 0.22) !important;
+  }
+
+  html.dark .category-icon svg {
+    color: #BEF264 !important;
+    stroke: #BEF264 !important;
   }
 
   html.dark .job-logo-badge {
