@@ -2795,7 +2795,7 @@ function App() {
                     <p className="text-2xl font-black text-slate-950 dark:text-white mb-3">$0 <span className="text-[12px] font-normal text-slate-400 dark:text-slate-500">/mes</span></p>
                     <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600 dark:text-slate-300">
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 3 anuncios activos</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Contacto por QR</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Contacto por Whatsapp/Telegram</li>
                     </ul>
                     <button className="py-2.5 w-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Plan actual</button>
                   </div>
