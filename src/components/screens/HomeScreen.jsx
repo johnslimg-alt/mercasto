@@ -231,20 +231,6 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       homeToastTimerRef.current = window.setTimeout(() => setHomeToast(null), 3200);
     }, []);
     const mapQuery = selectedState || 'México';
-    const mapPoint = {
-      'Ciudad de México': [-99.1332, 19.4326],
-      Jalisco: [-103.3496, 20.6597],
-      'Nuevo León': [-100.3161, 25.6866],
-      'Estado de México': [-99.6557, 19.2925],
-      'Quintana Roo': [-86.8515, 21.1619],
-      Puebla: [-98.2063, 19.0414],
-      Querétaro: [-100.3899, 20.5888],
-      Veracruz: [-96.1342, 19.1738],
-      Yucatán: [-89.5926, 20.9674],
-    }[selectedState] || [-102.5528, 23.6345];
-    const mapSpan = selectedState ? 0.7 : 18;
-    const mapBbox = [mapPoint[0] - mapSpan, mapPoint[1] - mapSpan, mapPoint[0] + mapSpan, mapPoint[1] + mapSpan].join('%2C');
-    const mapEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${mapBbox}&layer=mapnik&marker=${mapPoint[1]}%2C${mapPoint[0]}`;
     const mapExternalUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(mapQuery)}`;
     React.useEffect(() => () => window.clearTimeout(homeToastTimerRef.current), []);
 
@@ -660,9 +646,9 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   <div className="market-card h-full min-h-[360px] overflow-hidden relative">
 
-                    <iframe title={`Mapa de ${mapQuery}`} width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={mapEmbedUrl} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)', position: 'absolute', top: 0, left: 0 }} className="opacity-45 pointer-events-none"></iframe>
-
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-transparent pointer-events-none"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_38%,rgba(132,204,22,0.35),transparent_12%),radial-gradient(circle_at_64%_34%,rgba(15,23,42,0.2),transparent_10%),linear-gradient(135deg,#dbeafe_0%,#e0f2fe_35%,#dcfce7_58%,#bfdbfe_100%)]"></div>
+                    <div className="absolute inset-0 opacity-35" style={{ backgroundImage: 'linear-gradient(30deg, rgba(15,23,42,.18) 12%, transparent 12.5%, transparent 87%, rgba(15,23,42,.18) 87.5%, rgba(15,23,42,.18)), linear-gradient(150deg, rgba(15,23,42,.18) 12%, transparent 12.5%, transparent 87%, rgba(15,23,42,.18) 87.5%, rgba(15,23,42,.18)), linear-gradient(30deg, rgba(15,23,42,.18) 12%, transparent 12.5%, transparent 87%, rgba(15,23,42,.18) 87.5%, rgba(15,23,42,.18)), linear-gradient(150deg, rgba(15,23,42,.18) 12%, transparent 12.5%, transparent 87%, rgba(15,23,42,.18) 87.5%, rgba(15,23,42,.18))', backgroundSize: '64px 112px', backgroundPosition: '0 0, 0 0, 32px 56px, 32px 56px' }}></div>
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-white/10 pointer-events-none"></div>
 
                     <div className="absolute inset-0 p-4">
 
@@ -1041,7 +1027,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   </ul>
 
-                  <a href="mailto:enterprise@mercasto.com" className="btn-md w-full mt-5 border border-slate-300 hover:bg-slate-50">{t.contact_sales || 'Contactar ventas'}</a>
+                  <button onClick={() => navigate('/contacto?enterprise=1')} className="btn-md w-full mt-5 border border-slate-300 hover:bg-slate-50">{t.contact_sales || 'Contactar ventas'}</button>
 
                 </div>
 

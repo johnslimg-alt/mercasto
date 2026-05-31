@@ -21,6 +21,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'description' => 'required|string|max:255',
+            'product_code' => 'nullable|string|in:plus_monthly,pro_standard_monthly,pro_unlimited_monthly',
             'ad_id' => 'nullable|integer|exists:ads,id', // Защита от создания призрачных платежей
         ]);
 
@@ -40,10 +41,16 @@ class PaymentController extends Controller
         $description = $request->description;
 
         // Защита от подмены цен (Client-Side Pricing Exploit): Жестко фиксируем все цены
-        $packages = [
-            'Suscripción Paquete Plus' => 99,
-            'Suscripción PRO Estándar' => 500,
-            'Suscripción PRO Ilimitado' => 1500,
+        $packagesByCode = [
+            'plus_monthly' => ['amount' => 99, 'description' => 'Suscripción Paquete Plus'],
+            'pro_standard_monthly' => ['amount' => 500, 'description' => 'Suscripción PRO Estándar'],
+            'pro_unlimited_monthly' => ['amount' => 1500, 'description' => 'Suscripción PRO Ilimitado'],
+        ];
+
+        $legacyPackages = [
+            'Suscripción Paquete Plus' => 'plus_monthly',
+            'Suscripción PRO Estándar' => 'pro_standard_monthly',
+            'Suscripción PRO Ilimitado' => 'pro_unlimited_monthly',
         ];
         
         if ($request->ad_id) {
@@ -63,10 +70,14 @@ class PaymentController extends Controller
 
             $amount = 50; // Жесткая цена за продвижение
             $description = "Promoción de anuncio #" . $request->ad_id;
-        } elseif (array_key_exists($description, $packages)) {
-            $amount = (float) $packages[$description];
         } else {
-            return response()->json(['message' => 'Servicio no válido'], 400);
+            $productCode = $request->product_code ?: ($legacyPackages[$description] ?? null);
+            if (! $productCode || ! array_key_exists($productCode, $packagesByCode)) {
+                return response()->json(['message' => 'Servicio no válido'], 400);
+            }
+
+            $amount = (float) $packagesByCode[$productCode]['amount'];
+            $description = $packagesByCode[$productCode]['description'];
         }
 
         // Защита от DB Bloat DoS: переиспользуем 'pending' сессии
@@ -309,4 +320,3 @@ class PaymentController extends Controller
         return response()->json($payments);
     }
 }
-

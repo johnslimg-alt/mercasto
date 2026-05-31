@@ -2429,19 +2429,19 @@ function App() {
   };
 
   // --- PAYMENT CHECKOUT ---
-  const handleClipPayment = async (amount, description, adId = null) => {
+  const handleClipPayment = async (amount, description, adId = null, productCode = null) => {
     if (!user) { setShowAuthModal(true); return; }
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/payment/clip`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, description, ad_id: adId })
+        body: JSON.stringify({ amount, description, ad_id: adId, product_code: productCode })
       });
       const data = await res.json();
       if (res.ok && data.payment_url) {
         window.location.href = data.payment_url;
-      } else showToast(t.payment_error_generating || 'Error al generar el pago', 'error');
+      } else showToast(data.message || t.payment_error_generating || 'Error al generar el pago', 'error');
     } catch (err) { console.error("Payment error", err); showToast(t.connection_error || 'Error de conexión', 'error'); }
   };
 
@@ -2804,7 +2804,7 @@ function App() {
                     <li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> 2 Subidas a TOP gratis</li>
                     <li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> Más visibilidad</li>
                   </ul>
-                  <button onClick={() => handleClipPayment(99, t.plus_subscription_description || 'Suscripción Paquete Plus')} className="btn-lg w-full bg-white text-[#65A30D] hover:bg-slate-50 shadow-sm">{t.buy_plan}</button>
+                  <button onClick={() => handleClipPayment(99, t.plus_subscription_description || 'Suscripción Paquete Plus', null, 'plus_monthly')} className="btn-lg w-full bg-white text-[#65A30D] hover:bg-slate-50 shadow-sm">{t.buy_plan}</button>
                 </div>
               </div>
             ) : (
@@ -2818,7 +2818,7 @@ function App() {
                     <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Página de Empresa</li>
                     <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Estadísticas avanzadas</li>
                   </ul>
-                  <button onClick={() => handleClipPayment(500, t.pro_basic_subscription_description || 'Suscripción PRO Estándar')} className="btn-lg w-full border-2 border-[#84CC16] text-[#65A30D] hover:bg-[#84CC16]/5">{t.buy_plan}</button>
+                  <button onClick={() => handleClipPayment(500, t.pro_basic_subscription_description || 'Suscripción PRO Estándar', null, 'pro_standard_monthly')} className="btn-lg w-full border-2 border-[#84CC16] text-[#65A30D] hover:bg-[#84CC16]/5">{t.buy_plan}</button>
                 </div>
                 <div className="bg-[#0F172A] rounded-3xl p-6 md:p-8 flex flex-col relative shadow-xl transform md:-translate-y-2 ring-2 ring-[#84CC16]">
                   <div className="absolute top-0 right-6 -translate-y-1/2 bg-[#84CC16] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-md">POPULAR</div>
@@ -2830,7 +2830,7 @@ function App() {
                     <li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> 10 Destacados incluidos</li>
                     <li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Soporte dedicado</li>
                   </ul>
-                  <button onClick={() => handleClipPayment(1500, t.pro_max_subscription_description || 'Suscripción PRO Ilimitado')} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] shadow-md">{t.buy_plan}</button>
+                  <button onClick={() => handleClipPayment(1500, t.pro_max_subscription_description || 'Suscripción PRO Ilimitado', null, 'pro_unlimited_monthly')} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] shadow-md">{t.buy_plan}</button>
                 </div>
               </div>
             )}
