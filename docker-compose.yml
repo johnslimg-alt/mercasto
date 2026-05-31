@@ -10,6 +10,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: always
+    healthcheck:
+      disable: true
 
   mercasto-frontend:
     build:
@@ -128,7 +130,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mercasto_scheduler_container
-    command: php artisan schedule:work
+    command: sh -c 'while true; do php artisan schedule:run --no-interaction; sleep 60; done'
     volumes:
       - ./backend:/var/www
       - /var/www/vendor
@@ -279,6 +281,7 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: cadvisor
+    profiles: ["monitoring"]
     expose: ["8080"]
     volumes:
       - /:/rootfs:ro
@@ -297,6 +300,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.0
     container_name: prometheus
+    profiles: ["monitoring"]
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     expose: ["9090"]
@@ -311,6 +315,7 @@ services:
   grafana:
     image: grafana/grafana:11.1.0
     container_name: grafana
+    profiles: ["monitoring"]
     ports: ["127.0.0.1:3000:3000"]
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
