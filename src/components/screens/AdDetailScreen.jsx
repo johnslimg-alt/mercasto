@@ -5,6 +5,7 @@ import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircl
 import { filterConfig } from '../../constants/filterConfig';
 import { addRecentlyViewed } from '../../utils/recentlyViewed';
 import { events } from '../../utils/analytics';
+import MercastoMapPreview from '../common/MercastoMapPreview';
 
 function OwnerControls({ ad, API_URL, setViewedAd }) {
   const [status, setStatus] = useState(ad.status);
@@ -67,11 +68,6 @@ const buildPublicLocationLabel = (ad) => {
     .filter(Boolean);
   const uniqueParts = [...new Set(parts)];
   return uniqueParts.join(' · ');
-};
-
-const buildMapEmbedUrl = (locationLabel) => {
-  if (!locationLabel) return null;
-  return `https://www.openstreetmap.org/export/embed.html?bbox=-117.7%2C14.2%2C-86.0%2C32.8&layer=mapnik&marker=23.6345%2C-102.5528#${encodeURIComponent(`${locationLabel}, México`)}`;
 };
 
 const getSafeTelegramUsername = (ad) => {
@@ -245,7 +241,6 @@ export default function AdDetailScreen({
 
   const catConfig = filterConfig[ad.category] || [];
   const locationLabel = buildPublicLocationLabel(ad);
-  const mapEmbedUrl = buildMapEmbedUrl(locationLabel);
   const telegramUsername = getSafeTelegramUsername(ad);
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
   const whatsappNumber = getSafeWhatsAppNumber(ad);
@@ -327,8 +322,8 @@ export default function AdDetailScreen({
 
           {/* AD DETAILS */}
           <div className="mt-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4 leading-tight">{ad.title}</h1>
-            <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 font-medium">MXN</span></p>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{ad.title}</h1>
+            <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>
             {ad.old_price && ad.price_dropped_at && Number(ad.old_price) > Number(ad.price) && (
               <div className="inline-flex flex-wrap items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-xl px-3 py-1.5 mb-5 text-[13px] font-semibold dark:bg-green-950/30 dark:border-green-500/30 dark:text-green-200">
                 <span>Bajó de precio</span>
@@ -340,11 +335,11 @@ export default function AdDetailScreen({
             )}
             {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} />}
 
-            <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 font-medium">
-              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
-              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>
-              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>
-              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>
+            <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 dark:text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
+              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>
+              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>
+              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>
             </div>
 
             {locationLabel && (
@@ -359,17 +354,11 @@ export default function AdDetailScreen({
                     <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">La ubicación es aproximada y se muestra solo con datos públicos del anuncio.</p>
                   </div>
                 </div>
-                {mapEmbedUrl && (
-                  <div className="h-[220px] w-full border-t border-slate-200 dark:border-slate-700 md:h-[280px]">
-                    <iframe
-                      title={`Mapa de ${locationLabel}`}
-                      src={mapEmbedUrl}
-                      className="h-full w-full"
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                  </div>
-                )}
+                <MercastoMapPreview
+                  title={locationLabel || 'Todo México'}
+                  markers={[{ label: 'Aquí', x: 50, y: 52, tone: 'lime' }]}
+                  className="h-[220px] w-full rounded-none border-0 border-t border-slate-200 shadow-none dark:border-slate-700 md:h-[280px]"
+                />
               </div>
             )}
 

@@ -98,9 +98,9 @@ export default function ContactoScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2 text-sm">
           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors">
             <ChevronLeft className="w-4 h-4" /> Volver
@@ -113,18 +113,18 @@ export default function ContactoScreen() {
       </div>
 
       {/* Header */}
-      <div className="bg-white border-b border-slate-100">
+      <div className="bg-white border-b border-slate-100 dark:border-slate-800 dark:bg-slate-900">
         <div className="max-w-5xl mx-auto px-4 py-10 md:py-14">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Contáctanos</h1>
-          <p className="text-slate-500 text-lg">Estamos aquí para ayudarte. Respondemos en menos de 24 horas.</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2 dark:text-white">Contáctanos</h1>
+          <p className="text-slate-500 text-lg dark:text-slate-300">Estamos aquí para ayudarte. Respondemos en menos de 24 horas.</p>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-10 grid md:grid-cols-5 gap-8">
         {/* Form col */}
         <div className="md:col-span-3">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
-            <h2 className="text-lg font-bold text-slate-900 mb-6">Envíanos un mensaje</h2>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-lg font-bold text-slate-900 mb-6 dark:text-white">Envíanos un mensaje</h2>
 
             {status === 'success' && (
               <div className="flex items-start gap-3 bg-lime-50 border border-lime-200 rounded-xl p-4 mb-6">
@@ -235,7 +235,7 @@ export default function ContactoScreen() {
           {/* Contact cards */}
           <div className="space-y-3">
             {CONTACT_INFO.map(({ icon: Icon, title, value, sub, href, color }) => (
-              <div key={title} className="bg-white rounded-xl border border-slate-200 p-4 flex items-start gap-3 hover:shadow-sm transition-shadow">
+              <div key={title} className="bg-white rounded-xl border border-slate-200 p-4 flex items-start gap-3 hover:shadow-sm transition-shadow dark:border-slate-800 dark:bg-slate-900">
                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color.split(' ')[0]}`}>
                   <Icon className={`w-4.5 h-4.5 ${color.split(' ')[1]}`} />
                 </div>
@@ -243,11 +243,11 @@ export default function ContactoScreen() {
                   <p className="text-xs text-slate-400 mb-0.5">{title}</p>
                   {href ? (
                     <a href={href} target="_blank" rel="noopener noreferrer"
-                      className="font-semibold text-slate-800 hover:text-lime-600 transition-colors text-sm flex items-center gap-1">
+                      className="font-semibold text-slate-800 hover:text-lime-600 transition-colors text-sm flex items-center gap-1 dark:text-slate-100">
                       {value} <ExternalLink className="w-3 h-3 opacity-60" />
                     </a>
                   ) : (
-                    <p className="font-semibold text-slate-800 text-sm">{value}</p>
+                    <p className="font-semibold text-slate-800 text-sm dark:text-slate-100">{value}</p>
                   )}
                   <p className="text-xs text-slate-400 mt-0.5">{sub}</p>
                 </div>
@@ -256,13 +256,13 @@ export default function ContactoScreen() {
           </div>
 
           {/* Socials */}
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 dark:border-slate-800 dark:bg-slate-900">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Síguenos</p>
             <div className="flex gap-3">
               {SOCIALS.map(({ icon: Icon, label, href, color }) => (
                 <a key={label} href={href} target="_blank" rel="noopener noreferrer"
                   aria-label={label}
-                  className={`w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 ${color} transition-colors`}>
+                  className={`w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 ${color} transition-colors dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300`}>
                   <Icon className="w-4.5 h-4.5" />
                 </a>
               ))}

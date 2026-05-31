@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown, LocateFixed, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 import { MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
+import MercastoMapPreview from '../common/MercastoMapPreview';
 
 const GRADIENT_MAP = {
   blue:   'from-blue-600 to-blue-800',
@@ -35,13 +36,6 @@ const MAP_POINTS = {
   Mérida: [-89.5926, 20.9674],
 };
 
-const buildOsmEmbedUrl = (locationKey) => {
-  const [lon, lat] = MAP_POINTS[locationKey] || [-102.5528, 23.6345];
-  const span = locationKey && MAP_POINTS[locationKey] ? 0.35 : 18;
-  const bbox = [lon - span, lat - span, lon + span, lat + span].join('%2C');
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`;
-};
-
 export default function VerticalHero({
   title,
   subtitle,
@@ -65,8 +59,11 @@ export default function VerticalHero({
   const locationLabel = city || state || 'Todo México';
   const mapTerm = [query || mapQuery, city, state].filter(Boolean).join(' ');
   const osmQuery = encodeURIComponent(mapTerm || 'México');
-  const embedUrl = buildOsmEmbedUrl(city || state);
   const osmUrl = `https://www.openstreetmap.org/search?query=${osmQuery}`;
+  const markerPoint = MAP_POINTS[city || state];
+  const mapMarkers = markerPoint
+    ? [{ label: 'Aquí', coords: [markerPoint[1], markerPoint[0]], tone: 'lime' }]
+    : [];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -164,12 +161,11 @@ export default function VerticalHero({
 
         {showMap && (
           <div className="mx-auto mt-4 grid max-w-5xl gap-3 overflow-hidden rounded-3xl border border-white/20 bg-white p-2 text-left shadow-2xl md:grid-cols-[1.35fr_0.65fr]">
-            <iframe
-              title={`Mapa de ${title}`}
-              src={embedUrl}
-              loading="lazy"
+            <MercastoMapPreview
+              title={locationLabel}
+              markers={mapMarkers}
+              onSearch={handleSubmit}
               className="h-[260px] w-full rounded-2xl border-0 md:h-[320px]"
-              referrerPolicy="no-referrer-when-downgrade"
             />
             <div className="rounded-2xl bg-slate-950 p-4 text-white">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/50">Mapa activo</p>

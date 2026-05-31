@@ -5,14 +5,12 @@ import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
 
 import SortablePhotoGrid from '../SortablePhotoGrid';
+import MercastoMapPreview from '../common/MercastoMapPreview';
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, removeImageById, reorderImages, setEditingAd, setForm, setVideoFile, t, videoFile, aiLoading, handleGenerateDescription }) {
-    const mapQuery = debouncedLocation ? encodeURIComponent(debouncedLocation) : "Mexico";
     const [apiCategoryFields, setApiCategoryFields] = React.useState(null);
     const [loadingCategoryFields, setLoadingCategoryFields] = React.useState(false);
-
-    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=-117.7%2C14.2%2C-86.0%2C32.8&layer=mapnik&marker=23.6345%2C-102.5528#${mapQuery}`;
 
     React.useEffect(() => {
       if (!form.category) {
@@ -318,11 +316,15 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                  </div>
 
-                 <div className="osm-embed-shell w-full h-48 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 relative">
-
-                     <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={mapUrl} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)' }} className={`transition-opacity duration-300 ${isMapUpdating ? 'opacity-40' : 'opacity-100'}`}></iframe>
+                 <div className="w-full h-48 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
 
                      {isMapUpdating && <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50"><Loader2 className="w-8 h-8 text-[#84CC16] animate-spin"/></div>}
+                     <MercastoMapPreview
+                       title={debouncedLocation || form.location || form.state || 'Todo México'}
+                       markers={[{ label: 'Aquí', x: 50, y: 52, tone: 'lime' }]}
+                       showFullscreen={false}
+                       className={`h-full rounded-none border-0 shadow-none transition-opacity duration-300 ${isMapUpdating ? 'opacity-40' : 'opacity-100'}`}
+                     />
 
                  </div>
 
