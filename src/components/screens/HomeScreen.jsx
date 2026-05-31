@@ -684,9 +684,9 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                 <div className="flex items-center gap-2">
 
-                  <button onClick={() => { runSearch('Remoto', 'empleo'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.remote_only || 'Solo remoto'}</button>
+                  <button onClick={() => { runSearch('Remoto', 'empleo'); }} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700">{t.remote_only || 'Solo remoto'}</button>
 
-                  <button onClick={() => { runSearch('Tiempo Completo', 'empleo'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.full_time || 'Tiempo completo'}</button>
+                  <button onClick={() => { runSearch('Tiempo Completo', 'empleo'); }} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700">{t.full_time || 'Tiempo completo'}</button>
 
                   <a onClick={() => setActiveCat('empleo')} className="text-[13px] font-semibold text-[#65A30D] hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
 
@@ -694,23 +694,23 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
 
                 <div className="overflow-x-auto">
 
                   <table className="w-full text-[14px]">
 
-                    <thead className="bg-slate-50 text-[12px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
+                    <thead className="bg-slate-50 dark:bg-slate-950 text-[12px] uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
 
                       <tr><th className="text-left font-semibold px-4 py-3">{t.role || 'Puesto'}</th><th className="text-left font-semibold px-4 py-3 hidden md:table-cell">{t.company || 'Empresa'}</th><th className="text-left font-semibold px-4 py-3">{t.salary_mxn || 'Salario MXN'}</th><th className="text-left font-semibold px-4 py-3 hidden sm:table-cell">{t.location || 'Ubicación'}</th><th className="text-right font-semibold px-4 py-3">{t.action || 'Acción'}</th></tr>
 
                     </thead>
 
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
 
                       {jobsBoard.map((job, idx) => (
 
-                        <tr key={idx} className="hover:bg-slate-50 cursor-pointer" onClick={() => { runSearch(job.role, 'empleo'); }}>
+                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer" onClick={() => { runSearch(job.role, 'empleo'); }}>
 
                           <td className="px-4 py-3">
 
@@ -765,13 +765,13 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-slate-50 border-t border-slate-200 text-[13px]">
+                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-[13px]">
 
-                  <span className="text-slate-600">{t.showing_jobs || 'Mostrando empleos nuevos'}</span>
+                  <span className="text-slate-600 dark:text-slate-400">{t.showing_jobs || 'Mostrando empleos nuevos'}</span>
 
                   <div className="flex items-center gap-2">
 
-                    <button onClick={() => showHomeToast('La carga de CV estará disponible desde tu panel de usuario.')} className="btn-sm border border-slate-300 bg-white hover:bg-slate-100">{t.upload_cv || 'Subir CV'}</button>
+                    <button onClick={() => showHomeToast('La carga de CV estará disponible desde tu panel de usuario.')} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">{t.upload_cv || 'Subir CV'}</button>
 
                     <button onClick={() => showHomeToast('Alerta de empleo guardada para esta búsqueda.')} className="btn-sm bg-[#0F172A] text-white hover:bg-black">{t.create_job_alert || 'Crear alerta'}</button>
 
@@ -922,14 +922,14 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
                         : '/placeholder-ad.svg';
                       const locationStr = ad.state || ad.location?.split(',')[0] || 'México';
                       return (
-                        <div key={ad.id} onClick={() => { runSearch(ad.title); }} className="shrink-0 w-[160px] bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
-                          <div className="w-full h-[100px] bg-slate-100 overflow-hidden">
+                        <div key={ad.id} onClick={() => { runSearch(ad.title); }} className="shrink-0 w-[160px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md dark:hover:shadow-black/50 transition-shadow cursor-pointer group">
+                          <div className="w-full h-[100px] bg-slate-100 dark:bg-slate-850 overflow-hidden">
                             <img src={imgSrc} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { if (!e.currentTarget.src.endsWith('/placeholder-ad.svg')) e.currentTarget.src='/placeholder-ad.svg'; }} alt={ad.title}/>
                           </div>
                           <div className="p-2">
-                            <div className="text-[13px] font-bold text-[#0F172A] leading-tight line-clamp-1">{ad.title}</div>
-                            <div className="text-[13px] font-semibold text-[#65A30D] mt-0.5">${Number(ad.price || 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">MXN</span></div>
-                            <div className="text-[11px] text-slate-400 mt-0.5 truncate">{locationStr}</div>
+                            <div className="text-[13px] font-bold text-[#0F172A] dark:text-white leading-tight line-clamp-1">{ad.title}</div>
+                            <div className="text-[13px] font-semibold text-[#65A30D] dark:text-[#BEF264] mt-0.5">${Number(ad.price || 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">MXN</span></div>
+                            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{locationStr}</div>
                           </div>
                         </div>
                       );
@@ -947,25 +947,25 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
               <div className="grid lg:grid-cols-3 gap-4">
 
-                <div className="bg-white border border-slate-200 rounded-3xl p-6 card">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 card">
 
                   <div className="w-10 h-10 rounded-xl bg-[#84CC16]/15 flex items-center justify-center mb-3"><Zap className="w-5 h-5 text-[#65A30D]" /></div>
 
                   <h3 className="text-[18px] font-bold">{t.plan_free || 'Mercasto Starter'}</h3>
 
-                  <p className="text-[14px] text-slate-600 mt-1">{t.starter_desc || 'Ideal para ventas ocasionales'}</p>
+                  <p className="text-[14px] text-slate-600 dark:text-slate-400 mt-1">{t.starter_desc || 'Ideal para ventas ocasionales'}</p>
 
-                  <ul className="mt-4 space-y-2 text-[13px] text-slate-700">
+                  <ul className="mt-4 space-y-2 text-[13px] text-slate-700 dark:text-slate-300">
 
                     <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> 3 {t.free_ad || 'anuncios'}</li>
 
                     <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.basic_stats || 'Estadísticas básicas'}</li>
 
-                    <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.contacto_qr || 'Contacto vía QR'}</li>
+                    <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.contacto_qr || 'Contacto vía Whatsapp/Telegram'}</li>
 
                   </ul>
 
-                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#0F172A] text-white hover:bg-black">Elegir plan</button>
+                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700">Elegir plan</button>
 
                 </div>
 
@@ -995,15 +995,15 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-3xl p-6 card">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 card">
 
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mb-3"><Building2 className="w-5 h-5 text-slate-700" /></div>
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3"><Building2 className="w-5 h-5 text-slate-700 dark:text-slate-300" /></div>
 
                   <h3 className="text-[18px] font-bold">{t.enterprise || 'Enterprise'}</h3>
 
-                  <p className="text-[14px] text-slate-600 mt-1">{t.enterprise_desc || 'Inmobiliarias, agencias...'}</p>
+                  <p className="text-[14px] text-slate-600 dark:text-slate-400 mt-1">{t.enterprise_desc || 'Inmobiliarias, agencias...'}</p>
 
-                  <ul className="mt-4 space-y-2 text-[13px] text-slate-700">
+                  <ul className="mt-4 space-y-2 text-[13px] text-slate-700 dark:text-slate-300">
 
                     <li className="flex gap-2"><span className="text-[#84CC16]">✓</span> {t.bulk_import || 'Importación masiva'}</li>
 
@@ -1013,7 +1013,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   </ul>
 
-                  <button onClick={() => navigate('/contacto?enterprise=1')} className="btn-md w-full mt-5 border border-slate-300 hover:bg-slate-50">{t.contact_sales || 'Contactar ventas'}</button>
+                  <button onClick={() => navigate('/contacto?enterprise=1')} className="btn-md w-full mt-5 border border-slate-300 dark:border-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800">{t.contact_sales || 'Contactar ventas'}</button>
 
                 </div>
 

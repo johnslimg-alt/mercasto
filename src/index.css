@@ -773,6 +773,11 @@ html.dark .btn-lg.bg-white:hover {
     border-color: rgba(132, 204, 22, 0.62) !important;
   }
 
+  html.dark .market-card:hover {
+    border-color: rgba(132, 204, 22, 0.5) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(132, 204, 22, 0.3) !important;
+  }
+
   html.dark .category-pill h3 {
     color: #E2E8F0 !important;
   }
