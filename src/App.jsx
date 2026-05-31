@@ -3644,11 +3644,21 @@ function App() {
                         );
                         // Слушаем сообщение от popup
                         const listener = (event) => {
-                          if (event.origin === 'https://oauth.telegram.org' && event.data?.event === 'auth_result') {
-                            window.removeEventListener('message', listener);
-                            if (event.data.result) {
-                              window.TelegramLoginCallback(event.data.result);
+                          const allowedOrigins = ['https://oauth.telegram.org', 'https://oauth.tg.org'];
+                          if (!allowedOrigins.includes(event.origin)) return;
+
+                          let data = event.data;
+                          if (typeof data === 'string') {
+                            try {
+                              data = JSON.parse(data);
+                            } catch (e) {
+                              return;
                             }
+                          }
+
+                          if (data?.event === 'auth_result' && data?.result) {
+                            window.removeEventListener('message', listener);
+                            window.TelegramLoginCallback(data.result);
                           }
                         };
                         window.addEventListener('message', listener);

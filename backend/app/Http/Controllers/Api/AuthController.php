@@ -436,6 +436,9 @@ class AuthController extends Controller
         }
 
         $driver = $provider === 'twitter' ? 'twitter-oauth2' : $provider;
+        if ($provider === 'twitter') {
+            return Socialite::driver($driver)->redirect();
+        }
         return Socialite::driver($driver)->stateless()->redirect();
     }
 
@@ -489,7 +492,11 @@ class AuthController extends Controller
                 ];
             } else {
                 $driver = $provider === 'twitter' ? 'twitter-oauth2' : $provider;
-                $socialUser = Socialite::driver($driver)->stateless()->user();
+                if ($provider === 'twitter') {
+                    $socialUser = Socialite::driver($driver)->user();
+                } else {
+                    $socialUser = Socialite::driver($driver)->stateless()->user();
+                }
             }
             
             // Ищем по ID провайдера
