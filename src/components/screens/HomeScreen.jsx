@@ -706,11 +706,11 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                     </thead>
 
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody className="">
 
                       {jobsBoard.map((job, idx) => (
 
-                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer" onClick={() => { runSearch(job.role, 'empleo'); }}>
+                        <tr key={idx} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/90 cursor-pointer transition-colors duration-150 last:border-0" onClick={() => { runSearch(job.role, 'empleo'); }}>
 
                           <td className="px-4 py-3">
 
@@ -965,7 +965,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   </ul>
 
-                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700">Elegir plan</button>
+                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-transparent border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold">Elegir plan</button>
 
                 </div>
 

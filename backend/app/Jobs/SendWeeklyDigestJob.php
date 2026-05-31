@@ -115,7 +115,7 @@ class SendWeeklyDigestJob implements ShouldQueue
                               ->orWhere('category', 'like', $slug . '/%');
                         }
                     })
-                    ->orderByDesc('is_featured')
+                    ->orderByRaw("CASE WHEN promoted = 'destacado' THEN 1 ELSE 0 END DESC")
                     ->orderByDesc('created_at')
                     ->limit(8)
                     ->get();
@@ -130,7 +130,7 @@ class SendWeeklyDigestJob implements ShouldQueue
                 ->where('status', 'active')
                 ->where('user_id', '!=', $userId)
                 ->where('created_at', '>=', $since)
-                ->where('is_featured', true)
+                ->where('promoted', 'destacado')
                 ->whereNotIn('id', $favoritedIds)
                 ->orderByDesc('created_at')
                 ->limit(8)
@@ -143,7 +143,7 @@ class SendWeeklyDigestJob implements ShouldQueue
         $uniqueIds = $ads->unique('id')->pluck('id')->take(8)->values();
 
         return \App\Models\Ad::whereIn('id', $uniqueIds)
-            ->orderByDesc('is_featured')
+            ->orderByRaw("CASE WHEN promoted = 'destacado' THEN 1 ELSE 0 END DESC")
             ->orderByDesc('created_at')
             ->get();
     }
