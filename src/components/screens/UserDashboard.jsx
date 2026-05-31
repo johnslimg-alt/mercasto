@@ -51,6 +51,11 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
       || user?.email
       || t.complete_business_profile_hint
       || 'Agrega los datos de tu negocio para vender como PRO';
+    const accountVerified = Boolean(user?.account_verified || user?.email_verified || user?.email_verified_at || user?.phone_verified || user?.is_verified || user?.kyc_status === 'approved');
+    const verificationMethods = user?.account_verification_methods || [];
+    const hasEmailVerified = Boolean(user?.email_verified || user?.email_verified_at || verificationMethods.includes('email'));
+    const hasPhoneVerified = Boolean(user?.phone_verified || verificationMethods.includes('phone'));
+    const hasTrustBadge = Boolean(user?.is_verified || verificationMethods.includes('admin') || user?.kyc_status === 'approved');
 
     
 
@@ -110,6 +115,42 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
 
 
+          {/* Account verification status */}
+          {user && !accountVerified && (
+            <div className="mb-6 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={20} />
+                <div>
+                  <h3 className="font-bold text-amber-950 dark:text-amber-100 text-[15px]">Cuenta no verificada</h3>
+                  <p className="text-[13px] text-amber-800 dark:text-amber-200 mt-1">Confirma tu email, teléfono o solicita verificación para aumentar la confianza de compradores y vendedores.</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {hasEmailVerified ? (
+                  <span className="btn-sm bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default font-semibold text-[12px] flex items-center gap-1"><CheckCircle size={14}/> Email verificado</span>
+                ) : (
+                  <button onClick={async () => {
+                    try {
+                      const tok = localStorage.getItem('auth_token');
+                      const r = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api'}/email/send-verification`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${tok}` }
+                      });
+                      if (r.ok) {
+                        showDashToast('Email de verificación enviado.', 'success');
+                      } else {
+                        showDashToast('No se pudo enviar el email.', 'error');
+                      }
+                    } catch (err) { showDashToast('Error de conexión.', 'error'); }
+                  }} className="btn-sm bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[12px]">Verificar email</button>
+                )}
+                <span className={`btn-sm border cursor-default font-semibold text-[12px] flex items-center gap-1 ${hasPhoneVerified ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-slate-500 border-slate-200'}`}>
+                  {hasPhoneVerified ? <CheckCircle size={14}/> : <Phone size={14}/>} Teléfono {hasPhoneVerified ? 'verificado' : 'pendiente'}
+                </span>
+              </div>
+            </div>
+          )}
+
           <h1 className="hidden md:block text-[24px] font-bold text-slate-900 mb-6">{t.dashboard}</h1>
 
           
@@ -141,6 +182,15 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 {accountType === 'pro' && <span className="badge bg-slate-900 text-white">PRO</span>}
 
                 {userRole === 'admin' && <span className="badge bg-red-500 text-white">ADMIN</span>}
+
+                {accountVerified ? (
+                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-emerald-100"><CheckCircle size={14}/> Cuenta verificada</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-amber-100"><XCircle size={14}/> Cuenta no verificada</span>
+                )}
+                {hasTrustBadge && (
+                  <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-100"><BadgeCheck size={14}/> Vendedor verificado</span>
+                )}
 
               </h2>
 

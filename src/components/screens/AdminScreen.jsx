@@ -757,6 +757,8 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
                          <th className="p-3">{t.users_tab}</th>
 
+                         <th className="p-3">Estado</th>
+
                          <th className="p-3">Email / IP</th>
 
                          <th className="p-3">{t.role}</th>
@@ -769,7 +771,16 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
                      <tbody className="divide-y divide-slate-100">
 
-                       {filteredAdminUsers.map(u => (
+                       {filteredAdminUsers.map(u => {
+                         const accountVerified = Boolean(u.account_verified || u.email_verified || u.email_verified_at || u.phone_verified || u.is_verified || u.kyc_status === 'approved');
+                         const methods = u.account_verification_methods || [];
+                         const methodLabels = [
+                           (u.email_verified || u.email_verified_at || methods.includes('email')) ? 'Email' : null,
+                           (u.phone_verified || methods.includes('phone')) ? 'Teléfono' : null,
+                           (u.is_verified || methods.includes('admin')) ? 'Admin' : null,
+                           (u.kyc_status === 'approved' || methods.includes('kyc')) ? 'KYC' : null,
+                         ].filter(Boolean);
+                         return (
 
                          <tr key={u.id} className="hover:bg-slate-50 transition-colors">
 
@@ -785,13 +796,30 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
                                <div>
 
-                                 <p className="font-semibold text-[14px] text-slate-900 flex items-center gap-1">{u.name}</p>
-
-                                 <p className="text-[11px] font-medium text-slate-500">ID: {u.id}</p>
+                                 <p className="font-semibold text-[14px] text-slate-900 flex items-center gap-1">
+                                   {u.name}
+                                   {accountVerified ? (
+                                     <span className="inline-flex items-center text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] font-bold border border-emerald-100" title="Cuenta verificada"><CheckCircle size={11} /> Cuenta verificada</span>
+                                   ) : (
+                                     <span className="inline-flex items-center text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded text-[10px] font-bold border border-amber-100" title="Cuenta no verificada"><XCircle size={11} /> No verificada</span>
+                                   )}
+                                 </p>
+                                 <p className="text-[11px] font-medium text-slate-500 font-mono">ID: {u.id} | KYC: <span className={`font-bold capitalize ${u.kyc_status === 'approved' ? 'text-blue-600' : u.kyc_status === 'pending' ? 'text-amber-500 animate-pulse' : 'text-slate-400'}`}>{u.kyc_status || 'unverified'}</span></p>
 
                                </div>
 
                              </div>
+
+                           </td>
+
+                           <td className="p-3">
+
+                             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${accountVerified ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                               {accountVerified ? <CheckCircle size={13}/> : <AlertTriangle size={13}/>}
+                               {accountVerified ? 'Confirmado' : 'Sin confirmar'}
+                             </div>
+
+                             <p className="text-[11px] text-slate-500 mt-1">{methodLabels.length ? methodLabels.join(' · ') : 'Email/teléfono pendiente'}</p>
 
                            </td>
 
@@ -842,14 +870,14 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                            </td>
 
                          </tr>
-
-                       ))}
+                         );
+                       })}
 
                        {filteredAdminUsers.length === 0 && (
 
                          <tr>
 
-                           <td colSpan="4" className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">{t.no_users}</td>
+                           <td colSpan="5" className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">{t.no_users}</td>
 
                          </tr>
 

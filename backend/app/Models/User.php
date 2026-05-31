@@ -53,6 +53,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'business_description',
         'business_profile_enabled',
         'business_rfc_verified_at',
+        'kyc_document_url',
+        'kyc_status',
     ];
 
     /**
@@ -70,6 +72,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'pending_email',
         'phone_otp',
         'phone_otp_expires_at',
+    ];
+
+    protected $appends = [
+        'account_verified',
+        'account_verification_methods',
     ];
 
     /**
@@ -100,5 +107,25 @@ class User extends Authenticatable implements MustVerifyEmail
     public function ads(): HasMany
     {
         return $this->hasMany(Ad::class);
+    }
+
+    public function getAccountVerifiedAttribute(): bool
+    {
+        return (bool) (
+            $this->email_verified_at
+            || $this->phone_verified
+            || $this->is_verified
+            || $this->kyc_status === 'approved'
+        );
+    }
+
+    public function getAccountVerificationMethodsAttribute(): array
+    {
+        return array_values(array_filter([
+            $this->email_verified_at ? 'email' : null,
+            $this->phone_verified ? 'phone' : null,
+            $this->is_verified ? 'admin' : null,
+            $this->kyc_status === 'approved' ? 'kyc' : null,
+        ]));
     }
 }

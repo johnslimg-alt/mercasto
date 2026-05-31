@@ -1441,7 +1441,12 @@ function App() {
       const res = await fetch(`${API_URL}/users/${id}/verify`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, is_verified: data.is_verified } : u));
+        setAdminUsers(prev => prev.map(u => u.id === id ? {
+          ...u,
+          is_verified: data.is_verified,
+          account_verified: data.account_verified,
+          account_verification_methods: data.account_verification_methods || u.account_verification_methods || [],
+        } : u));
       }
     } catch (err) { console.error("Error verifying user", err); }
   };
@@ -2956,12 +2961,12 @@ function App() {
       )}
 
       {/* EMAIL VERIFICATION BANNER */}
-      {user && !user.email_verified && !emailBannerDismissed && (
+      {user && !user.account_verified && !emailBannerDismissed && (
         <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center justify-between text-sm z-50 relative">
           <span className="text-yellow-800">
             {emailBannerSent
               ? `✅ Email enviado a ${user.email}. Revisa tu bandeja de entrada.`
-              : <>⚠️ Verifica tu email para aumentar tu confianza en Mercasto.{' '}
+              : <>⚠️ Cuenta no verificada. Confirma tu email o teléfono para aumentar la confianza en Mercasto.{' '}
                   <button onClick={resendVerificationEmail} className="underline text-yellow-700 font-medium hover:text-yellow-900">Reenviar email</button>
                 </>
             }

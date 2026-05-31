@@ -418,7 +418,12 @@ class ProfileController extends Controller
         $userToVerify->is_verified = !$userToVerify->is_verified;
         $userToVerify->save();
 
-        return response()->json(['message' => 'Estado de verificación actualizado', 'is_verified' => $userToVerify->is_verified]);
+        return response()->json([
+            'message' => 'Estado de verificación actualizado',
+            'is_verified' => $userToVerify->is_verified,
+            'account_verified' => $userToVerify->account_verified,
+            'account_verification_methods' => $userToVerify->account_verification_methods,
+        ]);
     }
 
     public function destroy(Request $request, $id)
