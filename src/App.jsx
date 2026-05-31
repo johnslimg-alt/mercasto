@@ -2777,61 +2777,146 @@ function App() {
         <div className="bg-slate-50 w-full max-w-5xl md:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0">
           <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
             <div className="p-5 flex justify-between items-center">
-              <h3 className="font-bold text-[22px] text-slate-900 flex items-center gap-2"><Crown className="w-6 h-6 text-amber-500"/> {t.pricing_title}</h3>
+              <h3 className="font-bold text-[22px] text-slate-900 flex items-center gap-2"><Crown className="w-6 h-6 text-[#84CC16]"/> {t.pricing_title || 'Planes y Promociones'}</h3>
               <button onClick={() => setShowPricingModal(false)} className="p-1 text-slate-400 hover:text-slate-800 transition-colors"><XCircle size={26}/></button>
             </div>
             <div className="flex px-5 gap-6 border-t border-slate-100">
-              <button onClick={() => setPriceTab('particular')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'particular' ? 'border-[#84CC16] text-[#65A30D]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{t.tab_individuals}</button>
-              <button onClick={() => setPriceTab('pro')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'pro' ? 'border-[#84CC16] text-[#65A30D]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{t.tab_businesses}</button>
+              <button onClick={() => setPriceTab('particular')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'particular' ? 'border-[#84CC16] text-[#65A30D]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Planes mensuales</button>
+              <button onClick={() => setPriceTab('pro')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'pro' ? 'border-[#84CC16] text-[#65A30D]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>Promociones únicas</button>
             </div>
           </div>
           <div className="p-4 md:p-6 overflow-y-auto">
             {priceTab === 'particular' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-3xl mx-auto">
-                <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 flex flex-col shadow-sm">
-                  <h4 className="font-bold text-slate-500 uppercase tracking-wider text-[12px] mb-2">{t.plan_free}</h4>
-                  <p className="text-4xl font-black text-slate-900 mb-4">$0</p>
-                  <ul className="space-y-3 mb-8 flex-1">
-                    <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> 3 {t.free_ad} / mes</li>
-                    <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Contacto por QR</li>
-                  </ul>
-                  <button className="btn-lg w-full border border-slate-300 text-slate-700 hover:bg-slate-50">{t.current_plan}</button>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {/* Gratis */}
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200 flex flex-col shadow-sm">
+                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[11px] mb-1">Gratis</h4>
+                    <p className="text-2xl font-black text-slate-950 mb-3">$0 <span className="text-[12px] font-normal text-slate-400">/mes</span></p>
+                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600">
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 3 anuncios activos</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Contacto por QR</li>
+                    </ul>
+                    <button className="py-2.5 w-full border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors">Plan actual</button>
+                  </div>
+                  {/* Impulso */}
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200 flex flex-col shadow-sm">
+                    <h4 className="font-bold text-[#65A30D] uppercase tracking-wider text-[11px] mb-1">Impulso</h4>
+                    <p className="text-2xl font-black text-slate-950 mb-3">$99 <span className="text-[12px] font-normal text-slate-400">/mes</span></p>
+                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600">
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 10 anuncios activos</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Más visibilidad</li>
+                    </ul>
+                    <button onClick={() => handleClipPayment(99, 'Plan Impulso', null, 'package_impulso')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                  </div>
+                  {/* Negocio */}
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200 flex flex-col shadow-sm">
+                    <h4 className="font-bold text-[#65A30D] uppercase tracking-wider text-[11px] mb-1">Negocio</h4>
+                    <p className="text-2xl font-black text-slate-950 mb-3">$249 <span className="text-[12px] font-normal text-slate-400">/mes</span></p>
+                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600">
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 30 anuncios activos</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Insignia de negocio</li>
+                    </ul>
+                    <button onClick={() => handleClipPayment(249, 'Plan Negocio', null, 'package_negocio')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                  </div>
+                  {/* Pro */}
+                  <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 flex flex-col shadow-lg relative ring-2 ring-[#84CC16]">
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#84CC16] text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">POPULAR</div>
+                    <h4 className="font-bold text-lime-400 uppercase tracking-wider text-[11px] mb-1">Pro</h4>
+                    <p className="text-2xl font-black text-white mb-3">$599 <span className="text-[12px] font-normal text-slate-400">/mes</span></p>
+                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-300">
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 100 anuncios activos</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Página de empresa</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Soporte preferente</li>
+                    </ul>
+                    <button onClick={() => handleClipPayment(599, 'Plan Pro', null, 'package_pro')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                  </div>
+                  {/* Agencia */}
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200 flex flex-col shadow-sm">
+                    <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[11px] mb-1">Agencia</h4>
+                    <p className="text-2xl font-black text-slate-950 mb-3"><span className="text-[12px] font-normal text-slate-400">Desde</span> $1,499 <span className="text-[12px] font-normal text-slate-400">/mes</span></p>
+                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600">
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 300-500 anuncios</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Carga masiva XML/CSV</li>
+                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> API acceso</li>
+                    </ul>
+                    <button onClick={() => handleClipPayment(1499, 'Plan Agencia', null, 'package_agencia')} className="py-2.5 w-full bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Adquirir plan</button>
+                  </div>
                 </div>
-                <div className="bg-[#84CC16] rounded-3xl p-6 md:p-8 border border-[#84CC16] flex flex-col shadow-lg">
-                  <h4 className="font-bold text-lime-100 uppercase tracking-wider text-[12px] mb-2">{t.plan_plus}</h4>
-                  <p className="text-4xl font-black text-white mb-4">$99 <span className="text-[14px] font-medium text-lime-100">/mes</span></p>
-                  <ul className="space-y-3 mb-8 flex-1">
-                    <li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> 10 anuncios / mes</li>
-                    <li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> 2 Subidas a TOP gratis</li>
-                    <li className="flex items-center gap-2 text-[14px] text-white"><CheckCircle className="w-4 h-4 text-white"/> Más visibilidad</li>
-                  </ul>
-                  <button onClick={() => handleClipPayment(99, t.plus_subscription_description || 'Suscripción Paquete Plus', null, 'plus_monthly')} className="btn-lg w-full bg-white text-[#65A30D] hover:bg-slate-50 shadow-sm">{t.buy_plan}</button>
+
+                <div className="bg-slate-100 rounded-2xl p-4 text-center border border-slate-200">
+                  <p className="text-[14px] font-semibold text-slate-700">Paga con tarjeta o efectivo en OXXO</p>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto">
-                <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#84CC16]/50 flex flex-col relative shadow-sm">
-                  <h4 className="font-bold text-slate-500 uppercase tracking-wider text-[12px] mb-2">{t.plan_pro_basic}</h4>
-                  <p className="text-4xl font-black text-slate-900 mb-4">$500 <span className="text-[14px] font-medium text-slate-500">/mes</span></p>
-                  <ul className="space-y-3 mb-8 flex-1">
-                    <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> 50 anuncios / mes</li>
-                    <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Insignia "PRO"</li>
-                    <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Página de Empresa</li>
-                    <li className="flex items-center gap-2 text-[14px] text-slate-700"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Estadísticas avanzadas</li>
-                  </ul>
-                  <button onClick={() => handleClipPayment(500, t.pro_basic_subscription_description || 'Suscripción PRO Estándar', null, 'pro_standard_monthly')} className="btn-lg w-full border-2 border-[#84CC16] text-[#65A30D] hover:bg-[#84CC16]/5">{t.buy_plan}</button>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                  {/* Subir anuncios */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-200 flex flex-col shadow-sm">
+                    <h4 className="font-bold text-slate-500 uppercase tracking-wider text-[12px] mb-4">Subir de posición</h4>
+                    <div className="space-y-4 flex-1">
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                        <div>
+                          <p className="font-bold text-slate-900 text-[14px]">Subir 24 horas</p>
+                          <p className="text-[12px] text-slate-500">Reposiciona tu anuncio al inicio por 1 día</p>
+                        </div>
+                        <button onClick={() => handleClipPayment(19, 'Subir 24 horas', null, 'boost_1_day')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$19</button>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                        <div>
+                          <p className="font-bold text-slate-900 text-[14px]">Subir 3 días</p>
+                          <p className="text-[12px] text-slate-500">Reposiciona al inicio cada día por 3 días</p>
+                        </div>
+                        <button onClick={() => handleClipPayment(49, 'Subir 3 días', null, 'boost_3_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$49</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Resaltar / Destacar 7 días */}
+                  <div className="bg-white rounded-3xl p-6 border border-[#84CC16]/50 flex flex-col shadow-sm">
+                    <h4 className="font-bold text-[#65A30D] uppercase tracking-wider text-[12px] mb-4">Destacar Anuncio</h4>
+                    <div className="space-y-4 flex-1">
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                        <div>
+                          <p className="font-bold text-slate-900 text-[14px]">Resaltar 7 días</p>
+                          <p className="text-[12px] text-slate-500">Fondo llamativo en los resultados</p>
+                        </div>
+                        <button onClick={() => handleClipPayment(79, 'Resaltar 7 días', null, 'highlight_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$79</button>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                        <div>
+                          <p className="font-bold text-slate-900 text-[14px]">Destacado 7 días</p>
+                          <p className="text-[12px] text-slate-500">Etiqueta dorada y mayor exposición</p>
+                        </div>
+                        <button onClick={() => handleClipPayment(149, 'Destacado 7 días', null, 'featured_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$149</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Destacar 30 días / Top categoría */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-200 flex flex-col shadow-sm">
+                    <h4 className="font-bold text-slate-500 uppercase tracking-wider text-[12px] mb-4">Promoción Premium</h4>
+                    <div className="space-y-4 flex-1">
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                        <div>
+                          <p className="font-bold text-slate-900 text-[14px]">Destacado 30 días</p>
+                          <p className="text-[12px] text-slate-500">Súper exposición por un mes completo</p>
+                        </div>
+                        <button onClick={() => handleClipPayment(399, 'Destacado 30 días', null, 'featured_30_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                        <div>
+                          <p className="font-bold text-slate-900 text-[14px]">Top categoría 7 días</p>
+                          <p className="text-[12px] text-slate-500">Anuncio fijo al inicio de su categoría</p>
+                        </div>
+                        <button onClick={() => handleClipPayment(399, 'Top categoría 7 días', null, 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-[#0F172A] rounded-3xl p-6 md:p-8 flex flex-col relative shadow-xl transform md:-translate-y-2 ring-2 ring-[#84CC16]">
-                  <div className="absolute top-0 right-6 -translate-y-1/2 bg-[#84CC16] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-md">POPULAR</div>
-                  <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[12px] mb-2">{t.plan_pro_max}</h4>
-                  <p className="text-4xl font-black text-white mb-4">$1,500 <span className="text-[14px] font-medium text-slate-400">/mes</span></p>
-                  <ul className="space-y-3 mb-8 flex-1">
-                    <li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Anuncios Ilimitados</li>
-                    <li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Subida masiva (XML/CSV)</li>
-                    <li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> 10 Destacados incluidos</li>
-                    <li className="flex items-center gap-2 text-[14px] text-white/90"><CheckCircle className="w-4 h-4 text-[#84CC16]"/> Soporte dedicado</li>
-                  </ul>
-                  <button onClick={() => handleClipPayment(1500, t.pro_max_subscription_description || 'Suscripción PRO Ilimitado', null, 'pro_unlimited_monthly')} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] shadow-md">{t.buy_plan}</button>
+
+                <div className="bg-slate-100 rounded-2xl p-4 text-center border border-slate-200">
+                  <p className="text-[14px] font-semibold text-slate-700">Paga con tarjeta o efectivo en OXXO</p>
                 </div>
               </div>
             )}
