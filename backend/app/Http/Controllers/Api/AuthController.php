@@ -379,7 +379,7 @@ class AuthController extends Controller
 
         return response()->json([
             'google'   => $this->isValidConfig(config('services.google.client_id'), config('services.google.client_secret')),
-            'apple'    => $this->isValidConfig(config('services.apple.client_id'), config('services.apple.client_secret')),
+            'twitter'  => $this->isValidConfig(config('services.twitter-oauth2.client_id'), config('services.twitter-oauth2.client_secret')),
             'telegram' => $this->isValidConfig(config('services.telegram.client_id'), config('services.telegram.client_secret')),
             'sms'      => $smsConfigured,
         ]);
@@ -414,14 +414,24 @@ class AuthController extends Controller
     /**
      * Перенаправление на страницу авторизации провайдера
      */
-    public function redirectToProvider($provider)
+    public function redirectToProvider(Request $request, $provider)
     {
-        $allowedProviders = ['google', 'apple', 'telegram'];
+        $allowedProviders = ['google', 'apple', 'telegram', 'twitter'];
         if (!in_array($provider, $allowedProviders)) {
             return response()->json(['error' => 'Proveedor no soportado'], 400);
         }
         
-        return Socialite::driver($provider)->stateless()->redirect();
+        if ($provider === 'telegram') {
+            $botToken = config('services.telegram.client_secret');
+            $botId = explode(':', $botToken)[0];
+            $origin = $request->getSchemeAndHttpHost();
+            $redirectUrl = config('services.telegram.redirect') ?: $origin . '/api/auth/telegram/callback';
+            
+            return redirect()->away("https://oauth.telegram.org/auth?bot_id={$botId}&origin=" . urlencode($origin) . "&embed=1&return_to=" . urlencode($redirectUrl));
+        }
+
+        $driver = $provider === 'twitter' ? 'twitter-oauth2' : $provider;
+        return Socialite::driver($driver)->stateless()->redirect();
     }
 
     /**
@@ -429,8 +439,53 @@ class AuthController extends Controller
      */
     public function handleProviderCallback(Request $request, $provider)
     {
+        $allowedProviders = ['google', 'apple', 'telegram', 'twitter'];
+        if (!in_array($provider, $allowedProviders)) {
+            return response()->json(['error' => 'Proveedor no soportado'], 400);
+        }
+
         try {
-            $socialUser = Socialite::driver($provider)->stateless()->user();
+            if ($provider === 'telegram') {
+                $authData = $request->only(['id', 'first_name', 'last_name', 'username', 'photo_url', 'auth_date', 'hash']);
+                if (empty($authData['hash'])) {
+                    $authData = $request->query();
+                }
+
+                if (empty($authData['hash'])) {
+                    return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=telegram_auth_failed');
+                }
+
+                $checkHash = $authData['hash'];
+                unset($authData['hash']);
+
+                $dataCheckArr = [];
+                foreach ($authData as $key => $value) {
+                    if ($value !== null) {
+                        $dataCheckArr[] = $key . '=' . $value;
+                    }
+                }
+                sort($dataCheckArr);
+                $dataCheckString = implode("\n", $dataCheckArr);
+
+                $botToken = config('services.telegram.client_secret');
+                $secretKey = hash('sha256', $botToken, true);
+                $hash = hash_hmac('sha256', $dataCheckString, $secretKey);
+
+                if (strcmp($hash, $checkHash) !== 0) {
+                    \Illuminate\Support\Facades\Log::warning('Telegram signature verification failed.');
+                    return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=telegram_signature_invalid');
+                }
+
+                $socialUser = (object)[
+                    'id' => $authData['id'],
+                    'name' => $authData['first_name'] . (isset($authData['last_name']) ? ' ' . $authData['last_name'] : ''),
+                    'email' => isset($authData['username']) ? $authData['username'] . '@telegram.local' : $authData['id'] . '@telegram.local',
+                    'avatar' => $authData['photo_url'] ?? null,
+                ];
+            } else {
+                $driver = $provider === 'twitter' ? 'twitter-oauth2' : $provider;
+                $socialUser = Socialite::driver($driver)->stateless()->user();
+            }
             
             // Ищем по ID провайдера
             $user = User::where("{$provider}_id", $socialUser->id)->first();

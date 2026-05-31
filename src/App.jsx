@@ -417,7 +417,7 @@ function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [couponInput, setCouponInput] = useState('');
-  const [availableProviders, setAvailableProviders] = useState({ google: false, telegram: false, sms: false });
+  const [availableProviders, setAvailableProviders] = useState({ google: false, twitter: false, telegram: false, sms: false });
 
   const setCurrentTab = useCallback((tab) => {
     // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
@@ -469,6 +469,7 @@ function App() {
         const p = data?.providers ?? data;
         setAvailableProviders({
           google:   p?.google?.enabled  ?? p?.google  ?? false,
+          twitter:  p?.twitter?.enabled ?? p?.twitter ?? false,
           telegram: p?.telegram?.enabled ?? p?.telegram ?? false,
           sms:      p?.sms?.enabled      ?? p?.sms      ?? p?.phone?.enabled ?? p?.phone ?? false,
         });
@@ -3593,8 +3594,16 @@ function App() {
                         </button>
                       )}
 
+                      {availableProviders?.twitter && (
+                      <button type="button" onClick={() => window.location.href = `${API_URL}/auth/twitter/redirect`} className="btn-md w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                          </svg>
+                          X (Twitter)
+                      </button>
+                      )}
                       {availableProviders?.telegram && (
-                      <button type="button" onClick={() => window.location.href = `${API_URL}/auth/telegram/redirect`} className="btn-md w-full bg-[#229ED9] text-white hover:bg-[#1c88ba] flex items-center justify-center gap-2">
+                      <button type="button" onClick={() => window.location.href = `${API_URL}/auth/telegram/redirect`} className="btn-md w-full bg-[#229ED9] text-white hover:bg-[#1c88ba] flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md">
                           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                               <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.223-.535.223l.188-2.85 5.18-4.686c.223-.195-.054-.31-.35-.11l-6.4 4.02-2.76-.89c-.6-.188-.614-.6.126-.89L17.2 7.15c.523-.188.983.118.694 1.07z"/>
                           </svg>

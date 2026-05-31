@@ -54,6 +54,12 @@ return [
         'redirect'      => env('APP_URL') . '/api/auth/telegram/callback',
     ],
 
+    'twitter-oauth2' => [
+        'client_id'     => env('TWITTER_CLIENT_ID'),
+        'client_secret' => env('TWITTER_CLIENT_SECRET'),
+        'redirect'      => env('APP_URL') . '/api/auth/twitter/callback',
+    ],
+
     'clip' => [
         'api_key'        => env('CLIP_API_KEY'),
         'api_secret'     => env('CLIP_API_SECRET'),
