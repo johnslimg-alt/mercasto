@@ -139,7 +139,7 @@ export const translations = {
     browse_services: 'Ver todos →', from: 'Desde', book_now: 'Reservar', year: 'Año', price: 'Precio',
     recently_viewed: 'Vistos recientemente', clear_history: 'Borrar historial',
     starter_desc: 'Ideal para ventas ocasionales', basic_stats: 'Estadísticas básicas',
-    contacto_qr: 'Contacto vía QR', pro_desc: 'Para vendedores recurrentes', unlimited_ads: 'Anuncios ilimitados',
+    contacto_qr: 'Contacto vía Whatsapp/Telegram', pro_desc: 'Para vendedores recurrentes', unlimited_ads: 'Anuncios ilimitados',
     boost_credits: 'Créditos mensuales', advanced_stats: 'Estadísticas PRO', verified_badge: 'Insignia Verificada',
     enterprise: 'Enterprise', enterprise_desc: 'Inmobiliarias, agencias...', bulk_import: 'Importación masiva',
     account_manager: 'Soporte dedicado', storefront: 'Página de Tienda', contact_sales: 'Contactar ventas',
