@@ -213,6 +213,11 @@ class PaymentController extends Controller
             $clientIpHash = hash('sha256', (string) $request->ip());
             Log::warning('Invalid Clip webhook signature', [
                 'ip_hash' => $clientIpHash,
+                'path' => $request->path(),
+                'payload_keys' => array_keys($payload),
+                'checkout_id_present' => (bool) $checkoutId,
+                'status' => $paymentStatus ?: null,
+                'signature_present' => (bool) $signature,
             ]);
             return response()->json(['status' => 'invalid_signature'], 401);
         }
