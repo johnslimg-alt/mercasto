@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List } from "lucide-react";
 import SidebarFilters from '../common/SidebarFilters';
 
-// --- LEAFLET MAP DYNAMIC LOADERS & COORDINATES ---
+// --- MAP COORDINATES ---
 const STATE_COORDS = {
   "Aguascalientes": [21.8853, -102.2916],
   "Baja California": [30.8406, -115.2838],
@@ -47,123 +47,35 @@ const STATE_COORDS = {
   "Zacatecas": [22.7709, -102.5832]
 };
 
-const loadLeaflet = (callback) => {
-  if (window.L) {
-    callback();
-    return;
-  }
-  if (!document.getElementById('leaflet-css')) {
-    const link = document.createElement('link');
-    link.id = 'leaflet-css';
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-  }
-  const script = document.createElement('script');
-  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-  script.onload = () => callback();
-  document.body.appendChild(script);
-};
+const LeafletMap = ({ ads, onViewAd }) => {
+  const mapAds = React.useMemo(() => (ads || []).slice(0, 6).map(ad => {
+    if (ad.latitude && ad.longitude) return { ad, coords: [parseFloat(ad.latitude), parseFloat(ad.longitude)] };
+    const stateName = ad.state || ad.location?.split(',')[1]?.trim() || ad.location?.split('·')[0]?.trim() || ad.location?.split(',')[0]?.trim() || '';
+    const cleanedState = Object.keys(STATE_COORDS).find(k =>
+      stateName.toLowerCase().includes(k.toLowerCase()) ||
+      k.toLowerCase().includes(stateName.toLowerCase())
+    );
+    const base = cleanedState ? STATE_COORDS[cleanedState] : [23.6345, -102.5528];
+    return { ad, coords: base };
+  }), [ads]);
 
-const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
-  const mapRef = React.useRef(null);
-  const mapInstanceRef = React.useRef(null);
-  const markersRef = React.useRef([]);
-  const [mapReady, setMapReady] = React.useState(false);
-
-  React.useEffect(() => {
-    loadLeaflet(() => {
-      if (!mapRef.current) return;
-      
-      if (!mapInstanceRef.current) {
-        mapInstanceRef.current = window.L.map(mapRef.current).setView([23.6345, -102.5528], 5);
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(mapInstanceRef.current);
-      }
-
-      const map = mapInstanceRef.current;
-
-      markersRef.current.forEach(m => m.remove());
-      markersRef.current = [];
-
-      const bounds = [];
-      ads.forEach(ad => {
-        let coords = null;
-        if (ad.latitude && ad.longitude) {
-          coords = [parseFloat(ad.latitude), parseFloat(ad.longitude)];
-        } else {
-          const stateName = ad.state || ad.location?.split(',')[1]?.trim() || ad.location?.split('·')[0]?.trim() || ad.location?.split(',')[0]?.trim() || '';
-          const cleanedState = Object.keys(STATE_COORDS).find(k => 
-            stateName.toLowerCase().includes(k.toLowerCase()) || 
-            k.toLowerCase().includes(stateName.toLowerCase())
-          );
-          if (cleanedState && STATE_COORDS[cleanedState]) {
-            const base = STATE_COORDS[cleanedState];
-            const hash = (ad.id * 17) % 100 / 100;
-            const jitterLat = (hash - 0.5) * 0.12;
-            const jitterLng = (((ad.id * 31) % 100) / 100 - 0.5) * 0.12;
-            coords = [base[0] + jitterLat, base[1] + jitterLng];
-          }
-        }
-
-        if (coords) {
-          bounds.push(coords);
-          const imagesArr = isStringArray(ad.image_url) ? JSON.parse(ad.image_url) : [ad.image_url];
-          const imgUrl = getImageUrl(imagesArr ? imagesArr[0] : ad.image);
-          
-          const customPopup = `
-            <div style="width: 180px; font-family: sans-serif; cursor: pointer;" onclick="window.viewAd(${ad.id})">
-              <img src="${imgUrl}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />
-              <div style="font-weight: bold; font-size: 14px; color: #0f8f7d;">$${Number(ad.price).toLocaleString()} MXN</div>
-              <div style="font-size: 12px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">${ad.title}</div>
-            </div>
-          `;
-          
-          const marker = window.L.marker(coords).bindPopup(customPopup).addTo(map);
-          markersRef.current.push(marker);
-        }
-      });
-
-      if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [40, 40] });
-      }
-
-      window.setTimeout(() => {
-        map.invalidateSize();
-        setMapReady(true);
-      }, 120);
-    });
-  }, [ads, getImageUrl]);
-
-  React.useEffect(() => {
-    window.viewAd = (id) => {
-      const found = ads.find(a => a.id === id);
-      if (found) onViewAd(found);
-    };
-    return () => {
-      delete window.viewAd;
-    };
-  }, [ads, onViewAd]);
+  const center = mapAds[0]?.coords || [23.6345, -102.5528];
+  const bbox = `${center[1] - 6}%2C${center[0] - 4}%2C${center[1] + 6}%2C${center[0] + 4}`;
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${center[0]}%2C${center[1]}`;
 
   return (
-    <div className="relative mb-4 md:mb-6 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
-      {!mapReady && (
-        <div className="absolute inset-0 z-[2] grid place-items-center bg-slate-950/75 text-slate-200 text-sm font-semibold">
-          <div className="flex flex-col items-center">
-            <Loader2 className="mb-2 h-5 w-5 animate-spin text-[#84CC16]" />
-            Cargando mapa...
-          </div>
-        </div>
-      )}
-      <div ref={mapRef} className="w-full h-[190px] md:h-[320px] relative z-[1] overflow-hidden bg-slate-100 dark:bg-slate-900" />
+    <div className="relative mb-4 md:mb-6 h-[190px] md:h-[320px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-md">
+      <iframe title="Mapa de anuncios" src={mapUrl} className="h-full w-full border-0 opacity-90 dark:opacity-75" loading="lazy" />
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[2] flex gap-2 overflow-x-auto">
+        {mapAds.slice(0, 4).map(({ ad }, index) => (
+          <button key={ad.id || index} onClick={() => onViewAd(ad)} className={`pointer-events-auto shrink-0 rounded-full px-3 py-1.5 text-xs font-black text-white shadow-lg ${index % 2 ? 'bg-slate-950' : 'bg-[#84CC16]'}`}>
+            ${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
-
-function isStringArray(str) {
-  return typeof str === 'string' && str.startsWith('[');
-}
 
 export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
@@ -318,7 +230,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
             </div>
 
             {showMap && serverAds.length > 0 && (
-              <LeafletMap ads={serverAds} getImageUrl={getImageUrl} onViewAd={handleViewAd} />
+              <LeafletMap ads={serverAds} onViewAd={handleViewAd} />
             )}
 
           {loadingAds ? (
@@ -675,11 +587,15 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                 <div className="col-span-12 xl:col-span-4">
 
-                  <div className="market-card h-full min-h-[360px] overflow-hidden relative">
+                  <div className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900">
 
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_38%,rgba(132,204,22,0.35),transparent_12%),radial-gradient(circle_at_64%_34%,rgba(15,23,42,0.2),transparent_10%),linear-gradient(135deg,#dbeafe_0%,#e0f2fe_35%,#dcfce7_58%,#bfdbfe_100%)]"></div>
-                    <div className="absolute inset-0 opacity-35" style={{ backgroundImage: 'linear-gradient(30deg, rgba(15,23,42,.18) 12%, transparent 12.5%, transparent 87%, rgba(15,23,42,.18) 87.5%, rgba(15,23,42,.18)), linear-gradient(150deg, rgba(15,23,42,.18) 12%, transparent 12.5%, transparent 87%, rgba(15,23,42,.18) 87.5%, rgba(15,23,42,.18)), linear-gradient(30deg, rgba(15,23,42,.18) 12%, transparent 12.5%, transparent 87%, rgba(15,23,42,.18) 87.5%, rgba(15,23,42,.18)), linear-gradient(150deg, rgba(15,23,42,.18) 12%, transparent 12.5%, transparent 87%, rgba(15,23,42,.18) 87.5%, rgba(15,23,42,.18))', backgroundSize: '64px 112px', backgroundPosition: '0 0, 0 0, 32px 56px, 32px 56px' }}></div>
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-white/10 pointer-events-none"></div>
+                    <iframe
+                      title="Mapa de propiedades en México"
+                      src="https://www.openstreetmap.org/export/embed.html?bbox=-118.5%2C14.2%2C-86.4%2C32.9&layer=mapnik&marker=23.6345%2C-102.5528"
+                      className="absolute inset-0 h-full w-full border-0 opacity-80 dark:opacity-65"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-transparent to-white/55 dark:from-slate-950/45 dark:to-slate-950/70 pointer-events-none"></div>
 
                     <div className="absolute inset-0 p-4">
 

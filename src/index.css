@@ -388,7 +388,7 @@ html.dark .btn-lg.bg-white:hover {
 
   .mobile-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.38rem;
     align-items: stretch;
   }
@@ -410,11 +410,12 @@ html.dark .btn-lg.bg-white:hover {
 
   .mobile-location-chip {
     align-self: stretch;
-    max-width: 7.15rem;
+    flex: 0 0 8.85rem;
+    max-width: 8.85rem;
     border-left: 1px solid rgba(148, 163, 184, 0.35);
     border-radius: 0 0.85rem 0.85rem 0;
     color: #475569;
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     font-weight: 800;
     min-width: 0;
     background: rgba(226, 232, 240, 0.5);
@@ -451,20 +452,21 @@ html.dark .btn-lg.bg-white:hover {
   }
 
   .mobile-account-button--top {
-    width: 1.95rem;
-    height: 1.95rem;
-    min-width: 1.95rem;
-    min-height: 1.95rem;
+    width: 2.35rem;
+    height: 2.35rem;
+    min-width: 2.35rem;
+    min-height: 2.35rem;
     padding: 0.12rem;
     border-radius: 999px;
     border-color: rgba(132, 204, 22, 0.55);
     background: rgba(132, 204, 22, 0.08);
+    box-shadow: 0 0 0 1px rgba(132, 204, 22, 0.2), 0 10px 24px rgba(15, 23, 42, 0.18);
   }
 
   .mobile-account-button--top img {
-    width: 1.55rem;
-    height: 1.55rem;
-    border: 1px solid rgba(132, 204, 22, 0.58);
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid rgba(132, 204, 22, 0.7);
   }
 
   .mobile-account-button span {
@@ -782,7 +784,8 @@ html.dark .btn-lg.bg-white:hover {
 
   @media (max-width: 420px) {
     .mobile-location-chip {
-      max-width: 5.7rem;
+      flex-basis: 8.15rem;
+      max-width: 8.15rem;
       padding-inline: 0.45rem;
     }
 
