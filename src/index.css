@@ -162,23 +162,45 @@ html.dark .btn-lg.bg-white:hover {
     margin-top: 0.5rem !important;
   }
   @media (max-width: 640px) {
+    .list-layout {
+      gap: 0.75rem !important;
+    }
     .list-layout article {
-      height: 110px !important;
+      min-height: 0 !important;
+      height: 118px !important;
     }
     .list-layout article > div:first-child {
-      width: 120px !important;
-      height: 110px !important;
+      width: 124px !important;
+      height: 118px !important;
     }
     .list-layout article img {
-      height: 110px !important;
-      width: 120px !important;
+      height: 118px !important;
+      width: 124px !important;
     }
     .list-layout article > div:last-child {
-      padding: 0.5rem 0.75rem !important;
+      min-height: 0 !important;
+      padding: 0.75rem 0.85rem !important;
+    }
+    .list-layout .ad-result-body > div:first-child {
+      font-size: 17px !important;
+    }
+    .list-layout .ad-result-body h3 {
+      font-size: 13px !important;
+      -webkit-line-clamp: 2 !important;
     }
     .list-layout article button.btn-md,
     .list-layout article button.w-full {
       display: none !important;
+    }
+    .grid:not(.list-layout) > .ad-result-card {
+      min-height: 224px !important;
+    }
+    .grid:not(.list-layout) > .ad-result-card .ad-result-body {
+      min-height: 96px !important;
+      padding: 0.75rem !important;
+    }
+    .grid:not(.list-layout) > .ad-result-card .ad-result-body > div:first-child {
+      font-size: 16px !important;
     }
   }
   .category-rail {

@@ -153,7 +153,7 @@ const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
 
   if (mapFailed && !mapReady) {
     return (
-      <div className="mb-6 h-[220px] md:h-[300px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-[radial-gradient(circle_at_32%_48%,rgba(132,204,22,.28),transparent_13%),radial-gradient(circle_at_68%_38%,rgba(20,184,166,.18),transparent_14%),linear-gradient(135deg,#e0f2fe,#dcfce7_55%,#dbeafe)] dark:bg-[radial-gradient(circle_at_32%_48%,rgba(132,204,22,.18),transparent_13%),radial-gradient(circle_at_68%_38%,rgba(20,184,166,.12),transparent_14%),linear-gradient(135deg,#0f172a,#13233a_55%,#0b1120)] p-4 shadow-md">
+      <div className="mb-4 h-[150px] md:h-[260px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-[radial-gradient(circle_at_32%_48%,rgba(132,204,22,.28),transparent_13%),radial-gradient(circle_at_68%_38%,rgba(20,184,166,.18),transparent_14%),linear-gradient(135deg,#e0f2fe,#dcfce7_55%,#dbeafe)] dark:bg-[radial-gradient(circle_at_32%_48%,rgba(132,204,22,.18),transparent_13%),radial-gradient(circle_at_68%_38%,rgba(20,184,166,.12),transparent_14%),linear-gradient(135deg,#0f172a,#13233a_55%,#0b1120)] p-3 md:p-4 shadow-md">
         <div className="flex h-full flex-col justify-between">
           <div className="flex items-center justify-between text-sm font-bold text-slate-900 dark:text-white">
             <span>Todo México</span>
@@ -171,7 +171,7 @@ const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
     );
   }
 
-  return <div ref={mapRef} className="w-full h-[220px] md:h-[340px] rounded-2xl border border-slate-200 shadow-md relative z-[1] mb-6 overflow-hidden bg-slate-100 dark:bg-slate-900" />;
+  return <div ref={mapRef} className="w-full h-[150px] md:h-[320px] rounded-2xl border border-slate-200 shadow-md relative z-[1] mb-4 md:mb-6 overflow-hidden bg-slate-100 dark:bg-slate-900" />;
 };
 
 function isStringArray(str) {
@@ -282,7 +282,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
       return (
 
-        <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6 lg:py-8 min-h-screen flex flex-col lg:flex-row gap-6">
+        <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6 lg:py-8 pb-28 md:pb-8 min-h-screen flex flex-col lg:flex-row gap-6">
           
           {/* Кнопка фильтров для мобильных устройств */}
           <div className="md:hidden flex items-center justify-between mb-2">

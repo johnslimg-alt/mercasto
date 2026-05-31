@@ -2581,7 +2581,7 @@ function App() {
     const safeImage = options.displayImageUrl || getImageUrl(ad.image_url, ad.image);
 
     return (
-      <article key={ad.id} onClick={() => handleViewAd(ad)} className="market-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0">
+      <article key={ad.id} onClick={() => handleViewAd(ad)} className="market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0">
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
           <img src={safeImage} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
           <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white z-10">
@@ -2591,7 +2591,7 @@ function App() {
           {!isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
           {!isDestacado && !isUrgente && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
         </div>
-        <div className="p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white z-10 text-[#0F172A]">
+        <div className="ad-result-body p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white z-10 text-[#0F172A]">
           <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] truncate">${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500">MXN</span></div>
           <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700">{ad.title}</h3>
           <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500">
