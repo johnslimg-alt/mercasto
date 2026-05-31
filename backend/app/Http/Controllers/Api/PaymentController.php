@@ -92,25 +92,61 @@ class PaymentController extends Controller
             ]);
         }
 
-        $response = Http::withBasicAuth(config('services.clip.api_key'), config('services.clip.api_secret'))
-            ->post('https://api.clip.mx/v2/checkouts', [
+        $clipToken = 'Basic ' . base64_encode(config('services.clip.api_key') . ':' . config('services.clip.api_secret'));
+
+        try {
+            $response = Http::timeout(15)
+            ->withHeaders(['Authorization' => $clipToken])
+            ->post('https://api.payclip.com/v2/checkout', [
                 'amount' => $amount,
                 'currency' => 'MXN',
                 'purchase_description' => $description,
-                'reference' => $checkoutId, // Наш уникальный ID для отслеживания веб-хука
                 'redirection_url' => [
                     'success' => config('app.frontend_url', 'https://mercasto.com') . '/?payment=success',
                     'error'   => config('app.frontend_url', 'https://mercasto.com') . '/?payment=error',
                     'default' => config('app.frontend_url', 'https://mercasto.com')
                 ],
-                'override_color' => '#84CC16' // Фирменный цвет кнопок Mercasto
+                'metadata' => [
+                    'external_reference' => $checkoutId,
+                    'user_id' => (string) $user->id,
+                    'ad_id' => $request->ad_id ? (string) $request->ad_id : null,
+                ],
+                'webhook_url' => config('app.url', 'https://mercasto.com') . '/api/webhooks/clip',
+                'override_settings' => [
+                    'locale' => 'es-MX',
+                    'merchant_info' => ['show_contact_info' => false],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Clip checkout request failed', [
+                'message' => $e->getMessage(),
             ]);
 
+            return response()->json([
+                'success' => false,
+                'message' => 'Servicio de pago temporalmente no disponible. Inténtalo más tarde.',
+            ], 503);
+        }
+
         if ($response->successful()) {
+            $paymentUrl = $response->json('payment_request_url') ?: $response->json('payment_url');
+
+            if (! $paymentUrl) {
+                Log::error('Clip checkout response missing payment URL', [
+                    'status' => $response->status(),
+                    'body' => $response->json(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Clip no devolvió un enlace de pago válido.',
+                ], 502);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Checkout generado',
-                'payment_url' => $response->json('payment_url')
+                'payment_url' => $paymentUrl,
             ]);
         }
 
@@ -147,9 +183,12 @@ class PaymentController extends Controller
         }
 
         $payload = $request->all();
-        $checkoutId = $payload['reference'] ?? null; // Получаем наш ID из веб-хука
+        $checkoutId = $payload['reference']
+            ?? data_get($payload, 'metadata.external_reference')
+            ?? data_get($payload, 'payment_request.metadata.external_reference');
 
-        if ($checkoutId && isset($payload['status']) && $payload['status'] === 'paid') {
+        $paymentStatus = strtolower((string) ($payload['status'] ?? data_get($payload, 'payment_request.status', '')));
+        if ($checkoutId && in_array($paymentStatus, ['paid', 'completed', 'checkout_completed'], true)) {
             // Атомарное обновление для абсолютной защиты от Race Condition (Double-Spend)
             $updated = DB::table('payments')
                 ->where('clip_checkout_id', $checkoutId)

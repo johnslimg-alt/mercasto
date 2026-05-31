@@ -230,8 +230,6 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       setHomeToast(message);
       homeToastTimerRef.current = window.setTimeout(() => setHomeToast(null), 3200);
     }, []);
-    const mapQuery = selectedState || 'México';
-    const mapExternalUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(mapQuery)}`;
     React.useEffect(() => () => window.clearTimeout(homeToastTimerRef.current), []);
 
     if (activeCat || searchQuery || selectedState) {
@@ -656,7 +654,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                         <h3 className="font-semibold">{selectedState || t.all_mexico || 'Todo México'}</h3>
 
-                        <button onClick={() => window.open(mapExternalUrl, '_blank', 'noopener,noreferrer')} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">{t.open_map || 'Abrir mapa'}</button>
+                        <button onClick={() => { setActiveCat('inmobiliaria'); executeSearch?.('', null, 'inmobiliaria'); }} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">{t.search_map || 'Buscar en mapa'}</button>
 
                       </div>
 
@@ -885,23 +883,25 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
               </div>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
 
                 {automotiveDeals.map((car, idx) => (
 
-                  <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer" onClick={() => { runSearch(car.title, 'motor'); }}>
+                  <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => { runSearch(car.title, 'motor'); }}>
 
-                    <img src={car.img} loading="lazy" className="w-full h-140px] object-cover" alt=""/>
+                    <div className="aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-900">
+                      <img src={car.img} loading="lazy" className="w-full h-full object-cover" alt={car.title || ''}/>
+                    </div>
 
-                    <div className="p-3">
+                    <div className="p-3 flex flex-col flex-1 min-h-[112px]">
 
-                      <div className="font-bold">{car.price}</div>
+                      <div className="font-bold leading-tight line-clamp-1">{car.price}</div>
 
-                      <div className="text-[13px] font-medium line-clamp-1">{car.title}</div>
+                      <div className="text-[13px] font-medium line-clamp-1 mt-0.5">{car.title}</div>
 
-                      <div className="text-[12px] text-slate-500 mt-1">{car.specs}</div>
+                      <div className="text-[12px] text-slate-500 mt-1 line-clamp-1">{car.specs}</div>
 
-                      <div className="mt-2 flex gap-1 min-h-[20px]">
+                      <div className="mt-auto pt-2 flex gap-1 min-h-[24px]">
 
                         {car.badge && <span className={`badge ${car.badge.color}`}>{car.badge.label}</span>}
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft, Mail, MessageSquare, Clock, Send,
+  ChevronLeft, Mail, Clock, Send,
   CheckCircle, AlertCircle, ExternalLink, HelpCircle,
 } from 'lucide-react';
 
@@ -21,14 +21,6 @@ const CONTACT_INFO = [
     sub: 'Para consultas generales',
     href: 'mailto:soporte@mercasto.com',
     color: 'bg-lime-50 text-lime-600',
-  },
-  {
-    icon: MessageSquare,
-    title: 'WhatsApp',
-    value: '+52 55 1234 5678',
-    sub: 'Lunes a viernes 9am–7pm',
-    href: 'https://wa.me/5215512345678?text=Hola%20Mercasto%2C%20necesito%20ayuda',
-    color: 'bg-emerald-50 text-emerald-600',
   },
   {
     icon: Clock,
@@ -59,7 +51,7 @@ export default function ContactoScreen() {
     document.title = 'Contacto | Mercasto';
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
-    meta.content = 'Contáctanos en Mercasto. Respondemos en menos de 24 horas por correo o WhatsApp.';
+    meta.content = 'Contáctanos en Mercasto. Respondemos en menos de 24 horas por correo electrónico.';
     window.scrollTo(0, 0);
   }, []);
 
