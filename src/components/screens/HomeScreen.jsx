@@ -710,7 +710,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                       {jobsBoard.map((job, idx) => (
 
-                        <tr key={idx} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 cursor-pointer transition-all duration-200 hover:translate-x-1 last:border-0" onClick={() => { runSearch(job.role, 'empleo'); }}>
+                        <tr key={idx} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 cursor-pointer transition-all duration-200 last:border-0" onClick={() => { runSearch(job.role, 'empleo'); }}>
 
                           <td className="px-4 py-3">
 
@@ -729,7 +729,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                               <div>
 
-                                <div className="font-medium">{job.role}</div>
+                                <div className="font-medium transition-transform duration-200 group-hover:translate-x-1">{job.role}</div>
 
                                 <div className="text-[12px] text-slate-500 md:hidden">{job.company} • {job.loc}</div>
 
@@ -965,7 +965,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   </ul>
 
-                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-transparent border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-slate-400 dark:hover:border-slate-600">Elegir plan</button>
+                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-transparent border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white hover:bg-slate-50 dark:hover:bg-slate-850 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-[#84CC16] dark:hover:border-[#84CC16] hover:text-[#65A30D] dark:hover:text-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/20">Elegir plan</button>
 
                 </div>
 
@@ -1013,7 +1013,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   </ul>
 
-                  <button onClick={() => navigate('/contacto?enterprise=1')} className="btn-md w-full mt-5 border border-slate-300 dark:border-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-slate-400 dark:hover:border-slate-600">{t.contact_sales || 'Contactar ventas'}</button>
+                  <button onClick={() => navigate('/contacto?enterprise=1')} className="btn-md w-full mt-5 border border-slate-300 dark:border-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-850 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-[#84CC16] dark:hover:border-[#84CC16] hover:text-[#65A30D] dark:hover:text-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/20">{t.contact_sales || 'Contactar ventas'}</button>
 
                 </div>
 
