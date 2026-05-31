@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\AdminAnalyticsController;
 use App\Http\Controllers\Api\TwoFactorAuthenticationController;
 use App\Http\Controllers\Api\PhoneVerificationController;
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\SearchAlertController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\NotificationController;
 
@@ -200,6 +201,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])->whereNumber('id');
     Route::post('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений
     Route::delete('/user/notifications/{id}', [ProfileController::class, 'deleteNotification'])->whereNumber('id'); // Удалить уведомление
+    Route::get('/user/search-alerts', [SearchAlertController::class, 'index']);
+    Route::post('/user/search-alerts', [SearchAlertController::class, 'store'])->middleware('throttle:10,1');
+    Route::patch('/user/search-alerts/{searchAlert}', [SearchAlertController::class, 'update'])->whereNumber('searchAlert');
+    Route::delete('/user/search-alerts/{searchAlert}', [SearchAlertController::class, 'destroy'])->whereNumber('searchAlert');
     Route::post('/user/push-subscribe', [ProfileController::class, 'pushSubscribe']); // Подписка на Web Push
     Route::post('/user/push-unsubscribe', [ProfileController::class, 'pushUnsubscribe']); // Отписка от Web Push
     Route::delete('/user', [AccountDeletionController::class, 'delete']); // User self-deletion with financial/audit retention

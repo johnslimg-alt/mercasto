@@ -349,6 +349,20 @@ class AuthController extends Controller
         ]);
     }
 
+    private function isValidConfig($clientId, $clientSecret)
+    {
+        if (empty($clientId) || empty($clientSecret)) {
+            return false;
+        }
+        $placeholders = ['your_', 'placeholder', 'secret_here', 'client_id_here'];
+        foreach ($placeholders as $ph) {
+            if (str_contains(strtolower($clientId), $ph) || str_contains(strtolower($clientSecret), $ph)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * Returns which OAuth providers are actually configured
      */
@@ -360,12 +374,13 @@ class AuthController extends Controller
         $smsConfigured = !empty(config('services.twilio.sid'))
             && !empty(config('services.twilio.token'))
             && !empty($twilioFrom)
-            && $twilioFrom !== '+15005550006';
+            && $twilioFrom !== '+15005550006'
+            && !str_contains(strtolower(config('services.twilio.sid')), 'your_');
 
         return response()->json([
-            'google'   => !empty(config('services.google.client_id')) && !empty(config('services.google.client_secret')),
-            'apple'    => !empty(config('services.apple.client_id')) && !empty(config('services.apple.client_secret')),
-            'telegram' => !empty(config('services.telegram.client_id')) && !empty(config('services.telegram.client_secret')),
+            'google'   => $this->isValidConfig(config('services.google.client_id'), config('services.google.client_secret')),
+            'apple'    => $this->isValidConfig(config('services.apple.client_id'), config('services.apple.client_secret')),
+            'telegram' => $this->isValidConfig(config('services.telegram.client_id'), config('services.telegram.client_secret')),
             'sms'      => $smsConfigured,
         ]);
     }

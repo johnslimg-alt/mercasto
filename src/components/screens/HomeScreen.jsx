@@ -114,7 +114,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
   );
 };
 
-export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd }) {
+export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
     const [showMap, setShowMap] = React.useState(false);
@@ -246,6 +246,14 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
                 className={`btn-sm flex items-center gap-2 border transition-all ${showMap ? 'bg-[#0f8f7d] text-white border-[#0f8f7d]' : 'bg-white text-slate-700 border-slate-300 hover:border-[#0f8f7d]'}`}
               >
                 <MapPin size={16} /> {showMap ? 'Ocultar mapa' : 'Mostrar en mapa'}
+              </button>
+              <button
+                onClick={handleSaveSearchAlert}
+                disabled={savingSearchAlert}
+                className="btn-sm flex items-center gap-2 border border-[#84CC16]/40 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 disabled:opacity-60 dark:text-[#BEF264]"
+              >
+                {savingSearchAlert ? <Loader2 size={15} className="animate-spin" /> : <Bell size={15} />}
+                Guardar búsqueda
               </button>
               
               <div className="flex items-center gap-2 border border-slate-200 rounded-xl p-1 bg-white">

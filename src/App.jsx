@@ -489,6 +489,9 @@ function App() {
   const [sliderAutoplay, setSliderAutoplay] = useState(() => localStorage.getItem('sliderAutoplay') !== 'false');
   const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, push_notifications: true, marketing: false });
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [searchAlerts, setSearchAlerts] = useState([]);
+  const [loadingSearchAlerts, setLoadingSearchAlerts] = useState(false);
+  const [savingSearchAlert, setSavingSearchAlert] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [userAds, setUserAds] = useState([]);
   const [favoriteAds, setFavoriteAds] = useState([]);
@@ -1489,6 +1492,93 @@ function App() {
     } catch (err) { console.error("Error fetching pending ads", err); }
     finally { setLoadingPendingAds(false); }
   }, []);
+
+  const loadSearchAlerts = useCallback(async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    setLoadingSearchAlerts(true);
+    try {
+      const res = await fetch(`${API_URL}/user/search-alerts`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setSearchAlerts(await res.json());
+    } catch (err) {
+      console.error('Error fetching search alerts', err);
+    } finally {
+      setLoadingSearchAlerts(false);
+    }
+  }, []);
+
+  const handleSaveSearchAlert = useCallback(async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setAuthMode('login');
+      setShowAuthModal(true);
+      return;
+    }
+    setSavingSearchAlert(true);
+    try {
+      const res = await fetch(`${API_URL}/user/search-alerts`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: searchQuery || debouncedSearch || '',
+          category: activeCat || '',
+          min_price: minPrice || null,
+          max_price: maxPrice || null,
+          city: searchLocationInput || debouncedLocInput || '',
+          state: selectedState || '',
+          filters: dynamicFilters || {},
+        }),
+      });
+      if (!res.ok) throw new Error('save-search-alert-failed');
+      const created = await res.json();
+      setSearchAlerts(prev => [created, ...prev.filter(item => item.id !== created.id)]);
+      showToast('Búsqueda guardada. Te avisaremos de nuevos anuncios.', 'success');
+    } catch (err) {
+      console.error('Error saving search alert', err);
+      showToast('No se pudo guardar la búsqueda', 'error');
+    } finally {
+      setSavingSearchAlert(false);
+    }
+  }, [activeCat, debouncedLocInput, debouncedSearch, dynamicFilters, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
+
+  const handleToggleSearchAlert = useCallback(async (alert) => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    const nextActive = !alert.is_active;
+    setSearchAlerts(prev => prev.map(item => item.id === alert.id ? { ...item, is_active: nextActive } : item));
+    try {
+      const res = await fetch(`${API_URL}/user/search-alerts/${alert.id}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: nextActive }),
+      });
+      if (!res.ok) throw new Error('toggle-search-alert-failed');
+    } catch (err) {
+      console.error('Error toggling search alert', err);
+      setSearchAlerts(prev => prev.map(item => item.id === alert.id ? { ...item, is_active: alert.is_active } : item));
+    }
+  }, []);
+
+  const handleDeleteSearchAlert = useCallback(async (alertId) => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    const previous = searchAlerts;
+    setSearchAlerts(prev => prev.filter(item => item.id !== alertId));
+    try {
+      const res = await fetch(`${API_URL}/user/search-alerts/${alertId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('delete-search-alert-failed');
+    } catch (err) {
+      console.error('Error deleting search alert', err);
+      setSearchAlerts(previous);
+    }
+  }, [searchAlerts]);
+
+  useEffect(() => {
+    if (user) loadSearchAlerts();
+  }, [user, loadSearchAlerts]);
 
   const handleModerateAd = async (id, status) => {
     try {

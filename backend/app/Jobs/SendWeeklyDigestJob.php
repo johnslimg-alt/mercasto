@@ -64,16 +64,25 @@ class SendWeeklyDigestJob implements ShouldQueue
                     ->whereNotIn('id', $favoritedIds);
 
                 // Category match: look up slug from categories table
-                if ($alert->category_id) {
-                    $cat = DB::table('categories')->where('id', $alert->category_id)->first();
-                    if ($cat) {
-                        // ads.category stores hierarchical slugs like "parent/child"
-                        $query->where(function ($q) use ($cat) {
-                            $q->where('category', $cat->slug)
-                              ->orWhere('category', 'like', $cat->slug . '/%')
-                              ->orWhere('category', 'like', '%/' . $cat->slug);
-                        });
-                    }
+                $categorySlug = $alert->category_slug;
+                if (!$categorySlug && $alert->category_id) {
+                    $categorySlug = DB::table('categories')->where('id', $alert->category_id)->value('slug');
+                }
+                if ($categorySlug) {
+                    // ads.category stores hierarchical slugs like "parent/child"
+                    $query->where(function ($q) use ($categorySlug) {
+                        $q->where('category', $categorySlug)
+                          ->orWhere('category', 'like', $categorySlug . '/%')
+                          ->orWhere('category', 'like', '%/' . $categorySlug);
+                    });
+                }
+
+                if (!empty($alert->query)) {
+                    $term = '%' . $alert->query . '%';
+                    $query->where(function ($q) use ($term) {
+                        $q->where('title', 'ilike', $term)
+                          ->orWhere('description', 'ilike', $term);
+                    });
                 }
 
                 if ($alert->min_price !== null) {
@@ -87,6 +96,9 @@ class SendWeeklyDigestJob implements ShouldQueue
                         $q->where('location', 'ilike', '%' . $alert->city . '%')
                           ->orWhere('state', 'ilike', '%' . $alert->city . '%');
                     });
+                }
+                if (!empty($alert->state)) {
+                    $query->where('state', 'ilike', '%' . $alert->state . '%');
                 }
 
                 $alertAds = $query->orderByDesc('created_at')->limit(8)->get();
