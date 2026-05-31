@@ -965,7 +965,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   </ul>
 
-                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-transparent border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white hover:bg-slate-50 dark:hover:bg-slate-850 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-[#84CC16] dark:hover:border-[#84CC16] hover:text-[#65A30D] dark:hover:text-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/20">Elegir plan</button>
+                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-transparent border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white hover:bg-[#84CC16]/10 dark:hover:bg-[#84CC16]/10 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-[#84CC16] dark:hover:border-[#84CC16] hover:text-[#65A30D] dark:hover:text-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/20">Elegir plan</button>
 
                 </div>
 
@@ -1013,7 +1013,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   </ul>
 
-                  <button onClick={() => navigate('/contacto?enterprise=1')} className="btn-md w-full mt-5 border border-slate-300 dark:border-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-850 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-[#84CC16] dark:hover:border-[#84CC16] hover:text-[#65A30D] dark:hover:text-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/20">{t.contact_sales || 'Contactar ventas'}</button>
+                  <button onClick={() => navigate('/contacto?enterprise=1')} className="btn-md w-full mt-5 border border-slate-300 dark:border-slate-700 dark:text-white hover:bg-[#84CC16]/10 dark:hover:bg-[#84CC16]/10 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-[#84CC16] dark:hover:border-[#84CC16] hover:text-[#65A30D] dark:hover:text-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/20">{t.contact_sales || 'Contactar ventas'}</button>
 
                 </div>
 
