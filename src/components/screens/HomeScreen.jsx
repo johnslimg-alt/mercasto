@@ -456,7 +456,13 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                 <div className="flex items-center gap-2">
 
-                  <button onClick={() => showHomeToast('Búsqueda guardada en este navegador.')} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:block">{t.save_search || 'Guardar búsqueda'}</button>
+                  <button
+                    onClick={handleSaveSearchAlert}
+                    disabled={savingSearchAlert}
+                    className="btn-sm hidden border border-[#84CC16]/40 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 disabled:opacity-60 sm:block dark:text-[#BEF264]"
+                  >
+                    {savingSearchAlert ? 'Guardando...' : (t.save_search || 'Guardar búsqueda')}
+                  </button>
 
                   <button onClick={() => { setActiveCat(''); document.querySelector('.md\\:hidden button')?.click(); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter || 'Filtros'}</button>
 

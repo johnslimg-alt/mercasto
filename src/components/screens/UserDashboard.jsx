@@ -6,7 +6,7 @@ import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightReal
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, PieChart as PieChartIcon, CreditCard } from "lucide-react";
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
   const [dashToast, setDashToast] = React.useState(null);
   const showDashToast = (msg, type = 'success') => {
     setDashToast({ msg, type });
@@ -265,6 +265,10 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   </div>
 
                 )}
+
+                <div onClick={() => setDashboardTab('saved_searches')} className={`p-4 flex items-center gap-3 border-b border-slate-100 cursor-pointer transition-colors text-[14px] font-medium dark:border-slate-800 ${dashboardTab === 'saved_searches' ? 'text-[#65A30D] bg-lime-50/50 dark:bg-lime-400/10' : 'text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/70'}`}>
+                  <Bell className={`w-5 h-5 ${dashboardTab === 'saved_searches' ? 'text-[#84CC16]' : 'text-slate-400'}`}/> Búsquedas guardadas
+                </div>
 
                 {accountType === 'pro' && (
 
@@ -747,6 +751,59 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                   </div>
 
+                </div>
+
+              ) : dashboardTab === 'saved_searches' ? (
+
+                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex-1 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="p-5 border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-950/40">
+                    <h2 className="text-[18px] font-bold text-slate-900 dark:text-white">Búsquedas guardadas</h2>
+                    <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Recibe alertas cuando aparezcan nuevos anuncios que coincidan con tus filtros.</p>
+                  </div>
+
+                  {loadingSearchAlerts ? (
+                    <div className="p-10 text-center text-slate-400"><Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-[#84CC16]" />Cargando alertas...</div>
+                  ) : searchAlerts.length === 0 ? (
+                    <div className="p-10 text-center">
+                      <Bell className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+                      <h3 className="font-bold text-slate-900 dark:text-white">Aún no tienes búsquedas guardadas</h3>
+                      <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500 dark:text-slate-400">Haz una búsqueda en la página principal y pulsa “Guardar búsqueda”.</p>
+                      <button onClick={() => setCurrentTab('home')} className="btn-md mt-5 bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">
+                        Buscar anuncios
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {searchAlerts.map(alert => (
+                        <div key={alert.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-slate-900 dark:text-white">{alert.name}</h3>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${alert.is_active ? 'bg-lime-100 text-lime-700' : 'bg-slate-100 text-slate-500'}`}>
+                                {alert.is_active ? 'Activa' : 'Pausada'}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
+                              {[alert.query, alert.category_slug || alert.category?.slug, alert.city || alert.state].filter(Boolean).join(' · ') || 'Todo México'}
+                            </p>
+                            {(alert.min_price || alert.max_price) && (
+                              <p className="mt-1 text-[12px] font-semibold text-slate-600 dark:text-slate-300">
+                                Precio: {alert.min_price ? `$${Number(alert.min_price).toLocaleString('es-MX')}` : '$0'} - {alert.max_price ? `$${Number(alert.max_price).toLocaleString('es-MX')}` : 'sin límite'}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleToggleSearchAlert?.(alert)} className="btn-sm border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                              {alert.is_active ? 'Pausar' : 'Activar'}
+                            </button>
+                            <button onClick={() => handleDeleteSearchAlert?.(alert.id)} className="btn-sm border border-red-100 bg-red-50 text-red-600 hover:bg-red-100">
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
               ) : dashboardTab === 'company' ? (
