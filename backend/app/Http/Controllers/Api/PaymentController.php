@@ -21,7 +21,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'description' => 'required|string|max:255',
-            'product_code' => 'nullable|string|in:plus_monthly,pro_standard_monthly,pro_unlimited_monthly',
+            'product_code' => 'nullable|string|in:package_free,package_impulso,package_negocio,package_pro,package_agencia,boost_1_day,boost_3_days,highlight_7_days,featured_7_days,featured_30_days,top_category_7_days,plus_monthly,pro_standard_monthly,pro_unlimited_monthly',
             'ad_id' => 'nullable|integer|exists:ads,id', // Защита от создания призрачных платежей
         ]);
 
@@ -42,6 +42,18 @@ class PaymentController extends Controller
 
         // Защита от подмены цен (Client-Side Pricing Exploit): Жестко фиксируем все цены
         $packagesByCode = [
+            'package_free' => ['amount' => 0, 'description' => 'Plan Gratis'],
+            'package_impulso' => ['amount' => 99, 'description' => 'Plan Impulso'],
+            'package_negocio' => ['amount' => 249, 'description' => 'Plan Negocio'],
+            'package_pro' => ['amount' => 599, 'description' => 'Plan Pro'],
+            'package_agencia' => ['amount' => 1499, 'description' => 'Plan Agencia'],
+            'boost_1_day' => ['amount' => 19, 'description' => 'Subir 24 horas'],
+            'boost_3_days' => ['amount' => 49, 'description' => 'Subir 3 días'],
+            'highlight_7_days' => ['amount' => 79, 'description' => 'Resaltar 7 días'],
+            'featured_7_days' => ['amount' => 149, 'description' => 'Destacado 7 días'],
+            'featured_30_days' => ['amount' => 399, 'description' => 'Destacado 30 días'],
+            'top_category_7_days' => ['amount' => 399, 'description' => 'Top categoría 7 días'],
+            // Legacy/fallback support
             'plus_monthly' => ['amount' => 99, 'description' => 'Suscripción Paquete Plus'],
             'pro_standard_monthly' => ['amount' => 500, 'description' => 'Suscripción PRO Estándar'],
             'pro_unlimited_monthly' => ['amount' => 1500, 'description' => 'Suscripción PRO Ilimitado'],
@@ -64,18 +76,22 @@ class PaymentController extends Controller
             if ($ad->status !== 'active') {
                 return response()->json(['message' => 'Solo puedes promocionar anuncios que estén activos.'], 400);
             }
-            if ($ad->promoted === 'destacado') {
-                return response()->json(['message' => 'Este anuncio ya está destacado.'], 400);
-            }
 
-            $amount = 50; // Жесткая цена за продвижение
-            $description = "Promoción de anuncio #" . $request->ad_id;
+            // If a valid boost product code is supplied with ad_id, use its price/description. Otherwise fallback to standard promotion.
+            $productCode = $request->product_code;
+            if ($productCode && array_key_exists($productCode, $packagesByCode)) {
+                $amount = (float) $packagesByCode[$productCode]['amount'];
+                $description = $packagesByCode[$productCode]['description'] . " (Anuncio #" . $request->ad_id . ")";
+            } else {
+                $amount = 50; // Жесткая цена за продвижение по умолчанию
+                $description = "Promoción de anuncio #" . $request->ad_id;
+            }
         } else {
             $productCode = $request->product_code ?: ($legacyPackages[$description] ?? null);
             if (! $productCode || ! array_key_exists($productCode, $packagesByCode)) {
                 return response()->json(['message' => 'Servicio no válido'], 400);
             }
-
+ 
             $amount = (float) $packagesByCode[$productCode]['amount'];
             $description = $packagesByCode[$productCode]['description'];
         }

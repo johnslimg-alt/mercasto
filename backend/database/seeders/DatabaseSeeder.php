@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MercastoCategoriesSeeder::class,
             CategoryAttributeSeeder::class,
+            PaymentProductsSeeder::class,
         ]);
         
         // Защита продакшена: предотвращаем случайную заливку 1000 тестовых объявлений в реальную БД
