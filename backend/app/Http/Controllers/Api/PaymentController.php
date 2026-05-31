@@ -185,25 +185,34 @@ class PaymentController extends Controller
             return response()->json(['status' => 'misconfigured'], 503);
         }
 
+        $payload = $request->all();
+        $checkoutId = $payload['reference']
+            ?? data_get($payload, 'metadata.external_reference')
+            ?? data_get($payload, 'payment_request.metadata.external_reference');
+        $paymentStatus = strtolower((string) ($payload['status'] ?? data_get($payload, 'payment_request.status', '')));
+
         $signature = $request->header('X-Clip-Signature') ?? $request->header('X-Webhook-Signature');
         $expectedSignature = hash_hmac('sha256', $request->getContent(), $secret);
         // Защита от криптографического бага ltrim (удалял нужные символы хэша, если они совпадали с маской)
         $receivedHash = str_starts_with((string) $signature, 'sha256=') ? substr((string) $signature, 7) : (string) $signature;
 
         if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
+            // Clip dashboard can send an unsigned test ping. Accept only non-payment pings,
+            // never unsigned events that claim a checkout reference or paid status.
+            if (!$signature && !$checkoutId && !$paymentStatus) {
+                Log::info('Unsigned Clip webhook test ping accepted', [
+                    'ip_hash' => hash('sha256', (string) $request->ip()),
+                ]);
+
+                return response()->json(['status' => 'test_ok']);
+            }
+
             $clientIpHash = hash('sha256', (string) $request->ip());
             Log::warning('Invalid Clip webhook signature', [
                 'ip_hash' => $clientIpHash,
             ]);
             return response()->json(['status' => 'invalid_signature'], 401);
         }
-
-        $payload = $request->all();
-        $checkoutId = $payload['reference']
-            ?? data_get($payload, 'metadata.external_reference')
-            ?? data_get($payload, 'payment_request.metadata.external_reference');
-
-        $paymentStatus = strtolower((string) ($payload['status'] ?? data_get($payload, 'payment_request.status', '')));
         if ($checkoutId && in_array($paymentStatus, ['paid', 'completed', 'checkout_completed'], true)) {
             // Атомарное обновление для абсолютной защиты от Race Condition (Double-Spend)
             $updated = DB::table('payments')
