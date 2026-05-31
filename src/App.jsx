@@ -417,7 +417,7 @@ function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [couponInput, setCouponInput] = useState('');
-  const [availableProviders, setAvailableProviders] = useState({ google: false, apple: false, telegram: false, sms: false });
+  const [availableProviders, setAvailableProviders] = useState({ google: false, telegram: false, sms: false });
 
   const setCurrentTab = useCallback((tab) => {
     // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
@@ -469,7 +469,6 @@ function App() {
         const p = data?.providers ?? data;
         setAvailableProviders({
           google:   p?.google?.enabled  ?? p?.google  ?? false,
-          apple:    p?.apple?.enabled   ?? p?.apple   ?? false,
           telegram: p?.telegram?.enabled ?? p?.telegram ?? false,
           sms:      p?.sms?.enabled      ?? p?.sms      ?? p?.phone?.enabled ?? p?.phone ?? false,
         });
@@ -3593,14 +3592,7 @@ function App() {
                             Teléfono (SMS)
                         </button>
                       )}
-                      {availableProviders?.apple && (
-                      <button type="button" onClick={() => window.location.href = `${API_URL}/auth/apple/redirect`} className="btn-md w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center gap-3">
-                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                              <path d="M16.365 21.435c-1.47 1.043-2.52 1.488-4.225 1.488-1.545 0-2.925-.536-4.39-1.503-3.64-2.42-6.58-8.24-4.88-13.16 1.18-3.41 3.98-5.32 6.84-5.32 1.54 0 2.92.54 4.15 1.25 1.05.61 1.67.92 2.29.92.57 0 1.25-.32 2.38-.97 1.44-.82 3.12-1.12 4.7-.62 2.66.86 4.49 2.97 5.48 5.76-4.5 1.83-5.34 7.63-2.02 10.37-1.07 2.95-3.21 5.34-5.59 7.04-1.28.92-2.3 1.34-3.67 1.34-1.29 0-2.35-.45-3.8-1.39zm-3.08-20.17c-.55-2.05 1.27-4.13 3.3-4.26.65 2.15-1.39 4.34-3.3 4.26z"/>
-                          </svg>
-                          Apple
-                      </button>
-                      )}
+
                       {availableProviders?.telegram && (
                       <button type="button" onClick={() => window.location.href = `${API_URL}/auth/telegram/redirect`} className="btn-md w-full bg-[#229ED9] text-white hover:bg-[#1c88ba] flex items-center justify-center gap-2">
                           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
