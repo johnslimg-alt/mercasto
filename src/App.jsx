@@ -417,7 +417,7 @@ function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [couponInput, setCouponInput] = useState('');
-  const [availableProviders, setAvailableProviders] = useState({ google: false, twitter: false, telegram: false, sms: false });
+  const [availableProviders, setAvailableProviders] = useState({ google: false, twitter: false, telegram: false, telegram_bot_id: null, sms: false });
 
   const setCurrentTab = useCallback((tab) => {
     // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
@@ -471,10 +471,12 @@ function App() {
           google:   p?.google?.enabled  ?? p?.google  ?? false,
           twitter:  p?.twitter?.enabled ?? p?.twitter ?? false,
           telegram: p?.telegram?.enabled ?? p?.telegram ?? false,
+          telegram_bot_id: p?.telegram_bot_id ?? null,
           sms:      p?.sms?.enabled      ?? p?.sms      ?? p?.phone?.enabled ?? p?.phone ?? false,
         });
       })
       .catch(() => {});
+
   }, []);
   const [profileForm, setProfileForm] = useState({ name: '', avatarFile: null, avatarPreview: '' });
   const [profileLoading, setProfileLoading] = useState(false);
@@ -3605,7 +3607,7 @@ function App() {
                       {availableProviders?.telegram && (
                       <button type="button" onClick={() => {
                         // Telegram Login Widget — открываем popup авторизации
-                        const botName = 'mercasto_auth_bot';
+                        const botId = availableProviders?.telegram_bot_id || '8607696679';
                         const callbackUrl = `${API_URL}/auth/telegram/callback`;
                         window.TelegramLoginCallback = async (tgUser) => {
                           try {
@@ -3635,7 +3637,8 @@ function App() {
                         };
                         // Открываем авторизационный popup Telegram
                         const popup = window.open(
-                          `https://oauth.telegram.org/auth?bot_id=${botName}&origin=${encodeURIComponent(window.location.origin)}&request_access=write`,
+                          `https://oauth.telegram.org/auth?bot_id=${botId}&origin=${encodeURIComponent(window.location.origin)}&request_access=write`,
+
                           'telegram_auth',
                           'width=550,height=470,scrollbars=yes'
                         );

@@ -377,11 +377,16 @@ class AuthController extends Controller
             && $twilioFrom !== '+15005550006'
             && !str_contains(strtolower(config('services.twilio.sid')), 'your_');
 
+        // Извлекаем числовой ID бота из токена для Telegram Login Widget
+        $telegramToken = config('services.telegram.client_secret');
+        $telegramBotId = $telegramToken ? explode(':', $telegramToken)[0] : null;
+
         return response()->json([
-            'google'   => $this->isValidConfig(config('services.google.client_id'), config('services.google.client_secret')),
-            'twitter'  => $this->isValidConfig(config('services.twitter-oauth2.client_id'), config('services.twitter-oauth2.client_secret')),
-            'telegram' => $this->isValidConfig(config('services.telegram.client_id'), config('services.telegram.client_secret')),
-            'sms'      => $smsConfigured,
+            'google'          => $this->isValidConfig(config('services.google.client_id'), config('services.google.client_secret')),
+            'twitter'         => $this->isValidConfig(config('services.twitter-oauth2.client_id'), config('services.twitter-oauth2.client_secret')),
+            'telegram'        => $this->isValidConfig(config('services.telegram.client_id'), config('services.telegram.client_secret')),
+            'telegram_bot_id' => $telegramBotId,
+            'sms'             => $smsConfigured,
         ]);
     }
 
