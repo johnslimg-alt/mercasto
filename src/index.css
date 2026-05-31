@@ -75,6 +75,10 @@ html.dark .btn-lg.bg-white:hover {
     overflow-x: hidden;
     background: var(--paper);
   }
+  html.dark,
+  html.dark #root {
+    background: var(--paper);
+  }
   :focus-visible {
     outline: 3px solid rgba(132, 204, 22, 0.55);
     outline-offset: 3px;
@@ -445,6 +449,14 @@ html.dark .btn-lg.bg-white:hover {
     color: #F8FAFC;
   }
 
+  .mobile-location-chip svg {
+    color: #84CC16;
+  }
+
+  html.dark .mobile-location-chip svg {
+    color: #A3E635;
+  }
+
   .mobile-account-button {
     display: inline-flex;
     min-width: 2.35rem;
@@ -463,10 +475,10 @@ html.dark .btn-lg.bg-white:hover {
   }
 
   .mobile-account-button--top {
-    width: 2.35rem;
-    height: 2.35rem;
-    min-width: 2.35rem;
-    min-height: 2.35rem;
+    width: 2.55rem;
+    height: 2.55rem;
+    min-width: 2.55rem;
+    min-height: 2.55rem;
     padding: 0.12rem;
     border-radius: 999px;
     border-color: rgba(132, 204, 22, 0.55);
@@ -475,10 +487,12 @@ html.dark .btn-lg.bg-white:hover {
   }
 
   .mobile-account-button--top img {
-    width: 2rem;
-    height: 2rem;
+    width: 2.18rem;
+    height: 2.18rem;
     border-radius: 999px !important;
     border: 2px solid rgba(132, 204, 22, 0.7);
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
   }
 
   .osm-embed-shell {
@@ -843,6 +857,47 @@ html.dark .btn-lg.bg-white:hover {
     right: 0;
     width: auto !important;
     max-width: 100vw;
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(226, 232, 240, 0.92);
+    backdrop-filter: blur(18px);
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  html.dark .mobile-tabbar {
+    background: rgba(15, 23, 42, 0.92) !important;
+    border-color: rgba(51, 65, 85, 0.95) !important;
+  }
+
+  .mobile-tabbar-post {
+    width: 3.65rem !important;
+    height: 3.65rem !important;
+    border-color: rgba(255, 255, 255, 0.92) !important;
+    color: #0F172A !important;
+  }
+
+  html.dark .mobile-tabbar-post {
+    border-color: rgba(15, 23, 42, 0.95) !important;
+    color: #0F172A !important;
+  }
+
+  .mobile-tabbar-menu {
+    color: #0F172A;
+  }
+
+  html.dark .mobile-tabbar-menu {
+    color: #F8FAFC;
+  }
+
+  .header-user-button img,
+  .mobile-account-button img {
+    aspect-ratio: 1 / 1;
+    border-radius: 999px !important;
+    object-fit: cover;
+  }
+
+  .header-user-button > div,
+  .mobile-account-button > div {
+    border-radius: 999px !important;
   }
 
   .header-category-bar {
