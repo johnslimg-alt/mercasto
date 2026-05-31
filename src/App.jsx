@@ -3603,7 +3603,53 @@ function App() {
                       </button>
                       )}
                       {availableProviders?.telegram && (
-                      <button type="button" onClick={() => window.location.href = `${API_URL}/auth/telegram/redirect`} className="btn-md w-full bg-[#229ED9] text-white hover:bg-[#1c88ba] flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md">
+                      <button type="button" onClick={() => {
+                        // Telegram Login Widget — открываем popup авторизации
+                        const botName = 'mercasto_auth_bot';
+                        const callbackUrl = `${API_URL}/auth/telegram/callback`;
+                        window.TelegramLoginCallback = async (tgUser) => {
+                          try {
+                            const res = await fetch(`${API_URL}/auth/telegram/callback`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify(tgUser)
+                            });
+                            const data = await res.json();
+                            if (data.token && data.user) {
+                              localStorage.setItem('auth_token', data.token);
+                              setUser(data.user);
+                              setUserRole(data.user.role || 'individual');
+                              localStorage.setItem('user', JSON.stringify(data.user));
+                              setShowAuthModal(false);
+                              showToast('¡Bienvenido!');
+                            } else if (data.requires_2fa) {
+                              setTwoFactorEmail(data.email);
+                              setRequiresTwoFactor(true);
+                              setAuthMode('login');
+                            } else {
+                              showToast(data.error || 'Error de Telegram', 'error');
+                            }
+                          } catch (e) {
+                            showToast('Error de conexión con Telegram', 'error');
+                          }
+                        };
+                        // Открываем авторизационный popup Telegram
+                        const popup = window.open(
+                          `https://oauth.telegram.org/auth?bot_id=${botName}&origin=${encodeURIComponent(window.location.origin)}&request_access=write`,
+                          'telegram_auth',
+                          'width=550,height=470,scrollbars=yes'
+                        );
+                        // Слушаем сообщение от popup
+                        const listener = (event) => {
+                          if (event.origin === 'https://oauth.telegram.org' && event.data?.event === 'auth_result') {
+                            window.removeEventListener('message', listener);
+                            if (event.data.result) {
+                              window.TelegramLoginCallback(event.data.result);
+                            }
+                          }
+                        };
+                        window.addEventListener('message', listener);
+                      }} className="btn-md w-full bg-[#229ED9] text-white hover:bg-[#1c88ba] flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md">
                           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                               <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.223-.535.223l.188-2.85 5.18-4.686c.223-.195-.054-.31-.35-.11l-6.4 4.02-2.76-.89c-.6-.188-.614-.6.126-.89L17.2 7.15c.523-.188.983.118.694 1.07z"/>
                           </svg>

@@ -550,4 +550,99 @@ class AuthController extends Controller
         $user->referral_code = $referralCode;
         $user->save();
     }
+
+    /**
+     * Обработка Telegram Login Widget (POST JSON с фронтенда)
+     */
+    public function handleTelegramWidget(Request $request)
+    {
+        try {
+            $authData = $request->only(['id', 'first_name', 'last_name', 'username', 'photo_url', 'auth_date', 'hash']);
+
+            if (empty($authData['hash']) || empty($authData['id'])) {
+                return response()->json(['error' => 'Datos de Telegram incompletos'], 400);
+            }
+
+            // Проверка давности авторизации (не старше 5 минут)
+            if (isset($authData['auth_date']) && (time() - (int)$authData['auth_date']) > 300) {
+                return response()->json(['error' => 'La sesión de Telegram ha expirado'], 401);
+            }
+
+            $checkHash = $authData['hash'];
+            unset($authData['hash']);
+
+            $dataCheckArr = [];
+            foreach ($authData as $key => $value) {
+                if ($value !== null && $value !== '') {
+                    $dataCheckArr[] = $key . '=' . $value;
+                }
+            }
+            sort($dataCheckArr);
+            $dataCheckString = implode("\n", $dataCheckArr);
+
+            $botToken = config('services.telegram.client_secret');
+            $secretKey = hash('sha256', $botToken, true);
+            $hash = hash_hmac('sha256', $dataCheckString, $secretKey);
+
+            if (!hash_equals($hash, $checkHash)) {
+                \Illuminate\Support\Facades\Log::warning('Telegram widget signature verification failed.');
+                return response()->json(['error' => 'Firma de Telegram inválida'], 403);
+            }
+
+            $provider = 'telegram';
+            $socialUser = (object)[
+                'id' => $authData['id'],
+                'name' => ($authData['first_name'] ?? '') . (isset($authData['last_name']) ? ' ' . $authData['last_name'] : ''),
+                'email' => isset($authData['username']) ? $authData['username'] . '@telegram.local' : $authData['id'] . '@telegram.local',
+                'avatar' => $authData['photo_url'] ?? null,
+            ];
+
+            // Ищем по ID провайдера
+            $user = User::where('telegram_id', $socialUser->id)->first();
+
+            // Если не нашли по ID, но есть Email, ищем по Email
+            if (!$user && $socialUser->email) {
+                $existingUser = User::where('email', $socialUser->email)->first();
+                if ($existingUser && $existingUser->role === 'admin') {
+                    \Illuminate\Support\Facades\Log::alert('Attempted OAuth Hijack on Admin Account via Telegram: ' . $socialUser->email);
+                    return response()->json(['error' => 'No permitido'], 403);
+                }
+                $user = $existingUser;
+            }
+
+            if (!$user) {
+                $user = new User();
+                $user->name = $socialUser->name ?: 'telegram_user_' . rand(1000, 9999);
+                $user->email = $socialUser->email;
+                $user->telegram_id = $socialUser->id;
+                $user->avatar_url = $socialUser->avatar;
+                $user->role = 'individual';
+                $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                $user->save();
+            } elseif (!$user->telegram_id) {
+                $user->telegram_id = $socialUser->id;
+                $user->save();
+            }
+
+            $this->ensureReferralCode($user);
+
+            // Проверка 2FA
+            if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
+                return response()->json([
+                    'requires_2fa' => true,
+                    'email' => $user->email,
+                ]);
+            }
+
+            $token = $user->createToken('auth-token')->plainTextToken;
+
+            return response()->json([
+                'token' => $token,
+                'user'  => $user->makeHidden(['password', 'remember_token']),
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Telegram Widget Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Error de autenticación de Telegram'], 500);
+        }
+    }
 }

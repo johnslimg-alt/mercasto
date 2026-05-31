@@ -133,6 +133,7 @@ Route::middleware('throttle:api')->get('/auth/providers', [AuthController::class
 // OAuth wildcard routes (must come AFTER static /auth/providers)
 Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider']);
 Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback']);
+Route::post('/auth/telegram/callback', [AuthController::class, 'handleTelegramWidget']);
 
 // Защита метрик и просмотров от ботов и накруток (максимум 60 запросов в минуту с 1 IP)
 Route::middleware('throttle:60,1')->group(function () {
