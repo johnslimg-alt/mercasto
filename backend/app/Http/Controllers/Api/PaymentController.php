@@ -196,12 +196,15 @@ class PaymentController extends Controller
         // Защита от криптографического бага ltrim (удалял нужные символы хэша, если они совпадали с маской)
         $receivedHash = str_starts_with((string) $signature, 'sha256=') ? substr((string) $signature, 7) : (string) $signature;
 
+        $paidStatuses = ['paid', 'completed', 'checkout_completed'];
+
         if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
             // Clip dashboard can send an unsigned test ping. Accept only non-payment pings,
             // never unsigned events that claim a checkout reference or paid status.
-            if (!$signature && !$checkoutId && !$paymentStatus) {
+            if (!$signature && !$checkoutId && !in_array($paymentStatus, $paidStatuses, true)) {
                 Log::info('Unsigned Clip webhook test ping accepted', [
                     'ip_hash' => hash('sha256', (string) $request->ip()),
+                    'status' => $paymentStatus ?: null,
                 ]);
 
                 return response()->json(['status' => 'test_ok']);
@@ -213,7 +216,7 @@ class PaymentController extends Controller
             ]);
             return response()->json(['status' => 'invalid_signature'], 401);
         }
-        if ($checkoutId && in_array($paymentStatus, ['paid', 'completed', 'checkout_completed'], true)) {
+        if ($checkoutId && in_array($paymentStatus, $paidStatuses, true)) {
             // Атомарное обновление для абсолютной защиты от Race Condition (Double-Spend)
             $updated = DB::table('payments')
                 ->where('clip_checkout_id', $checkoutId)

@@ -149,6 +149,7 @@ Route::middleware('throttle:5,1')->group(function () {
 // Webhook routes (Защита от Crypto CPU DoS: ограничиваем попытки брутфорса HMAC-подписей)
 Route::middleware('throttle:60,1')->group(function () {
     Route::post('/webhooks/clip', [PaymentController::class, 'handleWebhook']);
+    Route::post('/payment/webhook', [PaymentController::class, 'handleWebhook']); // Backward-compatible Clip webhook alias
 });
 
 // Protected routes
