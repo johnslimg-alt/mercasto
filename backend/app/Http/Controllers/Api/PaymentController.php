@@ -210,6 +210,22 @@ class PaymentController extends Controller
                 return response()->json(['status' => 'test_ok']);
             }
 
+            $knownCheckout = $checkoutId
+                ? DB::table('payments')->where('clip_checkout_id', $checkoutId)->exists()
+                : false;
+
+            if (!$knownCheckout) {
+                Log::info('Unsigned or invalid Clip webhook test/unknown checkout accepted', [
+                    'ip_hash' => hash('sha256', (string) $request->ip()),
+                    'path' => $request->path(),
+                    'checkout_id_present' => (bool) $checkoutId,
+                    'status' => $paymentStatus ?: null,
+                    'signature_present' => (bool) $signature,
+                ]);
+
+                return response()->json(['status' => 'test_ok']);
+            }
+
             $clientIpHash = hash('sha256', (string) $request->ip());
             Log::warning('Invalid Clip webhook signature', [
                 'ip_hash' => $clientIpHash,
