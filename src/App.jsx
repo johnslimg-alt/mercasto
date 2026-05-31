@@ -1032,7 +1032,7 @@ function App() {
         showToast('Error al cargar el perfil. Inicia sesión de nuevo.', 'error');
       });
     } else if (error) {
-      showToast('Error de autenticación con Google', 'error');
+      showToast('Error de autenticación social. Inténtalo de nuevo.', 'error');
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
