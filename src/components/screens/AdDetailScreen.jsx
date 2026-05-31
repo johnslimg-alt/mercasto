@@ -464,7 +464,7 @@ export default function AdDetailScreen({
                   <Share2 size={18} /> Compartir
                 </button>
                 {showShareMenu && (
-                  <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                  <div className="absolute right-0 z-30 mt-2 max-h-64 w-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
                     {navigator.share && (
                       <button
                         type="button"
@@ -472,7 +472,7 @@ export default function AdDetailScreen({
                           handleShareAd(ad);
                           setShowShareMenu(false);
                         }}
-                        className="block w-full px-4 py-3 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                        className="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
                         Compartir desde el dispositivo
                       </button>
@@ -484,7 +484,7 @@ export default function AdDetailScreen({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setShowShareMenu(false)}
-                        className="block px-4 py-3 text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                        className="block px-4 py-2.5 text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
                         {option.label}
                       </a>

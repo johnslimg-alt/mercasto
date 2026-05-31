@@ -58,11 +58,22 @@ html.dark .btn-lg.bg-white:hover {
   }
   html.dark body { 
     @apply bg-[var(--color-ink)] text-[var(--color-paper)]; 
+    --paper: #0B1220;
+    --ink: #F8FAFC;
+    --surface: #1E293B;
+    --surface-soft: #0F172A;
+    --line: #334155;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(132, 204, 22, 0.08), transparent 24rem),
+      radial-gradient(circle at 86% 12%, rgba(15, 143, 125, 0.08), transparent 24rem),
+      var(--paper);
   }
   #root {
     width: 100%;
     max-width: 100%;
+    min-height: 100dvh;
     overflow-x: hidden;
+    background: var(--paper);
   }
   :focus-visible {
     outline: 3px solid rgba(132, 204, 22, 0.55);
@@ -466,7 +477,57 @@ html.dark .btn-lg.bg-white:hover {
   .mobile-account-button--top img {
     width: 2rem;
     height: 2rem;
+    border-radius: 999px !important;
     border: 2px solid rgba(132, 204, 22, 0.7);
+  }
+
+  .osm-embed-shell {
+    position: relative;
+  }
+
+  .osm-embed-shell::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    height: 2.4rem;
+    background: linear-gradient(to top, rgba(248, 250, 252, 0.98), rgba(248, 250, 252, 0.72), transparent);
+    pointer-events: none;
+  }
+
+  html.dark .osm-embed-shell::after {
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.72), transparent);
+  }
+
+  .native-file-control {
+    color: transparent;
+  }
+
+  .native-file-control::file-selector-button {
+    margin-right: 0.75rem;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(132, 204, 22, 0.16);
+    color: #65A30D;
+    padding: 0.65rem 1rem;
+    font-weight: 800;
+  }
+
+  .native-file-control::after {
+    content: attr(data-label);
+    color: #94A3B8;
+    font-size: 0.82rem;
+  }
+
+  html.dark .native-file-control {
+    background: #0F172A !important;
+  }
+
+  html.dark .native-file-control::file-selector-button {
+    background: rgba(132, 204, 22, 0.18);
+    color: #A3E635;
   }
 
   .mobile-account-button span {
@@ -563,6 +624,27 @@ html.dark .btn-lg.bg-white:hover {
 
   .profile-menu-item--danger {
     color: #dc2626;
+  }
+
+  .mobile-tabbar-menu {
+    position: absolute;
+    right: 1rem;
+    bottom: 5.7rem;
+    width: 13rem;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.18);
+    padding: 0.5rem;
+  }
+
+  html.dark .mobile-tabbar-menu {
+    border-color: rgba(51, 65, 85, 0.95);
+    background: rgba(15, 23, 42, 0.98);
+  }
+
+  .mobile-tabbar-post {
+    box-shadow: 0 14px 35px rgba(132, 204, 22, 0.38);
   }
 
   html.dark .profile-menu-popover {

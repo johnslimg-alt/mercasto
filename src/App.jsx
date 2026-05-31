@@ -6,7 +6,7 @@ import ChartTooltip from './components/common/ChartTooltip';
 import AdSenseBanner from './components/common/AdSenseBanner';
 import OnboardingModal from './components/OnboardingModal';
 import {
-  Search, Home, PlusCircle, User, Users, Settings, Shield,
+  Search, Home, PlusCircle, User, Users, Settings, Shield, Menu,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
   CheckCircle, XCircle, BarChart3, LogOut, Globe, Sparkles, Loader2, Play, Video, Phone, AlertTriangle, Activity,
   Car, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Pencil, Moon, Sun, BadgeCheck,
@@ -2943,11 +2943,19 @@ function App() {
       <button onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-8"><div className="flex flex-col items-center justify-center bg-[#84CC16] text-white p-3.5 rounded-full shadow-lg border-4 border-[#f5f5f5]"><PlusCircle className="w-7 h-7" /></div></button>
+      <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-7"><div className="mobile-tabbar-post flex h-16 w-16 flex-col items-center justify-center rounded-full border-[5px] border-slate-100 bg-[#84CC16] text-white dark:border-slate-800"><PlusCircle className="w-7 h-7" /></div></button>
       <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}><Bell className="w-6 h-6 mb-1" />{notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}</button>
-      <button onClick={() => { user ? setCurrentTab('profile') : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 ${currentTab === 'profile' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
-        <User className="w-6 h-6 mb-1" />
+      <button onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 ${currentTab === 'profile' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showProfileMenu}>
+        <Menu className="w-6 h-6 mb-1" />
       </button>
+      {showProfileMenu && user && (
+        <div className="mobile-tabbar-menu">
+          <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
+          <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
+          <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
+          <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
+        </div>
+      )}
     </div>
   );
 
@@ -3159,7 +3167,7 @@ function App() {
             <div className="relative hidden sm:block">
             <button onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
                 {user?.avatar_url ? (
-                  <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-lg object-cover" alt=""/>
+                  <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-full object-cover" alt=""/>
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500"><User size={18} /></div>
                 )}

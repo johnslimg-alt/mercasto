@@ -48,6 +48,7 @@ const STATE_COORDS = {
 };
 
 const LeafletMap = ({ ads, onViewAd }) => {
+  const [expanded, setExpanded] = React.useState(false);
   const mapAds = React.useMemo(() => (ads || []).slice(0, 6).map(ad => {
     if (ad.latitude && ad.longitude) return { ad, coords: [parseFloat(ad.latitude), parseFloat(ad.longitude)] };
     const stateName = ad.state || ad.location?.split(',')[1]?.trim() || ad.location?.split('·')[0]?.trim() || ad.location?.split(',')[0]?.trim() || '';
@@ -63,9 +64,16 @@ const LeafletMap = ({ ads, onViewAd }) => {
   const bbox = `${center[1] - 6}%2C${center[0] - 4}%2C${center[1] + 6}%2C${center[0] + 4}`;
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${center[0]}%2C${center[1]}`;
 
-  return (
-    <div className="relative mb-4 md:mb-6 h-[190px] md:h-[320px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-md">
+  const mapBody = (
+    <>
       <iframe title="Mapa de anuncios" src={mapUrl} className="h-full w-full border-0 opacity-90 dark:opacity-75" loading="lazy" />
+      <div className="absolute left-3 right-3 top-3 z-[3] flex flex-wrap gap-2">
+        <div className="rounded-full bg-white/95 px-3 py-1.5 text-xs font-black text-slate-800 shadow-sm dark:bg-slate-950/90 dark:text-white">Todo México</div>
+        <div className="rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm dark:bg-slate-950/90 dark:text-slate-300">Filtros activos</div>
+        <button type="button" onClick={() => setExpanded(true)} className="ml-auto rounded-full bg-[#84CC16] px-3 py-1.5 text-xs font-black text-slate-950 shadow-sm">
+          Ampliar mapa
+        </button>
+      </div>
       <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[2] flex gap-2 overflow-x-auto">
         {mapAds.slice(0, 4).map(({ ad }, index) => (
           <button key={ad.id || index} onClick={() => onViewAd(ad)} className={`pointer-events-auto shrink-0 rounded-full px-3 py-1.5 text-xs font-black text-white shadow-lg ${index % 2 ? 'bg-slate-950' : 'bg-[#84CC16]'}`}>
@@ -73,7 +81,36 @@ const LeafletMap = ({ ads, onViewAd }) => {
           </button>
         ))}
       </div>
+    </>
+  );
+
+  return (
+    <>
+    <div className="osm-embed-shell relative mb-4 md:mb-6 h-[190px] md:h-[320px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-md">
+      {mapBody}
     </div>
+    {expanded && (
+      <div className="fixed inset-0 z-[9999] bg-slate-950/80 p-3 backdrop-blur-sm">
+        <div className="relative h-full overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl">
+          <div className="absolute inset-x-3 top-3 z-[4] flex gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95">
+            <input className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold dark:border-slate-700" placeholder="Buscar en el mapa..." />
+            <button className="rounded-xl bg-[#84CC16] px-3 py-2 text-sm font-black text-slate-950">Buscar</button>
+            <button type="button" onClick={() => setExpanded(false)} className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white dark:bg-slate-700">Cerrar</button>
+          </div>
+          <iframe title="Mapa ampliado de anuncios" src={mapUrl} className="h-full w-full border-0 opacity-90" loading="lazy" />
+          <div className="absolute inset-x-0 bottom-0 z-[3] bg-slate-950/90 p-3">
+            <div className="flex gap-2 overflow-x-auto">
+              {mapAds.slice(0, 6).map(({ ad }, index) => (
+                <button key={ad.id || index} onClick={() => onViewAd(ad)} className="shrink-0 rounded-full bg-[#84CC16] px-3 py-2 text-xs font-black text-slate-950">
+                  ${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
@@ -587,7 +624,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                 <div className="col-span-12 xl:col-span-4">
 
-                  <div className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900">
+                  <div className="osm-embed-shell market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900">
 
                     <iframe
                       title="Mapa de propiedades en México"

@@ -157,7 +157,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
           <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 flex flex-col md:flex-row md:items-center gap-4 md:gap-6 mb-6 shadow-sm">
 
-            <div onClick={openProfileModal} className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-white ${accountType === 'pro' ? 'bg-slate-900' : 'bg-slate-100'} overflow-hidden relative group cursor-pointer shadow-inner`}>
+            <div onClick={openProfileModal} className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white ${accountType === 'pro' ? 'bg-slate-900' : 'bg-slate-100'} overflow-hidden relative group cursor-pointer shadow-inner`}>
 
               {user?.avatar_url ? (
 

@@ -318,7 +318,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                  </div>
 
-                 <div className="w-full h-48 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 relative">
+                 <div className="osm-embed-shell w-full h-48 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 relative">
 
                      <iframe width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight="0" marginWidth="0" src={mapUrl} style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)' }} className={`transition-opacity duration-300 ${isMapUpdating ? 'opacity-40' : 'opacity-100'}`}></iframe>
 
@@ -368,7 +368,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
                   ) : (
 
-                    <input type="file" accept="video/mp4,video/quicktime" onChange={(e) => setVideoFile(e.target.files[0])} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#84CC16]/10 file:text-[#65A30D] hover:file:bg-[#84CC16]/20" />
+                    <input type="file" accept="video/mp4,video/quicktime" onChange={(e) => setVideoFile(e.target.files[0])} data-label={t.no_file_selected || 'Sin archivo seleccionado'} className="native-file-control w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm" />
 
                   )}
 
