@@ -70,13 +70,9 @@ const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
   const [mapReady, setMapReady] = React.useState(false);
-  const [mapFailed, setMapFailed] = React.useState(false);
 
   React.useEffect(() => {
-    const fallbackTimer = window.setTimeout(() => setMapFailed(true), 3500);
-
     loadLeaflet(() => {
-      window.clearTimeout(fallbackTimer);
       if (!mapRef.current) return;
       
       if (!mapInstanceRef.current) {
@@ -138,7 +134,6 @@ const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
         setMapReady(true);
       }, 120);
     });
-    return () => window.clearTimeout(fallbackTimer);
   }, [ads, getImageUrl]);
 
   React.useEffect(() => {
@@ -151,27 +146,19 @@ const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
     };
   }, [ads, onViewAd]);
 
-  if (mapFailed && !mapReady) {
-    return (
-      <div className="mb-4 h-[150px] md:h-[260px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-[radial-gradient(circle_at_32%_48%,rgba(132,204,22,.28),transparent_13%),radial-gradient(circle_at_68%_38%,rgba(20,184,166,.18),transparent_14%),linear-gradient(135deg,#e0f2fe,#dcfce7_55%,#dbeafe)] dark:bg-[radial-gradient(circle_at_32%_48%,rgba(132,204,22,.18),transparent_13%),radial-gradient(circle_at_68%_38%,rgba(20,184,166,.12),transparent_14%),linear-gradient(135deg,#0f172a,#13233a_55%,#0b1120)] p-3 md:p-4 shadow-md">
-        <div className="flex h-full flex-col justify-between">
-          <div className="flex items-center justify-between text-sm font-bold text-slate-900 dark:text-white">
-            <span>Todo México</span>
-            <span className="rounded-full bg-white/80 px-3 py-1 text-xs text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">Vista previa</span>
-          </div>
-          <div className="grid grid-cols-4 gap-2 text-center text-xs font-bold text-white">
-            {(ads || []).slice(0, 4).map((ad, index) => (
-              <button key={ad.id || index} onClick={() => onViewAd(ad)} className={`rounded-full px-2 py-2 shadow-lg ${index % 2 ? 'bg-slate-900 dark:bg-slate-950' : 'bg-[#84CC16]'}`}>
-                ${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}
-              </button>
-            ))}
+  return (
+    <div className="relative mb-4 md:mb-6 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md">
+      {!mapReady && (
+        <div className="absolute inset-0 z-[2] grid place-items-center bg-slate-950/75 text-slate-200 text-sm font-semibold">
+          <div className="flex flex-col items-center">
+            <Loader2 className="mb-2 h-5 w-5 animate-spin text-[#84CC16]" />
+            Cargando mapa...
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return <div ref={mapRef} className="w-full h-[150px] md:h-[320px] rounded-2xl border border-slate-200 shadow-md relative z-[1] mb-4 md:mb-6 overflow-hidden bg-slate-100 dark:bg-slate-900" />;
+      )}
+      <div ref={mapRef} className="w-full h-[190px] md:h-[320px] relative z-[1] overflow-hidden bg-slate-100 dark:bg-slate-900" />
+    </div>
+  );
 };
 
 function isStringArray(str) {
@@ -400,7 +387,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
         {/* 1. HERO STATS */}
 
-        <div className="bg-white/75 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+        <div className="hidden md:block bg-white/75 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
 
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-3 flex flex-col md:flex-row md:items-center gap-3 justify-between">
 

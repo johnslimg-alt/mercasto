@@ -399,15 +399,25 @@ html.dark .btn-lg.bg-white:hover {
     border-radius: 1rem;
   }
 
+  html.dark .mobile-search-combo {
+    background: rgba(15, 23, 42, 0.92) !important;
+  }
+
+  .mobile-search-combo input {
+    background: transparent !important;
+    color: inherit;
+  }
+
   .mobile-location-chip {
     align-self: stretch;
     max-width: 7.15rem;
     border-left: 1px solid rgba(148, 163, 184, 0.35);
-    border-radius: 0;
+    border-radius: 0 0.85rem 0.85rem 0;
     color: #475569;
     font-size: 0.72rem;
     font-weight: 800;
     min-width: 0;
+    background: rgba(226, 232, 240, 0.5);
   }
 
   .mobile-location-chip span {
@@ -419,13 +429,14 @@ html.dark .btn-lg.bg-white:hover {
 
   html.dark .mobile-location-chip {
     border-left-color: rgba(100, 116, 139, 0.55);
-    color: #CBD5E1;
+    background: rgba(30, 41, 59, 0.72) !important;
+    color: #F8FAFC;
   }
 
   .mobile-account-button {
     display: inline-flex;
     min-width: 2.35rem;
-    max-width: 4.05rem;
+    max-width: 3.05rem;
     min-height: 2.32rem;
     align-items: center;
     justify-content: center;
@@ -445,12 +456,12 @@ html.dark .btn-lg.bg-white:hover {
 
   @media (min-width: 390px) {
     .mobile-account-button {
-      max-width: 5.5rem;
-      padding-inline: 0.55rem;
+      max-width: 3.05rem;
+      padding-inline: 0.42rem;
     }
 
     .mobile-account-button span {
-      display: inline;
+      display: none;
     }
   }
 
@@ -536,6 +547,13 @@ html.dark .btn-lg.bg-white:hover {
     align-items: center;
     justify-content: center;
     border-radius: 999px;
+    color: #84CC16;
+  }
+
+  .mobile-theme-icon svg,
+  .mobile-language-select svg {
+    color: #84CC16;
+    stroke-width: 2.35;
   }
 
   .job-logo-badge {
