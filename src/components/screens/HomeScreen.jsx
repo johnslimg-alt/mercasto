@@ -1260,77 +1260,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
 
 
-            {/* 15. APP DOWNLOAD */}
-
-            <section className="col-span-12 mt-4">
-
-              <div className="bg-[#0F172A] text-white rounded-[28px] overflow-hidden">
-
-                <div className="grid lg:grid-cols-2 gap-0 items-center">
-
-                  <div className="p-8 lg:p-12">
-
-                    <span className="badge bg-[#84CC16] text-white">NEW APP</span>
-
-                    <h3 className="text-[28px] lg:text-[34px] font-bold leading-tight mt-3">{t.app_title || 'Mercasto en tu teléfono. Compra y vende más rápido.'}</h3>
-
-                    <p className="text-white/70 mt-3 text-[15px] max-w-[480px]">{t.app_desc || 'Recibe alertas instantáneas, gestiona todo desde tu móvil y comunícate seguro.'}</p>
-
-                    <ul className="mt-5 space-y-2 text-[14px] text-white/90">
-
-                      <li className="flex gap-2.5"><span className="text-[#84CC16]">✓</span> {t.push_alerts || 'Alertas Push para tus búsquedas'}</li>
-
-                      <li className="flex gap-2.5"><span className="text-[#84CC16]">✓</span> {t.cam_autofill || 'Publicación rápida con cámara IA'}</li>
-
-                      <li className="flex gap-2.5"><span className="text-[#84CC16]">✓</span> {t.safe_qr || 'Contacto seguro con código QR'}</li>
-
-                    </ul>
-
-                    <div className="flex items-center gap-3 mt-6">
-
-                      <a className="h-12"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" className="h-12" alt="App Store"/></a>
-
-                      <a className="h-12"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" className="h-12" alt="Google Play"/></a>
-
-                    </div>
-
-                    <div className="flex items-center gap-4 mt-5 text-[12px] text-white/60">
-
-                      <span>4.8 ★ 124k reviews</span>
-
-                      <span>•</span>
-
-                      <span>{t.free_no_ads || 'Gratis • Sin anuncios en PRO'}</span>
-
-                    </div>
-
-                  </div>
-
-                  <div className="relative h-[340px] lg:h-full min-h-[380px] bg-gradient-to-br from-[#84CC16]/20 to-transparent">
-
-                    <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800" className="absolute bottom-0 right-6 lg:right-12 w-[260px] lg:w-[320px] drop-shadow-2xl rounded-[32px] border-[8px] border-black/80" alt="Phone mockup"/>
-
-                    <div className="absolute top-10 right-[40%] hidden lg:block bg-white text-slate-900 rounded-2xl p-3 shadow-xl w-[200px]">
-
-                      <div className="text-[11px] text-slate-500">Nuevo lead de WhatsApp</div>
-
-                      <div className="text-[13px] font-medium mt-1">¡Alguien está interesado en tu iPhone!</div>
-
-                      <div className="text-[11px] text-[#65A30D] mt-1 font-semibold">Ver estadísticas →</div>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            </section>
-
-
-
-            {/* 16. NEWSLETTER */}
+            {/* 15. NEWSLETTER */}
 
             <section className="col-span-12">
 
