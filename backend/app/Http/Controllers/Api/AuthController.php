@@ -523,9 +523,13 @@ class AuthController extends Controller
                 $user->avatar_url = $socialUser->avatar;
                 $user->role = 'individual';
                 $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                $user->email_verified_at = now(); // Automatically verify email for social registrations
                 $user->save();
             } elseif (!$user->{"{$provider}_id"}) {
                 $user->{"{$provider}_id"} = $socialUser->id;
+                if (!$user->email_verified_at) {
+                    $user->email_verified_at = now();
+                }
                 $user->save();
             }
 
@@ -630,9 +634,13 @@ class AuthController extends Controller
                 $user->avatar_url = $socialUser->avatar;
                 $user->role = 'individual';
                 $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                $user->email_verified_at = now(); // Automatically verify email for Telegram
                 $user->save();
             } elseif (!$user->telegram_id) {
                 $user->telegram_id = $socialUser->id;
+                if (!$user->email_verified_at) {
+                    $user->email_verified_at = now();
+                }
                 $user->save();
             }
 
