@@ -69,9 +69,14 @@ const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
+  const [mapReady, setMapReady] = React.useState(false);
+  const [mapFailed, setMapFailed] = React.useState(false);
 
   React.useEffect(() => {
+    const fallbackTimer = window.setTimeout(() => setMapFailed(true), 3500);
+
     loadLeaflet(() => {
+      window.clearTimeout(fallbackTimer);
       if (!mapRef.current) return;
       
       if (!mapInstanceRef.current) {
@@ -127,7 +132,13 @@ const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
       if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [40, 40] });
       }
+
+      window.setTimeout(() => {
+        map.invalidateSize();
+        setMapReady(true);
+      }, 120);
     });
+    return () => window.clearTimeout(fallbackTimer);
   }, [ads, getImageUrl]);
 
   React.useEffect(() => {
@@ -140,7 +151,27 @@ const LeafletMap = ({ ads, getImageUrl, onViewAd }) => {
     };
   }, [ads, onViewAd]);
 
-  return <div ref={mapRef} className="w-full h-[320px] md:h-[380px] rounded-2xl border border-slate-200 shadow-md relative z-[1] mb-6 overflow-hidden" />;
+  if (mapFailed && !mapReady) {
+    return (
+      <div className="mb-6 h-[220px] md:h-[300px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-[radial-gradient(circle_at_32%_48%,rgba(132,204,22,.28),transparent_13%),radial-gradient(circle_at_68%_38%,rgba(20,184,166,.18),transparent_14%),linear-gradient(135deg,#e0f2fe,#dcfce7_55%,#dbeafe)] dark:bg-[radial-gradient(circle_at_32%_48%,rgba(132,204,22,.18),transparent_13%),radial-gradient(circle_at_68%_38%,rgba(20,184,166,.12),transparent_14%),linear-gradient(135deg,#0f172a,#13233a_55%,#0b1120)] p-4 shadow-md">
+        <div className="flex h-full flex-col justify-between">
+          <div className="flex items-center justify-between text-sm font-bold text-slate-900 dark:text-white">
+            <span>Todo México</span>
+            <span className="rounded-full bg-white/80 px-3 py-1 text-xs text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">Vista previa</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-center text-xs font-bold text-white">
+            {(ads || []).slice(0, 4).map((ad, index) => (
+              <button key={ad.id || index} onClick={() => onViewAd(ad)} className={`rounded-full px-2 py-2 shadow-lg ${index % 2 ? 'bg-slate-900 dark:bg-slate-950' : 'bg-[#84CC16]'}`}>
+                ${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <div ref={mapRef} className="w-full h-[220px] md:h-[340px] rounded-2xl border border-slate-200 shadow-md relative z-[1] mb-6 overflow-hidden bg-slate-100 dark:bg-slate-900" />;
 };
 
 function isStringArray(str) {
@@ -212,6 +243,21 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
         })
         .slice(0, 12);
     }, [serverAds]);
+    const displayImageMap = React.useMemo(() => {
+      const seen = new Map();
+      const result = new Map();
+      (serverAds || []).forEach(ad => {
+        const raw = ad.image_url || ad.image || '';
+        const key = typeof raw === 'string' ? raw : JSON.stringify(raw);
+        const count = seen.get(key) || 0;
+        seen.set(key, count + 1);
+        if (count > 0) {
+          const category = encodeURIComponent(ad.category || activeCat || 'mercasto');
+          result.set(ad.id, `https://picsum.photos/seed/mercasto-${category}-${ad.id}/600/450`);
+        }
+      });
+      return result;
+    }, [serverAds, activeCat]);
     const applyCityFilter = React.useCallback((cityName) => {
       setSearchLocation?.(null);
       setSearchLocationInput?.(cityName);
@@ -312,7 +358,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
                   <React.Fragment key={ad.id}>
 
-                    {renderAdCard(ad)}
+                    {renderAdCard(ad, { displayImageUrl: displayImageMap.get(ad.id) })}
 
                     {/* Показываем рекламный баннер после каждого 7-го объявления */}
 
