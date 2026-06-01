@@ -125,54 +125,53 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               {/* IMAGE UPLOAD */}
 
               <div>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Фотографии объявления</label>
 
-                 <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.ad_photos || 'Fotos del anuncio'}</label>
+                  {images.length > 0 ? (
 
-                 {images.length > 0 ? (
+                     <div className="w-full space-y-3">
 
-                    <div className="w-full space-y-3">
+                        <SortablePhotoGrid
+                          photos={images}
+                          onReorder={reorderImages}
+                          onDelete={removeImageById}
+                        />
 
-                       <SortablePhotoGrid
-                         photos={images}
-                         onReorder={reorderImages}
-                         onDelete={removeImageById}
-                       />
+                        {images.length < 10 && (
 
-                       {images.length < 10 && (
+                           <label className="aspect-square border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50 w-full py-4">
 
-                          <label className="aspect-square border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50 w-full py-4">
+                              <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
 
-                             <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                              <PlusCircle className="text-slate-400" size={24} />
 
-                             <PlusCircle className="text-slate-400" size={24} />
+                              <span className="text-xs text-slate-400 mt-1">Добавить еще фото</span>
 
-                             <span className="text-xs text-slate-400 mt-1">{t.add_more_photos || 'Agregar más fotos'}</span>
+                           </label>
 
-                          </label>
+                        )}
 
-                       )}
+                     </div>
 
-                    </div>
+                  ) : (
 
-                 ) : (
+                     <label className="border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer group relative overflow-hidden h-40 md:h-48 bg-slate-50">
 
-                    <label className="border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer group relative overflow-hidden h-40 md:h-48 bg-slate-50">
+                        <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
 
-                       <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+                        <div className="w-14 h-14 bg-white group-hover:bg-[#84CC16]/10 rounded-full flex items-center justify-center mb-3 transition-colors shadow-sm">
 
-                       <div className="w-14 h-14 bg-white group-hover:bg-[#84CC16]/10 rounded-full flex items-center justify-center mb-3 transition-colors shadow-sm">
+                           <Camera className="text-slate-400 group-hover:text-[#65A30D]" size={28} />
 
-                          <Camera className="text-slate-400 group-hover:text-[#65A30D]" size={28} />
+                        </div>
 
-                       </div>
+                        <p className="text-[14px] font-medium text-slate-700 mb-1">Перетащите ваши фото сюда или <span className="text-[#65A30D]">выберите файл</span></p>
 
-                       <p className="text-[14px] font-medium text-slate-700 mb-1">{(t.drag_photos_hint || 'Arrastra tus fotos aquí o')} <span className="text-[#65A30D]">{(t.browse_label || 'explora')}</span></p>
+                        <p className="text-[12px] text-slate-500">Максимум 10 фото (JPG, PNG)</p>
 
-                       <p className="text-[12px] text-slate-500">{(t.max_photos_hint || 'Máximo 10 fotos (JPG, PNG)')}</p>
+                     </label>
 
-                    </label>
-
-                 )}
+                  )}
 
               </div>
 
