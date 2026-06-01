@@ -103,14 +103,14 @@ export default function MyAdsScreen({
         </div>
       )}
 
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex-1">
-        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h2 className="text-[18px] font-bold text-slate-900">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-1">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/40">
+          <h2 className="text-[18px] font-bold text-slate-900 dark:text-white">
             {t.my_ads}
-            <span className="text-slate-500 font-medium ml-2 text-[15px]">({counts[filter]})</span>
+            <span className="text-slate-500 dark:text-slate-400 font-medium ml-2 text-[15px]">({counts[filter]})</span>
           </h2>
           <div className="flex items-center gap-2">
-            <button onClick={() => selectionMode ? cancelSelection() : setSelectionMode(true)} className="btn-sm border border-slate-300 text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+            <button onClick={() => selectionMode ? cancelSelection() : setSelectionMode(true)} className="btn-sm border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5">
               {selectionMode ? <X className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{selectionMode ? (t.cancel || 'Cancelar') : (t.select || 'Seleccionar')}</span>
             </button>
@@ -120,18 +120,18 @@ export default function MyAdsScreen({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 px-5 pt-4 border-b border-slate-100 bg-white overflow-x-auto">
+        <div className="flex items-center gap-1 px-5 pt-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-x-auto">
           {selectionMode && (
             <button
               onClick={() => setSelectedIds(allVisibleSelected ? new Set() : new Set(filteredAds.map(ad => ad.id)))}
-              className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-600 mr-4 shrink-0 pb-3"
+              className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-600 dark:text-slate-300 mr-4 shrink-0 pb-3"
             >
               {allVisibleSelected ? <CheckSquare className="w-4 h-4 text-[#84CC16]" /> : <Square className="w-4 h-4 text-slate-400" />}
               {t.select_all || 'Seleccionar todo'}
             </button>
           )}
           {filters.map(([key, label, count]) => (
-            <button key={key} onClick={() => { setFilter(key); cancelSelection(); }} className={`pb-3 px-1 mr-4 text-[14px] font-semibold border-b-2 transition-colors shrink-0 ${filter === key ? 'border-[#84CC16] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            <button key={key} onClick={() => { setFilter(key); cancelSelection(); }} className={`pb-3 px-1 mr-4 text-[14px] font-semibold border-b-2 transition-colors shrink-0 ${filter === key ? 'border-[#84CC16] text-slate-900 dark:text-white' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
               {label}<span className="text-[12px] font-normal ml-1 text-slate-400">({count})</span>
             </button>
           ))}
@@ -142,15 +142,15 @@ export default function MyAdsScreen({
         ) : filteredAds.map(ad => {
           const selected = selectedIds.has(ad.id);
           return (
-            <div key={ad.id} onClick={selectionMode ? () => toggleSelect(ad.id) : undefined} className={`p-5 border-b border-slate-100 last:border-0 flex flex-col sm:flex-row gap-4 items-start sm:items-center ${selectionMode ? 'cursor-pointer' : ''} ${selected ? 'bg-lime-50/70' : 'hover:bg-slate-50'}`}>
+            <div key={ad.id} onClick={selectionMode ? () => toggleSelect(ad.id) : undefined} className={`p-5 border-b border-slate-100 dark:border-slate-800 last:border-0 flex flex-col sm:flex-row gap-4 items-start sm:items-center ${selectionMode ? 'cursor-pointer' : ''} ${selected ? 'bg-lime-50/70 dark:bg-lime-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}>
               <div className="flex gap-3 flex-1 w-full">
                 {selectionMode && (
                   <div className="shrink-0 self-center">{selected ? <CheckSquare className="w-5 h-5 text-[#84CC16]" /> : <Square className="w-5 h-5 text-slate-300" />}</div>
                 )}
-                <img src={getImageUrl(ad.image_url, ad.image)} loading="lazy" className="w-24 h-24 sm:w-20 sm:h-20 rounded-xl object-cover border border-slate-200 shrink-0" alt="" />
+                <img src={getImageUrl(ad.image_url, ad.image)} loading="lazy" className="w-24 h-24 sm:w-20 sm:h-20 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0" alt="" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold text-slate-900 text-[15px] line-clamp-1">{ad.title}</h4>
+                    <h4 className="font-semibold text-slate-900 dark:text-white text-[15px] line-clamp-1">{ad.title}</h4>
                     {ad.status !== 'active' && (
                       <span className="badge bg-slate-200 text-slate-600">
                         {ad.status === 'paused' ? (t.paused_status || 'Pausado') : ad.status === 'expired' ? (t.expired_status || 'Expirado') : ad.status}
@@ -162,14 +162,14 @@ export default function MyAdsScreen({
                   <p className="text-[#65A30D] text-[16px] font-bold mt-1">
                     ${Number(ad.price).toLocaleString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US')}
                   </p>
-                  <p className="text-[12px] text-slate-500 flex items-center gap-1 mt-2"><BarChart3 className="w-3.5 h-3.5" /> {ad.views || 0} {t.views}</p>
+                  <p className="text-[12px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-2"><BarChart3 className="w-3.5 h-3.5" /> {ad.views || 0} {t.views}</p>
                 </div>
               </div>
 
               {!selectionMode && (
                 <div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0 flex-wrap" onClick={e => e.stopPropagation()}>
-                  <Link to={`/?ad=${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs"><ExternalLink className="w-3.5 h-3.5" /> {t.view || 'Ver'}</Link>
-                  <Link to={`/anuncio/${ad.id}/editar`} className="btn-sm flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center gap-1.5 text-xs"><Pencil className="w-3.5 h-3.5" /> {t.edit || 'Editar'}</Link>
+                  <Link to={`/?ad=${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 text-xs"><ExternalLink className="w-3.5 h-3.5" /> {t.view || 'Ver'}</Link>
+                  <Link to={`/anuncio/${ad.id}/editar`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 text-xs"><Pencil className="w-3.5 h-3.5" /> {t.edit || 'Editar'}</Link>
                   {ad.status === 'active' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> {t.pause || 'Pausar'}</button>}
                   {ad.status === 'paused' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> {t.reactivate || 'Reactivar'}</button>}
                   {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1.5 text-xs">Renovar</button> : null; })()}
@@ -184,8 +184,8 @@ export default function MyAdsScreen({
       </div>
 
       {selectionMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-slate-200 shadow-2xl px-4 py-3 flex items-center justify-between gap-3">
-          <span className="text-[13px] font-semibold text-slate-700 shrink-0">{selectedIds.size} {t.selected || 'seleccionados'}</span>
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800 shadow-2xl px-4 py-3 flex items-center justify-between gap-3">
+          <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 shrink-0">{selectedIds.size} {t.selected || 'seleccionados'}</span>
           <div className="flex items-center gap-2">
             <button onClick={() => doBulkAction('pause')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-amber-50 text-amber-700 border border-amber-200 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : (t.pause || 'Pausar')}</button>
             <button onClick={() => doBulkAction('activate')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-lime-50 text-[#65A30D] border border-lime-200 disabled:opacity-40">{t.reactivate || 'Activar'}</button>

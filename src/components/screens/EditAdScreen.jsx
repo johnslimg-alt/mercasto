@@ -48,6 +48,9 @@ export default function EditAdScreen({ t, lang }) {
 
   const token = localStorage.getItem('auth_token');
   const maxPhotos = 10;
+  const labelClass = 'block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2';
+  const fieldClass = 'w-full border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400';
+  const compactFieldClass = 'w-full border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-lime-400';
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -173,7 +176,7 @@ export default function EditAdScreen({ t, lang }) {
     finally { setSaving(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-lime-500" /></div>;
+  if (loading) return <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950"><Loader2 className="w-8 h-8 animate-spin text-lime-500" /></div>;
   if (error && !ad) return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 text-center">
       <AlertTriangle className="w-12 h-12 text-red-400" />
@@ -185,14 +188,14 @@ export default function EditAdScreen({ t, lang }) {
   const CONDITIONS = ['Nuevo', 'Como nuevo', 'Bueno', 'Regular', 'Para piezas'];
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
+    <div className="max-w-2xl mx-auto px-4 py-8 pb-24 text-slate-900 dark:text-white">
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#25D366]'}`}>
           {toast.message}
         </div>
       )}
 
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 mb-6 font-medium transition-colors">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-6 font-medium transition-colors">
         <ChevronLeft size={20} /> {t.back_to_ad || 'Volver al anuncio'}
       </button>
 
@@ -201,8 +204,8 @@ export default function EditAdScreen({ t, lang }) {
           <Pencil className="w-5 h-5 text-[#65A30D]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t.edit_ad || 'Editar anuncio'}</h1>
-          <p className="text-slate-500 text-sm">{t.edit_ad_review_desc || 'Los cambios importantes se enviarán a revisión'}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t.edit_ad || 'Editar anuncio'}</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">{t.edit_ad_review_desc || 'Los cambios importantes se enviarán a revisión'}</p>
         </div>
       </div>
 
@@ -221,26 +224,26 @@ export default function EditAdScreen({ t, lang }) {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">{t.ad_title || 'Título'} *</label>
+          <label className={labelClass}>{t.ad_title || 'Título'} *</label>
           <input type="text" value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))}
             required maxLength={255} placeholder="Ej: iPhone 15 Pro en perfecto estado"
-            className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white" />
+            className={fieldClass} />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">{t.ad_price || 'Precio'} *</label>
+          <label className={labelClass}>{t.ad_price || 'Precio'} *</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
             <input type="number" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))}
               required min={0} step="0.01" placeholder="0.00"
-              className="w-full border border-slate-200 rounded-2xl px-4 py-3 pl-8 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white" />
+              className={`${fieldClass} pl-8`} />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">{t.category || 'Categoría'} *</label>
+          <label className={labelClass}>{t.category || 'Categoría'} *</label>
           <select value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value, attributes: {}}))}
-            required className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white">
+            required className={fieldClass}>
             <option value="">{t.select_category || 'Seleccionar categoría'}</option>
             {categories.map(cat => (
               <option key={cat.slug} value={cat.slug}>{typeof cat.name === 'object' && cat.name ? (cat.name[lang] || cat.name['es'] || cat.slug) : (cat.name || cat.slug)}</option>
@@ -249,8 +252,8 @@ export default function EditAdScreen({ t, lang }) {
         </div>
 
         {form.category && (loadingCategoryFields || categoryFields.length > 0) && (
-          <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/50">
-            <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-900">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
               <Settings2 size={16} className="text-[#84CC16]" />
               {t.ad_attributes || 'Características del anuncio'}
               {loadingCategoryFields && <Loader2 size={14} className="animate-spin text-slate-400" />}
@@ -260,11 +263,11 @@ export default function EditAdScreen({ t, lang }) {
                 const fieldId = field.id || field.key;
                 return (
                   <div key={fieldId}>
-                    <label className="block text-xs font-medium text-slate-600 mb-1.5">{field.label}</label>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{field.label}</label>
                     {(field.type === 'select' || field.type === 'checkbox') ? (
                       <select value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
                         required={field.required}
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-400">
+                        className={compactFieldClass}>
                         <option value="">{t.select || 'Seleccionar'}...</option>
                         {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
@@ -272,11 +275,11 @@ export default function EditAdScreen({ t, lang }) {
                       <input type="number" value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
                         min={field.range?.min} max={field.range?.max} step={field.range?.step}
                         placeholder={field.minPlaceholder || '0'} required={field.required}
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-400" />
+                        className={compactFieldClass} />
                     ) : (
                       <input type="text" value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
                         placeholder={field.placeholder || ''} required={field.required}
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-lime-400" />
+                        className={compactFieldClass} />
                     )}
                   </div>
                 );
@@ -286,28 +289,28 @@ export default function EditAdScreen({ t, lang }) {
         )}
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">{t.state || 'Estado'}</label>
+          <label className={labelClass}>{t.state || 'Estado'}</label>
           <select value={form.state || ''} onChange={e => setForm(p => ({...p, state: e.target.value}))}
-            className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white">
+            className={fieldClass}>
             <option value="">{t.select_state || 'Seleccionar estado'}</option>
             {MEXICO_STATES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">{t.city || 'Ciudad'} / {t.location || 'Ubicación'}</label>
+          <label className={labelClass}>{t.city || 'Ciudad'} / {t.location || 'Ubicación'}</label>
           <input type="text" value={form.location} onChange={e => setForm(p => ({...p, location: e.target.value}))}
             placeholder={t.loc_placeholder || "Ej: Ciudad de México, CDMX"}
-            className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white" />
+            className={fieldClass} />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">{t.condition || 'Condición'}</label>
+          <label className={labelClass}>{t.condition || 'Condición'}</label>
           <div className="flex flex-wrap gap-2">
             {CONDITIONS.map(c => (
               <button key={c} type="button" onClick={() => setForm(p => ({...p, condition: c}))}
                 className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
-                  form.condition === c ? 'bg-[#25D366] border-[#25D366] text-white' : 'border-gray-300 text-gray-600 hover:border-[#25D366]'
+                  form.condition === c ? 'bg-[#25D366] border-[#25D366] text-white' : 'border-gray-300 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:border-[#25D366]'
                 }`}>{c}</button>
             ))}
           </div>
@@ -315,7 +318,7 @@ export default function EditAdScreen({ t, lang }) {
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-semibold text-slate-700">{t.ad_desc || 'Descripción'} *</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">{t.ad_desc || 'Descripción'} *</label>
             <button type="button" onClick={handleGenerateDescription} disabled={aiLoading}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[#65A30D] hover:bg-[#84CC16]/10 disabled:opacity-50 transition-colors">
               {aiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
@@ -329,12 +332,12 @@ export default function EditAdScreen({ t, lang }) {
           )}
           <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))}
             required rows={6} placeholder="Describe tu artículo en detalle..."
-            className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 bg-white resize-none" />
+            className={`${fieldClass} resize-none`} />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-700">{t.ad_photos || 'Fotos'}</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t.ad_photos || 'Fotos'}</span>
             <span className={`text-xs ${images.length >= maxPhotos ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
               {images.length} / {maxPhotos}
             </span>
@@ -347,7 +350,7 @@ export default function EditAdScreen({ t, lang }) {
           <SortablePhotoGrid photos={images} onReorder={setImages} onDelete={id => setImages(prev => prev.filter(i => i.id !== id))} />
           {images.length < maxPhotos && (
             <button type="button" onClick={() => fileInputRef.current?.click()}
-              className="w-full mt-3 py-3 rounded-2xl border-2 border-dashed border-slate-300 hover:border-lime-400 flex items-center justify-center gap-2 text-slate-400 hover:text-lime-500 transition-all bg-slate-50 hover:bg-lime-50">
+              className="w-full mt-3 py-3 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-lime-400 flex items-center justify-center gap-2 text-slate-400 hover:text-lime-500 transition-all bg-slate-50 dark:bg-slate-900 hover:bg-lime-50 dark:hover:bg-lime-500/10">
               <Plus size={20} /><span className="text-xs font-medium">{t.add_photo || 'Agregar foto'}</span>
             </button>
           )}
@@ -358,9 +361,9 @@ export default function EditAdScreen({ t, lang }) {
           </p>
         </div>
 
-        <div className="flex gap-3 pt-4 border-t border-slate-100">
+        <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
           <button type="button" onClick={() => navigate(-1)}
-            className="flex-1 py-3 rounded-2xl border-2 border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">
+            className="flex-1 py-3 rounded-2xl border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
             {t.cancel || 'Cancelar'}
           </button>
           <button type="submit" disabled={saving}
