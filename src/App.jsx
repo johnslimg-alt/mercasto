@@ -6,7 +6,7 @@ import ChartTooltip from './components/common/ChartTooltip';
 import AdSenseBanner from './components/common/AdSenseBanner';
 import OnboardingModal from './components/OnboardingModal';
 import {
-  Search, Home, PlusCircle, User, Users, Settings, Shield, Menu,
+  Search, Home, PlusCircle, Plus, User, Users, Settings, Shield, Menu,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
   CheckCircle, XCircle, BarChart3, LogOut, Globe, Sparkles, Loader2, Play, Video, Phone, AlertTriangle, Activity,
   Car, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Pencil, Moon, Sun, BadgeCheck,
@@ -3114,23 +3114,115 @@ function App() {
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (
     <div className="mobile-tabbar md:hidden fixed bottom-0 w-full border-t pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[84px] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-      <button onClick={() => setCurrentTab('home')} className={`flex flex-col items-center p-1 ${currentTab === 'home' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button onClick={() => { setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className={`flex flex-col items-center p-1 ${currentTab === 'home' && !viewedAd ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
       <button onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-7"><div className="mobile-tabbar-post flex h-16 w-16 flex-col items-center justify-center rounded-full border-[5px] border-slate-100 bg-[#84CC16] text-white dark:border-slate-800"><PlusCircle className="w-7 h-7" /></div></button>
-      <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}><Bell className="w-6 h-6 mb-1" />{notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}</button>
-      <button onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 ${currentTab === 'profile' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showProfileMenu}>
+      <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-6 hover:scale-105 transition-transform" aria-label="Publicar anuncio">
+        <div className="mobile-tabbar-post flex h-14 w-14 items-center justify-center rounded-full border-[4px] border-white bg-[#84CC16] text-[#0F172A] shadow-lg dark:border-slate-900 shadow-[#84CC16]/30">
+          <Plus className="w-7 h-7 stroke-[3]" />
+        </div>
+      </button>
+      <button onClick={() => { user ? (setCurrentTab('profile'), setDashboardTab('notifications')) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'profile' && dashboardTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+        <Bell className="w-6 h-6 mb-1" />
+        {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
+      </button>
+      <button onClick={() => setShowProfileMenu(v => !v)} className={`flex flex-col items-center p-1 ${showProfileMenu ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showProfileMenu} aria-label="Menú global">
         <Menu className="w-6 h-6 mb-1" />
       </button>
-      {showProfileMenu && user && (
-        <div className="mobile-tabbar-menu">
-          <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
-          <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
-          <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
-          <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
+      {showProfileMenu && (
+        <div className="mobile-tabbar-menu fixed bottom-[90px] right-4 w-[280px] rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95 z-50 animate-in fade-in slide-in-from-bottom-5">
+          {/* User Profile / Guest Header */}
+          <div className="mb-3 border-b border-slate-100 pb-3 dark:border-slate-800">
+            {user ? (
+              <div className="flex items-center gap-3">
+                {user.avatar_url ? (
+                  <img src={getImageUrl(user.avatar_url)} className="h-10 w-10 rounded-full object-cover border border-slate-200" alt="" />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500"><User size={20} /></div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="truncate text-sm font-black text-slate-800 dark:text-white">{user.name}</h4>
+                  <p className="truncate text-xs text-slate-500">{user.email}</p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h4 className="text-sm font-black text-slate-800 dark:text-white mb-2">¡Hola! Bienvenido a Mercasto</h4>
+                <div className="flex gap-2">
+                  <button onClick={() => { setShowProfileMenu(false); setAuthMode('login'); setShowAuthModal(true); }} className="flex-1 rounded-xl bg-[#84CC16] py-2 text-center text-xs font-bold text-slate-950 hover:bg-[#65A30D]">
+                    Entrar
+                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); setAuthMode('register'); setShowAuthModal(true); }} className="flex-1 rounded-xl border border-slate-200 py-2 text-center text-xs font-bold text-slate-800 dark:border-slate-700 dark:text-white hover:bg-slate-50">
+                    Registrarse
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Navigation Links */}
+          <div className="space-y-1.5">
+            {user && (
+              <>
+                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                  <User size={16} className="text-[#84CC16]" /> Mi cuenta
+                </button>
+                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                  <Heart size={16} className="text-[#84CC16]" /> Favoritos
+                </button>
+                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                  <Settings size={16} className="text-[#84CC16]" /> Ajustes de Perfil
+                </button>
+              </>
+            )}
+            
+            <button onClick={() => { setCurrentTab('post'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+              <PlusCircle size={16} className="text-[#84CC16]" /> Publicar Anuncio
+            </button>
+
+            <button onClick={() => { setCurrentTab('help'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+              <Sparkles size={16} className="text-[#84CC16]" /> Ayuda y Soporte
+            </button>
+          </div>
+
+          {/* Theme / Settings Footer */}
+          <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800 flex items-center justify-between">
+            <div className="flex gap-1.5">
+              <button 
+                type="button" 
+                onClick={() => {
+                  const isDark = document.documentElement.classList.contains('dark');
+                  document.documentElement.classList.toggle('dark', !isDark);
+                  localStorage.setItem('theme', !isDark ? 'dark' : 'light');
+                }} 
+                className="rounded-xl bg-slate-100 p-2 text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:scale-105 transition-transform"
+                title="Cambiar tema"
+              >
+                <Moon size={15} className="dark:hidden" />
+                <Sun size={15} className="hidden dark:block" />
+              </button>
+              
+              <button 
+                type="button" 
+                onClick={() => {
+                  const nextLang = lang === 'es' ? 'en' : 'es';
+                  setLang(nextLang);
+                }} 
+                className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:scale-105 transition-transform"
+              >
+                {lang === 'es' ? 'EN' : 'ES'}
+              </button>
+            </div>
+
+            {user && (
+              <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
+                <LogOut size={14} /> Salir
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
