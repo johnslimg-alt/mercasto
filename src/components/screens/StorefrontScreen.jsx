@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCode, User, Loader2, Globe, MessageCircle, Clock, Building2 } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCode, User, Loader2, Globe, MessageCircle, Clock, Building2, Camera } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -28,6 +28,8 @@ export default function StorefrontScreen({
   user, handleViewCompany
 }) {
   const [businessProfile, setBusinessProfile] = useState(null);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const bannerInputRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +60,42 @@ export default function StorefrontScreen({
   const whatsAppForQr = businessProfile?.business_whatsapp || company.whatsapp;
   const businessHours = formatHours(businessProfile?.business_hours, t);
 
+  const bannerUrl = businessProfile?.business_banner_url
+    ? businessAssetUrl(businessProfile.business_banner_url)
+    : "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=400&fit=crop";
+
+  const handleBannerUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setBannerUploading(true);
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('banner', file);
+
+    try {
+      const response = await fetch(`${API_URL}/user/business-profile/banner`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setBusinessProfile(prev => prev ? { ...prev, business_banner_url: data.business_banner_url } : null);
+      } else {
+        alert(data.message || 'Error al subir la portada');
+      }
+    } catch (err) {
+      console.error('Error uploading banner cover:', err);
+      alert('Error de red al subir la portada');
+    } finally {
+      setBannerUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const isOwner = user && user.id === company.id;
+
   return (
   <div className="bg-[var(--paper)] min-h-screen pb-24 md:pb-12 w-full">
     <div className="sticky top-0 bg-white/90 backdrop-blur-xl z-40 border-b border-slate-200 px-4 py-3 flex items-center shadow-sm h-[60px]">
@@ -68,8 +106,32 @@ export default function StorefrontScreen({
 
     <div className="max-w-[1000px] mx-auto md:py-8 pt-4 px-4">
       <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm mb-8">
-        <div className="h-32 md:h-48 bg-slate-200 relative">
-           <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=400&fit=crop" loading="lazy" className="w-full h-full object-cover opacity-90 mix-blend-multiply" alt="Cover" />
+        <div className="h-32 md:h-48 bg-slate-200 relative group/banner">
+            <img src={bannerUrl} className="w-full h-full object-cover" alt="Cover" />
+
+            {bannerUploading && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-20">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+              </div>
+            )}
+
+            {isOwner && isBusinessEnabled && (
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/banner:opacity-100 transition-opacity flex items-center justify-center z-10">
+                <button
+                  onClick={() => bannerInputRef.current?.click()}
+                  className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-900 font-bold px-4 py-2.5 rounded-full flex items-center gap-2 shadow text-xs transition-all transform hover:scale-105"
+                >
+                  <Camera size={14} /> Actualizar Portada
+                </button>
+                <input
+                  type="file"
+                  ref={bannerInputRef}
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleBannerUpload}
+                  className="hidden"
+                />
+              </div>
+            )}
         </div>
         <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start md:items-center relative">
            <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center font-bold text-3xl shadow-lg border-4 border-white -mt-14 md:-mt-16 z-10 relative shrink-0 overflow-hidden">
@@ -95,7 +157,7 @@ export default function StorefrontScreen({
                <span className="font-bold text-slate-900 text-[14px]">{Number(companyRatingStats.average || 0).toFixed(1)}</span>
                <span className="text-slate-500 text-[13px]">({companyRatingStats.total} {t.reviews_count || 'reseñas'})</span>
              </div>
-             
+
              <div className="flex flex-wrap gap-2 mt-4">
                {company.is_verified && (
                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-emerald-50 border-emerald-100 text-emerald-700 text-[12px] font-semibold">
@@ -137,7 +199,7 @@ export default function StorefrontScreen({
              </button>
            </div>
            <div className="w-full md:w-auto">
-             <button 
+             <button
                onClick={() => whatsAppForQr && setQrModalData(`https://wa.me/${whatsAppForQr.replace(/\D/g, '')}`)}
                disabled={!whatsAppForQr}
                className="btn-md w-full border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2 shadow-sm"
@@ -165,7 +227,7 @@ export default function StorefrontScreen({
         <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2">
           <Star className="w-5 h-5 text-amber-400 fill-amber-400"/> {t.client_reviews} ({companyRatingStats.total})
         </h3>
-        
+
         {user && user.id !== company.id && (
           <form onSubmit={handleReviewSubmit} className="mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
             <h4 className="text-[14px] font-semibold text-slate-800 mb-3">{t.leave_review}</h4>

@@ -101,6 +101,7 @@ Route::middleware('throttle:api')->get('/states/counts', function () {
 Route::middleware('throttle:api')->get('/users/{id}/reviews', [ReviewController::class, 'index'])->whereNumber('id');
 Route::middleware('throttle:api')->get('/users/{id}/profile', [ProfileController::class, 'publicProfile'])->whereNumber('id'); // Публичный профиль продавца (Storefront)
 Route::middleware('throttle:api')->get('/users/{id}/business-profile', [BusinessProfileController::class, 'publicShow'])->whereNumber('id');
+Route::middleware('throttle:api')->get('/stores', [BusinessProfileController::class, 'directory']);
 
 // Регистрация маршрутов для WebSockets (Reverb / Echo) с авторизацией Sanctum
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
@@ -186,6 +187,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/business-profile', [BusinessProfileController::class, 'show']);
     Route::put('/user/business-profile', [BusinessProfileController::class, 'update']);
     Route::post('/user/business-profile/logo', [BusinessProfileController::class, 'uploadLogo']);
+    Route::post('/user/business-profile/banner', [BusinessProfileController::class, 'uploadBanner']);
     Route::put('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля (PUT)
     Route::put('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений (PUT)
     Route::post('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля

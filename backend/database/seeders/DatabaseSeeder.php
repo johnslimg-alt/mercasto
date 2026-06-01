@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         if (!app()->environment('production')) {
             $this->call([
                 TestAdsSeeder::class,
+                E2eTestSeeder::class,
             ]);
         }
     }

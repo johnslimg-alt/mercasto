@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
@@ -108,6 +109,37 @@ class BusinessProfileController extends Controller
         ]);
     }
 
+    public function uploadBanner(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'banner' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:10240', 'dimensions:max_width=4096,max_height=4096'],
+        ]);
+
+        if ($user->business_banner_url && ! str_starts_with($user->business_banner_url, 'http')) {
+            Storage::disk('public')->delete($user->business_banner_url);
+        }
+
+        $path = 'business-banners/' . Str::uuid() . '.webp';
+        $img = $this->imageManager()
+            ->decode($request->file('banner'))
+            ->cover(1200, 400)
+            ->encodeUsingFileExtension('webp', quality: 90);
+
+        Storage::disk('public')->put($path, (string) $img);
+
+        $user->business_banner_url = $path;
+        $user->save();
+
+        $this->clearProfileCaches($user->id);
+
+        return response()->json([
+            'business_banner_url' => $user->business_banner_url,
+            'message' => 'Banner de portada actualizado correctamente',
+        ]);
+    }
+
     private function businessProfilePayload(User $user, bool $includePrivate): array
     {
         $isBusiness = $user->role === 'business' || (bool) $user->business_profile_enabled;
@@ -118,6 +150,7 @@ class BusinessProfileController extends Controller
             'is_business' => $isBusiness,
             'business_name' => $user->business_name,
             'business_logo_url' => $user->business_logo_url,
+            'business_banner_url' => $user->business_banner_url,
             'business_website' => $user->business_website ?: $user->website,
             'business_phone' => $includePrivate ? $user->business_phone : null,
             'business_whatsapp' => $isBusiness ? ($user->business_whatsapp ?: $user->whatsapp) : null,
@@ -133,6 +166,62 @@ class BusinessProfileController extends Controller
         }
 
         return $payload;
+    }
+
+    public function directory(Request $request)
+    {
+        $query = User::where(function($q) {
+            $q->where('business_profile_enabled', true)
+              ->orWhere('role', 'business');
+        });
+
+        // Filter by state/city if provided
+        if ($request->filled('state')) {
+            $query->where('business_address', 'like', '%' . $request->state . '%');
+        }
+        if ($request->filled('city')) {
+            $query->where('business_address', 'like', '%' . $request->city . '%');
+        }
+
+        // Filter by search query (name or description)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('business_name', 'like', "%{$search}%")
+                  ->orWhere('business_description', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('category')) {
+            $category = $request->category;
+            $query->where('business_description', 'like', "%{$category}%");
+        }
+
+        $stores = $query->select([
+            'id', 'name', 'avatar_url', 'role', 'is_verified', 'created_at',
+            'business_name', 'business_logo_url', 'business_banner_url',
+            'business_website', 'business_address',
+            'business_description', 'business_rfc_verified_at'
+        ])->latest()->paginate(24);
+
+        // Map rating average and total ads count per store to display on the directory
+        $stores->getCollection()->transform(function($store) {
+            $reviewStats = DB::table('reviews')
+                ->where('seller_id', $store->id)
+                ->selectRaw('COUNT(*) as count, AVG(rating) as avg')
+                ->first();
+
+            $store->rating_count = (int) ($reviewStats->count ?? 0);
+            $store->rating_avg = round((float) ($reviewStats->avg ?? 0), 1);
+            $store->active_ads_count = DB::table('ads')
+                ->where('user_id', $store->id)
+                ->where('status', 'active')
+                ->count();
+
+            return $store;
+        });
+
+        return response()->json($stores);
     }
 
     private function clearProfileCaches(int $userId): void

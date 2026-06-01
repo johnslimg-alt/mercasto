@@ -26,6 +26,8 @@ function normalizeHours(hours) {
 export default function BusinessProfileEditor({ showToast }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
   const [form, setForm] = useState({
     business_profile_enabled: false,
     business_name: '',
@@ -35,6 +37,8 @@ export default function BusinessProfileEditor({ showToast }) {
     business_whatsapp: '',
     business_address: '',
     business_description: '',
+    business_logo_url: '',
+    business_banner_url: '',
     business_hours: DEFAULT_HOURS,
   });
 
@@ -58,6 +62,8 @@ export default function BusinessProfileEditor({ showToast }) {
           business_whatsapp: data.business_whatsapp || '',
           business_address: data.business_address || '',
           business_description: data.business_description || '',
+          business_logo_url: data.business_logo_url || '',
+          business_banner_url: data.business_banner_url || '',
           business_hours: normalizeHours(data.business_hours),
         }));
       } catch {
@@ -75,6 +81,58 @@ export default function BusinessProfileEditor({ showToast }) {
     ...prev,
     business_hours: prev.business_hours.map((item, idx) => idx === index ? { ...item, [key]: value } : item),
   }));
+
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    const body = new FormData();
+    body.append('logo', file);
+    try {
+      const response = await fetch(`${API_URL}/user/business-profile/logo`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body
+      });
+      const data = await response.json();
+      if (response.ok) {
+        updateField('business_logo_url', data.business_logo_url);
+        showToast?.('Logo de negocio actualizado');
+      } else {
+        showToast?.(data.message || 'Error al subir el logo', 'error');
+      }
+    } catch {
+      showToast?.('Error al conectar con el servidor', 'error');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleBannerUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBannerUploading(true);
+    const body = new FormData();
+    body.append('banner', file);
+    try {
+      const response = await fetch(`${API_URL}/user/business-profile/banner`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body
+      });
+      const data = await response.json();
+      if (response.ok) {
+        updateField('business_banner_url', data.business_banner_url);
+        showToast?.('Banner de portada de negocio actualizado');
+      } else {
+        showToast?.(data.message || 'Error al subir la portada', 'error');
+      }
+    } catch {
+      showToast?.('Error al conectar con el servidor', 'error');
+    } finally {
+      setBannerUploading(false);
+    }
+  };
 
   const handleSave = async event => {
     event.preventDefault();
@@ -114,6 +172,80 @@ export default function BusinessProfileEditor({ showToast }) {
           <input type="checkbox" checked={form.business_profile_enabled} onChange={event => updateField('business_profile_enabled', event.target.checked)} /> Activar
         </label>
       </div>
+
+      {form.business_profile_enabled && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+          {/* Logo Upload Block */}
+          <div className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-200 rounded-xl bg-white">
+            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">Logo Comercial (PRO)</label>
+            <div className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden relative group flex items-center justify-center border border-slate-200">
+              {form.business_logo_url ? (
+                <img
+                  src={form.business_logo_url.startsWith('http') ? form.business_logo_url : `${STORAGE_URL}/${form.business_logo_url}`}
+                  className="w-full h-full object-cover"
+                  alt="Logo"
+                />
+              ) : (
+                <Building2 className="w-8 h-8 text-slate-300" />
+              )}
+              {logoUploading && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-2xl">
+                  <Loader2 className="w-5 h-5 animate-spin text-white" />
+                </div>
+              )}
+            </div>
+            <input
+              type="file"
+              id="business-logo-file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
+            <button
+              type="button"
+              onClick={() => document.getElementById('business-logo-file').click()}
+              className="mt-3 text-xs font-bold text-lime-600 hover:text-lime-700 hover:underline"
+            >
+              Cambiar Logo
+            </button>
+          </div>
+
+          {/* Banner Upload Block */}
+          <div className="md:col-span-2 flex flex-col items-center justify-center p-4 border border-dashed border-slate-200 rounded-xl bg-white">
+            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">Banner de Portada (PRO)</label>
+            <div className="w-full h-20 bg-slate-100 rounded-xl overflow-hidden relative group flex items-center justify-center border border-slate-200">
+              {form.business_banner_url ? (
+                <img
+                  src={form.business_banner_url.startsWith('http') ? form.business_banner_url : `${STORAGE_URL}/${form.business_banner_url}`}
+                  className="w-full h-full object-cover"
+                  alt="Banner"
+                />
+              ) : (
+                <span className="text-xs text-slate-400 font-medium">1200 x 400 píxeles recomendados</span>
+              )}
+              {bannerUploading && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
+                  <Loader2 className="w-5 h-5 animate-spin text-white" />
+                </div>
+              )}
+            </div>
+            <input
+              type="file"
+              id="business-banner-file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleBannerUpload}
+            />
+            <button
+              type="button"
+              onClick={() => document.getElementById('business-banner-file').click()}
+              className="mt-3 text-xs font-bold text-lime-600 hover:text-lime-700 hover:underline"
+            >
+              Cambiar Portada
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>

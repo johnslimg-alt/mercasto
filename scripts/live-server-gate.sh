@@ -23,7 +23,10 @@ esac
 install -m 700 -d ~/.ssh
 key_file="$(mktemp)"
 trap 'rm -f "${key_file}"' EXIT
-printf '%s\n' "${SSH_KEY}" >"${key_file}"
+
+# Normalize private key format (rebuilding multiline if compressed, and ensuring a trailing newline)
+cleaned_key=$(echo "${SSH_KEY}" | sed 's/\\n/\n/g')
+printf '%s\n' "${cleaned_key}" | sed -e '$a\' >"${key_file}"
 chmod 600 "${key_file}"
 
 ssh \
