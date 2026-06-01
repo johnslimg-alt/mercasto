@@ -37,6 +37,23 @@ class SellerStatsController extends Controller
             ->groupBy('channel')
             ->pluck('count', 'channel');
 
+        $paidStatuses = ['paid', 'succeeded', 'approved'];
+        $promotionCodes = ['boost_1_day', 'boost_3_days', 'highlight_7_days', 'featured_7_days', 'featured_30_days', 'top_category_7_days'];
+        $promotionSpend = (float) DB::table('payments')
+            ->whereIn('ad_id', $adIds)
+            ->whereIn('status', $paidStatuses)
+            ->whereIn('product_code', $promotionCodes)
+            ->sum('amount');
+
+        $activePromotedAds = DB::table('ads')
+            ->where('user_id', $userId)
+            ->whereNotNull('promoted')
+            ->where(function ($query) {
+                $query->whereNull('boost_expires_at')
+                    ->orWhere('boost_expires_at', '>', now());
+            })
+            ->count();
+
         // --- Weekly view windows from ad_views log ---
         $now          = Carbon::now();
         $weekStart    = $now->copy()->subDays(7)->startOfDay();
@@ -120,11 +137,16 @@ class SellerStatsController extends Controller
             ->where('user_id', $userId)
             ->orderByDesc('views')
             ->limit(5)
-            ->get(['id', 'title', 'views', 'price', 'status'])
+            ->get(['id', 'title', 'views', 'price', 'status', 'promoted', 'boost_type', 'boost_expires_at'])
             ->map(function ($ad) use ($adIds) {
                 $favCount = DB::table('favorites')->where('ad_id', $ad->id)->count();
                 $impressions = DB::table('ad_impressions')->where('ad_id', $ad->id)->count();
                 $clicks = DB::table('ad_clicks')->where('ad_id', $ad->id)->count();
+                $spend = (float) DB::table('payments')
+                    ->where('ad_id', $ad->id)
+                    ->whereIn('status', ['paid', 'succeeded', 'approved'])
+                    ->whereIn('product_code', ['boost_1_day', 'boost_3_days', 'highlight_7_days', 'featured_7_days', 'featured_30_days', 'top_category_7_days'])
+                    ->sum('amount');
                 return [
                     'id'        => $ad->id,
                     'title'     => $ad->title,
@@ -132,6 +154,11 @@ class SellerStatsController extends Controller
                     'impressions' => $impressions,
                     'clicks'    => $clicks,
                     'ctr'       => $impressions > 0 ? round(($clicks / $impressions) * 100, 2) : 0,
+                    'promotion_spend' => $spend,
+                    'cost_per_click' => $clicks > 0 ? round($spend / $clicks, 2) : null,
+                    'promoted' => $ad->promoted,
+                    'boost_type' => $ad->boost_type,
+                    'boost_expires_at' => $ad->boost_expires_at,
                     'favorites' => $favCount,
                     'price'     => (float) $ad->price,
                     'status'    => $ad->status,
@@ -146,6 +173,9 @@ class SellerStatsController extends Controller
             'total_clicks'    => $totalClicks,
             'ctr'             => $totalImpressions > 0 ? round(($totalClicks / $totalImpressions) * 100, 2) : 0,
             'clicks_by_channel' => $clicksByChannel,
+            'promotion_spend' => $promotionSpend,
+            'active_promoted_ads' => $activePromotedAds,
+            'cost_per_click' => $totalClicks > 0 ? round($promotionSpend / $totalClicks, 2) : null,
             'total_favorites' => $totalFavorites,
             'total_messages'  => $totalMessages,
             'credits_balance' => $creditsBalance,

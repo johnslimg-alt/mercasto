@@ -44,6 +44,25 @@ class AdminAnalyticsController extends Controller
             ->where('status', 'paid')
             ->sum('amount');
 
+        $paidStatuses = ['paid', 'succeeded', 'approved'];
+        $promotionCodes = ['boost_1_day', 'boost_3_days', 'highlight_7_days', 'featured_7_days', 'featured_30_days', 'top_category_7_days'];
+        $promotionRevenuePeriod = (float) DB::table('payments')
+            ->where('created_at', '>=', $since)
+            ->whereIn('status', $paidStatuses)
+            ->whereIn('product_code', $promotionCodes)
+            ->sum('amount');
+        $promotionRevenueTotal = (float) DB::table('payments')
+            ->whereIn('status', $paidStatuses)
+            ->whereIn('product_code', $promotionCodes)
+            ->sum('amount');
+        $activePromotedAds = DB::table('ads')
+            ->whereNotNull('promoted')
+            ->where(function ($query) {
+                $query->whereNull('boost_expires_at')
+                    ->orWhere('boost_expires_at', '>', now());
+            })
+            ->count();
+
         $topCategories = DB::table('ads')
             ->join('categories', 'ads.category', '=', 'categories.slug')
             ->where('ads.status', 'active')
@@ -128,6 +147,9 @@ class AdminAnalyticsController extends Controller
             'clicks_by_channel' => $clicksByChannel,
             'revenue_period' => $revenuePeriod,
             'revenue_total'  => $revenueTotal,
+            'promotion_revenue_period' => $promotionRevenuePeriod,
+            'promotion_revenue_total' => $promotionRevenueTotal,
+            'active_promoted_ads' => $activePromotedAds,
             'daily_ads'      => $dailyAds,
             'daily_users'    => $dailyUsers,
             'top_categories' => $topCategories,

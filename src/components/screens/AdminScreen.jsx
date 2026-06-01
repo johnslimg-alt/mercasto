@@ -1,8 +1,8 @@
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
-import { Shield, Pencil, PlusCircle, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, Users, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, CreditCard } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, Users, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, CreditCard, Megaphone, MousePointerClick } from "lucide-react";
 
-export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, adminLoading, adminPendingAds, adminReportTab, adminReports, adminTab, adminUserReports, adminUserSearch, adminUsers, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments }) {
+export default function AdminScreen({ IconMap, adminAnalytics, adminCatForm, adminCoupons, adminLoading, adminPendingAds, adminReportTab, adminReports, adminTab, adminUserReports, adminUserSearch, adminUsers, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments }) {
     if (userRole !== 'admin') return <div className="p-10 text-center font-bold text-red-500">Acceso denegado</div>;
 
 
@@ -10,8 +10,9 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
     React.useEffect(() => {
         if (adminTab === 'payments') {
             loadAdminPayments(1);
+            loadAdminAnalytics?.();
         }
-    }, [adminTab, loadAdminPayments]);
+    }, [adminTab, loadAdminAnalytics, loadAdminPayments]);
 
     const filteredAdminUsers = adminUsers.filter(u => 
 
@@ -465,7 +466,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
             <div className="space-y-6">
               {/* Header Stats Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
                     <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
@@ -489,7 +490,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                       {t.admin_approved_revenue || 'Ingresos Aprobados (Pág. Actual)'}
                     </span>
                     <span className="text-3xl font-black text-[#84CC16] mt-1 block">
-                      ${adminPayments.filter(p => ['paid', 'succeeded', 'approved'].includes(p.status?.toLowerCase())).reduce((sum, p) => sum + parseFloat(p.amount || 0), 0).toFixed(2)} MXN
+                      ${Number(adminAnalytics?.revenue_period ?? adminPayments.filter(p => ['paid', 'succeeded', 'approved'].includes(p.status?.toLowerCase())).reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)).toFixed(2)} MXN
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
                       {t.admin_approved_revenue_desc || 'Monto de pagos exitosos mostrados'}
@@ -497,6 +498,32 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-lime-50 dark:bg-lime-950/20 flex items-center justify-center text-[#84CC16] shadow-sm border border-lime-100/55 dark:border-lime-900/30">
                     <Zap size={24} className="fill-[#84CC16]/20" />
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <div>
+                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Revenue promo 30d</span>
+                    <span className="text-3xl font-black text-amber-500 mt-1 block">
+                      ${Number(adminAnalytics?.promotion_revenue_period || 0).toFixed(2)}
+                    </span>
+                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">Boost / Highlight / Featured</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center text-amber-500 shadow-sm border border-amber-100/55 dark:border-amber-900/30">
+                    <Megaphone size={24} />
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <div>
+                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">CTR global</span>
+                    <span className="text-3xl font-black text-blue-500 mt-1 block">{adminAnalytics?.ctr || 0}%</span>
+                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
+                      {Number(adminAnalytics?.total_clicks || 0).toLocaleString('es-MX')} clics / {Number(adminAnalytics?.total_impressions || 0).toLocaleString('es-MX')} imp.
+                    </span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-500 shadow-sm border border-blue-100/55 dark:border-blue-900/30">
+                    <MousePointerClick size={24} />
                   </div>
                 </div>
               </div>

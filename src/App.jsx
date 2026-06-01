@@ -541,6 +541,7 @@ function App() {
   const [adminPaymentsPage, setAdminPaymentsPage] = useState(1);
   const [adminPaymentsLastPage, setAdminPaymentsLastPage] = useState(1);
   const [adminPaymentsTotal, setAdminPaymentsTotal] = useState(0);
+  const [adminAnalytics, setAdminAnalytics] = useState(null);
 
   // --- AI COMMAND CENTER STATE ---
   const [showAiModal, setShowAiModal] = useState(false);
@@ -1794,6 +1795,20 @@ function App() {
       console.error("Error fetching admin payments", err);
     } finally {
       setLoadingAdminPayments(false);
+    }
+  }, []);
+
+  const loadAdminAnalytics = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_URL}/admin/analytics?period=30`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setAdminAnalytics(await res.json());
+      }
+    } catch (err) {
+      console.error("Error fetching admin analytics", err);
     }
   }, []);
 
@@ -3231,7 +3246,7 @@ function App() {
   };
 
   // --- РЕНДЕР ПАНЕЛИ АДМИНИСТРАТОРА ---
-  const renderAdminScreen = () => <AdminScreen IconMap={IconMap} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} adminPayments={adminPayments} loadingAdminPayments={loadingAdminPayments} adminPaymentsPage={adminPaymentsPage} adminPaymentsLastPage={adminPaymentsLastPage} adminPaymentsTotal={adminPaymentsTotal} loadAdminPayments={loadAdminPayments} />;
+  const renderAdminScreen = () => <AdminScreen IconMap={IconMap} adminAnalytics={adminAnalytics} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminAnalytics={loadAdminAnalytics} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} adminPayments={adminPayments} loadingAdminPayments={loadingAdminPayments} adminPaymentsPage={adminPaymentsPage} adminPaymentsLastPage={adminPaymentsLastPage} adminPaymentsTotal={adminPaymentsTotal} loadAdminPayments={loadAdminPayments} />;
 
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (
