@@ -141,6 +141,14 @@ class AdIndexController extends Controller
         } elseif ($sort === 'popular') {
             $query->orderBy('views', 'desc');
         } elseif ($sort === 'latest' && ! $request->filled('radius')) {
+            $query->orderByRaw("
+                CASE
+                    WHEN promoted = 'destacado' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 0
+                    WHEN promoted = 'highlight' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 1
+                    WHEN promoted = 'urgente' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 2
+                    ELSE 3
+                END
+            ");
             $query->latest();
         }
 
@@ -183,6 +191,10 @@ class AdIndexController extends Controller
             return Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
                 ->where('status', 'active')
                 ->where('promoted', 'destacado')
+                ->where(function ($query) {
+                    $query->whereNull('boost_expires_at')
+                        ->orWhere('boost_expires_at', '>', now());
+                })
                 ->inRandomOrder()
                 ->limit(8)
                 ->get();

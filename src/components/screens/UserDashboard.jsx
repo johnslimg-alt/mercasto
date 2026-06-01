@@ -219,7 +219,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                   {parseFloat(user?.balance || 0).toFixed(0)} {t.credits_unit || 'Créditos'}
 
-                  <button onClick={() => handleClipPayment(100, `100 ${t.credits_unit || 'Créditos'} Mercasto`)} className="ml-1 bg-amber-500 text-white w-6 h-6 rounded-md flex items-center justify-center hover:bg-amber-600 transition-colors shadow-sm" title={t.credits_btn_title || 'Comprar créditos'}>+</button>
+                  <button onClick={() => handleClipPayment(100, `100 ${t.credits_unit || 'Créditos'} Mercasto`, null, 'credits_100')} className="ml-1 bg-amber-500 text-white w-6 h-6 rounded-md flex items-center justify-center hover:bg-amber-600 transition-colors shadow-sm" title={t.credits_btn_title || 'Comprar créditos'}>+</button>
 
                   <div className="absolute top-full right-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto">
 
@@ -999,7 +999,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                     {t.no_transactions_desc || 'Aún no has realizado ninguna compra de créditos. Puedes recargar saldo para destacar tus anuncios o acceder a funciones PRO.'}
                   </p>
                   <button 
-                    onClick={() => handleClipPayment(100, `100 ${t.credits_unit || 'Créditos'} Mercasto`)}
+                    onClick={() => handleClipPayment(100, `100 ${t.credits_unit || 'Créditos'} Mercasto`, null, 'credits_100')}
                     className="btn-md bg-[#0F172A] hover:bg-black text-white flex items-center gap-2 shadow-sm font-semibold text-[13px]"
                   >
                     <Zap size={16} className="text-amber-500 fill-amber-500" />

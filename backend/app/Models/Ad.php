@@ -49,6 +49,7 @@ class Ad extends Model
             'reminder_sent_at' => 'datetime',
             'republished_at' => 'datetime',
             'price_dropped_at' => 'datetime',
+            'boost_expires_at' => 'datetime',
         ];
     }
 

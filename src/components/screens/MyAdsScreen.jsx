@@ -36,13 +36,13 @@ export default function MyAdsScreen({
     all: userAds.length,
     active: userAds.filter(ad => ad.status === 'active').length,
     paused: userAds.filter(ad => ad.status === 'paused').length,
-    featured: userAds.filter(ad => ad.promoted === 'destacado' || ad.is_featured).length,
+    featured: userAds.filter(ad => ad.promoted || ad.is_featured).length,
   }), [userAds]);
 
   const filteredAds = useMemo(() => {
     if (filter === 'active') return userAds.filter(ad => ad.status === 'active');
     if (filter === 'paused') return userAds.filter(ad => ad.status === 'paused');
-    if (filter === 'featured') return userAds.filter(ad => ad.promoted === 'destacado' || ad.is_featured);
+    if (filter === 'featured') return userAds.filter(ad => ad.promoted || ad.is_featured);
     return userAds;
   }, [filter, userAds]);
 
@@ -157,7 +157,7 @@ export default function MyAdsScreen({
                       </span>
                     )}
                     {(() => { const d = daysUntilExpiry(ad.expires_at); if (ad.status === 'expired' || d !== null && d <= 0) return <span className="badge bg-red-100 text-red-700">Expirado</span>; if (d !== null && d <= 7 && ad.status === 'active') return <span className="badge bg-orange-100 text-orange-700">Expira en {d <= 1 ? '1 día' : d + ' días'}</span>; return null; })()}
-                    {(ad.promoted === 'destacado' || ad.is_featured) && <span className="badge bg-lime-100 text-lime-700">{t.destacado || 'Destacado'}</span>}
+                    {(ad.promoted || ad.is_featured) && <span className="badge bg-lime-100 text-lime-700">{ad.promoted === 'urgente' ? 'Urgente' : ad.promoted === 'highlight' ? 'Resaltado' : (t.destacado || 'Destacado')}</span>}
                   </div>
                   <p className="text-[#65A30D] text-[16px] font-bold mt-1">
                     ${Number(ad.price).toLocaleString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US')}

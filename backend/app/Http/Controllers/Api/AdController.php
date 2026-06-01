@@ -182,7 +182,16 @@ class AdController extends Controller
         if ($sort === 'price_asc') { $query->orderBy('price', 'asc'); }
         elseif ($sort === 'price_desc') { $query->orderBy('price', 'desc'); }
         elseif ($sort === 'popular') { $query->orderBy('views', 'desc'); }
-        elseif ($sort === 'latest' && !$request->filled('radius')) { $query->latest(); }
+        elseif ($sort === 'latest' && !$request->filled('radius')) {
+            $query->orderByRaw("
+                CASE
+                    WHEN promoted = 'destacado' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 0
+                    WHEN promoted = 'highlight' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 1
+                    WHEN promoted = 'urgente' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 2
+                    ELSE 3
+                END
+            ")->latest();
+        }
 
         // Кэшируем главную страницу (без фильтров) на 60 секунд в Redis, чтобы выдерживать DDoS
         // Защита от Cache Bypass: проверяем только реальные параметры фильтрации, игнорируя мусорные
@@ -237,7 +246,6 @@ class AdController extends Controller
         if ($user && ($user->id === $ad->user_id || $user->role === 'admin')) {
             $ad->whatsapp_clicks = DB::table('ad_clicks')
                 ->where('ad_id', $ad->id)
-                ->where('channel', 'whatsapp')
                 ->count();
         } else {
             $ad->whatsapp_clicks = null; // Скрываем от публики
@@ -398,7 +406,6 @@ class AdController extends Controller
         $ad->load('user');
         $ad->whatsapp_clicks = DB::table('ad_clicks')
             ->where('ad_id', $ad->id)
-            ->where('channel', 'whatsapp')
             ->count();
 
         // Сбрасываем кэш, чтобы новое объявление сразу появилось на главной странице и в SEO-картах
@@ -1146,7 +1153,6 @@ class AdController extends Controller
             ->addSelect(['whatsapp_clicks' => DB::table('ad_clicks')
                 ->selectRaw('count(*)')
                 ->whereColumn('ad_id', 'ads.id')
-                ->where('channel', 'whatsapp')
             ])
             ->where('user_id', $request->user()->id)
             ->latest()
@@ -1186,7 +1192,6 @@ class AdController extends Controller
             ->join('ads', 'ad_clicks.ad_id', '=', 'ads.id')
             ->where('ads.user_id', $userId)
             ->where('ad_clicks.created_at', '>=', now()->subDays($days - 1)->startOfDay())
-            ->where('ad_clicks.channel', 'whatsapp')
             ->selectRaw('DATE(ad_clicks.created_at) as date, count(*) as count')
             ->groupBy('date')
             ->orderBy('date')
@@ -1317,11 +1322,11 @@ class AdController extends Controller
     }
 
     /**
-     * Запись клика по кнопкам контактов (WhatsApp / Telegram) для аналитики
+     * Запись клика по кнопкам контактов и шаринга для аналитики
      */
     public function recordClick(Request $request, $id)
     {
-        $request->validate(['channel' => 'required|string']);
+        $request->validate(['channel' => 'required|string|in:whatsapp,telegram,email,share,profile,phone']);
         $ad = Ad::findOrFail($id);
 
         if ($ad->status !== 'active') {

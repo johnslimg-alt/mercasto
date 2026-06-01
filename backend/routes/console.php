@@ -23,7 +23,12 @@ Schedule::call(function () {
     if ($expiredPromotions->isNotEmpty()) {
         DB::table('ads')
             ->whereIn('id', $expiredPromotions)
-            ->update(['promoted' => null]);
+            ->update([
+                'promoted' => null,
+                'boost_type' => null,
+                'boost_expires_at' => null,
+                'updated_at' => now(),
+            ]);
             
         DB::table('ad_promotions')->whereIn('ad_id', $expiredPromotions)->delete();
         

@@ -31,7 +31,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'description' => 'required|string|max:255',
-            'product_code' => 'nullable|string|in:package_free,package_impulso,package_negocio,package_pro,package_agencia,boost_1_day,boost_3_days,highlight_7_days,featured_7_days,featured_30_days,top_category_7_days,plus_monthly,pro_standard_monthly,pro_unlimited_monthly',
+            'product_code' => 'nullable|string|in:package_free,package_impulso,package_negocio,package_pro,package_agencia,credits_100,boost_1_day,boost_3_days,highlight_7_days,featured_7_days,featured_30_days,top_category_7_days,plus_monthly,pro_standard_monthly,pro_unlimited_monthly',
             'ad_id' => 'nullable|integer|exists:ads,id', // Защита от создания призрачных платежей
         ]);
 
@@ -57,6 +57,7 @@ class PaymentController extends Controller
             'package_negocio' => ['amount' => 249, 'description' => 'Plan Negocio'],
             'package_pro' => ['amount' => 599, 'description' => 'Plan Pro'],
             'package_agencia' => ['amount' => 1499, 'description' => 'Plan Agencia'],
+            'credits_100' => ['amount' => 100, 'description' => '100 Créditos Mercasto'],
             'boost_1_day' => ['amount' => 19, 'description' => 'Subir 24 horas'],
             'boost_3_days' => ['amount' => 49, 'description' => 'Subir 3 días'],
             'highlight_7_days' => ['amount' => 79, 'description' => 'Resaltar 7 días'],
@@ -101,6 +102,10 @@ class PaymentController extends Controller
             if (! $productCode || ! array_key_exists($productCode, $packagesByCode)) {
                 return response()->json(['message' => 'Servicio no válido'], 400);
             }
+
+            if ($this->promotionConfig($productCode)) {
+                return response()->json(['message' => 'Selecciona un anuncio antes de comprar promoción.'], 400);
+            }
  
             $amount = (float) $packagesByCode[$productCode]['amount'];
             $description = $packagesByCode[$productCode]['description'];
@@ -109,11 +114,16 @@ class PaymentController extends Controller
         // Защита от DB Bloat DoS: переиспользуем 'pending' сессии
         $existing = DB::table('payments')->where(['user_id' => $user->id, 'ad_id' => $request->ad_id, 'description' => $description, 'status' => 'pending'])->first();
         if ($existing) {
-            DB::table('payments')->where('id', $existing->id)->update(['clip_checkout_id' => $checkoutId, 'amount' => $amount, 'updated_at' => now()]);
+            DB::table('payments')->where('id', $existing->id)->update([
+                'clip_checkout_id' => $checkoutId,
+                'product_code' => $productCode,
+                'amount' => $amount,
+                'updated_at' => now(),
+            ]);
         } else {
             DB::table('payments')->insert([
                 'user_id' => $user->id, 'ad_id' => $request->ad_id, 'clip_checkout_id' => $checkoutId, 
-                'amount' => $amount, 'description' => $description, 'status' => 'pending', 
+                'amount' => $amount, 'description' => $description, 'product_code' => $productCode, 'status' => 'pending',
                 'created_at' => now(), 'updated_at' => now()
             ]);
         }
@@ -329,19 +339,7 @@ class PaymentController extends Controller
                     DB::table('users')->where('id', $payment->user_id)->increment('balance', $payment->amount);
                 }
                 
-                // Бизнес-логика: Если платеж привязан к объявлению, продвигаем его
-                if ($payment->ad_id) {
-                    DB::table('ads')->where('id', $payment->ad_id)->update(['promoted' => 'destacado']);
-                    
-                    // Финансовый Аудит: Логируем оказанную услугу и устанавливаем срок сгорания VIP-статуса (7 дней)
-                    DB::table('ad_promotions')->insert([
-                        'ad_id' => $payment->ad_id,
-                        'type' => 'vip',
-                        'expires_at' => now()->addDays(7),
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]);
-                }
+                $this->activateAdPromotion($payment);
 
                 // Безопасная генерация Push-уведомления в реальном времени через WebSocket
                 $notificationData = [
@@ -385,6 +383,80 @@ class PaymentController extends Controller
         }
 
         DB::table('users')->where('id', $payment->user_id)->update($updates);
+    }
+
+    private function activateAdPromotion(object $payment): void
+    {
+        if (! $payment->ad_id) {
+            return;
+        }
+
+        $productCode = $payment->product_code ?: $this->resolvePromotionCode((string) $payment->description, (float) $payment->amount);
+        $promotion = $this->promotionConfig($productCode);
+
+        if (! $promotion) {
+            return;
+        }
+
+        $expiresAt = now()->addDays($promotion['days']);
+
+        DB::table('ads')->where('id', $payment->ad_id)->update([
+            'promoted' => $promotion['promoted'],
+            'boost_type' => $productCode,
+            'boost_expires_at' => $expiresAt,
+            'updated_at' => now(),
+        ]);
+
+        DB::table('ad_promotions')->updateOrInsert(
+            ['ad_id' => $payment->ad_id],
+            [
+                'type' => $promotion['ledger_type'],
+                'expires_at' => $expiresAt,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
+
+        $this->forgetAdPromotionCaches();
+    }
+
+    private function promotionConfig(?string $productCode): ?array
+    {
+        return match ($productCode) {
+            'boost_1_day' => ['promoted' => 'urgente', 'ledger_type' => 'lift', 'days' => 1],
+            'boost_3_days' => ['promoted' => 'urgente', 'ledger_type' => 'lift', 'days' => 3],
+            'highlight_7_days' => ['promoted' => 'highlight', 'ledger_type' => 'highlight', 'days' => 7],
+            'featured_7_days' => ['promoted' => 'destacado', 'ledger_type' => 'vip', 'days' => 7],
+            'featured_30_days' => ['promoted' => 'destacado', 'ledger_type' => 'vip', 'days' => 30],
+            'top_category_7_days' => ['promoted' => 'destacado', 'ledger_type' => 'vip', 'days' => 7],
+            default => null,
+        };
+    }
+
+    private function resolvePromotionCode(string $description, float $amount): ?string
+    {
+        $desc = strtolower($description);
+
+        return match (true) {
+            str_contains($desc, 'subir 24') || $amount === 19.0 => 'boost_1_day',
+            str_contains($desc, 'subir 3') || $amount === 49.0 => 'boost_3_days',
+            str_contains($desc, 'resaltar') || $amount === 79.0 => 'highlight_7_days',
+            str_contains($desc, '30') && (str_contains($desc, 'destacado') || $amount === 399.0) => 'featured_30_days',
+            str_contains($desc, 'top categoría') || str_contains($desc, 'top categoria') => 'top_category_7_days',
+            str_contains($desc, 'destacado') || str_contains($desc, 'promoción') || str_contains($desc, 'promocion') || $amount === 50.0 || $amount === 149.0 => 'featured_7_days',
+            default => null,
+        };
+    }
+
+    private function forgetAdPromotionCaches(): void
+    {
+        Cache::forget('ads_featured_block');
+        Cache::forget('sitemap_xml');
+        Cache::forget('google_merchant_xml');
+
+        for ($i = 1; $i <= 10; $i++) {
+            Cache::forget("ads_index_page_{$i}");
+        }
     }
 
     private function resolvePlanCode(string $description, float $amount): ?string

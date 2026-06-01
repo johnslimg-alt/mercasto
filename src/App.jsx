@@ -2379,19 +2379,19 @@ function App() {
     setCurrentTab('post');
   };
 
-  // --- АНАЛИТИКА КЛИКОВ WHATSAPP ---
-  const handleWhatsAppClick = (ad) => {
+  // --- CONTACT / SHARE CLICK ANALYTICS ---
+  const handleWhatsAppClick = (ad, channel = 'whatsapp') => {
     fetch(`${API_URL}/ads/${ad.id}/click`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ channel: 'whatsapp' })
+      body: JSON.stringify({ channel })
     }).catch(() => {});
 
       // GTM Event push para conversiones
       if (typeof window !== 'undefined') {
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push({
-          event: 'whatsapp_click',
+          event: `${channel}_click`,
           ad_id: ad.id,
           ad_title: ad.title,
           ad_category: ad.category
@@ -2726,12 +2726,13 @@ function App() {
   const renderAdCard = (ad, options = {}) => {
     const isDestacado = ad.promoted === 'destacado' || ad.is_featured;
     const isUrgente = ad.promoted === 'urgente';
+    const isHighlighted = ad.promoted === 'highlight';
     const isPro = ad.user?.role === 'business';
     const isFav = favoriteIds.includes(ad.id);
     const safeImage = options.displayImageUrl || getImageUrl(ad.image_url, ad.image);
 
     return (
-      <article key={ad.id} onClick={() => handleViewAd(ad)} className="market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800">
+      <article key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
           <img src={safeImage} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
           <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
@@ -2739,7 +2740,8 @@ function App() {
           </button>
           {isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}
           {!isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
-          {!isDestacado && !isUrgente && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
+          {!isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">Resaltado</span>}
+          {!isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
         </div>
         <div className="ad-result-body p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-10 text-[#0F172A] dark:text-white">
           <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>

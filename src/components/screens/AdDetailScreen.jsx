@@ -359,6 +359,7 @@ export default function AdDetailScreen({
     } catch (error) {
       handleShareAd(ad);
     } finally {
+      handleWhatsAppClick(ad, 'share');
       setShowShareMenu(false);
     }
   };
@@ -523,6 +524,7 @@ export default function AdDetailScreen({
                 href={telegramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => handleWhatsAppClick(ad, 'telegram')}
                 className="btn-lg mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 text-white shadow-md shadow-sky-500/20 transition-colors hover:bg-sky-600"
               >
                 <Send size={19} /> Escribir por Telegram
@@ -554,6 +556,7 @@ export default function AdDetailScreen({
                         type="button"
                         onClick={() => {
                           handleShareAd(ad);
+                          handleWhatsAppClick(ad, 'share');
                           setShowShareMenu(false);
                         }}
                         className="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
@@ -567,7 +570,10 @@ export default function AdDetailScreen({
                         href={option.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={() => setShowShareMenu(false)}
+                        onClick={() => {
+                          handleWhatsAppClick(ad, option.label === 'Email' ? 'email' : 'share');
+                          setShowShareMenu(false);
+                        }}
                         className="block px-4 py-2.5 text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
                         {option.label}
