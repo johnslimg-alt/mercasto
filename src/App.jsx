@@ -691,9 +691,13 @@ function App() {
   // --- СОСТОЯНИЕ ТЕМНОЙ ТЕМЫ ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const saved = localStorage.getItem('theme');
+      if (saved) {
+        return saved === 'dark';
+      }
+      return true; // Night mode by default
     }
-    return false;
+    return true;
   });
   const [qrModalData, setQrModalData] = useState(null);
   const fileInputRef = useRef(null);
