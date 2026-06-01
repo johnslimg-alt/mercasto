@@ -228,7 +228,7 @@ html.dark .btn-lg.bg-white:hover {
   }
   .category-rail::-webkit-scrollbar { display: none; }
   .category-pill {
-    @apply snap-start shrink-0 flex h-[64px] flex-col items-center justify-center gap-1 rounded-[18px] border border-slate-200 bg-white/95 px-2 py-1.5 text-[#0F172A] shadow-sm transition-all duration-200 hover:border-[#84CC16] hover:bg-[#F7FEE7] hover:text-[#365314] hover:shadow-md;
+    @apply snap-start shrink-0 flex h-[64px] flex-col items-center justify-center gap-1 rounded-[18px] border border-slate-300 bg-slate-50 px-2 py-1.5 text-slate-900 shadow-sm transition-all duration-200 hover:border-[#84CC16] hover:bg-[#F7FEE7] hover:text-[#365314] hover:shadow-md;
     box-shadow: 0 7px 16px rgba(15, 23, 42, 0.05);
   }
 
@@ -240,10 +240,10 @@ html.dark .btn-lg.bg-white:hover {
     width: 1.92rem;
     height: 1.92rem;
     border-radius: 0.95rem;
-    border: 1px solid #E2E8F0;
+    border: 1px solid #CBD5E1;
     background:
-      radial-gradient(circle at 30% 20%, rgba(132, 204, 22, 0.18), transparent 44%),
-      linear-gradient(145deg, #ffffff, #f1f5f9);
+      radial-gradient(circle at 30% 20%, rgba(132, 204, 22, 0.25), transparent 44%),
+      linear-gradient(145deg, #f8fafc, #e2e8f0);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 4px 10px rgba(15, 23, 42, 0.06);
   }
 
@@ -271,6 +271,18 @@ html.dark .btn-lg.bg-white:hover {
       radial-gradient(circle at 12% 0%, rgba(132, 204, 22, 0.12), transparent 26rem),
       radial-gradient(circle at 86% 12%, rgba(148, 163, 184, 0.08), transparent 24rem),
       var(--paper);
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  html.dark,
+  html.dark body,
+  html.dark #root {
+    background-color: #0B1220;
   }
   .site-header {
     background: rgba(255, 255, 255, 0.92);
@@ -301,6 +313,36 @@ html.dark .btn-lg.bg-white:hover {
     background: rgba(248, 250, 252, 0.9);
     border-color: rgba(226, 232, 240, 0.95);
     color: #334155;
+  }
+
+  .header-search-shell {
+    overflow: hidden;
+  }
+
+  .header-search-shell button {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 420px) {
+    .mobile-theme-icon,
+    .mobile-language-select {
+      width: 2.35rem;
+      height: 2.35rem;
+      min-width: 2.35rem;
+      padding-inline: 0.28rem;
+    }
+
+    .mobile-account-button--top {
+      width: 2.5rem;
+      height: 2.5rem;
+      min-width: 2.5rem;
+      min-height: 2.5rem;
+    }
+
+    .mobile-account-button--top img {
+      width: 2.15rem;
+      height: 2.15rem;
+    }
   }
 
   .header-search-shell,
@@ -403,7 +445,8 @@ html.dark .btn-lg.bg-white:hover {
   .mobile-top-controls {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.42rem;
+    flex: 0 0 auto;
   }
 
   @media (max-width: 639px) {
@@ -425,10 +468,13 @@ html.dark .btn-lg.bg-white:hover {
     min-height: 2.32rem;
     overflow: hidden;
     border-radius: 1rem;
+    background: rgba(248, 250, 252, 0.92);
+    border: 1px solid rgba(226, 232, 240, 0.92);
   }
 
   html.dark .mobile-search-combo {
-    background: rgba(15, 23, 42, 0.92) !important;
+    background: rgba(15, 23, 42, 0.96) !important;
+    border-color: rgba(51, 65, 85, 0.95) !important;
   }
 
   .mobile-search-combo input {
@@ -488,24 +534,33 @@ html.dark .btn-lg.bg-white:hover {
   }
 
   .mobile-account-button--top {
-    width: 2.55rem;
-    height: 2.55rem;
-    min-width: 2.55rem;
-    min-height: 2.55rem;
+    width: 2.7rem;
+    height: 2.7rem;
+    min-width: 2.7rem;
+    min-height: 2.7rem;
     padding: 0.12rem;
     border-radius: 999px;
     border-color: rgba(132, 204, 22, 0.55);
-    background: rgba(132, 204, 22, 0.08);
-    box-shadow: 0 0 0 1px rgba(132, 204, 22, 0.2), 0 10px 24px rgba(15, 23, 42, 0.18);
+    background:
+      radial-gradient(circle at 35% 20%, rgba(190, 242, 100, 0.32), transparent 42%),
+      rgba(15, 23, 42, 0.08);
+    box-shadow: 0 0 0 1px rgba(132, 204, 22, 0.24), 0 10px 24px rgba(15, 23, 42, 0.2);
   }
 
   .mobile-account-button--top img {
-    width: 2.18rem;
-    height: 2.18rem;
+    width: 2.34rem;
+    height: 2.34rem;
     border-radius: 999px !important;
     border: 2px solid rgba(132, 204, 22, 0.7);
     aspect-ratio: 1 / 1;
     object-fit: cover;
+  }
+
+  html.dark .mobile-account-button--top {
+    background:
+      radial-gradient(circle at 35% 20%, rgba(190, 242, 100, 0.22), transparent 42%),
+      rgba(15, 23, 42, 0.92) !important;
+    border-color: rgba(132, 204, 22, 0.65) !important;
   }
 
   .osm-embed-shell {
