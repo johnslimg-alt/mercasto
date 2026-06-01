@@ -1,5 +1,5 @@
 import React from 'react';
-import { Maximize2, Search, X, Loader2 } from 'lucide-react';
+import { Maximize2, Search, X, Loader2, SlidersHorizontal } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 const DEFAULT_MARKERS = [
@@ -50,6 +50,9 @@ export default function MercastoMapPreview({
   const [leaflet, setLeaflet] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [loadFailed, setLoadFailed] = React.useState(false);
+  const [mapQuery, setMapQuery] = React.useState('');
+  const [maxPrice, setMaxPrice] = React.useState('');
+  const [onlyWithCoords, setOnlyWithCoords] = React.useState(false);
   
   const mapContainerRef = React.useRef(null);
   const largeMapContainerRef = React.useRef(null);
@@ -57,6 +60,21 @@ export default function MercastoMapPreview({
   const largeMapInstanceRef = React.useRef(null);
 
   const normalizedMarkers = markers && markers.length ? markers : DEFAULT_MARKERS;
+  const visibleMarkers = React.useMemo(() => {
+    const query = mapQuery.trim().toLowerCase();
+    const priceLimit = Number(maxPrice);
+
+    return normalizedMarkers.filter(marker => {
+      const ad = marker.ad || {};
+      const text = `${marker.label || ''} ${ad.title || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
+      const price = Number(ad.price || String(marker.label || '').replace(/[^\d.]/g, '') || 0);
+
+      if (query && !text.includes(query)) return false;
+      if (priceLimit > 0 && price > priceLimit) return false;
+      if (onlyWithCoords && !(marker.coords && marker.coords.length >= 2)) return false;
+      return true;
+    });
+  }, [maxPrice, normalizedMarkers, mapQuery, onlyWithCoords]);
 
   React.useEffect(() => {
     let active = true;
@@ -65,7 +83,7 @@ export default function MercastoMapPreview({
         setLoadFailed(true);
         setLoading(false);
       }
-    }, 8000);
+    }, 2500);
 
     loadLeaflet()
       .then((L) => {
@@ -114,7 +132,7 @@ export default function MercastoMapPreview({
     let center = [23.6345, -102.5528];
     let zoom = isLarge ? 5 : 4;
 
-    const validMarkers = normalizedMarkers.filter(m => m.coords && Array.isArray(m.coords) && m.coords.length >= 2);
+    const validMarkers = visibleMarkers.filter(m => m.coords && Array.isArray(m.coords) && m.coords.length >= 2);
     
     if (validMarkers.length > 0) {
       if (validMarkers.length === 1) {
@@ -132,13 +150,20 @@ export default function MercastoMapPreview({
       }
     }
 
-    const map = L.map(container, {
+    let map;
+    try {
+      map = L.map(container, {
       center,
       zoom,
       zoomControl: true,
       attributionControl: false,
       scrollWheelZoom: isLarge,
-    });
+      });
+    } catch {
+      setLoadFailed(true);
+      setLoading(false);
+      return;
+    }
 
     instanceRef.current = map;
 
@@ -151,7 +176,9 @@ export default function MercastoMapPreview({
       maxZoom: 19,
       crossOrigin: true,
       attribution: '&copy; OpenStreetMap',
-    }).addTo(map);
+    })
+      .on('tileerror', () => setLoadFailed(true))
+      .addTo(map);
 
     const markerGroup = L.featureGroup();
 
@@ -219,7 +246,7 @@ export default function MercastoMapPreview({
         mapInstanceRef.current = null;
       }
     };
-  }, [leaflet, expanded, normalizedMarkers]);
+  }, [leaflet, expanded, visibleMarkers]);
 
   React.useEffect(() => {
     if (leaflet && expanded) {
@@ -235,7 +262,7 @@ export default function MercastoMapPreview({
         largeMapInstanceRef.current = null;
       }
     };
-  }, [leaflet, expanded, normalizedMarkers]);
+  }, [leaflet, expanded, visibleMarkers]);
 
   return (
     <>
@@ -251,7 +278,7 @@ export default function MercastoMapPreview({
           <div ref={mapContainerRef} className="h-full w-full min-h-[190px]" style={{ zIndex: 1 }} />
         ) : (
           <div className="relative h-full min-h-[190px] w-full overflow-hidden bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#e0f2fe,#ecfccb)] dark:bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.22),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.18),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
-            {normalizedMarkers.slice(0, 18).map((marker, index) => {
+            {visibleMarkers.slice(0, 18).map((marker, index) => {
               const pos = coordsToPoint(marker.coords || [23.6345, -102.5528]);
               return (
                 <button
@@ -292,12 +319,15 @@ export default function MercastoMapPreview({
       {expanded && (
         <div className="fixed inset-0 z-[9999] bg-slate-950/90 p-3 backdrop-blur-sm">
           <div className="relative h-full overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl">
-            <div className="absolute inset-x-3 top-3 z-[5] flex gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95">
+            <div className="absolute inset-x-3 top-3 z-[5] grid gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95 md:grid-cols-[1fr_140px_auto_auto]">
               <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
                 <Search size={16} className="text-[#84CC16]" />
-                <input className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none dark:text-white" placeholder="Buscar en el mapa..." />
+                <input value={mapQuery} onChange={(e) => setMapQuery(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none dark:text-white" placeholder="Buscar en el mapa..." />
               </div>
-              <button type="button" onClick={onSearch} className="rounded-xl bg-[#84CC16] px-4 py-2 text-sm font-black text-slate-950 hover:bg-[#65A30D]">Buscar</button>
+              <input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} type="number" className="hidden rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white md:block" placeholder="Precio máx." />
+              <button type="button" onClick={() => setOnlyWithCoords(v => !v)} className={`hidden items-center gap-1 rounded-xl px-3 py-2 text-xs font-black md:inline-flex ${onlyWithCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>
+                <SlidersHorizontal size={14} /> GPS
+              </button>
               <button type="button" onClick={() => setExpanded(false)} className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white dark:bg-slate-700 hover:bg-slate-800" aria-label="Cerrar mapa">
                 <X size={18} />
               </button>
@@ -307,7 +337,7 @@ export default function MercastoMapPreview({
               <div ref={largeMapContainerRef} className="h-full w-full" style={{ zIndex: 1 }} />
             ) : (
               <div className="relative h-full w-full bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
-                {normalizedMarkers.slice(0, 50).map((marker, index) => {
+                {visibleMarkers.slice(0, 50).map((marker, index) => {
                   const pos = coordsToPoint(marker.coords || [23.6345, -102.5528]);
                   return (
                     <button key={marker.id || index} type="button" onClick={() => onMarkerClick?.(marker.ad || marker)} className="absolute z-[2] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#84CC16] px-3 py-1.5 text-xs font-black text-slate-950 shadow-xl ring-2 ring-white/70" style={pos}>
@@ -317,6 +347,19 @@ export default function MercastoMapPreview({
                 })}
               </div>
             )}
+            <div className="absolute inset-x-3 bottom-3 z-[5] rounded-2xl bg-slate-950/90 p-3 text-white shadow-xl backdrop-blur">
+              <div className="flex items-center justify-between gap-3 text-xs font-bold">
+                <span>{visibleMarkers.length} anuncios en mapa</span>
+                <button type="button" onClick={() => { setMapQuery(''); setMaxPrice(''); setOnlyWithCoords(false); }} className="text-[#BEF264]">Limpiar filtros</button>
+              </div>
+              <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar">
+                {visibleMarkers.slice(0, 8).map((marker, index) => (
+                  <button key={marker.id || index} type="button" onClick={() => onMarkerClick?.(marker.ad || marker)} className="shrink-0 rounded-full bg-[#84CC16] px-3 py-2 text-xs font-black text-slate-950">
+                    {marker.label || 'Ver'}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
