@@ -13,6 +13,16 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
+    private const SUBSCRIPTION_PLANS = [
+        'package_impulso' => ['name' => 'Plan Impulso', 'limit' => 10, 'business' => false],
+        'package_negocio' => ['name' => 'Plan Negocio', 'limit' => 30, 'business' => true],
+        'package_pro' => ['name' => 'Plan Pro', 'limit' => 100, 'business' => true],
+        'package_agencia' => ['name' => 'Plan Agencia', 'limit' => 500, 'business' => true],
+        'plus_monthly' => ['name' => 'Suscripción Paquete Plus', 'limit' => 10, 'business' => false],
+        'pro_standard_monthly' => ['name' => 'Suscripción PRO Estándar', 'limit' => 50, 'business' => true],
+        'pro_unlimited_monthly' => ['name' => 'Suscripción PRO Ilimitado', 'limit' => 999999, 'business' => true],
+    ];
+
     /**
      * Создание сессии оплаты через Clip Mexico
      */
@@ -148,8 +158,7 @@ class PaymentController extends Controller
             $paymentUrl = $response->json('payment_request_url') ?: $response->json('payment_url');
             $paymentRequestId = $response->json('payment_request_id')
                 ?: $response->json('id')
-                ?: $response->json('payment_request.id')
-                ?: $response->json('payment_request_id');
+                ?: $response->json('payment_request.id');
 
             if (! $paymentUrl) {
                 Log::error('Clip checkout response missing payment URL', [
@@ -293,13 +302,10 @@ class PaymentController extends Controller
                     ->first();
                 if ($payment && $payment->user_id) {
 
-                // Бизнес-логика: Выдаем PRO статус (роль 'business'), если оплачен тариф «PRO» или «Plus»
-                $desc = strtolower($payment->description);
-                if ((str_contains($desc, 'pro') || str_contains($desc, 'plus')) && $payment->amount >= 99) {
-                    DB::table('users')->where('id', $payment->user_id)->update(['role' => 'business']);
-                }
+                $this->activatePaidProduct($payment);
 
                 // Бизнес-логика: Зачисление кредитов (если в описании есть слово «Crédito»)
+                $desc = strtolower($payment->description);
                 if ((str_contains($desc, 'crédito') || str_contains($desc, 'credito')) && $payment->amount >= 1) {
                     DB::table('users')->where('id', $payment->user_id)->increment('balance', $payment->amount);
                 }
@@ -336,6 +342,45 @@ class PaymentController extends Controller
         }
 
         return response()->json(['status' => 'received'], 200);
+    }
+
+    private function activatePaidProduct(object $payment): void
+    {
+        $planCode = $this->resolvePlanCode((string) $payment->description, (float) $payment->amount);
+        if (!$planCode || !isset(self::SUBSCRIPTION_PLANS[$planCode])) {
+            return;
+        }
+
+        $plan = self::SUBSCRIPTION_PLANS[$planCode];
+        $updates = [
+            'plan_code' => $planCode,
+            'plan_name' => $plan['name'],
+            'monthly_ad_limit' => $plan['limit'],
+            'plan_activated_at' => now(),
+            'plan_expires_at' => now()->addMonth(),
+            'updated_at' => now(),
+        ];
+
+        if ($plan['business']) {
+            $updates['role'] = 'business';
+        }
+
+        DB::table('users')->where('id', $payment->user_id)->update($updates);
+    }
+
+    private function resolvePlanCode(string $description, float $amount): ?string
+    {
+        $desc = strtolower($description);
+
+        return match (true) {
+            str_contains($desc, 'agencia') || $amount >= 1499 => 'package_agencia',
+            str_contains($desc, 'ilimitado') => 'pro_unlimited_monthly',
+            str_contains($desc, 'pro estándar') || str_contains($desc, 'pro estandar') => 'pro_standard_monthly',
+            str_contains($desc, 'plan pro') || ($amount >= 599 && $amount < 1499) => 'package_pro',
+            str_contains($desc, 'negocio') || ($amount >= 249 && $amount < 599) => 'package_negocio',
+            str_contains($desc, 'impulso') || str_contains($desc, 'plus') || ($amount >= 99 && $amount < 249) => 'package_impulso',
+            default => null,
+        };
     }
 
     public function getCoupons(Request $request)

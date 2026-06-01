@@ -33,6 +33,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'social_instagram',
         'last_active_at',
         'role',
+        'plan_code',
+        'plan_name',
+        'monthly_ad_limit',
+        'plan_expires_at',
+        'plan_activated_at',
         'ip_address',
         'balance',
         'is_verified',
@@ -78,6 +83,8 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $appends = [
         'account_verified',
         'account_verification_methods',
+        'active_plan',
+        'plan_active',
     ];
 
     /**
@@ -99,6 +106,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'phone_otp_expires_at' => 'datetime',
             'balance' => 'decimal:2',
             'last_active_at' => 'datetime',
+            'plan_expires_at' => 'datetime',
+            'plan_activated_at' => 'datetime',
+            'monthly_ad_limit' => 'integer',
             'business_hours' => 'array',
             'business_profile_enabled' => 'boolean',
             'business_rfc_verified_at' => 'datetime',
@@ -128,5 +138,29 @@ class User extends Authenticatable implements MustVerifyEmail
             $this->is_verified ? 'admin' : null,
             $this->kyc_status === 'approved' ? 'kyc' : null,
         ]));
+    }
+
+    public function getPlanActiveAttribute(): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        return $this->plan_code !== 'package_free'
+            && $this->plan_expires_at
+            && $this->plan_expires_at->isFuture();
+    }
+
+    public function getActivePlanAttribute(): array
+    {
+        $isActive = $this->plan_active;
+
+        return [
+            'code' => $isActive ? $this->plan_code : 'package_free',
+            'name' => $isActive ? $this->plan_name : 'Plan Gratis',
+            'monthly_ad_limit' => $isActive ? (int) $this->monthly_ad_limit : 3,
+            'expires_at' => $isActive ? $this->plan_expires_at?->toISOString() : null,
+            'active' => $isActive,
+        ];
     }
 }

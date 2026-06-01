@@ -33,6 +33,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
     const displayedAds = dashboardTab === 'my_ads' ? (adStatusFilter === 'active' ? activeAds : inactiveAds) : favoriteAds;
 
     const totalContactClicks = userAds.reduce((sum, ad) => sum + (ad.whatsapp_clicks || 0), 0);
+    const activePlan = user?.active_plan || {};
+    const planLimit = activePlan.monthly_ad_limit || user?.monthly_ad_limit || 3;
+    const planExpires = activePlan.expires_at || user?.plan_expires_at;
 
     const conversionRate = (() => {
 
@@ -195,6 +198,14 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               </h2>
 
               <p className="text-[14px] text-slate-500 mt-1">{accountType === 'pro' ? businessSubtitle : (user?.email || 'N/A')}</p>
+              <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-lime-200 dark:border-lime-500/30 bg-lime-50 dark:bg-lime-500/10 px-3 py-2 text-[12px] font-bold text-lime-800 dark:text-lime-200">
+                <Crown size={15}/>
+                <span>{activePlan.name || user?.plan_name || 'Plan Gratis'}</span>
+                <span className="text-lime-700/70 dark:text-lime-200/70">· {planLimit} anuncios/mes</span>
+                {planExpires && (
+                  <span className="text-lime-700/70 dark:text-lime-200/70">· vence {new Date(planExpires).toLocaleDateString('es-MX')}</span>
+                )}
+              </div>
 
             </div>
 

@@ -265,12 +265,12 @@ class AdController extends Controller
             'attributes' => 'nullable|array', // Динамические характеристики (марка, модель, ОЗУ и т.д.)
         ]);
 
-        // Защита бизнес-модели: Проверка лимитов на количество объявлений (Free = 3, PRO = 100)
+        // Защита бизнес-модели: лимиты берём из активного платного плана пользователя.
         $user = $request->user();
         $monthlyAds = Ad::where('user_id', $user->id)->where('created_at', '>=', now()->startOfMonth())->count();
-        $maxAds = $user->role === 'business' ? 100 : 3;
+        $maxAds = $this->monthlyAdLimit($user);
         if ($monthlyAds >= $maxAds && $user->role !== 'admin') {
-            return response()->json(['message' => "Has alcanzado el límite de {$maxAds} anuncios mensuales para tu tipo de cuenta. Sube a PRO para más."], 403);
+            return response()->json(['message' => "Has alcanzado el límite de {$maxAds} anuncios mensuales de tu plan. Actualiza tu plan para publicar más."], 403);
         }
 
         $lat = null;
@@ -866,7 +866,7 @@ class AdController extends Controller
         // Защита от обхода квот: проверяем лимиты PRO-пользователя перед массовой загрузкой
         $user = $request->user();
         $monthlyAds = Ad::where('user_id', $user->id)->where('created_at', '>=', now()->startOfMonth())->count();
-        $maxAds = $user->role === 'admin' ? 999999 : 100;
+        $maxAds = $user->role === 'admin' ? 999999 : $this->monthlyAdLimit($user);
         if ($monthlyAds >= $maxAds) {
             return response()->json(['message' => "Has alcanzado el límite de {$maxAds} anuncios mensuales."], 403);
         }
@@ -1776,7 +1776,7 @@ class AdController extends Controller
             return response()->json(['message' => 'Solo puedes republicar anuncios expirados'], 422);
         }
 
-        $maxRepublishes = ($request->user()->role === 'business' || $request->user()->role === 'admin') ? 100 : 3;
+        $maxRepublishes = $request->user()->role === 'admin' ? 100 : min($this->monthlyAdLimit($request->user()), 100);
         if ($ad->republish_count >= $maxRepublishes) {
             return response()->json([
                 'message' => 'Has alcanzado el límite de republicaciones gratuitas. Crea un nuevo anuncio o actualiza a PRO.',
@@ -2004,5 +2004,22 @@ class AdController extends Controller
             'expires_at'       => $ad->fresh()->expires_at,
             'credits_remaining' => $user->fresh()->referral_credits,
         ]);
+    }
+
+    private function monthlyAdLimit($user): int
+    {
+        if ($user->role === 'admin') {
+            return 999999;
+        }
+
+        if (
+            $user->plan_code !== 'package_free'
+            && $user->plan_expires_at
+            && $user->plan_expires_at->isFuture()
+        ) {
+            return max(3, (int) $user->monthly_ad_limit);
+        }
+
+        return 3;
     }
 }

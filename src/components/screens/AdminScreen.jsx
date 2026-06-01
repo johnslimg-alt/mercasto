@@ -763,6 +763,8 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
                          <th className="p-3">{t.role}</th>
 
+                         <th className="p-3">Plan</th>
+
                          <th className="p-3 text-right">{t.action}</th>
 
                        </tr>
@@ -853,6 +855,20 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
                            </td>
 
+                           <td className="p-3">
+
+                             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-lime-50 text-lime-700 border border-lime-100">
+                               <Crown size={13}/>
+                               {u.active_plan?.name || u.plan_name || 'Plan Gratis'}
+                             </div>
+
+                             <p className="text-[11px] text-slate-500 mt-1">
+                               {u.active_plan?.monthly_ad_limit || u.monthly_ad_limit || 3} anuncios/mes
+                               {(u.active_plan?.expires_at || u.plan_expires_at) ? ` · vence ${new Date(u.active_plan?.expires_at || u.plan_expires_at).toLocaleDateString('es-MX')}` : ''}
+                             </p>
+
+                           </td>
+
                            <td className="p-3 text-right flex items-center justify-end gap-2">
 
                              <button onClick={() => handleAdminVerifyUser(u.id)} className={`p-2 rounded-lg transition-colors ${u.is_verified ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-blue-500'}`} title="Verificar">
@@ -877,7 +893,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
                          <tr>
 
-                           <td colSpan="5" className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">{t.no_users}</td>
+                           <td colSpan="6" className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">{t.no_users}</td>
 
                          </tr>
 
