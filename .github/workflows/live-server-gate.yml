@@ -54,6 +54,17 @@ jobs:
           test -n "${SSH_USER}" || { echo "Missing MERCASTO_SSH_USER" >&2; exit 64; }
           test -n "${SSH_KEY}" || { echo "Missing MERCASTO_SSH_PRIVATE_KEY" >&2; exit 64; }
 
+      - name: Scan server host key
+        env:
+          SSH_HOST: ${{ secrets.MERCASTO_SSH_HOST }}
+          SSH_PORT: ${{ secrets.MERCASTO_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          touch ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
+          ssh-keyscan -p "${SSH_PORT:-22}" -T 10 "${SSH_HOST}" >> ~/.ssh/known_hosts
+          echo "Host key scanned successfully."
+
       - name: Run gate
         env:
           SSH_HOST: ${{ secrets.MERCASTO_SSH_HOST }}

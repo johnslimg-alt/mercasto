@@ -20,21 +20,28 @@ case "${SSH_PORT}" in
   ''|*[!0-9]*) echo "Invalid SSH_PORT" >&2; exit 64 ;;
 esac
 
-install -m 700 -d ~/.ssh
 key_file="$(mktemp)"
 trap 'rm -f "${key_file}"' EXIT
 
-# Normalize private key format (rebuilding multiline if compressed, and ensuring a trailing newline)
-cleaned_key=$(echo "${SSH_KEY}" | sed 's/\\n/\n/g')
-printf '%s\n' "${cleaned_key}" | sed -e '$a\' >"${key_file}"
+# Write the key exactly as-is (GitHub stores multiline secrets with real newlines).
+# If the secret was stored as a single line with literal \n, normalise those too.
+printf '%s' "${SSH_KEY}" | sed $'s/\\\\n/\\\n/g' > "${key_file}"
+# Guarantee trailing newline — OpenSSH requires it for ED25519 keys
+printf '\n' >> "${key_file}"
 chmod 600 "${key_file}"
+
+# Verify the key looks sane (type + base64 body) without printing the secret
+if ! grep -qE '^-----BEGIN (OPENSSH|RSA|EC|DSA) PRIVATE KEY-----' "${key_file}"; then
+  echo "ERROR: SSH key does not have a valid PEM header. Check MERCASTO_SSH_PRIVATE_KEY secret format." >&2
+  exit 1
+fi
 
 ssh \
   -i "${key_file}" \
   -p "${SSH_PORT}" \
   -o BatchMode=yes \
   -o IdentitiesOnly=yes \
-  -o StrictHostKeyChecking=accept-new \
+  -o StrictHostKeyChecking=yes \
   -o ServerAliveInterval=15 \
   -o ServerAliveCountMax=4 \
   "${SSH_USER}@${SSH_HOST}" \
