@@ -49,6 +49,7 @@ export default function MercastoMapPreview({
   const [expanded, setExpanded] = React.useState(false);
   const [leaflet, setLeaflet] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
+  const [loadFailed, setLoadFailed] = React.useState(false);
   
   const mapContainerRef = React.useRef(null);
   const largeMapContainerRef = React.useRef(null);
@@ -59,21 +60,30 @@ export default function MercastoMapPreview({
 
   React.useEffect(() => {
     let active = true;
+    const fallbackTimer = window.setTimeout(() => {
+      if (active) {
+        setLoadFailed(true);
+        setLoading(false);
+      }
+    }, 8000);
+
     loadLeaflet()
       .then((L) => {
         if (active) {
           setLeaflet(L);
+          setLoadFailed(false);
           setLoading(false);
         }
       })
       .catch(() => {
         if (active) {
-          setLoaded(false);
+          setLoadFailed(true);
           setLoading(false);
         }
       });
     return () => {
       active = false;
+      window.clearTimeout(fallbackTimer);
     };
   }, []);
 
@@ -140,6 +150,7 @@ export default function MercastoMapPreview({
     L.tileLayer(tileUrl, {
       maxZoom: 19,
       crossOrigin: true,
+      attribution: '&copy; OpenStreetMap',
     }).addTo(map);
 
     const markerGroup = L.featureGroup();
@@ -194,6 +205,8 @@ export default function MercastoMapPreview({
     if (validMarkers.length > 1 && markerGroup.getLayers().length > 0) {
       map.fitBounds(markerGroup.getBounds(), { padding: [30, 30] });
     }
+
+    window.requestAnimationFrame(() => map.invalidateSize());
   };
 
   React.useEffect(() => {
@@ -234,7 +247,7 @@ export default function MercastoMapPreview({
           </div>
         )}
         
-        {leaflet ? (
+        {leaflet && !loadFailed ? (
           <div ref={mapContainerRef} className="h-full w-full min-h-[190px]" style={{ zIndex: 1 }} />
         ) : (
           <div className="relative h-full min-h-[190px] w-full overflow-hidden bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#e0f2fe,#ecfccb)] dark:bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.22),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.18),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
@@ -262,7 +275,7 @@ export default function MercastoMapPreview({
           {title}
         </div>
         <div className="absolute right-3 top-3 z-[2] rounded-full bg-slate-950/90 px-3 py-1.5 text-xs font-black text-white shadow-md dark:bg-[#84CC16] dark:text-slate-950 pointer-events-none">
-          Mapa
+          {loadFailed ? 'Vista previa' : 'Mapa'}
         </div>
 
         {showFullscreen && (
@@ -290,7 +303,7 @@ export default function MercastoMapPreview({
               </button>
             </div>
             
-            {leaflet ? (
+            {leaflet && !loadFailed ? (
               <div ref={largeMapContainerRef} className="h-full w-full" style={{ zIndex: 1 }} />
             ) : (
               <div className="relative h-full w-full bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
