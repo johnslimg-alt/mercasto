@@ -93,7 +93,7 @@ export default function VerticalHero({
                   <span className={`mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-xl ${accent.bg} text-white shadow-sm`}>
                     <Icon size={17} strokeWidth={2.2} />
                   </span>
-                  <span className="block whitespace-nowrap text-[11px] font-bold text-slate-800">{item.name}</span>
+                  <span className="block whitespace-nowrap text-[11px] font-extrabold text-slate-950">{item.name}</span>
                 </button>
               );
             })}

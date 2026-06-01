@@ -454,15 +454,15 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
                         if (cat.action === 'pricing') { setShowPricingModal?.(true); return; }
                         const vpath = cat.verticalPath || getVerticalPath(cat.slug);
                         if (vpath) { navigate(vpath); } else { executeSearch?.('', null, cat.slug); }
-                      }} className="category-pill group min-w-[82px] sm:min-w-[96px] max-w-[108px]">
+                      }} className={`category-pill group min-w-[82px] sm:min-w-[96px] max-w-[108px] ${activeCat === cat.slug ? 'ring-2 ring-[#84CC16] bg-[#F7FEE7]' : ''}`}>
 
-                      <div className="category-icon flex items-center justify-center text-slate-500 group-hover:text-[#65A30D] transition-all">
+                      <div className="category-icon flex items-center justify-center text-slate-700 group-hover:text-[#65A30D] transition-all">
 
-                        <Icon size={15} strokeWidth={2.2} />
+                        <Icon size={16} strokeWidth={2.5} />
 
                       </div>
 
-                      <h3 className="font-semibold text-[10px] text-center text-slate-700 group-hover:text-[#365314] line-clamp-2 leading-tight">
+                      <h3 className="font-bold text-[11px] text-center text-slate-900 group-hover:text-[#365314] line-clamp-2 leading-tight">
                         {cat.name?.[lang] || cat.name?.['es'] || cat.name}
                       </h3>
 
