@@ -118,17 +118,12 @@ export default function StorefrontScreen({
                  </div>
                )}
              </div>
-             {isBusinessEnabled && (businessProfile?.business_website || businessProfile?.business_whatsapp || businessHours.length > 0) && (
+             {isBusinessEnabled && (businessProfile?.business_website || businessHours.length > 0) && (
                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px] text-slate-600">
                  {businessProfile?.business_website && (
                    <a href={businessProfile.business_website} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
                      <Globe className="w-4 h-4 text-slate-400" /> {t.website || 'Sitio web'}
                    </a>
-                 )}
-                 {businessProfile?.business_whatsapp && (
-                   <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
-                     <MessageCircle className="w-4 h-4 text-slate-400" /> WhatsApp
-                   </div>
                  )}
                  {businessHours.slice(0, 4).map(line => (
                    <div key={line} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">

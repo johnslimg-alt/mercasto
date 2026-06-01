@@ -184,7 +184,7 @@ export default function VerticalHero({
                 rel="noreferrer"
                 className="mt-2 block text-center text-xs font-semibold text-white/60 hover:text-white"
               >
-                Abrir en OpenStreetMap
+                Abrir mapa
               </a>
             </div>
           </div>

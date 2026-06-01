@@ -84,8 +84,7 @@ export default function MercastoMapPreview({
           setLoading(false);
         }
       })
-      .catch((err) => {
-        console.error(err);
+      .catch(() => {
         if (active) {
           setLoaded(false);
           setLoading(false);
@@ -248,7 +247,7 @@ export default function MercastoMapPreview({
         {loading && (
           <div className="absolute inset-0 z-[10] flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-[2px] dark:bg-slate-950/20">
             <Loader2 className="h-8 w-8 animate-spin text-[#84CC16]" />
-            <span className="mt-2 text-xs font-semibold text-slate-500">Cargando OpenStreetMap...</span>
+            <span className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-300">Cargando mapa...</span>
           </div>
         )}
         
@@ -271,7 +270,7 @@ export default function MercastoMapPreview({
               );
             })}
             <div className="absolute bottom-3 left-3 rounded-full bg-slate-950/80 px-3 py-1.5 text-[11px] font-bold text-white dark:bg-white/10">
-              Vista estable
+              Mapa
             </div>
           </div>
         )}
@@ -280,7 +279,7 @@ export default function MercastoMapPreview({
           {title}
         </div>
         <div className="absolute right-3 top-3 z-[2] rounded-full bg-slate-950/90 px-3 py-1.5 text-xs font-black text-white shadow-md dark:bg-[#84CC16] dark:text-slate-950 pointer-events-none">
-          OpenStreetMap
+          Mapa
         </div>
 
         {showFullscreen && (

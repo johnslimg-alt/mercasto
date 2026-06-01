@@ -177,7 +177,7 @@ export default function SellerProfileScreen({ currentUser }) {
             )}
 
             {/* Links & contact */}
-            {(seller?.website || seller?.social_instagram || seller?.whatsapp) && (
+            {(seller?.website || seller?.social_instagram) && (
               <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
                 <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contacto</h3>
                 {seller?.website && (
@@ -190,12 +190,6 @@ export default function SellerProfileScreen({ currentUser }) {
                   <a href={`https://instagram.com/${seller.social_instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-slate-700 hover:text-pink-500">
                     <span className="text-slate-400 flex-shrink-0"><InstagramIcon /></span>
                     @{seller.social_instagram}
-                  </a>
-                )}
-                {seller?.whatsapp && (
-                  <a href={`https://wa.me/${seller.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-slate-700 hover:text-green-600">
-                    <MessageCircle size={14} className="text-slate-400 flex-shrink-0" />
-                    WhatsApp
                   </a>
                 )}
               </div>
