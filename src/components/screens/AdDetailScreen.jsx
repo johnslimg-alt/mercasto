@@ -7,6 +7,75 @@ import { addRecentlyViewed } from '../../utils/recentlyViewed';
 import { events } from '../../utils/analytics';
 import MercastoMapPreview from '../common/MercastoMapPreview';
 
+// --- MAP COORDINATES ---
+const STATE_COORDS = {
+  "Aguascalientes": [21.8853, -102.2916],
+  "AGS": [21.8853, -102.2916],
+  "Baja California": [30.8406, -115.2838],
+  "BC": [30.8406, -115.2838],
+  "Baja California Sur": [26.0444, -111.6661],
+  "BCS": [26.0444, -111.6661],
+  "Campeche": [19.8301, -90.5349],
+  "CAMP": [19.8301, -90.5349],
+  "Chiapas": [16.7569, -93.1292],
+  "CHIS": [16.7569, -93.1292],
+  "Chihuahua": [28.6330, -106.0691],
+  "CHIH": [28.6330, -106.0691],
+  "Ciudad de México": [19.4326, -99.1332],
+  "CDMX": [19.4326, -99.1332],
+  "Coahuila": [27.0587, -101.7068],
+  "COAH": [27.0587, -101.7068],
+  "Colima": [19.2433, -103.7247],
+  "COL": [19.2433, -103.7247],
+  "Durango": [24.0277, -104.6532],
+  "DGO": [24.0277, -104.6532],
+  "Guanajuato": [21.0190, -101.2574],
+  "GTO": [21.0190, -101.2574],
+  "Guerrero": [17.4392, -99.5451],
+  "GRO": [17.4392, -99.5451],
+  "Hidalgo": [20.0911, -98.7624],
+  "HGO": [20.0911, -98.7624],
+  "Jalisco": [20.6597, -103.3496],
+  "JAL": [20.6597, -103.3496],
+  "GDL": [20.6597, -103.3496],
+  "México": [19.3565, -99.6312],
+  "EdoMex": [19.3565, -99.6312],
+  "Michoacán": [19.5665, -101.7068],
+  "MICH": [19.5665, -101.7068],
+  "Morelos": [18.6813, -99.1013],
+  "MOR": [18.6813, -99.1013],
+  "Nayarit": [21.7514, -104.8455],
+  "NAY": [21.7514, -104.8455],
+  "Nuevo León": [25.5922, -100.0574],
+  "NL": [25.5922, -100.0574],
+  "Oaxaca": [17.0732, -96.7266],
+  "OAX": [17.0732, -96.7266],
+  "Puebla": [19.0414, -98.2063],
+  "PUE": [19.0414, -98.2063],
+  "Querétaro": [20.5888, -100.3899],
+  "QRO": [20.5888, -100.3899],
+  "Quintana Roo": [19.1847, -88.4753],
+  "ROO": [19.1847, -88.4753],
+  "San Luis Potosí": [22.1565, -100.9855],
+  "SLP": [22.1565, -100.9855],
+  "Sinaloa": [25.1721, -107.4795],
+  "SIN": [25.1721, -107.4795],
+  "Sonora": [29.2972, -110.3309],
+  "SON": [29.2972, -110.3309],
+  "Tabasco": [17.8409, -92.6189],
+  "TAB": [17.8409, -92.6189],
+  "Tamaulipas": [24.2669, -98.8363],
+  "TAMPS": [24.2669, -98.8363],
+  "Tlaxcala": [19.3182, -98.2375],
+  "TLAX": [19.3182, -98.2375],
+  "Veracruz": [19.1738, -96.1342],
+  "VER": [19.1738, -96.1342],
+  "Yucatán": [20.7099, -89.0943],
+  "YUC": [20.7099, -89.0943],
+  "Zacatecas": [22.7709, -102.5832],
+  "ZAC": [22.7709, -102.5832]
+};
+
 function OwnerControls({ ad, API_URL, setViewedAd }) {
   const [status, setStatus] = useState(ad.status);
   const [loading, setLoading] = useState(false);
@@ -199,6 +268,32 @@ export default function AdDetailScreen({
   const [alertEnabled, setAlertEnabled] = useState(true);
   const [renderedAtMs] = useState(() => Date.now());
 
+  const adMarker = useMemo(() => {
+    if (!ad) return [];
+    if (ad.latitude && ad.longitude) {
+      return [{
+        id: ad.id,
+        ad,
+        coords: [parseFloat(ad.latitude), parseFloat(ad.longitude)],
+        label: `$${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}`,
+        tone: 'lime'
+      }];
+    }
+    const stateName = ad.state || ad.location?.split(',')[1]?.trim() || ad.location?.split('·')[0]?.trim() || ad.location?.split(',')[0]?.trim() || '';
+    const cleanedState = Object.keys(STATE_COORDS).find(k =>
+      stateName.toLowerCase().includes(k.toLowerCase()) ||
+      k.toLowerCase().includes(stateName.toLowerCase())
+    );
+    const base = cleanedState ? STATE_COORDS[cleanedState] : [23.6345, -102.5528];
+    return [{
+      id: ad.id,
+      ad,
+      coords: base,
+      label: `$${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}`,
+      tone: 'lime'
+    }];
+  }, [ad]);
+
   // Track recently viewed
   React.useEffect(() => {
     if (ad) {
@@ -356,7 +451,7 @@ export default function AdDetailScreen({
                 </div>
                 <MercastoMapPreview
                   title={locationLabel || 'Todo México'}
-                  markers={[{ label: 'Aquí', x: 50, y: 52, tone: 'lime' }]}
+                  markers={adMarker}
                   className="h-[220px] w-full rounded-none border-0 border-t border-slate-200 shadow-none dark:border-slate-700 md:h-[280px]"
                 />
               </div>
