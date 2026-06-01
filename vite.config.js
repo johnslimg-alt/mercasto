@@ -19,5 +19,19 @@ export default defineConfig({
     cssCodeSplit: false,
     emptyOutDir: true,
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return null;
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router-dom/')) {
+            return 'vendor-react';
+          }
+          if (id.includes('/@sentry/') || id.includes('/laravel-echo/') || id.includes('/pusher-js/')) {
+            return 'vendor-observability';
+          }
+          return null;
+        },
+      },
+    },
   }
 })
