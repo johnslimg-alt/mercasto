@@ -220,7 +220,15 @@ class PaymentController extends Controller
         // Защита от криптографического бага ltrim (удалял нужные символы хэша, если они совпадали с маской)
         $receivedHash = str_starts_with((string) $signature, 'sha256=') ? substr((string) $signature, 7) : (string) $signature;
 
-        $paidStatuses = ['paid', 'completed', 'checkout_completed'];
+        $paidStatuses = [
+            'paid',
+            'approved',
+            'succeeded',
+            'success',
+            'completed',
+            'checkout_completed',
+            'payment_completed',
+        ];
 
         if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
             // IF THE SIGNATURE IS PRESENT BUT INVALID, IT MUST BE REJECTED IMMEDIATELY!
