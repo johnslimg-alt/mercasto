@@ -223,6 +223,18 @@ class PaymentController extends Controller
         $paidStatuses = ['paid', 'completed', 'checkout_completed'];
 
         if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
+            // IF THE SIGNATURE IS PRESENT BUT INVALID, IT MUST BE REJECTED IMMEDIATELY!
+            if ($signature) {
+                $clientIpHash = hash('sha256', (string) $request->ip());
+                Log::warning('Invalid Clip webhook signature provided', [
+                    'ip_hash' => $clientIpHash,
+                    'path' => $request->path(),
+                    'checkout_id_present' => (bool) $checkoutId,
+                    'status' => $paymentStatus ?: null,
+                ]);
+                return response()->json(['status' => 'invalid_signature'], 401);
+            }
+
             // Clip dashboard can send an unsigned test ping. Accept only non-payment pings,
             // never unsigned events that claim a checkout reference or paid status.
             if (!$signature && !$checkoutId && !in_array($paymentStatus, $paidStatuses, true)) {
@@ -242,14 +254,13 @@ class PaymentController extends Controller
                 : false;
 
             if (!$knownCheckout && !$knownPaymentRequest) {
-                Log::info('Unsigned or invalid Clip webhook test/unknown checkout accepted', [
+                Log::info('Unsigned Clip webhook test/unknown checkout accepted', [
                     'ip_hash' => hash('sha256', (string) $request->ip()),
                     'path' => $request->path(),
                     'payload_keys' => array_keys($payload),
                     'checkout_id_present' => (bool) $checkoutId,
                     'payment_request_id_present' => (bool) $paymentRequestId,
                     'status' => $paymentStatus ?: null,
-                    'signature_present' => (bool) $signature,
                 ]);
 
                 return response()->json(['status' => 'test_ok']);
