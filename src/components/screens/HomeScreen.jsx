@@ -162,7 +162,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
   );
 };
 
-export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert }) {
+export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
     const [showMap, setShowMap] = React.useState(false);
@@ -628,39 +628,32 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
                 <div className="col-span-12 xl:col-span-8">
 
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-                    {spotlightRealEstate.map((item, idx) => (
-
-                      <article key={idx} className="market-card overflow-hidden cursor-pointer" onClick={() => { runSearch(item.specs, 'inmobiliaria'); }}>
-
-                        <div className="relative">
-
-                          <img src={item.img} loading="lazy" className="w-full h-[160px] object-cover" alt=""/>
-
-                          <span className={`badge absolute left-2 top-2 ${item.color} text-white`}>{item.type}</span>
-
-                        </div>
-
-                        <div className="p-3.5">
-
-                          <div className="font-bold text-[18px]">{item.price}</div>
-
-                          <div className="text-[13px] text-slate-600 line-clamp-1">{item.specs}</div>
-
-                          <div className="flex items-center gap-2 mt-2 text-[11px]">
-
-                            {item.badge && <span className={`badge ${item.badge.color}`}>{item.badge.label}</span>}
-
-                            <span className="text-slate-500">{item.location}</span>
-
+                    {((realEstateAds && realEstateAds.length > 0) ? realEstateAds : spotlightRealEstate).map((item, idx) => {
+                      const isReal = Boolean(item.id);
+                      if (isReal) {
+                        return (
+                          <div key={item.id} className="cursor-pointer" onClick={() => handleViewAd(item)}>
+                            {renderAdCard(item)}
                           </div>
-
-                        </div>
-
-                      </article>
-
-                    ))}
-
+                        );
+                      }
+                      return (
+                        <article key={idx} className="market-card overflow-hidden cursor-pointer" onClick={() => { runSearch(item.specs, 'inmobiliaria'); }}>
+                          <div className="relative">
+                            <img src={item.img} loading="lazy" className="w-full h-[160px] object-cover" alt=""/>
+                            <span className={`badge absolute left-2 top-2 ${item.color} text-white`}>{item.type}</span>
+                          </div>
+                          <div className="p-3.5">
+                            <div className="font-bold text-[18px]">{item.price}</div>
+                            <div className="text-[13px] text-slate-600 line-clamp-1">{item.specs}</div>
+                            <div className="flex items-center gap-2 mt-2 text-[11px]">
+                              {item.badge && <span className={`badge ${item.badge.color}`}>{item.badge.label}</span>}
+                              <span className="text-slate-500">{item.location}</span>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
 
                 </div>
@@ -754,58 +747,58 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
                     </thead>
 
                     <tbody className="">
-
-                      {jobsBoard.map((job, idx) => (
-
-                        <tr key={idx} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 cursor-pointer transition-all duration-200 last:border-0" onClick={() => { runSearch(job.role, 'empleo'); }}>
-
-                          <td className="px-4 py-3">
-
-                            <div className="flex items-center gap-3">
-
-                              <div className={`job-logo-badge ${job.logo}`}>
-
-                                {job.initial === 'MD' ? (
-                                  <svg viewBox="0 0 100 100" className="w-6 h-6" aria-hidden="true">
-                                    <path d="M50 5 C27.9 5 10 22.9 10 45 C10 75 50 95 50 95 C50 95 90 75 90 45 C90 22.9 72.1 5 50 5 Z" fill="#84CC16" />
-                                    <path d="M30 60 L30 35 L50 50 L70 35 L70 60" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
-                                ) : job.initial}
-
+                      {((jobAds && jobAds.length > 0) ? jobAds : jobsBoard).map((job, idx) => {
+                        const isReal = Boolean(job.id);
+                        if (isReal) {
+                          return (
+                            <tr key={job.id} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 cursor-pointer transition-all duration-200 last:border-0" onClick={() => handleViewAd(job)}>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-lime-50 dark:bg-lime-950 flex items-center justify-center font-bold text-lime-600 border border-lime-100">💼</div>
+                                  <div>
+                                    <div className="font-medium transition-transform duration-200 group-hover:translate-x-1">{job.title}</div>
+                                    <div className="text-[12px] text-slate-500 md:hidden">{job.location || 'México'}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 hidden md:table-cell">{job.user_name || 'Empresa'}</td>
+                              <td className="px-4 py-3 font-medium">${Number(job.price || 0).toLocaleString()} MXN</td>
+                              <td className="px-4 py-3 hidden sm:table-cell">{job.state || job.location || 'México'}</td>
+                              <td className="px-4 py-3 text-right">
+                                <button onClick={(e) => { e.stopPropagation(); handleViewAd(job); }} className="btn-sm bg-slate-900 text-white hover:bg-black">{t.view || 'Ver'}</button>
+                              </td>
+                            </tr>
+                          );
+                        }
+                        return (
+                          <tr key={idx} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 cursor-pointer transition-all duration-200 last:border-0" onClick={() => { runSearch(job.role, 'empleo'); }}>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className={`job-logo-badge ${job.logo}`}>
+                                  {job.initial === 'MD' ? (
+                                    <svg viewBox="0 0 100 100" className="w-6 h-6" aria-hidden="true">
+                                      <path d="M50 5 C27.9 5 10 22.9 10 45 C10 75 50 95 50 95 C50 95 90 75 90 45 C90 22.9 72.1 5 50 5 Z" fill="#84CC16" />
+                                      <path d="M30 60 L30 35 L50 50 L70 35 L70 60" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  ) : job.initial}
+                                </div>
+                                <div>
+                                  <div className="font-medium transition-transform duration-200 group-hover:translate-x-1">{job.role}</div>
+                                  <div className="text-[12px] text-slate-500 md:hidden">{job.company} • {job.loc}</div>
+                                </div>
                               </div>
-
-                              <div>
-
-                                <div className="font-medium transition-transform duration-200 group-hover:translate-x-1">{job.role}</div>
-
-                                <div className="text-[12px] text-slate-500 md:hidden">{job.company} • {job.loc}</div>
-
-                              </div>
-
-                            </div>
-
-                          </td>
-
-                          <td className="px-4 py-3 hidden md:table-cell">{job.company}</td>
-
-                          <td className="px-4 py-3 font-medium">{job.salary}</td>
-
-                          <td className="px-4 py-3 hidden sm:table-cell">
-
-                            {job.loc === 'Remote' ? <span className="badge bg-slate-900 text-white">Remote</span> : job.loc}
-
-                          </td>
-
-                          <td className="px-4 py-3 text-right">
-
-                            <button onClick={() => setCurrentTab('post')} className={`btn-sm text-white ${idx === 0 ? 'bg-[#84CC16] hover:bg-[#65A30D]' : 'bg-slate-900 hover:bg-black'}`}>{t.apply || 'Aplicar'}</button>
-
-                          </td>
-
-                        </tr>
-
-                      ))}
-
+                            </td>
+                            <td className="px-4 py-3 hidden md:table-cell">{job.company}</td>
+                            <td className="px-4 py-3 font-medium">{job.salary}</td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              {job.loc === 'Remote' ? <span className="badge bg-slate-900 text-white">Remote</span> : job.loc}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button onClick={(e) => { e.stopPropagation(); setCurrentTab('post'); }} className={`btn-sm text-white ${idx === 0 ? 'bg-[#84CC16] hover:bg-[#65A30D]' : 'bg-slate-900 hover:bg-black'}`}>{t.apply || 'Aplicar'}</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
 
                   </table>
@@ -845,41 +838,45 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
               </div>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-                {servicesMarketplace.map((srv, idx) => (
-
-                  <div key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => { runSearch(srv.title, 'servicios'); }}>
-
-                    <div className="flex items-start gap-3">
-
-                      <img src={srv.img} loading="lazy" className="w-12 h-12 rounded-xl object-cover" alt=""/>
-
-                      <div className="flex-1">
-
-                        <h3 className="font-semibold text-[15px] leading-tight">{srv.title}</h3>
-
-                        <div className="flex items-center gap-1 mt-1"><div className="flex text-amber-400 text-[13px]">★★★★★</div><span className="text-[12px] text-slate-600">{srv.stars}</span></div>
-
+                {((serviceAds && serviceAds.length > 0) ? serviceAds : servicesMarketplace).map((srv, idx) => {
+                  const isReal = Boolean(srv.id);
+                  if (isReal) {
+                    const imgSrc = srv.image_url ? (srv.image_url.startsWith('http') ? srv.image_url : getImageUrl(srv.image_url)) : 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=100';
+                    return (
+                      <div key={srv.id} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => handleViewAd(srv)}>
+                        <div className="flex items-start gap-3">
+                          <img src={imgSrc} loading="lazy" className="w-12 h-12 rounded-xl object-cover" alt={srv.title}/>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-[15px] leading-tight line-clamp-1">{srv.title}</h3>
+                            <div className="flex items-center gap-1 mt-1"><div className="flex text-amber-400 text-[13px]">★★★★★</div><span className="text-[12px] text-slate-600">4.9</span></div>
+                          </div>
+                        </div>
+                        <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.description}</p>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>${Number(srv.price || 0).toLocaleString()} MXN</strong></span>
+                          <button onClick={(e) => { e.stopPropagation(); handleViewAd(srv); }} className="btn-sm bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.view || 'Ver'}</button>
+                        </div>
                       </div>
-
-                      {srv.badge && <span className={`badge ${srv.badge.color}`}>{srv.badge.label}</span>}
-
+                    );
+                  }
+                  return (
+                    <div key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => { runSearch(srv.title, 'servicios'); }}>
+                      <div className="flex items-start gap-3">
+                        <img src={srv.img} loading="lazy" className="w-12 h-12 rounded-xl object-cover" alt=""/>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-[15px] leading-tight">{srv.title}</h3>
+                          <div className="flex items-center gap-1 mt-1"><div className="flex text-amber-400 text-[13px]">★★★★★</div><span className="text-[12px] text-slate-600">{srv.stars}</span></div>
+                        </div>
+                        {srv.badge && <span className={`badge ${srv.badge.color}`}>{srv.badge.label}</span>}
+                      </div>
+                      <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.desc}</p>
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>{srv.price}</strong></span>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveCat('servicios'); }} className="btn-sm bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.book_now || 'Reservar'}</button>
+                      </div>
                     </div>
-
-                    <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.desc}</p>
-
-                    <div className="flex items-center justify-between mt-3">
-
-                      <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>{srv.price}</strong></span>
-
-                      <button onClick={() => setActiveCat('servicios')} className="btn-sm bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.book_now || 'Reservar'}</button>
-
-                    </div>
-
-                  </div>
-
-                ))}
-
+                  );
+                })}
               </div>
 
             </section>
@@ -917,35 +914,42 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-
-                {automotiveDeals.map((car, idx) => (
-
-                  <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => { runSearch(car.title, 'motor'); }}>
-
-                    <div className="aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-900">
-                      <img src={car.img} loading="lazy" className="w-full h-full object-cover" alt={car.title || ''}/>
-                    </div>
-
-                    <div className="p-3 flex flex-col flex-1 min-h-[112px]">
-
-                      <div className="font-bold leading-tight line-clamp-1">{car.price}</div>
-
-                      <div className="text-[13px] font-medium line-clamp-1 mt-0.5">{car.title}</div>
-
-                      <div className="text-[12px] text-slate-500 mt-1 line-clamp-1">{car.specs}</div>
-
-                      <div className="mt-auto pt-2 flex gap-1 min-h-[24px]">
-
-                        {car.badge && <span className={`badge ${car.badge.color}`}>{car.badge.label}</span>}
-
+                {((automotiveAds && automotiveAds.length > 0) ? automotiveAds : automotiveDeals).map((car, idx) => {
+                  const isReal = Boolean(car.id);
+                  if (isReal) {
+                    const imgSrc = car.image_url ? (car.image_url.startsWith('http') ? car.image_url : getImageUrl(car.image_url)) : 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=600';
+                    return (
+                      <article key={car.id} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => handleViewAd(car)}>
+                        <div className="aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-900">
+                          <img src={imgSrc} loading="lazy" className="w-full h-full object-cover" alt={car.title}/>
+                        </div>
+                        <div className="p-3 flex flex-col flex-1 min-h-[112px]">
+                          <div className="font-bold leading-tight line-clamp-1">${Number(car.price || 0).toLocaleString()} MXN</div>
+                          <div className="text-[13px] font-medium line-clamp-1 mt-0.5">{car.title}</div>
+                          <div className="text-[12px] text-slate-500 mt-1 line-clamp-1">{car.state || car.location || 'México'}</div>
+                          <div className="mt-auto pt-2 flex gap-1 min-h-[24px]">
+                            <span className="badge bg-emerald-100 text-emerald-700">Verificado</span>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  }
+                  return (
+                    <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => { runSearch(car.title, 'motor'); }}>
+                      <div className="aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-900">
+                        <img src={car.img} loading="lazy" className="w-full h-full object-cover" alt={car.title || ''}/>
                       </div>
-
-                    </div>
-
-                  </article>
-
-                ))}
-
+                      <div className="p-3 flex flex-col flex-1 min-h-[112px]">
+                        <div className="font-bold leading-tight line-clamp-1">{car.price}</div>
+                        <div className="text-[13px] font-medium line-clamp-1 mt-0.5">{car.title}</div>
+                        <div className="text-[12px] text-slate-500 mt-1 line-clamp-1">{car.specs}</div>
+                        <div className="mt-auto pt-2 flex gap-1 min-h-[24px]">
+                          {car.badge && <span className={`badge ${car.badge.color}`}>{car.badge.label}</span>}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
 
             </section>

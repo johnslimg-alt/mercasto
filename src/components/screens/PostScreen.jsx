@@ -114,7 +114,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
           <form onSubmit={handlePostSubmit} className="space-y-6">
               {/* IMAGE UPLOAD */}
               <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Фотографии объявления</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.ad_photos || 'Fotos del anuncio'}</label>
 
                   {images.length > 0 ? (
                      <div className="w-full space-y-3">
@@ -128,7 +128,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                            <label className="aspect-square border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50 w-full py-4">
                               <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
                               <PlusCircle className="text-slate-400" size={24} />
-                              <span className="text-xs text-slate-400 mt-1">Добавить еще фото</span>
+                              <span className="text-xs text-slate-400 mt-1">{t.add_more_photos || 'Agregar más fotos'}</span>
                            </label>
                         )}
                      </div>
@@ -138,8 +138,8 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                         <div className="w-14 h-14 bg-white group-hover:bg-[#84CC16]/10 rounded-full flex items-center justify-center mb-3 transition-colors shadow-sm">
                            <Camera className="text-slate-400 group-hover:text-[#65A30D]" size={28} />
                         </div>
-                        <p className="text-[14px] font-medium text-slate-700 mb-1">Перетащите ваши фото сюда или <span className="text-[#65A30D]">выберите файл</span></p>
-                        <p className="text-[12px] text-slate-500">Максимум 10 фото (JPG, PNG)</p>
+                        <p className="text-[14px] font-medium text-slate-700 mb-1">{(t.drag_photos_hint || 'Arrastra tus fotos aquí o')} <span className="text-[#65A30D]">{(t.browse_label || 'explora')}</span></p>
+                        <p className="text-[12px] text-slate-500">{(t.max_photos_hint || 'Máximo 10 fotos (JPG, PNG)')}</p>
                      </label>
                   )}
               </div>
@@ -268,7 +268,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
               {/* VIDEO URL */}
               <div className="my-5">
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">Видео (Опционально, MP4, макс 50МБ)</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.video_hint || 'Video (Opcional, MP4, max 50MB)'}</label>
                   {videoFile ? (
                     <div className="flex items-center gap-3 p-2 bg-slate-100 rounded-xl border border-slate-200">
                       <Video className="text-slate-500" />
@@ -282,8 +282,8 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                          <Video className="text-[#65A30D]" size={20} />
                        </div>
                        <div className="flex-1 text-left">
-                         <p className="text-[13px] font-bold text-slate-700">Выбрать видеофайл</p>
-                         <p className="text-[11px] text-slate-500">Файл не выбран</p>
+                         <p className="text-[13px] font-bold text-slate-700">{t.video_opt || 'Subir video'}</p>
+                         <p className="text-[11px] text-slate-500">{t.no_file_selected || 'Sin archivo seleccionado'}</p>
                        </div>
                      </label>
                   )}
