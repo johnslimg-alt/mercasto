@@ -2888,15 +2888,15 @@ function App() {
 
     return (
       <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setQrModalData(null)}>
-        <div className="bg-white rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95 flex flex-col items-center max-w-sm w-full" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setQrModalData(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
-          <div className="w-12 h-12 bg-lime-100 text-[#65A30D] rounded-2xl flex items-center justify-center mb-4"><QrCode size={28}/></div>
-          <h2 className="text-[20px] font-bold text-slate-900 mb-2">Escanea para contactar</h2>
-          <p className="text-[13px] text-slate-500 mb-6 text-center">Abre la cámara de tu celular y escanea este código para enviar un mensaje al vendedor.</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95 flex flex-col items-center max-w-sm w-full" onClick={e => e.stopPropagation()}>
+          <button onClick={() => setQrModalData(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+          <div className="w-12 h-12 bg-lime-100 dark:bg-lime-500/10 text-[#65A30D] dark:text-[#84CC16] rounded-2xl flex items-center justify-center mb-4"><QrCode size={28}/></div>
+          <h2 className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Escanea para contactar</h2>
+          <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6 text-center">Abre la cámara de tu celular y escanea este código para enviar un mensaje al vendedor.</p>
           <div className="p-4 bg-white border-2 border-slate-100 rounded-3xl shadow-sm mb-6">
             <img src={qrUrl} alt="QR Code" className="w-48 h-48" />
           </div>
-          <button onClick={() => setQrModalData(null)} className="btn-md w-full bg-slate-100 text-slate-700 hover:bg-slate-200">Cerrar</button>
+          <button onClick={() => setQrModalData(null)} className="btn-md w-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700">Cerrar</button>
         </div>
       </div>
     );
@@ -2907,14 +2907,14 @@ function App() {
     if (!showReportModal) return null;
     return (
       <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowReportModal(false)}>
-        <div className="bg-white rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setShowReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
-          <h2 className="text-[20px] font-bold text-slate-900 mb-2">Reportar Anuncio</h2>
-          <p className="text-[13px] text-slate-500 mb-6">Ayúdanos a entender el problema con este anuncio.</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <button onClick={() => setShowReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+          <h2 className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Reportar Anuncio</h2>
+          <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">Ayúdanos a entender el problema con este anuncio.</p>
           <form onSubmit={handleReportAd} className="space-y-4">
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 mb-2">Motivo</label>
-              <select required value={reportForm.reason} onChange={e => setReportForm({...reportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white">
+              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Motivo</label>
+              <select required value={reportForm.reason} onChange={e => setReportForm({...reportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                 <option value="">Selecciona un motivo...</option>
                 <option value="Fraude o estafa">Fraude o estafa</option>
                 <option value="Contenido inapropiado">Contenido inapropiado</option>
@@ -2924,10 +2924,10 @@ function App() {
               </select>
             </div>
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 mb-2">Comentarios adicionales</label>
-              <textarea value={reportForm.comments} onChange={e => setReportForm({...reportForm, comments: e.target.value})} placeholder="Proporciona más detalles..." className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white"></textarea>
+              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Comentarios adicionales</label>
+              <textarea value={reportForm.comments} onChange={e => setReportForm({...reportForm, comments: e.target.value})} placeholder="Proporciona más detalles..." className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
             </div>
-            <button type="submit" className="btn-md w-full bg-[#0F172A] text-white hover:bg-black mt-2 shadow-sm">Enviar Reporte</button>
+            <button type="submit" className="btn-md w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] mt-2 shadow-sm">Enviar Reporte</button>
           </form>
         </div>
       </div>
@@ -2939,14 +2939,14 @@ function App() {
     if (!showUserReportModal) return null;
     return (
       <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowUserReportModal(false)}>
-        <div className="bg-white rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setShowUserReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
-          <h2 className="text-[20px] font-bold text-slate-900 mb-2">Reportar Vendedor</h2>
-          <p className="text-[13px] text-slate-500 mb-6">Ayúdanos a mantener una comunidad segura.</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <button onClick={() => setShowUserReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+          <h2 className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Reportar Vendedor</h2>
+          <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">Ayúdanos a mantener una comunidad segura.</p>
           <form onSubmit={handleUserReportSubmit} className="space-y-4">
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 mb-2">Motivo</label>
-              <select required value={userReportForm.reason} onChange={e => setUserReportForm({...userReportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white">
+              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Motivo</label>
+              <select required value={userReportForm.reason} onChange={e => setUserReportForm({...userReportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                 <option value="">Selecciona un motivo...</option>
                 <option value="Comportamiento abusivo">Comportamiento abusivo o insultos</option>
                 <option value="Sospecha de fraude">Sospecha de fraude</option>
@@ -2956,10 +2956,10 @@ function App() {
               </select>
             </div>
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 mb-2">Detalles adicionales</label>
-              <textarea value={userReportForm.comments} onChange={e => setUserReportForm({...userReportForm, comments: e.target.value})} placeholder="Explica la situación..." className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white"></textarea>
+              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Detalles adicionales</label>
+              <textarea value={userReportForm.comments} onChange={e => setUserReportForm({...userReportForm, comments: e.target.value})} placeholder="Explica la situación..." className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
             </div>
-            <button type="submit" className="btn-md w-full bg-[#0F172A] text-white hover:bg-black mt-2 shadow-sm">Enviar Reporte</button>
+            <button type="submit" className="btn-md w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] mt-2 shadow-sm">Enviar Reporte</button>
           </form>
         </div>
       </div>
