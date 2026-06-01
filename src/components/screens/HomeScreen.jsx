@@ -184,7 +184,20 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       { slug: 'boletos', name: { es: 'Boletos' }, icon: 'Ticket' }
     ];
     const displayCategories = categoriesData && categoriesData.length > 0 ? categoriesData : defaultCats;
-    const homeCategories = React.useMemo(() => verticalCategoryCards, [verticalCategoryCards]);
+    const homeCategories = React.useMemo(() => {
+      const combined = [
+        ...verticalCategoryCards,
+        ...displayCategories.filter(cat => !getVerticalPath(cat.slug) && cat.slug !== 'tiendas'),
+      ];
+      // deduplicate by slug/action to be safe
+      const seen = new Set();
+      return combined.filter(c => {
+        const key = c.slug || c.action;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }, [displayCategories, getVerticalPath, verticalCategoryCards]);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
       return (serverAds || [])
