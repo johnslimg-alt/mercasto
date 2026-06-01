@@ -1,5 +1,6 @@
 import React from 'react';
 import { Maximize2, Search, X, Loader2 } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
 const DEFAULT_MARKERS = [
   { label: '$1.7k', coords: [19.4326, -99.1332], tone: 'lime' },
@@ -8,40 +9,21 @@ const DEFAULT_MARKERS = [
   { label: '$35k', coords: [21.1619, -86.8515], tone: 'dark' },
 ];
 
+let leafletPromise;
+
 const loadLeaflet = () => {
-  return new Promise((resolve, reject) => {
-    if (window.L) {
-      resolve(window.L);
-      return;
-    }
-
-    // Load CSS
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
-
-    // Load JS
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.async = true;
-    const timer = window.setTimeout(() => {
-      reject(new Error('Leaflet load timeout'));
-    }, 3500);
-    script.onload = () => {
-      window.clearTimeout(timer);
-      resolve(window.L);
-    };
-    script.onerror = () => {
-      window.clearTimeout(timer);
-      reject(new Error('Failed to load Leaflet script'));
-    };
-    document.body.appendChild(script);
-  });
+  if (!leafletPromise) {
+    leafletPromise = import('leaflet').then((mod) => mod.default || mod);
+  }
+  return leafletPromise;
 };
+
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
 
 const coordsToPoint = ([lat, lon]) => {
   const minLat = 14;
@@ -65,8 +47,8 @@ export default function MercastoMapPreview({
   showFullscreen = true,
 }) {
   const [expanded, setExpanded] = React.useState(false);
-  const [loaded, setLoaded] = React.useState(!!window.L);
-  const [loading, setLoading] = React.useState(!window.L);
+  const [leaflet, setLeaflet] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
   
   const mapContainerRef = React.useRef(null);
   const largeMapContainerRef = React.useRef(null);
@@ -78,9 +60,9 @@ export default function MercastoMapPreview({
   React.useEffect(() => {
     let active = true;
     loadLeaflet()
-      .then(() => {
+      .then((L) => {
         if (active) {
-          setLoaded(true);
+          setLeaflet(L);
           setLoading(false);
         }
       })
@@ -108,14 +90,14 @@ export default function MercastoMapPreview({
   }, [normalizedMarkers, onMarkerClick]);
 
   const initMap = (container, instanceRef, isLarge = false) => {
-    if (!loaded || !container) return;
+    if (!leaflet || !container) return;
 
     if (instanceRef.current) {
       instanceRef.current.remove();
       instanceRef.current = null;
     }
 
-    const L = window.L;
+    const L = leaflet;
     if (!L) return;
 
     // Mexico centroid default
@@ -157,6 +139,7 @@ export default function MercastoMapPreview({
 
     L.tileLayer(tileUrl, {
       maxZoom: 19,
+      crossOrigin: true,
     }).addTo(map);
 
     const markerGroup = L.featureGroup();
@@ -184,9 +167,9 @@ export default function MercastoMapPreview({
 
       const ad = marker.ad;
       if (ad) {
-        const title = ad.title || 'Anuncio';
+        const title = escapeHtml(ad.title || 'Anuncio');
         const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-        const imgUrl = ad.image_url || ad.image || 'https://picsum.photos/seed/mercasto/100/75';
+        const imgUrl = escapeHtml(ad.image_url || ad.image || 'https://picsum.photos/seed/mercasto/100/75');
         
         const popupContent = `
           <div class="leaflet-popup-card">
@@ -214,7 +197,7 @@ export default function MercastoMapPreview({
   };
 
   React.useEffect(() => {
-    if (loaded && !expanded) {
+    if (leaflet && !expanded) {
       initMap(mapContainerRef.current, mapInstanceRef, false);
     }
     return () => {
@@ -223,10 +206,10 @@ export default function MercastoMapPreview({
         mapInstanceRef.current = null;
       }
     };
-  }, [loaded, expanded, normalizedMarkers]);
+  }, [leaflet, expanded, normalizedMarkers]);
 
   React.useEffect(() => {
-    if (loaded && expanded) {
+    if (leaflet && expanded) {
       // Small timeout to allow container to fully expand
       const timer = setTimeout(() => {
         initMap(largeMapContainerRef.current, largeMapInstanceRef, true);
@@ -239,7 +222,7 @@ export default function MercastoMapPreview({
         largeMapInstanceRef.current = null;
       }
     };
-  }, [loaded, expanded, normalizedMarkers]);
+  }, [leaflet, expanded, normalizedMarkers]);
 
   return (
     <>
@@ -251,7 +234,7 @@ export default function MercastoMapPreview({
           </div>
         )}
         
-        {loaded ? (
+        {leaflet ? (
           <div ref={mapContainerRef} className="h-full w-full min-h-[190px]" style={{ zIndex: 1 }} />
         ) : (
           <div className="relative h-full min-h-[190px] w-full overflow-hidden bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#e0f2fe,#ecfccb)] dark:bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.22),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.18),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
@@ -307,7 +290,7 @@ export default function MercastoMapPreview({
               </button>
             </div>
             
-            {loaded ? (
+            {leaflet ? (
               <div ref={largeMapContainerRef} className="h-full w-full" style={{ zIndex: 1 }} />
             ) : (
               <div className="relative h-full w-full bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
