@@ -107,22 +107,27 @@ const AI_PLACEHOLDERS = {
 
 const getImageUrl = (path, fallback = null) => {
   if (!path) return fallback || '/placeholder-ad.svg';
+  const safeExternalImage = (url) => (
+    typeof url === 'string' && url.includes('images.unsplash.com')
+      ? (fallback || '/placeholder-ad.svg')
+      : url
+  );
   if (Array.isArray(path)) {
     if (path.length > 0) {
       const first = path[0];
-      if (first && (first.startsWith('http') || first.startsWith('data:'))) return first;
+      if (first && (first.startsWith('http') || first.startsWith('data:'))) return safeExternalImage(first);
       return `${STORAGE_URL}/${first}`;
     }
     return fallback || '/placeholder-ad.svg';
   }
   if (typeof path === 'string') {
-    if (path.startsWith('http') || path.startsWith('data:')) return path;
+    if (path.startsWith('http') || path.startsWith('data:')) return safeExternalImage(path);
     if (path.startsWith('[')) {
       try {
         const arr = JSON.parse(path);
         if (arr && arr.length > 0) {
           const first = arr[0];
-          if (first.startsWith('http') || first.startsWith('data:')) return first;
+          if (first.startsWith('http') || first.startsWith('data:')) return safeExternalImage(first);
           return `${STORAGE_URL}/${first}`;
         }
       } catch (e) {}
@@ -135,12 +140,12 @@ const getImageUrl = (path, fallback = null) => {
 const getImageUrls = (pathStr, fallbackArr = []) => {
   if (!pathStr) return fallbackArr;
   if (Array.isArray(pathStr)) {
-    return pathStr.map(p => p.startsWith('http') || p.startsWith('data:') ? p : `${STORAGE_URL}/${p}`);
+    return pathStr.map(p => getImageUrl(p));
   }
   try {
     const arr = JSON.parse(pathStr);
     if (Array.isArray(arr)) {
-      return arr.map(p => p.startsWith('http') || p.startsWith('data:') ? p : `${STORAGE_URL}/${p}`);
+      return arr.map(p => getImageUrl(p));
     }
   } catch(e) {}
   const single = getImageUrl(pathStr);

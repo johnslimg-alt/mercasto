@@ -100,7 +100,7 @@ export default function StoresScreen() {
       if (store.business_banner_url.startsWith('http')) return store.business_banner_url;
       return `${STORAGE_URL}/${store.business_banner_url}`;
     }
-    return "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=200&fit=crop";
+    return "/placeholder-ad.svg";
   };
 
   return (

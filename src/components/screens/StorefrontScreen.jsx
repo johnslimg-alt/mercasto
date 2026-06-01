@@ -62,7 +62,7 @@ export default function StorefrontScreen({
 
   const bannerUrl = businessProfile?.business_banner_url
     ? businessAssetUrl(businessProfile.business_banner_url)
-    : "https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&h=400&fit=crop";
+    : "/placeholder-ad.svg";
 
   const handleBannerUpload = async (event) => {
     const file = event.target.files?.[0];

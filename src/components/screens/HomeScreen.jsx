@@ -940,7 +940,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 {((serviceAds && serviceAds.length > 0) ? serviceAds : servicesMarketplace).map((srv, idx) => {
                   const isReal = Boolean(srv.id);
                   if (isReal) {
-                    const imgSrc = srv.image_url ? (srv.image_url.startsWith('http') ? srv.image_url : getImageUrl(srv.image_url)) : 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=100';
+                    const imgSrc = srv.image_url ? (srv.image_url.startsWith('http') ? srv.image_url : getImageUrl(srv.image_url)) : '/placeholder-ad.svg';
                     return (
                       <div key={srv.id} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => handleViewAd(srv)}>
                         <div className="flex items-start gap-3">
@@ -1016,7 +1016,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 {((automotiveAds && automotiveAds.length > 0) ? automotiveAds : automotiveDeals).map((car, idx) => {
                   const isReal = Boolean(car.id);
                   if (isReal) {
-                    const imgSrc = car.image_url ? (car.image_url.startsWith('http') ? car.image_url : getImageUrl(car.image_url)) : 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=600';
+                    const imgSrc = car.image_url ? (car.image_url.startsWith('http') ? car.image_url : getImageUrl(car.image_url)) : '/placeholder-ad.svg';
                     return (
                       <article key={car.id} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => handleViewAd(car)}>
                         <div className="aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-900">
