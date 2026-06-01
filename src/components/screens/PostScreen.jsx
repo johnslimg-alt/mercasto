@@ -105,16 +105,16 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
     }, [categoryFields, form.attributes, form.category, setForm]);
 
     return (
-      <div className="bg-[var(--paper)] min-h-screen w-full flex items-start justify-center py-6 md:py-10 px-4">
-        <div className="w-full max-w-3xl bg-white rounded-2xl md:rounded-3xl border border-slate-200 p-6 md:p-10 shadow-sm">
-          <h2 className="text-[22px] font-bold tracking-tight text-slate-900 mb-6 flex items-center gap-2 cursor-pointer" onClick={() => editingAd && setEditingAd(null)}>
+      <div className="bg-[var(--paper)] dark:bg-slate-950 min-h-screen w-full flex items-start justify-center py-6 md:py-10 px-4">
+        <div className="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-10 shadow-sm dark:shadow-none">
+          <h2 className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-white mb-6 flex items-center gap-2 cursor-pointer" onClick={() => editingAd && setEditingAd(null)}>
               <PlusCircle className="text-[#84CC16]" size={26} /> {editingAd ? (t.edit_ad || 'Editar anuncio') : t.post_title}
           </h2>
 
           <form onSubmit={handlePostSubmit} className="space-y-6">
               {/* IMAGE UPLOAD */}
               <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.ad_photos || 'Fotos del anuncio'}</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.ad_photos || 'Fotos del anuncio'}</label>
 
                   {images.length > 0 ? (
                      <div className="w-full space-y-3">
@@ -125,7 +125,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                         />
 
                         {images.length < 10 && (
-                           <label className="aspect-square border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50 w-full py-4">
+                           <label className="aspect-square border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50 dark:bg-slate-950 w-full py-4">
                               <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
                               <PlusCircle className="text-slate-400" size={24} />
                               <span className="text-xs text-slate-400 mt-1">{t.add_more_photos || 'Agregar más fotos'}</span>
@@ -133,52 +133,52 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                         )}
                      </div>
                   ) : (
-                     <label className="border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer group relative overflow-hidden h-40 md:h-48 bg-slate-50">
+                     <label className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer group relative overflow-hidden h-40 md:h-48 bg-slate-50 dark:bg-slate-950">
                         <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
-                        <div className="w-14 h-14 bg-white group-hover:bg-[#84CC16]/10 rounded-full flex items-center justify-center mb-3 transition-colors shadow-sm">
+                        <div className="w-14 h-14 bg-white dark:bg-slate-900 group-hover:bg-[#84CC16]/10 rounded-full flex items-center justify-center mb-3 transition-colors shadow-sm">
                            <Camera className="text-slate-400 group-hover:text-[#65A30D]" size={28} />
                         </div>
-                        <p className="text-[14px] font-medium text-slate-700 mb-1">{(t.drag_photos_hint || 'Arrastra tus fotos aquí o')} <span className="text-[#65A30D]">{(t.browse_label || 'explora')}</span></p>
-                        <p className="text-[12px] text-slate-500">{(t.max_photos_hint || 'Máximo 10 fotos (JPG, PNG)')}</p>
+                        <p className="text-[14px] font-medium text-slate-700 dark:text-slate-200 mb-1">{(t.drag_photos_hint || 'Arrastra tus fotos aquí o')} <span className="text-[#65A30D] dark:text-[#84CC16]">{(t.browse_label || 'explora')}</span></p>
+                        <p className="text-[12px] text-slate-500 dark:text-slate-400">{(t.max_photos_hint || 'Máximo 10 fotos (JPG, PNG)')}</p>
                      </label>
                   )}
               </div>
 
               {/* TITLE */}
               <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.ad_title}</label>
-                  <input value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" placeholder="Ej: Honda Civic 2018" />
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.ad_title}</label>
+                  <input value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="Ej: Honda Civic 2018" />
               </div>
 
               {/* CATEGORY & CONDITION & PRICE */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div>
-                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.category || 'Categoría'}</label>
-                      <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.category || 'Categoría'}</label>
+                      <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
                           <option value="">{(t.select || 'Seleccionar')}...</option>
                           {categoriesData.map(c => <option key={c.slug} value={c.slug}>{c.name[lang] || c.name['es']}</option>)}
                       </select>
                   </div>
                   <div>
-                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.condition || 'Estado'}</label>
-                      <select value={form.condition} onChange={e => setForm({...form, condition: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.condition || 'Estado'}</label>
+                      <select value={form.condition} onChange={e => setForm({...form, condition: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
                           <option value="nuevo">{(t.new || 'Nuevo')}</option>
                           <option value="usado">{(t.used || 'Usado')}</option>
                       </select>
                   </div>
                   <div>
-                      <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.ad_price}</label>
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.ad_price}</label>
                       <div className="relative">
                           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">$</span>
-                          <input type="number" value={form.price} onChange={(e) => setForm({...form, price: e.target.value})} required className="w-full px-3.5 py-2.5 pl-7 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" placeholder="0.00" />
+                          <input type="number" value={form.price} onChange={(e) => setForm({...form, price: e.target.value})} required className="w-full px-3.5 py-2.5 pl-7 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="0.00" />
                       </div>
                   </div>
               </div>
 
               {/* DYNAMIC CATEGORY ATTRIBUTES */}
               {form.category && (loadingCategoryFields || categoryFields.length > 0) && (
-                <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/50">
-                  <h3 className="text-[14px] font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-950/50">
+                  <h3 className="text-[14px] font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                     <Settings2 size={16} className="text-[#84CC16]" /> {t.ad_attributes || 'Características del anuncio'}
                     {loadingCategoryFields && <Loader2 size={14} className="animate-spin text-slate-400" />}
                   </h3>
@@ -187,13 +187,13 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                       const fieldId = field.id || field.key;
                       return (
                       <div key={fieldId}>
-                        <label className="block text-[13px] font-semibold text-slate-700 mb-2">{field.label}</label>
+                        <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{field.label}</label>
                         {(field.type === 'select' || field.type === 'checkbox') && (
                           <select
                             value={form.attributes?.[fieldId] || ''}
                             onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [fieldId]: e.target.value}})}
                             required={field.required}
-                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all"
+                            className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all"
                           >
                             <option value="">{(t.select || 'Seleccionar')}...</option>
                             {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -206,7 +206,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                             onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [fieldId]: e.target.value}})}
                             placeholder={field.placeholder || ''}
                             required={field.required}
-                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"
+                            className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                           />
                         )}
                         {field.type === 'range' && (
@@ -219,7 +219,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                             step={field.range?.step}
                             placeholder={field.minPlaceholder || field.range?.min || '0'}
                             required={field.required}
-                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"
+                            className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                           />
                         )}
                       </div>
@@ -230,18 +230,18 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
 
               {/* LOCATION & MAP */}
               <div className="mb-3">
-                <label className="block text-[13px] font-semibold text-slate-700 mb-2">{(t.state || 'Estado')} <span className="text-red-500">*</span></label>
-                <select value={form.state || ''} onChange={e => setForm({...form, state: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
+                <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{(t.state || 'Estado')} <span className="text-red-500">*</span></label>
+                <select value={form.state || ''} onChange={e => setForm({...form, state: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
                   <option value="">{t.select_state || 'Seleccionar estado'}</option>
                   {MEXICO_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
               <div>
-                 <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.location || 'Ubicación'}</label>
+                 <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.location || 'Ubicación'}</label>
                  <div className="relative mb-3">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input value={form.location} onChange={e => setForm({...form, location: e.target.value})} required className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" placeholder={t.loc_placeholder || "Escribe tu ciudad, colonia o código postal"} />
+                    <input value={form.location} onChange={e => setForm({...form, location: e.target.value})} required className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder={t.loc_placeholder || "Escribe tu ciudad, colonia o código postal"} />
                  </div>
                  <div className="w-full h-48 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
                      {isMapUpdating && <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50"><Loader2 className="w-8 h-8 text-[#84CC16] animate-spin"/></div>}
@@ -257,33 +257,33 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               {/* DESCRIPTION */}
               <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-[13px] font-semibold text-slate-700">{t.ad_desc}</label>
+                    <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">{t.ad_desc}</label>
                     <button type="button" onClick={handleGenerateDescription} disabled={aiLoading} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-medium text-[#65A30D] hover:bg-[#84CC16]/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                       {aiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
                       {aiLoading ? (t.generating || 'Generando…') : (t.generate_ai || '✨ Generar con IA')}
                     </button>
                   </div>
-                  <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all h-32 resize-none" placeholder={t.ad_desc_placeholder || "Describe tu artículo..."} />
+                  <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all h-32 resize-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder={t.ad_desc_placeholder || "Describe tu artículo..."} />
               </div>
 
               {/* VIDEO URL */}
               <div className="my-5">
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.video_hint || 'Video (Opcional, MP4, max 50MB)'}</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.video_hint || 'Video (Opcional, MP4, max 50MB)'}</label>
                   {videoFile ? (
-                    <div className="flex items-center gap-3 p-2 bg-slate-100 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-3 p-2 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
                       <Video className="text-slate-500" />
                       <span className="text-sm text-slate-700 truncate flex-1">{videoFile.name}</span>
                       <button type="button" onClick={() => setVideoFile(null)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
                     </div>
                   ) : (
-                     <label className="flex items-center gap-3 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer">
+                     <label className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer">
                        <input type="file" accept="video/mp4,video/quicktime" onChange={(e) => setVideoFile(e.target.files[0])} className="hidden" />
-                       <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-200">
+                       <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-800">
                          <Video className="text-[#65A30D]" size={20} />
                        </div>
                        <div className="flex-1 text-left">
-                         <p className="text-[13px] font-bold text-slate-700">{t.video_opt || 'Subir video'}</p>
-                         <p className="text-[11px] text-slate-500">{t.no_file_selected || 'Sin archivo seleccionado'}</p>
+                         <p className="text-[13px] font-bold text-slate-700 dark:text-slate-200">{t.video_opt || 'Subir video'}</p>
+                         <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.no_file_selected || 'Sin archivo seleccionado'}</p>
                        </div>
                      </label>
                   )}
