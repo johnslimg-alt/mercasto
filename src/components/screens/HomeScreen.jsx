@@ -166,14 +166,10 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
       { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
       { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
-      { slug: 'electronica', name: { es: 'Electrónica y PCs', en: 'Electronics & PCs' }, icon: 'Cpu' },
-      { slug: 'telefonia', name: { es: 'Telefonía', en: 'Phones' }, icon: 'Smartphone' },
-      { slug: 'hogar', name: { es: 'Hogar y Jardín', en: 'Home & Garden' }, icon: 'Sofa' },
-      { slug: 'moda', name: { es: 'Moda y Estilo', en: 'Fashion' }, icon: 'Shirt' },
-      { slug: 'bebes', name: { es: 'Bebés e Infantil', en: 'Babies & Kids' }, icon: 'Baby' },
-      { slug: 'mascotas', name: { es: 'Mascotas', en: 'Pets' }, icon: 'PawPrint' },
-      { slug: 'ocio', name: { es: 'Deportes y Ocio', en: 'Sports & Leisure' }, icon: 'Bike' },
-      { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets' }, icon: 'Ticket' },
+      { slug: 'electronica', name: { es: 'Electrónica y Celulares', en: 'Electronics & Phones' }, icon: 'Cpu' },
+      { slug: 'hogar', name: { es: 'Hogar, Mascotas y Jardín', en: 'Home, Pets & Garden' }, icon: 'Sofa' },
+      { slug: 'moda', name: { es: 'Moda, Estilo y Bebés', en: 'Fashion & Kids' }, icon: 'Shirt' },
+      { slug: 'ocio', name: { es: 'Deportes, Ocio y Eventos', en: 'Sports, Leisure & Events' }, icon: 'Bike' },
       { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store', action: 'pricing' },
     ]), []);
     const trendingAds = React.useMemo(() => {
