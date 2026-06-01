@@ -53,6 +53,68 @@ class AdQueryFilters
                 $userQuery->where('is_verified', true);
             });
         }
+
+        $filters = $request->query('filters');
+        if (! is_array($filters)) {
+            return;
+        }
+
+        $publishedDays = self::publishedDaysFromLabels(self::filterValues($filters, 'published_at'));
+        if ($publishedDays !== null) {
+            $query->where('ads.created_at', '>=', now()->subDays($publishedDays));
+        }
+
+        $sellerTypes = self::lowerValues(self::filterValues($filters, 'seller_type_global'));
+        if ($sellerTypes !== []) {
+            $query->whereHas('user', static function (Builder $userQuery) use ($sellerTypes): void {
+                $userQuery->where(function (Builder $inner) use ($sellerTypes): void {
+                    foreach ($sellerTypes as $index => $type) {
+                        $method = $index === 0 ? 'where' : 'orWhere';
+                        if (str_contains($type, 'tienda') || str_contains($type, 'distribuidor')) {
+                            $inner->{$method}('role', 'business');
+                        } elseif (str_contains($type, 'particular')) {
+                            $inner->{$method}('role', 'individual');
+                        } elseif (str_contains($type, 'verificado')) {
+                            $inner->{$method}('is_verified', true);
+                        }
+                    }
+                });
+            });
+        }
+
+        $verification = self::lowerValues(self::filterValues($filters, 'seller_verified'));
+        if ($verification !== []) {
+            $query->whereHas('user', static function (Builder $userQuery) use ($verification): void {
+                $userQuery->where(function (Builder $inner) use ($verification): void {
+                    foreach ($verification as $index => $item) {
+                        $method = $index === 0 ? 'where' : 'orWhere';
+                        if (str_contains($item, 'vendedor') || str_contains($item, 'rese')) {
+                            $inner->{$method}('is_verified', true);
+                        } elseif (str_contains($item, 'tel')) {
+                            $inner->{$method}('phone_verified', true);
+                        }
+                    }
+                });
+            });
+        }
+
+        $media = self::lowerValues(self::filterValues($filters, 'media'));
+        foreach ($media as $item) {
+            if (str_contains($item, 'foto')) {
+                $query->whereNotNull('image_url')->where('image_url', '!=', '');
+            } elseif (str_contains($item, 'video')) {
+                $query->whereNotNull('video_url')->where('video_url', '!=', '');
+            } elseif (str_contains($item, 'mapa') || str_contains($item, 'tour')) {
+                $query->whereNotNull('latitude')->whereNotNull('longitude');
+            }
+        }
+
+        foreach (['listing_type', 'payment_method', 'delivery', 'seller_response'] as $key) {
+            $values = self::filterValues($filters, $key);
+            if ($values !== []) {
+                self::applyExactAttributeFilter($query, $key, $values, 'string');
+            }
+        }
     }
 
     private static function applyCategoryFilters(Builder $query, Request $request): void
@@ -220,6 +282,80 @@ class AdQueryFilters
         }
 
         return Str::of((string) $value)->trim()->limit(self::MAX_STRING_LENGTH, '')->toString();
+    }
+
+    public static function sortFromFilter(Request $request): ?string
+    {
+        $filters = $request->query('filters');
+        if (! is_array($filters)) {
+            return null;
+        }
+
+        $value = self::filterValues($filters, 'sort')[0] ?? null;
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = self::normalizeKey($value);
+
+        return match (true) {
+            str_contains($value, 'precio_menor') => 'price_asc',
+            str_contains($value, 'precio_mayor') => 'price_desc',
+            str_contains($value, 'popular') => 'popular',
+            str_contains($value, 'reciente') => 'latest',
+            default => null,
+        };
+    }
+
+    private static function filterValues(array $filters, string $key): array
+    {
+        $value = $filters[$key] ?? null;
+
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        if (! is_array($value)) {
+            $value = [$value];
+        }
+
+        return collect($value)
+            ->map(fn (mixed $item): mixed => self::sanitizeValue($item, 'string'))
+            ->filter(static fn (mixed $item): bool => is_string($item) && $item !== '')
+            ->unique()
+            ->take(20)
+            ->values()
+            ->all();
+    }
+
+    private static function lowerValues(array $values): array
+    {
+        return collect($values)
+            ->map(fn (string $item): string => Str::of($item)->lower()->ascii()->toString())
+            ->values()
+            ->all();
+    }
+
+    private static function publishedDaysFromLabels(array $values): ?int
+    {
+        $days = null;
+
+        foreach (self::lowerValues($values) as $value) {
+            $candidate = match (true) {
+                str_contains($value, 'hoy') => 1,
+                str_contains($value, 'ayer') => 2,
+                str_contains($value, '3') => 3,
+                str_contains($value, 'semana') => 7,
+                str_contains($value, 'mes') => 31,
+                default => null,
+            };
+
+            if ($candidate !== null) {
+                $days = $days === null ? $candidate : min($days, $candidate);
+            }
+        }
+
+        return $days;
     }
 
     private static function numeric(mixed $value): float|int|null
