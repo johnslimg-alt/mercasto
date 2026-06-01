@@ -415,6 +415,7 @@ function App() {
   };
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [priceTab, setPriceTab] = useState(accountType);
+  const [promotionTargetAdId, setPromotionTargetAdId] = useState('');
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [analyticsData, setAnalyticsData] = useState([]);
   const [analyticsDays, setAnalyticsDays] = useState(7);
@@ -1117,6 +1118,16 @@ function App() {
     document.documentElement.lang = lang;
   }, [lang]);
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
+
+  const promotableAds = useMemo(
+    () => userAds.filter(ad => ad.status === 'active'),
+    [userAds]
+  );
+
+  useEffect(() => {
+    if (!showPricingModal || promotionTargetAdId || promotableAds.length === 0) return;
+    setPromotionTargetAdId(String(promotableAds[0].id));
+  }, [showPricingModal, promotionTargetAdId, promotableAds]);
 
   useEffect(() => { setDashboardPage(1); }, [dashboardTab, adStatusFilter]);
 
@@ -2673,6 +2684,18 @@ function App() {
     } catch (err) { console.error("Payment error", err); showToast(t.connection_error || 'Error de conexión', 'error'); }
   };
 
+  const handlePromotionProductPayment = (amount, description, productCode) => {
+    if (!user) { setShowAuthModal(true); return; }
+
+    const adId = Number(promotionTargetAdId);
+    if (!adId) {
+      showToast('Selecciona un anuncio activo para promocionar.', 'error');
+      return;
+    }
+
+    handleClipPayment(amount, description, adId, productCode);
+  };
+
   // --- AI COMMAND CENTER LOGIC ---
   const handleAiSubmit = async (e) => {
     e.preventDefault();
@@ -2738,7 +2761,10 @@ function App() {
         } catch (e) { console.error(e); showToast('Error de conexión', 'error'); }
       }
     } else {
-      handleClipPayment(50, `${t.ad_promotion_description || 'Promoción de anuncio'}: ${ad.title}`, ad.id);
+      setPromotionTargetAdId(String(ad.id));
+      setPriceTab('pro');
+      setShowPricingModal(true);
+      showToast('Elige un paquete para promocionar este anuncio.');
     }
   };
 
@@ -3079,6 +3105,30 @@ function App() {
               </div>
             ) : (
               <div className="space-y-6">
+                <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+                  <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
+                    <div>
+                      <p className="text-[13px] font-bold text-slate-900 dark:text-white">Anuncio a promocionar</p>
+                      <p className="text-[12px] text-slate-500 dark:text-slate-400">El paquete se aplicará solo al anuncio seleccionado.</p>
+                    </div>
+                    <select
+                      value={promotionTargetAdId}
+                      onChange={(e) => setPromotionTargetAdId(e.target.value)}
+                      className="w-full md:w-[360px] px-3.5 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-[14px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16]"
+                    >
+                      <option value="">Selecciona un anuncio activo...</option>
+                      {promotableAds.map(ad => (
+                        <option key={ad.id} value={ad.id}>{ad.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {promotableAds.length === 0 && (
+                    <p className="mt-3 text-[12px] text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-3 py-2">
+                      No tienes anuncios activos. Publica o activa un anuncio antes de comprar promoción.
+                    </p>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                   {/* Subir anuncios */}
                   <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -3089,14 +3139,14 @@ function App() {
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">Subir 24 horas</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">Reposiciona tu anuncio al inicio por 1 día</p>
                         </div>
-                        <button onClick={() => handleClipPayment(19, 'Subir 24 horas', null, 'boost_1_day')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$19</button>
+                        <button onClick={() => handlePromotionProductPayment(19, 'Subir 24 horas', 'boost_1_day')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$19</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">Subir 3 días</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">Reposiciona al inicio cada día por 3 días</p>
                         </div>
-                        <button onClick={() => handleClipPayment(49, 'Subir 3 días', null, 'boost_3_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$49</button>
+                        <button onClick={() => handlePromotionProductPayment(49, 'Subir 3 días', 'boost_3_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$49</button>
                       </div>
                     </div>
                   </div>
@@ -3110,14 +3160,14 @@ function App() {
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">Resaltar 7 días</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">Fondo llamativo en los resultados</p>
                         </div>
-                        <button onClick={() => handleClipPayment(79, 'Resaltar 7 días', null, 'highlight_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$79</button>
+                        <button onClick={() => handlePromotionProductPayment(79, 'Resaltar 7 días', 'highlight_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$79</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">Destacado 7 días</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">Etiqueta dorada y mayor exposición</p>
                         </div>
-                        <button onClick={() => handleClipPayment(149, 'Destacado 7 días', null, 'featured_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$149</button>
+                        <button onClick={() => handlePromotionProductPayment(149, 'Destacado 7 días', 'featured_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$149</button>
                       </div>
                     </div>
                   </div>
@@ -3131,14 +3181,14 @@ function App() {
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">Destacado 30 días</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">Súper exposición por un mes completo</p>
                         </div>
-                        <button onClick={() => handleClipPayment(399, 'Destacado 30 días', null, 'featured_30_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
+                        <button onClick={() => handlePromotionProductPayment(399, 'Destacado 30 días', 'featured_30_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">Top categoría 7 días</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">Anuncio fijo al inicio de su categoría</p>
                         </div>
-                        <button onClick={() => handleClipPayment(399, 'Top categoría 7 días', null, 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
+                        <button onClick={() => handlePromotionProductPayment(399, 'Top categoría 7 días', 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
                       </div>
                     </div>
                   </div>
