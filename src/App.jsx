@@ -3239,14 +3239,14 @@ function App() {
     if (!showCouponModal) return null;
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div className="bg-white w-full max-w-sm rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95">
-          <button onClick={() => setShowCouponModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95">
+          <button onClick={() => setShowCouponModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
           <div className="flex justify-center mb-4"><Ticket className="text-[#84CC16] w-12 h-12" /></div>
-          <h2 className="text-[20px] font-bold tracking-tight mb-2 text-center text-slate-900">Canjear Cupón</h2>
-          <p className="text-center text-slate-500 text-[13px] mb-6">Introduce tu código promocional para recibir créditos gratis.</p>
+          <h2 className="text-[20px] font-bold tracking-tight mb-2 text-center text-slate-900 dark:text-white">Canjear Cupón</h2>
+          <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] mb-6">Introduce tu código promocional para recibir créditos gratis.</p>
           <form onSubmit={handleRedeemCoupon} className="space-y-4">
-            <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} required placeholder="CÓDIGO" className="w-full px-3.5 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 uppercase text-center font-bold tracking-widest" />
-            <button type="submit" className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black">Canjear</button>
+            <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} required placeholder="CÓDIGO" className="w-full px-3.5 py-3 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 uppercase text-center font-bold tracking-widest bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
+            <button type="submit" className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D]">Canjear</button>
           </form>
         </div>
       </div>
@@ -3258,13 +3258,13 @@ function App() {
     if (!showProfileModal) return null;
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div className="bg-white w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-          <button onClick={() => setShowProfileModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
-          <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900">Editar Perfil</h2>
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+          <button onClick={() => setShowProfileModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+          <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">Editar Perfil</h2>
 
           <form onSubmit={handleProfileSubmit} className="space-y-5">
             <div className="flex flex-col items-center mb-6">
-              <div className="w-24 h-24 rounded-full bg-slate-100 mb-3 overflow-hidden relative group border border-slate-200">
+              <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-950 mb-3 overflow-hidden relative group border border-slate-200 dark:border-slate-700">
                 {profileForm.avatarPreview ? (
                   <img src={profileForm.avatarPreview} className="w-full h-full object-cover" alt="Avatar" />
                 ) : (
@@ -3278,15 +3278,15 @@ function App() {
                   }}/>
                 </label>
               </div>
-              <span className="text-[12px] font-medium text-slate-500">Cambiar Foto</span>
+              <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">Cambiar Foto</span>
             </div>
 
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 mb-2">Nombre</label>
-              <input value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
+              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Nombre</label>
+              <input value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
             </div>
 
-            <button type="submit" disabled={profileLoading} className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black flex justify-center mt-2">
+            <button type="submit" disabled={profileLoading} className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] flex justify-center mt-2">
               {profileLoading ? <Loader2 className="animate-spin" size={20}/> : 'Guardar Cambios'}
             </button>
           </form>
@@ -3689,13 +3689,13 @@ function App() {
               <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               {showMobileLocationPicker && (
                 <div className="header-popover absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl border p-4 z-50">
-                  <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
-                  <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white">
+                  <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
+                  <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                     <option value="">{t.all_mexico || 'Todo México'}</option>
                     {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
-                      <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad'}</label>
-                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[14px] outline-none mb-3 bg-white disabled:bg-slate-50 disabled:text-slate-400">
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad'}</label>
+                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
@@ -3827,11 +3827,11 @@ function App() {
       {showAuthModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !authLoading) setShowAuthModal(false); }}>
           {requiresTwoFactor ? (
-            <div className="bg-white w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
-              <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900">Verificación de dos pasos</h2>
-              <p className="text-center text-slate-500 text-sm -mt-4 mb-6">Ingresa el código de tu app de autenticación.</p>
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+              <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">Verificación de dos pasos</h2>
+              <p className="text-center text-slate-500 dark:text-slate-400 text-sm -mt-4 mb-6">Ingresa el código de tu app de autenticación.</p>
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
-                <input name="code" required autoFocus placeholder="Código de 6 dígitos" maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all placeholder:text-slate-400"/>
+                <input name="code" required autoFocus placeholder="Código de 6 dígitos" maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                 <div className="pt-2">
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">
                     {authLoading ? <Loader2 className="animate-spin" size={20}/> : 'Verificar e Iniciar Sesión'}
@@ -3840,30 +3840,30 @@ function App() {
               </form>
             </div>
           ) : authMode === 'phone_request' || authMode === 'phone_verify' ? (
-            <div className="bg-white w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
-              <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
-              <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900">Acceso con Teléfono</h2>
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+              <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">Acceso con Teléfono</h2>
 
               {authMode === 'phone_request' ? (
                 <form onSubmit={handlePhoneRequestSubmit} className="space-y-3.5">
-                  <input name="phone_number" required type="tel" placeholder="Número de teléfono" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"/>
+                  <input name="phone_number" required type="tel" placeholder="Número de teléfono" className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : 'Recibir SMS'}</button>
                 </form>
               ) : (
                 <form onSubmit={handlePhoneVerifySubmit} className="space-y-3.5">
-                  <p className="text-center text-slate-500 text-[13px] -mt-2 mb-4">Código enviado al <br/><strong>{authPhone}</strong></p>
-                  <input name="code" required autoFocus placeholder="Código de 6 dígitos" maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all"/>
+                  <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] -mt-2 mb-4">Código enviado al <br/><strong>{authPhone}</strong></p>
+                  <input name="code" required autoFocus placeholder="Código de 6 dígitos" maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : 'Verificar y Entrar'}</button>
                 </form>
               )}
               <div className="mt-6 text-center">
-                 <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 hover:text-[#84CC16] transition-colors underline underline-offset-4">Volver a iniciar sesión</button>
+                 <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">Volver a iniciar sesión</button>
               </div>
             </div>
           ) : (
-            <div className="bg-white w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors"><XCircle size={24}/></button>
-                <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900">
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+                <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}
                 </h2>
                 {authMode === 'register' && localStorage.getItem('pendingReferral') && (
@@ -3873,10 +3873,10 @@ function App() {
                   </div>
                 )}
                 <form onSubmit={handleAuthSubmit} className="space-y-3.5">
-                    {authMode === 'register' && <input name="name" required placeholder={t.name} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all placeholder:text-slate-400"/>}
-                    {authMode !== 'reset_password' && <input name="email" type="email" required placeholder={t.email} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all placeholder:text-slate-400"/>}
-                    {(authMode === 'login' || authMode === 'register') && <input name="password" type="password" required placeholder={t.password} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all placeholder:text-slate-400"/>}
-                    {authMode === 'reset_password' && <input name="password" type="password" required placeholder={t.new_password} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all placeholder:text-slate-400"/>}
+                    {authMode === 'register' && <input name="name" required placeholder={t.name} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
+                    {authMode !== 'reset_password' && <input name="email" type="email" required placeholder={t.email} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
+                    {(authMode === 'login' || authMode === 'register') && <input name="password" type="password" required placeholder={t.password} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
+                    {authMode === 'reset_password' && <input name="password" type="password" required placeholder={t.new_password} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
                     <div className="pt-2">
                       <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">
                           {authLoading ? <Loader2 className="animate-spin" size={20}/> : (authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.send_link : t.reset_password)}
@@ -3887,13 +3887,13 @@ function App() {
                 {(authMode === 'login' || authMode === 'register') && (
                   <>
                     <div className="relative my-6">
-                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-                      <div className="relative flex justify-center text-[12px]"><span className="bg-white px-2 text-slate-400 font-medium">O</span></div>
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700"></div></div>
+                      <div className="relative flex justify-center text-[12px]"><span className="bg-white dark:bg-slate-900 px-2 text-slate-400 font-medium">O</span></div>
                     </div>
 
                     <div className="space-y-2.5">
                       {availableProviders?.google && (
-                        <button type="button" onClick={() => window.location.href = `${API_URL}/auth/google/redirect`} className="btn-md w-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-3">
+                        <button type="button" onClick={() => window.location.href = `${API_URL}/auth/google/redirect`} className="btn-md w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-3">
                             <svg className="w-4 h-4" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -3989,7 +3989,7 @@ function App() {
 
                 <div className="mt-6 text-center flex flex-col gap-2.5">
                     {(authMode === 'login' || authMode === 'register') && (
-                        <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-[13px] font-medium text-slate-500 hover:text-[#84CC16] transition-colors underline underline-offset-4">
+                        <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">
                             {authMode === 'login' ? "¿No tienes cuenta? Únete" : "Ya tengo cuenta"}
                         </button>
                     )}
@@ -3999,7 +3999,7 @@ function App() {
                         </button>
                     )}
                     {(authMode === 'forgot_password' || authMode === 'reset_password' || authMode === 'phone_request' || authMode === 'phone_verify') && (
-                        <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 hover:text-[#84CC16] transition-colors underline underline-offset-4">
+                        <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">
                             Volver a iniciar sesión
                         </button>
                     )}
