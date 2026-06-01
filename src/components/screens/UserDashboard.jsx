@@ -27,6 +27,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
     };
 
     const totalViews = userAds.reduce((sum, ad) => sum + (ad.views || 0), 0);
+    const totalImpressions = userAds.reduce((sum, ad) => sum + (ad.impressions_count || 0), 0);
 
     const inactiveAds = userAds.filter(ad => ['inactive', 'rejected', 'paused', 'expired'].includes(ad.status));
 
@@ -39,9 +40,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
     const conversionRate = (() => {
 
-      if (totalViews === 0) return "0.0";
+      if (totalImpressions === 0) return "0.0";
 
-      return ((totalContactClicks / totalViews) * 100).toFixed(1);
+      return ((totalContactClicks / totalImpressions) * 100).toFixed(1);
 
     })();
 
@@ -364,9 +365,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                   <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
 
-                    <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-1">{t.total_views}</p>
+                    <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-1">Impresiones</p>
 
-                    <p className="text-2xl md:text-3xl font-black text-[#84CC16]">{totalViews}</p>
+                    <p className="text-2xl md:text-3xl font-black text-[#84CC16]">{totalImpressions}</p>
 
                   </div>
 
@@ -1229,6 +1230,8 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                           <div className="flex items-center gap-3 mt-2">
 
                             <p className="text-[12px] text-slate-500 flex items-center gap-1"><BarChart3 className="w-3.5 h-3.5"/> {ad.views || 0} {t.views}</p>
+
+                            {accountType === 'pro' && <p className="text-[12px] text-slate-500 flex items-center gap-1"><Activity className="w-3.5 h-3.5"/> {ad.impressions_count || 0} imp.</p>}
 
                             {accountType === 'pro' && <p className="text-[12px] text-slate-500 flex items-center gap-1"><QrCode className="w-3.5 h-3.5"/> {ad.whatsapp_clicks || 0} {t.leads}</p>}
 

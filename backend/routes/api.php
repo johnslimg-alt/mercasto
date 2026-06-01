@@ -143,6 +143,7 @@ Route::post('/auth/telegram/callback', [AuthController::class, 'handleTelegramWi
 Route::middleware('throttle:60,1')->group(function () {
     Route::post('/ads/{id}/click', [AdController::class, 'recordClick'])->whereNumber('id');
     Route::post('/ads/{id}/view', [AdController::class, 'recordView'])->whereNumber('id');
+    Route::post('/ads/impressions', [AdController::class, 'recordImpressions']);
 });
 
 Route::middleware('throttle:5,1')->group(function () {

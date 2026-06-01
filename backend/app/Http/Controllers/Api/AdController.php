@@ -843,6 +843,7 @@ class AdController extends Controller
         DB::table('favorites')->where('ad_id', $ad->id)->delete();
         DB::table('ad_views')->where('ad_id', $ad->id)->delete();
         DB::table('ad_clicks')->where('ad_id', $ad->id)->delete();
+        DB::table('ad_impressions')->where('ad_id', $ad->id)->delete();
         DB::table('reports')->where('ad_id', $ad->id)->delete();
 
         // Защита финансовой отчетности: отвязываем платежи, сохраняя их в истории транзакций
@@ -1076,6 +1077,54 @@ class AdController extends Controller
     }
 
     /**
+     * Record visible ad cards from feeds/search results in batches.
+     */
+    public function recordImpressions(Request $request)
+    {
+        $validated = $request->validate([
+            'ad_ids' => 'required|array|min:1|max:50',
+            'ad_ids.*' => 'integer|min:1',
+            'placement' => 'nullable|string|in:feed,search,featured,profile,similar,vertical',
+        ]);
+
+        $adIds = collect($validated['ad_ids'])->unique()->values();
+        $placement = $validated['placement'] ?? 'feed';
+        $clientIpHash = hash('sha256', (string) $request->ip());
+        $seenRecently = DB::table('ad_impressions')
+            ->whereIn('ad_id', $adIds)
+            ->where('ip_address', $clientIpHash)
+            ->where('placement', $placement)
+            ->where('created_at', '>=', now()->subHours(6))
+            ->pluck('ad_id')
+            ->all();
+
+        $seenMap = array_flip($seenRecently);
+        $validAdIds = DB::table('ads')
+            ->whereIn('id', $adIds)
+            ->where('status', 'active')
+            ->pluck('id');
+
+        $rows = $validAdIds
+            ->reject(fn ($adId) => isset($seenMap[$adId]))
+            ->map(fn ($adId) => [
+                'ad_id' => $adId,
+                'user_id' => auth('sanctum')->id(),
+                'ip_address' => $clientIpHash,
+                'placement' => $placement,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])
+            ->values()
+            ->all();
+
+        if ($rows) {
+            DB::table('ad_impressions')->insert($rows);
+        }
+
+        return response()->json(['success' => true, 'recorded' => count($rows)]);
+    }
+
+    /**
      * Пожаловаться на объявление (Report)
      */
     public function report(Request $request, $id)
@@ -1154,6 +1203,10 @@ class AdController extends Controller
                 ->selectRaw('count(*)')
                 ->whereColumn('ad_id', 'ads.id')
             ])
+            ->addSelect(['impressions_count' => DB::table('ad_impressions')
+                ->selectRaw('count(*)')
+                ->whereColumn('ad_id', 'ads.id')
+            ])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(500); // Защита UX: увеличиваем лимит, чтобы PRO-продавцы не теряли доступ к своим объявлениям (фронтенд пока не поддерживает кнопку "Загрузить еще" в дашборде)
@@ -1197,6 +1250,15 @@ class AdController extends Controller
             ->orderBy('date')
             ->get();
 
+        $impressions = DB::table('ad_impressions')
+            ->join('ads', 'ad_impressions.ad_id', '=', 'ads.id')
+            ->where('ads.user_id', $userId)
+            ->where('ad_impressions.created_at', '>=', now()->subDays($days - 1)->startOfDay())
+            ->selectRaw('DATE(ad_impressions.created_at) as date, count(*) as count')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
         // Get views for the requested days range for this user's ads
         $views = DB::table('ad_views')
             ->join('ads', 'ad_views.ad_id', '=', 'ads.id')
@@ -1213,11 +1275,16 @@ class AdController extends Controller
             $dateObj = now()->subDays($i);
             $dateStr = $dateObj->format('Y-m-d');
             $match = $clicks->firstWhere('date', $dateStr);
+            $matchImpressions = $impressions->firstWhere('date', $dateStr);
             $matchViews = $views->firstWhere('date', $dateStr);
+            $impressionCount = $matchImpressions ? (int) $matchImpressions->count : 0;
+            $clickCount = $match ? (int) $match->count : 0;
             $data[] = [
                 'date' => $dateObj->format($days > 14 ? 'd/m' : 'M d'), // Shorten format for long ranges
-                'clicks' => $match ? (int) $match->count : 0,
-                'views' => $matchViews ? (int) $matchViews->count : 0
+                'clicks' => $clickCount,
+                'views' => $matchViews ? (int) $matchViews->count : 0,
+                'impressions' => $impressionCount,
+                'ctr' => $impressionCount > 0 ? round(($clickCount / $impressionCount) * 100, 2) : 0,
             ];
         }
 
@@ -1880,6 +1947,7 @@ class AdController extends Controller
             DB::table('favorites')->whereIn('ad_id', $adIds)->delete();
             DB::table('ad_views')->whereIn('ad_id', $adIds)->delete();
             DB::table('ad_clicks')->whereIn('ad_id', $adIds)->delete();
+            DB::table('ad_impressions')->whereIn('ad_id', $adIds)->delete();
             DB::table('reports')->whereIn('ad_id', $adIds)->delete();
             DB::table('payments')->whereIn('ad_id', $adIds)->update(['ad_id' => null]);
             Ad::whereIn('id', $adIds)->where('user_id', $userId)->delete();

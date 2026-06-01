@@ -28,6 +28,12 @@ class AdminAnalyticsController extends Controller
         $newAds      = DB::table('ads')->where('created_at', '>=', $since)->count();
         $newMessages = DB::table('messages')->where('created_at', '>=', $since)->count();
         $totalViews  = (int) DB::table('ads')->sum('views');
+        $totalImpressions = (int) DB::table('ad_impressions')->count();
+        $totalClicks = (int) DB::table('ad_clicks')->count();
+        $clicksByChannel = DB::table('ad_clicks')
+            ->select('channel', DB::raw('COUNT(*) as count'))
+            ->groupBy('channel')
+            ->pluck('count', 'channel');
 
         $revenuePeriod = (float) DB::table('payments')
             ->where('created_at', '>=', $since)
@@ -116,6 +122,10 @@ class AdminAnalyticsController extends Controller
             'new_ads'        => $newAds,
             'new_messages'   => $newMessages,
             'total_views'    => $totalViews,
+            'total_impressions' => $totalImpressions,
+            'total_clicks'    => $totalClicks,
+            'ctr'             => $totalImpressions > 0 ? round(($totalClicks / $totalImpressions) * 100, 2) : 0,
+            'clicks_by_channel' => $clicksByChannel,
             'revenue_period' => $revenuePeriod,
             'revenue_total'  => $revenueTotal,
             'daily_ads'      => $dailyAds,

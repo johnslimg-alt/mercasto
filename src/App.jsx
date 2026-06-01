@@ -694,6 +694,69 @@ function App() {
     if (node) observer.current.observe(node);
   }, [loadingAds, loadingMore, hasMore, currentPage]);
 
+  const impressionQueueRef = useRef(new Set());
+  const impressionSeenRef = useRef(new Set());
+  const impressionFlushTimerRef = useRef(null);
+  const impressionObserverRef = useRef(null);
+
+  const flushAdImpressions = useCallback(() => {
+    const ids = Array.from(impressionQueueRef.current);
+    if (!ids.length) return;
+
+    impressionQueueRef.current.clear();
+    if (impressionFlushTimerRef.current) {
+      clearTimeout(impressionFlushTimerRef.current);
+      impressionFlushTimerRef.current = null;
+    }
+
+    fetch(`${API_URL}/ads/impressions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ ad_ids: ids, placement: 'feed' }),
+      keepalive: true,
+    }).catch(() => {});
+  }, []);
+
+  const queueAdImpression = useCallback((adId) => {
+    if (!adId || impressionSeenRef.current.has(adId)) return;
+    impressionSeenRef.current.add(adId);
+    impressionQueueRef.current.add(adId);
+
+    if (impressionQueueRef.current.size >= 20) {
+      flushAdImpressions();
+      return;
+    }
+
+    if (!impressionFlushTimerRef.current) {
+      impressionFlushTimerRef.current = setTimeout(flushAdImpressions, 1200);
+    }
+  }, [flushAdImpressions]);
+
+  const observeAdImpression = useCallback((node, adId) => {
+    if (!node || !adId || impressionSeenRef.current.has(adId)) return;
+
+    if (!impressionObserverRef.current) {
+      impressionObserverRef.current = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.45) {
+            const visibleAdId = Number(entry.target.dataset.adId);
+            queueAdImpression(visibleAdId);
+            impressionObserverRef.current?.unobserve(entry.target);
+          }
+        });
+      }, { threshold: [0.45] });
+    }
+
+    node.dataset.adId = String(adId);
+    impressionObserverRef.current.observe(node);
+  }, [queueAdImpression]);
+
+  useEffect(() => () => {
+    if (impressionFlushTimerRef.current) clearTimeout(impressionFlushTimerRef.current);
+    flushAdImpressions();
+    impressionObserverRef.current?.disconnect();
+  }, [flushAdImpressions]);
+
   // --- СОСТОЯНИЕ ТЕМНОЙ ТЕМЫ ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -2732,7 +2795,7 @@ function App() {
     const safeImage = options.displayImageUrl || getImageUrl(ad.image_url, ad.image);
 
     return (
-      <article key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
+      <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
           <img src={safeImage} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
           <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">

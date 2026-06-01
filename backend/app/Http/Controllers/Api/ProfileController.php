@@ -475,6 +475,7 @@ class ProfileController extends Controller
         DB::table('user_notifications')->where('user_id', $user->id)->delete();
         DB::table('ad_clicks')->where('user_id', $user->id)->delete();
         DB::table('ad_views')->where('user_id', $user->id)->delete();
+        DB::table('ad_impressions')->where('user_id', $user->id)->delete();
         DB::table('reports')->where('user_id', $user->id)->delete();
         DB::table('user_reports')->where('reporter_id', $user->id)->orWhere('reported_user_id', $user->id)->delete();
         DB::table('push_subscriptions')->where('user_id', $user->id)->delete();
@@ -486,6 +487,7 @@ class ProfileController extends Controller
         DB::table('favorites')->whereIn('ad_id', $adIds)->delete();
         DB::table('ad_views')->whereIn('ad_id', $adIds)->delete();
         DB::table('ad_clicks')->whereIn('ad_id', $adIds)->delete();
+        DB::table('ad_impressions')->whereIn('ad_id', $adIds)->delete();
         DB::table('reports')->whereIn('ad_id', $adIds)->delete();
 
         // Защита финансовой отчетности: платежи НЕЛЬЗЯ удалять физически. Отвязываем их, сохраняя историю для бухгалтерии.
@@ -627,6 +629,7 @@ class ProfileController extends Controller
         DB::table('user_notifications')->where('user_id', $user->id)->delete();
         DB::table('ad_clicks')->where('user_id', $user->id)->delete();
         DB::table('ad_views')->where('user_id', $user->id)->delete();
+        DB::table('ad_impressions')->where('user_id', $user->id)->delete();
         DB::table('reports')->where('user_id', $user->id)->delete();
         DB::table('user_reports')->where('reporter_id', $user->id)->orWhere('reported_user_id', $user->id)->delete();
         DB::table('payments')->where('user_id', $user->id)->delete();
@@ -639,6 +642,7 @@ class ProfileController extends Controller
         DB::table('favorites')->whereIn('ad_id', $adIds)->delete();
         DB::table('ad_views')->whereIn('ad_id', $adIds)->delete();
         DB::table('ad_clicks')->whereIn('ad_id', $adIds)->delete();
+        DB::table('ad_impressions')->whereIn('ad_id', $adIds)->delete();
         DB::table('reports')->whereIn('ad_id', $adIds)->delete();
         DB::table('payments')->whereIn('ad_id', $adIds)->delete();
 

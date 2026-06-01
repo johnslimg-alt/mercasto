@@ -23,12 +23,24 @@ class SellerStatsController extends Controller
             ->where('user_id', $userId)
             ->sum('views');
 
+        $totalImpressions = (int) DB::table('ad_impressions')
+            ->whereIn('ad_id', $adIds = DB::table('ads')->where('user_id', $userId)->pluck('id'))
+            ->count();
+
+        $totalClicks = (int) DB::table('ad_clicks')
+            ->whereIn('ad_id', $adIds)
+            ->count();
+
+        $clicksByChannel = DB::table('ad_clicks')
+            ->whereIn('ad_id', $adIds)
+            ->select('channel', DB::raw('COUNT(*) as count'))
+            ->groupBy('channel')
+            ->pluck('count', 'channel');
+
         // --- Weekly view windows from ad_views log ---
         $now          = Carbon::now();
         $weekStart    = $now->copy()->subDays(7)->startOfDay();
         $prevWeekStart = $now->copy()->subDays(14)->startOfDay();
-
-        $adIds = DB::table('ads')->where('user_id', $userId)->pluck('id');
 
         $viewsThisWeek = DB::table('ad_views')
             ->whereIn('ad_id', $adIds)
@@ -50,12 +62,32 @@ class SellerStatsController extends Controller
             ->get()
             ->keyBy('date');
 
+        $impressionsByDayRaw = DB::table('ad_impressions')
+            ->whereIn('ad_id', $adIds)
+            ->where('created_at', '>=', $weekStart)
+            ->selectRaw("DATE(created_at) as date, COUNT(*) as impressions")
+            ->groupByRaw("DATE(created_at)")
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $clicksByDayRaw = DB::table('ad_clicks')
+            ->whereIn('ad_id', $adIds)
+            ->where('created_at', '>=', $weekStart)
+            ->selectRaw("DATE(created_at) as date, COUNT(*) as clicks")
+            ->groupByRaw("DATE(created_at)")
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
         $viewsByDay = [];
         for ($i = 6; $i >= 0; $i--) {
             $date          = $now->copy()->subDays($i)->format('Y-m-d');
             $viewsByDay[]  = [
                 'date'  => $date,
                 'views' => isset($viewsByDayRaw[$date]) ? (int) $viewsByDayRaw[$date]->views : 0,
+                'impressions' => isset($impressionsByDayRaw[$date]) ? (int) $impressionsByDayRaw[$date]->impressions : 0,
+                'clicks' => isset($clicksByDayRaw[$date]) ? (int) $clicksByDayRaw[$date]->clicks : 0,
             ];
         }
 
@@ -91,10 +123,15 @@ class SellerStatsController extends Controller
             ->get(['id', 'title', 'views', 'price', 'status'])
             ->map(function ($ad) use ($adIds) {
                 $favCount = DB::table('favorites')->where('ad_id', $ad->id)->count();
+                $impressions = DB::table('ad_impressions')->where('ad_id', $ad->id)->count();
+                $clicks = DB::table('ad_clicks')->where('ad_id', $ad->id)->count();
                 return [
                     'id'        => $ad->id,
                     'title'     => $ad->title,
                     'views'     => (int) $ad->views,
+                    'impressions' => $impressions,
+                    'clicks'    => $clicks,
+                    'ctr'       => $impressions > 0 ? round(($clicks / $impressions) * 100, 2) : 0,
                     'favorites' => $favCount,
                     'price'     => (float) $ad->price,
                     'status'    => $ad->status,
@@ -105,6 +142,10 @@ class SellerStatsController extends Controller
             'total_ads'       => $totalAds,
             'active_ads'      => $activeAds,
             'total_views'     => $totalViews,
+            'total_impressions' => $totalImpressions,
+            'total_clicks'    => $totalClicks,
+            'ctr'             => $totalImpressions > 0 ? round(($totalClicks / $totalImpressions) * 100, 2) : 0,
+            'clicks_by_channel' => $clicksByChannel,
             'total_favorites' => $totalFavorites,
             'total_messages'  => $totalMessages,
             'credits_balance' => $creditsBalance,
