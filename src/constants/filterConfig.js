@@ -23,6 +23,9 @@ const autoFilters = [
   { id: 'vendedor', label: 'Vendedor', type: 'checkbox', options: ['Particular', 'Agencia', 'Verificado'] },
   { id: 'documentacion', label: 'Documentación', type: 'checkbox', options: ['Factura original', 'Tenencias pagadas', 'Verificación vigente', 'Sin adeudos', 'Único dueño', 'Acepta revisión mecánica'] },
   { id: 'seguridad_auto', label: 'Seguridad y equipamiento', type: 'checkbox', options: ['ABS', 'Bolsas de aire', 'Cámara reversa', 'Sensores', 'GPS', 'Bluetooth', 'Quemacocos', 'Piel'] },
+  { id: 'financiamiento', label: 'Compra segura', type: 'checkbox', options: ['Acepta financiamiento', 'Acepta crédito', 'Trato en agencia', 'Cita en punto seguro', 'Garantía mecánica'] },
+  { id: 'estatus_legal', label: 'Estatus legal', type: 'checkbox', options: ['REPUVE limpio', 'Placas vigentes', 'Sin reporte de robo', 'Importado legalizado', 'Factura de aseguradora'] },
+  { id: 'uso', label: 'Uso', type: 'checkbox', options: ['Familiar', 'Trabajo', 'Uber/Didi', 'Carga', 'Taxi', 'Flotilla'] },
 ];
 
 const propertyFilters = [
@@ -36,6 +39,10 @@ const propertyFilters = [
   { id: 'antiguedad', label: 'Antigüedad', type: 'select', options: ['Nueva', '0-5 años', '6-10 años', '11-20 años', '+20 años'] },
   { id: 'credito', label: 'Pago / crédito', type: 'checkbox', options: ['INFONAVIT', 'FOVISSSTE', 'Crédito bancario', 'Recursos propios', 'Acepta mascotas', 'Mantenimiento incluido'] },
   { id: 'seguridad_inmueble', label: 'Seguridad', type: 'checkbox', options: ['Caseta', 'Cámaras', 'Acceso controlado', 'Condominio cerrado', 'Portero', 'Alarma'] },
+  { id: 'servicios_incluidos', label: 'Servicios incluidos', type: 'checkbox', options: ['Agua', 'Luz', 'Internet', 'Gas', 'Mantenimiento', 'Limpieza', 'Amueblado'] },
+  { id: 'entorno', label: 'Entorno', type: 'checkbox', options: ['Cerca de metro', 'Cerca de escuela', 'Cerca de hospital', 'Zona turística', 'Zona corporativa', 'Fraccionamiento'] },
+  { id: 'publicador', label: 'Publicado por', type: 'checkbox', options: ['Dueño directo', 'Inmobiliaria', 'Asesor certificado', 'Desarrollador'] },
+  { id: 'documentos_inmueble', label: 'Documentos', type: 'checkbox', options: ['Escrituras', 'Predial al corriente', 'Uso de suelo', 'Contrato listo', 'Sin gravamen'] },
 ];
 
 const jobFilters = [
@@ -48,6 +55,9 @@ const jobFilters = [
   { id: 'beneficios', label: 'Beneficios', type: 'checkbox', options: ['Seguro', 'Prestaciones', 'Bonos', 'Vales', 'Capacitación'] },
   { id: 'educacion', label: 'Escolaridad', type: 'select', options: ['Primaria', 'Secundaria', 'Preparatoria', 'Técnico', 'Licenciatura', 'Maestría'] },
   { id: 'idiomas', label: 'Idiomas', type: 'checkbox', options: ['Inglés', 'Francés', 'Portugués', 'Alemán', 'Maya / lengua indígena'] },
+  { id: 'area', label: 'Área', type: 'checkbox', options: ['Ventas', 'Administración', 'Tecnología', 'Operaciones', 'Hotelería', 'Salud', 'Educación', 'Construcción'] },
+  { id: 'pago', label: 'Pago', type: 'checkbox', options: ['Semanal', 'Quincenal', 'Mensual', 'Por comisión', 'Propinas', 'Bonos por meta'] },
+  { id: 'requisitos', label: 'Requisitos', type: 'checkbox', options: ['Licencia vigente', 'Auto propio', 'Disponibilidad inmediata', 'Sin experiencia', 'Inglés', 'Referencias'] },
 ];
 
 const electronicsFilters = [
@@ -59,6 +69,9 @@ const electronicsFilters = [
   { id: 'ram', label: 'RAM', type: 'checkbox', options: ['4 GB', '6 GB', '8 GB', '12 GB', '16 GB', '32 GB+'] },
   { id: 'pantalla', label: 'Pantalla', type: 'checkbox', options: ['Hasta 6"', '6" - 7"', '13"', '14"', '15"', '16"+', '4K', 'OLED'] },
   { id: 'estado_bateria', label: 'Batería / estado', type: 'checkbox', options: ['80%+', '90%+', 'Sin detalles', 'Reacondicionado certificado', 'Incluye cargador'] },
+  { id: 'sistema', label: 'Sistema', type: 'checkbox', options: ['iOS', 'Android', 'Windows', 'macOS', 'Linux', 'ChromeOS'] },
+  { id: 'estado_fisico', label: 'Estado físico', type: 'checkbox', options: ['Sin golpes', 'Pantalla intacta', 'Detalles estéticos', 'Reparado', 'Sellado'] },
+  { id: 'incluye', label: 'Incluye', type: 'checkbox', options: ['Caja', 'Cargador', 'Factura', 'Accesorios', 'Funda', 'Mica'] },
 ];
 
 const serviceFilters = [
@@ -68,6 +81,9 @@ const serviceFilters = [
   { id: 'confianza', label: 'Confianza', type: 'checkbox', options: ['Verificado', 'Con reseñas', 'Factura', 'Garantía', 'Contrato', 'Seguro de responsabilidad'] },
   { id: 'precio_servicio', label: 'Precio desde (MXN)', type: 'range', minPlaceholder: 'Desde', maxPlaceholder: 'Hasta' },
   { id: 'experiencia_servicio', label: 'Experiencia', type: 'select', options: ['Nuevo proveedor', '1-3 años', '4-7 años', '+8 años'] },
+  { id: 'cobertura', label: 'Cobertura', type: 'checkbox', options: ['Mi colonia', 'Toda la ciudad', 'Todo el estado', 'Todo México', 'Emergencias'] },
+  { id: 'tipo_cobro', label: 'Cobro', type: 'checkbox', options: ['Por hora', 'Por visita', 'Por proyecto', 'Precio fijo', 'Cotización gratis'] },
+  { id: 'facturacion', label: 'Formalidad', type: 'checkbox', options: ['Factura', 'Contrato', 'Garantía por escrito', 'Seguro', 'Equipo propio'] },
 ];
 
 const homeFilters = [
@@ -75,6 +91,8 @@ const homeFilters = [
   { id: 'condicion', label: 'Condición', type: 'checkbox', options: ['Nuevo', 'Usado', 'Como nuevo', 'Restaurado'] },
   { id: 'material', label: 'Material', type: 'checkbox', options: ['Madera', 'Metal', 'Vidrio', 'Tela', 'Piel', 'Plástico', 'MDF'] },
   { id: 'entrega', label: 'Entrega', type: 'checkbox', options: ['Entrega a domicilio', 'Recoger en domicilio', 'Envío disponible', 'Instalación incluida'] },
+  { id: 'medidas', label: 'Medidas', type: 'text', placeholder: 'Ej. 180x90 cm' },
+  { id: 'ambiente', label: 'Ambiente', type: 'checkbox', options: ['Sala', 'Comedor', 'Recámara', 'Cocina', 'Baño', 'Terraza', 'Oficina'] },
 ];
 
 const fashionFilters = [
@@ -82,6 +100,8 @@ const fashionFilters = [
   { id: 'talla', label: 'Talla', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '24', '26', '28', '30', '32', '34'] },
   { id: 'marca_moda', label: 'Marca', type: 'text', placeholder: 'Ej. Zara, Nike, Levi’s' },
   { id: 'genero', label: 'Género', type: 'checkbox', options: ['Mujer', 'Hombre', 'Unisex', 'Niñas', 'Niños'] },
+  { id: 'estado_moda', label: 'Estado', type: 'checkbox', options: ['Nuevo con etiqueta', 'Nuevo sin etiqueta', 'Usado excelente', 'Vintage', 'Original verificado'] },
+  { id: 'color_moda', label: 'Color', type: 'select', options: ['Negro', 'Blanco', 'Beige', 'Azul', 'Rojo', 'Verde', 'Rosa', 'Multicolor'] },
 ];
 
 const petFilters = [

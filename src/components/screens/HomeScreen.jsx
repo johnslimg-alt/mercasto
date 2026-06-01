@@ -78,7 +78,21 @@ const STATE_COORDS = {
 
 const LeafletMap = ({ ads, onViewAd }) => {
   const [expanded, setExpanded] = React.useState(false);
-  const mapAds = React.useMemo(() => (ads || []).slice(0, 10).map((ad, idx) => {
+  const [mapQuery, setMapQuery] = React.useState('');
+  const [mapMaxPrice, setMapMaxPrice] = React.useState('');
+  const [mapOnlyCoords, setMapOnlyCoords] = React.useState(false);
+  const filteredAds = React.useMemo(() => {
+    const query = mapQuery.trim().toLowerCase();
+    const priceLimit = Number(mapMaxPrice);
+    return (ads || []).filter(ad => {
+      const title = `${ad.title || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
+      if (query && !title.includes(query)) return false;
+      if (mapOnlyCoords && !(ad.latitude && ad.longitude)) return false;
+      if (priceLimit > 0 && Number(ad.price || 0) > priceLimit) return false;
+      return true;
+    });
+  }, [ads, mapMaxPrice, mapOnlyCoords, mapQuery]);
+  const mapAds = React.useMemo(() => filteredAds.slice(0, expanded ? 60 : 14).map((ad, idx) => {
     if (ad.latitude && ad.longitude) return { ad, coords: [parseFloat(ad.latitude), parseFloat(ad.longitude)] };
     const stateName = ad.state || ad.location?.split(',')[1]?.trim() || ad.location?.split('·')[0]?.trim() || ad.location?.split(',')[0]?.trim() || '';
     const cleanedState = Object.keys(STATE_COORDS).find(k =>
@@ -90,7 +104,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
     const jitterLat = base[0] + (Math.sin(idx * 2.3) * 0.18);
     const jitterLon = base[1] + (Math.cos(idx * 2.3) * 0.18);
     return { ad, coords: [jitterLat, jitterLon] };
-  }), [ads]);
+  }), [filteredAds, expanded]);
 
   const markers = mapAds.map(({ ad, coords }, index) => ({
     id: ad.id,
@@ -101,9 +115,16 @@ const LeafletMap = ({ ads, onViewAd }) => {
   }));
 
   const mapBody = (
-    <>
-      <MercastoMapPreview title="Todo México" markers={markers} onMarkerClick={onViewAd} onSearch={() => setExpanded(true)} className="h-full border-0 shadow-none" />
-    </>
+    <div className="relative h-full">
+      <MercastoMapPreview title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="absolute bottom-3 right-3 z-[5] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg"
+      >
+        <MapPin size={13} /> Abrir mapa
+      </button>
+    </div>
   );
 
   return (
@@ -115,12 +136,17 @@ const LeafletMap = ({ ads, onViewAd }) => {
       <div className="fixed inset-0 z-[9999] bg-slate-950/80 p-3 backdrop-blur-sm">
         <div className="relative h-full overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl">
           <div className="absolute inset-x-3 top-3 z-[4] flex gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95">
-            <input className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="Buscar en el mapa..." />
-            <button className="rounded-xl bg-[#84CC16] px-3 py-2 text-sm font-black text-slate-950">Buscar</button>
+            <input value={mapQuery} onChange={(e) => setMapQuery(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="Buscar en el mapa..." />
+            <input value={mapMaxPrice} onChange={(e) => setMapMaxPrice(e.target.value)} type="number" className="hidden w-32 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white sm:block" placeholder="Precio max" />
+            <button type="button" onClick={() => setMapOnlyCoords(v => !v)} className={`hidden rounded-xl px-3 py-2 text-xs font-black sm:block ${mapOnlyCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>Coords</button>
             <button type="button" onClick={() => setExpanded(false)} className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white dark:bg-slate-700">Cerrar</button>
           </div>
           <MercastoMapPreview title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
           <div className="absolute inset-x-0 bottom-0 z-[3] bg-slate-950/90 p-3">
+            <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/80">
+              <span>{filteredAds.length} anuncios en mapa</span>
+              <button type="button" onClick={() => { setMapQuery(''); setMapMaxPrice(''); setMapOnlyCoords(false); }} className="text-[#BEF264]">Limpiar filtros</button>
+            </div>
             <div className="flex gap-2 overflow-x-auto">
               {mapAds.slice(0, 6).map(({ ad }, index) => (
                 <button key={ad.id || index} onClick={() => onViewAd(ad)} className="shrink-0 rounded-full bg-[#84CC16] px-3 py-2 text-xs font-black text-slate-950">

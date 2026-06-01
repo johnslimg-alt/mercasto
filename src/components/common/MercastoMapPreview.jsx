@@ -28,14 +28,32 @@ const loadLeaflet = () => {
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.async = true;
+    const timer = window.setTimeout(() => {
+      reject(new Error('Leaflet load timeout'));
+    }, 3500);
     script.onload = () => {
+      window.clearTimeout(timer);
       resolve(window.L);
     };
     script.onerror = () => {
+      window.clearTimeout(timer);
       reject(new Error('Failed to load Leaflet script'));
     };
     document.body.appendChild(script);
   });
+};
+
+const coordsToPoint = ([lat, lon]) => {
+  const minLat = 14;
+  const maxLat = 33;
+  const minLon = -118;
+  const maxLon = -86;
+  const x = ((Number(lon) - minLon) / (maxLon - minLon)) * 100;
+  const y = 100 - ((Number(lat) - minLat) / (maxLat - minLat)) * 100;
+  return {
+    left: `${Math.min(90, Math.max(8, x))}%`,
+    top: `${Math.min(84, Math.max(14, y))}%`,
+  };
 };
 
 export default function MercastoMapPreview({
@@ -68,7 +86,10 @@ export default function MercastoMapPreview({
       })
       .catch((err) => {
         console.error(err);
-        if (active) setLoading(false);
+        if (active) {
+          setLoaded(false);
+          setLoading(false);
+        }
       });
     return () => {
       active = false;
@@ -231,7 +252,29 @@ export default function MercastoMapPreview({
           </div>
         )}
         
-        <div ref={mapContainerRef} className="h-full w-full min-h-[190px]" style={{ zIndex: 1 }} />
+        {loaded ? (
+          <div ref={mapContainerRef} className="h-full w-full min-h-[190px]" style={{ zIndex: 1 }} />
+        ) : (
+          <div className="relative h-full min-h-[190px] w-full overflow-hidden bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#e0f2fe,#ecfccb)] dark:bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.22),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.18),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
+            {normalizedMarkers.slice(0, 18).map((marker, index) => {
+              const pos = coordsToPoint(marker.coords || [23.6345, -102.5528]);
+              return (
+                <button
+                  key={marker.id || index}
+                  type="button"
+                  onClick={() => onMarkerClick?.(marker.ad || marker)}
+                  className={`absolute z-[2] -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1.5 text-[11px] font-black shadow-xl ring-2 ring-white/70 transition-transform hover:scale-110 ${marker.tone === 'dark' ? 'bg-slate-950 text-white dark:bg-[#84CC16] dark:text-slate-950' : 'bg-[#84CC16] text-slate-950'}`}
+                  style={pos}
+                >
+                  {marker.label || '$'}
+                </button>
+              );
+            })}
+            <div className="absolute bottom-3 left-3 rounded-full bg-slate-950/80 px-3 py-1.5 text-[11px] font-bold text-white dark:bg-white/10">
+              Vista estable
+            </div>
+          </div>
+        )}
         
         <div className="absolute left-3 top-3 z-[2] rounded-full bg-white/92 px-3 py-1.5 text-xs font-black text-slate-800 shadow-md dark:bg-slate-950/88 dark:text-white pointer-events-none">
           {title}
@@ -265,7 +308,20 @@ export default function MercastoMapPreview({
               </button>
             </div>
             
-            <div ref={largeMapContainerRef} className="h-full w-full" style={{ zIndex: 1 }} />
+            {loaded ? (
+              <div ref={largeMapContainerRef} className="h-full w-full" style={{ zIndex: 1 }} />
+            ) : (
+              <div className="relative h-full w-full bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
+                {normalizedMarkers.slice(0, 50).map((marker, index) => {
+                  const pos = coordsToPoint(marker.coords || [23.6345, -102.5528]);
+                  return (
+                    <button key={marker.id || index} type="button" onClick={() => onMarkerClick?.(marker.ad || marker)} className="absolute z-[2] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#84CC16] px-3 py-1.5 text-xs font-black text-slate-950 shadow-xl ring-2 ring-white/70" style={pos}>
+                      {marker.label || '$'}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
