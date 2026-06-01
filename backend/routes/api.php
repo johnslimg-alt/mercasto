@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\NotificationController;
 Route::middleware('throttle:search')->get('/search/suggestions', [SearchController::class, 'suggestions']);
 Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'index']);
 Route::middleware('throttle:search')->get('/category-attributes', [CategoryAttributeController::class, 'index']); // Динамические атрибуты категории для PostScreen + SidebarFilters
+Route::middleware('throttle:api')->get('/ads/featured', [AdIndexController::class, 'featured']); // Объявления «Destacados» для блока на главной
 Route::middleware('throttle:api')->get('/ads/{id}', [AdController::class, 'show'])->whereNumber('id'); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
 Route::middleware('throttle:search')->get('/ads/{id}/similar', [AdController::class, 'similar'])->whereNumber('id'); // Похожие объявления через pgvector
 Route::middleware('throttle:api')->get('/ads/{id}/price-history', [AdController::class, 'priceHistory'])->whereNumber('id'); // Historial de precios

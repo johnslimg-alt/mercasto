@@ -169,7 +169,17 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
     const [viewLayout, setViewLayout] = React.useState('grid'); // 'grid' or 'list'
     const [homeToast, setHomeToast] = React.useState(null);
     const homeToastTimerRef = React.useRef(null);
+    const [featuredAds, setFeaturedAds] = React.useState([]);
     const navigate = useNavigate();
+
+    // Fetch Destacados on mount
+    React.useEffect(() => {
+      const API_URL = (typeof window !== 'undefined' && window.__API_URL__) || import.meta.env?.VITE_API_URL || '/api';
+      fetch(`${API_URL}/ads/featured`, { headers: { 'Accept': 'application/json' } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.data?.length) setFeaturedAds(data.data); })
+        .catch(() => {});
+    }, []);
     const VERTICAL_SLUGS = {
       'coches-y-motor': '/autos',
       'motor': '/autos',
@@ -468,8 +478,96 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
 
 
 
+            {/* 3. DESTACADOS — Promoted ads block */}
 
-            {/* 3. TRENDING NOW */}
+            {featuredAds.length > 0 && (
+              <section className="col-span-12 mt-2">
+
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-[22px] font-bold tracking-tight">
+                      {t.featured_ads || 'Destacados'}
+                    </h2>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 shadow-sm">
+                      <Star size={9} className="fill-amber-900" />
+                      PRO
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowPricingModal?.(true)}
+                    className="btn-sm border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+                  >
+                    {t.promote_ad || 'Promocionar'}
+                  </button>
+                </div>
+
+                {/* Cards — horizontal scroll on mobile, grid on desktop */}
+                <div className="-mx-4 lg:mx-0 px-4 lg:px-0">
+                  <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible">
+                    {featuredAds.slice(0, 8).map(ad => {
+                      const imgUrl = getImageUrl
+                        ? getImageUrl(ad.image_url || ad.image)
+                        : (ad.image_url || ad.image || `https://picsum.photos/seed/feat-${ad.id}/600/450`);
+                      const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+                      return (
+                        <div
+                          key={ad.id}
+                          className="snap-start shrink-0 w-[240px] lg:w-auto cursor-pointer group"
+                          onClick={() => handleViewAd?.(ad)}
+                        >
+                          {/* Gold-border premium card */}
+                          <div className="relative overflow-hidden rounded-2xl border-2 border-amber-300/60 bg-white shadow-lg shadow-amber-100/50 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-200/60 dark:bg-slate-800 dark:border-amber-600/40 dark:shadow-amber-900/30">
+
+                            {/* Image */}
+                            <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-700">
+                              <img
+                                src={imgUrl}
+                                alt={ad.title}
+                                loading="lazy"
+                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                onError={e => { e.currentTarget.src = `https://picsum.photos/seed/feat-${ad.id}/600/450`; }}
+                              />
+                              {/* Golden badge */}
+                              <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2 py-0.5 shadow-md">
+                                <Star size={9} className="fill-amber-900 text-amber-900" />
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-900">Destacado</span>
+                              </div>
+                              {/* Gradient overlay */}
+                              <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/40 to-transparent" />
+                            </div>
+
+                            {/* Info */}
+                            <div className="p-3">
+                              <p className="mb-1 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-800 dark:text-white">{ad.title}</p>
+                              <p className="text-[15px] font-bold text-amber-600 dark:text-amber-400">{price}</p>
+                              {ad.location && (
+                                <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                  <MapPin size={10} />
+                                  <span className="truncate">{ad.location}</span>
+                                </p>
+                              )}
+                              {/* Seller badge */}
+                              {ad.user?.is_verified && (
+                                <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                                  <CheckCircle size={10} />
+                                  {t.verified_seller || 'Vendedor verificado'}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </section>
+            )}
+
+
+
+            {/* 4. TRENDING NOW */}
 
             <section className="col-span-12 mt-2">
 

@@ -170,4 +170,24 @@ class AdIndexController extends Controller
 
         return response()->json($query->paginate(16));
     }
+
+    /**
+     * Featured / Destacados endpoint — up to 8 promoted ads, randomised, cached 2 minutes.
+     * Used by the premium «Destacados» block on the home feed.
+     */
+    public function featured()
+    {
+        $cacheKey = 'ads_featured_block';
+
+        $ads = Cache::remember($cacheKey, 120, function () {
+            return Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
+                ->where('status', 'active')
+                ->where('promoted', 'destacado')
+                ->inRandomOrder()
+                ->limit(8)
+                ->get();
+        });
+
+        return response()->json(['data' => $ads]);
+    }
 }

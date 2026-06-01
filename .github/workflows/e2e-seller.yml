@@ -1,0 +1,76 @@
+name: Seller & Payment E2E Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs daily at 07:00 UTC (01:00 CST)
+    - cron: '0 7 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-seller-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-seller:
+    name: Run seller & payment E2E tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE_URL: https://mercasto.com
+      E2E_SELLER_EMAIL: ${{ secrets.E2E_SELLER_EMAIL }}
+      E2E_SELLER_PASSWORD: ${{ secrets.E2E_SELLER_PASSWORD }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      CLIP_WEBHOOK_SECRET: ${{ secrets.CLIP_WEBHOOK_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npm run e2e:install
+
+      - name: Verify required secrets are present
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -z "${E2E_SELLER_EMAIL}" ]   && missing+=("E2E_SELLER_EMAIL")
+          [ -z "${E2E_SELLER_PASSWORD}" ] && missing+=("E2E_SELLER_PASSWORD")
+          [ -z "${E2E_ADMIN_EMAIL}" ]    && missing+=("E2E_ADMIN_EMAIL")
+          [ -z "${E2E_ADMIN_PASSWORD}" ] && missing+=("E2E_ADMIN_PASSWORD")
+          [ -z "${CLIP_WEBHOOK_SECRET}" ] && missing+=("CLIP_WEBHOOK_SECRET")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "❌ Missing required secrets: ${missing[*]}" >&2
+            echo "Set them in Settings → Secrets → Actions" >&2
+            exit 1
+          fi
+          echo "✅ All required secrets are present."
+
+      - name: Run auth E2E tests
+        run: CI=1 npx playwright test tests/e2e/auth-flow.spec.js --reporter=list
+
+      - name: Run ads lifecycle E2E tests
+        run: CI=1 npx playwright test tests/e2e/ads-lifecycle.spec.js --reporter=list
+
+      - name: Run payments E2E tests (full — with seller & webhook secrets)
+        run: CI=1 npx playwright test tests/e2e/payments.spec.js --reporter=list
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-seller-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 14

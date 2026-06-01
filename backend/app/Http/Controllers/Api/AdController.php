@@ -727,6 +727,7 @@ class AdController extends Controller
         // Сбрасываем кэш SEO и главной страницы
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
+        Cache::forget('ads_featured_block');
         for ($i = 1; $i <= 10; $i++) {
             Cache::forget("ads_index_page_{$i}");
         }
@@ -791,6 +792,9 @@ class AdController extends Controller
             return $result['response'];
         }
 
+        // Инвалидируем кеш «Destacados», чтобы блок на главной обновился мгновенно
+        Cache::forget('ads_featured_block');
+
         return response()->json([
             'success' => true,
             'balance' => $result['balance'],
@@ -842,6 +846,7 @@ class AdController extends Controller
         // Сбрасываем кэш SEO и главной страницы
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
+        Cache::forget('ads_featured_block');
         for ($i = 1; $i <= 10; $i++) {
             Cache::forget("ads_index_page_{$i}");
         }
