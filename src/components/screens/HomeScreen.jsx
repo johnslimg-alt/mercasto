@@ -162,14 +162,14 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
     }, []);
 
     const homeCategories = React.useMemo(() => ([
-      { slug: 'motor', name: { es: 'Autos y Motos', en: 'Cars & Moto' }, icon: 'Car' },
+      { slug: 'motor', name: { es: 'Motor', en: 'Motor' }, icon: 'Car' },
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
       { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
       { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
-      { slug: 'electronica', name: { es: 'Electrónica y Celulares', en: 'Electronics & Phones' }, icon: 'Cpu' },
-      { slug: 'hogar', name: { es: 'Hogar, Mascotas y Jardín', en: 'Home, Pets & Garden' }, icon: 'Sofa' },
-      { slug: 'moda', name: { es: 'Moda, Estilo y Bebés', en: 'Fashion & Kids' }, icon: 'Shirt' },
-      { slug: 'ocio', name: { es: 'Deportes, Ocio y Eventos', en: 'Sports, Leisure & Events' }, icon: 'Bike' },
+      { slug: 'electronica', name: { es: 'Tecnología', en: 'Tech' }, icon: 'Cpu' },
+      { slug: 'hogar', name: { es: 'Hogar', en: 'Home' }, icon: 'Sofa' },
+      { slug: 'moda', name: { es: 'Moda', en: 'Fashion' }, icon: 'Shirt' },
+      { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure' }, icon: 'Bike' },
       { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store', action: 'pricing' },
     ]), []);
     const trendingAds = React.useMemo(() => {
