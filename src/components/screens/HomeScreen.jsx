@@ -147,6 +147,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
     const VERTICAL_SLUGS = {
       'coches-y-motor': '/autos',
       'motor': '/autos',
+      'coches': '/autos',
       'inmobiliaria': '/inmuebles',
       'empleo': '/empleos',
       'servicios': '/servicios',
@@ -159,45 +160,22 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       if (slug.startsWith('servicios/')) return '/servicios';
       return null;
     }, []);
-    const verticalCategoryCards = React.useMemo(() => ([
-      { slug: 'motor', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
+
+    const homeCategories = React.useMemo(() => ([
+      { slug: 'motor', name: { es: 'Autos y Motos', en: 'Cars & Moto' }, icon: 'Car' },
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
-      { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
       { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
-      { slug: 'electronica', name: { es: 'Electrónica', en: 'Electronics' }, icon: 'Cpu' },
+      { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
+      { slug: 'electronica', name: { es: 'Electrónica y PCs', en: 'Electronics & PCs' }, icon: 'Cpu' },
+      { slug: 'telefonia', name: { es: 'Telefonía', en: 'Phones' }, icon: 'Smartphone' },
+      { slug: 'hogar', name: { es: 'Hogar y Jardín', en: 'Home & Garden' }, icon: 'Sofa' },
+      { slug: 'moda', name: { es: 'Moda y Estilo', en: 'Fashion' }, icon: 'Shirt' },
+      { slug: 'bebes', name: { es: 'Bebés e Infantil', en: 'Babies & Kids' }, icon: 'Baby' },
+      { slug: 'mascotas', name: { es: 'Mascotas', en: 'Pets' }, icon: 'PawPrint' },
+      { slug: 'ocio', name: { es: 'Deportes y Ocio', en: 'Sports & Leisure' }, icon: 'Bike' },
+      { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets' }, icon: 'Ticket' },
       { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store', action: 'pricing' },
     ]), []);
-
-    // Заглушка (Fallback) на случай, если база данных категорий пуста
-    const defaultCats = [
-      { slug: 'motor', name: { es: 'Motor' }, icon: 'Car' },
-      { slug: 'inmobiliaria', name: { es: 'Inmuebles' }, icon: 'Home' },
-      { slug: 'empleo', name: { es: 'Empleo' }, icon: 'Briefcase' },
-      { slug: 'servicios', name: { es: 'Servicios' }, icon: 'Wrench' },
-      { slug: 'informatica', name: { es: 'Informática' }, icon: 'Monitor' },
-      { slug: 'telefonia', name: { es: 'Telefonía' }, icon: 'Smartphone' },
-      { slug: 'hogar', name: { es: 'Hogar' }, icon: 'Sofa' },
-      { slug: 'moda', name: { es: 'Moda' }, icon: 'Shirt' },
-      { slug: 'bebes', name: { es: 'Bebés' }, icon: 'Baby' },
-      { slug: 'mascotas', name: { es: 'Mascotas' }, icon: 'PawPrint' },
-      { slug: 'ocio', name: { es: 'Ocio' }, icon: 'Bike' },
-      { slug: 'boletos', name: { es: 'Boletos' }, icon: 'Ticket' }
-    ];
-    const displayCategories = categoriesData && categoriesData.length > 0 ? categoriesData : defaultCats;
-    const homeCategories = React.useMemo(() => {
-      const combined = [
-        ...verticalCategoryCards,
-        ...displayCategories.filter(cat => !getVerticalPath(cat.slug) && cat.slug !== 'tiendas'),
-      ];
-      // deduplicate by slug/action to be safe
-      const seen = new Set();
-      return combined.filter(c => {
-        const key = c.slug || c.action;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-    }, [displayCategories, getVerticalPath, verticalCategoryCards]);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
       return (serverAds || [])
