@@ -33,6 +33,96 @@ class AdController extends Controller
         return ImageManager::usingDriver(Driver::class);
     }
 
+    private function geocodeApproximateLocation(?string $location, ?string $state = null): array
+    {
+        $query = trim(collect([$location, $state, 'México'])->filter()->implode(', '));
+
+        if ($query !== '') {
+            $apiKey = config('services.google.maps_api_key');
+            if ($apiKey) {
+                try {
+                    $response = Http::timeout(5)->get('https://maps.googleapis.com/maps/api/geocode/json', [
+                        'address' => $query,
+                        'key' => $apiKey,
+                    ]);
+
+                    if ($response->successful() && !empty($response->json('results'))) {
+                        $geometry = $response->json('results.0.geometry.location');
+                        return [(float) $geometry['lat'], (float) $geometry['lng']];
+                    }
+                } catch (\Throwable $e) {
+                    // Fall through to local Mexico centroids if the paid provider is unavailable.
+                }
+            }
+        }
+
+        $centroids = [
+            'aguascalientes' => [21.8853, -102.2916],
+            'baja california' => [30.8406, -115.2838],
+            'baja california sur' => [26.0444, -111.6661],
+            'campeche' => [19.8301, -90.5349],
+            'chiapas' => [16.7569, -93.1292],
+            'chihuahua' => [28.6330, -106.0691],
+            'ciudad de mexico' => [19.4326, -99.1332],
+            'ciudad de méxico' => [19.4326, -99.1332],
+            'cdmx' => [19.4326, -99.1332],
+            'coahuila' => [27.0587, -101.7068],
+            'colima' => [19.2433, -103.7247],
+            'durango' => [24.0277, -104.6532],
+            'guanajuato' => [21.0190, -101.2574],
+            'guerrero' => [17.4392, -99.5451],
+            'hidalgo' => [20.0911, -98.7624],
+            'jalisco' => [20.6597, -103.3496],
+            'guadalajara' => [20.6597, -103.3496],
+            'puerto vallarta' => [20.6534, -105.2253],
+            'mexico' => [19.3565, -99.6312],
+            'méxico' => [19.3565, -99.6312],
+            'estado de mexico' => [19.3565, -99.6312],
+            'estado de méxico' => [19.3565, -99.6312],
+            'michoacan' => [19.5665, -101.7068],
+            'michoacán' => [19.5665, -101.7068],
+            'morelos' => [18.6813, -99.1013],
+            'nayarit' => [21.7514, -104.8455],
+            'nuevo leon' => [25.5922, -100.0574],
+            'nuevo león' => [25.5922, -100.0574],
+            'monterrey' => [25.6866, -100.3161],
+            'oaxaca' => [17.0732, -96.7266],
+            'puebla' => [19.0414, -98.2063],
+            'queretaro' => [20.5888, -100.3899],
+            'querétaro' => [20.5888, -100.3899],
+            'quintana roo' => [19.1847, -88.4753],
+            'cancun' => [21.1619, -86.8515],
+            'cancún' => [21.1619, -86.8515],
+            'san luis potosi' => [22.1565, -100.9855],
+            'san luis potosí' => [22.1565, -100.9855],
+            'sinaloa' => [25.1721, -107.4795],
+            'sonora' => [29.2972, -110.3309],
+            'tabasco' => [17.8409, -92.6189],
+            'tamaulipas' => [24.2669, -98.8363],
+            'tlaxcala' => [19.3182, -98.2375],
+            'veracruz' => [19.1738, -96.1342],
+            'yucatan' => [20.7099, -89.0943],
+            'yucatán' => [20.7099, -89.0943],
+            'merida' => [20.9674, -89.5926],
+            'mérida' => [20.9674, -89.5926],
+            'zacatecas' => [22.7709, -102.5832],
+        ];
+
+        $haystack = Str::of(trim(($location ?? '') . ' ' . ($state ?? '')))
+            ->lower()
+            ->ascii()
+            ->toString();
+
+        foreach ($centroids as $name => $coords) {
+            $needle = Str::of($name)->lower()->ascii()->toString();
+            if ($needle !== '' && str_contains($haystack, $needle)) {
+                return $coords;
+            }
+        }
+
+        return [23.6345, -102.5528];
+    }
+
     /**
      * Получение списка всех активных объявлений
      */
@@ -281,22 +371,7 @@ class AdController extends Controller
             return response()->json(['message' => "Has alcanzado el límite de {$maxAds} anuncios mensuales de tu plan. Actualiza tu plan para publicar más."], 403);
         }
 
-        $lat = null;
-        $lng = null;
-        if ($request->filled('location')) {
-            $apiKey = config('services.google.maps_api_key');
-            if ($apiKey) {
-                $response = Http::timeout(5)->get('https://maps.googleapis.com/maps/api/geocode/json', [
-                    'address' => $request->location,
-                    'key' => $apiKey,
-                ]);
-                if ($response->successful() && !empty($response->json('results'))) {
-                    $geometry = $response->json('results.0.geometry.location');
-                    $lat = $geometry['lat'];
-                    $lng = $geometry['lng'];
-                }
-            }
-        }
+        [$lat, $lng] = $this->geocodeApproximateLocation($request->location, $request->state);
 
         $imagePaths = [];
         if ($request->hasFile('images')) {
@@ -457,20 +532,9 @@ class AdController extends Controller
 
         $lat = $ad->latitude;
         $lng = $ad->longitude;
-        // Пересчитываем координаты, только если локация изменилась
-        if ($request->filled('location') && $request->location !== $ad->location) {
-            $apiKey = config('services.google.maps_api_key');
-            if ($apiKey) {
-                $response = Http::timeout(5)->get('https://maps.googleapis.com/maps/api/geocode/json', [
-                    'address' => $request->location,
-                    'key' => $apiKey,
-                ]);
-                if ($response->successful() && !empty($response->json('results'))) {
-                    $geometry = $response->json('results.0.geometry.location');
-                    $lat = $geometry['lat'];
-                    $lng = $geometry['lng'];
-                }
-            }
+        // Пересчитываем координаты, только если локация или штат изменились
+        if (($request->filled('location') && $request->location !== $ad->location) || (($request->input('state') ?? null) !== $ad->state)) {
+            [$lat, $lng] = $this->geocodeApproximateLocation($request->location, $request->state);
         }
 
         // 3. Обработка изображений
