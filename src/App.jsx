@@ -487,6 +487,7 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showTabBarMenu, setShowTabBarMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sliderAutoplay, setSliderAutoplay] = useState(() => localStorage.getItem('sliderAutoplay') !== 'false');
   const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, push_notifications: true, marketing: false });
@@ -3129,10 +3130,10 @@ function App() {
         <Bell className="w-6 h-6 mb-1" />
         {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
       </button>
-      <button onClick={() => setShowProfileMenu(v => !v)} className={`flex flex-col items-center p-1 ${showProfileMenu ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showProfileMenu} aria-label="Menú global">
+      <button onClick={() => setShowTabBarMenu(v => !v)} className={`flex flex-col items-center p-1 ${showTabBarMenu ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showTabBarMenu} aria-label="Menú global">
         <Menu className="w-6 h-6 mb-1" />
       </button>
-      {showProfileMenu && (
+      {showTabBarMenu && (
         <div className="mobile-tabbar-menu fixed bottom-[90px] right-4 w-[280px] rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95 z-50 animate-in fade-in slide-in-from-bottom-5">
           {/* User Profile / Guest Header */}
           <div className="mb-3 border-b border-slate-100 pb-3 dark:border-slate-800">
@@ -3152,10 +3153,10 @@ function App() {
               <div>
                 <h4 className="text-sm font-black text-slate-800 dark:text-white mb-2">¡Hola! Bienvenido a Mercasto</h4>
                 <div className="flex gap-2">
-                  <button onClick={() => { setShowProfileMenu(false); setAuthMode('login'); setShowAuthModal(true); }} className="flex-1 rounded-xl bg-[#84CC16] py-2 text-center text-xs font-bold text-slate-950 hover:bg-[#65A30D]">
+                  <button onClick={() => { setShowTabBarMenu(false); setAuthMode('login'); setShowAuthModal(true); }} className="flex-1 rounded-xl bg-[#84CC16] py-2 text-center text-xs font-bold text-slate-950 hover:bg-[#65A30D]">
                     Entrar
                   </button>
-                  <button onClick={() => { setShowProfileMenu(false); setAuthMode('register'); setShowAuthModal(true); }} className="flex-1 rounded-xl border border-slate-200 py-2 text-center text-xs font-bold text-slate-800 dark:border-slate-700 dark:text-white hover:bg-slate-50">
+                  <button onClick={() => { setShowTabBarMenu(false); setAuthMode('register'); setShowAuthModal(true); }} className="flex-1 rounded-xl border border-slate-200 py-2 text-center text-xs font-bold text-slate-800 dark:border-slate-700 dark:text-white hover:bg-slate-50">
                     Registrarse
                   </button>
                 </div>
@@ -3167,23 +3168,23 @@ function App() {
           <div className="space-y-1.5">
             {user && (
               <>
-                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                   <User size={16} className="text-[#84CC16]" /> Mi cuenta
                 </button>
-                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                   <Heart size={16} className="text-[#84CC16]" /> Favoritos
                 </button>
-                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                   <Settings size={16} className="text-[#84CC16]" /> Ajustes de Perfil
                 </button>
               </>
             )}
             
-            <button onClick={() => { setCurrentTab('post'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+            <button onClick={() => { setCurrentTab('post'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
               <PlusCircle size={16} className="text-[#84CC16]" /> Publicar Anuncio
             </button>
 
-            <button onClick={() => { setCurrentTab('help'); setShowProfileMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+            <button onClick={() => { setCurrentTab('help'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
               <Sparkles size={16} className="text-[#84CC16]" /> Ayuda y Soporte
             </button>
           </div>
@@ -3218,7 +3219,7 @@ function App() {
             </div>
 
             {user && (
-              <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
+              <button onClick={() => { setShowTabBarMenu(false); handleLogout(); }} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
                 <LogOut size={14} /> Salir
               </button>
             )}
