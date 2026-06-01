@@ -9,7 +9,7 @@ import {
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
   CheckCircle, XCircle, BarChart3, LogOut, Globe, Sparkles, Loader2, Play, Video, Phone, AlertTriangle, Activity,
   Car, Briefcase, Wrench, Monitor, Smartphone, Sofa, Shirt, Baby, PawPrint, Bike, Ticket, Pencil, Moon, Sun, BadgeCheck,
-  Star, Zap, Building2, Crown, Store, TrendingUp, UploadCloud, Cpu, ShieldCheck, Camera, Trash2, Download, PieChart as PieChartIcon, QrCode, Share2, Bell,
+  Star, Zap, Building2, Crown, Store, TrendingUp, UploadCloud, Cpu, ShieldCheck, Camera, Trash2, Download, PieChart as PieChartIcon, QrCode, Share2, Bell, MessageCircle,
   Anchor, Archive, BarChart, Bed, Bird, Book, BookOpen, Box, Building, Cable, Circle, Coffee, Droplets, Dumbbell, Factory, FileText,
   Film, Fish, Footprints, Gamepad, Gem, GraduationCap, Hammer, Laptop, Leaf, MoreHorizontal, Mountain, Mouse, Music, Package,
   Paintbrush, Pen, Printer, Projector, ShoppingBag, Tablet, Truck, Tv, Utensils, Volume2, Watch, Waves, Worm, Dices
@@ -287,6 +287,7 @@ const NotificationsScreen = React.lazy(() => import('./components/screens/Notifi
 const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ReferralScreen = React.lazy(() => import('./components/screens/ReferralScreen').catch(() => ({ default: () => <div className='flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500'>No pudimos cargar esta página.</div> })));
+const ChatScreen = React.lazy(() => import('./components/screens/ChatScreen').catch(() => ({ default: () => <div className='flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500'>No pudimos cargar el chat.</div> })));
 
 function ReferralRedirect() {
   const { code } = useParams();
@@ -493,6 +494,7 @@ function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showTabBarMenu, setShowTabBarMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [sliderAutoplay, setSliderAutoplay] = useState(() => localStorage.getItem('sliderAutoplay') !== 'false');
   const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, push_notifications: true, marketing: false });
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -1309,7 +1311,21 @@ function App() {
 
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60000);
-    return () => clearInterval(interval);
+
+    // Poll unread messages count every 30s
+    const fetchUnreadMessages = () => {
+      if (!token) return;
+      fetch(`${API_URL}/chat/conversations`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } })
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          const total = (Array.isArray(data) ? data : []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
+          setUnreadMessages(total);
+        })
+        .catch(() => {});
+    };
+    if (user?.id) fetchUnreadMessages();
+    const msgInterval = setInterval(() => { if (user?.id) fetchUnreadMessages(); }, 30000);
+    return () => { clearInterval(interval); clearInterval(msgInterval); };
   }, [user]);
 
   const handleMarkNotificationRead = async (id) => {
@@ -3170,6 +3186,18 @@ function App() {
         <Bell className="w-6 h-6 mb-1" />
         {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
       </button>
+      <button
+        onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }}
+        className={`flex flex-col items-center p-1 relative ${location.pathname === '/mensajes' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}
+        aria-label="Mensajes"
+      >
+        <MessageCircle className="w-6 h-6 mb-1" />
+        {unreadMessages > 0 && (
+          <span className="absolute top-0 right-1 min-w-[16px] h-4 rounded-full bg-lime-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+            {unreadMessages > 9 ? '9+' : unreadMessages}
+          </span>
+        )}
+      </button>
       <button onClick={() => setShowTabBarMenu(v => !v)} className={`flex flex-col items-center p-1 ${showTabBarMenu ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showTabBarMenu} aria-label="Menú global">
         <Menu className="w-6 h-6 mb-1" />
       </button>
@@ -3402,7 +3430,23 @@ function App() {
                 </select>
               </div>
               <div className="relative hidden sm:block">
+              {/* Messages button - desktop */}
+              <button
+                onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }}
+                className="header-icon-button relative p-2.5 rounded-xl mr-1"
+                title={t.messages || 'Mensajes'}
+              >
+                <MessageCircle className="w-[22px] h-[22px]" />
+                {unreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-lime-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white leading-none">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
+              </button>
+              </div>
+              <div className="relative hidden sm:block">
               <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl">
+
                   <Bell className="w-[22px] h-[22px]" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white leading-none">
@@ -3577,8 +3621,10 @@ function App() {
   <Route path="/ayuda"     element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AyudaScreen     /></React.Suspense>} />
   <Route path="/verificar-email" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><VerificarEmailScreen /></React.Suspense>} />
   <Route path="/referidos" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ReferralScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
+  <Route path="/mensajes" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ChatScreen user={user} t={t} /></React.Suspense></RequireAuth>} />
   <Route path="/r/:code" element={<ReferralRedirect />} />
   <Route path="*" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotFoundScreen /></React.Suspense>} />
+
             </Routes>
           )}
         </Suspense>

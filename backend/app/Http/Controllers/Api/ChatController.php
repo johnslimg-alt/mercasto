@@ -8,6 +8,7 @@ use App\Events\MessageSent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Jobs\SendTelegramMessageNotification;
 
 class ChatController extends Controller {
     public function getConversations(Request $request) {
@@ -96,7 +97,7 @@ class ChatController extends Controller {
             $userId = $request->user()->id;
             $receiverId = (int) $request->receiver_id;
             $adId = $request->filled('ad_id') ? (int) $request->ad_id : null;
-            $ad = $adId ? Ad::select('id', 'user_id')->find($adId) : null;
+            $ad = $adId ? Ad::select('id', 'user_id', 'title')->find($adId) : null;
 
             $sellerId = $ad?->user_id ?: $receiverId;
             $buyerId = $userId === $sellerId ? $receiverId : $userId;
@@ -126,11 +127,28 @@ class ChatController extends Controller {
 
             broadcast(new MessageSent($message->load('sender:id,name,avatar_url', 'conversation')))->toOthers();
 
+            SendTelegramMessageNotification::dispatch(
+                $receiverId,
+                $userId,
+                $request->user()->name,
+                $request->content,
+                $ad?->title
+            );
+
             return response()->json($this->formatMessage($message->load('sender:id,name,avatar_url', 'conversation.ad:id,title,price,image_url'), $userId));
         }
 
         $message = Message::create(['sender_id' => $request->user()->id, 'receiver_id' => $request->receiver_id, 'content' => $request->content, 'ad_id' => $request->ad_id]);
         broadcast(new MessageSent($message))->toOthers();
+
+        SendTelegramMessageNotification::dispatch(
+            (int) $request->receiver_id,
+            $request->user()->id,
+            $request->user()->name,
+            $request->content,
+            $request->ad_id ? Ad::find($request->ad_id)?->title : null
+        );
+
         return response()->json($message->load('sender:id,name,avatar_url'));
     }
 

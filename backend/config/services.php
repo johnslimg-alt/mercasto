@@ -51,6 +51,7 @@ return [
     'telegram' => [
         'client_id'     => env('TELEGRAM_CLIENT_ID', env('TELEGRAM_BOT_NAME')),
         'client_secret' => env('TELEGRAM_CLIENT_SECRET', env('TELEGRAM_BOT_TOKEN')),
+        'bot_token'     => env('TELEGRAM_BOT_TOKEN'),
         'redirect'      => env('APP_URL') . '/api/auth/telegram/callback',
     ],
 
