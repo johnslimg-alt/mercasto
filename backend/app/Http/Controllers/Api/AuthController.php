@@ -383,7 +383,7 @@ class AuthController extends Controller
 
         return response()->json([
             'google'          => $this->isValidConfig(config('services.google.client_id'), config('services.google.client_secret')),
-            'twitter'         => $this->isValidConfig(config('services.twitter-oauth2.client_id'), config('services.twitter-oauth2.client_secret')),
+            'twitter'         => false, // Disabled for now per user request
             'telegram'        => $this->isValidConfig(config('services.telegram.client_id'), config('services.telegram.client_secret')),
             'telegram_bot_id' => $telegramBotId,
             'sms'             => $smsConfigured,
