@@ -37,6 +37,8 @@ html.dark .btn-lg.bg-white:hover {
     scroll-behavior: smooth;
     max-width: 100%;
     overflow-x: hidden;
+    min-height: 100%;
+    background: var(--paper, #F6F8FB);
   }
   body { 
     @apply bg-[var(--color-paper)] text-[var(--color-ink)] antialiased font-sans; 
@@ -230,9 +232,9 @@ html.dark .btn-lg.bg-white:hover {
     box-shadow: 0 7px 16px rgba(15, 23, 42, 0.05);
   }
   .category-icon {
-    width: 1.85rem;
-    height: 1.85rem;
-    border-radius: 0.8rem;
+    width: 1.92rem;
+    height: 1.92rem;
+    border-radius: 0.95rem;
     border: 1px solid #E2E8F0;
     background:
       radial-gradient(circle at 30% 20%, rgba(132, 204, 22, 0.18), transparent 44%),
@@ -534,7 +536,7 @@ html.dark .btn-lg.bg-white:hover {
       linear-gradient(135deg, #07111f 0%, #0f2237 48%, #0b1220 100%);
   }
 
-  .mercasco-map-preview--large {
+  .mercasto-map-preview--large {
     height: 100%;
     min-height: 100%;
   }
@@ -1042,6 +1044,22 @@ html.dark .btn-lg.bg-white:hover {
   html.dark input::placeholder,
   html.dark textarea::placeholder {
     color: #64748B;
+  }
+
+  html.dark .category-pill .category-icon,
+  html.dark .category-pill .category-icon * {
+    color: #BEF264 !important;
+    stroke: #BEF264 !important;
+  }
+
+  html.dark .mobile-search-combo input,
+  html.dark .mobile-search-combo button,
+  html.dark .mobile-search-combo span {
+    color: #F8FAFC !important;
+  }
+
+  html.dark footer {
+    background-color: #0B1220 !important;
   }
 
   @media (max-width: 420px) {

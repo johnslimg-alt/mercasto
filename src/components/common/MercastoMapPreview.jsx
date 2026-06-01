@@ -32,7 +32,7 @@ export default function MercastoMapPreview({
   const normalizedMarkers = markers.length ? markers : DEFAULT_MARKERS;
 
   const renderMap = (large = false) => (
-    <div className={`mercasto-map-preview ${large ? 'mercasco-map-preview--large' : ''}`}>
+    <div className={`mercasto-map-preview ${large ? 'mercasto-map-preview--large' : ''}`}>
       <div className="mercasto-map-grid" />
       <div className="mercasto-map-glow mercasto-map-glow--one" />
       <div className="mercasto-map-glow mercasto-map-glow--two" />
@@ -44,7 +44,7 @@ export default function MercastoMapPreview({
         {title}
       </div>
       <div className="absolute right-4 top-4 z-[2] rounded-full bg-slate-950/90 px-3 py-1.5 text-xs font-black text-white shadow-sm dark:bg-[#84CC16] dark:text-slate-950">
-        Vista previa
+        Mapa
       </div>
 
       {normalizedMarkers.map((marker, index) => {

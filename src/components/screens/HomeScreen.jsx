@@ -84,7 +84,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
       <div className="fixed inset-0 z-[9999] bg-slate-950/80 p-3 backdrop-blur-sm">
         <div className="relative h-full overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl">
           <div className="absolute inset-x-3 top-3 z-[4] flex gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95">
-            <input className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold dark:border-slate-700" placeholder="Buscar en el mapa..." />
+            <input className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="Buscar en el mapa..." />
             <button className="rounded-xl bg-[#84CC16] px-3 py-2 text-sm font-black text-slate-950">Buscar</button>
             <button type="button" onClick={() => setExpanded(false)} className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white dark:bg-slate-700">Cerrar</button>
           </div>
@@ -129,17 +129,11 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
       return null;
     }, []);
     const verticalCategoryCards = React.useMemo(() => ([
-      { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets' }, icon: 'Ticket' },
       { slug: 'motor', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
-      { slug: 'electronica', name: { es: 'Electrónica', en: 'Electronics' }, icon: 'Cpu' },
       { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
       { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
-      { slug: 'hogar', name: { es: 'Hogar', en: 'Home' }, icon: 'Sofa' },
-      { slug: 'moda', name: { es: 'Moda', en: 'Fashion' }, icon: 'Shirt' },
-      { slug: 'bebes', name: { es: 'Bebés', en: 'Babies' }, icon: 'Baby' },
-      { slug: 'mascotas', name: { es: 'Mascotas', en: 'Pets' }, icon: 'PawPrint' },
-      { slug: 'deportes', name: { es: 'Deportes', en: 'Sports' }, icon: 'Bike' },
+      { slug: 'electronica', name: { es: 'Electrónica', en: 'Electronics' }, icon: 'Cpu' },
       { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store', action: 'pricing' },
     ]), []);
 
@@ -213,8 +207,8 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
           
           {/* Кнопка фильтров для мобильных устройств */}
           <div className="md:hidden flex items-center justify-between mb-2">
-             <h2 className="text-[18px] font-bold text-slate-900">{t.search_results || 'Resultados'} <span className="text-slate-400 text-[14px] font-normal ml-1">({serverAds.length})</span></h2>
-             <button onClick={() => setShowMobileFilters(!showMobileFilters)} className={`btn-sm flex items-center gap-2 border transition-colors ${showMobileFilters ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'}`}>
+             <h2 className="text-[18px] font-bold text-slate-900 dark:text-white">{t.search_results || 'Resultados'} <span className="text-slate-400 text-[14px] font-normal ml-1">({serverAds.length})</span></h2>
+             <button onClick={() => setShowMobileFilters(!showMobileFilters)} className={`btn-sm flex items-center gap-2 border transition-colors ${showMobileFilters ? 'bg-slate-900 text-white border-slate-900 dark:bg-[#84CC16] dark:text-slate-950 dark:border-[#84CC16]' : 'bg-white text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'}`}>
                <Settings2 size={16} /> Filtros
              </button>
           </div>
@@ -227,14 +221,14 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
           {/* Сетка результатов (товары) */}
           <div className="flex-1">
             <div className="hidden md:flex justify-between items-center mb-6">
-              <h2 className="text-[22px] font-bold tracking-tight text-slate-900">{t.search_results || 'Resultados de búsqueda'} <span className="text-slate-400 text-[14px] font-normal ml-2">({serverAds.length})</span></h2>
+              <h2 className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-white">{t.search_results || 'Resultados de búsqueda'} <span className="text-slate-400 text-[14px] font-normal ml-2">({serverAds.length})</span></h2>
             </div>
 
             {/* Map and Layout Control Panel */}
             <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
               <button 
                 onClick={() => setShowMap(prev => !prev)} 
-                className={`btn-sm flex items-center gap-2 border transition-all ${showMap ? 'bg-[#0f8f7d] text-white border-[#0f8f7d]' : 'bg-white text-slate-700 border-slate-300 hover:border-[#0f8f7d]'}`}
+                className={`btn-sm flex items-center gap-2 border transition-all ${showMap ? 'bg-[#0f8f7d] text-white border-[#0f8f7d]' : 'bg-white text-slate-700 border-slate-300 hover:border-[#0f8f7d] dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'}`}
               >
                 <MapPin size={16} /> {showMap ? 'Ocultar mapa' : 'Mostrar en mapa'}
               </button>
@@ -247,7 +241,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
                 Guardar búsqueda
               </button>
               
-              <div className="flex items-center gap-2 border border-slate-200 rounded-xl p-1 bg-white">
+              <div className="flex items-center gap-2 border border-slate-200 rounded-xl p-1 bg-white dark:bg-slate-800 dark:border-slate-700">
                 <button 
                   onClick={() => setViewLayout('grid')} 
                   className={`btn-sm px-2.5 py-1 rounded-lg transition-all ${viewLayout === 'grid' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
@@ -265,7 +259,7 @@ export default function HomeScreen({ IconMap, MercastoLogo, activeCat, adsTotal 
               </div>
             </div>
 
-            {showMap && serverAds.length > 0 && (
+            {showMap && (
               <LeafletMap ads={serverAds} onViewAd={handleViewAd} />
             )}
 
