@@ -1316,4 +1316,47 @@ html.dark .btn-lg.bg-white:hover {
   .leaflet-top, .leaflet-bottom {
     z-index: 4 !important;
   }
+
+  /* Dark-mode safety layer for account/admin/store screens with legacy light utility classes. */
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.bg-white, .bg-slate-50, .bg-gray-50) {
+    background-color: #1E293B !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.bg-white\/90, .bg-slate-50\/50, .bg-slate-50\/70, .bg-slate-50\/30) {
+    background-color: rgba(15, 23, 42, 0.82) !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.text-slate-900, .text-gray-900, .text-slate-800, .text-gray-800) {
+    color: #F8FAFC !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.text-slate-700, .text-gray-700, .text-slate-600, .text-gray-600) {
+    color: #CBD5E1 !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.text-slate-500, .text-gray-500, .text-slate-400, .text-gray-400) {
+    color: #94A3B8 !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.border-slate-100, .border-slate-200, .border-slate-300, .border-gray-100, .border-gray-200, .border-gray-300) {
+    border-color: #334155 !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(input, textarea, select) {
+    background-color: #0F172A !important;
+    border-color: #334155 !important;
+    color: #F8FAFC !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(input, textarea)::placeholder {
+    color: #64748B !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(thead tr, tbody tr, .hover\:bg-slate-50:hover, .hover\:bg-gray-50:hover) {
+    background-color: rgba(15, 23, 42, 0.62) !important;
+  }
+
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) .shadow-sm {
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18) !important;
+  }
 }

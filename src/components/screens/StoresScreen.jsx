@@ -104,7 +104,7 @@ export default function StoresScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="stores-dark-scope min-h-screen bg-slate-50 pb-20">
       {/* Dynamic Sleek Header Cover */}
       <section
         className="relative overflow-hidden py-16 md:py-24 text-center text-white"

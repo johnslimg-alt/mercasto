@@ -158,11 +158,11 @@ export default function BusinessProfileEditor({ showToast }) {
   };
 
   if (loading) {
-    return <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-sm text-slate-500"><Loader2 className="w-4 h-4 inline animate-spin mr-2" />Cargando perfil de negocio...</div>;
+    return <div className="business-profile-dark-scope bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-sm text-slate-500"><Loader2 className="w-4 h-4 inline animate-spin mr-2" />Cargando perfil de negocio...</div>;
   }
 
   return (
-    <form onSubmit={handleSave} className="bg-white rounded-2xl p-6 shadow-sm space-y-5 border border-slate-100">
+    <form onSubmit={handleSave} className="business-profile-dark-scope bg-white rounded-2xl p-6 shadow-sm space-y-5 border border-slate-100">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Building2 size={16} className="text-lime-500" /> Perfil de negocio</h2>

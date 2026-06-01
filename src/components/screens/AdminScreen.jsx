@@ -27,7 +27,7 @@ export default function AdminScreen({ IconMap, adminCatForm, adminCoupons, admin
 
     return (
 
-      <div className="bg-[var(--paper)] min-h-screen pb-6 md:pb-12 w-full">
+      <div className="dashboard-dark-scope bg-[var(--paper)] min-h-screen pb-6 md:pb-12 w-full">
 
         <div className="p-4 md:p-8 w-full max-w-5xl mx-auto">
 
