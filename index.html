@@ -70,11 +70,13 @@
         showBootMessage('Mercasto no pudo cargar', 'Actualiza la página. Si sigue igual, borra los datos del sitio en Safari/Chrome e intenta de nuevo.');
       });
 
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          showBootMessage('Mercasto está actualizando', 'Estamos recargando la app. Pulsa Reintentar en unos segundos.');
-        }, 3500);
-      });
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          registrations.forEach(function(registration) {
+            registration.unregister();
+          });
+        }).catch(function() {});
+      }
     </script>
 
     <div id="root"></div>
