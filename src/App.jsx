@@ -27,12 +27,6 @@ class ErrorBoundary extends React.Component {
   }
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
-
-    const reloadKey = 'mercasto_error_recovery_attempted';
-    if (!sessionStorage.getItem(reloadKey)) {
-      sessionStorage.setItem(reloadKey, '1');
-      ErrorBoundary.recoverFromStaleApp();
-    }
   }
 
   static recoverFromStaleApp() {
@@ -40,16 +34,6 @@ class ErrorBoundary extends React.Component {
       'caches' in window ? caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))) : Promise.resolve(),
       navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(reg => reg.update()))) : Promise.resolve(),
     ]).finally(() => window.location.replace(`/?refresh=${Date.now()}`));
-  }
-
-  componentDidMount() {
-    if (this.state.hasError) {
-      const reloadKey = 'mercasto_error_screen_recovery_attempted';
-      if (!sessionStorage.getItem(reloadKey)) {
-        sessionStorage.setItem(reloadKey, '1');
-        window.setTimeout(() => ErrorBoundary.recoverFromStaleApp(), 300);
-      }
-    }
   }
   render() {
     if (this.state.hasError) {
