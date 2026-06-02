@@ -3,27 +3,29 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Create table if not exists (idempotent)
-        DB::statement('
-            CREATE TABLE IF NOT EXISTS price_history (
-                id BIGSERIAL PRIMARY KEY,
-                ad_id BIGINT NOT NULL REFERENCES ads(id) ON DELETE CASCADE,
-                old_price DECIMAL(12,2) NOT NULL,
-                new_price DECIMAL(12,2) NOT NULL,
-                changed_at TIMESTAMPTZ DEFAULT NOW()
-            )
-        ');
+        if (Schema::hasTable('price_history')) {
+            return;
+        }
 
-        DB::statement('
-            CREATE INDEX IF NOT EXISTS idx_price_history_ad
-            ON price_history(ad_id, changed_at DESC)
-        ');
+        Schema::create('price_history', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('ad_id');
+            $table->decimal('old_price', 12, 2);
+            $table->decimal('new_price', 12, 2);
+            $table->timestamp('changed_at')->useCurrent();
+
+            $table->foreign('ad_id')
+                ->references('id')
+                ->on('ads')
+                ->onDelete('cascade');
+
+            $table->index(['ad_id', 'changed_at'], 'idx_price_history_ad');
+        });
     }
 
     public function down(): void
