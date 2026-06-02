@@ -38,6 +38,16 @@ const coordsToPoint = ([lat, lon]) => {
   };
 };
 
+const markerAccuracyLabel = (marker = {}) => (
+  marker.accuracyLabel || (marker.approximate ? 'Approx' : 'GPS real')
+);
+
+const markerAccuracyClass = (marker = {}) => (
+  marker.approximate
+    ? 'bg-amber-100 text-amber-900 dark:bg-amber-400 dark:text-slate-950'
+    : 'bg-[#84CC16] text-slate-950'
+);
+
 export default function MercastoMapPreview({
   title = 'Todo México',
   markers = DEFAULT_MARKERS,
@@ -244,8 +254,13 @@ export default function MercastoMapPreview({
 
       const isDarkMarker = marker.tone === 'dark' || index % 2;
       const markerHtml = `
-        <div class="custom-leaflet-marker ${isDarkMarker ? 'custom-leaflet-marker--dark' : 'custom-leaflet-marker--lime'}">
-          ${marker.label || '$'}
+        <div class="custom-leaflet-marker-shell">
+          <div class="custom-leaflet-marker ${isDarkMarker ? 'custom-leaflet-marker--dark' : 'custom-leaflet-marker--lime'}">
+            ${marker.label || '$'}
+          </div>
+          <div class="custom-leaflet-marker-accuracy ${marker.approximate ? 'custom-leaflet-marker-accuracy--approx' : 'custom-leaflet-marker-accuracy--real'}">
+            ${escapeHtml(markerAccuracyLabel(marker))}
+          </div>
         </div>
       `;
 
@@ -265,10 +280,12 @@ export default function MercastoMapPreview({
         const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
         const imgUrl = escapeHtml(ad.image_url || ad.image || 'https://picsum.photos/seed/mercasto/100/75');
         
+        const accuracy = escapeHtml(markerAccuracyLabel(marker));
         const popupContent = `
           <div class="leaflet-popup-card">
             <img src="${imgUrl}" class="leaflet-popup-card__img" alt="${title}"/>
             <div class="leaflet-popup-card__body">
+              <span class="leaflet-popup-card__accuracy ${marker.approximate ? 'leaflet-popup-card__accuracy--approx' : 'leaflet-popup-card__accuracy--real'}">${accuracy}</span>
               <h4 class="leaflet-popup-card__title">${title}</h4>
               <p class="leaflet-popup-card__price">${price}</p>
               <button type="button" class="leaflet-popup-card__btn" onclick="window.__onMapAdClick?.(${ad.id})">Ver anuncio</button>
@@ -347,10 +364,15 @@ export default function MercastoMapPreview({
                   key={marker.id || index}
                   type="button"
                   onClick={() => onMarkerClick?.(marker.ad || marker)}
-                  className={`absolute z-[2] -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1.5 text-[11px] font-black shadow-xl ring-2 ring-white/70 transition-transform hover:scale-110 ${marker.tone === 'dark' ? 'bg-slate-950 text-white dark:bg-[#84CC16] dark:text-slate-950' : 'bg-[#84CC16] text-slate-950'}`}
+                  className={`absolute z-[2] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center transition-transform hover:scale-110`}
                   style={pos}
                 >
-                  {marker.label || '$'}
+                  <span className={`rounded-full px-3 py-1.5 text-[11px] font-black shadow-xl ring-2 ring-white/70 ${marker.tone === 'dark' ? 'bg-slate-950 text-white dark:bg-[#84CC16] dark:text-slate-950' : 'bg-[#84CC16] text-slate-950'}`}>
+                    {marker.label || '$'}
+                  </span>
+                  <span className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-black shadow ${markerAccuracyClass(marker)}`}>
+                    {markerAccuracyLabel(marker)}
+                  </span>
                 </button>
               );
             })}
@@ -379,21 +401,32 @@ export default function MercastoMapPreview({
       </div>
 
       {expanded && (
-        <div className="fixed inset-0 z-[9999] bg-slate-950/90 p-3 backdrop-blur-sm">
-          <div className="relative h-full overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl">
-            <div className="absolute inset-x-3 top-3 z-[5] grid gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95 md:grid-cols-[1fr_140px_auto_auto_auto]">
+        <div className="fixed inset-0 z-[9999] bg-slate-950/90 p-0 backdrop-blur-sm sm:p-3">
+          <div className="relative h-full overflow-hidden bg-slate-950 shadow-2xl sm:rounded-3xl sm:border sm:border-slate-700">
+            <div className="absolute inset-x-0 top-0 z-[5] rounded-b-3xl bg-white/95 p-3 shadow-xl dark:bg-slate-900/95 sm:inset-x-3 sm:top-3 sm:rounded-2xl md:grid md:grid-cols-[1fr_140px_auto_auto_auto] md:gap-2">
+              <div className="mb-2 flex items-center justify-between md:hidden">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#65A30D]">Mapa fullscreen</p>
+                  <p className="text-[13px] font-bold text-slate-900 dark:text-white">{visibleMarkers.length} anuncios visibles</p>
+                </div>
+                <button type="button" onClick={() => setExpanded(false)} className="rounded-2xl bg-slate-950 p-2 text-white dark:bg-slate-700" aria-label="Cerrar mapa">
+                  <X size={18} />
+                </button>
+              </div>
               <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
                 <Search size={16} className="text-[#84CC16]" />
                 <input value={mapQuery} onChange={(e) => setMapQuery(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none dark:text-white" placeholder="Buscar en el mapa..." />
               </div>
-              <input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} type="number" className="hidden rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white md:block" placeholder="Precio máx." />
-              <button type="button" onClick={() => setOnlyWithCoords(v => !v)} className={`hidden items-center gap-1 rounded-xl px-3 py-2 text-xs font-black md:inline-flex ${onlyWithCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>
+              <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-2 md:mt-0 md:contents">
+              <input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} type="number" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="Precio máx." />
+              <button type="button" onClick={() => setOnlyWithCoords(v => !v)} className={`inline-flex items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black ${onlyWithCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>
                 <SlidersHorizontal size={14} /> GPS
               </button>
               <button type="button" onClick={handleSearchArea} className="inline-flex items-center justify-center gap-1 rounded-xl bg-[#84CC16] px-3 py-2 text-xs font-black text-slate-950 hover:bg-[#a3e635]">
                 <Crosshair size={14} /> Zona
               </button>
-              <button type="button" onClick={() => setExpanded(false)} className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white dark:bg-slate-700 hover:bg-slate-800" aria-label="Cerrar mapa">
+              </div>
+              <button type="button" onClick={() => setExpanded(false)} className="hidden rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white hover:bg-slate-800 dark:bg-slate-700 md:block" aria-label="Cerrar mapa">
                 <X size={18} />
               </button>
             </div>
@@ -405,17 +438,22 @@ export default function MercastoMapPreview({
                 {visibleMarkers.slice(0, 50).map((marker, index) => {
                   const pos = coordsToPoint(marker.coords || [23.6345, -102.5528]);
                   return (
-                    <button key={marker.id || index} type="button" onClick={() => onMarkerClick?.(marker.ad || marker)} className="absolute z-[2] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#84CC16] px-3 py-1.5 text-xs font-black text-slate-950 shadow-xl ring-2 ring-white/70" style={pos}>
-                      {marker.label || '$'}
+                    <button key={marker.id || index} type="button" onClick={() => onMarkerClick?.(marker.ad || marker)} className="absolute z-[2] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={pos}>
+                      <span className="rounded-full bg-[#84CC16] px-3 py-1.5 text-xs font-black text-slate-950 shadow-xl ring-2 ring-white/70">{marker.label || '$'}</span>
+                      <span className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-black shadow ${markerAccuracyClass(marker)}`}>{markerAccuracyLabel(marker)}</span>
                     </button>
                   );
                 })}
               </div>
             )}
-            <div className="absolute inset-x-3 bottom-3 z-[5] rounded-2xl bg-slate-950/90 p-3 text-white shadow-xl backdrop-blur">
+            <div className="absolute inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-[5] rounded-3xl bg-slate-950/90 p-3 text-white shadow-xl backdrop-blur">
               <div className="flex items-center justify-between gap-3 text-xs font-bold">
-                <span>{visibleMarkers.length} anuncios en mapa{mapArea ? ` · ${mapArea.radius} km` : ''}</span>
+                <span>{visibleMarkers.length} anuncios{mapArea ? ` · ${mapArea.radius} km` : ''}</span>
                 <button type="button" onClick={() => { setMapQuery(''); setMaxPrice(''); setOnlyWithCoords(false); }} className="text-[#BEF264]">Limpiar filtros</button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black">
+                <span className="rounded-full bg-[#84CC16] px-2 py-1 text-slate-950">GPS real</span>
+                <span className="rounded-full bg-amber-300 px-2 py-1 text-slate-950">Approx ciudad/estado</span>
               </div>
               <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar">
                 {visibleMarkers.slice(0, 8).map((marker, index) => (

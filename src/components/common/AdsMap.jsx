@@ -28,23 +28,58 @@ const STATE_COORDS = {
   Tamaulipas: [24.2669, -98.8363],
 };
 
+const CITY_COORDS = {
+  'ciudad de mexico': [19.4326, -99.1332],
+  cdmx: [19.4326, -99.1332],
+  guadalajara: [20.6597, -103.3496],
+  zapopan: [20.7236, -103.3848],
+  monterrey: [25.6866, -100.3161],
+  puebla: [19.0414, -98.2063],
+  queretaro: [20.5888, -100.3899],
+  cancun: [21.1619, -86.8515],
+  'puerto vallarta': [20.6534, -105.2253],
+  merida: [20.9674, -89.5926],
+  tijuana: [32.5149, -117.0382],
+  leon: [21.125, -101.686],
+  toluca: [19.2826, -99.6557],
+  acapulco: [16.8531, -99.8237],
+  hermosillo: [29.0729, -110.9559],
+  chihuahua: [28.6329, -106.0691],
+  veracruz: [19.1738, -96.1342],
+  oaxaca: [17.0732, -96.7266],
+  morelia: [19.7008, -101.1844],
+  mazatlan: [23.2494, -106.4111],
+  culiacan: [24.8091, -107.394],
+  'san luis potosi': [22.1565, -100.9855],
+  aguascalientes: [21.8853, -102.2916],
+};
+
+const normalizeLocationText = (value = '') => String(value)
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase();
+
 function adCoords(ad, index) {
   const lat = Number(ad?.latitude ?? ad?.lat);
   const lng = Number(ad?.longitude ?? ad?.lng);
   if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-    return { coords: [lat, lng], approximate: false };
+    return { coords: [lat, lng], approximate: false, accuracy: 'real', accuracyLabel: 'GPS real' };
   }
 
-  const locationText = `${ad?.state || ''} ${ad?.location || ''} ${ad?.city || ''}`.toLowerCase();
-  const stateKey = Object.keys(STATE_COORDS).find((key) => locationText.includes(key.toLowerCase()));
-  const base = stateKey ? STATE_COORDS[stateKey] : [23.6345, -102.5528];
+  const locationText = normalizeLocationText(`${ad?.city || ''} ${ad?.municipality || ''} ${ad?.location || ''} ${ad?.state || ''}`);
+  const cityKey = Object.keys(CITY_COORDS).find((key) => locationText.includes(key));
+  const stateKey = Object.keys(STATE_COORDS).find((key) => locationText.includes(normalizeLocationText(key)));
+  const base = cityKey ? CITY_COORDS[cityKey] : (stateKey ? STATE_COORDS[stateKey] : [23.6345, -102.5528]);
+  const jitter = cityKey ? 0.035 : 0.16;
 
   return {
     coords: [
-      base[0] + (Math.sin(index * 2.31) * 0.16),
-      base[1] + (Math.cos(index * 2.31) * 0.16),
+      base[0] + (Math.sin(index * 2.31) * jitter),
+      base[1] + (Math.cos(index * 2.31) * jitter),
     ],
     approximate: true,
+    accuracy: cityKey ? 'city' : 'approx',
+    accuracyLabel: cityKey ? 'Approx ciudad' : 'Approx estado',
   };
 }
 
@@ -98,6 +133,8 @@ export default function AdsMap({
       ad,
       coords: location.coords,
       approximate: location.approximate,
+      accuracy: location.accuracy,
+      accuracyLabel: location.accuracyLabel,
       label: markerLabel(ad),
       tone: location.approximate ? 'dark' : 'lime',
       title: ad.title,
