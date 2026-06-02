@@ -173,6 +173,9 @@ export default function MercastoMapPreview({
       zoomControl: true,
       attributionControl: false,
       scrollWheelZoom: isLarge,
+      fadeAnimation: false,
+      markerZoomAnimation: false,
+      zoomAnimation: false,
       });
     } catch {
       setLoadFailed(true);
