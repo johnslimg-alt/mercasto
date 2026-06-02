@@ -1,5 +1,5 @@
 import React from 'react';
-import { Maximize2, Search, X, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 const DEFAULT_MARKERS = [
@@ -42,6 +42,7 @@ export default function MercastoMapPreview({
   title = 'Todo México',
   markers = DEFAULT_MARKERS,
   onSearch,
+  onSearchArea,
   onMarkerClick,
   className = '',
   showFullscreen = true,
@@ -53,6 +54,7 @@ export default function MercastoMapPreview({
   const [mapQuery, setMapQuery] = React.useState('');
   const [maxPrice, setMaxPrice] = React.useState('');
   const [onlyWithCoords, setOnlyWithCoords] = React.useState(false);
+  const [mapArea, setMapArea] = React.useState(null);
   
   const mapContainerRef = React.useRef(null);
   const largeMapContainerRef = React.useRef(null);
@@ -90,6 +92,36 @@ export default function MercastoMapPreview({
       // Leaflet can still have pending tile events during route changes.
     }
     instanceRef.current = null;
+  };
+
+  const updateMapArea = (map) => {
+    if (!map || !mountedRef.current) return;
+    try {
+      const center = map.getCenter();
+      const bounds = map.getBounds();
+      const north = bounds.getNorthEast();
+      const radiusKm = Math.max(5, Math.min(250, Math.round(center.distanceTo(north) / 1000)));
+      setMapArea({
+        lat: Number(center.lat.toFixed(6)),
+        lng: Number(center.lng.toFixed(6)),
+        radius: radiusKm,
+      });
+    } catch {
+      // Ignore stale map viewport.
+    }
+  };
+
+  const handleSearchArea = () => {
+    if (onSearchArea && mapArea) {
+      onSearchArea({
+        ...mapArea,
+        query: mapQuery.trim(),
+        maxPrice: maxPrice ? Number(maxPrice) : null,
+        onlyWithCoords,
+      });
+      return;
+    }
+    onSearch?.();
   };
 
   React.useEffect(() => {
@@ -184,6 +216,10 @@ export default function MercastoMapPreview({
     }
 
     instanceRef.current = map;
+    updateMapArea(map);
+    if (isLarge) {
+      map.on('moveend zoomend', () => updateMapArea(map));
+    }
 
     const isDark = document.documentElement.classList.contains('dark');
     const tileUrl = isDark 
@@ -345,7 +381,7 @@ export default function MercastoMapPreview({
       {expanded && (
         <div className="fixed inset-0 z-[9999] bg-slate-950/90 p-3 backdrop-blur-sm">
           <div className="relative h-full overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl">
-            <div className="absolute inset-x-3 top-3 z-[5] grid gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95 md:grid-cols-[1fr_140px_auto_auto]">
+            <div className="absolute inset-x-3 top-3 z-[5] grid gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95 md:grid-cols-[1fr_140px_auto_auto_auto]">
               <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
                 <Search size={16} className="text-[#84CC16]" />
                 <input value={mapQuery} onChange={(e) => setMapQuery(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none dark:text-white" placeholder="Buscar en el mapa..." />
@@ -353,6 +389,9 @@ export default function MercastoMapPreview({
               <input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} type="number" className="hidden rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white md:block" placeholder="Precio máx." />
               <button type="button" onClick={() => setOnlyWithCoords(v => !v)} className={`hidden items-center gap-1 rounded-xl px-3 py-2 text-xs font-black md:inline-flex ${onlyWithCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>
                 <SlidersHorizontal size={14} /> GPS
+              </button>
+              <button type="button" onClick={handleSearchArea} className="inline-flex items-center justify-center gap-1 rounded-xl bg-[#84CC16] px-3 py-2 text-xs font-black text-slate-950 hover:bg-[#a3e635]">
+                <Crosshair size={14} /> Zona
               </button>
               <button type="button" onClick={() => setExpanded(false)} className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white dark:bg-slate-700 hover:bg-slate-800" aria-label="Cerrar mapa">
                 <X size={18} />
@@ -375,7 +414,7 @@ export default function MercastoMapPreview({
             )}
             <div className="absolute inset-x-3 bottom-3 z-[5] rounded-2xl bg-slate-950/90 p-3 text-white shadow-xl backdrop-blur">
               <div className="flex items-center justify-between gap-3 text-xs font-bold">
-                <span>{visibleMarkers.length} anuncios en mapa</span>
+                <span>{visibleMarkers.length} anuncios en mapa{mapArea ? ` · ${mapArea.radius} km` : ''}</span>
                 <button type="button" onClick={() => { setMapQuery(''); setMaxPrice(''); setOnlyWithCoords(false); }} className="text-[#BEF264]">Limpiar filtros</button>
               </div>
               <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar">

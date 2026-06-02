@@ -113,6 +113,18 @@ export default function AdsMap({
     if (id) navigate(`/?ad=${id}`);
   };
 
+  const handleSearchArea = ({ lat, lng, radius, query, maxPrice, onlyWithCoords }) => {
+    const params = new URLSearchParams();
+    if (category) params.set('category', category);
+    if (query) params.set('search', query);
+    if (maxPrice) params.set('max_price', String(maxPrice));
+    if (onlyWithCoords) params.set('has_coords', '1');
+    params.set('lat', String(lat));
+    params.set('lng', String(lng));
+    params.set('radius', String(radius));
+    navigate(`/?${params.toString()}`);
+  };
+
   return (
     <div className={`relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-800 dark:bg-slate-950 ${className}`}>
       {loading && (
@@ -124,6 +136,7 @@ export default function AdsMap({
         title={title}
         markers={markers}
         onMarkerClick={handleMarkerClick}
+        onSearchArea={handleSearchArea}
         showFullscreen={showFullscreen}
         className="h-full rounded-none border-0 shadow-none"
       />
