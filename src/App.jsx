@@ -33,7 +33,10 @@ class ErrorBoundary extends React.Component {
       const reloadKey = 'mercasto_chunk_reload_attempted';
       if (!sessionStorage.getItem(reloadKey)) {
         sessionStorage.setItem(reloadKey, '1');
-        window.location.reload();
+        Promise.allSettled([
+          'caches' in window ? caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))) : Promise.resolve(),
+          navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(reg => reg.update()))) : Promise.resolve(),
+        ]).finally(() => window.location.replace(`/?refresh=${Date.now()}`));
       }
     }
   }
