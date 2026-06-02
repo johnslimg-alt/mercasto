@@ -27,6 +27,15 @@ class ErrorBoundary extends React.Component {
   }
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
+    try {
+      sessionStorage.setItem('mercasto_last_runtime_error', JSON.stringify({
+        message: error?.message || String(error),
+        stack: error?.stack || '',
+        componentStack: errorInfo?.componentStack || '',
+        path: window.location.pathname,
+        time: new Date().toISOString(),
+      }));
+    } catch {}
   }
 
   static recoverFromStaleApp() {
@@ -35,17 +44,31 @@ class ErrorBoundary extends React.Component {
       navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(reg => reg.update()))) : Promise.resolve(),
     ]).finally(() => window.location.replace(`/?refresh=${Date.now()}`));
   }
+
+  static resetSessionAndReload() {
+    try {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('just_registered');
+    } catch {}
+    window.location.replace('/');
+  }
+
   render() {
     if (this.state.hasError) {
       const showDetails = import.meta.env.DEV;
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6 text-center w-full">
-          <h1 className="text-[24px] font-bold text-slate-900 mb-2">No pudimos cargar esta sección</h1>
-          <p className="text-slate-500 mb-6 max-w-md">Recarga la página. Si el problema continúa, vuelve a intentarlo en unos minutos.</p>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
+          <h1 className="text-[24px] font-bold text-white mb-2">No pudimos cargar esta sección</h1>
+          <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba dañada, podrás iniciar sesión otra vez.</p>
           {showDetails && (
             <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
           )}
-          <button onClick={() => ErrorBoundary.recoverFromStaleApp()} className="px-6 py-3 bg-slate-900 text-white rounded-xl shadow-md hover:bg-black transition-colors">Recargar página</button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">Abrir como invitado</button>
+            <button onClick={() => ErrorBoundary.recoverFromStaleApp()} className="px-6 py-3 bg-slate-800 text-white rounded-xl shadow-md hover:bg-slate-700 transition-colors">Recargar</button>
+          </div>
         </div>
       );
     }
