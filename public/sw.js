@@ -6,17 +6,7 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(
         Promise.all([
             self.caches ? caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))) : Promise.resolve(),
-            self.clients.claim(),
-            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients =>
-                Promise.all(clients.map(client => {
-                    const url = new URL(client.url);
-                    if (url.origin === self.location.origin && !url.searchParams.has('refresh')) {
-                        url.searchParams.set('refresh', Date.now());
-                        return client.navigate(url.href);
-                    }
-                    return Promise.resolve();
-                }))
-            )
+            self.clients.claim()
         ])
     );
 });
