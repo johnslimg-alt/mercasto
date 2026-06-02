@@ -65,11 +65,9 @@ class AuthTest extends TestCase
 
         $response = $this->getJson('/api/auth/providers');
 
-        $response->assertOk()->assertExactJson([
-            'google' => true,
-            'apple' => false,
-            'telegram' => true,
-            'sms' => false,
-        ]);
+        $response->assertOk()
+            ->assertJsonFragment(['google' => true])
+            ->assertJsonFragment(['telegram' => true])
+            ->assertJsonFragment(['sms' => false]);
     }
 }

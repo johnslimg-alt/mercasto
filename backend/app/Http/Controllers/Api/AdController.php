@@ -20,6 +20,7 @@ use App\Jobs\NotifyPriceDropJob;
 use App\Jobs\ProcessReferralRewardJob;
 use App\Mail\NewAdInCategory;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
