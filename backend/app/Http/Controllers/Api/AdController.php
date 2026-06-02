@@ -273,6 +273,11 @@ class AdController extends Controller
             });
         }
 
+        if ($request->boolean('has_coords')) {
+            $query->whereNotNull('latitude')
+                ->whereNotNull('longitude');
+        }
+
         // Глобальный фильтр: Цена
         if ($request->filled('min_price')) {
             $query->where('price', '>=', (float) $request->min_price);
@@ -306,9 +311,9 @@ class AdController extends Controller
         elseif ($sort === 'latest' && !$request->filled('radius')) {
             $query->orderByRaw("
                 CASE
-                    WHEN promoted = 'destacado' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 0
-                    WHEN promoted = 'highlight' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 1
-                    WHEN promoted = 'urgente' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 2
+                    WHEN promoted = 'destacado' AND (boost_expires_at IS NULL OR boost_expires_at > CURRENT_TIMESTAMP) THEN 0
+                    WHEN promoted = 'highlight' AND (boost_expires_at IS NULL OR boost_expires_at > CURRENT_TIMESTAMP) THEN 1
+                    WHEN promoted = 'urgente' AND (boost_expires_at IS NULL OR boost_expires_at > CURRENT_TIMESTAMP) THEN 2
                     ELSE 3
                 END
             ")->latest();
@@ -330,6 +335,7 @@ class AdController extends Controller
             'max_price',
             'condition',
             'sort',
+            'has_coords',
         ]) || $request->filled('filters');
         $isDefaultQuery = !$hasFilters;
 

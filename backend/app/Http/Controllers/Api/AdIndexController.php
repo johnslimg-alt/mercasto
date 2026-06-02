@@ -126,6 +126,11 @@ class AdIndexController extends Controller
             });
         }
 
+        if ($request->boolean('has_coords')) {
+            $query->whereNotNull('latitude')
+                ->whereNotNull('longitude');
+        }
+
         if ($request->filled('condition')) {
             $conditions = is_array($request->condition) ? $request->condition : explode(',', (string) $request->condition);
             $query->whereIn('condition', $conditions);
@@ -143,9 +148,9 @@ class AdIndexController extends Controller
         } elseif ($sort === 'latest' && ! $request->filled('radius')) {
             $query->orderByRaw("
                 CASE
-                    WHEN promoted = 'destacado' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 0
-                    WHEN promoted = 'highlight' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 1
-                    WHEN promoted = 'urgente' AND (boost_expires_at IS NULL OR boost_expires_at > NOW()) THEN 2
+                    WHEN promoted = 'destacado' AND (boost_expires_at IS NULL OR boost_expires_at > CURRENT_TIMESTAMP) THEN 0
+                    WHEN promoted = 'highlight' AND (boost_expires_at IS NULL OR boost_expires_at > CURRENT_TIMESTAMP) THEN 1
+                    WHEN promoted = 'urgente' AND (boost_expires_at IS NULL OR boost_expires_at > CURRENT_TIMESTAMP) THEN 2
                     ELSE 3
                 END
             ");
@@ -166,6 +171,7 @@ class AdIndexController extends Controller
             'max_price',
             'condition',
             'sort',
+            'has_coords',
         ]) || AdQueryFilters::hasAdvancedFilters($request);
 
         if (! $hasFilters && $page <= 10) {
