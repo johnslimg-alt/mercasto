@@ -11,8 +11,7 @@ self.addEventListener('activate', (event) => {
                 Promise.all(clients.map(client => {
                     const url = new URL(client.url);
                     if (url.origin === self.location.origin && !url.searchParams.has('refresh')) {
-                        url.pathname = '/';
-                        url.search = `?refresh=${Date.now()}`;
+                        url.searchParams.set('refresh', Date.now());
                         return client.navigate(url.href);
                     }
                     return Promise.resolve();
