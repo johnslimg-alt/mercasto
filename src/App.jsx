@@ -28,15 +28,26 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
 
-    // Автоматическая защита от устаревшего кэша Vite (после новых деплоев)
-    if (error && error.message && error.message.includes('Failed to fetch dynamically imported module')) {
-      const reloadKey = 'mercasto_chunk_reload_attempted';
+    const reloadKey = 'mercasto_error_recovery_attempted';
+    if (!sessionStorage.getItem(reloadKey)) {
+      sessionStorage.setItem(reloadKey, '1');
+      ErrorBoundary.recoverFromStaleApp();
+    }
+  }
+
+  static recoverFromStaleApp() {
+    Promise.allSettled([
+      'caches' in window ? caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))) : Promise.resolve(),
+      navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(reg => reg.update()))) : Promise.resolve(),
+    ]).finally(() => window.location.replace(`/?refresh=${Date.now()}`));
+  }
+
+  componentDidMount() {
+    if (this.state.hasError) {
+      const reloadKey = 'mercasto_error_screen_recovery_attempted';
       if (!sessionStorage.getItem(reloadKey)) {
         sessionStorage.setItem(reloadKey, '1');
-        Promise.allSettled([
-          'caches' in window ? caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))) : Promise.resolve(),
-          navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(reg => reg.update()))) : Promise.resolve(),
-        ]).finally(() => window.location.replace(`/?refresh=${Date.now()}`));
+        window.setTimeout(() => ErrorBoundary.recoverFromStaleApp(), 300);
       }
     }
   }
@@ -50,7 +61,7 @@ class ErrorBoundary extends React.Component {
           {showDetails && (
             <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
           )}
-          <button onClick={() => window.location.reload()} className="px-6 py-3 bg-slate-900 text-white rounded-xl shadow-md hover:bg-black transition-colors">Recargar página</button>
+          <button onClick={() => ErrorBoundary.recoverFromStaleApp()} className="px-6 py-3 bg-slate-900 text-white rounded-xl shadow-md hover:bg-black transition-colors">Recargar página</button>
         </div>
       );
     }
