@@ -124,11 +124,6 @@ class SellerStatsController extends Controller
             ->whereIn('ad_id', $adIds)
             ->count();
 
-        // --- Messages / conversations initiated with this seller ---
-        $totalMessages = DB::table('conversations')
-            ->where('seller_id', $userId)
-            ->count();
-
         // --- Credits balance ---
         $creditsBalance = (int) ($user->referral_credits ?? 0);
 
@@ -177,7 +172,6 @@ class SellerStatsController extends Controller
             'active_promoted_ads' => $activePromotedAds,
             'cost_per_click' => $totalClicks > 0 ? round($promotionSpend / $totalClicks, 2) : null,
             'total_favorites' => $totalFavorites,
-            'total_messages'  => $totalMessages,
             'credits_balance' => $creditsBalance,
             'views_this_week' => $viewsThisWeek,
             'views_last_week' => $viewsLastWeek,

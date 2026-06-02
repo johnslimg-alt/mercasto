@@ -159,9 +159,6 @@ Route::middleware('throttle:60,1')->group(function () {
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/chat/conversations', [\App\Http\Controllers\Api\ChatController::class, 'getConversations']);
-    Route::get('/chat/{userId}', [\App\Http\Controllers\Api\ChatController::class, 'getMessages'])->whereNumber('userId');
-    Route::post('/chat', [\App\Http\Controllers\Api\ChatController::class, 'sendMessage']);
     Route::middleware('throttle:ads')->post('/ads', [AdController::class, 'store']);
     // Защита ИИ от спама и истощения лимитов API (максимум 5 генераций в минуту на пользователя)
     Route::middleware('throttle:5,1')->group(function () {

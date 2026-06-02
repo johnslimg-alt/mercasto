@@ -47,7 +47,7 @@ export default function ProfileEditScreen() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [form, setForm] = useState({ name: '', bio: '', city: '', phone_number: '', whatsapp: '', website: '', social_instagram: '' });
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
-  const [notifForm, setNotifForm] = useState({ email_new_message: true, email_ad_reply: true, push_enabled: false });
+  const [notifForm, setNotifForm] = useState({ email_ad_reply: true, push_enabled: false });
   const [phoneInput, setPhoneInput] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpInput, setOtpInput] = useState('');
@@ -331,7 +331,6 @@ export default function ProfileEditScreen() {
 
         <div className={`${cardClass} space-y-4`}>
           <h2 className={headingClass}><Bell size={16} className="text-lime-500" /> Notificaciones</h2>
-          <Toggle value={notifForm.email_new_message} onChange={value => setNotifForm(prev => ({ ...prev, email_new_message: value }))} label="Correo cuando reciba un mensaje" />
           <Toggle value={notifForm.email_ad_reply} onChange={value => setNotifForm(prev => ({ ...prev, email_ad_reply: value }))} label="Correo cuando alguien pregunte por mi anuncio" />
           <button type="button" onClick={handleSaveNotifications} className="w-full border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium rounded-xl py-2.5 text-sm">Guardar preferencias</button>
         </div>

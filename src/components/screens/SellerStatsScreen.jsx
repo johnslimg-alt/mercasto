@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, Eye, Heart, MessageCircle, CreditCard, BarChart3, ArrowUp, ArrowDown, Minus, Loader2, MousePointerClick, Megaphone } from 'lucide-react';
+import { TrendingUp, Eye, Heart, CreditCard, BarChart3, ArrowUp, ArrowDown, Minus, Loader2, MousePointerClick, Megaphone } from 'lucide-react';
 
 const API = (window.VITE_API_URL || import.meta.env?.VITE_API_URL || 'https://mercasto.com/api');
 
@@ -118,7 +118,7 @@ export default function SellerStatsScreen({ token }) {
           sub={<WkTrend thisWeek={data.views_this_week} lastWeek={data.views_last_week}/>} />
         <KpiCard icon={MousePointerClick} label="Clics"       value={fmt(data.total_clicks)} color="bg-[#84CC16]" sub={`CTR ${data.ctr || 0}%`} />
         <KpiCard icon={Megaphone}     label="Promocionados"   value={fmt(data.active_promoted_ads)}  color="bg-amber-500" />
-        <KpiCard icon={MessageCircle} label="Mensajes"         value={fmt(data.total_messages)}   color="bg-violet-500" />
+        <KpiCard icon={Heart}         label="Favoritos"        value={fmt(data.total_favorites || data.saved_ads || 0)} color="bg-rose-500" />
       </div>
 
       {/* Credits + ads summary */}

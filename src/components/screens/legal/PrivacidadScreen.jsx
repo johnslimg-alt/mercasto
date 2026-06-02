@@ -111,7 +111,7 @@ export default function PrivacidadScreen() {
                     {[
                       { label: 'Identificación', items: ['Nombre completo', 'Correo electrónico', 'Número de teléfono', 'Foto de perfil (opcional)'] },
                       { label: 'Ubicación', items: ['Ciudad o municipio', 'Código postal', 'Ubicación aproximada (GPS, opcional)'] },
-                      { label: 'Actividad en la plataforma', items: ['Anuncios publicados', 'Búsquedas realizadas', 'Mensajes enviados', 'Favoritos guardados'] },
+                      { label: 'Actividad en la plataforma', items: ['Anuncios publicados', 'Búsquedas realizadas', 'Favoritos guardados'] },
                       { label: 'Técnicos y de dispositivo', items: ['Dirección IP', 'Tipo de navegador', 'Sistema operativo', 'Cookies e identificadores de sesión'] },
                     ].map((cat) => (
                       <div key={cat.label} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
@@ -138,7 +138,7 @@ export default function PrivacidadScreen() {
                     'Publicar y gestionar tus anuncios en la plataforma.',
                     'Facilitar la comunicación entre compradores y vendedores.',
                     'Procesar pagos por servicios adicionales (anuncios destacados, cuentas Pro).',
-                    'Enviarte notificaciones sobre actividad en tus anuncios o mensajes.',
+                    'Enviarte notificaciones sobre actividad en tus anuncios y publicaciones.',
                     'Cumplir con obligaciones legales y prevenir fraudes.',
                   ]} />
                   <p className="mt-4">Y para las siguientes finalidades <strong>secundarias</strong> (opcionales, puedes negarte):</p>

@@ -51,7 +51,7 @@ export default function OnboardingModal({ onClose, user, t, lang }) {
         <div className="flex flex-col gap-4 py-2 w-full max-w-xs mx-auto">
           {[
             { step: '1', icon: '📝', label: dictionary.onboarding_step1_label || 'Publica gratis', desc: dictionary.onboarding_step1_desc || 'Sube fotos y describe lo que vendes en minutos' },
-            { step: '2', icon: '💬', label: dictionary.onboarding_step2_label || 'Chatea con compradores', desc: dictionary.onboarding_step2_desc || 'Recibe mensajes y negocia de forma segura' },
+            { step: '2', icon: '🤝', label: dictionary.onboarding_step2_label || 'Coordina con confianza', desc: dictionary.onboarding_step2_desc || 'Usa los canales públicos del vendedor y revisa su reputación' },
             { step: '3', icon: '✅', label: dictionary.onboarding_step3_label || 'Vende seguro', desc: dictionary.onboarding_step3_desc || 'Coordina la entrega y recibe tu pago' },
           ].map(({ step: sNum, icon, label, desc }) => (
             <div key={sNum} className="flex items-start gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
