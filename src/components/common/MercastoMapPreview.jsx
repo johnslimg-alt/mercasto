@@ -58,6 +58,7 @@ export default function MercastoMapPreview({
   const largeMapContainerRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const largeMapInstanceRef = React.useRef(null);
+  const mountedRef = React.useRef(true);
 
   const normalizedMarkers = markers && markers.length ? markers : DEFAULT_MARKERS;
   const visibleMarkers = React.useMemo(() => {
@@ -71,10 +72,25 @@ export default function MercastoMapPreview({
 
       if (query && !text.includes(query)) return false;
       if (priceLimit > 0 && price > priceLimit) return false;
-      if (onlyWithCoords && !(marker.coords && marker.coords.length >= 2)) return false;
+      if (onlyWithCoords && (!(marker.coords && marker.coords.length >= 2) || marker.approximate)) return false;
       return true;
     });
   }, [maxPrice, normalizedMarkers, mapQuery, onlyWithCoords]);
+
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+
+  const removeMap = (instanceRef) => {
+    if (!instanceRef.current) return;
+    try {
+      instanceRef.current.off();
+      instanceRef.current.remove();
+    } catch {
+      // Leaflet can still have pending tile events during route changes.
+    }
+    instanceRef.current = null;
+  };
 
   React.useEffect(() => {
     let active = true;
@@ -121,8 +137,7 @@ export default function MercastoMapPreview({
     if (!leaflet || !container) return;
 
     if (instanceRef.current) {
-      instanceRef.current.remove();
-      instanceRef.current = null;
+      removeMap(instanceRef);
     }
 
     const L = leaflet;
@@ -177,7 +192,9 @@ export default function MercastoMapPreview({
       crossOrigin: true,
       attribution: '&copy; OpenStreetMap',
     })
-      .on('tileerror', () => setLoadFailed(true))
+      .on('tileerror', () => {
+        if (mountedRef.current && instanceRef.current === map) setLoadFailed(true);
+      })
       .addTo(map);
 
     const markerGroup = L.featureGroup();
@@ -230,10 +247,22 @@ export default function MercastoMapPreview({
     });
 
     if (validMarkers.length > 1 && markerGroup.getLayers().length > 0) {
-      map.fitBounds(markerGroup.getBounds(), { padding: [30, 30] });
+      try {
+        map.fitBounds(markerGroup.getBounds(), { padding: [30, 30] });
+      } catch {
+        // Keep the map usable even if Leaflet races during mobile route changes.
+      }
     }
 
-    window.requestAnimationFrame(() => map.invalidateSize());
+    window.requestAnimationFrame(() => {
+      if (mountedRef.current && instanceRef.current === map) {
+        try {
+          map.invalidateSize();
+        } catch {
+          // Ignore stale map instance after unmount.
+        }
+      }
+    });
   };
 
   React.useEffect(() => {
@@ -241,10 +270,7 @@ export default function MercastoMapPreview({
       initMap(mapContainerRef.current, mapInstanceRef, false);
     }
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      removeMap(mapInstanceRef);
     };
   }, [leaflet, expanded, visibleMarkers]);
 
@@ -257,10 +283,7 @@ export default function MercastoMapPreview({
       return () => clearTimeout(timer);
     }
     return () => {
-      if (largeMapInstanceRef.current) {
-        largeMapInstanceRef.current.remove();
-        largeMapInstanceRef.current = null;
-      }
+      removeMap(largeMapInstanceRef);
     };
   }, [leaflet, expanded, visibleMarkers]);
 
