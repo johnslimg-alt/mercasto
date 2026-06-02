@@ -23,7 +23,7 @@ class E2eTestSeeder extends Seeder
             return;
         }
 
-        $password = env('E2E_TEST_PASSWORD', 'E2eTestPass99!');
+        $password = env('E2E_TEST_PASSWORD', env('E2E_SELLER_PASSWORD', 'E2eTestPass99!'));
 
         $this->seedUser([
             'email' => env('E2E_SELLER_EMAIL', 'seller_e2e@mercasto.com'),
@@ -31,6 +31,7 @@ class E2eTestSeeder extends Seeder
             'role' => 'individual',
             'referral_code' => 'E2ESELLER',
             'password' => $password,
+            'phone_number' => '+520000000001',
         ]);
 
         $this->seedUser([
@@ -39,11 +40,12 @@ class E2eTestSeeder extends Seeder
             'role' => 'admin',
             'referral_code' => 'E2EADMIN',
             'password' => env('E2E_ADMIN_PASSWORD', $password),
+            'phone_number' => '+520000000002',
         ]);
     }
 
     /**
-     * @param array{email:string,name:string,role:string,referral_code:string,password:string} $payload
+     * @param array{email:string,name:string,role:string,referral_code:string,password:string,phone_number:string} $payload
      */
     private function seedUser(array $payload): void
     {
@@ -52,7 +54,7 @@ class E2eTestSeeder extends Seeder
             [
                 'name' => $payload['name'],
                 'password' => Hash::make($payload['password']),
-                'phone_number' => '+520000000000',
+                'phone_number' => $payload['phone_number'],
                 'phone_verified' => true,
                 'role' => $payload['role'],
                 'plan_code' => 'package_free',
