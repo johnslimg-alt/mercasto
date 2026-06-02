@@ -7,6 +7,7 @@ import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLef
 import { IconMap } from '../../constants/iconMap';
 import SidebarFilters from '../common/SidebarFilters';
 import MercastoMapPreview from '../common/MercastoMapPreview';
+import AdsMap from '../common/AdsMap';
 
 // --- MAP COORDINATES ---
 const STATE_COORDS = {
@@ -315,7 +316,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
             </div>
 
             {showMap && (
-              <LeafletMap ads={serverAds} onViewAd={handleViewAd} />
+              <AdsMap ads={serverAds} title={selectedState || t.all_mexico || 'Todo México'} onMarkerClick={handleViewAd} className="mb-4 h-[220px] md:mb-6 md:h-[340px]" />
             )}
 
           {loadingAds ? (
@@ -760,49 +761,19 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 <div className="col-span-12 xl:col-span-4">
 
                   <div className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900">
-
-                    <MercastoMapPreview
+                    <AdsMap
+                      ads={realEstateAds}
+                      category="inmobiliaria"
                       title={selectedState || t.all_mexico || 'Todo México'}
-                      markers={[
-                        { label: '$3.2M', x: 24, y: 46, tone: 'lime' },
-                        { label: '$1.8M', x: 58, y: 35, tone: 'dark' },
-                        { label: '$4.9M', x: 76, y: 42, tone: 'lime' },
-                      ]}
-                      onSearch={() => { setActiveCat('inmobiliaria'); executeSearch?.('', null, 'inmobiliaria'); }}
+                      onMarkerClick={handleViewAd}
                       className="absolute inset-0 h-full rounded-none border-0 shadow-none"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/45 dark:from-slate-950/20 dark:to-slate-950/60 pointer-events-none"></div>
-
-                    <div className="absolute inset-0 p-4">
-
-                      <div className="flex items-center justify-between">
-
-                        <h3 className="font-semibold">{selectedState || t.all_mexico || 'Todo México'}</h3>
-
-                        <button onClick={() => { setActiveCat('inmobiliaria'); executeSearch?.('', null, 'inmobiliaria'); }} className="btn-sm bg-white border border-slate-300 shadow-sm hover:bg-slate-50">{t.search_map || 'Buscar en mapa'}</button>
-
+                    <div className="absolute inset-x-4 bottom-4 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-medium text-slate-800 dark:text-white">{selectedState ? `Propiedades en ${selectedState}` : 'Propiedades en todo México'}</span>
+                        <span onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-[#65A30D] hover:underline">{t.view_all_mexico || 'Ver todo México'} →</span>
                       </div>
-
-                      <div className="relative mt-6">
-
-                        <div className="absolute left-[20%] top-[40%]"><div className="w-8 h-8 rounded-full bg-[#84CC16] text-white flex items-center justify-center text-[11px] font-bold shadow-lg ring-4 ring-[#84CC16]/30 animate-pulse cursor-pointer" onClick={() => { runSearch('3.2M', 'inmobiliaria'); }}>$3.2M</div></div>
-
-                        <div className="absolute left-[55%] top-[25%]"><div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold shadow-lg cursor-pointer" onClick={() => { runSearch('1.8M', 'inmobiliaria'); }}>$1.8M</div></div>
-
-                        <div className="absolute left-[70%] top-[60%]"><div className="w-8 h-8 rounded-full bg-[#84CC16] text-white flex items-center justify-center text-[11px] font-bold shadow-lg ring-4 ring-[#84CC16]/30 cursor-pointer" onClick={() => { runSearch('4.9M', 'inmobiliaria'); }}>$4.9M</div></div>
-
-                        <div className="absolute left-[35%] top-[70%]"><div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold shadow-lg cursor-pointer" onClick={() => { runSearch('28k', 'inmobiliaria'); }}>$28k</div></div>
-
-                      </div>
-
-                      <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur rounded-xl p-3 border border-slate-200">
-
-                        <div className="flex items-center justify-between text-[12px]"><span className="font-medium">{selectedState ? `Propiedades en ${selectedState}` : 'Propiedades en todo México'}</span><span onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="text-[#65A30D] font-semibold cursor-pointer hover:underline">{t.view_all_mexico || 'Ver todo México'} →</span></div>
-
-                      </div>
-
                     </div>
-
                   </div>
 
                 </div>

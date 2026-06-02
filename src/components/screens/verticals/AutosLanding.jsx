@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
+import AdsMap from '../../common/AdsMap';
 import { Bike, Car, CarFront, Gauge, PackageSearch, Truck, Wrench } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -149,6 +150,19 @@ export default function AutosLanding() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-14">
+        <section>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Autos en el mapa</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Explora vehículos por ubicación, precio y coordenadas GPS.</p>
+            </div>
+            <button onClick={() => navigate('/?category=motor')}
+              className="hidden rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 sm:inline-flex">
+              Ver listado
+            </button>
+          </div>
+          <AdsMap category="motor" title="Autos en México" className="h-[260px] md:h-[420px]" />
+        </section>
 
         {/* Featured Listings */}
         <section>

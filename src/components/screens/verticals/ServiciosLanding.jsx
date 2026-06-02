@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
+import AdsMap from '../../common/AdsMap';
 import { BadgeCheck, Brush, Camera, Car, GraduationCap, Hammer, HeartHandshake, Leaf, PawPrint, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -61,6 +62,19 @@ export default function ServiciosLanding() {
       />
 
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-14">
+        <section>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Servicios en el mapa</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Encuentra profesionales cerca de ti con búsqueda y filtros fullscreen.</p>
+            </div>
+            <button onClick={() => navigate('/?category=servicios')}
+              className="hidden rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600 sm:inline-flex">
+              Ver listado
+            </button>
+          </div>
+          <AdsMap category="servicios" title="Servicios en México" className="h-[260px] md:h-[420px]" />
+        </section>
 
         {/* Service category grid */}
         <section>
