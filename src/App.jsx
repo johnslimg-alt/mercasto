@@ -1403,6 +1403,7 @@ function App() {
 
     // Poll unread messages count every 30s
     const fetchUnreadMessages = () => {
+      const token = localStorage.getItem('auth_token');
       if (!token) return;
       fetch(`${API_URL}/chat/conversations`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } })
         .then(r => r.ok ? r.json() : [])
