@@ -25,6 +25,11 @@
       try {
         var theme = localStorage.getItem('theme');
         document.documentElement.classList.toggle('dark', theme === 'dark' || !theme);
+        var url = new URL(window.location.href);
+        if (url.searchParams.has('refresh')) {
+          url.searchParams.delete('refresh');
+          window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+        }
       } catch (e) {}
     </script>
     <style>
