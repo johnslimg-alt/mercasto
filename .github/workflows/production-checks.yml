@@ -185,9 +185,12 @@ jobs:
             "$@"
           }
           retry curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/mercasto-live-gate/home.html
-          retry curl -fsS --max-time 30 https://mercasto.com/api/auth/providers -o /tmp/mercasto-live-gate/auth-providers.json
+          retry curl -fsS --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/mercasto-live-gate/sitemap.xml
+          retry curl -fsS --max-time 30 https://mercasto.com/robots.txt -o /tmp/mercasto-live-gate/robots.txt
           grep -Eiq '<title[^>]*>[^<]{10,90}</title>' /tmp/mercasto-live-gate/home.html
-          grep -Eiq '"google"|"telegram"|"apple"|"sms"' /tmp/mercasto-live-gate/auth-providers.json
+          grep -Eiq 'name="description"|property="og:description"' /tmp/mercasto-live-gate/home.html
+          grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/mercasto-live-gate/sitemap.xml
+          grep -Eiq 'Sitemap:|User-agent:' /tmp/mercasto-live-gate/robots.txt
 
       - name: Upload live gate diagnostics
         if: always()
