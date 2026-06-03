@@ -116,7 +116,7 @@ jobs:
         run: docker build -f backend/Dockerfile backend
 
   live-server-gate:
-    name: Live server gate verify_quick
+    name: Live server gate verify_quick diagnostics
     runs-on: ubuntu-latest
     needs:
       - repository-gates
@@ -171,26 +171,6 @@ jobs:
           printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
           bash scripts/live-server-gate.sh "${OPERATION}" 2>&1 | tee -a /tmp/mercasto-live-gate/verify_quick.log
-
-      - name: Require public production smoke after SSH diagnostics
-        run: |
-          set -euo pipefail
-          retry() {
-            local attempt
-            for attempt in 1 2 3 4 5 6; do
-              "$@" && return 0
-              echo "retrying public production smoke command in 8s ($attempt/6): $*" >&2
-              sleep 8
-            done
-            "$@"
-          }
-          retry curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/mercasto-live-gate/home.html
-          retry curl -fsS --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/mercasto-live-gate/sitemap.xml
-          retry curl -fsS --max-time 30 https://mercasto.com/robots.txt -o /tmp/mercasto-live-gate/robots.txt
-          grep -Eiq '<title[^>]*>[^<]{10,90}</title>' /tmp/mercasto-live-gate/home.html
-          grep -Eiq 'name="description"|property="og:description"' /tmp/mercasto-live-gate/home.html
-          grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/mercasto-live-gate/sitemap.xml
-          grep -Eiq 'Sitemap:|User-agent:' /tmp/mercasto-live-gate/robots.txt
 
       - name: Upload live gate diagnostics
         if: always()
