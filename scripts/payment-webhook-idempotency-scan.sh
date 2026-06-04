@@ -22,11 +22,11 @@ grep -qF "where('clip_checkout_id'" "$CONTROLLER"
 grep -qF "where('status', '!=', 'paid')" "$CONTROLLER"
 grep -qF "'status' => 'paid'" "$CONTROLLER"
 grep -qF 'if ($updated)' "$CONTROLLER"
-grep -qF "DB::table('ad_promotions')->insert" "$CONTROLLER"
+grep -qE "DB::table('ad_promotions')->(insert|updateOrInsert)" "$CONTROLLER"
 grep -qF 'broadcast(new NewNotification' "$CONTROLLER"
 
 updated_line="$(grep -nF 'if ($updated)' "$CONTROLLER" | head -1 | cut -d: -f1)"
-promotion_line="$(grep -nF "DB::table('ad_promotions')->insert" "$CONTROLLER" | head -1 | cut -d: -f1)"
+promotion_line="$(grep -nE "DB::table('ad_promotions')->(insert|updateOrInsert)" "$CONTROLLER" | head -1 | cut -d: -f1)"
 notification_line="$(grep -nF 'broadcast(new NewNotification' "$CONTROLLER" | head -1 | cut -d: -f1)"
 
 if [ -z "$updated_line" ] || [ -z "$promotion_line" ] || [ -z "$notification_line" ]; then
