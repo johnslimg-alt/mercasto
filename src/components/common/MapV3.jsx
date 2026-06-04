@@ -366,7 +366,7 @@ export default function MapV3({
         setLoadFailed(true);
         setLoading(false);
       }
-    }, 2500);
+    }, 10000);
 
     loadLeaflet()
       .then((L) => {
@@ -456,15 +456,24 @@ export default function MapV3({
       ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
       : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-    L.tileLayer(tileUrl, {
+    // Count tile errors - only fail if most tiles fail
+    let tileErrorCount = 0;
+    let tileLoadCount = 0;
+    const tileLayerInstance = L.tileLayer(tileUrl, {
       maxZoom: 19,
       crossOrigin: true,
       attribution: '&copy; OpenStreetMap',
-    })
-      .on('tileerror', () => {
-        if (mountedRef.current && instanceRef.current === map) setLoadFailed(true);
-      })
-      .addTo(map);
+    });
+    
+    tileLayerInstance.on('tileload', () => { tileLoadCount++; });
+    tileLayerInstance.on('tileerror', () => {
+      tileErrorCount++;
+      // Only fail if many tiles failed AND failures exceed successes
+      if (mountedRef.current && instanceRef.current === map && tileErrorCount > 5 && tileErrorCount > tileLoadCount) {
+        setLoadFailed(true);
+      }
+    });
+    tileLayerInstance.addTo(map);
 
     const markerGroup = L.featureGroup();
 
@@ -548,7 +557,7 @@ export default function MapV3({
     return () => {
       removeMap(mapInstanceRef);
     };
-  }, [leaflet, expanded, visibleMarkers]);
+  }, [leaflet, expanded]);
 
   useEffect(() => {
     if (leaflet && expanded) {
@@ -560,7 +569,7 @@ export default function MapV3({
     return () => {
       removeMap(largeMapInstanceRef);
     };
-  }, [leaflet, expanded, visibleMarkers]);
+  }, [leaflet, expanded]);
 
   const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
 
@@ -761,7 +770,7 @@ export default function MapV3({
           {title}
         </div>
         <div className="absolute right-3 top-3 z-[2] rounded-full bg-slate-950/90 px-3 py-1.5 text-xs font-black text-white shadow-md dark:bg-[#84CC16] dark:text-slate-950 pointer-events-none">
-          {loadFailed ? 'Vista previa' : 'Mapa V3'}
+          {loadFailed ? 'Vista previa' : 'Mapa'}
         </div>
 
         {showFullscreen && (
@@ -781,7 +790,7 @@ export default function MapV3({
           className="fixed inset-0 z-[9999] flex flex-col bg-slate-950"
           role="dialog"
           aria-modal="true"
-          aria-label="Mapa interactivo V3"
+          aria-label="Mapa interactivo"
         >
           {/* ── Header bar ── */}
           <div className="relative z-[10] flex items-center gap-3 border-b border-slate-800 bg-slate-900/98 px-4 py-3 shadow-lg backdrop-blur sm:px-6">
@@ -790,7 +799,7 @@ export default function MapV3({
                 <MapPin size={18} className="text-slate-950" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-sm font-black text-white truncate">Mapa interactivo V3</h2>
+                <h2 className="text-sm font-black text-white truncate">Mapa interactivo</h2>
                 <p className="text-[11px] font-semibold text-slate-400">
                   {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}
                 </p>
