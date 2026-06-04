@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import AdsMap from '../../common/AdsMap';
+import MapV3 from '../../common/MapV3';
 import { BadgeCheck, Brush, Camera, Car, GraduationCap, Hammer, HeartHandshake, Leaf, PawPrint, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -73,7 +73,7 @@ export default function ServiciosLanding() {
               Ver listado
             </button>
           </div>
-          <AdsMap category="servicios" title="Servicios en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="servicios" title="Servicios en México" className="h-[260px] md:h-[420px]" />
         </section>
 
         {/* Service category grid */}

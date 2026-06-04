@@ -5,7 +5,7 @@ import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
 
 import SortablePhotoGrid from '../SortablePhotoGrid';
-import MercastoMapPreview from '../common/MercastoMapPreview';
+import MapV3 from '../common/MapV3';
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, removeImageById, reorderImages, setEditingAd, setForm, setVideoFile, t, videoFile, aiLoading, handleGenerateDescription }) {
@@ -245,7 +245,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                  </div>
                  <div className="w-full h-48 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
                      {isMapUpdating && <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50"><Loader2 className="w-8 h-8 text-[#84CC16] animate-spin"/></div>}
-                     <MercastoMapPreview
+                     <MapV3
                        title={debouncedLocation || form.location || form.state || 'Todo México'}
                        markers={[{ label: 'Aquí', x: 50, y: 52, tone: 'lime' }]}
                        showFullscreen={false}

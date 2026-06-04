@@ -5,7 +5,7 @@ import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircl
 import { filterConfig } from '../../constants/filterConfig';
 import { addRecentlyViewed } from '../../utils/recentlyViewed';
 import { events } from '../../utils/analytics';
-import MercastoMapPreview from '../common/MercastoMapPreview';
+import MapV3 from '../common/MapV3';
 
 // --- MAP COORDINATES ---
 const STATE_COORDS = {
@@ -482,7 +482,7 @@ export default function AdDetailScreen({
                     <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">La ubicación es aproximada y se muestra solo con datos públicos del anuncio.</p>
                   </div>
                 </div>
-                <MercastoMapPreview
+                <MapV3
                   title={locationLabel || 'Todo México'}
                   markers={adMarker}
                   className="h-[220px] w-full rounded-none border-0 border-t border-slate-200 shadow-none dark:border-slate-700 md:h-[280px]"

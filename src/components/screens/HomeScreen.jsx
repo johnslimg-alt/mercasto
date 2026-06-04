@@ -3,11 +3,11 @@ import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyView
 import { mexicoLocations, subcategoriesMap, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair } from "lucide-react";
 import { IconMap } from '../../constants/iconMap';
 import SidebarFilters from '../common/SidebarFilters';
-import MercastoMapPreview from '../common/MercastoMapPreview';
-import AdsMap from '../common/AdsMap';
+import MapV3 from '../common/MapV3';
+
 
 // --- MAP COORDINATES ---
 const STATE_COORDS = {
@@ -83,6 +83,21 @@ const LeafletMap = ({ ads, onViewAd }) => {
   const [mapQuery, setMapQuery] = React.useState('');
   const [mapMaxPrice, setMapMaxPrice] = React.useState('');
   const [mapOnlyCoords, setMapOnlyCoords] = React.useState(false);
+
+  // Close on Escape key
+  React.useEffect(() => {
+    if (!expanded) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setExpanded(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [expanded]);
+
   const filteredAds = React.useMemo(() => {
     const query = mapQuery.trim().toLowerCase();
     const priceLimit = Number(mapMaxPrice);
@@ -102,7 +117,6 @@ const LeafletMap = ({ ads, onViewAd }) => {
       k.toLowerCase().includes(stateName.toLowerCase())
     );
     const base = cleanedState ? STATE_COORDS[cleanedState] : [23.6345, -102.5528];
-    // Add jitter to prevent exact overlapping markers on state centroids
     const jitterLat = base[0] + (Math.sin(idx * 2.3) * 0.18);
     const jitterLon = base[1] + (Math.cos(idx * 2.3) * 0.18);
     return { ad, coords: [jitterLat, jitterLon] };
@@ -118,11 +132,11 @@ const LeafletMap = ({ ads, onViewAd }) => {
 
   const mapBody = (
     <div className="relative h-full">
-      <MercastoMapPreview title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
+      <MapV3 title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className="absolute bottom-3 right-3 z-[5] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg"
+        className="absolute bottom-3 right-3 z-[5] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg hover:scale-105 active:scale-95 transition-all"
       >
         <MapPin size={13} /> Abrir mapa
       </button>
@@ -131,35 +145,160 @@ const LeafletMap = ({ ads, onViewAd }) => {
 
   return (
     <>
-    <div className="osm-embed-shell relative mb-4 md:mb-6 h-[190px] md:h-[320px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-md">
-      {mapBody}
-    </div>
-    {expanded && (
-      <div className="fixed inset-0 z-[9999] bg-slate-950/80 p-3 backdrop-blur-sm">
-        <div className="relative h-full overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl">
-          <div className="absolute inset-x-3 top-3 z-[4] flex gap-2 rounded-2xl bg-white/95 p-2 shadow-xl dark:bg-slate-900/95">
-            <input value={mapQuery} onChange={(e) => setMapQuery(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="Buscar en el mapa..." />
-            <input value={mapMaxPrice} onChange={(e) => setMapMaxPrice(e.target.value)} type="number" className="hidden w-32 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white sm:block" placeholder="Precio max" />
-            <button type="button" onClick={() => setMapOnlyCoords(v => !v)} className={`hidden rounded-xl px-3 py-2 text-xs font-black sm:block ${mapOnlyCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>Coords</button>
-            <button type="button" onClick={() => setExpanded(false)} className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white dark:bg-slate-700">Cerrar</button>
-          </div>
-          <MercastoMapPreview title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
-          <div className="absolute inset-x-0 bottom-0 z-[3] bg-slate-950/90 p-3">
-            <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/80">
-              <span>{filteredAds.length} anuncios en mapa</span>
-              <button type="button" onClick={() => { setMapQuery(''); setMapMaxPrice(''); setMapOnlyCoords(false); }} className="text-[#BEF264]">Limpiar filtros</button>
+      <div className="osm-embed-shell relative mb-4 md:mb-6 h-[190px] md:h-[320px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-md">
+        {mapBody}
+      </div>
+
+      {/* ===================== FULLSCREEN MAP MODAL ===================== */}
+      {expanded && (
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col bg-slate-950"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mapa interactivo"
+        >
+          {/* ── Header bar ── */}
+          <div className="relative z-[10] flex items-center gap-3 border-b border-slate-800 bg-slate-900/98 px-4 py-3 shadow-lg backdrop-blur sm:px-6">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#84CC16]">
+                <MapPin size={18} className="text-slate-950" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-black text-white truncate">Mapa interactivo</h2>
+                <p className="text-[11px] font-semibold text-slate-400">
+                  {filteredAds.length} anuncio{filteredAds.length !== 1 ? 's' : ''} visible{filteredAds.length !== 1 ? 's' : ''}
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto">
-              {mapAds.slice(0, 6).map(({ ad }, index) => (
-                <button key={ad.id || index} onClick={() => onViewAd(ad)} className="shrink-0 rounded-full bg-[#84CC16] px-3 py-2 text-xs font-black text-slate-950">
-                  ${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}
-                </button>
-              ))}
+
+            {/* Search + filters (desktop) */}
+            <div className="hidden flex-1 items-center gap-2 md:flex">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
+                <Search size={15} className="shrink-0 text-[#84CC16]" />
+                <input
+                  value={mapQuery}
+                  onChange={(e) => setMapQuery(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+                  placeholder="Buscar en el mapa..."
+                />
+              </div>
+              <input
+                value={mapMaxPrice}
+                onChange={(e) => setMapMaxPrice(e.target.value)}
+                type="number"
+                className="w-28 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+                placeholder="Precio máx."
+              />
+              <button
+                type="button"
+                onClick={() => setMapOnlyCoords(v => !v)}
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
+                  mapOnlyCoords
+                    ? 'bg-[#84CC16] text-slate-950'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <SlidersHorizontal size={14} /> Solo GPS
+              </button>
+            </div>
+
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-colors sm:h-10 sm:w-auto sm:gap-2 sm:px-4"
+              aria-label="Cerrar mapa"
+              title="Cerrar (Esc)"
+            >
+              <X size={20} />
+              <span className="hidden text-sm font-black sm:inline">Cerrar</span>
+            </button>
+          </div>
+
+          {/* ── Mobile search bar ── */}
+          <div className="relative z-[10] flex items-center gap-2 border-b border-slate-800 bg-slate-900/95 px-3 py-2 md:hidden">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
+              <Search size={15} className="shrink-0 text-[#84CC16]" />
+              <input
+                value={mapQuery}
+                onChange={(e) => setMapQuery(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+                placeholder="Buscar..."
+              />
+            </div>
+            <input
+              value={mapMaxPrice}
+              onChange={(e) => setMapMaxPrice(e.target.value)}
+              type="number"
+              className="w-24 rounded-xl border border-slate-700 bg-slate-800 px-2 py-2 text-xs font-semibold text-white outline-none placeholder:text-slate-500"
+              placeholder="$ máx"
+            />
+            <button
+              type="button"
+              onClick={() => setMapOnlyCoords(v => !v)}
+              className={`rounded-xl px-2 py-2 text-xs font-black ${
+                mapOnlyCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-800 text-slate-300'
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+            </button>
+          </div>
+
+          {/* ── Map area ── */}
+          <div className="relative flex-1 overflow-hidden">
+            <MapV3
+              title="Todo México"
+              markers={markers}
+              onMarkerClick={onViewAd}
+              showFullscreen={false}
+              className="h-full w-full border-0 shadow-none rounded-none"
+            />
+
+            {/* ── Bottom info panel ── */}
+            <div className="absolute inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-[5] rounded-2xl border border-slate-700/50 bg-slate-900/95 p-3 text-white shadow-2xl backdrop-blur-md">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 text-xs font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Layers size={14} className="text-[#84CC16]" />
+                    {filteredAds.length} anuncio{filteredAds.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setMapQuery(''); setMapMaxPrice(''); setMapOnlyCoords(false); }}
+                    className="rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 transition-colors"
+                  >
+                    Limpiar filtros
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(false)}
+                    className="rounded-lg bg-red-500/20 px-3 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-500/30 transition-colors"
+                  >
+                    <X size={14} className="inline mr-1" />
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+              {mapAds.length > 0 && (
+                <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {mapAds.slice(0, 10).map(({ ad }, index) => (
+                    <button
+                      key={ad.id || index}
+                      type="button"
+                      onClick={() => onViewAd(ad)}
+                      className="shrink-0 rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-[11px] font-black text-white hover:bg-[#84CC16] hover:text-slate-950 hover:border-[#84CC16] transition-colors"
+                    >
+                      ${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </>
   );
 };
@@ -323,7 +462,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
             </div>
 
             {showMap && (
-              <AdsMap ads={serverAds} title={selectedState || t.all_mexico || 'Todo México'} onMarkerClick={handleViewAd} className="mb-4 h-[220px] md:mb-6 md:h-[340px]" />
+              <MapV3 ads={serverAds} title={selectedState || t.all_mexico || 'Todo México'} onMarkerClick={handleViewAd} className="mb-4 h-[220px] md:mb-6 md:h-[340px]" />
             )}
 
           {loadingAds ? (
@@ -774,7 +913,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 <div className="col-span-12 xl:col-span-4">
 
                   <div className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900">
-                    <AdsMap
+                    <MapV3
                       ads={realEstateAds}
                       category="inmobiliaria"
                       title={selectedState || t.all_mexico || 'Todo México'}

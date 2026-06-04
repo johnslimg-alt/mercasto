@@ -1,6 +1,10 @@
-import React from 'react';
-import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter } from 'lucide-react';
+import { filterConfig } from '../../constants/filterConfig';
+import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 import 'leaflet/dist/leaflet.css';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const DEFAULT_MARKERS = [
   { label: '$1.7k', coords: [19.4326, -99.1332], tone: 'lime' },
@@ -10,7 +14,6 @@ const DEFAULT_MARKERS = [
 ];
 
 let leafletPromise;
-
 const loadLeaflet = () => {
   if (!leafletPromise) {
     leafletPromise = import('leaflet').then((mod) => mod.default || mod);
@@ -48,23 +51,128 @@ const markerAccuracyClass = (marker = {}) => (
     : 'bg-[#84CC16] text-slate-950'
 );
 
-export default function MercastoMapPreview({
+// Location coordinates for geocoding
+const STATE_COORDS = {
+  'Ciudad de México': [19.4326, -99.1332],
+  CDMX: [19.4326, -99.1332],
+  Jalisco: [20.6597, -103.3496],
+  'Nuevo León': [25.6866, -100.3161],
+  'México': [19.2925, -99.6557],
+  'Estado de México': [19.2925, -99.6557],
+  Puebla: [19.0414, -98.2063],
+  Querétaro: [20.5888, -100.3899],
+  'Baja California': [32.5149, -117.0382],
+  'Quintana Roo': [21.1619, -86.8515],
+  Yucatán: [20.9674, -89.5926],
+  Veracruz: [19.1738, -96.1342],
+  Guanajuato: [21.019, -101.2574],
+  Chihuahua: [28.6329, -106.0691],
+  Sonora: [29.2972, -110.3309],
+  Sinaloa: [25.1721, -107.4795],
+  Oaxaca: [17.0732, -96.7266],
+  Chiapas: [16.7569, -93.1292],
+  Michoacán: [19.5665, -101.7068],
+  Guerrero: [17.4392, -99.5451],
+  Tamaulipas: [24.2669, -98.8363],
+};
+
+const CITY_COORDS = {
+  'ciudad de mexico': [19.4326, -99.1332],
+  cdmx: [19.4326, -99.1332],
+  guadalajara: [20.6597, -103.3496],
+  zapopan: [20.7236, -103.3848],
+  monterrey: [25.6866, -100.3161],
+  puebla: [19.0414, -98.2063],
+  queretaro: [20.5888, -100.3899],
+  cancun: [21.1619, -86.8515],
+  'puerto vallarta': [20.6534, -105.2253],
+  merida: [20.9674, -89.5926],
+  tijuana: [32.5149, -117.0382],
+  leon: [21.125, -101.686],
+  toluca: [19.2826, -99.6557],
+  acapulco: [16.8531, -99.8237],
+  hermosillo: [29.0729, -110.9559],
+  chihuahua: [28.6329, -106.0691],
+  veracruz: [19.1738, -96.1342],
+  oaxaca: [17.0732, -96.7266],
+  morelia: [19.7008, -101.1844],
+  mazatlan: [23.2494, -106.4111],
+  culiacan: [24.8091, -107.394],
+  'san luis potosi': [22.1565, -100.9855],
+  aguascalientes: [21.8853, -102.2916],
+};
+
+const normalizeLocationText = (value = '') => String(value)
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase();
+
+function adCoords(ad, index) {
+  const lat = Number(ad?.latitude ?? ad?.lat);
+  const lng = Number(ad?.longitude ?? ad?.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+    return { coords: [lat, lng], approximate: false, accuracy: 'real', accuracyLabel: 'GPS real' };
+  }
+
+  const locationText = normalizeLocationText(`${ad?.city || ''} ${ad?.municipality || ''} ${ad?.location || ''} ${ad?.state || ''}`);
+  const cityKey = Object.keys(CITY_COORDS).find((key) => locationText.includes(key));
+  const stateKey = Object.keys(STATE_COORDS).find((key) => locationText.includes(normalizeLocationText(key)));
+  const base = cityKey ? CITY_COORDS[cityKey] : (stateKey ? STATE_COORDS[stateKey] : [23.6345, -102.5528]);
+  const jitter = cityKey ? 0.035 : 0.16;
+
+  return {
+    coords: [
+      base[0] + (Math.sin(index * 2.31) * jitter),
+      base[1] + (Math.cos(index * 2.31) * jitter),
+    ],
+    approximate: true,
+    accuracy: cityKey ? 'city' : 'approx',
+    accuracyLabel: cityKey ? 'Approx ciudad' : 'Approx estado',
+  };
+}
+
+function markerLabel(ad) {
+  const price = Number(ad?.price || 0);
+  if (price > 0) return `$${price.toLocaleString('es-MX', { notation: 'compact' })}`;
+  return ad?.category ? String(ad.category).slice(0, 10) : 'Ver';
+}
+
+export default function MapV3({
   title = 'Todo México',
-  markers = DEFAULT_MARKERS,
+  markers: propMarkers,
+  ads: propAds,
+  apiUrl,
+  category = null,
   onSearch,
   onSearchArea,
   onMarkerClick,
   className = '',
   showFullscreen = true,
+  initialFilters = {},
 }) {
-  const [expanded, setExpanded] = React.useState(false);
-  const [leaflet, setLeaflet] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const [loadFailed, setLoadFailed] = React.useState(false);
-  const [mapQuery, setMapQuery] = React.useState('');
-  const [maxPrice, setMaxPrice] = React.useState('');
-  const [onlyWithCoords, setOnlyWithCoords] = React.useState(false);
-  const [mapArea, setMapArea] = React.useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [leaflet, setLeaflet] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [fetchingAds, setFetchingAds] = useState(false);
+  
+  // Filter states
+  const [mapQuery, setMapQuery] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [onlyWithCoords, setOnlyWithCoords] = useState(false);
+  const [selectedState, setSelectedState] = useState(initialFilters.state || '');
+  const [selectedCity, setSelectedCity] = useState(initialFilters.city || '');
+  const [listingType, setListingType] = useState(initialFilters.listingType || '');
+  const [conditionFilter, setConditionFilter] = useState(initialFilters.condition || []);
+  const [dynamicFilters, setDynamicFilters] = useState(initialFilters.dynamic || {});
+  
+  // API config for category attributes
+  const [apiConfig, setApiConfig] = useState(null);
+  
+  // Fetched ads state
+  const [fetchedAds, setFetchedAds] = useState([]);
   
   const mapContainerRef = React.useRef(null);
   const largeMapContainerRef = React.useRef(null);
@@ -72,10 +180,70 @@ export default function MercastoMapPreview({
   const largeMapInstanceRef = React.useRef(null);
   const mountedRef = React.useRef(true);
 
-  const normalizedMarkers = markers && markers.length ? markers : DEFAULT_MARKERS;
-  const visibleMarkers = React.useMemo(() => {
+  // Fetch ads if apiUrl or category is provided
+  useEffect(() => {
+    if (!apiUrl && !category) return;
+    const controller = new AbortController();
+    const url = apiUrl || `${API_URL}/ads?category=${encodeURIComponent(category)}&per_page=80`;
+
+    setFetchingAds(true);
+    fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } })
+      .then((res) => (res.ok ? res.json() : { data: [] }))
+      .then((payload) => {
+        const nextAds = Array.isArray(payload) ? payload : (payload.data || []);
+        setFetchedAds(nextAds);
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') setFetchedAds([]);
+      })
+      .finally(() => setFetchingAds(false));
+
+    return () => controller.abort();
+  }, [apiUrl, category]);
+
+  // Fetch category attributes from DB
+  useEffect(() => {
+    if (!category) { setApiConfig(null); return; }
+    let cancelled = false;
+    fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(category)}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (!cancelled) setApiConfig(data.length > 0 ? data : null); })
+      .catch(() => { if (!cancelled) setApiConfig(null); });
+    return () => { cancelled = true; };
+  }, [category]);
+
+  const config = apiConfig ?? (category ? (filterConfig[category] || null) : null);
+
+  // Convert ads to markers
+  const adsMarkers = useMemo(() => {
+    const sourceAds = propAds || fetchedAds;
+    if (!sourceAds || !sourceAds.length) return [];
+    
+    return sourceAds.slice(0, 80).map((ad, index) => {
+      const location = adCoords(ad, index);
+      return {
+        id: ad.id || `ad-${index}`,
+        ad,
+        coords: location.coords,
+        approximate: location.approximate,
+        accuracy: location.accuracy,
+        accuracyLabel: location.accuracyLabel,
+        label: markerLabel(ad),
+        tone: location.approximate ? 'dark' : 'lime',
+        title: ad.title,
+        price: ad.price,
+        location: ad.location || ad.city || ad.state,
+        category: ad.category,
+      };
+    });
+  }, [propAds, fetchedAds]);
+
+  const normalizedMarkers = propMarkers || (adsMarkers.length > 0 ? adsMarkers : DEFAULT_MARKERS);
+  
+  const visibleMarkers = useMemo(() => {
     const query = mapQuery.trim().toLowerCase();
-    const priceLimit = Number(maxPrice);
+    const priceLimitMin = Number(minPrice);
+    const priceLimitMax = Number(maxPrice);
 
     return normalizedMarkers.filter(marker => {
       const ad = marker.ad || {};
@@ -83,24 +251,28 @@ export default function MercastoMapPreview({
       const price = Number(ad.price || String(marker.label || '').replace(/[^\d.]/g, '') || 0);
 
       if (query && !text.includes(query)) return false;
-      if (priceLimit > 0 && price > priceLimit) return false;
+      if (priceLimitMin > 0 && price < priceLimitMin) return false;
+      if (priceLimitMax > 0 && price > priceLimitMax) return false;
       if (onlyWithCoords && (!(marker.coords && marker.coords.length >= 2) || marker.approximate)) return false;
+      if (selectedState && ad.state && !ad.state.toLowerCase().includes(selectedState.toLowerCase())) return false;
+      if (selectedCity && ad.city && !ad.city.toLowerCase().includes(selectedCity.toLowerCase())) return false;
+      if (listingType && ad.listing_type && ad.listing_type !== listingType) return false;
+      
       return true;
     });
-  }, [maxPrice, normalizedMarkers, mapQuery, onlyWithCoords]);
+  }, [minPrice, maxPrice, normalizedMarkers, mapQuery, onlyWithCoords, selectedState, selectedCity, listingType]);
 
-  React.useEffect(() => () => {
+  useEffect(() => () => {
     mountedRef.current = false;
   }, []);
 
   // Close fullscreen on Escape key
-  React.useEffect(() => {
+  useEffect(() => {
     if (!expanded) return;
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') setExpanded(false);
     };
     window.addEventListener('keydown', handleKeyDown);
-    // Prevent body scroll when fullscreen is open
     document.body.style.overflow = 'hidden';
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -120,36 +292,75 @@ export default function MercastoMapPreview({
   };
 
   const updateMapArea = (map) => {
-    if (!map || !mountedRef.current) return;
+    if (!map || !mountedRef.current) return null;
     try {
       const center = map.getCenter();
       const bounds = map.getBounds();
       const north = bounds.getNorthEast();
       const radiusKm = Math.max(5, Math.min(250, Math.round(center.distanceTo(north) / 1000)));
-      setMapArea({
+      return {
         lat: Number(center.lat.toFixed(6)),
         lng: Number(center.lng.toFixed(6)),
         radius: radiusKm,
-      });
+      };
     } catch {
-      // Ignore stale map viewport.
+      return null;
     }
   };
 
   const handleSearchArea = () => {
+    const mapArea = updateMapArea(expanded ? largeMapInstanceRef.current : mapInstanceRef.current);
     if (onSearchArea && mapArea) {
       onSearchArea({
         ...mapArea,
         query: mapQuery.trim(),
+        minPrice: minPrice ? Number(minPrice) : null,
         maxPrice: maxPrice ? Number(maxPrice) : null,
         onlyWithCoords,
+        state: selectedState,
+        city: selectedCity,
+        listingType,
+        condition: conditionFilter,
+        dynamic: dynamicFilters,
       });
       return;
     }
     onSearch?.();
   };
 
-  React.useEffect(() => {
+  const clearAllFilters = () => {
+    setMapQuery('');
+    setMinPrice('');
+    setMaxPrice('');
+    setOnlyWithCoords(false);
+    setSelectedState('');
+    setSelectedCity('');
+    setListingType('');
+    setConditionFilter([]);
+    setDynamicFilters({});
+  };
+
+  const handleStateChange = (state) => {
+    setSelectedState(state);
+    setSelectedCity('');
+  };
+
+  const handleCityChange = (city) => {
+    setSelectedCity(city);
+  };
+
+  const handleConditionToggle = (val) => {
+    setConditionFilter(prev => prev.includes(val) ? prev.filter(c => c !== val) : [...prev, val]);
+  };
+
+  const handleDynamicToggle = (key, val) => {
+    setDynamicFilters(prev => {
+      const current = prev[key] || [];
+      return { ...prev, [key]: current.includes(val) ? current.filter(c => c !== val) : [...current, val] };
+    });
+  };
+
+  useEffect(() => {
     let active = true;
     const fallbackTimer = window.setTimeout(() => {
       if (active) {
@@ -178,7 +389,7 @@ export default function MercastoMapPreview({
     };
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     window.__onMapAdClick = (adId) => {
       const found = normalizedMarkers.find(m => m.id === adId || m.ad?.id === adId);
       if (found) {
@@ -200,7 +411,6 @@ export default function MercastoMapPreview({
     const L = leaflet;
     if (!L) return;
 
-    // Mexico centroid default
     let center = [23.6345, -102.5528];
     let zoom = isLarge ? 5 : 4;
 
@@ -225,14 +435,14 @@ export default function MercastoMapPreview({
     let map;
     try {
       map = L.map(container, {
-      center,
-      zoom,
-      zoomControl: true,
-      attributionControl: false,
-      scrollWheelZoom: isLarge,
-      fadeAnimation: false,
-      markerZoomAnimation: false,
-      zoomAnimation: false,
+        center,
+        zoom,
+        zoomControl: true,
+        attributionControl: false,
+        scrollWheelZoom: isLarge,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
+        zoomAnimation: false,
       });
     } catch {
       setLoadFailed(true);
@@ -241,11 +451,7 @@ export default function MercastoMapPreview({
     }
 
     instanceRef.current = map;
-    updateMapArea(map);
-    if (isLarge) {
-      map.on('moveend zoomend', () => updateMapArea(map));
-    }
-
+    
     const isDark = document.documentElement.classList.contains('dark');
     const tileUrl = isDark 
       ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
@@ -336,7 +542,7 @@ export default function MercastoMapPreview({
     });
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (leaflet && !expanded) {
       initMap(mapContainerRef.current, mapInstanceRef, false);
     }
@@ -345,9 +551,8 @@ export default function MercastoMapPreview({
     };
   }, [leaflet, expanded, visibleMarkers]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (leaflet && expanded) {
-      // Small timeout to allow container to fully expand
       const timer = setTimeout(() => {
         initMap(largeMapContainerRef.current, largeMapInstanceRef, true);
       }, 100);
@@ -358,13 +563,169 @@ export default function MercastoMapPreview({
     };
   }, [leaflet, expanded, visibleMarkers]);
 
+  const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
+
+  const FilterPanel = ({ isMobile = false }) => (
+    <div className={`${isMobile ? 'p-3' : 'p-4'} space-y-4 bg-slate-900/95 border-b border-slate-800 max-h-[50vh] overflow-y-auto`}>
+      {/* Search */}
+      <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
+        <Search size={15} className="shrink-0 text-[#84CC16]" />
+        <input
+          value={mapQuery}
+          onChange={(e) => setMapQuery(e.target.value)}
+          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+          placeholder="Buscar en el mapa..."
+        />
+      </div>
+
+      {/* Location */}
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          value={selectedState}
+          onChange={(e) => handleStateChange(e.target.value)}
+          className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
+        >
+          <option value="">Todo México</option>
+          {MEXICO_STATES.map(state => (
+            <option key={state} value={state}>{state}</option>
+          ))}
+        </select>
+        <select
+          value={selectedCity}
+          onChange={(e) => handleCityChange(e.target.value)}
+          disabled={!selectedState}
+          className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none disabled:opacity-50"
+        >
+          <option value="">Todas las ciudades</option>
+          {availableCities.map(city => (
+            <option key={city} value={city}>{city}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Price */}
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          value={minPrice}
+          onChange={(e) => setMinPrice(e.target.value)}
+          type="number"
+          className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+          placeholder="Precio mín."
+        />
+        <input
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+          type="number"
+          className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+          placeholder="Precio máx."
+        />
+      </div>
+
+      {/* Listing Type */}
+      <select
+        value={listingType}
+        onChange={(e) => setListingType(e.target.value)}
+        className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
+      >
+        <option value="">Tipo de anuncio</option>
+        <option value="Venta">Venta</option>
+        <option value="Renta">Renta</option>
+        <option value="Renta con opción a compra">Renta con opción a compra</option>
+        <option value="Traspaso">Traspaso</option>
+        <option value="Gratis">Gratis</option>
+        <option value="Intercambio">Intercambio</option>
+        <option value="Compro">Compro</option>
+        <option value="Subasta">Subasta</option>
+      </select>
+
+      {/* Condition */}
+      {config?.condition && (
+        <div className="space-y-2">
+          <p className="text-xs font-black text-slate-400">Condición</p>
+          <div className="flex flex-wrap gap-2">
+            {config.condition.map(opt => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => handleConditionToggle(opt)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                  conditionFilter.includes(opt)
+                    ? 'bg-[#84CC16] text-slate-950'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Filters */}
+      {config && Object.entries(config).filter(([key]) => key !== 'condition').map(([key, options]) => (
+        <div key={key} className="space-y-2">
+          <p className="text-xs font-black text-slate-400 capitalize">{key.replace(/_/g, ' ')}</p>
+          <div className="flex flex-wrap gap-2">
+            {options.map(opt => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => handleDynamicToggle(key, opt)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                  (dynamicFilters[key] || []).includes(opt)
+                    ? 'bg-[#84CC16] text-slate-950'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Toggles */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setOnlyWithCoords(v => !v)}
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
+            onlyWithCoords
+              ? 'bg-[#84CC16] text-slate-950'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <MapPin size={14} /> Solo GPS real
+        </button>
+        <button
+          type="button"
+          onClick={clearAllFilters}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/30 transition-colors"
+        >
+          <X size={14} /> Limpiar
+        </button>
+      </div>
+
+      {/* Search Area Button */}
+      <button
+        type="button"
+        onClick={handleSearchArea}
+        className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-[#a3e635] transition-colors"
+      >
+        <Crosshair size={16} /> Buscar en esta zona
+      </button>
+    </div>
+  );
+
   return (
     <>
       <div className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-md dark:border-slate-700 dark:bg-slate-950 ${className}`}>
-        {loading && (
+        {(loading || fetchingAds) && (
           <div className="absolute inset-0 z-[10] flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-[2px] dark:bg-slate-950/20">
             <Loader2 className="h-8 w-8 animate-spin text-[#84CC16]" />
-            <span className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-300">Cargando mapa...</span>
+            <span className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-300">
+              {fetchingAds ? 'Cargando anuncios...' : 'Cargando mapa...'}
+            </span>
           </div>
         )}
         
@@ -401,7 +762,7 @@ export default function MercastoMapPreview({
           {title}
         </div>
         <div className="absolute right-3 top-3 z-[2] rounded-full bg-slate-950/90 px-3 py-1.5 text-xs font-black text-white shadow-md dark:bg-[#84CC16] dark:text-slate-950 pointer-events-none">
-          {loadFailed ? 'Vista previa' : 'Mapa'}
+          {loadFailed ? 'Vista previa' : 'Mapa V3'}
         </div>
 
         {showFullscreen && (
@@ -421,62 +782,34 @@ export default function MercastoMapPreview({
           className="fixed inset-0 z-[9999] flex flex-col bg-slate-950"
           role="dialog"
           aria-modal="true"
-          aria-label="Mapa interactivo"
+          aria-label="Mapa interactivo V3"
         >
           {/* ── Header bar ── */}
           <div className="relative z-[10] flex items-center gap-3 border-b border-slate-800 bg-slate-900/98 px-4 py-3 shadow-lg backdrop-blur sm:px-6">
-            {/* Title section */}
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#84CC16]">
                 <MapPin size={18} className="text-slate-950" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-sm font-black text-white truncate">Mapa interactivo</h2>
+                <h2 className="text-sm font-black text-white truncate">Mapa interactivo V3</h2>
                 <p className="text-[11px] font-semibold text-slate-400">
-                  {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}{mapArea ? ` · radio ${mapArea.radius} km` : ''}
+                  {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
 
-            {/* Search + filters (center) */}
-            <div className="hidden flex-1 items-center gap-2 md:flex">
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
-                <Search size={15} className="shrink-0 text-[#84CC16]" />
-                <input
-                  value={mapQuery}
-                  onChange={(e) => setMapQuery(e.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-                  placeholder="Buscar en el mapa..."
-                />
-              </div>
-              <input
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                type="number"
-                className="w-28 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-                placeholder="Precio máx."
-              />
-              <button
-                type="button"
-                onClick={() => setOnlyWithCoords(v => !v)}
-                className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
-                  onlyWithCoords
-                    ? 'bg-[#84CC16] text-slate-950'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                <SlidersHorizontal size={14} /> GPS real
-              </button>
-              <button
-                type="button"
-                onClick={handleSearchArea}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2 text-xs font-black text-slate-950 hover:bg-[#a3e635] transition-colors"
-              >
-                <Crosshair size={14} /> Buscar en zona
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
+                showFilters
+                  ? 'bg-[#84CC16] text-slate-950'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <Filter size={14} /> Filtros
+            </button>
 
-            {/* Close button */}
             <button
               type="button"
               onClick={() => setExpanded(false)}
@@ -489,41 +822,8 @@ export default function MercastoMapPreview({
             </button>
           </div>
 
-          {/* ── Mobile search bar (shown below header on small screens) ── */}
-          <div className="relative z-[10] flex items-center gap-2 border-b border-slate-800 bg-slate-900/95 px-3 py-2 md:hidden">
-            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
-              <Search size={15} className="shrink-0 text-[#84CC16]" />
-              <input
-                value={mapQuery}
-                onChange={(e) => setMapQuery(e.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-                placeholder="Buscar..."
-              />
-            </div>
-            <input
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              type="number"
-              className="w-24 rounded-xl border border-slate-700 bg-slate-800 px-2 py-2 text-xs font-semibold text-white outline-none placeholder:text-slate-500"
-              placeholder="$ máx"
-            />
-            <button
-              type="button"
-              onClick={() => setOnlyWithCoords(v => !v)}
-              className={`rounded-xl px-2 py-2 text-xs font-black ${
-                onlyWithCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-800 text-slate-300'
-              }`}
-            >
-              <SlidersHorizontal size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={handleSearchArea}
-              className="rounded-xl bg-[#84CC16] px-2.5 py-2 text-xs font-black text-slate-950"
-            >
-              <Crosshair size={14} />
-            </button>
-          </div>
+          {/* ── Filter Panel ── */}
+          {showFilters && <FilterPanel />}
 
           {/* ── Map area ── */}
           <div className="relative flex-1 overflow-hidden">
@@ -550,13 +850,12 @@ export default function MercastoMapPreview({
                   <span className="flex items-center gap-1.5">
                     <Layers size={14} className="text-[#84CC16]" />
                     {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}
-                    {mapArea && <span className="text-slate-400">· radio {mapArea.radius} km</span>}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => { setMapQuery(''); setMaxPrice(''); setOnlyWithCoords(false); }}
+                    onClick={clearAllFilters}
                     className="rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 transition-colors"
                   >
                     Limpiar filtros

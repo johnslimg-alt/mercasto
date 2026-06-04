@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import AdsMap from '../../common/AdsMap';
+import MapV3 from '../../common/MapV3';
 import { Bike, Car, CarFront, Gauge, PackageSearch, Truck, Wrench } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -161,7 +161,7 @@ export default function AutosLanding() {
               Ver listado
             </button>
           </div>
-          <AdsMap category="motor" title="Autos en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="motor" title="Autos en México" className="h-[260px] md:h-[420px]" />
         </section>
 
         {/* Featured Listings */}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, LocateFixed, MapPin, Search, SlidersHorizontal } from 'lucide-react';
 import { MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
-import MercastoMapPreview from '../common/MercastoMapPreview';
+import MapV3 from '../common/MapV3';
 
 const GRADIENT_MAP = {
   blue:   'from-blue-600 to-blue-800',
@@ -161,7 +161,7 @@ export default function VerticalHero({
 
         {showMap && (
           <div className="mx-auto mt-4 grid max-w-5xl gap-3 overflow-hidden rounded-3xl border border-white/20 bg-white p-2 text-left shadow-2xl md:grid-cols-[1.35fr_0.65fr]">
-            <MercastoMapPreview
+            <MapV3
               title={locationLabel}
               markers={mapMarkers}
               onSearch={handleSubmit}

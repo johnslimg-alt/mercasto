@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import AdsMap from '../../common/AdsMap';
+import MapV3 from '../../common/MapV3';
 import { Building2, Castle, FileCheck2, Home, KeyRound, LandPlot, MapPinned, SearchCheck, Store } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -114,7 +114,7 @@ export default function InmueblesLanding() {
               Ver listado
             </button>
           </div>
-          <AdsMap category="inmobiliaria" title="Inmuebles en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="inmobiliaria" title="Inmuebles en México" className="h-[260px] md:h-[420px]" />
         </section>
 
         {/* Featured listings */}
