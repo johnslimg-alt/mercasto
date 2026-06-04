@@ -370,6 +370,7 @@ export default function MapV3({
 
     loadLeaflet()
       .then((L) => {
+        window.clearTimeout(fallbackTimer);
         if (active) {
           setLeaflet(L);
           setLoadFailed(false);
@@ -377,6 +378,7 @@ export default function MapV3({
         }
       })
       .catch(() => {
+        window.clearTimeout(fallbackTimer);
         if (active) {
           setLoadFailed(true);
           setLoading(false);
