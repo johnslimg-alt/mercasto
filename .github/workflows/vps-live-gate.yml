@@ -32,6 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
+          git config --global --add safe.directory /var/www/mercasto
           git rev-parse --show-toplevel
           git status --short || true
 
