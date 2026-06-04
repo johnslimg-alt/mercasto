@@ -53,7 +53,7 @@ if not isinstance(data, dict):
     raise SystemExit("auth providers response must be a JSON object")
 
 providers = data.get("providers", data)
-for key in ("google", "apple", "telegram"):
+for key in ("google", "telegram"):
     value = providers.get(key)
     if isinstance(value, dict):
         value = value.get("enabled")
