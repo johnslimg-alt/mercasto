@@ -453,10 +453,8 @@ export default function MapV3({
 
     instanceRef.current = map;
     
-    const isDark = document.documentElement.classList.contains('dark');
-    const tileUrl = isDark 
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
-      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    // Всегда используем светлую тему карты (OpenStreetMap)
+    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     // Count tile errors - only fail if most tiles fail
     let tileErrorCount = 0;
