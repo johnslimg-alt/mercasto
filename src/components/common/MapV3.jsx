@@ -27,6 +27,39 @@ const escapeHtml = (value = '') => String(value)
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#039;');
 
+const getAdImageUrl = (ad) => {
+  const STORAGE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_STORAGE_URL) || '';
+  const raw = ad?.image_url || ad?.image || null;
+  if (!raw) return null;
+  // Handle JSON array string like '["url1","url2"]' or '["url"]'
+  if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0 && arr[0]) {
+        const u = String(arr[0]);
+        if (u.startsWith('http')) return u;
+        if (u.startsWith('/')) return (STORAGE_URL || '') + u;
+        return u;
+      }
+    } catch (e) { /* not JSON, fall through */ }
+  }
+  // Handle plain string URL
+  if (typeof raw === 'string') {
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('/')) return (STORAGE_URL || '') + raw;
+    return raw;
+  }
+  // Handle array directly
+  if (Array.isArray(raw) && raw.length > 0) {
+    const u = String(raw[0]);
+    if (u.startsWith('http')) return u;
+    if (u.startsWith('/')) return (STORAGE_URL || '') + u;
+    return u;
+  }
+  return null;
+};
+
+
 const coordsToPoint = ([lat, lon]) => {
   const minLat = 14;
   const maxLat = 33;
@@ -505,23 +538,58 @@ export default function MapV3({
 
       const ad = marker.ad;
       if (ad) {
-        const title = escapeHtml(ad.title || 'Anuncio');
+        const rawTitle = ad.title || 'Anuncio';
         const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-        const imgUrl = escapeHtml(ad.image_url || ad.image || 'https://picsum.photos/seed/mercasto/100/75');
-        
-        const accuracy = escapeHtml(markerAccuracyLabel(marker));
-        const popupContent = `
-          <div class="leaflet-popup-card">
-            <img src="${imgUrl}" class="leaflet-popup-card__img" alt="${title}"/>
-            <div class="leaflet-popup-card__body">
-              <span class="leaflet-popup-card__accuracy ${marker.approximate ? 'leaflet-popup-card__accuracy--approx' : 'leaflet-popup-card__accuracy--real'}">${accuracy}</span>
-              <h4 class="leaflet-popup-card__title">${title}</h4>
-              <p class="leaflet-popup-card__price">${price}</p>
-              <button type="button" class="leaflet-popup-card__btn" onclick="window.__onMapAdClick?.(${ad.id})">Ver anuncio</button>
-            </div>
-          </div>
-        `;
-        leafMarker.bindPopup(popupContent);
+        const rawImg = getAdImageUrl(ad);
+        const FALLBACK_IMG = `https://placehold.co/300x200/84cc16/020617/png?text=${encodeURIComponent(rawTitle.slice(0, 15))}`;
+        const imgUrl = rawImg || FALLBACK_IMG;
+        const accuracy = markerAccuracyLabel(marker);
+        const adId = ad.id;
+
+        // Build popup as DOM element — avoids all HTML escaping issues with images
+        const popupWrapper = document.createElement('div');
+        popupWrapper.className = 'leaflet-popup-card';
+
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.className = 'leaflet-popup-card__img';
+        img.alt = rawTitle;
+        img.loading = 'lazy';
+        img.onerror = function() {
+          this.onerror = null;
+          this.src = FALLBACK_IMG;
+        };
+        popupWrapper.appendChild(img);
+
+        const body = document.createElement('div');
+        body.className = 'leaflet-popup-card__body';
+
+        const accSpan = document.createElement('span');
+        accSpan.className = `leaflet-popup-card__accuracy ${marker.approximate ? 'leaflet-popup-card__accuracy--approx' : 'leaflet-popup-card__accuracy--real'}`;
+        accSpan.textContent = accuracy;
+        body.appendChild(accSpan);
+
+        const h4 = document.createElement('h4');
+        h4.className = 'leaflet-popup-card__title';
+        h4.textContent = rawTitle;
+        body.appendChild(h4);
+
+        const priceP = document.createElement('p');
+        priceP.className = 'leaflet-popup-card__price';
+        priceP.textContent = price;
+        body.appendChild(priceP);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'leaflet-popup-card__btn';
+        btn.textContent = 'Ver anuncio';
+        btn.addEventListener('click', () => {
+          window.__onMapAdClick?.(adId);
+        });
+        body.appendChild(btn);
+
+        popupWrapper.appendChild(body);
+        leafMarker.bindPopup(popupWrapper);
       }
 
       leafMarker.on('click', () => {
