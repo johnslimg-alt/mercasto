@@ -136,8 +136,15 @@ const MercastoLogo = ({ className = "h-11" }) => (
   </div>
 );
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
+const getEnvVar = (key, prodFallback) => {
+  const value = import.meta.env[key];
+  if (value) return value;
+  if (import.meta.env.PROD) return prodFallback;
+  throw new Error(`Environment variable ${key} is required in development/staging. Please check your .env file.`);
+};
+
+const API_URL = getEnvVar('VITE_API_BASE_URL', 'https://mercasto.com/api');
+const STORAGE_URL = getEnvVar('VITE_STORAGE_URL', 'https://mercasto.com/storage');
 const ENABLE_AI_PANEL = import.meta.env.VITE_ENABLE_AI_PANEL === 'true';
 const AI_PLACEHOLDERS = {
   postgresql: 'Ej: ¿Cuántos anuncios activos tenemos ahora?',
@@ -503,7 +510,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api'}/auth/providers`)
+    fetch(`${API_URL}/auth/providers`)
       .then(res => res.json())
       .then(data => {
         // Normalize: live server returns { providers: { apple: { enabled: bool } } }
