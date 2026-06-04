@@ -22,6 +22,7 @@ jobs:
       - name: Check runner context
         run: |
           set -euo pipefail
+          echo "workflow=vps-live-gate"
           echo "user=$(whoami)"
           echo "host=$(hostname)"
           echo "pwd=$(pwd)"
