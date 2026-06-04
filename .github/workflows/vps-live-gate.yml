@@ -16,7 +16,7 @@ concurrency:
 jobs:
   vps-live-gate:
     name: VPS live gate
-    runs-on: [self-hosted, Linux, X64, mercasto-vps]
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 20
     steps:
       - name: Check runner context
