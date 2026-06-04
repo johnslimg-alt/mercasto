@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
-import 'leaflet/dist/leaflet.css';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
