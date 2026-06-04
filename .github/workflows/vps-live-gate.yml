@@ -1,0 +1,61 @@
+name: VPS live gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vps-live-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vps-live-gate:
+    name: VPS live gate
+    runs-on: [self-hosted, Linux, X64, mercasto-vps]
+    timeout-minutes: 20
+    steps:
+      - name: Check runner context
+        run: |
+          set -euo pipefail
+          echo "user=$(whoami)"
+          echo "host=$(hostname)"
+          echo "pwd=$(pwd)"
+          test -d /var/www/mercasto
+
+      - name: Check repository directory
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          git rev-parse --show-toplevel
+          git status --short || true
+
+      - name: Check Docker Compose services
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          docker compose ps
+
+      - name: Check nginx config inside frontend container
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          docker compose exec -T mercasto-frontend nginx -t
+
+      - name: Check backend artisan availability
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          docker compose exec -T mercasto-backend php artisan --version
+
+      - name: Check production HTTP endpoints
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/mercasto-vps-home.html
+          curl -fsS --max-time 30 https://mercasto.com/api/auth/providers -o /tmp/mercasto-vps-auth-providers.json
+          grep -Eiq '<title[^>]*>[^<]{10,90}</title>' /tmp/mercasto-vps-home.html
+          grep -Eiq '"google"|"telegram"|"apple"|"sms"' /tmp/mercasto-vps-auth-providers.json
