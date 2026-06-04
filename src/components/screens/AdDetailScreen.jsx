@@ -393,6 +393,24 @@ export default function AdDetailScreen({
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
+      {/* JSON-LD Structured Data for SEO/AEO */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": ad.title || "Anuncio en Mercasto",
+        "description": ad.description || "Anuncio clasificado en Mercasto",
+        "image": ad.images?.[0] ? `https://mercasto.com/storage/${ad.images[0]}` : "https://mercasto.com/placeholder-ad.svg",
+        "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
+        "offers": {
+          "@type": "Offer",
+          "url": `https://mercasto.com/anuncio/${ad.id}`,
+          "priceCurrency": "MXN",
+          "price": ad.price || "0",
+          "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+          "itemCondition": ad.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
+        }
+      })}} />
+
       <div className="flex items-center justify-between mb-6">
         <button onClick={() => (onBack ? onBack() : setViewedAd(null))} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium transition-colors">
           <ChevronLeft size={20} /> Volver a resultados
