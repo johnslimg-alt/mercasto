@@ -347,7 +347,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       { slug: 'hogar', name: { es: 'Hogar', en: 'Home' }, icon: 'Sofa' },
       { slug: 'moda', name: { es: 'Moda', en: 'Fashion' }, icon: 'Shirt' },
       { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure' }, icon: 'Bike' },
-      { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store', action: 'pricing' },
+      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing' }, icon: 'Crown', action: 'pricing' },
     ]), []);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
