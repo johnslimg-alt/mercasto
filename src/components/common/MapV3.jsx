@@ -435,6 +435,63 @@ export default function MapV3({
     };
   }, [normalizedMarkers, onMarkerClick]);
 
+
+// Factory function — creates a fresh popup DOM element each time
+// Called by Leaflet every time the popup opens, so content is never stale
+function createPopupElement(ad, marker) {
+  const rawTitle = ad.title || 'Anuncio';
+  const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+  const rawImg = getAdImageUrl(ad);
+  const FALLBACK_IMG = `https://placehold.co/300x200/84cc16/020617/png?text=${encodeURIComponent(rawTitle.slice(0, 15))}`;
+  const imgUrl = rawImg || FALLBACK_IMG;
+  const accuracy = markerAccuracyLabel(marker);
+  const adId = ad.id;
+
+  const popupWrapper = document.createElement('div');
+  popupWrapper.className = 'leaflet-popup-card';
+
+  const img = document.createElement('img');
+  img.src = imgUrl;
+  img.className = 'leaflet-popup-card__img';
+  img.alt = rawTitle;
+  img.loading = 'lazy';
+  img.onerror = function() {
+    this.onerror = null;
+    this.src = FALLBACK_IMG;
+  };
+  popupWrapper.appendChild(img);
+
+  const body = document.createElement('div');
+  body.className = 'leaflet-popup-card__body';
+
+  const accSpan = document.createElement('span');
+  accSpan.className = `leaflet-popup-card__accuracy ${marker.approximate ? 'leaflet-popup-card__accuracy--approx' : 'leaflet-popup-card__accuracy--real'}`;
+  accSpan.textContent = accuracy;
+  body.appendChild(accSpan);
+
+  const h4 = document.createElement('h4');
+  h4.className = 'leaflet-popup-card__title';
+  h4.textContent = rawTitle;
+  body.appendChild(h4);
+
+  const priceP = document.createElement('p');
+  priceP.className = 'leaflet-popup-card__price';
+  priceP.textContent = price;
+  body.appendChild(priceP);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'leaflet-popup-card__btn';
+  btn.textContent = 'Ver anuncio';
+  btn.addEventListener('click', () => {
+    window.__onMapAdClick?.(adId);
+  });
+  body.appendChild(btn);
+
+  popupWrapper.appendChild(body);
+  return popupWrapper;
+}
+
   const initMap = (container, instanceRef, isLarge = false) => {
     if (!leaflet || !container) return;
 
@@ -538,58 +595,9 @@ export default function MapV3({
 
       const ad = marker.ad;
       if (ad) {
-        const rawTitle = ad.title || 'Anuncio';
-        const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-        const rawImg = getAdImageUrl(ad);
-        const FALLBACK_IMG = `https://placehold.co/300x200/84cc16/020617/png?text=${encodeURIComponent(rawTitle.slice(0, 15))}`;
-        const imgUrl = rawImg || FALLBACK_IMG;
-        const accuracy = markerAccuracyLabel(marker);
-        const adId = ad.id;
-
-        // Build popup as DOM element — avoids all HTML escaping issues with images
-        const popupWrapper = document.createElement('div');
-        popupWrapper.className = 'leaflet-popup-card';
-
-        const img = document.createElement('img');
-        img.src = imgUrl;
-        img.className = 'leaflet-popup-card__img';
-        img.alt = rawTitle;
-        img.loading = 'lazy';
-        img.onerror = function() {
-          this.onerror = null;
-          this.src = FALLBACK_IMG;
-        };
-        popupWrapper.appendChild(img);
-
-        const body = document.createElement('div');
-        body.className = 'leaflet-popup-card__body';
-
-        const accSpan = document.createElement('span');
-        accSpan.className = `leaflet-popup-card__accuracy ${marker.approximate ? 'leaflet-popup-card__accuracy--approx' : 'leaflet-popup-card__accuracy--real'}`;
-        accSpan.textContent = accuracy;
-        body.appendChild(accSpan);
-
-        const h4 = document.createElement('h4');
-        h4.className = 'leaflet-popup-card__title';
-        h4.textContent = rawTitle;
-        body.appendChild(h4);
-
-        const priceP = document.createElement('p');
-        priceP.className = 'leaflet-popup-card__price';
-        priceP.textContent = price;
-        body.appendChild(priceP);
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'leaflet-popup-card__btn';
-        btn.textContent = 'Ver anuncio';
-        btn.addEventListener('click', () => {
-          window.__onMapAdClick?.(adId);
-        });
-        body.appendChild(btn);
-
-        popupWrapper.appendChild(body);
-        leafMarker.bindPopup(popupWrapper);
+        // Use factory function — creates a NEW DOM element each time popup opens
+        // This fixes the bug where popup content disappears after first close
+        leafMarker.bindPopup(() => createPopupElement(ad, marker));
       }
 
       leafMarker.on('click', () => {
@@ -641,8 +649,9 @@ export default function MapV3({
 
   const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
 
-  const FilterPanel = ({ isMobile = false }) => (
-    <div className={`${isMobile ? 'p-3' : 'p-4'} space-y-4 bg-slate-900/95 border-b border-slate-800 max-h-[50vh] overflow-y-auto`}>
+  // FilterPanel rendered inline (no internal component — avoids React remounting errors)
+  const filterPanelContent = showFilters ? (
+    <div className="p-4 space-y-4 bg-slate-900/95 border-b border-slate-800 max-h-[50vh] overflow-y-auto">
       {/* Search */}
       <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
         <Search size={15} className="shrink-0 text-[#84CC16]" />
@@ -791,7 +800,7 @@ export default function MapV3({
         <Crosshair size={16} /> Buscar en esta zona
       </button>
     </div>
-  );
+  ) : null;
 
   return (
     <>
@@ -899,7 +908,7 @@ export default function MapV3({
           </div>
 
           {/* ── Filter Panel ── */}
-          {showFilters && <FilterPanel />}
+          {filterPanelContent}
 
           {/* ── Map area ── */}
           <div className="relative flex-1 overflow-hidden">
