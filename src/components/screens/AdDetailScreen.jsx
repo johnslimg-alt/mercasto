@@ -1,12 +1,18 @@
+import useDocumentMeta from '../../hooks/useDocumentMeta';
+import QRCode from 'qrcode';
+import ContactButton from '../common/ContactButton';
+// buildMapEmbedUrl
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2, Send, Star } from 'lucide-react';
+import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2, Send, Star, X } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { addRecentlyViewed } from '../../utils/recentlyViewed';
 import { events } from '../../utils/analytics';
 import MapV3 from '../common/MapV3';
-import ContactButton from '../common/ContactButton';
+import RecommendationsWidget from '../common/RecommendationsWidget';
+import BottomSheet from '../ui/BottomSheet';
+
 
 // --- MAP COORDINATES ---
 const STATE_COORDS = {
@@ -187,7 +193,7 @@ const getSafeWhatsAppNumber = (ad) => {
 };
 
 // ── Price Sparkline ──────────────────────────────────────────────────────────
-function PriceSparkline({ history }) {
+function PriceSparkline({ history, label = 'Price history' }) {
   const [tooltip, setTooltip] = React.useState(null);
   const W = 280, H = 64, PAD = 8;
   const prices = history.map(h => Number(h.new_price));
@@ -206,7 +212,7 @@ function PriceSparkline({ history }) {
 
   return (
     <div className="mt-3 mb-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3">
-      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2">Historial de precio</p>
+      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2">{label}</p>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} className="overflow-visible">
         <defs>
           <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
@@ -290,6 +296,8 @@ export default function AdDetailScreen({
   const [priceHistory, setPriceHistory] = useState([]);
   const [alertEnabled, setAlertEnabled] = useState(true);
   const [renderedAtMs] = useState(() => Date.now());
+  const [showQR, setShowQR] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
 
   const adMarker = useMemo(() => {
     if (!ad) return [];
@@ -348,6 +356,14 @@ export default function AdDetailScreen({
 
   if (!ad) return null;
 
+  // Dynamic OG tags for social sharing
+  useDocumentMeta({
+    title: ad.title,
+    description: `$${Number(ad.price || 0).toLocaleString('es-MX')} - ${ad.state || ad.location || 'México'}`,
+    image: getImageUrl(ad.image_url || ad.image?.[0]),
+    url: typeof window !== 'undefined' ? window.location.href : ''
+  });
+
   const isOwner = currentUser && currentUser.id === ad.user_id;
   const isFav = favoriteIds.includes(ad.id);
   const images = getImageUrls(ad.image_url, ad.image).map(url => ({ type: 'image', url }));
@@ -360,6 +376,7 @@ export default function AdDetailScreen({
   const catConfig = filterConfig[ad.category] || [];
   const locationLabel = buildPublicLocationLabel(ad);
   const telegramUsername = getSafeTelegramUsername(ad);
+  // Escribir por Telegram
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
   const whatsappNumber = getSafeWhatsAppNumber(ad);
   const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${ad.title}" en Mercasto`);
@@ -381,6 +398,13 @@ export default function AdDetailScreen({
     { author: 'Usuario Mercasto', text: 'La información coincide con las fotos del anuncio.' },
   ].slice(0, Math.min(2, ratingStats.count));
 
+  const handleShowQR = () => {
+    QRCode.toDataURL(shareUrl, { width: 300, margin: 2 })
+      .then(url => { setQrDataUrl(url); setShowQR(true); })
+      .catch(err => console.error('QR generation failed', err));
+    setShowShareMenu(false);
+  };
+
   const copyShareLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -391,6 +415,22 @@ export default function AdDetailScreen({
       setShowShareMenu(false);
     }
   };
+
+  // Handle share button click — use native share API on mobile if available
+  const handleShareClick = async () => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile && navigator.share) {
+      try {
+        await navigator.share({ title: ad.title, text: shareText, url: shareUrl });
+        handleWhatsAppClick(ad, 'share');
+        return;
+      } catch (err) {
+        // User cancelled native share or not supported — fall through to BottomSheet
+      }
+    }
+    setShowShareMenu(prev => !prev);
+  };
+
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
@@ -414,7 +454,7 @@ export default function AdDetailScreen({
 
       <div className="flex items-center justify-between mb-6">
         <button onClick={() => (onBack ? onBack() : setViewedAd(null))} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium transition-colors">
-          <ChevronLeft size={20} /> Volver a resultados
+          <ChevronLeft size={20} /> {t.back_results || 'Back to results'}
         </button>
         {isOwner && (
           <div className="flex items-center gap-2">
@@ -480,7 +520,7 @@ export default function AdDetailScreen({
                 </span>
               </div>
             )}
-            {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} />}
+            {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} label={t.price_history || 'Price history'} />}
 
             <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 dark:text-slate-300 font-medium">
               <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
@@ -496,7 +536,7 @@ export default function AdDetailScreen({
                     <MapPin size={20} />
                   </div>
                   <div>
-                    <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">Ubicación del anuncio</h3>
+                    <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">{t.location || 'Location'}</h3>
                     <p className="mt-1 text-[14px] font-medium text-slate-600 dark:text-slate-300">{locationLabel}</p>
                     <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">La ubicación es aproximada y se muestra solo con datos públicos del anuncio.</p>
                   </div>
@@ -512,7 +552,7 @@ export default function AdDetailScreen({
             {/* DYNAMIC EAV ATTRIBUTES (Отображение фильтров) */}
             {Object.keys(attributes).length > 0 && (
               <div className="mb-10">
-                <h3 className="text-[18px] font-bold text-slate-900 mb-5">Características principales</h3>
+                <h3 className="text-[18px] font-bold text-slate-900 mb-5">{t.main_features || 'Main features'}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {Object.entries(attributes).map(([key, val]) => {
                     const fieldDef = catConfig.find(f => f.id === key);
@@ -529,7 +569,7 @@ export default function AdDetailScreen({
               </div>
             )}
 
-            <h3 className="text-[18px] font-bold text-slate-900 mb-4">Descripción</h3>
+            <h3 className="text-[18px] font-bold text-slate-900 mb-4">{t.description || 'Description'}</h3>
             <div className="text-slate-700 leading-relaxed whitespace-pre-line text-[15px]">
               {ad.description}
             </div>
@@ -537,7 +577,7 @@ export default function AdDetailScreen({
             <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/40">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-[18px] font-bold text-slate-900 dark:text-white">Comentarios y valoración</h3>
+                  <h3 className="text-[18px] font-bold text-slate-900 dark:text-white">{t.comments || 'Reviews and ratings'}</h3>
                   <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Opiniones visibles para ayudar a comprar con confianza.</p>
                 </div>
                 <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm dark:bg-slate-800">
@@ -559,7 +599,7 @@ export default function AdDetailScreen({
             </div>
             
             <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">
-              <button onClick={() => { setReportingAd(ad); setShowReportModal(true); }} className="text-slate-400 hover:text-red-500 text-[13px] font-medium flex items-center gap-1.5 transition-colors"><AlertTriangle size={16}/> Reportar anuncio sospechoso</button>
+              <button onClick={() => { setReportingAd(ad); setShowReportModal(true); }} className="text-slate-400 hover:text-red-500 text-[13px] font-medium flex items-center gap-1.5 transition-colors"><AlertTriangle size={16}/> {t.report_ad || 'Report listing'}</button>
             </div>
           </div>
         </div>
@@ -582,7 +622,7 @@ export default function AdDetailScreen({
               </div>
             </div>
 
-            <ContactButton ad={ad} user={currentUser} className="w-full mb-3" />
+            <ContactButton ad={ad} user={user} className="w-full mb-3" />
 
             <div className="flex gap-3 mt-4">
               <button onClick={(e) => handleToggleFavorite(e, ad.id)} className={`btn-md flex-1 flex items-center justify-center gap-2 border transition-colors ${isFav ? 'bg-red-50 border-red-100 text-red-600' : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}>
@@ -590,22 +630,20 @@ export default function AdDetailScreen({
               </button>
               <div className="relative flex-1">
                 <button
-                  onClick={() => setShowShareMenu(prev => !prev)}
+                  onClick={handleShareClick}
                   className="btn-md w-full bg-white dark:bg-slate-700 border border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50 flex items-center justify-center gap-2"
                   aria-expanded={showShareMenu}
                 >
                   <Share2 size={18} /> Compartir
                 </button>
+
+                {/* Desktop Dropdown */}
                 {showShareMenu && (
-                  <div className="absolute right-0 z-30 mt-2 max-h-64 w-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                  <div className="hidden md:block absolute right-0 z-30 mt-2 max-h-64 w-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
                     {navigator.share && (
                       <button
                         type="button"
-                        onClick={() => {
-                          handleShareAd(ad);
-                          handleWhatsAppClick(ad, 'share');
-                          setShowShareMenu(false);
-                        }}
+                        onClick={() => { handleShareAd(ad); handleWhatsAppClick(ad, 'share'); setShowShareMenu(false); }}
                         className="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
                         Compartir desde el dispositivo
@@ -617,15 +655,19 @@ export default function AdDetailScreen({
                         href={option.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={() => {
-                          handleWhatsAppClick(ad, option.label === 'Email' ? 'email' : 'share');
-                          setShowShareMenu(false);
-                        }}
+                        onClick={() => { handleWhatsAppClick(ad, option.label === 'Email' ? 'email' : 'share'); setShowShareMenu(false); }}
                         className="block px-4 py-2.5 text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
                         {option.label}
                       </a>
                     ))}
+                    <button
+                      type="button"
+                      onClick={handleShowQR}
+                      className="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                    >
+                      Código QR
+                    </button>
                     <button
                       type="button"
                       onClick={copyShareLink}
@@ -635,7 +677,60 @@ export default function AdDetailScreen({
                     </button>
                   </div>
                 )}
+
+                {/* Mobile Bottom Sheet via BottomSheet component */}
+                <BottomSheet
+                  isOpen={showShareMenu}
+                  onClose={() => setShowShareMenu(false)}
+                  title="Compartir anuncio"
+                  maxHeight="75vh"
+                  zIndex={1001}
+                >
+                  <div className="p-6 md:hidden">
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      {shareOptions.map(option => {
+                        const colors = {
+                          'WhatsApp': 'bg-green-500 text-white',
+                          'Telegram': 'bg-blue-500 text-white',
+                          'Facebook': 'bg-blue-600 text-white',
+                          'X / Twitter': 'bg-black text-white dark:bg-white dark:text-black',
+                          'Email': 'bg-slate-500 text-white'
+                        };
+                        return (
+                          <a
+                            key={option.label}
+                            href={option.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => { handleWhatsAppClick(ad, option.label === 'Email' ? 'email' : 'share'); setShowShareMenu(false); }}
+                            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[11px] ${colors[option.label] || 'bg-slate-500 text-white'}`}>
+                              {option.label[0]}
+                            </div>
+                            <span className="text-xs font-semibold mt-2 text-slate-700 dark:text-slate-300">{option.label}</span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleShowQR}
+                      className="w-full py-3 text-center text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors mb-3"
+                    >
+                      Código QR
+                    </button>
+                    <button
+                      type="button"
+                      onClick={copyShareLink}
+                      className="w-full py-3 text-center text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
+                    >
+                      Copiar enlace
+                    </button>
+                  </div>
+                </BottomSheet>
               </div>
+
             </div>
             {currentUser && !isOwner && (
               <button
@@ -657,13 +752,63 @@ export default function AdDetailScreen({
       {/* ПОХОЖИЕ ОБЪЯВЛЕНИЯ */}
       {similarAds.length > 0 && (
         <div className="mt-10">
-          <h2 className="text-[20px] font-bold text-slate-900 mb-5">Te puede interesar</h2>
+          <h2 className="text-[20px] font-bold text-slate-900 mb-5">{t.similar_ads || 'You may also like'}</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {similarAds.map(simAd => (
               <div key={simAd.id} className="cursor-pointer" onClick={() => setViewedAd(simAd)}>
                 {renderAdCard(simAd)}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      {/* AI RECOMMENDATIONS */}
+      <div className="mt-10">
+        <RecommendationsWidget
+          userId={currentUser?.id}
+          excludeAdId={ad?.id}
+          limit={12}
+          onAdClick={(recAd) => setViewedAd(recAd)}
+        />
+      </div>
+
+      {/* QR Code Modal */}
+      {showQR && (
+        <div
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setShowQR(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center gap-5 max-w-xs w-full"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowQR(false)}
+              className="self-end -mt-4 -mr-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+              aria-label="Cerrar"
+            >
+              <X size={22} />
+            </button>
+            <h2 className="text-[15px] font-bold text-slate-900 dark:text-white text-center leading-snug">
+              {ad.title}
+            </h2>
+            {qrDataUrl && (
+              <img
+                src={qrDataUrl}
+                alt="Código QR del anuncio"
+                width={240}
+                height={240}
+                className="rounded-xl border border-slate-200 dark:border-slate-700"
+              />
+            )}
+            <a
+              href={qrDataUrl}
+              download={`mercasto-qr-${ad.id}.png`}
+              className="w-full py-3 text-center text-sm font-semibold rounded-2xl bg-[#65A30D] hover:bg-[#4d7a09] text-white transition-colors"
+            >
+              Descargar PNG
+            </a>
           </div>
         </div>
       )}
