@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Bell, Camera, CheckCircle, ChevronLeft, Globe, Lock, MapPin, Phone, Save, Trash2, User } from 'lucide-react';
 import BusinessProfileEditor from '../profile/BusinessProfileEditor';
+import { useUI } from '../../contexts/UIContext';
+import { getTranslations } from '../../utils/translations';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -36,6 +38,8 @@ function Toggle({ value, onChange, label }) {
 export default function ProfileEditScreen() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const { lang } = useUI();
+  const t = getTranslations(lang);
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -92,9 +96,9 @@ export default function ProfileEditScreen() {
         }
         setAvatarPreview(getAvatarSrc(data.avatar_url));
       })
-      .catch(() => showToast('Error al cargar el perfil', 'error'))
+      .catch(() => showToast(t.network_error || 'Error al cargar el perfil', 'error'))
       .finally(() => setLoading(false));
-  }, [navigate]);
+  }, [navigate, t]);
 
   const handleAvatarChange = async event => {
     const file = event.target.files?.[0];
@@ -112,12 +116,12 @@ export default function ProfileEditScreen() {
       const data = await response.json();
       if (response.ok) {
         setAvatarPreview(getAvatarSrc(data.avatar_url));
-        showToast('Foto actualizada');
+        showToast(t.photo_uploaded || 'Foto actualizada');
       } else {
-        showToast(data.message || 'Error al subir la foto', 'error');
+        showToast(data.message || t.photo_upload_failed || 'Error al subir la foto', 'error');
       }
     } catch {
-      showToast('Error de red al subir la foto', 'error');
+      showToast(t.network_error || 'Error de red al subir la foto', 'error');
     } finally {
       setAvatarUploading(false);
       event.target.value = '';
@@ -135,14 +139,14 @@ export default function ProfileEditScreen() {
       });
       const data = await response.json();
       if (response.ok) {
-        showToast('Perfil guardado correctamente');
+        showToast(t.profile_saved || 'Perfil guardado correctamente');
         setProfile(prev => ({ ...prev, ...data }));
       } else {
         const message = data.errors ? Object.values(data.errors).flat().join(' ') : data.message;
-        showToast(message || 'Error al guardar', 'error');
+        showToast(message || t.network_error || 'Error al guardar', 'error');
       }
     } catch {
-      showToast('Error de red', 'error');
+      showToast(t.network_error || 'Error de red', 'error');
     } finally {
       setSaving(false);
     }
@@ -151,11 +155,11 @@ export default function ProfileEditScreen() {
   const handleSavePassword = async event => {
     event.preventDefault();
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      showToast('Las contraseñas no coinciden', 'error');
+      showToast(t.passwords_mismatch || 'Las contraseñas no coinciden', 'error');
       return;
     }
     if (passwordForm.new_password.length < 8) {
-      showToast('La contraseña debe tener al menos 8 caracteres', 'error');
+      showToast(t.password_length_error || 'La contraseña debe tener al menos 8 caracteres', 'error');
       return;
     }
     setSaving(true);
@@ -169,13 +173,13 @@ export default function ProfileEditScreen() {
       });
       const data = await response.json();
       if (response.ok) {
-        showToast('Contraseña actualizada');
+        showToast(t.password_updated || 'Contraseña actualizada');
         setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       } else {
-        showToast(data.message || 'Error al cambiar la contraseña', 'error');
+        showToast(data.message || t.network_error || 'Error al cambiar la contraseña', 'error');
       }
     } catch {
-      showToast('Error de red', 'error');
+      showToast(t.network_error || 'Error de red', 'error');
     } finally {
       setSaving(false);
     }
@@ -183,7 +187,7 @@ export default function ProfileEditScreen() {
 
   const handleSendOtp = async () => {
     if (!phoneInput || phoneInput.length < 10) {
-      showToast('Ingresa un número válido (mín. 10 dígitos)', 'error');
+      showToast(t.phone_length_error || 'Ingresa un número válido (mín. 10 dígitos)', 'error');
       return;
     }
     setPhoneVerifying(true);
@@ -196,12 +200,12 @@ export default function ProfileEditScreen() {
       const data = await response.json();
       if (response.ok) {
         setOtpSent(true);
-        showToast('Código enviado. Revisa tu teléfono.');
+        showToast(t.otp_code_sent || 'Código enviado. Revisa tu teléfono.');
       } else {
-        showToast(data.error || 'Error al enviar el código', 'error');
+        showToast(data.error || t.otp_code_error || 'Error al enviar el código', 'error');
       }
     } catch {
-      showToast('Error de red', 'error');
+      showToast(t.network_error || 'Error de red', 'error');
     } finally {
       setPhoneVerifying(false);
     }
@@ -209,7 +213,7 @@ export default function ProfileEditScreen() {
 
   const handleVerifyOtp = async () => {
     if (otpInput.length !== 6) {
-      showToast('El código debe tener 6 dígitos', 'error');
+      showToast(t.otp_length_error || 'El código debe tener 6 dígitos', 'error');
       return;
     }
     setPhoneVerifying(true);
@@ -221,15 +225,15 @@ export default function ProfileEditScreen() {
       });
       const data = await response.json();
       if (response.ok) {
-        showToast(data.message || '¡Teléfono verificado!');
+        showToast(data.message || t.phone_verified_success || '¡Teléfono verificado!');
         setProfile(prev => ({ ...prev, phone_verified: true, phone_number: phoneInput }));
         setOtpSent(false);
         setOtpInput('');
       } else {
-        showToast(data.error || 'Código incorrecto', 'error');
+        showToast(data.error || t.otp_invalid || 'Código incorrecto', 'error');
       }
     } catch {
-      showToast('Error de red', 'error');
+      showToast(t.network_error || 'Error de red', 'error');
     } finally {
       setPhoneVerifying(false);
     }
@@ -242,9 +246,9 @@ export default function ProfileEditScreen() {
         headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(notifForm),
       });
-      showToast(response.ok ? 'Preferencias guardadas' : 'Error al guardar preferencias', response.ok ? 'success' : 'error');
+      showToast(response.ok ? (t.save_prefs_success || 'Preferencias guardadas') : (t.network_error || 'Error'), response.ok ? 'success' : 'error');
     } catch {
-      showToast('Error de red', 'error');
+      showToast(t.network_error || 'Error de red', 'error');
     }
   };
 
@@ -266,7 +270,7 @@ export default function ProfileEditScreen() {
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300"><ChevronLeft size={20} /></button>
-          <h1 className="font-semibold text-slate-900 dark:text-white">Editar perfil</h1>
+          <h1 className="font-semibold text-slate-900 dark:text-white">{t.edit_profile || 'Editar perfil'}</h1>
         </div>
       </div>
 
@@ -280,40 +284,40 @@ export default function ProfileEditScreen() {
             <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-8 h-8 bg-lime-500 hover:bg-lime-600 rounded-full flex items-center justify-center shadow text-white"><Camera size={14} /></button>
           </div>
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-lime-600 font-medium hover:underline">Cambiar foto</button>
-          {profile?.member_since && <p className="text-xs text-slate-400">Miembro desde {profile.member_since}</p>}
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-lime-600 font-medium hover:underline">{t.change_photo || 'Cambiar foto'}</button>
+          {profile?.member_since && <p className="text-xs text-slate-400">{t.member_since || 'Miembro desde'} {profile.member_since}</p>}
         </div>
 
         <form onSubmit={handleSaveProfile} className={`${cardClass} space-y-4`}>
-          <h2 className={headingClass}><User size={16} className="text-lime-500" /> Información básica</h2>
-          <input required maxLength={255} value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className={inputClass} placeholder="Nombre completo" />
-          <textarea rows={3} maxLength={1000} value={form.bio} onChange={event => setForm(prev => ({ ...prev, bio: event.target.value }))} className={`${inputClass} resize-none`} placeholder="Biografía" />
+          <h2 className={headingClass}><User size={16} className="text-lime-500" /> {t.personal_info || 'Información básica'}</h2>
+          <input required maxLength={255} value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className={inputClass} placeholder={t.fullname_placeholder || 'Nombre completo'} />
+          <textarea rows={3} maxLength={1000} value={form.bio} onChange={event => setForm(prev => ({ ...prev, bio: event.target.value }))} className={`${inputClass} resize-none`} placeholder={t.bio_placeholder || 'Biografía'} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input maxLength={120} value={form.city} onChange={event => setForm(prev => ({ ...prev, city: event.target.value }))} className={inputClass} placeholder="Ciudad" />
-            <input type="tel" maxLength={20} value={form.phone_number} onChange={event => setForm(prev => ({ ...prev, phone_number: event.target.value }))} className={inputClass} placeholder="Teléfono" />
-            <input type="tel" maxLength={20} value={form.whatsapp} onChange={event => setForm(prev => ({ ...prev, whatsapp: event.target.value }))} className={inputClass} placeholder="WhatsApp" />
-            <input type="url" maxLength={255} value={form.website} onChange={event => setForm(prev => ({ ...prev, website: event.target.value }))} className={inputClass} placeholder="Sitio web" />
+            <input maxLength={120} value={form.city} onChange={event => setForm(prev => ({ ...prev, city: event.target.value }))} className={inputClass} placeholder={t.city || 'Ciudad'} />
+            <input type="tel" maxLength={20} value={form.phone_number} onChange={event => setForm(prev => ({ ...prev, phone_number: event.target.value }))} className={inputClass} placeholder={t.phone || 'Teléfono'} />
+            <input type="tel" maxLength={20} value={form.whatsapp} onChange={event => setForm(prev => ({ ...prev, whatsapp: event.target.value }))} className={inputClass} placeholder={t.whatsapp || 'WhatsApp'} />
+            <input type="url" maxLength={255} value={form.website} onChange={event => setForm(prev => ({ ...prev, website: event.target.value }))} className={inputClass} placeholder={t.website || 'Sitio web'} />
           </div>
           <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-950">
             <span className="px-3 text-slate-400 text-sm bg-slate-50 dark:bg-slate-900 border-r border-slate-300 dark:border-slate-700 py-2.5">@</span>
             <input maxLength={100} value={form.social_instagram} onChange={event => setForm(prev => ({ ...prev, social_instagram: event.target.value.replace(/^@/, '') }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Instagram" />
           </div>
-          <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">{saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save size={15} />} Guardar información</button>
+          <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">{saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save size={15} />} {t.save_changes || 'Guardar información'}</button>
         </form>
 
         <BusinessProfileEditor showToast={showToast} />
 
         <div className={`${cardClass} space-y-4`}>
-          <h2 className={headingClass}><Phone size={16} className="text-lime-500" /> Verificación de teléfono</h2>
+          <h2 className={headingClass}><Phone size={16} className="text-lime-500" /> {t.phone_verification || 'Verificación de teléfono'}</h2>
           {profile?.phone_verified ? (
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-xl px-4 py-3"><CheckCircle size={18} /><span className="text-sm font-medium">{profile.phone_number} — Verificado ✓</span></div>
+            <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-xl px-4 py-3"><CheckCircle size={18} /><span className="text-sm font-medium">{profile.phone_number} — {t.verified || 'Verificado ✓'}</span></div>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-slate-500">Verifica tu teléfono para ganar confianza con los compradores. Recibirás un código SMS.</p>
+              <p className="text-xs text-slate-500">{t.phone_verify_desc || 'Verifica tu teléfono para ganar confianza con los compradores. Recibirás un código SMS.'}</p>
               {!otpSent ? (
-                <div className="flex gap-2"><input type="tel" placeholder="+52 55 1234 5678" value={phoneInput} onChange={event => setPhoneInput(event.target.value)} className={`${inputClass} flex-1`} /><button type="button" onClick={handleSendOtp} disabled={phoneVerifying} className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap">Enviar código</button></div>
+                <div className="flex gap-2"><input type="tel" placeholder="+52 55 1234 5678" value={phoneInput} onChange={event => setPhoneInput(event.target.value)} className={`${inputClass} flex-1`} /><button type="button" onClick={handleSendOtp} disabled={phoneVerifying} className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap">{t.send_code || 'Enviar código'}</button></div>
               ) : (
-                <div className="space-y-3"><input inputMode="numeric" maxLength={6} placeholder="123456" value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\D/g, ''))} className={`${inputClass} text-center text-2xl tracking-widest font-mono`} /><button type="button" onClick={handleVerifyOtp} disabled={phoneVerifying || otpInput.length !== 6} className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">Verificar</button></div>
+                <div className="space-y-3"><input inputMode="numeric" maxLength={6} placeholder="123456" value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\D/g, ''))} className={`${inputClass} text-center text-2xl tracking-widest font-mono`} /><button type="button" onClick={handleVerifyOtp} disabled={phoneVerifying || otpInput.length !== 6} className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">{t.verify || 'Verificar'}</button></div>
               )}
             </div>
           )}
@@ -321,35 +325,35 @@ export default function ProfileEditScreen() {
 
         {!isOAuth && (
           <form onSubmit={handleSavePassword} className={`${cardClass} space-y-4`}>
-            <h2 className={headingClass}><Lock size={16} className="text-lime-500" /> Cambiar contraseña</h2>
-            {profile?.password_set && <input type="password" value={passwordForm.current_password} onChange={event => setPasswordForm(prev => ({ ...prev, current_password: event.target.value }))} className={inputClass} placeholder="Contraseña actual" />}
-            <input type="password" minLength={8} required value={passwordForm.new_password} onChange={event => setPasswordForm(prev => ({ ...prev, new_password: event.target.value }))} className={inputClass} placeholder="Nueva contraseña" />
-            <input type="password" required value={passwordForm.confirm_password} onChange={event => setPasswordForm(prev => ({ ...prev, confirm_password: event.target.value }))} className={inputClass} placeholder="Confirmar contraseña" />
-            <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"><Lock size={15} /> Actualizar contraseña</button>
+            <h2 className={headingClass}><Lock size={16} className="text-lime-500" /> {t.change_password || 'Cambiar contraseña'}</h2>
+            {profile?.password_set && <input type="password" value={passwordForm.current_password} onChange={event => setPasswordForm(prev => ({ ...prev, current_password: event.target.value }))} className={inputClass} placeholder={t.curr_password || 'Contraseña actual'} />}
+            <input type="password" minLength={8} required value={passwordForm.new_password} onChange={event => setPasswordForm(prev => ({ ...prev, new_password: event.target.value }))} className={inputClass} placeholder={t.new_password || 'Nueva contraseña'} />
+            <input type="password" required value={passwordForm.confirm_password} onChange={event => setPasswordForm(prev => ({ ...prev, confirm_password: event.target.value }))} className={inputClass} placeholder={t.conf_password || 'Confirmar contraseña'} />
+            <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"><Lock size={15} /> {t.update_pass_btn || 'Actualizar contraseña'}</button>
           </form>
         )}
 
         <div className={`${cardClass} space-y-4`}>
-          <h2 className={headingClass}><Bell size={16} className="text-lime-500" /> Notificaciones</h2>
-          <Toggle value={notifForm.email_ad_reply} onChange={value => setNotifForm(prev => ({ ...prev, email_ad_reply: value }))} label="Correo cuando alguien pregunte por mi anuncio" />
-          <button type="button" onClick={handleSaveNotifications} className="w-full border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium rounded-xl py-2.5 text-sm">Guardar preferencias</button>
+          <h2 className={headingClass}><Bell size={16} className="text-lime-500" /> {t.notifications || 'Notificaciones'}</h2>
+          <Toggle value={notifForm.email_ad_reply} onChange={value => setNotifForm(prev => ({ ...prev, email_ad_reply: value }))} label={t.notif_email_desc || 'Correo cuando alguien pregunte por mi anuncio'} />
+          <button type="button" onClick={handleSaveNotifications} className="w-full border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium rounded-xl py-2.5 text-sm">{t.save_prefs || 'Guardar preferencias'}</button>
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-red-100 dark:border-red-500/20 space-y-3">
-          <h2 className="font-semibold text-red-700 flex items-center gap-2"><Trash2 size={16} /> Zona de peligro</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-300">Eliminar tu cuenta es una acción permanente.</p>
-          <button type="button" onClick={() => setShowDeleteModal(true)} className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium rounded-xl py-2.5 text-sm">Eliminar mi cuenta</button>
+          <h2 className="font-semibold text-red-700 flex items-center gap-2"><Trash2 size={16} /> {t.danger_zone || 'Zona de peligro'}</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{t.delete_account_desc || 'Eliminar tu cuenta es una acción permanente.'}</p>
+          <button type="button" onClick={() => setShowDeleteModal(true)} className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium rounded-xl py-2.5 text-sm">{t.del_account || 'Eliminar mi cuenta'}</button>
         </div>
       </div>
 
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full shadow-xl border border-slate-200 dark:border-slate-800">
-            <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-2">¿Eliminar tu cuenta?</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">Esta acción es irreversible. Escribe <strong>ELIMINAR</strong> para confirmar.</p>
+            <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-2">{t.delete_account_confirm || '¿Eliminar tu cuenta?'}</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{t.delete_account_warn || 'Esta acción es irreversible. Escribe ELIMINAR para confirmar.'}</p>
             <input value={deleteConfirmText} onChange={event => setDeleteConfirmText(event.target.value)} placeholder="ELIMINAR" className={`${inputClass} mb-4`} />
             <div className="flex gap-3">
-              <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">{t.cancel || 'Cancelar'}</button>
               <button type="button" disabled={deleteConfirmText !== 'ELIMINAR'} onClick={async () => {
                 const response = await fetch(`${API_URL}/user`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
                 if (response.ok) {
@@ -357,10 +361,10 @@ export default function ProfileEditScreen() {
                   localStorage.removeItem('token');
                   window.location.href = '/';
                 } else {
-                  showToast('Error al eliminar la cuenta', 'error');
+                  showToast(t.delete_account_error || 'Error al eliminar la cuenta', 'error');
                   setShowDeleteModal(false);
                 }
-              }} className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium">Eliminar</button>
+              }} className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium">{t.delete || 'Eliminar'}</button>
             </div>
           </div>
         </div>
