@@ -1,17 +1,19 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, ArrowLeft, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function NotFoundScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
-    document.title = 'Página no encontrada | Mercasto';
+    document.title = `${t('errors.notFound')} | Mercasto`;
     let meta = document.querySelector('meta[name="robots"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'robots'; document.head.appendChild(meta); }
     meta.content = 'noindex, nofollow';
     window.scrollTo(0, 0);
-  }, []);
+  }, [t]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-16">
@@ -28,13 +30,13 @@ export default function NotFoundScreen() {
 
       {/* Title */}
       <h1 className="text-3xl md:text-4xl font-bold text-slate-900 text-center mb-3">
-        ¡Ay! Página no encontrada
+        {t('errors.notFound')}
       </h1>
       <p className="text-slate-500 text-center max-w-md mb-2">
-        El anuncio que buscas ya no existe o fue eliminado.
+        {t('home.noResults')}
       </p>
       <p className="text-slate-400 text-sm text-center max-w-sm mb-10">
-        Puede que el enlace esté desactualizado, el anuncio haya expirado o la URL esté mal escrita.
+        {t('home.tryDifferentFilters')}
       </p>
 
       {/* Action buttons */}
@@ -44,27 +46,27 @@ export default function NotFoundScreen() {
           className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:border-slate-300 hover:shadow-sm transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
-          Volver
+          {t('common.back')}
         </button>
         <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2 px-5 py-2.5 bg-lime-500 text-white rounded-xl text-sm font-medium hover:bg-lime-600 transition-colors shadow-sm"
         >
           <Home className="w-4 h-4" />
-          Ir al inicio
+          {t('home.home', { defaultValue: 'Home' })}
         </button>
         <button
           onClick={() => { navigate('/'); setTimeout(() => { const el = document.querySelector('input[type="search"], input[placeholder*="busca"], input[placeholder*="Busca"]'); if (el) el.focus(); }, 300); }}
           className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:border-slate-300 hover:shadow-sm transition-all"
         >
           <Search className="w-4 h-4" />
-          Buscar anuncios
+          {t('common.search')}
         </button>
       </div>
 
       {/* Suggested categories */}
       <div className="mt-12 text-center">
-        <p className="text-sm text-slate-400 mb-4">Quizás te interese explorar:</p>
+        <p className="text-sm text-slate-400 mb-4">{t('home.trending')}</p>
         <div className="flex flex-wrap gap-2 justify-center">
           {[
             { label: '🚗 Autos', path: '/autos' },
@@ -86,9 +88,9 @@ export default function NotFoundScreen() {
       {/* Footer note */}
       <p className="mt-16 text-xs text-slate-300">
         © 2026 Mercasto México •{' '}
-        <button onClick={() => navigate('/terminos')} className="hover:text-slate-400 transition-colors underline underline-offset-2">Términos</button>
+        <button onClick={() => navigate('/terminos')} className="hover:text-slate-400 transition-colors underline underline-offset-2">{t('footer.terms')}</button>
         {' '}•{' '}
-        <button onClick={() => navigate('/privacidad')} className="hover:text-slate-400 transition-colors underline underline-offset-2">Privacidad</button>
+        <button onClick={() => navigate('/privacidad')} className="hover:text-slate-400 transition-colors underline underline-offset-2">{t('footer.privacy')}</button>
       </p>
     </div>
   );

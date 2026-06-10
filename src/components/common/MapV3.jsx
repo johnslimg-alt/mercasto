@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter } from 'lucide-react';
+import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter, Navigation, Locate } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
+import { useTranslation } from 'react-i18next';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -15,7 +16,13 @@ const DEFAULT_MARKERS = [
 let leafletPromise;
 const loadLeaflet = () => {
   if (!leafletPromise) {
-    leafletPromise = import('leaflet').then((mod) => mod.default || mod);
+    leafletPromise = import('leaflet')
+      .then((mod) => mod.default || mod)
+      .then((L) => Promise.all([
+        import('leaflet.markercluster'),
+        import('leaflet-draw'),
+        import('leaflet-draw/dist/leaflet.draw.css'),
+      ]).then(() => L));
   }
   return leafletPromise;
 };
@@ -182,7 +189,10 @@ export default function MapV3({
   showFullscreen = true,
   initialFilters = {},
 }) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.resolvedLanguage || i18n.language || 'es';
   const [expanded, setExpanded] = useState(false);
+  const [drawMode, setDrawMode] = useState(false);
   const [leaflet, setLeaflet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -199,6 +209,12 @@ export default function MapV3({
   const [listingType, setListingType] = useState(initialFilters.listingType || '');
   const [conditionFilter, setConditionFilter] = useState(initialFilters.condition || []);
   const [dynamicFilters, setDynamicFilters] = useState(initialFilters.dynamic || {});
+  const [selectedCategory, setSelectedCategory] = useState(category || '');
+  const [categories, setCategories] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState('');
+
   
   // API config for category attributes
   const [apiConfig, setApiConfig] = useState(null);
@@ -211,12 +227,32 @@ export default function MapV3({
   const mapInstanceRef = React.useRef(null);
   const largeMapInstanceRef = React.useRef(null);
   const mountedRef = React.useRef(true);
+  const userMarkerRef = React.useRef(null);
 
-  // Fetch ads if apiUrl or category is provided
+  // Fetch list of categories
   useEffect(() => {
-    if (!apiUrl && !category) return;
+    let cancelled = false;
+    fetch(`${API_URL}/categories`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        if (!cancelled) setCategories(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Sync selectedCategory state when category prop changes
+  useEffect(() => {
+    setSelectedCategory(category || '');
+  }, [category]);
+
+  // Fetch ads if apiUrl or selectedCategory is provided
+  useEffect(() => {
     const controller = new AbortController();
-    const url = apiUrl || `${API_URL}/ads?category=${encodeURIComponent(category)}&per_page=80`;
+    // Fetch all ads if selectedCategory is empty, otherwise fetch category specific
+    const url = apiUrl || `${API_URL}/ads?${selectedCategory ? `category=${encodeURIComponent(selectedCategory)}&` : ''}per_page=80`;
 
     setFetchingAds(true);
     fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } })
@@ -231,20 +267,20 @@ export default function MapV3({
       .finally(() => setFetchingAds(false));
 
     return () => controller.abort();
-  }, [apiUrl, category]);
+  }, [apiUrl, selectedCategory]);
 
   // Fetch category attributes from DB
   useEffect(() => {
-    if (!category) { setApiConfig(null); return; }
+    if (!selectedCategory) { setApiConfig(null); return; }
     let cancelled = false;
-    fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(category)}`)
+    fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(selectedCategory)}`)
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (!cancelled) setApiConfig(data.length > 0 ? data : null); })
       .catch(() => { if (!cancelled) setApiConfig(null); });
     return () => { cancelled = true; };
-  }, [category]);
+  }, [selectedCategory]);
 
-  const config = apiConfig ?? (category ? (filterConfig[category] || null) : null);
+  const config = apiConfig ?? (selectedCategory ? (filterConfig[selectedCategory] || null) : null);
 
   // Convert ads to markers
   const adsMarkers = useMemo(() => {
@@ -288,11 +324,12 @@ export default function MapV3({
       if (onlyWithCoords && (!(marker.coords && marker.coords.length >= 2) || marker.approximate)) return false;
       if (selectedState && ad.state && !ad.state.toLowerCase().includes(selectedState.toLowerCase())) return false;
       if (selectedCity && ad.city && !ad.city.toLowerCase().includes(selectedCity.toLowerCase())) return false;
+      if (selectedCategory && ad.category && ad.category !== selectedCategory) return false;
       if (listingType && ad.listing_type && ad.listing_type !== listingType) return false;
       
       return true;
     });
-  }, [minPrice, maxPrice, normalizedMarkers, mapQuery, onlyWithCoords, selectedState, selectedCity, listingType]);
+  }, [minPrice, maxPrice, normalizedMarkers, mapQuery, onlyWithCoords, selectedState, selectedCity, selectedCategory, listingType]);
 
   useEffect(() => () => {
     mountedRef.current = false;
@@ -367,6 +404,7 @@ export default function MapV3({
     setOnlyWithCoords(false);
     setSelectedState('');
     setSelectedCity('');
+    setSelectedCategory('');
     setListingType('');
     setConditionFilter([]);
     setDynamicFilters({});
@@ -492,7 +530,70 @@ function createPopupElement(ad, marker) {
   return popupWrapper;
 }
 
-  const initMap = (container, instanceRef, isLarge = false) => {
+
+  // Геолокация пользователя - "Buscar cerca de mí"
+  const getUserLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocalización no disponible en este navegador');
+      return;
+    }
+    
+    setLocating(true);
+    setLocationError('');
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const loc = { lat: latitude, lng: longitude };
+        setUserLocation(loc);
+        setLocating(false);
+        
+        // Определяем активную карту (fullscreen или обычная)
+        const activeMap = expanded ? largeMapInstanceRef.current : mapInstanceRef.current;
+        
+        // Центрируем карту на локации пользователя
+        if (activeMap && leaflet) {
+          activeMap.setView([latitude, longitude], 14, { animate: true });
+          
+          // Удаляем старый маркер если есть
+          if (userMarkerRef.current && activeMap.hasLayer(userMarkerRef.current)) {
+            activeMap.removeLayer(userMarkerRef.current);
+          }
+          
+          // Добавляем маркер "Ты здесь"
+          const userIcon = leaflet.divIcon({
+            className: 'user-location-marker',
+            html: '<div style="width:20px;height:20px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 0 0 4px rgba(59,130,246,0.3),0 2px 8px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          });
+          
+          userMarkerRef.current = leaflet.marker([latitude, longitude], { icon: userIcon, zIndexOffset: 1000 })
+            .addTo(activeMap)
+            .bindPopup('<strong>📍 Estás aquí</strong>');
+        }
+      },
+      (error) => {
+        setLocating(false);
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationError('Permiso de ubicación denegado. Activa la ubicación en tu navegador.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationError('Ubicación no disponible');
+            break;
+          case error.TIMEOUT:
+            setLocationError('Tiempo de espera agotado');
+            break;
+          default:
+            setLocationError('Error desconocido al obtener ubicación');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const initMap = (container, instanceRef, isLarge = false, isDrawMode = false) => {
     if (!leaflet || !container) return;
 
     if (instanceRef.current) {
@@ -565,17 +666,55 @@ function createPopupElement(ad, marker) {
     });
     tileLayerInstance.addTo(map);
 
-    const markerGroup = L.featureGroup();
+    const markerGroup = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      disableClusteringAtZoom: 16,
+      iconCreateFunction: function(cluster) {
+        const count = cluster.getChildCount();
+        let className = "marker-cluster-custom";
+        if (count < 10) className += " marker-cluster-small";
+        else if (count < 50) className += " marker-cluster-medium";
+        else className += " marker-cluster-large";
+        return L.divIcon({
+          html: "<div><span>" + count + "</span></div>",
+          className: className,
+          iconSize: L.point(40, 40)
+        });
+      }
+    });
 
     validMarkers.forEach((marker, index) => {
       const [lat, lon] = marker.coords.map(Number);
       if (Number.isNaN(lat) || Number.isNaN(lon)) return;
 
+      const ad = marker.ad;
       const isDarkMarker = marker.tone === 'dark' || index % 2;
+
+      // Category symbol mapping: prices for auto/real estate, icons/emojis for others
+      let symbol = marker.label || '$';
+      if (ad && ad.category !== 'motor' && ad.category !== 'inmobiliaria') {
+        const symbols = {
+          'empleo': '💼',
+          'servicios': '🔧',
+          'electronica': '💻',
+          'tecnologia': '💻',
+          'informatica': '💻',
+          'moda': '👕',
+          'hogar': '🛋️',
+          'ocio': '🚲',
+          'telefonia': '📱',
+          'mascotas': '🐶',
+          'negocios': '🏢'
+        };
+        symbol = symbols[ad.category] || '📦';
+      }
+
       const markerHtml = `
         <div class="custom-leaflet-marker-shell">
           <div class="custom-leaflet-marker ${isDarkMarker ? 'custom-leaflet-marker--dark' : 'custom-leaflet-marker--lime'}">
-            ${marker.label || '$'}
+            ${symbol}
           </div>
           <div class="custom-leaflet-marker-accuracy ${marker.approximate ? 'custom-leaflet-marker-accuracy--approx' : 'custom-leaflet-marker-accuracy--real'}">
             ${escapeHtml(markerAccuracyLabel(marker))}
@@ -591,13 +730,31 @@ function createPopupElement(ad, marker) {
         popupAnchor: [0, -15]
       });
 
-      const leafMarker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
+      const leafMarker = L.marker([lat, lon], { icon: customIcon });
 
-      const ad = marker.ad;
       if (ad) {
-        // Use factory function — creates a NEW DOM element each time popup opens
-        // This fixes the bug where popup content disappears after first close
         leafMarker.bindPopup(() => createPopupElement(ad, marker));
+
+        // Draw service coverage zone if it is a service listing
+        if (ad.category === 'servicios') {
+          let radiusMeters = 10000;
+          try {
+            const attrs = typeof ad.attributes === 'string' ? JSON.parse(ad.attributes) : (ad.attributes || {});
+            const cob = attrs.cobertura || attrs.radius || '';
+            if (cob.includes('colonia') || cob.includes('Colonia')) radiusMeters = 2000;
+            else if (cob.includes('ciudad') || cob.includes('Ciudad')) radiusMeters = 15000;
+            else if (cob.includes('estado') || cob.includes('Estado')) radiusMeters = 80000;
+          } catch (e) {}
+
+          L.circle([lat, lon], {
+            color: '#3b82f6',
+            fillColor: '#60a5fa',
+            fillOpacity: 0.12,
+            radius: radiusMeters,
+            weight: 1.5,
+            dashArray: '3, 3'
+          }).addTo(map);
+        }
       }
 
       leafMarker.on('click', () => {
@@ -607,12 +764,43 @@ function createPopupElement(ad, marker) {
       markerGroup.addLayer(leafMarker);
     });
 
+    markerGroup.addTo(map);
+
     if (validMarkers.length > 1 && markerGroup.getLayers().length > 0) {
       try {
         map.fitBounds(markerGroup.getBounds(), { padding: [30, 30] });
       } catch {
         // Keep the map usable even if Leaflet races during mobile route changes.
       }
+    }
+
+    // ── Draw control (polygon area search) ──
+    if (isDrawMode && L.Control && L.Control.Draw) {
+      const drawItems = new L.FeatureGroup();
+      map.addLayer(drawItems);
+      const drawControl = new L.Control.Draw({
+        draw: {
+          polygon: { allowIntersection: false, showArea: true },
+          rectangle: true,
+          circle: false,
+          marker: false,
+          polyline: false,
+          circlemarker: false,
+        },
+        edit: { featureGroup: drawItems },
+      });
+      map.addControl(drawControl);
+      map.on(L.Draw.Event.CREATED, (e) => {
+        drawItems.addLayer(e.layer);
+        const bounds = e.layer.getBounds();
+        onSearchArea?.({
+          lat: bounds.getCenter().lat,
+          lng: bounds.getCenter().lng,
+          radius: Math.round(bounds.getNorthEast().distanceTo(bounds.getSouthWest()) / 2000),
+          polygon: e.layer.toGeoJSON(),
+        });
+        setDrawMode(false);
+      });
     }
 
     window.requestAnimationFrame(() => {
@@ -628,24 +816,24 @@ function createPopupElement(ad, marker) {
 
   useEffect(() => {
     if (leaflet && !expanded) {
-      initMap(mapContainerRef.current, mapInstanceRef, false);
+      initMap(mapContainerRef.current, mapInstanceRef, false, drawMode);
     }
     return () => {
       removeMap(mapInstanceRef);
     };
-  }, [leaflet, expanded]);
+  }, [leaflet, expanded, drawMode]);
 
   useEffect(() => {
     if (leaflet && expanded) {
       const timer = setTimeout(() => {
-        initMap(largeMapContainerRef.current, largeMapInstanceRef, true);
+        initMap(largeMapContainerRef.current, largeMapInstanceRef, true, drawMode);
       }, 100);
       return () => clearTimeout(timer);
     }
     return () => {
       removeMap(largeMapInstanceRef);
     };
-  }, [leaflet, expanded]);
+  }, [leaflet, expanded, drawMode]);
 
   const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
 
@@ -659,8 +847,25 @@ function createPopupElement(ad, marker) {
           value={mapQuery}
           onChange={(e) => setMapQuery(e.target.value)}
           className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-          placeholder="Buscar en el mapa..."
+          placeholder={t('home.searchPlaceholder')}
         />
+      </div>
+
+      {/* Category Dropdown */}
+      <div className="space-y-1">
+        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('ads.category')}</label>
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
+        >
+          <option value="">{t('filters.allCategories')}</option>
+          {categories.map(cat => (
+            <option key={cat.slug} value={cat.slug}>
+              {cat.name?.[lang] || cat.name?.['es'] || cat.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Location */}
@@ -670,7 +875,7 @@ function createPopupElement(ad, marker) {
           onChange={(e) => handleStateChange(e.target.value)}
           className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
         >
-          <option value="">Todo México</option>
+          <option value="">{t('filters.allStates')}</option>
           {MEXICO_STATES.map(state => (
             <option key={state} value={state}>{state}</option>
           ))}
@@ -681,7 +886,7 @@ function createPopupElement(ad, marker) {
           disabled={!selectedState}
           className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none disabled:opacity-50"
         >
-          <option value="">Todas las ciudades</option>
+          <option value="">{t('filters.allCities')}</option>
           {availableCities.map(city => (
             <option key={city} value={city}>{city}</option>
           ))}
@@ -695,14 +900,14 @@ function createPopupElement(ad, marker) {
           onChange={(e) => setMinPrice(e.target.value)}
           type="number"
           className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-          placeholder="Precio mín."
+          placeholder={t('filters.minPrice')}
         />
         <input
           value={maxPrice}
           onChange={(e) => setMaxPrice(e.target.value)}
           type="number"
           className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-          placeholder="Precio máx."
+          placeholder={t('filters.maxPrice')}
         />
       </div>
 
@@ -726,7 +931,7 @@ function createPopupElement(ad, marker) {
       {/* Condition */}
       {config?.condition && (
         <div className="space-y-2">
-          <p className="text-xs font-black text-slate-400">Condición</p>
+          <p className="text-xs font-black text-slate-400">{t('ads.condition', { defaultValue: 'Condition' })}</p>
           <div className="flex flex-wrap gap-2">
             {config.condition.map(opt => (
               <button
@@ -780,14 +985,14 @@ function createPopupElement(ad, marker) {
               : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
           }`}
         >
-          <MapPin size={14} /> Solo GPS real
+          <MapPin size={14} /> {t('map.realGpsOnly', { defaultValue: 'Real GPS only' })}
         </button>
         <button
           type="button"
           onClick={clearAllFilters}
           className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/30 transition-colors"
         >
-          <X size={14} /> Limpiar
+          <X size={14} /> {t('common.reset')}
         </button>
       </div>
 
@@ -797,7 +1002,7 @@ function createPopupElement(ad, marker) {
         onClick={handleSearchArea}
         className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-[#a3e635] transition-colors"
       >
-        <Crosshair size={16} /> Buscar en esta zona
+        <Crosshair size={16} /> {t('map.searchArea', { defaultValue: 'Search this area' })}
       </button>
     </div>
   ) : null;
@@ -809,13 +1014,21 @@ function createPopupElement(ad, marker) {
           <div className="absolute inset-0 z-[10] flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-[2px] dark:bg-slate-950/20">
             <Loader2 className="h-8 w-8 animate-spin text-[#84CC16]" />
             <span className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-300">
-              {fetchingAds ? 'Cargando anuncios...' : 'Cargando mapa...'}
+              {fetchingAds ? t('ads.loading', { defaultValue: 'Loading listings...' }) : t('common.loading')}
             </span>
           </div>
         )}
         
         {leaflet && !loadFailed ? (
-          <div ref={mapContainerRef} className="h-full w-full min-h-[190px]" style={{ zIndex: 1 }} />
+          <>
+            {locationError && (
+              <div className="mx-4 mb-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{locationError}</span>
+              </div>
+            )}
+            <div ref={mapContainerRef} className="h-full w-full min-h-[190px]" style={{ zIndex: 1 }} />
+          </>
         ) : (
           <div className="relative h-full min-h-[190px] w-full overflow-hidden bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.24),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.22),transparent_18%),linear-gradient(135deg,#e0f2fe,#ecfccb)] dark:bg-[radial-gradient(circle_at_28%_48%,rgba(132,204,22,.22),transparent_16%),radial-gradient(circle_at_70%_38%,rgba(14,165,233,.18),transparent_18%),linear-gradient(135deg,#020617,#0f172a)]">
             {visibleMarkers.slice(0, 18).map((marker, index) => {
@@ -849,6 +1062,41 @@ function createPopupElement(ad, marker) {
         <div className="absolute right-3 top-3 z-[2] rounded-full bg-slate-950/90 px-3 py-1.5 text-xs font-black text-white shadow-md dark:bg-[#84CC16] dark:text-slate-950 pointer-events-none">
           {loadFailed ? 'Vista previa' : 'Mapa'}
         </div>
+
+        {/* Geolocation Button - Buscar cerca de mí */}
+        {showFullscreen && leaflet && !loadFailed && (
+          <button
+            type="button"
+            onClick={getUserLocation}
+            disabled={locating}
+            className="absolute bottom-3 left-3 z-[2] inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-2.5 text-xs font-black text-white shadow-lg hover:bg-blue-500 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Buscar cerca de mí"
+          >
+            {locating ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Locate size={13} />
+            )}
+            <span className="hidden sm:inline">Cerca de mí</span>
+          </button>
+        )}
+
+        {/* Draw Area Button (small map) */}
+        {showFullscreen && leaflet && !loadFailed && (
+          <button
+            type="button"
+            onClick={() => setDrawMode((v) => !v)}
+            className={`absolute bottom-14 left-3 z-[2] inline-flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-black shadow-lg hover:scale-105 active:scale-95 transition-all ${
+              drawMode
+                ? 'bg-[#84CC16] text-slate-950'
+                : 'bg-slate-800 text-white hover:bg-slate-700'
+            }`}
+            title="Dibujar área de búsqueda"
+          >
+            <Crosshair size={13} />
+            <span className="hidden sm:inline">Dibujar área</span>
+          </button>
+        )}
 
         {showFullscreen && (
           <button
@@ -893,6 +1141,36 @@ function createPopupElement(ad, marker) {
               }`}
             >
               <Filter size={14} /> Filtros
+            </button>
+
+            <button
+              type="button"
+              onClick={getUserLocation}
+              disabled={locating}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Buscar cerca de mí"
+            >
+              {locating ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Locate size={14} />
+              )}
+              <span className="hidden sm:inline">Cerca de mí</span>
+            </button>
+
+            {/* Draw Area Button (fullscreen header) */}
+            <button
+              type="button"
+              onClick={() => setDrawMode((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
+                drawMode
+                  ? 'bg-[#84CC16] text-slate-950'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+              title="Dibujar área de búsqueda"
+            >
+              <Crosshair size={14} />
+              <span className="hidden sm:inline">Dibujar área</span>
             </button>
 
             <button
