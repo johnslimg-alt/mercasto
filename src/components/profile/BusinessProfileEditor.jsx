@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Building2, CheckCircle, Loader2, Save } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
 
 const DEFAULT_HOURS = [
   { day: 'Lunes', open: '09:00', close: '18:00', closed: false },

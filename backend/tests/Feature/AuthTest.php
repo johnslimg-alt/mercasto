@@ -58,7 +58,7 @@ class AuthTest extends TestCase
         Config::set('services.apple.client_id', null);
         Config::set('services.apple.client_secret', null);
         Config::set('services.telegram.client_id', 'telegram-client');
-        Config::set('services.telegram.client_secret', 'telegram-secret');
+        Config::set('services.telegram.client_secret', '123456:telegram-secret');
         Config::set('services.twilio.sid', null);
         Config::set('services.twilio.token', null);
         Config::set('services.twilio.from', null);
@@ -67,8 +67,9 @@ class AuthTest extends TestCase
 
         $response->assertOk()->assertExactJson([
             'google' => true,
-            'apple' => false,
+            'twitter' => false,
             'telegram' => true,
+            'telegram_bot_id' => '123456',
             'sms' => false,
         ]);
     }

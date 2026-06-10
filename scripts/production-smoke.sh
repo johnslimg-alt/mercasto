@@ -51,10 +51,10 @@ if [[ ! -f docker-compose.override.yml ]]; then
 fi
 
 echo "== Compose validation =="
-"${COMPOSE[@]}" config >/tmp/mercasto_compose_config.out
-grep -q 'mercasto-scheduler:' /tmp/mercasto_compose_config.out
-grep -q 'mercasto-reverb:' /tmp/mercasto_compose_config.out
-grep -q 'condition: service_healthy' /tmp/mercasto_compose_config.out
+"${COMPOSE[@]}" config >"/tmp/mercasto_compose_config.$(id -u).out"
+grep -q 'mercasto-scheduler:' "/tmp/mercasto_compose_config.$(id -u).out"
+grep -q 'mercasto-reverb:' "/tmp/mercasto_compose_config.$(id -u).out"
+grep -q 'condition: service_healthy' "/tmp/mercasto_compose_config.$(id -u).out"
 echo "compose config OK"
 
 echo "== Container status =="

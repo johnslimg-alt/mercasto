@@ -70,6 +70,7 @@ grep -qF "category-attributes" "$POST_SCREEN"
 grep -qF "MapV3" "$POST_SCREEN"
 grep -qF "Reportar anuncio sospechoso" "$DETAIL_SCREEN"
 grep -qF "Ubicación del anuncio" "$DETAIL_SCREEN"
-grep -qF "Escribir por Telegram" "$DETAIL_SCREEN"
+# Contact channels may be inline (legacy) or encapsulated in ContactButton
+grep -qE "Escribir por Telegram|ContactButton" "$DETAIL_SCREEN"
 
 echo "listing lifecycle launch gate OK"

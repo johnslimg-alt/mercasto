@@ -13,6 +13,7 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Events\NewNotification;
 use App\Jobs\ProcessVideoWatermark;
@@ -1408,7 +1409,7 @@ class AdController extends Controller
             $content .= "   <url>\n      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/</loc>\n      <changefreq>always</changefreq>\n      <priority>1.0</priority>\n   </url>\n";
 
             // SEO: Добавляем статические страницы в карту сайта
-            $staticPages = ['terms', 'privacy', 'help', 'safety'];
+            $staticPages = ['terminos', 'privacidad', 'cookies', 'contacto', 'ayuda', 'safety', 'reembolsos', 'moderacion'];
             foreach ($staticPages as $page) {
                 $content .= "   <url>\n";
                 $content .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/{$page}</loc>\n";
