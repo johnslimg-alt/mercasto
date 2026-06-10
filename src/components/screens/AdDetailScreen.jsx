@@ -6,6 +6,7 @@ import { filterConfig } from '../../constants/filterConfig';
 import { addRecentlyViewed } from '../../utils/recentlyViewed';
 import { events } from '../../utils/analytics';
 import MapV3 from '../common/MapV3';
+import ContactButton from '../common/ContactButton';
 
 // --- MAP COORDINATES ---
 const STATE_COORDS = {
@@ -581,35 +582,7 @@ export default function AdDetailScreen({
               </div>
             </div>
 
-            {whatsappUrl && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => handleWhatsAppClick(ad)}
-                className="btn-lg w-full bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center gap-2 mb-3 shadow-md shadow-[#25D366]/20"
-              >
-                <MessageCircle size={20} /> Contactar por WhatsApp
-              </a>
-            )}
-
-            {telegramUrl ? (
-              <a
-                href={telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => handleWhatsAppClick(ad, 'telegram')}
-                className="btn-lg mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 text-white shadow-md shadow-sky-500/20 transition-colors hover:bg-sky-600"
-              >
-                <Send size={19} /> Escribir por Telegram
-              </a>
-            ) : null}
-
-            {!whatsappUrl && !telegramUrl && (
-              <div className="mb-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-center text-[12px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-400">
-                Este vendedor aún no tiene un canal de contacto público.
-              </div>
-            )}
+            <ContactButton ad={ad} user={currentUser} className="w-full mb-3" />
 
             <div className="flex gap-3 mt-4">
               <button onClick={(e) => handleToggleFavorite(e, ad.id)} className={`btn-md flex-1 flex items-center justify-center gap-2 border transition-colors ${isFav ? 'bg-red-50 border-red-100 text-red-600' : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}>

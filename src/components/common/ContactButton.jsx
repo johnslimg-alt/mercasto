@@ -56,7 +56,7 @@ export default function ContactButton({ ad, user, className = '' }) {
   const logContact = async (channel) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/ads/${ad.id}/contact-click`, {
+      await fetch(`${API_URL}/ads/${ad.id}/click`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
