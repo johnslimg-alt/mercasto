@@ -15,15 +15,16 @@ jobs:
         run: |
           cd /var/www/mercasto
           docker exec mercasto_backend_container php artisan up || true
-          git fetch origin
-          git reset --hard origin/main
-          git clean -fd
-          rm -f backend/bootstrap/cache/*.php
+          # sudo: el checkout de producción pertenece a root; el runner es github-runner
+          sudo -n git fetch origin
+          sudo -n git reset --hard origin/main
+          sudo -n git clean -fd
+          sudo -n rm -f backend/bootstrap/cache/*.php
 
       - name: Миграции
         run: |
           cd /var/www/mercasto
-          rm -f backend/bootstrap/cache/*.php
+          sudo -n rm -f backend/bootstrap/cache/*.php
           docker exec mercasto_backend_container php artisan migrate --force
 
       - name: Собрать и поднять
