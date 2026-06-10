@@ -35,12 +35,15 @@ if [[ ! -f docker-compose.yml ]]; then
 fi
 
 echo "== Discover first ad id from API =="
-# JSON via stdin: passing it through the environment hits the exec arg limit
-# ("Argument list too long") once the API page grows past ~128KB.
-FIRST_ID="$(curl -k -sS "${BASE_URL}/api/ads?page=1" | python3 - <<'PY'
-import json, sys
+# JSON via temp file: passing it through the environment hits the exec arg
+# limit ("Argument list too long") once the API page grows past ~128KB.
+ADS_JSON_FILE="$(mktemp)"
+trap 'rm -f "${ADS_JSON_FILE}"' EXIT
+curl -k -sS "${BASE_URL}/api/ads?page=1" -o "${ADS_JSON_FILE}"
+FIRST_ID="$(ADS_JSON_FILE="$ADS_JSON_FILE" python3 - <<'PY'
+import json, os
 try:
-    data=json.load(sys.stdin)
+    data=json.load(open(os.environ['ADS_JSON_FILE']))
 except Exception:
     print('')
     raise SystemExit(0)
