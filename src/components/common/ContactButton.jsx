@@ -27,7 +27,10 @@ export default function ContactButton({ ad, user, className = '' }) {
   const getSafeWhatsAppNumber = (ad) => {
     const raw = ad?.user?.business_whatsapp || ad?.user?.whatsapp || ad?.whatsapp || '';
     if (!raw) return null;
-    return String(raw).replace(/\D/g, '') || null;
+    const digits = String(raw).replace(/\D/g, '');
+    if (!digits) return null;
+    // Números locales mexicanos de 10 dígitos: anteponer código de país 52
+    return digits.length === 10 ? `52${digits}` : digits;
   };
 
   // El email del vendedor nunca llega al cliente; el contacto por correo
