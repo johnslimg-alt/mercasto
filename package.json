@@ -34,6 +34,7 @@
     "e2e:public:ci": "CI=1 npx playwright test tests/e2e/public-smoke.spec.js",
     "check:session-config": "bash scripts/session-config-scan.sh",
     "check:payment-webhook-idempotency": "bash scripts/payment-webhook-idempotency-scan.sh",
+    "check:payment-webhook-fixtures": "node scripts/payment-webhook-fixture-smoke.mjs",
     "check:media-upload-validation": "bash scripts/media-upload-validation-scan.sh",
     "check:static-safety": "bash scripts/static-safety-scans.sh",
     "check:ai-description-editor": "bash scripts/ai-description-editor-gate.sh",
