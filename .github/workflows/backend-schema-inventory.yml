@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Generate schema inventory
         shell: bash
@@ -44,7 +44,7 @@ jobs:
           } | tee /tmp/mercasto-schema-inventory/backend-schema-inventory.md
 
       - name: Upload schema inventory artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-schema-inventory
           path: /tmp/mercasto-schema-inventory/backend-schema-inventory.md
