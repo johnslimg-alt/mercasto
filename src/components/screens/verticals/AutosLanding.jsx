@@ -1,9 +1,12 @@
+import SEO from "../../SEO";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { Bike, Car, CarFront, Gauge, PackageSearch, Truck, Wrench } from 'lucide-react';
+import { useUI } from '../../../contexts/UIContext';
+import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -72,6 +75,8 @@ const SUBSECTIONS = [
 
 export default function AutosLanding() {
   const navigate = useNavigate();
+  const { lang } = useUI();
+  const copy = getVerticalCopy(lang, 'autos');
   const [condition, setCondition] = useState('');
   const [priceRange, setPriceRange] = useState(null);
   const [brand, setBrand] = useState('');
@@ -104,9 +109,10 @@ export default function AutosLanding() {
   return (
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
-        title="Encuentra tu auto ideal en México"
-        subtitle="Miles de autos nuevos y usados al mejor precio"
-        searchPlaceholder="Buscar por marca, modelo, año…"
+        title={copy.title}
+        subtitle={copy.subtitle}
+        searchPlaceholder={copy.placeholder}
+        labels={copy.labels}
         color="blue"
         mapQuery="autos en México"
         onSearch={handleSearch}
@@ -158,7 +164,7 @@ export default function AutosLanding() {
             </div>
             <button onClick={() => navigate('/?category=motor')}
               className="hidden rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 sm:inline-flex">
-              Ver listado
+              {copy.labels.viewList}
             </button>
           </div>
           <MapV3 category="motor" title="Autos en México" className="h-[260px] md:h-[420px]" />
@@ -167,10 +173,10 @@ export default function AutosLanding() {
         {/* Featured Listings */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-2xl font-bold text-slate-900">Vehículos destacados</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{copy.featured}</h2>
             <a onClick={() => navigate('/?category=motor')}
               className="text-[13px] font-semibold text-blue-600 hover:underline cursor-pointer">
-              Ver todos →
+              {copy.labels.viewAll} →
             </a>
           </div>
           <VerticalAdGrid

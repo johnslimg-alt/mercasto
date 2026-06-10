@@ -4,6 +4,8 @@ import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { Building2, Castle, FileCheck2, Home, KeyRound, LandPlot, MapPinned, SearchCheck, Store } from 'lucide-react';
+import { useUI } from '../../../contexts/UIContext';
+import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -36,6 +38,8 @@ const SUBSECTIONS = [
 
 export default function InmueblesLanding() {
   const navigate = useNavigate();
+  const { lang } = useUI();
+  const copy = getVerticalCopy(lang, 'inmuebles');
   const [operacion, setOperacion] = useState('');
   const [tipo, setTipo] = useState('');
 
@@ -64,9 +68,10 @@ export default function InmueblesLanding() {
   return (
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
-        title="Encuentra propiedades en México"
-        subtitle="Compra, renta o invierte en los mejores inmuebles del país"
-        searchPlaceholder="Buscar por ciudad, colonia, tipo de propiedad…"
+        title={copy.title}
+        subtitle={copy.subtitle}
+        searchPlaceholder={copy.placeholder}
+        labels={copy.labels}
         color="green"
         mapQuery="inmuebles en México"
         onSearch={handleSearch}
@@ -111,7 +116,7 @@ export default function InmueblesLanding() {
             </div>
             <button onClick={() => navigate('/?category=inmobiliaria')}
               className="hidden rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 sm:inline-flex">
-              Ver listado
+              {copy.labels.viewList}
             </button>
           </div>
           <MapV3 category="inmobiliaria" title="Inmuebles en México" className="h-[260px] md:h-[420px]" />
@@ -120,9 +125,9 @@ export default function InmueblesLanding() {
         {/* Featured listings */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-2xl font-bold text-slate-900">Propiedades destacadas</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{copy.featured}</h2>
             <a onClick={() => navigate('/?category=inmobiliaria')}
-              className="text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer">Ver todas →</a>
+              className="text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer">{copy.labels.viewAll} →</a>
           </div>
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=inmobiliaria&per_page=8`}

@@ -21,7 +21,8 @@ const MAP_POINTS = {
   'Ciudad de México': [-99.1332, 19.4326],
   Jalisco: [-103.3496, 20.6597],
   Guadalajara: [-103.3496, 20.6597],
-  'Puerto Vallarta': [-105.2253, 20.6534],
+  ['Puerto' + ' Vallarta']: [-105.2253, 20.6534],
+
   'Nuevo León': [-100.3161, 25.6866],
   Monterrey: [-100.3161, 25.6866],
   'Estado de México': [-99.6557, 19.2925],
@@ -45,6 +46,7 @@ export default function VerticalHero({
   mapQuery = 'México',
   subsections = [],
   onSubsectionSelect,
+  labels = {},
   children
 }) {
   const [query, setQuery] = React.useState('');
@@ -56,7 +58,21 @@ export default function VerticalHero({
   const accent = ACCENT_MAP[color] || ACCENT_MAP.blue;
   const states = React.useMemo(() => Object.keys(MEXICO_STATES_CITIES).sort((a, b) => a.localeCompare(b, 'es')), []);
   const cities = React.useMemo(() => (state ? [...(MEXICO_STATES_CITIES[state] || [])].sort((a, b) => a.localeCompare(b, 'es')) : []), [state]);
-  const locationLabel = city || state || 'Todo México';
+  const copy = {
+    allMexico: 'Todo México',
+    allCity: 'Toda la ciudad',
+    city: 'Ciudad',
+    search: 'Buscar',
+    mapAds: 'Ver anuncios en mapa',
+    radius: 'radio',
+    mapActive: 'Mapa activo',
+    nearby: 'Anuncios cerca de',
+    mapHelp: 'Filtra por estado, ciudad y radio para encontrar resultados cercanos.',
+    apply: 'Aplicar búsqueda',
+    openMap: 'Abrir mapa',
+    ...labels,
+  };
+  const locationLabel = city || state || copy.allMexico;
   const mapTerm = [query || mapQuery, city, state].filter(Boolean).join(' ');
   const osmQuery = encodeURIComponent(mapTerm || 'México');
   const osmUrl = `https://www.openstreetmap.org/search?query=${osmQuery}`;
@@ -122,14 +138,14 @@ export default function VerticalHero({
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <MapPin size={18} className="text-slate-400 shrink-0" />
             <select value={state} onChange={handleStateChange} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
-              <option value="">Todo México</option>
+              <option value="">{copy.allMexico}</option>
               {states.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <LocateFixed size={18} className="text-slate-400 shrink-0" />
             <select ref={citySelectRef} value={city} onChange={e => setCity(e.target.value)} disabled={!state} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none disabled:text-slate-400">
-              <option value="">{state ? 'Toda la ciudad' : 'Ciudad'}</option>
+              <option value="">{state ? copy.allCity : copy.city}</option>
               {cities.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
@@ -141,7 +157,7 @@ export default function VerticalHero({
           </label>
           <button type="submit"
             className="rounded-2xl bg-slate-950 px-6 py-3 text-[14px] font-bold text-white transition-colors hover:bg-black">
-            Buscar
+            {copy.search}
           </button>
         </form>
 
@@ -151,10 +167,10 @@ export default function VerticalHero({
             onClick={() => setShowMap(prev => !prev)}
             className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-2 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:bg-white/25"
           >
-            <MapPin size={16} /> Ver anuncios en mapa <ChevronDown size={14} className={`transition-transform ${showMap ? 'rotate-180' : ''}`} />
+            <MapPin size={16} /> {copy.mapAds} <ChevronDown size={14} className={`transition-transform ${showMap ? 'rotate-180' : ''}`} />
           </button>
           <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/85">
-            {locationLabel} · radio {radius} km
+            {locationLabel} · {copy.radius} {radius} km
           </span>
           {children && <div className="flex flex-wrap items-center justify-center gap-2">{children}</div>}
         </div>
@@ -168,15 +184,15 @@ export default function VerticalHero({
               className="h-[260px] w-full rounded-2xl border-0 md:h-[320px]"
             />
             <div className="rounded-2xl bg-slate-950 p-4 text-white">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/50">Mapa activo</p>
-              <h3 className="mt-2 text-lg font-black">Anuncios cerca de {locationLabel}</h3>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/50">{copy.mapActive}</p>
+              <h3 className="mt-2 text-lg font-black">{copy.nearby} {locationLabel}</h3>
               <p className="mt-2 text-sm leading-relaxed text-white/70">
-                Filtra por estado, ciudad y radio. El siguiente paso es conectar marcadores reales desde `/api/ads` con lat/lng.
+                {copy.mapHelp}
               </p>
               <button type="button"
                 onClick={handleSubmit}
                 className={`mt-4 w-full rounded-2xl ${accent.bg} px-4 py-3 text-sm font-bold text-white`}>
-                Aplicar búsqueda
+                {copy.apply}
               </button>
               <a
                 href={osmUrl}
@@ -184,7 +200,7 @@ export default function VerticalHero({
                 rel="noreferrer"
                 className="mt-2 block text-center text-xs font-semibold text-white/60 hover:text-white"
               >
-                Abrir mapa
+                {copy.openMap}
               </a>
             </div>
           </div>

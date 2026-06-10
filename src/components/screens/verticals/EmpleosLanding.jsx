@@ -4,6 +4,8 @@ import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { BriefcaseBusiness, ChartNoAxesCombined, Clock, GraduationCap, HeartPulse, Hotel, Landmark, Laptop, Megaphone, Palette, UserSearch } from 'lucide-react';
+import { useUI } from '../../../contexts/UIContext';
+import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -32,6 +34,8 @@ const SUBSECTIONS = [
 
 export default function EmpleosLanding() {
   const navigate = useNavigate();
+  const { lang } = useUI();
+  const copy = getVerticalCopy(lang, 'empleos');
   const [area, setArea] = useState('');
   const [modalidad, setModalidad] = useState('');
 
@@ -60,9 +64,10 @@ export default function EmpleosLanding() {
   return (
     <div className="min-h-screen bg-slate-50">
       <VerticalHero
-        title="Encuentra trabajo en México"
-        subtitle="Miles de oportunidades laborales en todo el país"
-        searchPlaceholder="Buscar por puesto, empresa, ciudad…"
+        title={copy.title}
+        subtitle={copy.subtitle}
+        searchPlaceholder={copy.placeholder}
+        labels={copy.labels}
         color="purple"
         mapQuery="empleos en México"
         onSearch={handleSearch}
@@ -106,7 +111,7 @@ export default function EmpleosLanding() {
             </div>
             <button onClick={() => navigate('/?category=empleo')}
               className="hidden rounded-full bg-purple-600 px-4 py-2 text-sm font-bold text-white hover:bg-purple-700 sm:inline-flex">
-              Ver listado
+              {copy.labels.viewList}
             </button>
           </div>
           <MapV3 category="empleo" title="Empleos en México" className="h-[260px] md:h-[420px]" />
@@ -115,9 +120,9 @@ export default function EmpleosLanding() {
         {/* Featured jobs */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-2xl font-bold text-slate-900">Empleos recientes</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{copy.featured}</h2>
             <a onClick={() => navigate('/?category=empleo')}
-              className="text-[13px] font-semibold text-purple-600 hover:underline cursor-pointer">Ver todos →</a>
+              className="text-[13px] font-semibold text-purple-600 hover:underline cursor-pointer">{copy.labels.viewAll} →</a>
           </div>
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=empleo&per_page=6`}
