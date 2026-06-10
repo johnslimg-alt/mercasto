@@ -20,8 +20,21 @@ case "${SSH_PORT}" in
   ''|*[!0-9]*) echo "Invalid SSH_PORT" >&2; exit 64 ;;
 esac
 
+# Host key pinning: prefer SSH_KNOWN_HOSTS secret; otherwise fall back to the
+# default known_hosts (populated by an ssh-keyscan step in the workflow).
+SSH_KNOWN_HOSTS="${SSH_KNOWN_HOSTS:-}"
+
 key_file="$(mktemp)"
-trap 'rm -f "${key_file}"' EXIT
+known_hosts_file=""
+trap 'rm -f "${key_file}" ${known_hosts_file:+"${known_hosts_file}"}' EXIT
+
+extra_ssh_opts=()
+if [ -n "${SSH_KNOWN_HOSTS}" ]; then
+  known_hosts_file="$(mktemp)"
+  printf '%s\n' "${SSH_KNOWN_HOSTS}" > "${known_hosts_file}"
+  chmod 600 "${known_hosts_file}"
+  extra_ssh_opts+=(-o "UserKnownHostsFile=${known_hosts_file}")
+fi
 
 # Write the key exactly as-is (GitHub stores multiline secrets with real newlines).
 # If the secret was stored as a single line with literal \n, normalise those too.
@@ -42,6 +55,7 @@ ssh \
   -o BatchMode=yes \
   -o IdentitiesOnly=yes \
   -o StrictHostKeyChecking=yes \
+  "${extra_ssh_opts[@]}" \
   -o ServerAliveInterval=15 \
   -o ServerAliveCountMax=4 \
   "${SSH_USER}@${SSH_HOST}" \
