@@ -149,8 +149,8 @@ run_verify_quick() {
 
   echo "npm not found; running server-compatible verify:quick fallback"
   find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
-  "${COMPOSE_BASE[@]}" config >/tmp/mercasto_compose_base.out
-  "${COMPOSE_PROD[@]}" config >/tmp/mercasto_compose_override.out
+  "${COMPOSE_BASE[@]}" config >"/tmp/mercasto_compose_base.$(id -u).out"
+  "${COMPOSE_PROD[@]}" config >"/tmp/mercasto_compose_override.$(id -u).out"
   bash scripts/static-safety-scans.sh
   bash scripts/production-smoke.sh
   bash scripts/auth-providers-smoke.sh

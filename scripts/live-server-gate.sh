@@ -73,7 +73,7 @@ echo "== Docker compose status =="
 docker compose ps
 
 echo "== Docker compose config =="
-docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_check.out
+docker compose -f docker-compose.yml -f docker-compose.override.yml config >"/tmp/mercasto_compose_check.$(id -u).out"
 
 echo "== Nginx config =="
 docker compose -f docker-compose.yml -f docker-compose.override.yml exec -T mercasto-frontend nginx -t
