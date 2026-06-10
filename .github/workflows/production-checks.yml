@@ -142,4 +142,5 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          bash scripts/server-operator.sh verify_quick
+          # sudo: el .env de producción es root:www-data 640 y docker compose config lo lee.
+          sudo -n bash scripts/server-operator.sh verify_quick
