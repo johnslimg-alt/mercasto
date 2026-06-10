@@ -37,12 +37,20 @@ export default function MyAdsScreen({
     active: userAds.filter(ad => ad.status === 'active').length,
     paused: userAds.filter(ad => ad.status === 'paused').length,
     featured: userAds.filter(ad => ad.promoted || ad.is_featured).length,
+    draft: userAds.filter(ad => ad.status === 'draft').length,
+    pending: userAds.filter(ad => ad.status === 'pending').length,
+    sold: userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived').length,
+    rejected: userAds.filter(ad => ad.status === 'rejected').length,
   }), [userAds]);
 
   const filteredAds = useMemo(() => {
     if (filter === 'active') return userAds.filter(ad => ad.status === 'active');
     if (filter === 'paused') return userAds.filter(ad => ad.status === 'paused');
     if (filter === 'featured') return userAds.filter(ad => ad.promoted || ad.is_featured);
+    if (filter === 'draft') return userAds.filter(ad => ad.status === 'draft');
+    if (filter === 'pending') return userAds.filter(ad => ad.status === 'pending');
+    if (filter === 'sold') return userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived');
+    if (filter === 'rejected') return userAds.filter(ad => ad.status === 'rejected');
     return userAds;
   }, [filter, userAds]);
 
@@ -89,10 +97,14 @@ export default function MyAdsScreen({
   };
 
   const filters = [
-    ['all', t.all_filter || 'Todos', counts.all],
-    ['active', t.active_status || 'Activos', counts.active],
-    ['paused', t.paused_status || 'Pausados', counts.paused],
-    ['featured', t.featured_status || 'Destacados', counts.featured],
+    ['all', t.all_filter || 'All', counts.all],
+    ['active', t.active_status || 'Active', counts.active],
+    ['paused', t.paused_status || 'Paused', counts.paused],
+    ['featured', t.featured_status || 'Featured', counts.featured],
+    ['draft', t.draft_status || 'Drafts', counts.draft],
+    ['pending', t.pending_status || 'Pending review', counts.pending],
+    ['sold', t.sold_status || 'Sold', counts.sold],
+    ['rejected', t.rejected_status || 'Rejected', counts.rejected],
   ];
 
   return (
@@ -103,7 +115,7 @@ export default function MyAdsScreen({
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-1">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm flex-1">
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/40">
           <h2 className="text-[18px] font-bold text-slate-900 dark:text-white">
             {t.my_ads}
@@ -153,10 +165,16 @@ export default function MyAdsScreen({
                     <h4 className="font-semibold text-slate-900 dark:text-white text-[15px] line-clamp-1">{ad.title}</h4>
                     {ad.status !== 'active' && (
                       <span className="badge bg-slate-200 text-slate-600">
-                        {ad.status === 'paused' ? (t.paused_status || 'Pausado') : ad.status === 'expired' ? (t.expired_status || 'Expirado') : ad.status}
+                        {ad.status === 'paused' ? (t.paused_status || 'Pausado') : 
+                         ad.status === 'expired' ? (t.expired_status || 'Expirado') : 
+                         ad.status === 'draft' ? (t.draft_status || 'Borrador') :
+                         ad.status === 'pending' ? (t.pending_status || 'En Moderación') :
+                         ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived' ? (t.sold_status || 'Vendido') :
+                         ad.status === 'rejected' ? (t.rejected_status || 'Rechazado') :
+                         ad.status}
                       </span>
                     )}
-                    {(() => { const d = daysUntilExpiry(ad.expires_at); if (ad.status === 'expired' || d !== null && d <= 0) return <span className="badge bg-red-100 text-red-700">Expirado</span>; if (d !== null && d <= 7 && ad.status === 'active') return <span className="badge bg-orange-100 text-orange-700">Expira en {d <= 1 ? '1 día' : d + ' días'}</span>; return null; })()}
+                    {(() => { const d = daysUntilExpiry(ad.expires_at); if (ad.status === 'expired' || d !== null && d <= 0) return <span className="badge bg-red-100 text-red-700">{t.expired_status || 'Expired'}</span>; if (d !== null && d <= 7 && ad.status === 'active') return <span className="badge bg-orange-100 text-orange-700">{t.expires_in || 'Expires in'} {d} {t.days || 'days'}</span>; return null; })()}
                     {(ad.promoted || ad.is_featured) && <span className="badge bg-lime-100 text-lime-700">{ad.promoted === 'urgente' ? 'Urgente' : ad.promoted === 'highlight' ? 'Resaltado' : (t.destacado || 'Destacado')}</span>}
                   </div>
                   <p className="text-[#65A30D] text-[16px] font-bold mt-1">
@@ -172,7 +190,7 @@ export default function MyAdsScreen({
                   <Link to={`/anuncio/${ad.id}/editar`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 text-xs"><Pencil className="w-3.5 h-3.5" /> {t.edit || 'Editar'}</Link>
                   {ad.status === 'active' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> {t.pause || 'Pausar'}</button>}
                   {ad.status === 'paused' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1.5 text-xs"><Zap className="w-3.5 h-3.5" /> {t.reactivate || 'Reactivar'}</button>}
-                  {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1.5 text-xs">Renovar</button> : null; })()}
+                  {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1.5 text-xs">{t.renew || 'Renew'}</button> : null; })()}
                   {ad.status === 'expired' && <button onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1.5 text-xs">{t.republish || 'Republicar'}</button>}
                   {ad.status === 'active' && <button onClick={() => handlePromoteAd(ad)} className="btn-sm flex-1 sm:flex-none bg-[#0F172A] hover:bg-black text-white flex items-center justify-center gap-1.5 text-xs"><TrendingUp className="w-3.5 h-3.5" /> {t.promote}</button>}
                   <button onClick={() => handleDeleteAd(ad.id)} className="btn-sm flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center gap-1.5 text-xs"><Trash2 className="w-3.5 h-3.5" /></button>
