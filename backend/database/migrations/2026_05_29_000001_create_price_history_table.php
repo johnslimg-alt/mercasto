@@ -3,27 +3,27 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Create table if not exists (idempotent)
-        DB::statement('
-            CREATE TABLE IF NOT EXISTS price_history (
-                id BIGSERIAL PRIMARY KEY,
-                ad_id BIGINT NOT NULL REFERENCES ads(id) ON DELETE CASCADE,
-                old_price DECIMAL(12,2) NOT NULL,
-                new_price DECIMAL(12,2) NOT NULL,
-                changed_at TIMESTAMPTZ DEFAULT NOW()
-            )
-        ');
+        // Idempotente: en producción la tabla ya existe (creada por la versión anterior
+        // de esta migración con SQL crudo de Postgres). Schema builder mantiene la
+        // compatibilidad con sqlite para el gate de PHPUnit.
+        if (Schema::hasTable('price_history')) {
+            return;
+        }
 
-        DB::statement('
-            CREATE INDEX IF NOT EXISTS idx_price_history_ad
-            ON price_history(ad_id, changed_at DESC)
-        ');
+        Schema::create('price_history', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('ad_id')->constrained('ads')->cascadeOnDelete();
+            $table->decimal('old_price', 12, 2);
+            $table->decimal('new_price', 12, 2);
+            $table->timestampTz('changed_at')->useCurrent();
+
+            $table->index(['ad_id', 'changed_at'], 'idx_price_history_ad');
+        });
     }
 
     public function down(): void
