@@ -18,11 +18,14 @@ const loadLeaflet = () => {
   if (!leafletPromise) {
     leafletPromise = import('leaflet')
       .then((mod) => mod.default || mod)
-      .then((L) => Promise.all([
-        import('leaflet.markercluster'),
-        import('leaflet-draw'),
-        import('leaflet-draw/dist/leaflet.draw.css'),
-      ]).then(() => L));
+      .then((L) => {
+        globalThis.L = L;
+        return Promise.all([
+          import('leaflet.markercluster'),
+          import('leaflet-draw'),
+          import('leaflet-draw/dist/leaflet.draw.css'),
+        ]).then(() => L);
+      });
   }
   return leafletPromise;
 };

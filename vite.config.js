@@ -36,7 +36,7 @@ export default defineConfig({
             || id.includes('/leaflet.markercluster/')
             || id.includes('/react-leaflet/')
           ) {
-            return 'vendor-maps';
+            return null;
           }
           
           // Observability
