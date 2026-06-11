@@ -483,6 +483,26 @@ class AdController extends Controller
             }
         }
 
+        // Dynamic category attributes validation
+        if ($request->filled('attributes')) {
+            $categoryId = DB::table('categories')->where('slug', $request->category)->value('id');
+            if ($categoryId) {
+                $dynamicRules = [];
+                $categoryAttrs = DB::table('category_attributes')->where('category_id', $categoryId)->get();
+                foreach ($categoryAttrs as $attr) {
+                    if ($attr->required) {
+                        $dynamicRules["attributes.{$attr->key}"] = 'required';
+                    }
+                    if ($attr->type === 'number' || $attr->type === 'range') {
+                        $dynamicRules["attributes.{$attr->key}"] = ($attr->required ? 'required' : 'nullable') . '|numeric';
+                    }
+                }
+                if (!empty($dynamicRules)) {
+                    $request->validate($dynamicRules);
+                }
+            }
+        }
+
         // Защита бизнес-модели: лимиты берём из активного платного плана пользователя.
         $user = $request->user();
         $monthlyAds = Ad::where('user_id', $user->id)->where('created_at', '>=', now()->startOfMonth())->count();
@@ -677,6 +697,26 @@ class AdController extends Controller
             'attributes.subcategory' => 'required|string|max:100',
         ]);
         $this->validateCategoryAttributes($request);
+
+        // Dynamic category attributes validation
+        if ($request->filled('attributes')) {
+            $categoryId = DB::table('categories')->where('slug', $request->category)->value('id');
+            if ($categoryId) {
+                $dynamicRules = [];
+                $categoryAttrs = DB::table('category_attributes')->where('category_id', $categoryId)->get();
+                foreach ($categoryAttrs as $attr) {
+                    if ($attr->required) {
+                        $dynamicRules["attributes.{$attr->key}"] = 'required';
+                    }
+                    if ($attr->type === 'number' || $attr->type === 'range') {
+                        $dynamicRules["attributes.{$attr->key}"] = ($attr->required ? 'required' : 'nullable') . '|numeric';
+                    }
+                }
+                if (!empty($dynamicRules)) {
+                    $request->validate($dynamicRules);
+                }
+            }
+        }
 
         // Dynamic category attributes validation
         if ($request->filled('attributes')) {
