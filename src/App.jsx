@@ -15,6 +15,12 @@ import {
 import echo from './echo';
 import CookieBanner from './components/CookieBanner';
 import SearchSuggestions from './components/common/SearchSuggestions';
+import i18n from './i18n';
+
+const SUPPORTED_LANGUAGES = new Set([
+  'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
+]);
+const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
 
 // Глобальный перехватчик фатальных ошибок (Защита от белого экрана)
 class ErrorBoundary extends React.Component {
@@ -374,9 +380,9 @@ function App() {
   // Защита от Prototype Pollution (WSOD Crash): проверяем, что язык действительно существует в словаре
   const [lang, setLang] = useState(() => {
     const saved = localStorage.getItem('lang');
-    return Object.keys(translations).includes(saved) ? saved : 'es';
+    return SUPPORTED_LANGUAGES.has(saved) ? saved : 'es';
   });
-  const t = translations[lang] || translations['es'];
+  const t = translations[lang] || translations.en || translations.es;
 
   const [serverAds, setServerAds] = useState([]);
   const [realEstateAds, setRealEstateAds] = useState([]);
@@ -1157,7 +1163,10 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('lang', lang);
+    localStorage.setItem('mercasto_language', lang);
     document.documentElement.lang = lang;
+    document.documentElement.dir = RTL_LANGUAGES.has(lang) ? 'rtl' : 'ltr';
+    if (i18n.language !== lang) i18n.changeLanguage(lang);
   }, [lang]);
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
 
