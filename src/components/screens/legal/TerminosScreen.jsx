@@ -176,7 +176,7 @@ export default function TerminosScreen() {
 
                 <section id="propiedad">
                   <SectionTitle n="7">Propiedad Intelectual</SectionTitle>
-                  <p>Todos los derechos de propiedad intelectual sobre la Plataforma, su diseño, código, marcas, logotipos y contenido desarrollado por Mercasto son propiedad exclusiva de <strong>Mercasto México S.A. de C.V.</strong>, protegidos por la Ley Federal del Derecho de Autor y otras leyes aplicables.</p>
+                  <p>Todos los derechos de propiedad intelectual sobre la Plataforma, su diseño, código, marcas, logotipos y contenido desarrollado por Mercasto son propiedad exclusiva de <strong>Mercasto</strong>, protegidos por la Ley Federal del Derecho de Autor y otras leyes aplicables.</p>
                   <p className="mt-3">Al publicar contenido (textos, imágenes, etc.), el usuario otorga a Mercasto una licencia no exclusiva, gratuita, sublicenciable y mundial para usar, reproducir y distribuir dicho contenido con fines de operación y promoción de la Plataforma.</p>
                 </section>
 
@@ -246,7 +246,7 @@ function BulletList({ items, color = 'lime' }) {
 function ContactBox({ email }) {
   return (
     <div className="mt-4 p-4 bg-lime-50 rounded-xl border border-lime-100">
-      <p className="font-semibold text-slate-800 mb-1">Mercasto México S.A. de C.V.</p>
+      <p className="font-semibold text-slate-800 mb-1">Mercasto · Hecho en México</p>
       <p className="text-slate-600 text-sm">Ciudad de México, México</p>
       <a href={`mailto:${email}`} className="inline-flex items-center gap-1.5 mt-2 text-lime-600 hover:text-lime-700 text-sm font-medium transition-colors">
         <ExternalLink className="w-3.5 h-3.5" />

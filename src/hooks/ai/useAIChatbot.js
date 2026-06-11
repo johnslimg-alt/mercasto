@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useId } from 'react';
 import axios from 'axios';
 
 export function useAIChatbot() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [messages, setMessages] = useState([]);
-  const sessionIdRef = useRef(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const sessionId = `session_${useId().replace(/:/g, '')}`;
 
   const sendMessage = useCallback(async (message) => {
     if (!message.trim()) return;
@@ -25,7 +25,7 @@ export function useAIChatbot() {
       const token = localStorage.getItem('authToken');
       const response = await axios.post('/api/ai/chat', {
         message: message.trim(),
-        session_id: sessionIdRef.current,
+        session_id: sessionId,
       }, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -60,13 +60,13 @@ export function useAIChatbot() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sessionId]);
 
   const clearHistory = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken');
       await axios.post('/api/ai/chat/clear', {
-        session_id: sessionIdRef.current,
+        session_id: sessionId,
       }, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -75,13 +75,13 @@ export function useAIChatbot() {
     } catch (err) {
       console.error('Failed to clear chat history:', err);
     }
-  }, []);
+  }, [sessionId]);
 
   return {
     loading,
     error,
     messages,
-    sessionId: sessionIdRef.current,
+    sessionId,
     sendMessage,
     clearHistory,
   };

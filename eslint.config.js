@@ -11,6 +11,7 @@ export default defineConfig([
     '.codex-backups/**',
     '**/._*',
     'backend/vendor/**',
+    'backend/vendor_new/**',
     'node_modules/**',
   ]),
   {

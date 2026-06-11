@@ -249,7 +249,7 @@ export default function CookiesScreen() {
                   <SectionTitle n="6">Contacto</SectionTitle>
                   <p>Si tienes preguntas sobre el uso de cookies en Mercasto:</p>
                   <div className="mt-4 p-4 bg-lime-50 rounded-xl border border-lime-100">
-                    <p className="font-semibold text-slate-800 mb-0.5">Mercasto México S.A. de C.V.</p>
+                    <p className="font-semibold text-slate-800 mb-0.5">Mercasto · Hecho en México</p>
                     <p className="text-slate-600 text-sm">Departamento de Privacidad</p>
                     <p className="text-slate-600 text-sm">Ciudad de México, México</p>
                     <a href="mailto:privacidad@mercasto.com" className="inline-flex items-center gap-1.5 mt-2 text-lime-600 hover:text-lime-700 text-sm font-medium transition-colors">

@@ -5,7 +5,6 @@ import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { Bike, Car, CarFront, Gauge, PackageSearch, Truck, Wrench } from 'lucide-react';
-import { useUI } from '../../../contexts/UIContext';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -73,9 +72,8 @@ const SUBSECTIONS = [
   { name: 'Autopartes', query: 'autopartes', Icon: PackageSearch },
 ];
 
-export default function AutosLanding() {
+export default function AutosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
-  const { lang } = useUI();
   const copy = getVerticalCopy(lang, 'autos');
   const [condition, setCondition] = useState('');
   const [priceRange, setPriceRange] = useState(null);

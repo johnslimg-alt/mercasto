@@ -25,6 +25,7 @@ export default function SplitViewContainer({
   loadingMore = false,
   lastAdElementRef,
   getImageUrl,
+  onSearchArea,
 }) {
   const [viewLayout, setViewLayout] = useState('grid'); // 'grid' or 'list'
   const [hoveredAdId, setHoveredAdId] = useState(null);
@@ -143,6 +144,7 @@ export default function SplitViewContainer({
               className="h-full border-0 shadow-none rounded-none"
               highlightedAdId={hoveredAdId}
               selectedAdId={selectedAdId}
+              onSearchArea={onSearchArea}
             />
           )}
           

@@ -4,7 +4,6 @@ import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { BadgeCheck, Brush, Camera, Car, GraduationCap, Hammer, HeartHandshake, Leaf, PawPrint, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
-import { useUI } from '../../../contexts/UIContext';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -32,9 +31,8 @@ const TRUST = [
     body: 'Contacta directamente al profesional y negocia el precio sin comisiones.' },
 ];
 
-export default function ServiciosLanding() {
+export default function ServiciosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
-  const { lang } = useUI();
   const copy = getVerticalCopy(lang, 'servicios');
 
   React.useEffect(() => {

@@ -17,7 +17,6 @@ import {
   Bike, Dumbbell, Footprints, Mountain, Fish, Waves,
   BookOpen, Music, Ticket, Gamepad, Activity, Film, FileText
 } from 'lucide-react';
-import { useUI } from '../../../contexts/UIContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -283,9 +282,8 @@ const COLOR_CLASSES = {
   },
 };
 
-export default function CategoryLanding({ category }) {
+export default function CategoryLanding({ category, lang = 'es' }) {
   const navigate = useNavigate();
-  const { lang } = useUI();
   const cfg = CATEGORY_CONFIG[category];
   const c = COLOR_CLASSES[cfg?.color] || COLOR_CLASSES.blue;
 

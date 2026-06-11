@@ -26,7 +26,8 @@ if [[ -n "$matches" ]]; then
     exit 1
   }
 
-  if grep -nE "addEventListener\\(['\"]fetch|caches\\.|CacheStorage|cacheName|CACHE_NAME|precache|addAll\\(" public/sw.js >&2; then
+  # Permitido: limpieza de caches viejos (caches.keys/caches.delete). Prohibido: cachear.
+  if grep -nE "addEventListener\\(['\"]fetch|caches\\.(open|match|put)|CacheStorage|cacheName|CACHE_NAME|precache|addAll\\(" public/sw.js >&2; then
     echo "service worker caching detected; Mercasto only allows Web Push service workers without fetch/cache handling." >&2
     exit 1
   fi

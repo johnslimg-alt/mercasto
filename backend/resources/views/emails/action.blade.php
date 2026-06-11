@@ -42,7 +42,7 @@
             </div>
         </div>
         <div class="footer">
-            &copy; {{ date('Y') }} Mercasto México S.A. de C.V.<br>
+            &copy; {{ date('Y') }} Mercasto · Hecho en México<br>
             Has recibido este correo porque estás registrado en <a href="{{ config('app.frontend_url', 'https://mercasto.com') }}">Mercasto.com</a>.
         </div>
     </div>

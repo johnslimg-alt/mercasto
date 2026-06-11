@@ -13,6 +13,9 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Events\NewNotification;
 use App\Jobs\ProcessVideoWatermark;
@@ -31,6 +34,54 @@ class AdController extends Controller
     private function imageManager(): ImageManager
     {
         return ImageManager::usingDriver(Driver::class);
+    }
+
+    private function validateCategoryAttributes(Request $request): void
+    {
+        $attributes = $request->input('attributes', []);
+        $errors = [];
+        $aliases = [
+            'brand' => 'marca',
+            'model' => 'modelo',
+            'kms' => 'km',
+            'fuel' => 'combustible',
+            'property_type' => 'tipo',
+            'rooms' => 'habitaciones',
+            'bathrooms' => 'banos',
+            'area' => 'm2',
+            'contract_type' => 'contrato',
+            'working_hours' => 'tipo_empleo',
+            'salary' => 'salario',
+        ];
+
+        foreach ($attributes as $key => $value) {
+            if (! preg_match('/^[a-zA-Z0-9_-]{1,80}$/', (string) $key)) {
+                $errors["attributes.{$key}"][] = 'La característica no es válida.';
+                continue;
+            }
+            if (is_array($value) || is_object($value) || mb_strlen((string) $value) > 500) {
+                $errors["attributes.{$key}"][] = 'El valor de la característica no es válido.';
+            }
+        }
+
+        if (Schema::hasTable('category_attributes')) {
+            $requiredKeys = DB::table('category_attributes')
+                ->join('categories', 'categories.id', '=', 'category_attributes.category_id')
+                ->where('categories.slug', $request->input('category'))
+                ->where('category_attributes.required', true)
+                ->pluck('category_attributes.key');
+
+            foreach ($requiredKeys as $key) {
+                $submittedKey = $aliases[$key] ?? $key;
+                if (! isset($attributes[$submittedKey]) || trim((string) $attributes[$submittedKey]) === '') {
+                    $errors["attributes.{$submittedKey}"][] = 'Esta característica es obligatoria.';
+                }
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     private function geocodeApproximateLocation(?string $location, ?string $state = null): array
@@ -196,6 +247,11 @@ class AdController extends Controller
             $query->where('category', $request->category);
         }
 
+        // Фильтрация по подкатегории
+        if ($request->filled('subcategory')) {
+            $query->where('subcategory', $request->subcategory);
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
@@ -327,6 +383,7 @@ class AdController extends Controller
             'radius',
             'user_id',
             'category',
+            'subcategory',
             'search',
             'location',
             'city',
@@ -390,15 +447,41 @@ class AdController extends Controller
             'title' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'description' => 'required|string',
-            'location' => 'nullable|string|max:255',
-            'state' => 'nullable|string|max:60',
+            'location' => 'required|string|max:255',
+            'city' => 'required|string|max:100',
+            'state' => 'required|string|max:60',
+            'latitude' => 'required|numeric|between:14,33',
+            'longitude' => 'required|numeric|between:-118,-86',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД, защита от Data Integrity Bypass
+            'subcategory' => 'nullable|string|max:255',
             'images' => 'nullable|array|max:10', // Максимум 10 картинок
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Максимум 5МБ и защита от OOM-бомб (Pixel Flooding)
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // 50MB Max
-            'attributes' => 'nullable|array', // Динамические характеристики (марка, модель, ОЗУ и т.д.)
+            'attributes' => 'required|array', // Динамические характеристики (марка, модель, ОЗУ и т.д.)
+            'attributes.subcategory' => 'required|string|max:100',
         ]);
+        $this->validateCategoryAttributes($request);
+
+        // Dynamic category attributes validation
+        if ($request->filled('attributes')) {
+            $categoryId = DB::table('categories')->where('slug', $request->category)->value('id');
+            if ($categoryId) {
+                $dynamicRules = [];
+                $categoryAttrs = DB::table('category_attributes')->where('category_id', $categoryId)->get();
+                foreach ($categoryAttrs as $attr) {
+                    if ($attr->required) {
+                        $dynamicRules["attributes.{$attr->key}"] = 'required';
+                    }
+                    if ($attr->type === 'number' || $attr->type === 'range') {
+                        $dynamicRules["attributes.{$attr->key}"] = ($attr->required ? 'required' : 'nullable') . '|numeric';
+                    }
+                }
+                if (!empty($dynamicRules)) {
+                    $request->validate($dynamicRules);
+                }
+            }
+        }
 
         // Защита бизнес-модели: лимиты берём из активного платного плана пользователя.
         $user = $request->user();
@@ -408,7 +491,12 @@ class AdController extends Controller
             return response()->json(['message' => "Has alcanzado el límite de {$maxAds} anuncios mensuales de tu plan. Actualiza tu plan para publicar más."], 403);
         }
 
-        [$lat, $lng] = $this->geocodeApproximateLocation($request->location, $request->state);
+        if ($request->filled('latitude') && $request->filled('longitude')) {
+            $lat = (float) $request->latitude;
+            $lng = (float) $request->longitude;
+        } else {
+            [$lat, $lng] = $this->geocodeApproximateLocation($request->location, $request->state);
+        }
 
         $imagePaths = [];
         if ($request->hasFile('images')) {
@@ -457,9 +545,11 @@ class AdController extends Controller
             'description' => strip_tags($request->description, '<p><br><b><i><ul><ol><li>'),
             'location' => $request->location,
             'state' => $request->state,
+            'city' => $request->city,
             'latitude' => $lat,
             'longitude' => $lng,
             'category' => $request->category,
+            'subcategory' => $request->subcategory,
             'attributes' => $request->filled('attributes') ? $request->input('attributes') : null,
             'image_url' => count($imagePaths) > 0 ? json_encode($imagePaths) : null,
             'video_url' => $videoPath,
@@ -570,22 +660,51 @@ class AdController extends Controller
             'title' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'description' => 'required|string',
-            'location' => 'nullable|string|max:255',
-            'state' => 'nullable|string|max:60',
+            'location' => 'required|string|max:255',
+            'city' => 'required|string|max:100',
+            'state' => 'required|string|max:60',
+            'latitude' => 'required|numeric|between:14,33',
+            'longitude' => 'required|numeric|between:-118,-86',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД
+            'subcategory' => 'nullable|string|max:255',
             'existing_images' => 'nullable|array',
             'existing_images.*' => 'string',
             'images' => 'nullable|array|max:10', // Новые изображения
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Защита от Pixel Flooding
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // Защита от загрузки вредоносных скриптов
-            'attributes' => 'nullable|array',
+            'attributes' => 'required|array',
+            'attributes.subcategory' => 'required|string|max:100',
         ]);
+        $this->validateCategoryAttributes($request);
+
+        // Dynamic category attributes validation
+        if ($request->filled('attributes')) {
+            $categoryId = DB::table('categories')->where('slug', $request->category)->value('id');
+            if ($categoryId) {
+                $dynamicRules = [];
+                $categoryAttrs = DB::table('category_attributes')->where('category_id', $categoryId)->get();
+                foreach ($categoryAttrs as $attr) {
+                    if ($attr->required) {
+                        $dynamicRules["attributes.{$attr->key}"] = 'required';
+                    }
+                    if ($attr->type === 'number' || $attr->type === 'range') {
+                        $dynamicRules["attributes.{$attr->key}"] = ($attr->required ? 'required' : 'nullable') . '|numeric';
+                    }
+                }
+                if (!empty($dynamicRules)) {
+                    $request->validate($dynamicRules);
+                }
+            }
+        }
 
         $lat = $ad->latitude;
         $lng = $ad->longitude;
         // Пересчитываем координаты, только если локация или штат изменились
-        if (($request->filled('location') && $request->location !== $ad->location) || (($request->input('state') ?? null) !== $ad->state)) {
+        if ($request->filled('latitude') && $request->filled('longitude')) {
+            $lat = (float) $request->latitude;
+            $lng = (float) $request->longitude;
+        } elseif (($request->filled('location') && $request->location !== $ad->location) || (($request->input('state') ?? null) !== $ad->state)) {
             [$lat, $lng] = $this->geocodeApproximateLocation($request->location, $request->state);
         }
 
@@ -682,9 +801,11 @@ class AdController extends Controller
             'description' => strip_tags($validated['description'], '<p><br><b><i><ul><ol><li>'),
             'location' => $validated['location'],
             'state' => $validated['state'] ?? $ad->state,
+            'city' => $validated['city'],
             'latitude' => $lat,
             'longitude' => $lng,
             'category' => $validated['category'],
+            'subcategory' => $request->input('subcategory', $ad->subcategory),
             'attributes' => $request->filled('attributes') ? $request->input('attributes') : $ad->attributes,
             'image_url' => count($finalImagePaths) > 0 ? json_encode($finalImagePaths) : null,
             'video_url' => $videoPath,
@@ -1423,7 +1544,7 @@ class AdController extends Controller
             $content .= "   <url>\n      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/</loc>\n      <changefreq>always</changefreq>\n      <priority>1.0</priority>\n   </url>\n";
 
             // SEO: Добавляем статические страницы в карту сайта
-            $staticPages = ['terms', 'privacy', 'help', 'safety'];
+            $staticPages = ['terminos', 'privacidad', 'cookies', 'contacto', 'ayuda', 'safety', 'reembolsos', 'moderacion'];
             foreach ($staticPages as $page) {
                 $content .= "   <url>\n";
                 $content .= "      <loc>" . config('app.frontend_url', 'https://mercasto.com') . "/{$page}</loc>\n";

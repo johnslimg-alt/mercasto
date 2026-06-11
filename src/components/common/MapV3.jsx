@@ -18,11 +18,14 @@ const loadLeaflet = () => {
   if (!leafletPromise) {
     leafletPromise = import('leaflet')
       .then((mod) => mod.default || mod)
-      .then((L) => Promise.all([
-        import('leaflet.markercluster'),
-        import('leaflet-draw'),
-        import('leaflet-draw/dist/leaflet.draw.css'),
-      ]).then(() => L));
+      .then((L) => {
+        globalThis.L = L;
+        return Promise.all([
+          import('leaflet.markercluster'),
+          import('leaflet-draw'),
+          import('leaflet-draw/dist/leaflet.draw.css'),
+        ]).then(() => L);
+      });
   }
   return leafletPromise;
 };
@@ -185,6 +188,9 @@ export default function MapV3({
   onSearch,
   onSearchArea,
   onMarkerClick,
+  onLocationSelect,
+  locationPicker = false,
+  locationQuery = '',
   className = '',
   showFullscreen = true,
   initialFilters = {},
@@ -228,6 +234,7 @@ export default function MapV3({
   const largeMapInstanceRef = React.useRef(null);
   const mountedRef = React.useRef(true);
   const userMarkerRef = React.useRef(null);
+  const pickerMarkerRef = React.useRef(null);
 
   // Fetch list of categories
   useEffect(() => {
@@ -358,6 +365,7 @@ export default function MapV3({
       // Leaflet can still have pending tile events during route changes.
     }
     instanceRef.current = null;
+    if (locationPicker) pickerMarkerRef.current = null;
   };
 
   const updateMapArea = (map) => {
@@ -607,6 +615,14 @@ function createPopupElement(ad, marker) {
     let zoom = isLarge ? 5 : 4;
 
     const validMarkers = visibleMarkers.filter(m => m.coords && Array.isArray(m.coords) && m.coords.length >= 2);
+    const normalizedQuery = normalizeLocationText(locationQuery);
+    const queryCity = Object.keys(CITY_COORDS).find((key) => normalizedQuery.includes(key));
+    const queryState = Object.keys(STATE_COORDS).find((key) => normalizedQuery.includes(normalizeLocationText(key)));
+
+    if (locationPicker && (queryCity || queryState)) {
+      center = queryCity ? CITY_COORDS[queryCity] : STATE_COORDS[queryState];
+      zoom = queryCity ? 12 : 7;
+    }
     
     if (validMarkers.length > 0) {
       if (validMarkers.length === 1) {
@@ -766,6 +782,29 @@ function createPopupElement(ad, marker) {
 
     markerGroup.addTo(map);
 
+    if (locationPicker) {
+      const selected = validMarkers[0]?.coords;
+      if (selected) {
+        pickerMarkerRef.current = L.marker(selected, { draggable: true }).addTo(map);
+        pickerMarkerRef.current.on('dragend', (event) => {
+          const point = event.target.getLatLng();
+          onLocationSelect?.({ lat: point.lat, lng: point.lng });
+        });
+      }
+      map.on('click', (event) => {
+        const point = event.latlng;
+        if (pickerMarkerRef.current) pickerMarkerRef.current.setLatLng(point);
+        else {
+          pickerMarkerRef.current = L.marker(point, { draggable: true }).addTo(map);
+          pickerMarkerRef.current.on('dragend', (dragEvent) => {
+            const draggedPoint = dragEvent.target.getLatLng();
+            onLocationSelect?.({ lat: draggedPoint.lat, lng: draggedPoint.lng });
+          });
+        }
+        onLocationSelect?.({ lat: point.lat, lng: point.lng });
+      });
+    }
+
     if (validMarkers.length > 1 && markerGroup.getLayers().length > 0) {
       try {
         map.fitBounds(markerGroup.getBounds(), { padding: [30, 30] });
@@ -821,7 +860,7 @@ function createPopupElement(ad, marker) {
     return () => {
       removeMap(mapInstanceRef);
     };
-  }, [leaflet, expanded, drawMode]);
+  }, [leaflet, expanded, drawMode, visibleMarkers, locationPicker, locationQuery]);
 
   useEffect(() => {
     if (leaflet && expanded) {
@@ -833,7 +872,7 @@ function createPopupElement(ad, marker) {
     return () => {
       removeMap(largeMapInstanceRef);
     };
-  }, [leaflet, expanded, drawMode]);
+  }, [leaflet, expanded, drawMode, visibleMarkers, locationPicker, locationQuery]);
 
   const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
 

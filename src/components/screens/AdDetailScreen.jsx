@@ -354,15 +354,15 @@ export default function AdDetailScreen({
       .catch(() => setPriceHistory([]));
   }, [API_URL, ad?.id]);
 
-  if (!ad) return null;
-
   // Dynamic OG tags for social sharing
   useDocumentMeta({
-    title: ad.title,
-    description: `$${Number(ad.price || 0).toLocaleString('es-MX')} - ${ad.state || ad.location || 'México'}`,
-    image: getImageUrl(ad.image_url || ad.image?.[0]),
+    title: ad?.title || 'Mercasto',
+    description: ad ? `$${Number(ad.price || 0).toLocaleString('es-MX')} - ${ad.state || ad.location || 'México'}` : '',
+    image: ad ? getImageUrl(ad.image_url || ad.image?.[0]) : '',
     url: typeof window !== 'undefined' ? window.location.href : ''
   });
+
+  if (!ad) return null;
 
   const isOwner = currentUser && currentUser.id === ad.user_id;
   const isFav = favoriteIds.includes(ad.id);
