@@ -88,7 +88,7 @@ if [[ "$PHP_POST_MAX" != "64M" ]]; then
 fi
 
 echo "== Redis host setting =="
-if [[ "$(sysctl -n vm.overcommit_memory 2>/dev/null || echo unknown)" != "1" ]]; then
+if [[ "$(uname)" != "Darwin" && "$(sysctl -n vm.overcommit_memory 2>/dev/null || echo unknown)" != "1" ]]; then
   echo "vm.overcommit_memory is not 1" >&2
   exit 1
 fi

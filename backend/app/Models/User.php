@@ -62,9 +62,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'business_rfc_verified_at',
         'kyc_document_url',
         'kyc_status',
-        'preferred_role',
-        'preferred_categories',
-        'onboarding_completed_at',
     ];
 
     /**

@@ -536,6 +536,21 @@ class AdController extends Controller
             }
         }
 
+        // Gamification: Award XP for posting an ad
+        try {
+            $gamification = app(GamificationService::class);
+            $xpAmount = 30; // Base XP for posting
+            if ($ad->images && count(json_decode($ad->images, true) ?? []) > 0) {
+                $xpAmount += 10; // Bonus XP for adding photos
+            }
+            $gamification->awardXp($adUser, $xpAmount, 'ad_posted', 'ad', $ad->id);
+            $gamification->recordActivity($adUser, 'post');
+            $newAchievements = $gamification->checkAchievements($adUser);
+            \Log::info('Gamification: ad posted XP', ['user_id' => $adUser->id, 'xp' => $xpAmount, 'achievements' => count($newAchievements)]);
+        } catch (\Throwable $e) {
+            \Log::warning('Gamification ad post error: ' . $e->getMessage());
+        }
+
         // Подгружаем пользователя, чтобы вернуть полные данные для фронтенда
         return response()->json($ad, 201);
     }
@@ -2200,5 +2215,51 @@ class AdController extends Controller
         }
 
         return 3;
+    }
+
+    /**
+     * Log a contact click on an ad (WhatsApp, Telegram, Email, Phone)
+     * Rate limited to prevent abuse
+     */
+    public function contactClick(Request $request, $id)
+    {
+        $request->validate([
+            'channel' => 'required|in:whatsapp,telegram,email,phone,share',
+            'ad_id' => 'nullable|integer',
+        ]);
+
+        $ad = \App\Models\Ad::find($id);
+        if (!$ad) {
+            return response()->json(['error' => 'Ad not found'], 404);
+        }
+
+        // Rate limiting: max 10 contact clicks per IP per hour
+        $ip = $request->ip();
+        $recentClicks = \App\Models\ContactClick::where('ip_address', $ip)
+            ->where('created_at', '>', now()->subHour())
+            ->count();
+
+        if ($recentClicks >= 10) {
+            return response()->json([
+                'error' => 'Too many contact attempts. Please try again later.',
+                'retry_after' => 3600
+            ], 429);
+        }
+
+        $click = \App\Models\ContactClick::create([
+            'ad_id' => $ad->id,
+            'user_id' => auth()->id(),
+            'channel' => $request->channel,
+            'ip_address' => $ip,
+            'user_agent' => substr($request->userAgent() ?? '', 0, 255),
+        ]);
+
+        // Increment ad counter for analytics
+        $ad->increment('contact_clicks');
+
+        return response()->json([
+            'success' => true,
+            'click_id' => $click->id,
+        ]);
     }
 }

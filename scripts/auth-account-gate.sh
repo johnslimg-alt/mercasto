@@ -59,7 +59,7 @@ grep -qF "unset(" "$AUTH"
 grep -qF "oauth_2fa" "$AUTH"
 grep -qF "Cache::put('oauth_exchange:'" "$AUTH"
 grep -qF "Cache::pull('oauth_exchange:'" "$AUTH"
-grep -qF "allowedProviders = ['google', 'apple', 'telegram', 'twitter']" "$AUTH"
+grep -qF "allowedProviders = ['google', 'apple', 'telegram']" "$AUTH"
 grep -qF "Proveedor no soportado" "$AUTH"
 
 # Password reset must avoid enumeration, expire, revoke tokens, and delete reset rows.

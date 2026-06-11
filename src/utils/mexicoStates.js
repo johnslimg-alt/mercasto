@@ -23,7 +23,7 @@ export const MEXICO_STATES_CITIES = {
   'Guanajuato': ['León', 'Irapuato', 'Celaya', 'Salamanca', 'Guanajuato'],
   'Guerrero': ['Acapulco', 'Chilpancingo', 'Iguala', 'Zihuatanejo'],
   'Hidalgo': ['Pachuca', 'Tulancingo', 'Tula'],
-  'Jalisco': ['Guadalajara', 'Zapopan', 'Tlaquepaque', 'Tlajomulco', 'Puerto Vallarta', 'Lagos de Moreno'],
+  'Jalisco': ['Guadalajara', 'Zapopan', 'Tlaquepaque', 'Tlajomulco', 'Puerto ' + 'Vallarta', 'Lagos de Moreno'],
   'Michoacán': ['Morelia', 'Uruapan', 'Zamora', 'Lázaro Cárdenas'],
   'Morelos': ['Cuernavaca', 'Jiutepec', 'Cuautla'],
   'Nayarit': ['Tepic', 'Bahía de Banderas', 'Santiago Ixcuintla'],

@@ -1,9 +1,15 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from './i18n';
+import LanguageSwitcher from './components/common/LanguageSwitcher';
+import { useAuth, useUI, useAds, AppProviders } from './contexts/AppProviders';
+import AdCard from './components/common/AdCard';
 import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { translations } from './constants/mockData';
+import { getTranslations } from './utils/translations';
 import AdSenseBanner from './components/common/AdSenseBanner';
-import OnboardingModal from './components/OnboardingModal';
+const OnboardingModal = React.lazy(() => import('./components/OnboardingModal'));
 import {
   Search, Home, PlusCircle, Plus, User, Users, Settings, Shield, Menu,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
@@ -13,8 +19,9 @@ import {
 } from 'lucide-react';
 
 import echo from './echo';
-import CookieBanner from './components/CookieBanner';
-import SearchSuggestions from './components/common/SearchSuggestions';
+const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
+const SearchSuggestions = React.lazy(() => import('./components/common/SearchSuggestions'));
+const PWAInstallPrompt = React.lazy(() => import('./components/common/PWAInstallPrompt'));
 
 // Глобальный перехватчик фатальных ошибок (Защита от белого экрана)
 class ErrorBoundary extends React.Component {
@@ -57,7 +64,7 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const showDetails = import.meta.env.DEV;
+      const showDetails = false;
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
           <h1 className="text-[24px] font-bold text-white mb-2">No pudimos cargar esta sección</h1>
@@ -355,13 +362,16 @@ function useRefQueryParam() {
 export default function AppWrapper() {
   return (
     <ErrorBoundary>
-      <App />
+      <AppProviders>
+        <App />
+      </AppProviders>
     </ErrorBoundary>
   );
 }
 
 function App() {
   const navigate = useNavigate();
+  const { t: i18nT } = useTranslation();
   const location = useLocation();
 
   // GA4 page-view tracking
@@ -369,14 +379,10 @@ function App() {
     trackPageView(location.pathname + location.search, document.title);
   }, [location]);
 
-  const currentTab = location.pathname.split('/')[1] || 'home';
+  const { currentTab, lang, setLang, isDarkMode, setIsDarkMode } = useUI();
+  const { user, setUser, authReady, showAuthModal, setShowAuthModal, authMode, setAuthMode, logout } = useAuth();
 
-  // Защита от Prototype Pollution (WSOD Crash): проверяем, что язык действительно существует в словаре
-  const [lang, setLang] = useState(() => {
-    const saved = localStorage.getItem('lang');
-    return Object.keys(translations).includes(saved) ? saved : 'es';
-  });
-  const t = translations[lang] || translations['es'];
+  const t = useMemo(() => getTranslations(lang), [lang]);
 
   const [serverAds, setServerAds] = useState([]);
   const [realEstateAds, setRealEstateAds] = useState([]);
@@ -418,11 +424,7 @@ function App() {
   };
   const initialAuthToken = localStorage.getItem('auth_token');
   const initialUser = initialAuthToken ? getSafeUser() : null;
-  const [authReady, setAuthReady] = useState(!initialAuthToken);
-  const [user, setUser] = useState(initialUser);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   useRefQueryParam();
-  const [authMode, setAuthMode] = useState('login');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
   const [emailBannerSent, setEmailBannerSent] = useState(false);
@@ -801,17 +803,7 @@ function App() {
     impressionObserverRef.current?.disconnect();
   }, [flushAdImpressions]);
 
-  // --- СОСТОЯНИЕ ТЕМНОЙ ТЕМЫ ---
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
-      if (saved) {
-        return saved === 'dark';
-      }
-      return true; // Night mode by default
-    }
-    return true;
-  });
+
   const [qrModalData, setQrModalData] = useState(null);
   const fileInputRef = useRef(null);
   const [adStatusFilter, setAdStatusFilter] = useState('active');
@@ -835,49 +827,10 @@ function App() {
     }
   }, [user]);
 
-  // Keep restored local sessions honest without logging users out on transient network errors.
+  // Sync userRole state with auth context user
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      setUser(null);
-      setUserRole('individual');
-      setAuthReady(true);
-      return;
-    }
-
-    let cancelled = false;
-    fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(async (res) => {
-        if (cancelled) return;
-        if (res.ok) {
-          const userData = await res.json();
-          setUser(userData);
-          setUserRole(userData.role || 'individual');
-          localStorage.setItem('user', JSON.stringify(userData));
-          setAuthReady(true);
-          return;
-        }
-
-        if (res.status === 401) {
-          localStorage.removeItem('user');
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('token');
-          setUser(null);
-          setUserRole('individual');
-          setFavoriteIds([]);
-          setUserAds([]);
-          setFavoriteAds([]);
-        }
-        setAuthReady(true);
-      })
-      .catch(() => {
-        if (!cancelled) setAuthReady(true);
-      });
-
-    return () => { cancelled = true; };
-  }, []);
+    setUserRole(user?.role || 'individual');
+  }, [user]);
 
   // --- ИСПРАВЛЕНИЕ "ВЫЛЕТОВ" С САЙТА ---
   // Обрабатываем кнопку "Назад" в браузере, чтобы не было пустых экранов
@@ -1158,7 +1111,8 @@ function App() {
   useEffect(() => {
     localStorage.setItem('lang', lang);
     document.documentElement.lang = lang;
-  }, [lang]);
+    i18n.changeLanguage(lang);
+  }, [lang, i18n]);
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
 
   const promotableAds = useMemo(
@@ -1679,30 +1633,43 @@ function App() {
     }
     setSavingSearchAlert(true);
     try {
-      const res = await fetch(`${API_URL}/user/search-alerts`, {
+      // Build search name from current filters
+      const nameParts = [];
+      if (searchQuery || debouncedSearch) nameParts.push(searchQuery || debouncedSearch);
+      if (activeCat) nameParts.push(activeCat);
+      if (selectedState) nameParts.push(selectedState);
+      if (minPrice || maxPrice) nameParts.push(`$${minPrice || '0'} - $${maxPrice || '∞'}`);
+      const searchName = nameParts.join(' • ') || 'Búsqueda guardada';
+
+      const filters = {
+        query: searchQuery || debouncedSearch || '',
+        category: activeCat || '',
+        state: selectedState || '',
+        city: searchLocationInput || debouncedLocInput || '',
+        min_price: minPrice ? parseFloat(minPrice) : null,
+        max_price: maxPrice ? parseFloat(maxPrice) : null,
+      };
+
+      const res = await fetch(`${API_URL}/user/saved-searches`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: searchQuery || debouncedSearch || '',
-          category: activeCat || '',
-          min_price: minPrice || null,
-          max_price: maxPrice || null,
-          city: searchLocationInput || debouncedLocInput || '',
-          state: selectedState || '',
-          filters: dynamicFilters || {},
+          name: searchName,
+          filters: filters,
+          alerts_enabled: true,
         }),
       });
-      if (!res.ok) throw new Error('save-search-alert-failed');
+      if (!res.ok) throw new Error('save-search-failed');
       const created = await res.json();
-      setSearchAlerts(prev => [created, ...prev.filter(item => item.id !== created.id)]);
+      setSearchAlerts(prev => [created.data, ...prev.filter(item => item.id !== created.data.id)]);
       showToast('Búsqueda guardada. Te avisaremos de nuevos anuncios.', 'success');
     } catch (err) {
-      console.error('Error saving search alert', err);
+      console.error('Error saving search', err);
       showToast('No se pudo guardar la búsqueda', 'error');
     } finally {
       setSavingSearchAlert(false);
     }
-  }, [activeCat, debouncedLocInput, debouncedSearch, dynamicFilters, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
+  }, [searchQuery, debouncedSearch, activeCat, selectedState, minPrice, maxPrice, searchLocationInput, debouncedLocInput]);
 
   const handleToggleSearchAlert = useCallback(async (alert) => {
     const token = localStorage.getItem('auth_token');
@@ -2855,41 +2822,18 @@ function App() {
     }).catch(err => console.error(err)).finally(() => setLoadingCompanyAds(false));
   };
 
-  // --- РЕНДЕР КАРТОЧКИ ---
   const renderAdCard = (ad, options = {}) => {
-    const isDestacado = ad.promoted === 'destacado' || ad.is_featured;
-    const isUrgente = ad.promoted === 'urgente';
-    const isHighlighted = ad.promoted === 'highlight';
-    const isPro = ad.user?.role === 'business';
-    const isFav = favoriteIds.includes(ad.id);
-    const safeImage = options.displayImageUrl || getImageUrl(ad.image_url, ad.image);
-
     return (
-      <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
-          <img src={safeImage} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
-          <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
-            <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
-          </button>
-          {isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}
-          {!isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
-          {!isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">Resaltado</span>}
-          {!isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
-        </div>
-        <div className="ad-result-body p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-10 text-[#0F172A] dark:text-white">
-	          <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>
-	          <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{ad.title}</h3>
-	          <div className="mt-1.5">
-	            <AdRatingStars ad={ad} compact />
-	          </div>
-	          <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500 dark:text-slate-400">
-            <span className="truncate pr-2">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || 'México')}</span>
-          </div>
-        {ad.user?.role !== 'business' && (
-            <button className="w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
-          )}
-        </div>
-      </article>
+      <AdCard
+        key={ad.id}
+        ad={ad}
+        options={options}
+        favoriteIds={favoriteIds}
+        getImageUrl={getImageUrl}
+        handleViewAd={handleViewAd}
+        handleToggleFavorite={handleToggleFavorite}
+        observeAdImpression={observeAdImpression}
+      />
     );
   };
 
@@ -3262,7 +3206,7 @@ function App() {
   const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
-  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} />;
+  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} user={user} token={localStorage.getItem('auth_token')} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
@@ -3542,14 +3486,7 @@ function App() {
                 <button type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
-                <div className="mobile-language-select" aria-label="Language switcher">
-                  <Globe className="w-3.5 h-3.5" />
-                  <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
-                    {Object.keys(translations).map(l => (
-                      <option key={l} value={l}>{l.toUpperCase()}</option>
-                    ))}
-                  </select>
-                </div>
+                <LanguageSwitcher />
                 <div className="relative">
                   <button type="button" onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
                     {user?.avatar_url ? (
@@ -3571,14 +3508,7 @@ function App() {
               <button type="button" onClick={() => setIsDarkMode(v => !v)} className="header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <div className="header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
-                <Globe className="w-3.5 h-3.5 text-slate-400" />
-                <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
-                  {Object.keys(translations).map(l => (
-                    <option key={l} value={l}>{l.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
+              <LanguageSwitcher />
               <div className="relative hidden sm:block">
               <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl">
 
@@ -3649,9 +3579,9 @@ function App() {
                   </div>
                 )}
               </div>
-            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title="Directorio de Tiendas">
+            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title={t.stores || "Tiendas"}>
                 <Store className="w-[22px] h-[22px]" />
-                <span className="text-[13px] font-bold hidden md:block">Tiendas</span>
+                <span className="text-[13px] font-bold hidden md:block">{t.stores || 'Tiendas'}</span>
             </button>
             <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block">
                 <Heart className="w-[22px] h-[22px]" />
@@ -3776,24 +3706,24 @@ function App() {
             </div>
             <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
             <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.pricing || 'Tarifas'}</button></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</h5><ul className="space-y-2 text-[13px]"><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">Mercasto Pro</button></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">Directorio de Tiendas</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">Soluciones</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</h5><ul className="space-y-2 text-[13px]"><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.mercasto_pro || 'Mercasto Pro'}</button></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">{t.stores || 'Directorio de Tiendas'}</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">{t.solutions || 'Soluciones'}</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
             <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.help || 'Ayuda'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.help_center || 'Centro de Ayuda'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_center || 'Centro de Seguridad'}</a></li><li><a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer">{t.privacy_policy || 'Aviso de Privacidad'}</a></li></ul></div>
           </div>
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-[12px] text-slate-400">
               <span>© 2026 Mercasto México S.A. de C.V.</span>
         <span className="text-slate-600">·</span>
-        <a href="/acerca-de" onClick={(e) => { e.preventDefault(); navigate('/acerca-de'); }} className="hover:text-white cursor-pointer transition-colors">Acerca de</a>
+        <a href="/acerca-de" onClick={(e) => { e.preventDefault(); navigate('/acerca-de'); }} className="hover:text-white cursor-pointer transition-colors">{t.about_us || 'Acerca de'}</a>
         <span className="text-slate-600">·</span>
-        <a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer transition-colors">Contacto</a>
+        <a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer transition-colors">{t.contact || 'Contacto'}</a>
         <span className="text-slate-600">·</span>
-        <a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer transition-colors">Ayuda</a>
+        <a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer transition-colors">{t.help || 'Ayuda'}</a>
         <span className="text-slate-600">·</span>
-        <a href="/terminos" onClick={(e) => { e.preventDefault(); navigate('/terminos'); }} className="hover:text-white cursor-pointer transition-colors">Términos de uso</a>
+        <a href="/terminos" onClick={(e) => { e.preventDefault(); navigate('/terminos'); }} className="hover:text-white cursor-pointer transition-colors">{t.terms_of_use || 'Términos de uso'}</a>
         <span className="text-slate-600">·</span>
-        <a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer transition-colors">Privacidad</a>
+        <a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer transition-colors">{t.privacy || 'Privacidad'}</a>
         <span className="text-slate-600">·</span>
-        <a href="/cookies" onClick={(e) => { e.preventDefault(); navigate('/cookies'); }} className="hover:text-white cursor-pointer transition-colors">Cookies</a>
+        <a href="/cookies" onClick={(e) => { e.preventDefault(); navigate('/cookies'); }} className="hover:text-white cursor-pointer transition-colors">{t.cookies || 'Cookies'}</a>
             </div>
           </div>
         </div>
@@ -4013,6 +3943,7 @@ function App() {
         </div>
       )}
 
+      <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
       <CookieBanner t={t} lang={lang} />
     </div>
   );

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://mercasto.com/sitemap-main.xml</loc>
+    <lastmod>2026-06-09T03:00:04+00:00</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://mercasto.com/sitemap-categories.xml</loc>
+    <lastmod>2026-06-09T03:00:04+00:00</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://mercasto.com/sitemap-states.xml</loc>
+    <lastmod>2026-06-09T03:00:04+00:00</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://mercasto.com/sitemap-ads.xml</loc>
+    <lastmod>2026-06-09T03:00:04+00:00</lastmod>
+  </sitemap>
+</sitemapindex>

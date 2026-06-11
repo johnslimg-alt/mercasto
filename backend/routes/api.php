@@ -188,7 +188,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/profile', [ProfileController::class, 'getProfile']); // Получить профиль
     Route::put('/user/profile', [ProfileController::class, 'update']); // Обновить профиль (PUT)
     Route::post('/user/avatar', [ProfileController::class, 'uploadAvatar']); // Загрузить аватар
-    Route::post('/user/preferences', [ProfileController::class, 'preferences']); // Save onboarding preferences
     Route::get('/user/business-profile', [BusinessProfileController::class, 'show']);
     Route::put('/user/business-profile', [BusinessProfileController::class, 'update']);
     Route::post('/user/business-profile/logo', [BusinessProfileController::class, 'uploadLogo']);

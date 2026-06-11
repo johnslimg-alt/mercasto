@@ -57,4 +57,9 @@ class Ad extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function contactClicks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ContactClick::class);
+    }
 }

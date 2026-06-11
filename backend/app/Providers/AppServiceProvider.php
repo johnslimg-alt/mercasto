@@ -6,6 +6,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Models\Ad;
+use App\Observers\AdObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,5 +46,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define("viewHorizon", function ($user) {
             return $user && $user->role === "admin";
         });
+
+        // Register Ad Observer for IndexNow integration
+        Ad::observe(AdObserver::class);
     }
 }

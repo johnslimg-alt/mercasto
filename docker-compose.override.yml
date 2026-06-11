@@ -1,4 +1,8 @@
 services:
+  mercasto-frontend:
+    volumes:
+      - ./certs:/etc/letsencrypt:ro
+
   mercasto-scheduler:
     depends_on:
       redis:

@@ -1,12 +1,23 @@
+import SEO from "../SEO";
 import AdSenseBanner from '../common/AdSenseBanner';
 import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyViewed';
 import { mexicoLocations, subcategoriesMap, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair } from "lucide-react";
+
+// SEO Components for AEO
+import FAQSchema, { FAQ_DATA } from '../seo/FAQSchema';
+import ItemListSchema from '../seo/ItemListSchema';
 import { IconMap } from '../../constants/iconMap';
 import SidebarFilters from '../common/SidebarFilters';
 import MapV3 from '../common/MapV3';
+import SplitViewContainer from '../common/SplitViewContainer';
+
+import SkeletonCard from '../common/SkeletonCard';
+import SavedSearchesPanel from '../common/SavedSearchesPanel';
+import RecommendationsWidget from '../common/RecommendationsWidget';
+import BottomSheet from '../ui/BottomSheet';
 
 
 // --- MAP COORDINATES ---
@@ -145,6 +156,12 @@ const LeafletMap = ({ ads, onViewAd }) => {
 
   return (
     <>
+      <SEO
+        title="Mercasto | Compra, Vende y Renta en Todo México"
+        description="Marketplace de clasificados para México: autos, inmuebles, servicios, empleo, electrónica y más. Publica gratis y encuentra lo que necesitas cerca de ti."
+        image="https://mercasto.com/icon-512x512.png"
+      />
+      <h1 style={{position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", borderWidth: 0}}>Mercasto - Compra, Vende y Renta en Todo México | Marketplace de Autos, Inmuebles, Servicios y Empleo</h1>
       <div className="osm-embed-shell relative mb-4 md:mb-6 h-[190px] md:h-[320px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-md">
         {mapBody}
       </div>
@@ -303,7 +320,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
   );
 };
 
-export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds }) {
+export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds, user, token }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
     const [showMap, setShowMap] = React.useState(false);
@@ -339,15 +356,15 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     }, []);
 
     const homeCategories = React.useMemo(() => ([
-      { slug: 'motor', name: { es: 'Motor', en: 'Motor' }, icon: 'Car' },
-      { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
-      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
-      { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
-      { slug: 'electronica', name: { es: 'Tecnología', en: 'Tech' }, icon: 'Cpu' },
-      { slug: 'hogar', name: { es: 'Hogar', en: 'Home' }, icon: 'Sofa' },
-      { slug: 'moda', name: { es: 'Moda', en: 'Fashion' }, icon: 'Shirt' },
-      { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure' }, icon: 'Bike' },
-      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing' }, icon: 'Crown', action: 'pricing' },
+      { slug: 'motor', name: { es: 'Motor', en: 'Motor', pt: 'Motor', fr: 'Moteur', zh: '汽车和摩托车', ko: '자동차/오토바이', de: 'Motor', it: 'Motore', ar: 'المحركات', he: 'מנוע', yi: 'מאָטאָр', ru: 'Авто и Мото', ja: '自動車・バイク' }, icon: 'Car' },
+      { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate', pt: 'Imóveis', fr: 'Immobilier', zh: '房地产', ko: '부동산', de: 'Immobilien', it: 'Immobiliare', ar: 'العقارات', he: 'נדל״ן', yi: 'איממאָביליען', ru: 'Недвижимость', ja: '不動産' }, icon: 'Home' },
+      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs', pt: 'Empregos', fr: 'Emplois', zh: '工作', ko: '채용', de: 'Jobs', it: 'Lavoro', ar: 'وظائف', he: 'משרות', yi: 'דזשאָבс', ru: 'Работа', ja: '求人' }, icon: 'Briefcase' },
+      { slug: 'servicios', name: { es: 'Servicios', en: 'Services', pt: 'Serviços', fr: 'Services', zh: '服务', ko: '서비스', de: 'Dienstleistungen', it: 'Servizi', ar: 'خدمات', he: 'שירותים', yi: 'סערוויסעס', ru: 'Услуги', ja: 'サービス' }, icon: 'Wrench' },
+      { slug: 'electronica', name: { es: 'Tecnología', en: 'Tech', pt: 'Tecnologia', fr: 'Technologie', zh: '科技', ko: '기술', de: 'Technologie', it: 'Tecnologia', ar: 'تكنولوجيا', he: 'טכנולוגיה', yi: 'טעכנאָלאָגיע', ru: 'Технологии', ja: 'テクノロジー' }, icon: 'Cpu' },
+      { slug: 'hogar', name: { es: 'Hogar', en: 'Home', pt: 'Casa', fr: 'Maison', zh: '家居', ko: '가정', de: 'Zuhause', it: 'Casa', ar: 'المنزل', he: 'בית', yi: 'היים', ru: 'Дом', ja: '住まい' }, icon: 'Sofa' },
+      { slug: 'moda', name: { es: 'Moda', en: 'Fashion', pt: 'Moda', fr: 'Mode', zh: '时尚', ko: '패션', de: 'Mode', it: 'Moda', ar: 'موضة', he: 'אופנה', yi: 'מאָדע', ru: 'Мода', ja: 'ファッション' }, icon: 'Shirt' },
+      { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure', pt: 'Lazer', fr: 'Loisirs', zh: '休闲', ko: '여가', de: 'Freizeit', it: 'Tempo libero', ar: 'ترفيه', he: 'פנאי', yi: 'פרייַע צייַט', ru: 'Хобби', ja: 'レジャー' }, icon: 'Bike' },
+      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing', pt: 'Tarifas', fr: 'Tarifs', zh: '资费', ko: '요금', de: 'Tarife', it: 'Tariffe', ar: 'الأسعار', he: 'תעриפים', yi: 'טאַריפֿן', ru: 'Тарифы', ja: '料金' }, icon: 'Crown', action: 'pricing' },
     ]), []);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
@@ -415,25 +432,46 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
              </button>
           </div>
 
-          {/* Динамическая боковая панель (Адаптивная: скрывается на мобилках, открывается по кнопке) */}
-          <aside className={`w-full lg:w-1/4 shrink-0 ${showMobileFilters ? 'block' : 'hidden md:block'}`}>
+          {/* Динамическая боковая панель (Адаптивная: липкая на desktop, drawer/bottom-sheet на mobile/tablet) */}
+          <aside className="hidden lg:block lg:w-1/4 shrink-0">
              <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
+             {user && <SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); }} />}
           </aside>
 
-          {/* Сетка результатов (товары) */}
-          <div className="flex-1">
-            <div className="hidden md:flex justify-between items-center mb-6">
-              <h2 className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-white">{t.search_results || 'Resultados de búsqueda'} <span className="text-slate-400 text-[14px] font-normal ml-2">({serverAds.length})</span></h2>
+          {/* Mobile Bottom Sheet (< md) */}
+          <BottomSheet
+            isOpen={showMobileFilters}
+            onClose={() => setShowMobileFilters(false)}
+            title={t.filters || 'Filtros'}
+            maxHeight="90vh"
+            zIndex={9999}
+          >
+            <div className="block md:hidden p-6">
+              <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
+              {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); setShowMobileFilters(false); }} /></div>}
             </div>
+          </BottomSheet>
 
-            {/* Map and Layout Control Panel */}
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-              <button 
-                onClick={() => setShowMap(prev => !prev)} 
-                className={`btn-sm flex items-center gap-2 border transition-all ${showMap ? 'bg-[#0f8f7d] text-white border-[#0f8f7d]' : 'bg-white text-slate-700 border-slate-300 hover:border-[#0f8f7d] dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'}`}
-              >
-                <MapPin size={16} /> {showMap ? 'Ocultar mapa' : 'Mostrar en mapa'}
-              </button>
+          {/* Tablet Side Drawer (md to lg) */}
+          {showMobileFilters && (
+            <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm hidden md:flex items-stretch justify-start lg:hidden">
+              <div className="absolute inset-0 -z-10" onClick={() => setShowMobileFilters(false)} />
+              <div className="bg-white dark:bg-slate-900 w-[360px] h-full overflow-y-auto p-6 shadow-2xl animate-slideRight border-r border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">{t.filters || 'Filtros'}</h3>
+                  <button onClick={() => setShowMobileFilters(false)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">✕</button>
+                </div>
+                <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
+                {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); setShowMobileFilters(false); }} /></div>}
+              </div>
+            </div>
+          )}
+
+
+          {/* Split View: список + карта (desktop) или toggle (mobile) */}
+          <div className="flex-1">
+            {/* Панель управления (только для desktop, на mobile есть toggle в SplitViewContainer) */}
+            <div className="hidden lg:flex items-center justify-between mb-6 flex-wrap gap-3">
               <button
                 onClick={handleSaveSearchAlert}
                 disabled={savingSearchAlert}
@@ -442,74 +480,20 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 {savingSearchAlert ? <Loader2 size={15} className="animate-spin" /> : <Bell size={15} />}
                 Guardar búsqueda
               </button>
-              
-              <div className="flex items-center gap-2 border border-slate-200 rounded-xl p-1 bg-white dark:bg-slate-800 dark:border-slate-700">
-                <button 
-                  onClick={() => setViewLayout('grid')} 
-                  className={`btn-sm px-2.5 py-1 rounded-lg transition-all ${viewLayout === 'grid' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-                  title="Vista Cuadrícula"
-                >
-                  <LayoutGrid size={15} />
-                </button>
-                <button 
-                  onClick={() => setViewLayout('list')} 
-                  className={`btn-sm px-2.5 py-1 rounded-lg transition-all ${viewLayout === 'list' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-                  title="Vista Lista"
-                >
-                  <List size={15} />
-                </button>
-              </div>
             </div>
 
-            {showMap && (
-              <MapV3 ads={serverAds} title={selectedState || t.all_mexico || 'Todo México'} onMarkerClick={handleViewAd} className="mb-4 h-[220px] md:mb-6 md:h-[340px]" />
-            )}
-
-          {loadingAds ? (
-
-            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#84CC16]" size={40}/></div>
-
-          ) : serverAds.length === 0 ? (
-
-            <div className="py-20 text-center flex flex-col items-center">
-
-              <Search size={48} className="text-slate-300 mb-4" />
-
-              <span className="text-slate-400 font-bold uppercase tracking-widest">{t.noAds}</span>
-
-            </div>
-
-          ) : (
-
-            <>
-
-              <div className={viewLayout === 'list' ? "list-layout" : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"}>
-
-                {serverAds.map((ad, index) => (
-
-                  <React.Fragment key={ad.id}>
-
-                    {renderAdCard(ad, { displayImageUrl: displayImageMap.get(ad.id) })}
-
-                    {/* Показываем рекламный баннер после каждого 7-го объявления */}
-
-                    {(index + 1) % 7 === 0 && <AdSenseBanner key={`ad-banner-${ad.id}`} />}
-
-                  </React.Fragment>
-
-                ))}
-
-              </div>
-
-              <div ref={lastAdElementRef} />
-
-              {loadingMore && <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#84CC16]" size={32}/></div>}
-
-              {!loadingMore && !hasMore && serverAds.length > 0 && <div className="text-center text-slate-400 font-bold uppercase tracking-widest text-xs py-10 mt-6">Has llegado al final</div>}
-
-            </>
-
-          )}
+            <SplitViewContainer
+              ads={serverAds}
+              onAdClick={handleViewAd}
+              renderAdCard={renderAdCard}
+              title={selectedState || t.all_mexico || 'Todo México'}
+              selectedState={selectedState}
+              loadingAds={loadingAds}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              lastAdElementRef={lastAdElementRef}
+              getImageUrl={getImageUrl}
+            />
           </div>
 
         </div>
@@ -517,8 +501,6 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       );
 
     }
-
-
 
     return (
 
@@ -680,7 +662,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                               {/* Golden badge */}
                               <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2 py-0.5 shadow-md">
                                 <Star size={9} className="fill-amber-900 text-amber-900" />
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-900">Destacado</span>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-900">{t.destacado || 'Destacado'}</span>
                               </div>
                               {/* Gradient overlay */}
                               <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/40 to-transparent" />
@@ -723,7 +705,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             {/* 4. TRENDING NOW */}
 
-            <section className="col-span-12 mt-2">
+            <section className="col-span-12 mt-2 min-h-[380px] cls-safe">
 
               <div className="flex items-center justify-between mb-4">
 
@@ -757,15 +739,20 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2">
 
-                  {trendingAds.map(ad => (
-
-                    <div key={ad.id} className="snap-start shrink-0 w-[260px]">
-
-                      {renderAdCard(ad)}
-
-                    </div>
-
-                  ))}
+                  {trendingAds.length === 0 ? (
+                    // Show skeleton cards while loading
+                    Array.from({ length: 6 }).map((_, idx) => (
+                      <div key={`skeleton-${idx}`} className="snap-start shrink-0 w-[260px]">
+                        <SkeletonCard />
+                      </div>
+                    ))
+                  ) : (
+                    trendingAds.map(ad => (
+                      <div key={ad.id} className="snap-start shrink-0 w-[260px]">
+                        {renderAdCard(ad)}
+                      </div>
+                    ))
+                  )}
 
                 </div>
 
@@ -777,7 +764,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             {/* 4. DEALS OF THE DAY */}
 
-            <section className="col-span-12">
+            <section className="col-span-12 min-h-[220px] cls-safe">
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
@@ -848,6 +835,15 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
             </section>
 
 
+
+            {/* AI RECOMMENDATIONS */}
+            <section className="col-span-12 mt-6">
+              <RecommendationsWidget
+                userId={user?.id}
+                limit={12}
+                onAdClick={handleViewAd}
+              />
+            </section>
 
             {/* 5. REAL ESTATE SPOTLIGHT */}
 
@@ -1537,6 +1533,17 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             </section>
 
+          </div>
+
+
+          {/* SEO: ItemList Schema for ads */}
+          {serverAds && serverAds.length > 0 && (
+            <ItemListSchema items={serverAds} listName="Anuncios destacados en Mercasto" />
+          )}
+
+          {/* SEO: FAQ Section for AEO */}
+          <div className="container mx-auto px-4 py-8">
+            <FAQSchema faqs={FAQ_DATA.home} pageType="home" lang={lang} />
           </div>
 
         </main>

@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('embeddings', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('ad_id')->unique()->constrained('ads')->onDelete('cascade');
+            $table->timestamps();
+        });
+
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('CREATE EXTENSION IF NOT EXISTS vector;');
+            DB::statement('ALTER TABLE embeddings ADD COLUMN embedding vector(768);');
+            DB::statement('CREATE INDEX embeddings_embedding_index ON embeddings USING hnsw (embedding vector_cosine_ops);');
+        }
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('embeddings');
+    }
+};

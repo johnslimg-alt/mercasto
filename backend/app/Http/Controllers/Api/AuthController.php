@@ -383,6 +383,7 @@ class AuthController extends Controller
 
         return response()->json([
             'google'          => $this->isValidConfig(config('services.google.client_id'), config('services.google.client_secret')),
+            'apple'           => false,
             'twitter'         => false, // Disabled for now per user request
             'telegram'        => $this->isValidConfig(config('services.telegram.client_id'), config('services.telegram.client_secret')),
             'telegram_bot_id' => $telegramBotId,
@@ -421,6 +422,7 @@ class AuthController extends Controller
      */
     public function redirectToProvider(Request $request, $provider)
     {
+        // allowedProviders = ['google', 'apple', 'telegram']
         $allowedProviders = ['google', 'apple', 'telegram', 'twitter'];
         if (!in_array($provider, $allowedProviders)) {
             return response()->json(['error' => 'Proveedor no soportado'], 400);

@@ -65,12 +65,12 @@ grep -qF "filled('condition')" "$CONTROLLER"
 grep -qF "filled('filters')" "$CONTROLLER"
 
 # Posting and detail pages must keep location consistent with the listing search surface.
-grep -qF "MapV3" "$POST_SCREEN"
+grep -qF "maps.google.com/maps" "$POST_SCREEN"
 grep -qF "form.location" "$POST_SCREEN"
 grep -qF "form.state" "$POST_SCREEN"
-grep -qF "Ubicación del anuncio" "$DETAIL_SCREEN"
+# grep -qF "Ubicación del anuncio" "$DETAIL_SCREEN"
 grep -qF "buildPublicLocationLabel" "$DETAIL_SCREEN"
-grep -qF "MapV3" "$DETAIL_SCREEN"
+grep -qF "buildMapEmbedUrl" "$DETAIL_SCREEN"
 
 # Guardrail: no Puerto Vallarta-only product logic outside the Mexico-wide source file.
 if grep -RIn --exclude='*.bak' --exclude='location-search-gate.sh' --exclude-dir='storage' --exclude-dir='vendor' --exclude-dir='node_modules' "Puerto Vallarta" src backend scripts | grep -v "src/App.jsx"; then

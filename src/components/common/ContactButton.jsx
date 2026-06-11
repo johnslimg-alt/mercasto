@@ -57,6 +57,29 @@ export default function ContactButton({ ad, user, className = '' }) {
 
   // Логирование клика
   const logContact = async (channel) => {
+    // Save to local contacted ads history
+    try {
+      const historyRaw = localStorage.getItem('mercasto_contact_history') || '[]';
+      const history = JSON.parse(historyRaw);
+      const existingIdx = history.findIndex(item => item.adId === ad.id);
+      if (existingIdx !== -1) {
+        history.splice(existingIdx, 1);
+      }
+      history.unshift({
+        adId: ad.id,
+        title: ad.title,
+        price: ad.price,
+        image: ad.image_url || ad.image,
+        category: ad.category,
+        state: ad.state || ad.location,
+        contactedAt: new Date().toISOString(),
+        channel
+      });
+      localStorage.setItem('mercasto_contact_history', JSON.stringify(history.slice(0, 50)));
+    } catch (e) {
+      console.error('Failed to save contact history', e);
+    }
+
     try {
       const token = localStorage.getItem('token');
       await fetch(`${API_URL}/ads/${ad.id}/click`, {

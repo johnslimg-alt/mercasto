@@ -15,15 +15,15 @@ This checklist defines what must be true before public launch/marketing. `verify
 | --- | --- | --- | --- |
 | Production health | Done | `UP=200` and `VERIFY_EXIT=0` | `bash scripts/server-operator.sh verify_quick` |
 | Direct 80/443 ownership | Done | `mercasto_frontend_container` owns 80/443; Traefik not active for `mercasto.com` | `npm run smoke:port-ownership` |
-| Env readiness | Done | Critical runtime config present and non-placeholder | `REQUIRE_ENV_READY=1 npm run smoke:env-readiness` |
-| SMS OTP | **Optional** | Phone verification is optional for launch. Email verification is sufficient for core functionality. SMS provider can be configured post-launch if needed. | `npm run smoke:sms-readiness` (non-blocking) |
-| Auth E2E | Done | Register, login, logout, password reset, 2FA, delete account verified | `tests/e2e/auth-flow.spec.js`, CI workflow `e2e-seller.yml` |
-| Ads E2E | Done | Create/edit/delete ad, upload media, AI description, moderation, report | `tests/e2e/ads-lifecycle.spec.js`, CI workflow `e2e-seller.yml` |
-| Location/search | Done | Mexico-wide state/city search, mobile/desktop, no single-city logic | MapV3 component with state/city cascading filters |
-| Payments | Done | Checkout, signed webhook, duplicate webhook, failed payment, refund/manual recovery | `tests/e2e/payments.spec.js`, CI workflow `e2e-seller.yml` |
-| Categories/attributes seed | Done | Fresh database gets categories and attributes from repo-controlled seed/migration | `REQUIRE_CATEGORY_DATA_READY=1 npm run smoke:category-data` (20 categories, 12 attributes) |
-| Security | Done | Admin access, rate limits, uploads, webhooks, no debug text, no exposed stack traces, no secrets in logs | `npm run smoke:security`, `npm run check:static-safety` |
-| Ops | Done | backup restore test, rollback drill, uptime alerts, log rotation, Docker health, Sentry alerts | `docs/ops/backup-restore-drill-report.md` (RTO 4m 12s, completed May 22, 2026) |
+| Env readiness | Guarded | Critical runtime config present and non-placeholder | `REQUIRE_ENV_READY=1 npm run smoke:env-readiness` |
+| SMS OTP | Blocked | Provider configured with production-safe values | Issue #260, `REQUIRE_SMS_READY=1 npm run smoke:sms-readiness` |
+| Auth E2E | Blocked | Register, login, logout, password reset, 2FA, delete account verified | Playwright/manual evidence |
+| Ads E2E | Blocked | Create/edit/delete ad, upload media, AI description, moderation, report | Playwright/manual evidence |
+| Location/search | Guarded | Mexico-wide state/city search, mobile/desktop, no single-city logic | `location-search-gate.sh`, Playwright smoke |
+| Payments | Blocked | Checkout, signed webhook, duplicate webhook, failed payment, refund/manual recovery | Provider sandbox/live evidence |
+| Categories/attributes seed | Blocked | Fresh database gets categories and attributes from repo-controlled seed/migration | migration/seed smoke evidence |
+| Security | Guarded | Admin access, rate limits, uploads, webhooks, no debug text, no exposed stack traces, no secrets in logs | `smoke:security`, static gates, OWASP pass |
+| Ops | Blocked | backup restore test, rollback drill, uptime alerts, log rotation, Docker health, Sentry alerts | recorded drill output |
 
 ## P1 soft-launch gates
 
@@ -49,13 +49,14 @@ This checklist defines what must be true before public launch/marketing. `verify
 cd /var/www/mercasto || exit 1
 docker exec mercasto_backend_container php artisan migrate --force
 REQUIRE_ENV_READY=1 npm run smoke:env-readiness
-npm run smoke:sms-readiness  # SMS is optional, non-blocking
+REQUIRE_SMS_READY=1 npm run smoke:sms-readiness
 npm run verify:launch
 ```
 
 Expected launch-ready result:
 
 ```text
+sms_provider=ready
 launch env readiness smoke OK
 VERIFY_EXIT=0
 ```

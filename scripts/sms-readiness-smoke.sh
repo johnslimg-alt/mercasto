@@ -4,7 +4,7 @@ set -euo pipefail
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.override.yml)
 COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
 COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
-REQUIRE_SMS_READY="0"  # SMS is optional for launch
+REQUIRE_SMS_READY="${REQUIRE_SMS_READY:-0}"
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -40,7 +40,7 @@ echo (!$placeholderSid && !$placeholderToken && !$placeholderFrom && $from !== "
 echo "sms_provider=$SMS_READY"
 
 if [[ "$SMS_READY" != "ready" ]]; then
-  echo "SMS OTP provider is not configured. Phone verification will be unavailable, but email verification is sufficient for launch. This is non-blocking." >&2
+  echo "SMS OTP provider is not configured with production-safe values. Phone verification endpoints should remain unavailable and launch should stay blocked when REQUIRE_SMS_READY=1." >&2
   if [[ "$REQUIRE_SMS_READY" == "1" ]]; then
     exit 1
   fi

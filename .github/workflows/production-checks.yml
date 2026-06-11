@@ -117,7 +117,12 @@ jobs:
 
   live-server-gate:
     name: Live server gate verify_quick
-    runs-on: ubuntu-latest
+    # Runs on the self-hosted runner that lives on the production server:
+    # GitHub-hosted runners cannot reach the VPS SSH port (firewall), which made
+    # this gate fail on every PR. Executes ONLY the server-resident script from
+    # /var/www/mercasto (never PR code), read-only, same pattern as
+    # autonomous-server-live-gate.yml.
+    runs-on: [self-hosted, linux]
     needs:
       - repository-gates
       - compose-config
@@ -125,25 +130,17 @@ jobs:
     timeout-minutes: 20
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Validate SSH inputs
-        env:
-          SSH_HOST: ${{ secrets.MERCASTO_SSH_HOST }}
-          SSH_USER: ${{ secrets.MERCASTO_SSH_USER }}
-          SSH_KEY: ${{ secrets.MERCASTO_SSH_PRIVATE_KEY }}
+      - name: Verify production checkout exists
+        shell: bash
         run: |
           set -euo pipefail
-          test -n "${SSH_HOST}" || { echo "Missing MERCASTO_SSH_HOST" >&2; exit 64; }
-          test -n "${SSH_USER}" || { echo "Missing MERCASTO_SSH_USER" >&2; exit 64; }
-          test -n "${SSH_KEY}" || { echo "Missing MERCASTO_SSH_PRIVATE_KEY" >&2; exit 64; }
+          test -d /var/www/mercasto
+          test -f /var/www/mercasto/scripts/server-operator.sh
 
       - name: Run read-only verify_quick gate
-        env:
-          SSH_HOST: ${{ secrets.MERCASTO_SSH_HOST }}
-          SSH_PORT: ${{ secrets.MERCASTO_SSH_PORT }}
-          SSH_USER: ${{ secrets.MERCASTO_SSH_USER }}
-          SSH_KEY: ${{ secrets.MERCASTO_SSH_PRIVATE_KEY }}
-          OPERATION: verify_quick
-        run: bash scripts/live-server-gate.sh "${OPERATION}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          # sudo: el .env de producción es root:www-data 640 y docker compose config lo lee.
+          sudo -n bash scripts/server-operator.sh verify_quick

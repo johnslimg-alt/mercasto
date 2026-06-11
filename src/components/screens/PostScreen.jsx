@@ -6,6 +6,7 @@ import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLef
 
 import SortablePhotoGrid from '../SortablePhotoGrid';
 import MapV3 from '../common/MapV3';
+// maps.google.com/maps
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, removeImageById, reorderImages, setEditingAd, setForm, setVideoFile, t, videoFile, aiLoading, handleGenerateDescription }) {

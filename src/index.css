@@ -1479,3 +1479,317 @@ html.dark .btn-lg.bg-white:hover {
     box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18) !important;
   }
 }
+
+/* ===== CLS (Cumulative Layout Shift) Optimizations ===== */
+
+/* Reserve space for dynamic content sections */
+@layer utilities {
+  .cls-safe {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 400px;
+    contain: layout style paint;
+  }
+  
+  .cls-safe-sm {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 200px;
+    contain: layout style paint;
+  }
+  
+  /* Prevent layout shift from images */
+  .img-safe {
+    aspect-ratio: attr(width) / attr(height);
+    object-fit: cover;
+  }
+  
+  /* Font metrics override to prevent FOUT */
+  .font-safe {
+    font-size-adjust: 0.5;
+    font-synthesis: none;
+  }
+}
+
+/* Ad card container - prevent shifts */
+.ad-result-card {
+  contain: layout style paint;
+  min-height: 252px;
+}
+
+/* Market card image container */
+.market-card .relative {
+  contain: layout paint;
+}
+
+/* Prevent hero/banner shifts */
+.hero-section,
+.banner-section {
+  contain: layout style;
+  min-height: 300px;
+}
+
+/* Category grid - prevent shifts */
+.category-grid {
+  contain: layout;
+  min-height: 200px;
+}
+
+/* Search results container */
+.search-results {
+  contain: layout style;
+}
+
+/* Skeleton animations should not cause shifts */
+.skeleton-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity;
+}
+
+/* Prevent navbar shifts */
+.navbar-fixed {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  contain: layout;
+}
+
+/* Footer - prevent shifts */
+footer {
+  contain: layout;
+  min-height: 200px;
+}
+
+/* ===== Global Dark Mode Overrides (QA Fix) ===== */
+/* Auto-applies dark styles to elements without explicit dark: prefix */
+
+/* White backgrounds → slate-800 */
+html.dark .bg-white:not(.dark\:bg-transparent) {
+  background-color: #1E293B !important;
+}
+
+/* Gray-50 backgrounds → slate-900 */
+html.dark .bg-gray-50 {
+  background-color: #0F172A !important;
+}
+
+/* Gray-100 backgrounds → slate-700 */
+html.dark .bg-gray-100 {
+  background-color: #334155 !important;
+}
+
+/* Gray-200 backgrounds → slate-700 */
+html.dark .bg-gray-200 {
+  background-color: #334155 !important;
+}
+
+/* Slate-50 backgrounds → slate-800/60 */
+html.dark .bg-slate-50 {
+  background-color: rgba(30, 41, 59, 0.6) !important;
+}
+
+/* Text colors */
+html.dark .text-gray-900 {
+  color: #F1F5F9 !important;
+}
+
+html.dark .text-gray-800 {
+  color: #E2E8F0 !important;
+}
+
+html.dark .text-gray-700 {
+  color: #CBD5E1 !important;
+}
+
+html.dark .text-gray-600 {
+  color: #94A3B8 !important;
+}
+
+html.dark .text-gray-500 {
+  color: #64748B !important;
+}
+
+html.dark .text-slate-900 {
+  color: #F1F5F9 !important;
+}
+
+html.dark .text-slate-800 {
+  color: #E2E8F0 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #CBD5E1 !important;
+}
+
+html.dark .text-slate-600 {
+  color: #94A3B8 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #64748B !important;
+}
+
+/* Border colors */
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: #334155 !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+/* Hover states */
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #334155 !important;
+}
+
+html.dark .hover\:bg-gray-200:hover,
+html.dark .hover\:bg-gray-300:hover {
+  background-color: #475569 !important;
+}
+
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #334155 !important;
+}
+
+html.dark .hover\:text-gray-600:hover,
+html.dark .hover\:text-gray-700:hover,
+html.dark .hover\:text-gray-900:hover {
+  color: #F1F5F9 !important;
+}
+
+html.dark .hover\:text-slate-700:hover,
+html.dark .hover\:text-slate-900:hover {
+  color: #F1F5F9 !important;
+}
+
+/* Inputs in dark mode */
+html.dark input:not([class*="dark:"]),
+html.dark textarea:not([class*="dark:"]),
+html.dark select:not([class*="dark:"]) {
+  background-color: #0F172A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748B;
+}
+
+/* Red backgrounds (error states) */
+html.dark .bg-red-50,
+html.dark .bg-red-100 {
+  background-color: rgba(127, 29, 29, 0.3) !important;
+}
+
+html.dark .text-red-600 {
+  color: #FCA5A5 !important;
+}
+
+/* Green/lime accents preserved */
+html.dark .bg-lime-100 {
+  background-color: rgba(132, 204, 22, 0.15) !important;
+}
+
+html.dark .text-lime-600 {
+  color: #A3E635 !important;
+}
+
+/* Shadow adjustments for dark mode */
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Exceptions: keep these light in dark mode */
+html.dark .dark-keep-light {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+/* ===== End Global Dark Mode Overrides ===== */
+
+/* Custom Leaflet Marker Cluster Styling */
+.marker-cluster-custom {
+  background-clip: padding-box;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+}
+
+.marker-cluster-custom div {
+  width: 34px;
+  height: 34px;
+  margin-left: 3px;
+  margin-top: 3px;
+  text-align: center;
+  border-radius: 50%;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.marker-cluster-small {
+  background-color: rgba(132, 204, 22, 0.4);
+}
+.marker-cluster-small div {
+  background-color: #84CC16;
+  color: #020617;
+}
+
+.marker-cluster-medium {
+  background-color: rgba(101, 163, 13, 0.4);
+}
+.marker-cluster-medium div {
+  background-color: #65A30D;
+  color: white;
+}
+
+.marker-cluster-large {
+  background-color: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(132, 204, 22, 0.5);
+}
+.marker-cluster-large div {
+  background-color: #0f172a;
+  color: #84CC16;
+  border: 1px solid #84CC16;
+}
+
+.marker-cluster-custom:hover {
+  transform: scale(1.1);
+}
+
+/* Custom Animations for Sheets and Drawers */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slideRight {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slideRight {
+  animation: slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
