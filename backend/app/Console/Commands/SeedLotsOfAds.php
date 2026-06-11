@@ -100,7 +100,7 @@ class SeedLotsOfAds extends Command
                 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600',
                 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600'
             ],
-            'deportes' => [
+            'ocio' => [
                 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600',
                 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600',
                 'https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?w=600'
@@ -205,7 +205,7 @@ class SeedLotsOfAds extends Command
                 'Gatos' => ['Rascador de gatos de 3 niveles con túnel', 'Arena aglutinante premium sin olor', 'Juguete interactivo de túnel y láser'],
                 'Accesorios' => ['Alimentador automático inteligente Wifi', 'Bebedero de fuente con filtro', 'Bolsa transportadora aprobada por aerolíneas']
             ],
-            'deportes' => [
+            'ocio' => [
                 'Bicicletas' => ['Bicicleta de montaña R29 de aluminio', 'Bicicleta de ruta Trek ligera', 'Bicicleta urbana vintage con canasta'],
                 'Gym' => ['Par de mancuernas hexagonales de 20lb', 'Set de bandas de resistencia premium', 'Tapete de yoga antiderrapante'],
                 'Camping' => ['Tienda de campaña Coleman para 4 personas', 'Saco de dormir para temperaturas bajas', 'Hielera portátil termoaislante']
