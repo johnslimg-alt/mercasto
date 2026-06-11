@@ -46,7 +46,8 @@ export const subcategoriesMap = {
   'infantil': ['Carriolas', 'Autoasientos', 'Cunas', 'Juguetes', 'Ropa infantil', 'Ropa bebé', 'Baño y cuidado', 'Escolar', 'Muebles infantiles', 'Seguridad'],
   'mascotas': ['Perros', 'Gatos', 'Aves', 'Peces', 'Accesorios', 'Alimento', 'Veterinaria'],
   'negocios': ['Traspasos', 'Franquicias', 'Equipamiento', 'Maquinaria', 'Industria', 'Inversión'],
-  'formacion': ['Libros', 'Cursos', 'Idiomas', 'Universidad', 'Infantil', 'Programación']
+  'formacion': ['Libros', 'Cursos', 'Idiomas', 'Universidad', 'Infantil', 'Programación'],
+  'boletos': ['Conciertos', 'Deportes', 'Teatro y Cultura', 'Festivales', 'Cine', 'Conferencias']
 };
 
 export const mockAds = [

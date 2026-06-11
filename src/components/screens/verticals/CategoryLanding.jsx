@@ -65,6 +65,10 @@ const SUBCAT_ICONS = {
     'Música y Vinilos': Music, 'Instrumentos musicales': Music,
     'Entradas': Ticket, 'Juegos': Gamepad,
   },
+  boletos: {
+    'Conciertos': Ticket, 'Deportes': Dumbbell, 'Teatro y Cultura': Activity,
+    'Festivales': Ticket, 'Cine': Film, 'Conferencias': FileText,
+  },
 };
 
 const CATEGORY_CONFIG = {
@@ -225,6 +229,23 @@ const CATEGORY_CONFIG = {
     cta: '¿Tienes artículos de deporte u ocio para vender?',
     ctaDesc: 'Publica tu anuncio gratis y vende tus instrumentos, bicicletas o cómics de inmediato.',
     ctaBtn: 'Vender artículos →',
+  },
+  boletos: {
+    title: 'Boletos',
+    subtitle: 'Conciertos, deportes, teatro, festivales y eventos en México',
+    description: 'Encuentra entradas para tus eventos favoritos. Compra y vende boletos para conciertos, partidos de fútbol, obras de teatro y más.',
+    seoTitle: 'Compra y Venta de Boletos en México — Conciertos y Eventos | Mercasto',
+    seoDesc: 'Compra y vende boletos y entradas en México. Conciertos, festivales, eventos deportivos y obras de teatro en Mercasto.',
+    color: 'blue',
+    slug: 'boletos',
+    trust: [
+      { Icon: BadgeCheck, title: 'Entradas originales', body: 'Recomendamos verificar los códigos y sellos de seguridad antes de adquirir cualquier boleto.' },
+      { Icon: ShieldCheck, title: 'Trato seguro', body: 'Realiza el intercambio en un lugar público o utiliza métodos de transferencia oficial.' },
+      { Icon: Star, title: 'Eventos agotados', body: 'Encuentra boletos de reventa para espectáculos agotados a precios competitivos.' },
+    ],
+    cta: '¿Tienes boletos que no vas a usar?',
+    ctaDesc: 'Publícalos gratis en Mercasto y recupera tu dinero de forma segura.',
+    ctaBtn: 'Vender boletos →',
   },
 };
 

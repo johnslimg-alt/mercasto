@@ -352,6 +352,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       'infantil': '/infantil',
       'mascotas': '/mascotas',
       'negocios': '/negocios',
+      'boletos': '/boletos',
     };
     const getVerticalPath = React.useCallback((slug = '') => {
       if (VERTICAL_SLUGS[slug]) return VERTICAL_SLUGS[slug];
@@ -366,6 +367,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       if (slug.startsWith('infantil/')) return '/infantil';
       if (slug.startsWith('mascotas/')) return '/mascotas';
       if (slug.startsWith('negocios/')) return '/negocios';
+      if (slug.startsWith('boletos/')) return '/boletos';
       return null;
     }, []);
 
@@ -381,6 +383,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       { slug: 'infantil', name: { es: 'Infantil', en: 'Kids', pt: 'Infantil', fr: 'Enfants', zh: '儿童', ko: '아동', de: 'Kinder', it: 'Bambini', ar: 'الأطفال', he: 'ילדים', yi: 'קינדער', ru: 'Детские товары', ja: 'キッズ' }, icon: 'Baby' },
       { slug: 'mascotas', name: { es: 'Mascotas', en: 'Pets', pt: 'Animais', fr: 'Animaux', zh: '宠物', ko: '애완동물', de: 'Haustiere', it: 'Animali', ar: 'حيوانات أليفة', he: 'חיות מחמד', yi: 'חנות חיות', ru: 'Животные', ja: 'ペット' }, icon: 'PawPrint' },
       { slug: 'negocios', name: { es: 'Negocios', en: 'Business', pt: 'Negócios', fr: 'Affaires', zh: '商务', ko: '비즈니스', de: 'Geschäft', it: 'Affari', ar: 'أعمال', he: 'עסקים', yi: 'ביזנעס', ru: 'Бизнес', ja: 'ビジネス' }, icon: 'Store' },
+      { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets', pt: 'Ingressos', fr: 'Billets', zh: '门票', ko: '티켓', de: 'Tickets', it: 'Biglietti', ar: 'تذاكر', he: 'כרטיסים', yi: 'בילעטן', ru: 'Билеты', ja: 'チケット' }, icon: 'Ticket' },
       { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing', pt: 'Tarifas', fr: 'Tarifs', zh: '资费', ko: '요금', de: 'Tarife', it: 'Tariffe', ar: 'الأسعار', he: 'תעриפים', yi: 'טאַריפֿן', ru: 'Тарифы', ja: '料金' }, icon: 'Crown', action: 'pricing' },
     ]), []);
     const trendingAds = React.useMemo(() => {
