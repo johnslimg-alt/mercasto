@@ -3,7 +3,7 @@ import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyView
 import { mexicoLocations, subcategoriesMap, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair, Trophy } from "lucide-react";
 import { IconMap } from '../../constants/iconMap';
 import SidebarFilters from '../common/SidebarFilters';
 import MapV3 from '../common/MapV3';
@@ -76,6 +76,24 @@ const STATE_COORDS = {
   "YUC": [20.7099, -89.0943],
   "Zacatecas": [22.7709, -102.5832],
   "ZAC": [22.7709, -102.5832]
+};
+
+const WORLD_CUP_CAMPAIGN_END = new Date('2026-07-20T00:00:00-06:00').getTime();
+const SHOW_WORLD_CUP_CAMPAIGN = Date.now() < WORLD_CUP_CAMPAIGN_END;
+
+const WORLD_CUP_COPY = {
+  es: {
+    eyebrow: 'México vive el fútbol',
+    title: 'Temporada fútbol 2026',
+    body: 'Encuentra boletos, pantallas, jerseys, hospedaje y artículos para vivir cada partido.',
+    action: 'Explorar ofertas',
+  },
+  en: {
+    eyebrow: 'Mexico lives football',
+    title: 'Football season 2026',
+    body: 'Find tickets, screens, jerseys, stays and everything you need for every match.',
+    action: 'Explore deals',
+  },
 };
 
 const LeafletMap = ({ ads, onViewAd }) => {
@@ -304,6 +322,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
 };
 
 export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds }) {
+  const worldCupCopy = WORLD_CUP_COPY[lang] || WORLD_CUP_COPY.es;
     const categoryRailRef = React.useRef(null);
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
@@ -556,6 +575,35 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
           <div className="fixed left-1/2 top-24 z-[120] -translate-x-1/2 rounded-2xl border border-lime-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-xl shadow-slate-900/10">
             {homeToast}
           </div>
+        )}
+
+        {SHOW_WORLD_CUP_CAMPAIGN && (
+          <section className="world-cup-ribbon" aria-label={worldCupCopy.title}>
+            <div className="world-cup-ribbon__pitch" aria-hidden="true" />
+            <div className="world-cup-ribbon__content">
+              <div className="world-cup-ribbon__mark">
+                <Trophy size={22} strokeWidth={2.2} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="world-cup-ribbon__eyebrow">{worldCupCopy.eyebrow}</p>
+                <h2 className="world-cup-ribbon__title">{worldCupCopy.title}</h2>
+                <p className="world-cup-ribbon__body">{worldCupCopy.body}</p>
+              </div>
+              <button
+                type="button"
+                className="world-cup-ribbon__action"
+                onClick={() => runSearch('fútbol', 'boletos')}
+              >
+                {worldCupCopy.action}
+                <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="world-cup-ribbon__hosts" aria-hidden="true">
+              <span className="host-mx" />
+              <span className="host-us" />
+              <span className="host-ca" />
+            </div>
+          </section>
         )}
 
         {/* 1. HERO STATS */}
