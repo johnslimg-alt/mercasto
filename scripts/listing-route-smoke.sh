@@ -36,11 +36,10 @@ fi
 
 echo "== Discover first ad id from API =="
 ADS_JSON="$(curl -k -sS "${BASE_URL}/api/ads?page=1")"
-FIRST_ID="$(ADS_JSON="$ADS_JSON" python3 - <<'PY'
+FIRST_ID="$(echo "$ADS_JSON" | python3 - <<'PY'
 import json, sys
-import os
 try:
-    data=json.loads(os.environ.get('ADS_JSON', ''))
+    data=json.load(sys.stdin)
 except Exception:
     print('')
     raise SystemExit(0)
