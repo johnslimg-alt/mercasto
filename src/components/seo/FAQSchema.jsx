@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect } from 'react';
 import { useUI } from '../../contexts/UIContext';
 import { translations } from '../../constants/mockData';
@@ -130,7 +131,7 @@ export const FAQ_DATA = {
 };
 
 export default function FAQSchema({ faqs, pageType = 'general', lang = 'es' }) {
-  const { translations: userTrans } = useUI ? useUI() : { lang: 'es' };
+  useUI();
   const currentLang = lang || 'es';
   const t = translations[currentLang] || translations['es'];
 
