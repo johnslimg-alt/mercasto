@@ -1,29 +1,45 @@
 import { useEffect } from 'react';
 
-export default function SEO({ title, description, image, url }) {
+const SITE_URL = 'https://mercasto.com';
+
+const upsertMeta = (selector, attribute, value) => {
+  if (!value) return;
+  let tag = document.querySelector(selector);
+  if (!tag) {
+    tag = document.createElement('meta');
+    document.head.appendChild(tag);
+  }
+  Object.entries(attribute).forEach(([key, content]) => tag.setAttribute(key, content));
+  tag.setAttribute('content', value);
+};
+
+export default function SEO({ title, description, image, url, type = 'website', noindex = false }) {
   useEffect(() => {
-    // Обновляем title
+    const canonicalUrl = new URL(url || window.location.pathname, SITE_URL).toString();
+
     if (title) {
       document.title = title;
     }
 
-    // Обновляем meta description
-    if (description) {
-      let descMeta = document.querySelector('meta[name="description"]');
-      if (!descMeta) {
-        descMeta = document.createElement('meta');
-        descMeta.setAttribute('name', 'description');
-        document.head.appendChild(descMeta);
-      }
-      descMeta.setAttribute('content', description);
-    }
+    upsertMeta('meta[name="description"]', { name: 'description' }, description);
+    upsertMeta('meta[name="robots"]', { name: 'robots' }, noindex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1');
 
-    // Обновляем Open Graph теги
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', canonicalUrl);
+
     const ogTags = {
       'og:title': title,
       'og:description': description,
       'og:image': image,
-      'og:url': url || window.location.href,
+      'og:url': canonicalUrl,
+      'og:type': type,
+      'og:site_name': 'Mercasto',
+      'og:locale': 'es_MX',
     };
 
     Object.entries(ogTags).forEach(([property, content]) => {
@@ -38,8 +54,8 @@ export default function SEO({ title, description, image, url }) {
       }
     });
 
-    // Обновляем Twitter Card теги
     const twitterTags = {
+      'twitter:card': image ? 'summary_large_image' : 'summary',
       'twitter:title': title,
       'twitter:description': description,
       'twitter:image': image,
@@ -56,7 +72,7 @@ export default function SEO({ title, description, image, url }) {
         tag.setAttribute('content', content);
       }
     });
-  }, [title, description, image, url]);
+  }, [title, description, image, url, type, noindex]);
 
   return null;
 }

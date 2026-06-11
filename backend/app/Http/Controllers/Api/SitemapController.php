@@ -22,7 +22,7 @@ class SitemapController extends Controller
 
     public function index()
     {
-        $content = Cache::remember('sitemap_main', 3600, function () {
+        $content = Cache::remember('sitemap_main_v2', 3600, function () {
             return $this->generateMainSitemap();
         });
 
@@ -32,7 +32,7 @@ class SitemapController extends Controller
 
     public function categories()
     {
-        $content = Cache::remember('sitemap_categories', 3600, function () {
+        $content = Cache::remember('sitemap_categories_v3', 3600, function () {
             return $this->generateCategoriesSitemap();
         });
 
@@ -42,7 +42,7 @@ class SitemapController extends Controller
 
     public function states()
     {
-        $content = Cache::remember('sitemap_states', 3600, function () {
+        $content = Cache::remember('sitemap_states_v2', 3600, function () {
             return $this->generateStatesSitemap();
         });
 
@@ -52,7 +52,7 @@ class SitemapController extends Controller
 
     public function ads()
     {
-        $content = Cache::remember('sitemap_ads', 1800, function () {
+        $content = Cache::remember('sitemap_ads_v2', 1800, function () {
             return $this->generateAdsSitemap();
         });
 
@@ -100,24 +100,24 @@ class SitemapController extends Controller
         $xml .= $this->urlEntry($baseUrl . '/', 'daily', '1.0', $now);
 
         // Основные вертикали
-        $verticals = ['autos', 'inmuebles', 'servicios', 'empleos', 'electronica', 'muebles'];
+        $verticals = [
+            'autos', 'inmuebles', 'servicios', 'empleos', 'electronica',
+            'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'negocios',
+            'boletos', 'tiendas',
+        ];
         foreach ($verticals as $vertical) {
             $xml .= $this->urlEntry("{$baseUrl}/{$vertical}", 'daily', '0.9', $now);
         }
 
-        // Страница магазинов
-        $xml .= $this->urlEntry("{$baseUrl}/tiendas", 'weekly', '0.7', $now);
-
-        // Юридические страницы
+        // Public information and legal pages that have real frontend routes.
         $legalPages = [
+            'acerca-de' => ['monthly', '0.6'],
             'terminos' => ['monthly', '0.6'],
             'privacidad' => ['monthly', '0.6'],
             'cookies' => ['monthly', '0.5'],
             'contacto' => ['monthly', '0.5'],
             'ayuda' => ['monthly', '0.5'],
             'safety' => ['monthly', '0.5'],
-            'reembolsos' => ['monthly', '0.5'],
-            'moderacion' => ['monthly', '0.5'],
         ];
 
         foreach ($legalPages as $page => [$freq, $priority]) {
@@ -136,9 +136,32 @@ class SitemapController extends Controller
 
         $categories = Category::all();
         
+        $verticalRoutes = [
+            'coches' => 'autos',
+            'motor' => 'autos',
+            'inmobiliaria' => 'inmuebles',
+            'empleo' => 'empleos',
+            'servicios' => 'servicios',
+            'electronica' => 'electronica',
+            'hogar' => 'hogar',
+            'moda' => 'moda',
+            'ocio' => 'ocio',
+            'infantil' => 'infantil',
+            'mascotas' => 'mascotas',
+            'negocios' => 'negocios',
+            'boletos' => 'boletos',
+        ];
+
+        $seenUrls = [];
         foreach ($categories as $category) {
+            $route = $verticalRoutes[$category->slug] ?? ('?category=' . rawurlencode($category->slug));
+            $url = "{$baseUrl}/{$route}";
+            if (isset($seenUrls[$url])) {
+                continue;
+            }
+            $seenUrls[$url] = true;
             $xml .= $this->urlEntry(
-                "{$baseUrl}/categoria/{$category->slug}",
+                $url,
                 'daily',
                 '0.8',
                 ($category->updated_at ? $category->updated_at->toW3cString() : now()->toW3cString())
@@ -157,7 +180,7 @@ class SitemapController extends Controller
 
         foreach (self::MEXICO_STATES as $state) {
             $xml .= $this->urlEntry(
-                "{$baseUrl}/estado/{$state}",
+                "{$baseUrl}/?state={$state}",
                 'daily',
                 '0.8',
                 now()->toW3cString()
@@ -175,14 +198,14 @@ class SitemapController extends Controller
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 
         // Последние 10000 активных объявлений
-        $ads = Ad::where('status', 'approved')
+        $ads = Ad::whereIn('status', ['approved', 'active'])
             ->orderBy('updated_at', 'desc')
             ->limit(10000)
             ->get(['id', 'title', 'updated_at']);
 
         foreach ($ads as $ad) {
             $xml .= $this->urlEntry(
-                "{$baseUrl}/ad/{$ad->id}",
+                "{$baseUrl}/share/ads/{$ad->id}",
                 'daily',
                 '0.7',
                 $ad->updated_at->toW3cString()

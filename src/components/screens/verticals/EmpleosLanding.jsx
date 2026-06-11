@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
@@ -37,12 +38,6 @@ export default function EmpleosLanding({ lang = 'es' }) {
   const [area, setArea] = useState('');
   const [modalidad, setModalidad] = useState('');
 
-  React.useEffect(() => {
-    document.title = 'Empleos y trabajos en México — Mercasto';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Encuentra trabajo en México. Miles de empleos en tecnología, ventas, administración y más. Busca o publica empleos gratis en Mercasto.');
-  }, []);
-
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'empleo' });
     if (q) params.set('search', q);
@@ -61,6 +56,7 @@ export default function EmpleosLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/empleos" />
       <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}

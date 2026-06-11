@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
@@ -41,12 +42,6 @@ export default function InmueblesLanding({ lang = 'es' }) {
   const [operacion, setOperacion] = useState('');
   const [tipo, setTipo] = useState('');
 
-  React.useEffect(() => {
-    document.title = 'Comprar y rentar propiedades en México — Mercasto';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Encuentra casas, departamentos y terrenos en venta o renta en México. Las mejores propiedades en Mercasto.');
-  }, []);
-
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'inmobiliaria' });
     if (q) params.set('search', q);
@@ -65,6 +60,7 @@ export default function InmueblesLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/inmuebles" />
       <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}

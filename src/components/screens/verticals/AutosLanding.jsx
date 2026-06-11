@@ -79,12 +79,6 @@ export default function AutosLanding({ lang = 'es' }) {
   const [priceRange, setPriceRange] = useState(null);
   const [brand, setBrand] = useState('');
 
-  React.useEffect(() => {
-    document.title = 'Comprar y vender autos en México — Mercasto';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Encuentra autos nuevos y usados en México. Miles de vehículos con los mejores precios. Publica gratis en Mercasto.');
-  }, []);
-
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'motor' });
     if (q) params.set('search', q);
@@ -106,6 +100,7 @@ export default function AutosLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/autos" />
       <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}

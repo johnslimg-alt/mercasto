@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
@@ -35,12 +36,6 @@ export default function ServiciosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'servicios');
 
-  React.useEffect(() => {
-    document.title = 'Contratar servicios profesionales en México — Mercasto';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Contrata plomeros, electricistas, diseñadores y más en México. Profesionales verificados con reseñas en Mercasto.');
-  }, []);
-
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'servicios' });
     if (q) params.set('search', q);
@@ -52,6 +47,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/servicios" />
       <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}
