@@ -1206,7 +1206,7 @@ function App() {
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
 
   const promotableAds = useMemo(
-    () => userAds.filter(ad => ad.status === 'active'),
+    () => (Array.isArray(userAds) ? userAds : []).filter(ad => ad.status === 'active'),
     [userAds]
   );
 
@@ -1448,7 +1448,11 @@ function App() {
       const res = await fetch(`${API_URL}/user/notifications/list`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(Array.isArray(data) ? data : (data.data || []));
+        setNotifications(
+          Array.isArray(data)
+            ? data
+            : (Array.isArray(data?.data) ? data.data : [])
+        );
       }
     } catch (err) { console.error("Error fetching notifications", err); }
   }, [user]);
@@ -1591,7 +1595,7 @@ function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        setFavoriteIds(data);
+        setFavoriteIds(Array.isArray(data) ? data : []);
       }
     } catch (err) { console.error("Error fetching favorites", err); }
   }, [user]);
@@ -1710,7 +1714,14 @@ function App() {
     setLoadingSearchAlerts(true);
     try {
       const res = await fetch(`${API_URL}/user/search-alerts`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setSearchAlerts(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setSearchAlerts(
+          Array.isArray(data)
+            ? data
+            : (Array.isArray(data?.data) ? data.data : [])
+        );
+      }
     } catch (err) {
       console.error('Error fetching search alerts', err);
     } finally {
