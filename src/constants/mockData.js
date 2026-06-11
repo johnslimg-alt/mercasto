@@ -41,16 +41,12 @@ export const subcategoriesMap = {
   'servicios': ['Mudanzas', 'Limpieza', 'Plomería', 'Electricidad', 'Cerrajería', 'Clases', 'Diseño', 'Eventos'],
   'moda': ['Ropa mujer', 'Ropa hombre', 'Calzado', 'Bolsos', 'Accesorios', 'Joyería', 'Cosmética'],
   'hogar': ['Muebles', 'Decoración', 'Electrodomésticos', 'Cocina', 'Jardín', 'Herramientas', 'Organización'],
-  'electronica': ['Laptops', 'Tablets', 'TV y video', 'Audio', 'Cámaras', 'Drones', 'Accesorios'],
-  'telefonos': ['Smartphones', 'Fundas y Carcasas', 'Smartwatches', 'Cargadores y Cables', 'Repuestos'],
-  'deportes': ['Bicicletas', 'Gym', 'Running', 'Camping', 'Pesca', 'Surf', 'Kayak'],
-  'infantil': ['Juguetes', 'Ropa infantil', 'Escolar', 'Muebles infantiles', 'Seguridad'],
-  'bebes': ['Carriolas', 'Autoasientos', 'Ropa bebé', 'Baño y cuidado', 'Cunas', 'Juguetes bebé'],
+  'electronica': ['Smartphones', 'Laptops', 'Tablets', 'PCs', 'Componentes', 'Monitores', 'TV y video', 'Audio', 'Smartwatches', 'Cámaras', 'Drones', 'Fundas y Carcasas', 'Cargadores y Cables', 'Impresoras', 'Redes', 'Accesorios', 'Repuestos'],
+  'ocio': ['Bicicletas', 'Gym', 'Running', 'Camping', 'Pesca', 'Surf', 'Kayak', 'Arte', 'Antigüedades', 'Cómics', 'Monedas y Billetes', 'Música y Vinilos', 'Instrumentos musicales', 'Entradas', 'Juegos'],
+  'infantil': ['Carriolas', 'Autoasientos', 'Cunas', 'Juguetes', 'Ropa infantil', 'Ropa bebé', 'Baño y cuidado', 'Escolar', 'Muebles infantiles', 'Seguridad'],
   'mascotas': ['Perros', 'Gatos', 'Aves', 'Peces', 'Accesorios', 'Alimento', 'Veterinaria'],
   'negocios': ['Traspasos', 'Franquicias', 'Equipamiento', 'Maquinaria', 'Industria', 'Inversión'],
-  'formacion': ['Libros', 'Cursos', 'Idiomas', 'Universidad', 'Infantil', 'Programación'],
-  'informatica': ['PCs', 'Componentes', 'Monitores', 'Impresoras', 'Redes'],
-  'coleccionismo': ['Arte', 'Antigüedades', 'Cómics', 'Monedas y Billetes', 'Música y Vinilos', 'Instrumentos musicales', 'Entradas']
+  'formacion': ['Libros', 'Cursos', 'Idiomas', 'Universidad', 'Infantil', 'Programación']
 };
 
 export const mockAds = [

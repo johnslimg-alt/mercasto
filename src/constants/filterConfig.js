@@ -193,6 +193,11 @@ export const filterConfig = {
   'moda/calzado': fashionFilters,
   'moda/accesorios': fashionFilters,
 
+  infantil: [
+    { id: 'tipo', label: 'Tipo', type: 'select', options: ['Carriolas', 'Autoasientos', 'Cunas', 'Juguetes', 'Ropa infantil', 'Ropa bebé', 'Baño y cuidado', 'Escolar', 'Muebles infantiles', 'Seguridad'] },
+    { id: 'edad', label: 'Edad recomendada', type: 'select', options: ['0-6 meses', '6-12 meses', '1-2 años', '2-3 años', '4-6 años', '7-9 años', '10+ años'] },
+  ],
+
   bebes: [
     { id: 'tipo', label: 'Tipo', type: 'select', options: ['Carriolas', 'Autoasientos', 'Cunas', 'Ropa bebé', 'Juguetes bebé'] },
     { id: 'edad', label: 'Edad recomendada', type: 'select', options: ['0-6 meses', '6-12 meses', '1-2 años', '2-3 años', '+3 años'] },

@@ -175,7 +175,7 @@ export function getCategoryAttributeSchema(categorySlug = '') {
     return CATEGORY_ATTRIBUTE_SCHEMA.servicios;
   }
 
-  if (normalized.startsWith('electronica') || normalized.startsWith('electrónica') || normalized.startsWith('informatica') || normalized.startsWith('telefonia') || normalized.startsWith('moviles-y-telefonia')) {
+  if (normalized.startsWith('electronica') || normalized.startsWith('electrónica') || normalized.startsWith('informatica') || normalized.startsWith('telefonia') || normalized.startsWith('telefonos') || normalized.startsWith('moviles-y-telefonia')) {
     return CATEGORY_ATTRIBUTE_SCHEMA.electronica;
   }
 
