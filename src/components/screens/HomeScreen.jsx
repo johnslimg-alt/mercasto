@@ -621,27 +621,15 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
 
 
-        <main className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
+        <main className="max-w-[1440px] mx-auto px-4 lg:px-6 pt-3 pb-6 lg:pt-4 lg:pb-8">
 
-          <div className="grid grid-cols-12 gap-6">
+          <div className="grid grid-cols-12 gap-x-6 gap-y-4 lg:gap-y-5">
 
             
 
             {/* 2. FEATURED CATEGORIES */}
 
             <section className="col-span-12">
-
-              <div className="flex items-center justify-between mb-4">
-
-                <h2 className="text-[22px] font-bold tracking-tight">{t.browse_category || 'Explorar por categoría'}</h2>
-
-                <div className="flex items-center gap-3">
-
-                  <span className="text-[13px] font-medium text-slate-500 hidden sm:block">{t.marketplace_verticals || 'Sitios principales de Mercasto'}</span>
-
-                </div>
-
-              </div>
 
               <div ref={categoryRailRef} data-testid="home-category-rail" dir="ltr" className="category-rail rail-fade">
 
