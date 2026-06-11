@@ -118,6 +118,38 @@ const ticketFilters = [
   { id: 'zona', label: 'Zona', type: 'text', placeholder: 'Ej. General, VIP, Preferente' },
 ];
 
+const sportsFilters = [
+  { id: 'tipo_deporte', label: 'Deporte / actividad', type: 'select', options: ['Fútbol', 'Ciclismo', 'Gimnasio', 'Running', 'Camping', 'Pesca', 'Surf', 'Náutica', 'Otro'] },
+  { id: 'marca', label: 'Marca', type: 'text', placeholder: 'Ej. Shimano, Nike, Garmin' },
+  { id: 'talla', label: 'Talla / medida', type: 'text', placeholder: 'Ej. M, 27.5, 10 ft' },
+  { id: 'condicion', label: 'Condición', type: 'select', options: ['Nuevo', 'Como nuevo', 'Usado', 'Restaurado'] },
+  { id: 'disciplina', label: 'Disciplina', type: 'checkbox', options: ['Recreativo', 'Entrenamiento', 'Competencia', 'Profesional'] },
+];
+
+const kidsFilters = [
+  { id: 'tipo', label: 'Tipo', type: 'select', options: ['Juguetes', 'Ropa infantil', 'Escolar', 'Muebles', 'Seguridad', 'Carriolas', 'Autoasientos'] },
+  { id: 'edad', label: 'Edad recomendada', type: 'select', options: ['0-6 meses', '6-12 meses', '1-2 años', '3-5 años', '6-9 años', '10+ años'] },
+  { id: 'condicion', label: 'Condición', type: 'select', options: ['Nuevo', 'Como nuevo', 'Usado'] },
+  { id: 'marca', label: 'Marca', type: 'text', placeholder: 'Ej. Chicco, Lego, Fisher-Price' },
+  { id: 'seguridad', label: 'Seguridad', type: 'checkbox', options: ['Certificado', 'Sin piezas pequeñas', 'Funda lavable', 'Manual incluido'] },
+];
+
+const businessFilters = [
+  { id: 'tipo_negocio', label: 'Tipo de oportunidad', type: 'select', options: ['Traspaso', 'Franquicia', 'Maquinaria', 'Equipamiento', 'Insumos', 'Sociedad', 'Inversión'] },
+  { id: 'sector', label: 'Sector', type: 'select', options: ['Alimentos', 'Retail', 'Servicios', 'Industria', 'Turismo', 'Tecnología', 'Construcción'] },
+  { id: 'ingresos', label: 'Ingresos mensuales', type: 'range', minPlaceholder: 'Desde', maxPlaceholder: 'Hasta' },
+  { id: 'antiguedad', label: 'Antigüedad del negocio', type: 'select', options: ['Nuevo', 'Menos de 1 año', '1-3 años', '4-10 años', '10+ años'] },
+  { id: 'incluye_negocio', label: 'Incluye', type: 'checkbox', options: ['Inventario', 'Local', 'Equipo', 'Marca', 'Permisos', 'Personal capacitado'] },
+];
+
+const educationFilters = [
+  { id: 'tipo_formacion', label: 'Tipo', type: 'select', options: ['Libro', 'Curso', 'Clases', 'Idiomas', 'Universidad', 'Certificación', 'Material escolar'] },
+  { id: 'modalidad', label: 'Modalidad', type: 'select', options: ['Presencial', 'En línea', 'Híbrido', 'Material físico'] },
+  { id: 'nivel', label: 'Nivel', type: 'select', options: ['Principiante', 'Intermedio', 'Avanzado', 'Profesional'] },
+  { id: 'idioma', label: 'Idioma', type: 'select', options: ['Español', 'Inglés', 'Francés', 'Alemán', 'Portugués', 'Otro'] },
+  { id: 'certificado', label: 'Certificación', type: 'checkbox', options: ['Constancia', 'Certificado oficial', 'Validez SEP', 'Sin certificado'] },
+];
+
 export const filterConfig = {
   coches: autoFilters,
   motor: autoFilters,
@@ -207,6 +239,30 @@ export const filterConfig = {
   'mascotas/perros': petFilters,
   'mascotas/gatos': petFilters,
   'mascotas/accesorios': petFilters,
+
+  deportes: sportsFilters,
+  'deportes/bicicletas': sportsFilters,
+  'deportes/gimnasio': sportsFilters,
+  'deportes/camping': sportsFilters,
+  'deportes/nautica': sportsFilters,
+
+  infantil: kidsFilters,
+  'infantil/juguetes': kidsFilters,
+  'infantil/ropa': kidsFilters,
+  'infantil/escolar': kidsFilters,
+  'infantil/seguridad': kidsFilters,
+
+  negocios: businessFilters,
+  'negocios/traspasos': businessFilters,
+  'negocios/franquicias': businessFilters,
+  'negocios/maquinaria': businessFilters,
+  'negocios/equipamiento': businessFilters,
+
+  formacion: educationFilters,
+  'formacion/libros': educationFilters,
+  'formacion/cursos': educationFilters,
+  'formacion/idiomas': educationFilters,
+  'formacion/certificaciones': educationFilters,
 
   ocio: [
     { id: 'tipo', label: 'Categoría', type: 'select', options: ['Deportes', 'Videojuegos', 'Libros/Música', 'Coleccionismo', 'Fotografía', 'Instrumentos', 'Camping', 'Viajes'] },

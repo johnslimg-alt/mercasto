@@ -16,29 +16,41 @@ export default defineConfig({
     })
   ],
   build: {
-    cssCodeSplit: false,
+    cssCodeSplit: true,
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: 'hidden',
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return null;
+          
+          // React core
           if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router-dom/')) {
             return 'vendor-react';
           }
+          
+          // Maps (Leaflet is heavy)
+          if (
+            id.includes('/leaflet/')
+            || id.includes('/leaflet-draw/')
+            || id.includes('/leaflet.markercluster/')
+            || id.includes('/react-leaflet/')
+          ) {
+            return null;
+          }
+          
+          // Observability
           if (id.includes('/@sentry/') || id.includes('/laravel-echo/') || id.includes('/pusher-js/')) {
             return 'vendor-observability';
           }
-          if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory/')) {
-            return 'vendor-charts';
-          }
-          if (id.includes('/leaflet/') || id.includes('/leaflet.markercluster/')) {
-            return 'vendor-maps';
-          }
-          if (id.includes('/@headlessui/') || id.includes('/heroicons/') || id.includes('/lucide-react/')) {
+          
+          // UI / Tailwind related
+          if (id.includes('/@headlessui/') || id.includes('/@heroicons/') || id.includes('/framer-motion/')) {
             return 'vendor-ui';
           }
-          return null;
+          
+          // All other node_modules
+          return 'vendor-misc';
         },
       },
     },

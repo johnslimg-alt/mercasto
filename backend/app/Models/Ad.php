@@ -36,6 +36,7 @@ class Ad extends Model
         'boost_type',
         'boost_expires_at',
         'state',
+        'city',
     ];
 
     protected function casts(): array
