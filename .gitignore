@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 backend/vendor/
+backend/vendor_new/
 backend/node_modules/
 
 # Build outputs
