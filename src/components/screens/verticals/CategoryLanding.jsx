@@ -13,7 +13,9 @@ import {
   Smartphone, PhoneCall, TabletSmartphone, RadioTower, Phone,
   PawPrint, Syringe, Bone, Bird,
   Building2, Briefcase, TrendingUp, DollarSign, Globe,
-  Tag
+  Tag,
+  Bike, Dumbbell, Footprints, Mountain, Fish, Waves,
+  BookOpen, Music, Ticket, Gamepad, Activity, Film, FileText
 } from 'lucide-react';
 import { useUI } from '../../../contexts/UIContext';
 
@@ -174,11 +176,7 @@ const CATEGORY_CONFIG = {
     ctaDesc: 'Publica tus servicios veterinarios, peluquería o productos y llega a dueños de mascotas en tu ciudad.',
     ctaBtn: 'Publicar anuncio →',
   },
-  infantil: {
-    'Juguetes': Star, 'Ropa infantil': Shirt, 'Carriolas': Tag, 'Cunas': Tag,
-    'Ropa bebé': Shirt, 'Autoasientos': Tag, 'Cuidado bebé': Tag,
-    'Escolar': Tag, 'Muebles infantiles': Sofa, 'Seguridad': ShieldCheck,
-  },
+
   infantil: {
     title: 'Infantil y Bebés',
     subtitle: 'Juguetes, ropa, carriolas, cunas y todo para niños y bebés en México',
