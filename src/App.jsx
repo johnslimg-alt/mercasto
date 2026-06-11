@@ -449,7 +449,7 @@ function App() {
   const [accountType, setAccountType] = useState('particular');
   const [userRole, setUserRole] = useState(() => initialUser?.role || 'individual');
 
-  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
+  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
   const [debouncedLocation, setDebouncedLocation] = useState('');
   const [isMapUpdating, setIsMapUpdating] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
@@ -486,7 +486,7 @@ function App() {
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
-        setForm({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
+        setForm({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
     }
 
     if (tab === 'home') navigate('/'); else navigate(`/${tab}`);
@@ -2407,6 +2407,10 @@ function App() {
       setShowAuthModal(true);
       return;
     }
+    if (form.latitude === '' || form.longitude === '') {
+      showToast('Selecciona la ubicación exacta tocando el mapa.', 'error');
+      return;
+    }
 
     setPostLoading(true);
     const formData = new FormData();
@@ -2414,8 +2418,14 @@ function App() {
     formData.append('price', form.price);
     formData.append('description', form.description);
     formData.append('location', form.location || 'México');
+    formData.append('city', form.city || '');
     formData.append('state', form.state || '');
+    if (form.latitude !== '' && form.longitude !== '') {
+      formData.append('latitude', form.latitude);
+      formData.append('longitude', form.longitude);
+    }
     formData.append('category', form.category || 'general');
+    formData.append('condition', form.condition || 'usado');
     if (user && user.id) formData.append('user_id', user.id);
 
     // Добавляем динамические атрибуты (EAV JSON)
@@ -2467,7 +2477,7 @@ function App() {
         });
 
         // Сбрасываем состояние формы
-        setForm({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
+        setForm({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
@@ -2478,7 +2488,8 @@ function App() {
         loadUserAds(); // Обновляем список моих объявлений
       } else {
         const errorData = await res.json();
-        showToast(`Error: ${errorData.message || 'No se pudo guardar el anuncio.'}`, 'error');
+        const validationError = Object.values(errorData.errors || {}).flat().find(Boolean);
+        showToast(`Error: ${validationError || errorData.message || 'No se pudo guardar el anuncio.'}`, 'error');
       }
     } catch (err) { console.error("Post error"); }
     finally { setPostLoading(false); }
@@ -2517,7 +2528,10 @@ function App() {
       price: ad.price,
       description: ad.description || '',
       location: ad.location || '',
+      city: ad.city || String(ad.location || '').split(',')[0].trim(),
       state: ad.state || '',
+      latitude: ad.latitude || '',
+      longitude: ad.longitude || '',
       category: ad.category || '',
       condition: ad.condition || 'usado',
       attributes: parsedAttributes
