@@ -20,9 +20,23 @@ const AUTO_MODELS = {
 export default function PostScreen({ categoriesData, debouncedLocation, editingAd, form, handleImageChange, handlePostSubmit, images, isMapUpdating, lang, postLoading, removeImage, removeImageById, reorderImages, setEditingAd, setForm, setVideoFile, t, videoFile, aiLoading, handleGenerateDescription }) {
     const [apiCategoryFields, setApiCategoryFields] = React.useState(null);
     const [loadingCategoryFields, setLoadingCategoryFields] = React.useState(false);
+    const safeCategories = React.useMemo(
+      () => (Array.isArray(categoriesData) ? categoriesData : []),
+      [categoriesData]
+    );
+    const safeImages = React.useMemo(
+      () => (Array.isArray(images) ? images : []),
+      [images]
+    );
+    const safeForm = form && typeof form === 'object'
+      ? form
+      : { title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} };
+    const safeAttributes = safeForm.attributes && typeof safeForm.attributes === 'object' && !Array.isArray(safeForm.attributes)
+      ? safeForm.attributes
+      : {};
 
     React.useEffect(() => {
-      if (!form.category) {
+      if (!safeForm.category) {
         setApiCategoryFields(null);
         setLoadingCategoryFields(false);
         return;
@@ -31,7 +45,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
       let cancelled = false;
       setLoadingCategoryFields(true);
 
-      fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(form.category)}`)
+      fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(safeForm.category)}`)
         .then(response => response.ok ? response.json() : [])
         .then(data => {
           if (cancelled) return;
@@ -45,16 +59,16 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
         });
 
       return () => { cancelled = true; };
-    }, [form.category]);
+    }, [safeForm.category]);
 
     const categoryFields = React.useMemo(() => {
-      if (!form.category) return [];
+      if (!safeForm.category) return [];
       const apiFields = apiCategoryFields;
       if (!apiFields) {
-        return getCategoryFields(form.category, form.attributes?.subcategory) ?? [];
+        return getCategoryFields(safeForm.category, safeAttributes.subcategory) ?? [];
       }
 
-      const localFields = getCategoryFields(form.category, form.attributes?.subcategory) ?? [];
+      const localFields = getCategoryFields(safeForm.category, safeAttributes.subcategory) ?? [];
       const normalizedApiFields = apiFields.map(apiField => {
         const apiFieldId = apiField.id || apiField.key;
 
@@ -104,26 +118,28 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
         ...normalizedApiFields,
         ...localFields.filter(field => !apiKeys.has(field.id || field.key)),
       ];
-    }, [apiCategoryFields, form.attributes?.subcategory, form.category]);
+    }, [apiCategoryFields, safeAttributes.subcategory, safeForm.category]);
 
     const selectedCategorySchema = React.useMemo(
-      () => resolveCategorySchema(form.category),
-      [form.category]
+      () => resolveCategorySchema(safeForm.category),
+      [safeForm.category]
     );
-    const availableCities = form.state ? (MEXICO_STATES_CITIES[form.state] || []) : [];
+    const availableCities = safeForm.state && Array.isArray(MEXICO_STATES_CITIES[safeForm.state])
+      ? MEXICO_STATES_CITIES[safeForm.state]
+      : [];
 
     React.useEffect(() => {
-      if (!form.category || categoryFields.length === 0 || !form.attributes) return;
+      if (!safeForm.category || categoryFields.length === 0) return;
 
       const allowedKeys = new Set(['subcategory', ...categoryFields.map(field => field.id || field.key)]);
       const cleanedAttributes = Object.fromEntries(
-        Object.entries(form.attributes).filter(([key]) => allowedKeys.has(key))
+        Object.entries(safeAttributes).filter(([key]) => allowedKeys.has(key))
       );
 
-      if (Object.keys(cleanedAttributes).length !== Object.keys(form.attributes).length) {
+      if (Object.keys(cleanedAttributes).length !== Object.keys(safeAttributes).length) {
         setForm(prev => ({ ...prev, attributes: cleanedAttributes }));
       }
-    }, [categoryFields, form.attributes, form.category, setForm]);
+    }, [categoryFields, safeAttributes, safeForm.category, setForm]);
 
     return (
       <div className="bg-[var(--paper)] dark:bg-slate-950 min-h-screen w-full flex items-start justify-center py-6 md:py-10 px-4">
@@ -137,15 +153,15 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               <div>
                   <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.ad_photos || 'Fotos del anuncio'}</label>
 
-                  {images.length > 0 ? (
+                  {safeImages.length > 0 ? (
                      <div className="w-full space-y-3">
                         <SortablePhotoGrid
-                          photos={images}
+                          photos={safeImages}
                           onReorder={reorderImages}
                           onDelete={removeImageById}
                         />
 
-                        {images.length < 10 && (
+                        {safeImages.length < 10 && (
                            <label className="aspect-square border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50 dark:bg-slate-950 w-full py-4">
                               <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
                               <PlusCircle className="text-slate-400" size={24} />
@@ -168,21 +184,27 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               {/* TITLE */}
               <div>
                   <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.ad_title}</label>
-                  <input value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="Ej: Honda Civic 2018" />
+                  <input value={safeForm.title || ''} onChange={(e) => setForm({...safeForm, title: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="Ej: Honda Civic 2018" />
               </div>
 
               {/* CATEGORY & CONDITION & PRICE */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div>
                       <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.category || 'Categoría'}</label>
-                      <select data-testid="post-category" value={form.category} onChange={e => setForm({...form, category: e.target.value, attributes: {}})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
+                      <select data-testid="post-category" value={safeForm.category || ''} onChange={e => setForm({...safeForm, category: e.target.value, attributes: {}})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
                           <option value="">{(t.select || 'Seleccionar')}...</option>
-                          {categoriesData.map(c => <option key={c.slug} value={c.slug}>{c.name[lang] || c.name['es']}</option>)}
+                          {safeCategories.map(c => {
+                            const categoryName = c?.name;
+                            const label = typeof categoryName === 'object'
+                              ? (categoryName?.[lang] || categoryName?.es || c.slug)
+                              : (categoryName || c.slug);
+                            return <option key={c.slug} value={c.slug}>{label}</option>;
+                          })}
                       </select>
                   </div>
                   <div>
                       <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.condition || 'Estado'}</label>
-                      <select value={form.condition} onChange={e => setForm({...form, condition: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
+                      <select value={safeForm.condition || 'nuevo'} onChange={e => setForm({...safeForm, condition: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
                           <option value="nuevo">{(t.new || 'Nuevo')}</option>
                           <option value="usado">{(t.used || 'Usado')}</option>
                       </select>
@@ -191,21 +213,21 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                       <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.ad_price}</label>
                       <div className="relative">
                           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">$</span>
-                          <input type="number" value={form.price} onChange={(e) => setForm({...form, price: e.target.value})} required className="w-full px-3.5 py-2.5 pl-7 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="0.00" />
+                          <input type="number" value={safeForm.price || ''} onChange={(e) => setForm({...safeForm, price: e.target.value})} required className="w-full px-3.5 py-2.5 pl-7 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="0.00" />
                       </div>
                   </div>
               </div>
 
-              {form.category && selectedCategorySchema.subcategories.length > 0 && (
+              {safeForm.category && Array.isArray(selectedCategorySchema?.subcategories) && selectedCategorySchema.subcategories.length > 0 && (
                 <div>
                   <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     {t.subcategory || 'Subcategoría'} <span className="text-red-500">*</span>
                   </label>
                   <select
                     data-testid="post-subcategory"
-                    value={form.attributes?.subcategory || ''}
+                    value={safeAttributes.subcategory || ''}
                     onChange={e => setForm({
-                      ...form,
+                      ...safeForm,
                       attributes: { subcategory: e.target.value },
                     })}
                     required
@@ -222,7 +244,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               )}
 
               {/* DYNAMIC CATEGORY ATTRIBUTES */}
-              {form.category && (loadingCategoryFields || categoryFields.length > 0) && (
+              {safeForm.category && (loadingCategoryFields || categoryFields.length > 0) && (
                 <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-950/50">
                   <h3 className="text-[14px] font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                     <Settings2 size={16} className="text-[#84CC16]" /> {t.ad_attributes || 'Características del anuncio'}
@@ -232,19 +254,19 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                     {categoryFields.map(field => {
                       const fieldId = field.id || field.key;
                       if (fieldId === 'subcategory') return null;
-                      const isAutoModel = fieldId === 'modelo' && ['coches', 'motor'].includes(form.category);
-                      const dependentModels = isAutoModel ? (AUTO_MODELS[form.attributes?.marca] || []) : [];
+                      const isAutoModel = fieldId === 'modelo' && ['coches', 'motor'].includes(safeForm.category);
+                      const dependentModels = isAutoModel ? (AUTO_MODELS[safeAttributes.marca] || []) : [];
                       return (
                       <div key={fieldId}>
                         <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{field.label}</label>
                         {(field.type === 'select' || field.type === 'checkbox') && !isAutoModel && (
                           <select
                             data-testid={`attribute-${fieldId}`}
-                            value={form.attributes?.[fieldId] || ''}
+                            value={safeAttributes[fieldId] || ''}
                             onChange={e => {
-                              const nextAttributes = {...(form.attributes || {}), [fieldId]: e.target.value};
+                              const nextAttributes = {...safeAttributes, [fieldId]: e.target.value};
                               if (fieldId === 'marca') delete nextAttributes.modelo;
-                              setForm({...form, attributes: nextAttributes});
+                              setForm({...safeForm, attributes: nextAttributes});
                             }}
                             required={field.required}
                             className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all"
@@ -256,8 +278,8 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                         {isAutoModel && dependentModels.length > 0 && (
                           <select
                             data-testid="attribute-modelo"
-                            value={form.attributes?.[fieldId] || ''}
-                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [fieldId]: e.target.value}})}
+                            value={safeAttributes[fieldId] || ''}
+                            onChange={e => setForm({...safeForm, attributes: {...safeAttributes, [fieldId]: e.target.value}})}
                             required={field.required}
                             className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                           >
@@ -269,8 +291,8 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                           <input
                             data-testid={`attribute-${fieldId}`}
                             type="text"
-                            value={form.attributes?.[fieldId] || ''}
-                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [fieldId]: e.target.value}})}
+                            value={safeAttributes[fieldId] || ''}
+                            onChange={e => setForm({...safeForm, attributes: {...safeAttributes, [fieldId]: e.target.value}})}
                             placeholder={field.placeholder || ''}
                             required={field.required}
                             className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -279,8 +301,8 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                         {field.type === 'range' && (
                           <input
                             type="number"
-                            value={form.attributes?.[fieldId] || ''}
-                            onChange={e => setForm({...form, attributes: {...(form.attributes || {}), [fieldId]: e.target.value}})}
+                            value={safeAttributes[fieldId] || ''}
+                            onChange={e => setForm({...safeForm, attributes: {...safeAttributes, [fieldId]: e.target.value}})}
                             min={field.range?.min}
                             max={field.range?.max}
                             step={field.range?.step}
@@ -298,7 +320,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               {/* LOCATION & MAP */}
               <div className="mb-3">
                 <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{(t.state || 'Estado')} <span className="text-red-500">*</span></label>
-                <select data-testid="post-state" value={form.state || ''} onChange={e => setForm({...form, state: e.target.value, city: '', location: '', latitude: '', longitude: ''})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
+                <select data-testid="post-state" value={safeForm.state || ''} onChange={e => setForm({...safeForm, state: e.target.value, city: '', location: '', latitude: '', longitude: ''})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
                   <option value="">{t.select_state || 'Seleccionar estado'}</option>
                   {MEXICO_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -308,16 +330,16 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                 <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.city || 'Ciudad / Municipio'} <span className="text-red-500">*</span></label>
                 <select
                   data-testid="post-city"
-                  value={form.city || ''}
+                  value={safeForm.city || ''}
                   onChange={e => {
                     const city = e.target.value;
-                    setForm({...form, city, location: city ? `${city}, ${form.state}` : '', latitude: '', longitude: ''});
+                    setForm({...safeForm, city, location: city ? `${city}, ${safeForm.state}` : '', latitude: '', longitude: ''});
                   }}
-                  disabled={!form.state}
+                  disabled={!safeForm.state}
                   required
                   className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:opacity-50"
                 >
-                  <option value="">{form.state ? (t.select_city || 'Seleccionar ciudad') : (t.select_state_first || 'Primero selecciona un estado')}</option>
+                  <option value="">{safeForm.state ? (t.select_city || 'Seleccionar ciudad') : (t.select_state_first || 'Primero selecciona un estado')}</option>
                   {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
                 </select>
               </div>
@@ -326,23 +348,23 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.location || 'Ubicación'}</label>
                  <div className="relative mb-3">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input data-testid="post-location" value={form.location} onChange={e => setForm({...form, location: e.target.value, latitude: '', longitude: ''})} required className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder={t.loc_placeholder || "Escribe colonia, calle o código postal"} />
+                    <input data-testid="post-location" value={safeForm.location || ''} onChange={e => setForm({...safeForm, location: e.target.value, latitude: '', longitude: ''})} required className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder={t.loc_placeholder || "Escribe colonia, calle o código postal"} />
                  </div>
                  <div className="w-full h-48 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
                      {isMapUpdating && <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50"><Loader2 className="w-8 h-8 text-[#84CC16] animate-spin"/></div>}
                      <MapV3
-                       title={debouncedLocation || form.location || form.state || 'Todo México'}
-                       markers={form.latitude && form.longitude ? [{ label: 'Aquí', coords: [Number(form.latitude), Number(form.longitude)], tone: 'lime' }] : []}
+                       title={debouncedLocation || safeForm.location || safeForm.state || 'Todo México'}
+                       markers={safeForm.latitude && safeForm.longitude ? [{ label: 'Aquí', coords: [Number(safeForm.latitude), Number(safeForm.longitude)], tone: 'lime' }] : []}
                        locationPicker
-                       locationQuery={`${form.city || ''} ${form.state || ''}`}
+                       locationQuery={`${safeForm.city || ''} ${safeForm.state || ''}`}
                        onLocationSelect={({ lat, lng }) => setForm(prev => ({ ...prev, latitude: lat.toFixed(7), longitude: lng.toFixed(7) }))}
                        showFullscreen={false}
                        className={`h-full rounded-none border-0 shadow-none transition-opacity duration-300 ${isMapUpdating ? 'opacity-40' : 'opacity-100'}`}
                      />
                  </div>
                  <p data-testid="post-coordinates" className="mt-2 text-[12px] text-slate-500 dark:text-slate-400">
-                   {form.latitude && form.longitude
-                     ? `${t.exact_location || 'Ubicación exacta seleccionada'}: ${form.latitude}, ${form.longitude}`
+                   {safeForm.latitude && safeForm.longitude
+                     ? `${t.exact_location || 'Ubicación exacta seleccionada'}: ${safeForm.latitude}, ${safeForm.longitude}`
                      : (t.map_pick_hint || 'Selecciona una ciudad y toca el mapa para ajustar la ubicación exacta.')}
                  </p>
               </div>
@@ -356,7 +378,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                       {aiLoading ? (t.generating || 'Generando…') : (t.generate_ai || '✨ Generar con IA')}
                     </button>
                   </div>
-                  <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all h-32 resize-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder={t.ad_desc_placeholder || "Describe tu artículo..."} />
+                  <textarea value={safeForm.description || ''} onChange={(e) => setForm({...safeForm, description: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all h-32 resize-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder={t.ad_desc_placeholder || "Describe tu artículo..."} />
               </div>
 
               {/* VIDEO URL */}

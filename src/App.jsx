@@ -1414,7 +1414,11 @@ function App() {
       const res = await fetch(`${API_URL}/user/ads`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setUserAds(Array.isArray(data) ? data : (data.data || []));
+        setUserAds(
+          Array.isArray(data)
+            ? data
+            : (Array.isArray(data?.data) ? data.data : [])
+        );
       }
     } catch (err) { console.error("Error fetching user ads", err); }
   }, [user]);
@@ -1959,8 +1963,13 @@ function App() {
 
   useEffect(() => {
     fetch(`${API_URL}/categories`)
-      .then(res => res.json())
-      .then(data => setCategoriesData(Array.isArray(data) ? data : (data.data || [])))
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        const categories = Array.isArray(data)
+          ? data
+          : (Array.isArray(data?.data) ? data.data : []);
+        setCategoriesData(categories);
+      })
       .catch(err => console.error("Error fetching categories", err));
   }, []);
 
@@ -1981,7 +1990,12 @@ function App() {
 
       if (res.ok) {
         const catRes = await fetch(`${API_URL}/categories`);
-        setCategoriesData(await catRes.json());
+        const categoryPayload = catRes.ok ? await catRes.json() : [];
+        setCategoriesData(
+          Array.isArray(categoryPayload)
+            ? categoryPayload
+            : (Array.isArray(categoryPayload?.data) ? categoryPayload.data : [])
+        );
         cancelCatEdit();
         showToast('Categoría guardada exitosamente');
       } else showToast('Error al guardar la categoría', 'error');
@@ -3296,13 +3310,15 @@ function App() {
   };
 
   // --- РЕНДЕР ДАШБОРДА ПОЛЬЗОВАТЕЛЯ ---
-  const activeAds = useMemo(() => userAds.filter(a => a.status === 'active'), [userAds]);
-  const inactiveAds = useMemo(() => userAds.filter(a => a.status !== 'active'), [userAds]);
-  const totalViews = useMemo(() => userAds.reduce((sum, a) => sum + (a.views || 0), 0), [userAds]);
-  const totalContactClicks = useMemo(() => userAds.reduce((sum, a) => sum + (a.whatsapp_clicks || 0), 0), [userAds]);
+  const safeUserAds = useMemo(() => (Array.isArray(userAds) ? userAds : []), [userAds]);
+  const safeCategoriesData = useMemo(() => (Array.isArray(categoriesData) ? categoriesData : []), [categoriesData]);
+  const activeAds = useMemo(() => safeUserAds.filter(a => a.status === 'active'), [safeUserAds]);
+  const inactiveAds = useMemo(() => safeUserAds.filter(a => a.status !== 'active'), [safeUserAds]);
+  const totalViews = useMemo(() => safeUserAds.reduce((sum, a) => sum + (a.views || 0), 0), [safeUserAds]);
+  const totalContactClicks = useMemo(() => safeUserAds.reduce((sum, a) => sum + (a.whatsapp_clicks || 0), 0), [safeUserAds]);
   const conversionRate = useMemo(() => totalViews > 0 ? ((totalContactClicks / totalViews) * 100).toFixed(1) : 0, [totalViews, totalContactClicks]);
-  const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
-  const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
+  const catObj = useMemo(() => safeCategoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [safeCategoriesData, lang]);
+  const categoryStats = useMemo(() => safeCategoriesData.map(c => ({ name: getCatName(c, lang), count: safeUserAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [safeCategoriesData, safeUserAds, lang]);
   const headerCategories = useMemo(() => ([
     { slug: 'motor', label: lang === 'en' ? 'Cars' : 'Autos' },
     { slug: 'inmobiliaria', label: lang === 'en' ? 'Real Estate' : 'Inmuebles' },
@@ -3317,7 +3333,7 @@ function App() {
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
-  const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
+  const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
 
   const renderCouponModal = () => {
     if (!showCouponModal) return null;
