@@ -188,6 +188,7 @@ export default function MapV3({
   className = '',
   showFullscreen = true,
   initialFilters = {},
+  onSelectCoords = null,
 }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.resolvedLanguage || i18n.language || 'es';
@@ -643,6 +644,13 @@ function createPopupElement(ad, marker) {
     }
 
     instanceRef.current = map;
+
+    if (onSelectCoords) {
+      map.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        onSelectCoords(lat, lng);
+      });
+    }
     
     // Всегда используем светлую тему карты (OpenStreetMap)
     const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -803,6 +811,21 @@ function createPopupElement(ad, marker) {
       });
     }
 
+    // ── User interaction listeners for two-way bounds sync ──
+    map.on('dragend', () => {
+      const area = updateMapArea(map);
+      if (area && onSearchArea) {
+        onSearchArea(area);
+      }
+    });
+
+    map.on('zoomend', () => {
+      const area = updateMapArea(map);
+      if (area && onSearchArea) {
+        onSearchArea(area);
+      }
+    });
+
     window.requestAnimationFrame(() => {
       if (mountedRef.current && instanceRef.current === map) {
         try {
@@ -821,7 +844,7 @@ function createPopupElement(ad, marker) {
     return () => {
       removeMap(mapInstanceRef);
     };
-  }, [leaflet, expanded, drawMode]);
+  }, [leaflet, expanded, drawMode, onSelectCoords]);
 
   useEffect(() => {
     if (leaflet && expanded) {
@@ -833,7 +856,7 @@ function createPopupElement(ad, marker) {
     return () => {
       removeMap(largeMapInstanceRef);
     };
-  }, [leaflet, expanded, drawMode]);
+  }, [leaflet, expanded, drawMode, onSelectCoords]);
 
   const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
 

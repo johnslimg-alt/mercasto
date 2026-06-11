@@ -320,7 +320,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
   );
 };
 
-export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds, user, token }) {
+export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds, user, token, onSearchArea }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
     const [showMap, setShowMap] = React.useState(false);
@@ -513,6 +513,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
               loadingMore={loadingMore}
               lastAdElementRef={lastAdElementRef}
               getImageUrl={getImageUrl}
+              onSearchArea={onSearchArea}
             />
           </div>
 
@@ -577,21 +578,9 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             {/* 2. FEATURED CATEGORIES */}
 
-            <section className="col-span-12">
+            <section className="col-span-12 -mt-2">
 
-              <div className="flex items-center justify-between mb-4">
-
-                <h2 className="text-[22px] font-bold tracking-tight">{t.browse_category || 'Explorar por categoría'}</h2>
-
-                <div className="flex items-center gap-3">
-
-                  <span className="text-[13px] font-medium text-slate-500 hidden sm:block">{t.marketplace_verticals || 'Sitios principales de Mercasto'}</span>
-
-                </div>
-
-              </div>
-
-              <div className="category-rail rail-fade -mx-4 px-4 lg:mx-0 lg:px-0">
+              <div className="category-rail rail-fade -mx-4 px-6 lg:-mx-6 lg:px-6">
 
                 {homeCategories.map(cat => {
 

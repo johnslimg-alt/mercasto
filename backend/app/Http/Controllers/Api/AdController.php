@@ -196,6 +196,11 @@ class AdController extends Controller
             $query->where('category', $request->category);
         }
 
+        // Фильтрация по подкатегории
+        if ($request->filled('subcategory')) {
+            $query->where('subcategory', $request->subcategory);
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
@@ -327,6 +332,7 @@ class AdController extends Controller
             'radius',
             'user_id',
             'category',
+            'subcategory',
             'search',
             'location',
             'city',
@@ -393,12 +399,33 @@ class AdController extends Controller
             'location' => 'nullable|string|max:255',
             'state' => 'nullable|string|max:60',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД, защита от Data Integrity Bypass
+            'subcategory' => 'nullable|string|max:255',
             'images' => 'nullable|array|max:10', // Максимум 10 картинок
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Максимум 5МБ и защита от OOM-бомб (Pixel Flooding)
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // 50MB Max
             'attributes' => 'nullable|array', // Динамические характеристики (марка, модель, ОЗУ и т.д.)
         ]);
+
+        // Dynamic category attributes validation
+        if ($request->filled('attributes')) {
+            $categoryId = DB::table('categories')->where('slug', $request->category)->value('id');
+            if ($categoryId) {
+                $dynamicRules = [];
+                $categoryAttrs = DB::table('category_attributes')->where('category_id', $categoryId)->get();
+                foreach ($categoryAttrs as $attr) {
+                    if ($attr->required) {
+                        $dynamicRules["attributes.{$attr->key}"] = 'required';
+                    }
+                    if ($attr->type === 'number' || $attr->type === 'range') {
+                        $dynamicRules["attributes.{$attr->key}"] = ($attr->required ? 'required' : 'nullable') . '|numeric';
+                    }
+                }
+                if (!empty($dynamicRules)) {
+                    $request->validate($dynamicRules);
+                }
+            }
+        }
 
         // Защита бизнес-модели: лимиты берём из активного платного плана пользователя.
         $user = $request->user();
@@ -460,6 +487,7 @@ class AdController extends Controller
             'latitude' => $lat,
             'longitude' => $lng,
             'category' => $request->category,
+            'subcategory' => $request->subcategory,
             'attributes' => $request->filled('attributes') ? $request->input('attributes') : null,
             'image_url' => count($imagePaths) > 0 ? json_encode($imagePaths) : null,
             'video_url' => $videoPath,
@@ -573,6 +601,7 @@ class AdController extends Controller
             'location' => 'nullable|string|max:255',
             'state' => 'nullable|string|max:60',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД
+            'subcategory' => 'nullable|string|max:255',
             'existing_images' => 'nullable|array',
             'existing_images.*' => 'string',
             'images' => 'nullable|array|max:10', // Новые изображения
@@ -581,6 +610,26 @@ class AdController extends Controller
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // Защита от загрузки вредоносных скриптов
             'attributes' => 'nullable|array',
         ]);
+
+        // Dynamic category attributes validation
+        if ($request->filled('attributes')) {
+            $categoryId = DB::table('categories')->where('slug', $request->category)->value('id');
+            if ($categoryId) {
+                $dynamicRules = [];
+                $categoryAttrs = DB::table('category_attributes')->where('category_id', $categoryId)->get();
+                foreach ($categoryAttrs as $attr) {
+                    if ($attr->required) {
+                        $dynamicRules["attributes.{$attr->key}"] = 'required';
+                    }
+                    if ($attr->type === 'number' || $attr->type === 'range') {
+                        $dynamicRules["attributes.{$attr->key}"] = ($attr->required ? 'required' : 'nullable') . '|numeric';
+                    }
+                }
+                if (!empty($dynamicRules)) {
+                    $request->validate($dynamicRules);
+                }
+            }
+        }
 
         $lat = $ad->latitude;
         $lng = $ad->longitude;
@@ -685,6 +734,7 @@ class AdController extends Controller
             'latitude' => $lat,
             'longitude' => $lng,
             'category' => $validated['category'],
+            'subcategory' => $request->input('subcategory', $ad->subcategory),
             'attributes' => $request->filled('attributes') ? $request->input('attributes') : $ad->attributes,
             'image_url' => count($finalImagePaths) > 0 ? json_encode($finalImagePaths) : null,
             'video_url' => $videoPath,

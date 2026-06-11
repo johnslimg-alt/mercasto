@@ -64,13 +64,13 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const showDetails = false;
+      const showDetails = true;
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
           <h1 className="text-[24px] font-bold text-white mb-2">No pudimos cargar esta sección</h1>
-          <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba dañada, podrás iniciar sesión otra vez.</p>
+          <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba daíada, podrás iniciar sesión otra vez.</p>
           {showDetails && (
-            <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
+            <div className="text-left bg-red-950/40 text-red-400 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-900/30 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
           )}
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">Abrir como invitado</button>
@@ -599,6 +599,13 @@ function App() {
   const [radius, setRadius] = useState(50);
   const [searchLocation, setSearchLocation] = useState(null); // { lat, lng, name }
   const [searchLocationInput, setSearchLocationInput] = useState('');
+  const handleSearchArea = useCallback((area) => {
+    if (area) {
+      setSearchLocation({ lat: area.lat, lng: area.lng });
+      setRadius(area.radius);
+      setSearchLocationInput(`GPS (${area.lat.toFixed(4)}, ${area.lng.toFixed(4)})`);
+    }
+  }, []);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showMobileLocationPicker, setShowMobileLocationPicker] = useState(false);
   const [locState, setLocState] = useState('');
@@ -676,9 +683,25 @@ function App() {
     if (String(nextMaxPrice || '').trim()) params.set('max_price', String(nextMaxPrice).trim());
     if (Array.isArray(nextCondition) && nextCondition.length > 0) params.set('condition', nextCondition.join(','));
 
+    if (dynamicFilters) {
+      Object.keys(dynamicFilters).forEach(key => {
+        const val = dynamicFilters[key];
+        if (val) {
+          if (Array.isArray(val) && val.length > 0) {
+            params.set(`filters_${key}`, val.join(','));
+          } else if (typeof val === 'object' && (val.min !== undefined || val.max !== undefined)) {
+            if (val.min) params.set(`filters_${key}_min`, val.min);
+            if (val.max) params.set(`filters_${key}_max`, val.max);
+          } else if (typeof val === 'string' && val.trim()) {
+            params.set(`filters_${key}`, val.trim());
+          }
+        }
+      });
+    }
+
     const query = params.toString();
     return query ? `/?${query}` : '/';
-  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, maxPrice, minPrice, selectedState]);
+  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, maxPrice, minPrice, selectedState, dynamicFilters]);
 
   // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
   const executeSearch = useCallback((overrideSearch = null, overrideLoc = null, overrideCategory = undefined) => {
@@ -965,7 +988,29 @@ function App() {
     setMinPrice(minPriceParam || '');
     setMaxPrice(maxPriceParam || '');
     setConditionFilter(conditionParam ? conditionParam.split(',').filter(Boolean) : []);
-    setDynamicFilters({});
+
+    const nextDynamicFilters = {};
+    for (const [paramKey, paramVal] of params.entries()) {
+      if (paramKey.startsWith('filters_')) {
+        const key = paramKey.replace('filters_', '');
+        if (key.endsWith('_min')) {
+          const cleanKey = key.replace('_min', '');
+          if (!nextDynamicFilters[cleanKey]) nextDynamicFilters[cleanKey] = {};
+          nextDynamicFilters[cleanKey].min = paramVal;
+        } else if (key.endsWith('_max')) {
+          const cleanKey = key.replace('_max', '');
+          if (!nextDynamicFilters[cleanKey]) nextDynamicFilters[cleanKey] = {};
+          nextDynamicFilters[cleanKey].max = paramVal;
+        } else {
+          if (paramVal.includes(',')) {
+            nextDynamicFilters[key] = paramVal.split(',').filter(Boolean);
+          } else {
+            nextDynamicFilters[key] = paramVal;
+          }
+        }
+      }
+    }
+    setDynamicFilters(nextDynamicFilters);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -983,7 +1028,7 @@ function App() {
     const nextPath = buildHomeFilterPath();
     const currentPath = `${location.pathname}${location.search}`;
     if (nextPath !== currentPath) navigate(nextPath, { replace: true });
-  }, [activeCat, buildHomeFilterPath, debouncedLocInput, debouncedSearch, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany]);
+  }, [activeCat, buildHomeFilterPath, debouncedLocInput, debouncedSearch, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany, dynamicFilters]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -2400,6 +2445,9 @@ function App() {
     formData.append('location', form.location || 'México');
     formData.append('state', form.state || '');
     formData.append('category', form.category || 'general');
+    if (form.subcategory) formData.append('subcategory', form.subcategory);
+    if (form.latitude) formData.append('latitude', form.latitude);
+    if (form.longitude) formData.append('longitude', form.longitude);
     if (user && user.id) formData.append('user_id', user.id);
 
     // Добавляем динамические атрибуты (EAV JSON)
@@ -2503,6 +2551,9 @@ function App() {
       location: ad.location || '',
       state: ad.state || '',
       category: ad.category || '',
+      subcategory: ad.subcategory || '',
+      latitude: ad.latitude || '',
+      longitude: ad.longitude || '',
       condition: ad.condition || 'usado',
       attributes: parsedAttributes
     });
@@ -3258,7 +3309,7 @@ function App() {
   const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
-  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} user={user} token={localStorage.getItem('auth_token')} />;
+  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} user={user} token={localStorage.getItem('auth_token')} onSearchArea={handleSearchArea} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;

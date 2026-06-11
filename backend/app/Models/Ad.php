@@ -20,6 +20,7 @@ class Ad extends Model
         'latitude',
         'longitude',
         'category',
+        'subcategory',
         'condition',
         'attributes',
         'image_url',

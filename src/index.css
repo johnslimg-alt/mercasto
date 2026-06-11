@@ -221,8 +221,8 @@ html.dark .btn-lg.bg-white:hover {
     }
   }
   .category-rail {
-    @apply flex gap-2 overflow-x-auto snap-x snap-mandatory pt-1 pb-3 lg:justify-center;
-    scroll-padding-inline: 1rem;
+    @apply flex gap-2 overflow-x-auto snap-x snap-mandatory pt-1 pb-3 lg:justify-start;
+    scroll-padding-inline: 1.5rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
