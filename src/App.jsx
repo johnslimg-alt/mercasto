@@ -1,15 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
-import { useTranslation } from 'react-i18next';
-import i18n from './i18n';
-import LanguageSwitcher from './components/common/LanguageSwitcher';
-import { useAuth, useUI, useAds, AppProviders } from './contexts/AppProviders';
-import AdCard from './components/common/AdCard';
 import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { translations } from './constants/mockData';
-import { getTranslations } from './utils/translations';
 import AdSenseBanner from './components/common/AdSenseBanner';
-const OnboardingModal = React.lazy(() => import('./components/OnboardingModal'));
+import OnboardingModal from './components/OnboardingModal';
 import {
   Search, Home, PlusCircle, Plus, User, Users, Settings, Shield, Menu,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
@@ -19,9 +13,15 @@ import {
 } from 'lucide-react';
 
 import echo from './echo';
-const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
-const SearchSuggestions = React.lazy(() => import('./components/common/SearchSuggestions'));
-const PWAInstallPrompt = React.lazy(() => import('./components/common/PWAInstallPrompt'));
+import CookieBanner from './components/CookieBanner';
+import SearchSuggestions from './components/common/SearchSuggestions';
+import i18n from './i18n';
+
+const SUPPORTED_LANGUAGES = new Set([
+  'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
+]);
+const LANGUAGE_OPTIONS = [...SUPPORTED_LANGUAGES];
+const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
 
 // Глобальный перехватчик фатальных ошибок (Защита от белого экрана)
 class ErrorBoundary extends React.Component {
@@ -64,13 +64,13 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const showDetails = true;
+      const showDetails = import.meta.env.DEV;
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
           <h1 className="text-[24px] font-bold text-white mb-2">No pudimos cargar esta sección</h1>
-          <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba daíada, podrás iniciar sesión otra vez.</p>
+          <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba dañada, podrás iniciar sesión otra vez.</p>
           {showDetails && (
-            <div className="text-left bg-red-950/40 text-red-400 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-900/30 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
+            <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
           )}
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">Abrir como invitado</button>
@@ -326,7 +326,6 @@ const AutosLanding = React.lazy(() => import('./components/screens/verticals/Aut
 const InmueblesLanding = React.lazy(() => import('./components/screens/verticals/InmueblesLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const EmpleosLanding = React.lazy(() => import('./components/screens/verticals/EmpleosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ServiciosLanding = React.lazy(() => import('./components/screens/verticals/ServiciosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const CategoryLanding = React.lazy(() => import('./components/screens/verticals/CategoryLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor de perfil.</div> })));
 const TerminosScreen = React.lazy(() => import('./components/screens/legal/TerminosScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const PrivacidadScreen = React.lazy(() => import('./components/screens/legal/PrivacidadScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
@@ -363,16 +362,13 @@ function useRefQueryParam() {
 export default function AppWrapper() {
   return (
     <ErrorBoundary>
-      <AppProviders>
-        <App />
-      </AppProviders>
+      <App />
     </ErrorBoundary>
   );
 }
 
 function App() {
   const navigate = useNavigate();
-  const { t: i18nT } = useTranslation();
   const location = useLocation();
 
   // GA4 page-view tracking
@@ -380,10 +376,14 @@ function App() {
     trackPageView(location.pathname + location.search, document.title);
   }, [location]);
 
-  const { currentTab, lang, setLang, isDarkMode, setIsDarkMode } = useUI();
-  const { user, setUser, authReady, showAuthModal, setShowAuthModal, authMode, setAuthMode, logout } = useAuth();
+  const currentTab = location.pathname.split('/')[1] || 'home';
 
-  const t = useMemo(() => getTranslations(lang), [lang]);
+  // Защита от Prototype Pollution (WSOD Crash): проверяем, что язык действительно существует в словаре
+  const [lang, setLang] = useState(() => {
+    const saved = localStorage.getItem('lang');
+    return SUPPORTED_LANGUAGES.has(saved) ? saved : 'es';
+  });
+  const t = translations[lang] || translations.en || translations.es;
 
   const [serverAds, setServerAds] = useState([]);
   const [realEstateAds, setRealEstateAds] = useState([]);
@@ -425,7 +425,11 @@ function App() {
   };
   const initialAuthToken = localStorage.getItem('auth_token');
   const initialUser = initialAuthToken ? getSafeUser() : null;
+  const [authReady, setAuthReady] = useState(!initialAuthToken);
+  const [user, setUser] = useState(initialUser);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   useRefQueryParam();
+  const [authMode, setAuthMode] = useState('login');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
   const [emailBannerSent, setEmailBannerSent] = useState(false);
@@ -446,7 +450,7 @@ function App() {
   const [accountType, setAccountType] = useState('particular');
   const [userRole, setUserRole] = useState(() => initialUser?.role || 'individual');
 
-  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
+  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
   const [debouncedLocation, setDebouncedLocation] = useState('');
   const [isMapUpdating, setIsMapUpdating] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
@@ -483,7 +487,7 @@ function App() {
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
-        setForm({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
+        setForm({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
     }
 
     if (tab === 'home') navigate('/'); else navigate(`/${tab}`);
@@ -599,68 +603,10 @@ function App() {
   const [radius, setRadius] = useState(50);
   const [searchLocation, setSearchLocation] = useState(null); // { lat, lng, name }
   const [searchLocationInput, setSearchLocationInput] = useState('');
-  const handleSearchArea = useCallback((area) => {
-    if (area) {
-      setSearchLocation({ lat: area.lat, lng: area.lng });
-      setRadius(area.radius);
-      setSearchLocationInput(`GPS (${area.lat.toFixed(4)}, ${area.lng.toFixed(4)})`);
-    }
-  }, []);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showMobileLocationPicker, setShowMobileLocationPicker] = useState(false);
   const [locState, setLocState] = useState('');
   const [locCity, setLocCity] = useState('');
-
-  const toggleLocationPicker = () => {
-    if (!showLocationPicker) {
-      let stateVal = '';
-      let cityVal = '';
-      if (searchLocationInput) {
-        const parts = searchLocationInput.split(',').map(s => s.trim());
-        if (parts.length === 2) {
-          cityVal = parts[0];
-          stateVal = parts[1];
-        } else if (parts.length === 1) {
-          if (MEXICO_STATES_CITIES[parts[0]]) {
-            stateVal = parts[0];
-          } else {
-            cityVal = parts[0];
-          }
-        }
-      }
-      setLocState(stateVal);
-      setLocCity(cityVal);
-      setShowLocationPicker(true);
-    } else {
-      setShowLocationPicker(false);
-    }
-  };
-
-  const toggleMobileLocationPicker = () => {
-    if (!showMobileLocationPicker) {
-      let stateVal = '';
-      let cityVal = '';
-      if (searchLocationInput) {
-        const parts = searchLocationInput.split(',').map(s => s.trim());
-        if (parts.length === 2) {
-          cityVal = parts[0];
-          stateVal = parts[1];
-        } else if (parts.length === 1) {
-          if (MEXICO_STATES_CITIES[parts[0]]) {
-            stateVal = parts[0];
-          } else {
-            cityVal = parts[0];
-          }
-        }
-      }
-      setLocState(stateVal);
-      setLocCity(cityVal);
-      setShowMobileLocationPicker(true);
-    } else {
-      setShowMobileLocationPicker(false);
-    }
-  };
-
   const mobileSearchInputRef = useRef(null);
   const skipFilterUrlSyncRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -679,29 +625,15 @@ function App() {
     if (String(nextSearch || '').trim()) params.set('search', String(nextSearch).trim());
     if (String(nextCategory || '').trim()) params.set('category', String(nextCategory).trim());
     if (String(nextLocation || '').trim()) params.set('location', String(nextLocation).trim());
+    if (String(locState || '').trim()) params.set('state', String(locState).trim());
+    if (String(locCity || '').trim()) params.set('city', String(locCity).trim());
     if (String(nextMinPrice || '').trim()) params.set('min_price', String(nextMinPrice).trim());
     if (String(nextMaxPrice || '').trim()) params.set('max_price', String(nextMaxPrice).trim());
     if (Array.isArray(nextCondition) && nextCondition.length > 0) params.set('condition', nextCondition.join(','));
 
-    if (dynamicFilters) {
-      Object.keys(dynamicFilters).forEach(key => {
-        const val = dynamicFilters[key];
-        if (val) {
-          if (Array.isArray(val) && val.length > 0) {
-            params.set(`filters_${key}`, val.join(','));
-          } else if (typeof val === 'object' && (val.min !== undefined || val.max !== undefined)) {
-            if (val.min) params.set(`filters_${key}_min`, val.min);
-            if (val.max) params.set(`filters_${key}_max`, val.max);
-          } else if (typeof val === 'string' && val.trim()) {
-            params.set(`filters_${key}`, val.trim());
-          }
-        }
-      });
-    }
-
     const query = params.toString();
     return query ? `/?${query}` : '/';
-  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, maxPrice, minPrice, selectedState, dynamicFilters]);
+  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, locCity, locState, maxPrice, minPrice, selectedState]);
 
   // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
   const executeSearch = useCallback((overrideSearch = null, overrideLoc = null, overrideCategory = undefined) => {
@@ -720,6 +652,17 @@ function App() {
       events.searchPerformed(nextSearch.trim(), nextCategory || "");
     }
   }, [activeCat, buildHomeFilterPath, navigate, searchQuery, searchLocationInput, setCurrentTab]);
+
+  const applyHeaderLocation = useCallback((mobile = false) => {
+    const locationLabel = locCity ? `${locCity}, ${locState}` : locState;
+    setSearchLocation(null);
+    setSearchLocationInput(locationLabel);
+    setSelectedState(locState);
+    setDebouncedLocInput(locationLabel);
+    if (mobile) setShowMobileLocationPicker(false);
+    else setShowLocationPicker(false);
+    executeSearch(null, locationLabel);
+  }, [executeSearch, locCity, locState]);
 
   const fetchSuggestions = useCallback((q) => {
     if (!q || q.length < 2) { setSuggestions([]); return; }
@@ -745,6 +688,13 @@ function App() {
     localStorage.setItem('mercasto_recent_searches', JSON.stringify(updated));
     setRecentSearches(updated.slice(0, 5));
   }, []);
+
+  const submitHeaderSearch = useCallback((event) => {
+    event?.preventDefault();
+    setShowSuggestions(false);
+    if (searchQuery.trim()) saveRecentSearch(searchQuery);
+    executeSearch();
+  }, [executeSearch, saveRecentSearch, searchQuery]);
 
   const handleSuggestionSelect = useCallback((suggestion) => {
     setSearchQuery(suggestion);
@@ -878,7 +828,17 @@ function App() {
     impressionObserverRef.current?.disconnect();
   }, [flushAdImpressions]);
 
-
+  // --- СОСТОЯНИЕ ТЕМНОЙ ТЕМЫ ---
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme');
+      if (saved) {
+        return saved === 'dark';
+      }
+      return true; // Night mode by default
+    }
+    return true;
+  });
   const [qrModalData, setQrModalData] = useState(null);
   const fileInputRef = useRef(null);
   const [adStatusFilter, setAdStatusFilter] = useState('active');
@@ -902,10 +862,49 @@ function App() {
     }
   }, [user]);
 
-  // Sync userRole state with auth context user
+  // Keep restored local sessions honest without logging users out on transient network errors.
   useEffect(() => {
-    setUserRole(user?.role || 'individual');
-  }, [user]);
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+      setUserRole('individual');
+      setAuthReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+          setUserRole(userData.role || 'individual');
+          localStorage.setItem('user', JSON.stringify(userData));
+          setAuthReady(true);
+          return;
+        }
+
+        if (res.status === 401) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('token');
+          setUser(null);
+          setUserRole('individual');
+          setFavoriteIds([]);
+          setUserAds([]);
+          setFavoriteAds([]);
+        }
+        setAuthReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setAuthReady(true);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
 
   // --- ИСПРАВЛЕНИЕ "ВЫЛЕТОВ" С САЙТА ---
   // Обрабатываем кнопку "Назад" в браузере, чтобы не было пустых экранов
@@ -964,7 +963,9 @@ function App() {
     skipFilterUrlSyncRef.current = true;
     const searchParam = params.get('search') || params.get('q');
     const categoryParam = params.get('category') || params.get('cat');
-    const locationParam = params.get('location') || params.get('city') || params.get('state');
+    const stateParam = params.get('state') || '';
+    const cityParam = params.get('city') || '';
+    const locationParam = params.get('location') || cityParam || stateParam;
     const minPriceParam = params.get('min_price');
     const maxPriceParam = params.get('max_price');
     const conditionParam = params.get('condition');
@@ -977,40 +978,22 @@ function App() {
     if (locationParam) {
       setSearchLocation(null);
       setSearchLocationInput(locationParam);
-      setSelectedState(locationParam);
+      setSelectedState(stateParam || '');
+      setLocState(stateParam);
+      setLocCity(cityParam);
       setDebouncedLocInput(locationParam);
     } else {
       setSearchLocation(null);
       setSearchLocationInput('');
       setSelectedState('');
+      setLocState('');
+      setLocCity('');
       setDebouncedLocInput('');
     }
     setMinPrice(minPriceParam || '');
     setMaxPrice(maxPriceParam || '');
     setConditionFilter(conditionParam ? conditionParam.split(',').filter(Boolean) : []);
-
-    const nextDynamicFilters = {};
-    for (const [paramKey, paramVal] of params.entries()) {
-      if (paramKey.startsWith('filters_')) {
-        const key = paramKey.replace('filters_', '');
-        if (key.endsWith('_min')) {
-          const cleanKey = key.replace('_min', '');
-          if (!nextDynamicFilters[cleanKey]) nextDynamicFilters[cleanKey] = {};
-          nextDynamicFilters[cleanKey].min = paramVal;
-        } else if (key.endsWith('_max')) {
-          const cleanKey = key.replace('_max', '');
-          if (!nextDynamicFilters[cleanKey]) nextDynamicFilters[cleanKey] = {};
-          nextDynamicFilters[cleanKey].max = paramVal;
-        } else {
-          if (paramVal.includes(',')) {
-            nextDynamicFilters[key] = paramVal.split(',').filter(Boolean);
-          } else {
-            nextDynamicFilters[key] = paramVal;
-          }
-        }
-      }
-    }
-    setDynamicFilters(nextDynamicFilters);
+    setDynamicFilters({});
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -1028,7 +1011,7 @@ function App() {
     const nextPath = buildHomeFilterPath();
     const currentPath = `${location.pathname}${location.search}`;
     if (nextPath !== currentPath) navigate(nextPath, { replace: true });
-  }, [activeCat, buildHomeFilterPath, debouncedLocInput, debouncedSearch, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany, dynamicFilters]);
+  }, [activeCat, buildHomeFilterPath, debouncedLocInput, debouncedSearch, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1207,9 +1190,11 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('lang', lang);
+    localStorage.setItem('mercasto_language', lang);
     document.documentElement.lang = lang;
-    i18n.changeLanguage(lang);
-  }, [lang, i18n]);
+    document.documentElement.dir = RTL_LANGUAGES.has(lang) ? 'rtl' : 'ltr';
+    if (i18n.language !== lang) i18n.changeLanguage(lang);
+  }, [lang]);
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
 
   const promotableAds = useMemo(
@@ -1730,43 +1715,30 @@ function App() {
     }
     setSavingSearchAlert(true);
     try {
-      // Build search name from current filters
-      const nameParts = [];
-      if (searchQuery || debouncedSearch) nameParts.push(searchQuery || debouncedSearch);
-      if (activeCat) nameParts.push(activeCat);
-      if (selectedState) nameParts.push(selectedState);
-      if (minPrice || maxPrice) nameParts.push(`$${minPrice || '0'} - $${maxPrice || '∞'}`);
-      const searchName = nameParts.join(' • ') || 'Búsqueda guardada';
-
-      const filters = {
-        query: searchQuery || debouncedSearch || '',
-        category: activeCat || '',
-        state: selectedState || '',
-        city: searchLocationInput || debouncedLocInput || '',
-        min_price: minPrice ? parseFloat(minPrice) : null,
-        max_price: maxPrice ? parseFloat(maxPrice) : null,
-      };
-
-      const res = await fetch(`${API_URL}/user/saved-searches`, {
+      const res = await fetch(`${API_URL}/user/search-alerts`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: searchName,
-          filters: filters,
-          alerts_enabled: true,
+          query: searchQuery || debouncedSearch || '',
+          category: activeCat || '',
+          min_price: minPrice || null,
+          max_price: maxPrice || null,
+          city: searchLocationInput || debouncedLocInput || '',
+          state: selectedState || '',
+          filters: dynamicFilters || {},
         }),
       });
-      if (!res.ok) throw new Error('save-search-failed');
+      if (!res.ok) throw new Error('save-search-alert-failed');
       const created = await res.json();
-      setSearchAlerts(prev => [created.data, ...prev.filter(item => item.id !== created.data.id)]);
+      setSearchAlerts(prev => [created, ...prev.filter(item => item.id !== created.id)]);
       showToast('Búsqueda guardada. Te avisaremos de nuevos anuncios.', 'success');
     } catch (err) {
-      console.error('Error saving search', err);
+      console.error('Error saving search alert', err);
       showToast('No se pudo guardar la búsqueda', 'error');
     } finally {
       setSavingSearchAlert(false);
     }
-  }, [searchQuery, debouncedSearch, activeCat, selectedState, minPrice, maxPrice, searchLocationInput, debouncedLocInput]);
+  }, [activeCat, debouncedLocInput, debouncedSearch, dynamicFilters, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
 
   const handleToggleSearchAlert = useCallback(async (alert) => {
     const token = localStorage.getItem('auth_token');
@@ -2436,6 +2408,10 @@ function App() {
       setShowAuthModal(true);
       return;
     }
+    if (form.latitude === '' || form.longitude === '') {
+      showToast('Selecciona la ubicación exacta tocando el mapa.', 'error');
+      return;
+    }
 
     setPostLoading(true);
     const formData = new FormData();
@@ -2443,11 +2419,14 @@ function App() {
     formData.append('price', form.price);
     formData.append('description', form.description);
     formData.append('location', form.location || 'México');
+    formData.append('city', form.city || '');
     formData.append('state', form.state || '');
+    if (form.latitude !== '' && form.longitude !== '') {
+      formData.append('latitude', form.latitude);
+      formData.append('longitude', form.longitude);
+    }
     formData.append('category', form.category || 'general');
-    if (form.subcategory) formData.append('subcategory', form.subcategory);
-    if (form.latitude) formData.append('latitude', form.latitude);
-    if (form.longitude) formData.append('longitude', form.longitude);
+    formData.append('condition', form.condition || 'usado');
     if (user && user.id) formData.append('user_id', user.id);
 
     // Добавляем динамические атрибуты (EAV JSON)
@@ -2499,7 +2478,7 @@ function App() {
         });
 
         // Сбрасываем состояние формы
-        setForm({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
+        setForm({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
@@ -2510,7 +2489,8 @@ function App() {
         loadUserAds(); // Обновляем список моих объявлений
       } else {
         const errorData = await res.json();
-        showToast(`Error: ${errorData.message || 'No se pudo guardar el anuncio.'}`, 'error');
+        const validationError = Object.values(errorData.errors || {}).flat().find(Boolean);
+        showToast(`Error: ${validationError || errorData.message || 'No se pudo guardar el anuncio.'}`, 'error');
       }
     } catch (err) { console.error("Post error"); }
     finally { setPostLoading(false); }
@@ -2549,11 +2529,11 @@ function App() {
       price: ad.price,
       description: ad.description || '',
       location: ad.location || '',
+      city: ad.city || String(ad.location || '').split(',')[0].trim(),
       state: ad.state || '',
-      category: ad.category || '',
-      subcategory: ad.subcategory || '',
       latitude: ad.latitude || '',
       longitude: ad.longitude || '',
+      category: ad.category || '',
       condition: ad.condition || 'usado',
       attributes: parsedAttributes
     });
@@ -2925,18 +2905,41 @@ function App() {
     }).catch(err => console.error(err)).finally(() => setLoadingCompanyAds(false));
   };
 
+  // --- РЕНДЕР КАРТОЧКИ ---
   const renderAdCard = (ad, options = {}) => {
+    const isDestacado = ad.promoted === 'destacado' || ad.is_featured;
+    const isUrgente = ad.promoted === 'urgente';
+    const isHighlighted = ad.promoted === 'highlight';
+    const isPro = ad.user?.role === 'business';
+    const isFav = favoriteIds.includes(ad.id);
+    const safeImage = options.displayImageUrl || getImageUrl(ad.image_url, ad.image);
+
     return (
-      <AdCard
-        key={ad.id}
-        ad={ad}
-        options={options}
-        favoriteIds={favoriteIds}
-        getImageUrl={getImageUrl}
-        handleViewAd={handleViewAd}
-        handleToggleFavorite={handleToggleFavorite}
-        observeAdImpression={observeAdImpression}
-      />
+      <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
+          <img src={safeImage} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
+          <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
+            <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
+          </button>
+          {isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}
+          {!isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
+          {!isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">Resaltado</span>}
+          {!isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
+        </div>
+        <div className="ad-result-body p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-10 text-[#0F172A] dark:text-white">
+	          <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>
+	          <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{ad.title}</h3>
+	          <div className="mt-1.5">
+	            <AdRatingStars ad={ad} compact />
+	          </div>
+	          <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500 dark:text-slate-400">
+            <span className="truncate pr-2">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || 'México')}</span>
+          </div>
+        {ad.user?.role !== 'business' && (
+            <button className="w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
+          )}
+        </div>
+      </article>
     );
   };
 
@@ -3300,8 +3303,8 @@ function App() {
     { slug: 'electronica', label: lang === 'en' ? 'Electronics' : 'Electrónica' },
     { slug: 'moda', label: lang === 'en' ? 'Fashion' : 'Moda' },
     { slug: 'hogar', label: lang === 'en' ? 'Home' : 'Hogar' },
-    { slug: 'infantil', label: lang === 'en' ? 'Kids' : 'Infantil' },
-    { slug: 'ocio', label: lang === 'en' ? 'Leisure' : 'Ocio' },
+    { slug: 'informatica', label: lang === 'en' ? 'Tech' : 'Tecnología' },
+    { slug: 'telefonia', label: lang === 'en' ? 'Phones' : 'Teléfonos' },
     { slug: 'mascotas', label: lang === 'en' ? 'Pets' : 'Mascotas' },
     { slug: 'negocios', label: lang === 'en' ? 'Business' : 'Negocios' },
   ]), [lang]);
@@ -3309,7 +3312,7 @@ function App() {
   const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
-  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} user={user} token={localStorage.getItem('auth_token')} onSearchArea={handleSearchArea} />;
+  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
@@ -3528,15 +3531,15 @@ function App() {
             </a>
             <div className="hidden lg:flex flex-1 items-center">
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
-              <div className="header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
+              <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-              <input value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); if (window.location.pathname !== '/') { navigate('/'); } setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2 bg-transparent outline-none text-[14px]" />
+              <input data-testid="desktop-search-input" value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
 
                 {/* КАСТОМНЫЙ ПОПАП ВЫБОРА ЛОКАЦИИ (ШТАТ + ГОРОД) */}
                 <div className="relative flex items-center w-full max-w-[220px]">
                   <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
-                  <button type="button" onClick={toggleLocationPicker} className="w-full px-2 py-2 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
+                  <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
                     {searchLocationInput || t.all_mexico || "Todo México"}
                   </button>
 
@@ -3544,21 +3547,21 @@ function App() {
                     <div className="header-popover absolute top-full left-0 mt-3 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
                       <div className="mb-3">
                         <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
-                        <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
+                        <select data-testid="desktop-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
                           <option value="">{t.all_mexico || 'Todo México'}</option>
                           {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                         </select>
                       </div>
                     <div className="mb-4">
                       <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad / Municipio'}</label>
-                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400">
+                      <select data-testid="desktop-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400">
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
                     </div>
                       <div className="flex gap-2">
                         <button type="button" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
-                      <button type="button" onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowLocationPicker(false); executeSearch(null, query); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
                       </div>
                     </div>
                   )}
@@ -3576,11 +3579,11 @@ function App() {
                     </select>
                   </>
                 )}
-              <button type="button" onClick={() => { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); }} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
+              <button type="submit" data-testid="desktop-search-submit" className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn || "Buscar"}
                 </button>
-              </div>
+              </form>
               <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               </div>
             </div>
@@ -3589,7 +3592,14 @@ function App() {
                 <button type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
-                <LanguageSwitcher />
+                <div className="mobile-language-select" aria-label="Language switcher">
+                  <Globe className="w-3.5 h-3.5" />
+                  <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
+                    {LANGUAGE_OPTIONS.map(l => (
+                      <option key={l} value={l}>{l.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="relative">
                   <button type="button" onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
                     {user?.avatar_url ? (
@@ -3611,7 +3621,14 @@ function App() {
               <button type="button" onClick={() => setIsDarkMode(v => !v)} className="header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <LanguageSwitcher />
+              <div className="header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
+                <Globe className="w-3.5 h-3.5 text-slate-400" />
+                <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
+                  {LANGUAGE_OPTIONS.map(l => (
+                    <option key={l} value={l}>{l.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
               <div className="relative hidden sm:block">
               <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl">
 
@@ -3682,9 +3699,9 @@ function App() {
                   </div>
                 )}
               </div>
-            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title={t.stores || "Tiendas"}>
+            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title="Directorio de Tiendas">
                 <Store className="w-[22px] h-[22px]" />
-                <span className="text-[13px] font-bold hidden md:block">{t.stores || 'Tiendas'}</span>
+                <span className="text-[13px] font-bold hidden md:block">Tiendas</span>
             </button>
             <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block">
                 <Heart className="w-[22px] h-[22px]" />
@@ -3716,14 +3733,17 @@ function App() {
           {/* Mobile Search + Location + Account */}
           <div className="mobile-search-row lg:hidden pb-1">
             <div ref={mobileSearchRef} className="relative min-w-0">
-              <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
+              <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); if (window.location.pathname !== '/') { navigate('/'); } setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
-                <button type="button" aria-expanded={showMobileLocationPicker} onClick={toggleMobileLocationPicker} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
+                <input data-testid="mobile-search-input" ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
+                <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
                 </button>
-              </div>
+                <button type="submit" data-testid="mobile-search-submit" aria-label={t.search_btn || 'Buscar'} className="mobile-search-submit mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#84CC16] text-slate-950">
+                  <Search className="h-4 w-4" />
+                </button>
+              </form>
               <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               {showMobileLocationPicker && (
                 <div className="header-popover absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl border p-4 z-50">
@@ -3737,7 +3757,7 @@ function App() {
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
-                <button type="button" onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowMobileLocationPicker(false); executeSearch(null, query); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
+                <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
                 </div>
               )}
             </div>
@@ -3780,14 +3800,6 @@ function App() {
               <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding /></React.Suspense>} />
               <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding /></React.Suspense>} />
               <Route path="/servicios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ServiciosLanding /></React.Suspense>} />
-              <Route path="/electronica" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category="electronica" /></React.Suspense>} />
-              <Route path="/hogar" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category="hogar" /></React.Suspense>} />
-              <Route path="/moda" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category="moda" /></React.Suspense>} />
-              <Route path="/ocio" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category="ocio" /></React.Suspense>} />
-              <Route path="/infantil" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category="infantil" /></React.Suspense>} />
-              <Route path="/mascotas" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category="mascotas" /></React.Suspense>} />
-              <Route path="/negocios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category="negocios" /></React.Suspense>} />
-              <Route path="/boletos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category="boletos" /></React.Suspense>} />
               <Route path="/terminos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><TerminosScreen /></React.Suspense>} />
   <Route path="/privacidad" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><PrivacidadScreen /></React.Suspense>} />
   <Route path="/cookies" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CookiesScreen /></React.Suspense>} />
@@ -3817,24 +3829,24 @@ function App() {
             </div>
             <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
             <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.pricing || 'Tarifas'}</button></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</h5><ul className="space-y-2 text-[13px]"><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.mercasto_pro || 'Mercasto Pro'}</button></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">{t.stores || 'Directorio de Tiendas'}</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">{t.solutions || 'Soluciones'}</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
+            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</h5><ul className="space-y-2 text-[13px]"><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">Mercasto Pro</button></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">Directorio de Tiendas</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">Soluciones</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
             <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.help || 'Ayuda'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.help_center || 'Centro de Ayuda'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_center || 'Centro de Seguridad'}</a></li><li><a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer">{t.privacy_policy || 'Aviso de Privacidad'}</a></li></ul></div>
           </div>
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-[12px] text-slate-400">
               <span>© 2026 Mercasto México S.A. de C.V.</span>
         <span className="text-slate-600">·</span>
-        <a href="/acerca-de" onClick={(e) => { e.preventDefault(); navigate('/acerca-de'); }} className="hover:text-white cursor-pointer transition-colors">{t.about_us || 'Acerca de'}</a>
+        <a href="/acerca-de" onClick={(e) => { e.preventDefault(); navigate('/acerca-de'); }} className="hover:text-white cursor-pointer transition-colors">Acerca de</a>
         <span className="text-slate-600">·</span>
-        <a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer transition-colors">{t.contact || 'Contacto'}</a>
+        <a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer transition-colors">Contacto</a>
         <span className="text-slate-600">·</span>
-        <a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer transition-colors">{t.help || 'Ayuda'}</a>
+        <a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer transition-colors">Ayuda</a>
         <span className="text-slate-600">·</span>
-        <a href="/terminos" onClick={(e) => { e.preventDefault(); navigate('/terminos'); }} className="hover:text-white cursor-pointer transition-colors">{t.terms_of_use || 'Términos de uso'}</a>
+        <a href="/terminos" onClick={(e) => { e.preventDefault(); navigate('/terminos'); }} className="hover:text-white cursor-pointer transition-colors">Términos de uso</a>
         <span className="text-slate-600">·</span>
-        <a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer transition-colors">{t.privacy || 'Privacidad'}</a>
+        <a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer transition-colors">Privacidad</a>
         <span className="text-slate-600">·</span>
-        <a href="/cookies" onClick={(e) => { e.preventDefault(); navigate('/cookies'); }} className="hover:text-white cursor-pointer transition-colors">{t.cookies || 'Cookies'}</a>
+        <a href="/cookies" onClick={(e) => { e.preventDefault(); navigate('/cookies'); }} className="hover:text-white cursor-pointer transition-colors">Cookies</a>
             </div>
           </div>
         </div>
@@ -4054,7 +4066,6 @@ function App() {
         </div>
       )}
 
-      <Suspense fallback={null}><PWAInstallPrompt /></Suspense>
       <CookieBanner t={t} lang={lang} />
     </div>
   );

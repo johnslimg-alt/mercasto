@@ -374,41 +374,6 @@ export default function AdDetailScreen({
   } catch(e) {}
 
   const catConfig = filterConfig[ad.category] || [];
-
-  // Group specifications and hide empty values
-  const groupAttributes = (attrs, config) => {
-    const groups = {
-      generales: { title: 'Datos Generales', items: [] },
-      tecnicas: { title: 'Especificaciones Técnicas', items: [] },
-      otros: { title: 'Detalles Adicionales', items: [] }
-    };
-
-    const techKeywords = ['transmision', 'combustible', 'kilometraje', 'motor', 'cilindros', 'ram', 'almacenamiento', 'storage', 'pantalla', 'camara', 'so', 'habitaciones', 'banos', 'metros_cuadrados', 'm2', 'plantas', 'cobertura', 'experiencia', 'jornada', 'salario', 'speed', 'bandwidth'];
-    const generalKeywords = ['marca', 'modelo', 'ano', 'año', 'color', 'condicion', 'estado', 'tipo', 'genero', 'talla', 'material'];
-
-    Object.entries(attrs).forEach(([key, val]) => {
-      if (val === null || val === undefined || val === '' || (Array.isArray(val) && val.length === 0)) {
-        return;
-      }
-
-      const fieldDef = config.find(f => f.id === key);
-      const label = fieldDef ? fieldDef.label : key.replace(/_/g, ' ');
-      const displayVal = Array.isArray(val) ? val.join(', ') : String(val);
-
-      const normalizedKey = key.toLowerCase();
-      if (generalKeywords.some(kw => normalizedKey.includes(kw))) {
-        groups.generales.items.push({ label, val: displayVal });
-      } else if (techKeywords.some(kw => normalizedKey.includes(kw))) {
-        groups.tecnicas.items.push({ label, val: displayVal });
-      } else {
-        groups.otros.items.push({ label, val: displayVal });
-      }
-    });
-
-    return Object.values(groups).filter(g => g.items.length > 0);
-  };
-  
-  const specGroups = groupAttributes(attributes, catConfig);
   const locationLabel = buildPublicLocationLabel(ad);
   const telegramUsername = getSafeTelegramUsername(ad);
   // Escribir por Telegram
@@ -484,14 +449,7 @@ export default function AdDetailScreen({
           "price": ad.price || "0",
           "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
           "itemCondition": ad.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
-        },
-        "additionalProperty": Object.entries(attributes)
-          .filter(([_, val]) => val !== null && val !== undefined && val !== '')
-          .map(([key, val]) => ({
-            "@type": "PropertyValue",
-            "name": key,
-            "value": Array.isArray(val) ? val.join(', ') : String(val)
-          }))
+        }
       })}} />
 
       <div className="flex items-center justify-between mb-6">
@@ -591,26 +549,22 @@ export default function AdDetailScreen({
               </div>
             )}
 
-            {/* DYNAMIC EAV ATTRIBUTES - Grouped Specifications */}
-            {specGroups.length > 0 && (
+            {/* DYNAMIC EAV ATTRIBUTES (Отображение фильтров) */}
+            {Object.keys(attributes).length > 0 && (
               <div className="mb-10">
-                <h3 className="text-[18px] font-bold text-slate-900 dark:text-white mb-5">{t.main_features || 'Características principales'}</h3>
-                <div className="space-y-6">
-                  {specGroups.map((group, idx) => (
-                    <div key={idx} className="bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-5">
-                      <h4 className="text-[13px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800/55 pb-2">
-                        {group.title}
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {group.items.map((item, itemIdx) => (
-                          <div key={itemIdx} className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-tight mb-1">{item.label}</p>
-                            <p className="text-[14px] font-black text-slate-950 dark:text-slate-50 capitalize">{item.val}</p>
-                          </div>
-                        ))}
+                <h3 className="text-[18px] font-bold text-slate-900 mb-5">{t.main_features || 'Main features'}</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {Object.entries(attributes).map(([key, val]) => {
+                    const fieldDef = catConfig.find(f => f.id === key);
+                    const label = fieldDef ? fieldDef.label : key;
+                    const displayVal = Array.isArray(val) ? val.join(', ') : val;
+                    return (
+                      <div key={key} className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                        <p className="text-[12px] text-slate-500 font-medium mb-1">{label}</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{displayVal}</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
