@@ -24,6 +24,13 @@ if command -v ufw >/dev/null 2>&1; then
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
     
+    # Update default forward policy for Docker compatibility
+    if [ -f /etc/default/ufw ]; then
+        echo "🔧 Adjusting UFW default forward policy to ACCEPT for Docker compatibility..."
+        sudo sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/g' /etc/default/ufw
+        sudo sed -i 's/DEFAULT_FORWARD_POLICY="REJECT"/DEFAULT_FORWARD_POLICY="ACCEPT"/g' /etc/default/ufw
+    fi
+    
     # Allow essential ports
     echo "🔓 Allowing SSH (22)..."
     sudo ufw allow 22/tcp comment 'SSH Secure Access'
