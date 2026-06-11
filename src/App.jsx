@@ -64,13 +64,13 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const showDetails = false;
+      const showDetails = true;
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
           <h1 className="text-[24px] font-bold text-white mb-2">No pudimos cargar esta sección</h1>
-          <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba dañada, podrás iniciar sesión otra vez.</p>
+          <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba daíada, podrás iniciar sesión otra vez.</p>
           {showDetails && (
-            <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
+            <div className="text-left bg-red-950/40 text-red-400 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-900/30 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
           )}
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">Abrir como invitado</button>

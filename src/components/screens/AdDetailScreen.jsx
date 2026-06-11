@@ -622,7 +622,7 @@ export default function AdDetailScreen({
               </div>
             </div>
 
-            <ContactButton ad={ad} user={user} className="w-full mb-3" />
+            <ContactButton ad={ad} user={currentUser} className="w-full mb-3" />
 
             <div className="flex gap-3 mt-4">
               <button onClick={(e) => handleToggleFavorite(e, ad.id)} className={`btn-md flex-1 flex items-center justify-center gap-2 border transition-colors ${isFav ? 'bg-red-50 border-red-100 text-red-600' : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}>
