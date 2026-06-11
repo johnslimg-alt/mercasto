@@ -603,6 +603,57 @@ function App() {
   const [showMobileLocationPicker, setShowMobileLocationPicker] = useState(false);
   const [locState, setLocState] = useState('');
   const [locCity, setLocCity] = useState('');
+
+  const toggleLocationPicker = () => {
+    if (!showLocationPicker) {
+      let stateVal = '';
+      let cityVal = '';
+      if (searchLocationInput) {
+        const parts = searchLocationInput.split(',').map(s => s.trim());
+        if (parts.length === 2) {
+          cityVal = parts[0];
+          stateVal = parts[1];
+        } else if (parts.length === 1) {
+          if (MEXICO_STATES_CITIES[parts[0]]) {
+            stateVal = parts[0];
+          } else {
+            cityVal = parts[0];
+          }
+        }
+      }
+      setLocState(stateVal);
+      setLocCity(cityVal);
+      setShowLocationPicker(true);
+    } else {
+      setShowLocationPicker(false);
+    }
+  };
+
+  const toggleMobileLocationPicker = () => {
+    if (!showMobileLocationPicker) {
+      let stateVal = '';
+      let cityVal = '';
+      if (searchLocationInput) {
+        const parts = searchLocationInput.split(',').map(s => s.trim());
+        if (parts.length === 2) {
+          cityVal = parts[0];
+          stateVal = parts[1];
+        } else if (parts.length === 1) {
+          if (MEXICO_STATES_CITIES[parts[0]]) {
+            stateVal = parts[0];
+          } else {
+            cityVal = parts[0];
+          }
+        }
+      }
+      setLocState(stateVal);
+      setLocCity(cityVal);
+      setShowMobileLocationPicker(true);
+    } else {
+      setShowMobileLocationPicker(false);
+    }
+  };
+
   const mobileSearchInputRef = useRef(null);
   const skipFilterUrlSyncRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -3434,7 +3485,7 @@ function App() {
                 {/* КАСТОМНЫЙ ПОПАП ВЫБОРА ЛОКАЦИИ (ШТАТ + ГОРОД) */}
                 <div className="relative flex items-center w-full max-w-[220px]">
                   <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
-                  <button onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
+                  <button type="button" onClick={toggleLocationPicker} className="w-full px-2 py-2 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
                     {searchLocationInput || t.all_mexico || "Todo México"}
                   </button>
 
@@ -3455,8 +3506,8 @@ function App() {
                       </select>
                     </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
-                      <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowLocationPicker(false); executeSearch(null, query); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                        <button type="button" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
+                      <button type="button" onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowLocationPicker(false); executeSearch(null, query); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
                       </div>
                     </div>
                   )}
@@ -3474,7 +3525,7 @@ function App() {
                     </select>
                   </>
                 )}
-              <button onClick={() => { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); }} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
+              <button type="button" onClick={() => { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); }} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn || "Buscar"}
                 </button>
@@ -3617,7 +3668,7 @@ function App() {
               <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
                 <input ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); if (window.location.pathname !== '/') { navigate('/'); } setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
-                <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
+                <button type="button" aria-expanded={showMobileLocationPicker} onClick={toggleMobileLocationPicker} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
                 </button>
@@ -3635,7 +3686,7 @@ function App() {
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
-                <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowMobileLocationPicker(false); executeSearch(null, query); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
+                <button type="button" onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowMobileLocationPicker(false); executeSearch(null, query); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
                 </div>
               )}
             </div>
