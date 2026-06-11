@@ -345,6 +345,13 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       'inmobiliaria': '/inmuebles',
       'empleo': '/empleos',
       'servicios': '/servicios',
+      'electronica': '/electronica',
+      'hogar': '/hogar',
+      'moda': '/moda',
+      'ocio': '/ocio',
+      'infantil': '/infantil',
+      'mascotas': '/mascotas',
+      'negocios': '/negocios',
     };
     const getVerticalPath = React.useCallback((slug = '') => {
       if (VERTICAL_SLUGS[slug]) return VERTICAL_SLUGS[slug];
@@ -352,6 +359,13 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       if (slug.startsWith('inmobiliaria/')) return '/inmuebles';
       if (slug.startsWith('empleo/')) return '/empleos';
       if (slug.startsWith('servicios/')) return '/servicios';
+      if (slug.startsWith('electronica/')) return '/electronica';
+      if (slug.startsWith('hogar/')) return '/hogar';
+      if (slug.startsWith('moda/')) return '/moda';
+      if (slug.startsWith('ocio/')) return '/ocio';
+      if (slug.startsWith('infantil/')) return '/infantil';
+      if (slug.startsWith('mascotas/')) return '/mascotas';
+      if (slug.startsWith('negocios/')) return '/negocios';
       return null;
     }, []);
 
@@ -360,10 +374,13 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate', pt: 'Imóveis', fr: 'Immobilier', zh: '房地产', ko: '부동산', de: 'Immobilien', it: 'Immobiliare', ar: 'العقارات', he: 'נדל״ן', yi: 'איממאָביליען', ru: 'Недвижимость', ja: '不動産' }, icon: 'Home' },
       { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs', pt: 'Empregos', fr: 'Emplois', zh: '工作', ko: '채용', de: 'Jobs', it: 'Lavoro', ar: 'وظائف', he: 'משרות', yi: 'דזשאָבс', ru: 'Работа', ja: '求人' }, icon: 'Briefcase' },
       { slug: 'servicios', name: { es: 'Servicios', en: 'Services', pt: 'Serviços', fr: 'Services', zh: '服务', ko: '서비스', de: 'Dienstleistungen', it: 'Servizi', ar: 'خدمات', he: 'שירותים', yi: 'סערוויסעס', ru: 'Услуги', ja: 'サービス' }, icon: 'Wrench' },
-      { slug: 'electronica', name: { es: 'Tecnología', en: 'Tech', pt: 'Tecnologia', fr: 'Technologie', zh: '科技', ko: '기술', de: 'Technologie', it: 'Tecnologia', ar: 'تكنولوجيا', he: 'טכנולוגיה', yi: 'טעכנאָלאָגיע', ru: 'Технологии', ja: 'テクノロジー' }, icon: 'Cpu' },
+      { slug: 'electronica', name: { es: 'Electrónica', en: 'Electronics', pt: 'Eletrônicos', fr: 'Électronique', zh: '电子产品', ko: '전자제품', de: 'Elektronik', it: 'Elettronica', ar: 'إلكترونيات', he: 'אלקטרוניקה', yi: 'עלעקטראָניк', ru: 'Электроника', ja: '電子機器' }, icon: 'Cpu' },
       { slug: 'hogar', name: { es: 'Hogar', en: 'Home', pt: 'Casa', fr: 'Maison', zh: '家居', ko: '가정', de: 'Zuhause', it: 'Casa', ar: 'المنزل', he: 'בית', yi: 'היים', ru: 'Дом', ja: '住まい' }, icon: 'Sofa' },
       { slug: 'moda', name: { es: 'Moda', en: 'Fashion', pt: 'Moda', fr: 'Mode', zh: '时尚', ko: '패션', de: 'Mode', it: 'Moda', ar: 'موضة', he: 'אופנה', yi: 'מאָדע', ru: 'Мода', ja: 'ファッション' }, icon: 'Shirt' },
       { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure', pt: 'Lazer', fr: 'Loisirs', zh: '休闲', ko: '여가', de: 'Freizeit', it: 'Tempo libero', ar: 'ترفيه', he: 'פנאי', yi: 'פרייַע צייַט', ru: 'Хобби', ja: 'レジャー' }, icon: 'Bike' },
+      { slug: 'infantil', name: { es: 'Infantil', en: 'Kids', pt: 'Infantil', fr: 'Enfants', zh: '儿童', ko: '아동', de: 'Kinder', it: 'Bambini', ar: 'الأطفال', he: 'ילדים', yi: 'קינדער', ru: 'Детские товары', ja: 'キッズ' }, icon: 'Baby' },
+      { slug: 'mascotas', name: { es: 'Mascotas', en: 'Pets', pt: 'Animais', fr: 'Animaux', zh: '宠物', ko: '애완동물', de: 'Haustiere', it: 'Animali', ar: 'حيوانات أليفة', he: 'חיות מחמד', yi: 'חנות חיות', ru: 'Животные', ja: 'ペット' }, icon: 'PawPrint' },
+      { slug: 'negocios', name: { es: 'Negocios', en: 'Business', pt: 'Negócios', fr: 'Affaires', zh: '商务', ko: '비즈니스', de: 'Geschäft', it: 'Affari', ar: 'أعمال', he: 'עסקים', yi: 'ביזנעס', ru: 'Бизнес', ja: 'ビジネス' }, icon: 'Store' },
       { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing', pt: 'Tarifas', fr: 'Tarifs', zh: '资费', ko: '요금', de: 'Tarife', it: 'Tariffe', ar: 'الأسعار', he: 'תעриפים', yi: 'טאַריפֿן', ru: 'Тарифы', ja: '料金' }, icon: 'Crown', action: 'pricing' },
     ]), []);
     const trendingAds = React.useMemo(() => {
