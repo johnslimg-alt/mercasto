@@ -3,6 +3,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import AppWrapper from './App.jsx'
+import { UIProvider } from './contexts/UIContext.jsx'
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -13,9 +14,11 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   createRoot(rootElement).render(
     <React.StrictMode>
-      <BrowserRouter>
-        <AppWrapper />
-      </BrowserRouter>
+      <UIProvider>
+        <BrowserRouter>
+          <AppWrapper />
+        </BrowserRouter>
+      </UIProvider>
     </React.StrictMode>
   );
 }
