@@ -3,6 +3,41 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Search, PlusCircle, Heart, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+const NavItem = ({ icon: Icon, label, tab, isCenter = false, activeTab, onNavigate }) => {
+  const isActive = activeTab === tab;
+
+  if (isCenter) {
+    return (
+      <button
+        onClick={() => onNavigate(tab)}
+        className="flex flex-col items-center justify-center relative -mt-6"
+        aria-label={label}
+      >
+        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#84CC16] to-[#65A30D] flex items-center justify-center shadow-lg shadow-lime-500/30 hover:shadow-xl hover:shadow-lime-500/40 transition-all hover:scale-110 active:scale-95">
+          <Icon className="w-7 h-7 text-white" strokeWidth={2.5} />
+        </div>
+        <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 mt-1">{label}</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => onNavigate(tab)}
+      className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors ${
+        isActive
+          ? 'text-[#84CC16]'
+          : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+      }`}
+      aria-label={label}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} fill={isActive ? 'currentColor' : 'none'} />
+      <span className={`text-[10px] mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
+    </button>
+  );
+};
+
 /**
  * Bottom Navigation Bar для мобильных устройств
  * Показывается только на экранах < 768px
@@ -99,41 +134,6 @@ const BottomNav = ({ user, setCurrentTab, setDashboardTab, setShowAuthModal, set
     }
   };
 
-  const NavItem = ({ icon: Icon, label, tab, isCenter = false }) => {
-    const isActive = activeTab === tab;
-    
-    if (isCenter) {
-      return (
-        <button
-          onClick={() => handleNavClick(tab)}
-          className="flex flex-col items-center justify-center relative -mt-6"
-          aria-label={label}
-        >
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#84CC16] to-[#65A30D] flex items-center justify-center shadow-lg shadow-lime-500/30 hover:shadow-xl hover:shadow-lime-500/40 transition-all hover:scale-110 active:scale-95">
-            <Icon className="w-7 h-7 text-white" strokeWidth={2.5} />
-          </div>
-          <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 mt-1">{label}</span>
-        </button>
-      );
-    }
-
-    return (
-      <button
-        onClick={() => handleNavClick(tab)}
-        className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors ${
-          isActive 
-            ? 'text-[#84CC16]' 
-            : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-        }`}
-        aria-label={label}
-        aria-current={isActive ? 'page' : undefined}
-      >
-        <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} fill={isActive ? 'currentColor' : 'none'} />
-        <span className={`text-[10px] mt-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
-      </button>
-    );
-  };
-
   return (
     <>
       {/* Spacer для контента чтобы не перекрывался BottomNav */}
@@ -146,11 +146,11 @@ const BottomNav = ({ user, setCurrentTab, setDashboardTab, setShowAuthModal, set
         aria-label="Mobile navigation"
       >
         <div className="flex items-center justify-around max-w-md mx-auto px-2 py-2">
-          <NavItem icon={Home} label={t('home.home', { defaultValue: 'Home' })} tab="home" />
-          <NavItem icon={Search} label={t('common.search', { defaultValue: 'Search' })} tab="search" />
-          <NavItem icon={PlusCircle} label={t('ads.publish', { defaultValue: 'Publish' })} tab="post" isCenter />
-          <NavItem icon={Heart} label={t('ads.favorites', { defaultValue: 'Favorites' })} tab="favorites" />
-          <NavItem icon={User} label={t('dashboard.profile', { defaultValue: 'Profile' })} tab="profile" />
+          <NavItem icon={Home} label={t('home.home', { defaultValue: 'Home' })} tab="home" activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={Search} label={t('common.search', { defaultValue: 'Search' })} tab="search" activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={PlusCircle} label={t('ads.publish', { defaultValue: 'Publish' })} tab="post" isCenter activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={Heart} label={t('ads.favorites', { defaultValue: 'Favorites' })} tab="favorites" activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={User} label={t('dashboard.profile', { defaultValue: 'Profile' })} tab="profile" activeTab={activeTab} onNavigate={handleNavClick} />
         </div>
       </nav>
     </>
