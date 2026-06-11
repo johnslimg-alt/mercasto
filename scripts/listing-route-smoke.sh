@@ -35,11 +35,13 @@ if [[ ! -f docker-compose.yml ]]; then
 fi
 
 echo "== Discover first ad id from API =="
-ADS_JSON="$(curl -k -sS "${BASE_URL}/api/ads?page=1")"
-FIRST_ID="$(echo "$ADS_JSON" | python3 - <<'PY'
+ADS_FILE="$(mktemp)"
+curl -k -sS "${BASE_URL}/api/ads?page=1" > "$ADS_FILE"
+FIRST_ID="$(python3 - "$ADS_FILE" <<'PY'
 import json, sys
 try:
-    data=json.load(sys.stdin)
+    with open(sys.argv[1], 'r') as f:
+        data=json.load(f)
 except Exception:
     print('')
     raise SystemExit(0)
@@ -56,6 +58,8 @@ elif isinstance(data, list):
 print(items[0].get('id','') if items else '')
 PY
 )"
+rm -f "$ADS_FILE"
+
 
 if [[ -z "$FIRST_ID" ]]; then
   echo "No first ad id discovered; checking generic endpoints only."
