@@ -1,12 +1,23 @@
+import SEO from "../SEO";
 import AdSenseBanner from '../common/AdSenseBanner';
 import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyViewed';
 import { mexicoLocations, subcategoriesMap, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair, Trophy } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair } from "lucide-react";
+
+// SEO Components for AEO
+import FAQSchema, { FAQ_DATA } from '../seo/FAQSchema';
+import ItemListSchema from '../seo/ItemListSchema';
 import { IconMap } from '../../constants/iconMap';
 import SidebarFilters from '../common/SidebarFilters';
 import MapV3 from '../common/MapV3';
+import SplitViewContainer from '../common/SplitViewContainer';
+
+import SkeletonCard from '../common/SkeletonCard';
+import SavedSearchesPanel from '../common/SavedSearchesPanel';
+import RecommendationsWidget from '../common/RecommendationsWidget';
+import BottomSheet from '../ui/BottomSheet';
 
 
 // --- MAP COORDINATES ---
@@ -78,29 +89,12 @@ const STATE_COORDS = {
   "ZAC": [22.7709, -102.5832]
 };
 
-const WORLD_CUP_CAMPAIGN_END = new Date('2026-07-20T00:00:00-06:00').getTime();
-const SHOW_WORLD_CUP_CAMPAIGN = Date.now() < WORLD_CUP_CAMPAIGN_END;
-
-const WORLD_CUP_COPY = {
-  es: {
-    eyebrow: 'México vive el fútbol',
-    title: 'Temporada fútbol 2026',
-    body: 'Encuentra boletos, pantallas, jerseys, hospedaje y artículos para vivir cada partido.',
-    action: 'Explorar ofertas',
-  },
-  en: {
-    eyebrow: 'Mexico lives football',
-    title: 'Football season 2026',
-    body: 'Find tickets, screens, jerseys, stays and everything you need for every match.',
-    action: 'Explore deals',
-  },
-};
-
 const LeafletMap = ({ ads, onViewAd }) => {
   const [expanded, setExpanded] = React.useState(false);
   const [mapQuery, setMapQuery] = React.useState('');
   const [mapMaxPrice, setMapMaxPrice] = React.useState('');
   const [mapOnlyCoords, setMapOnlyCoords] = React.useState(false);
+  const safeAds = React.useMemo(() => (Array.isArray(ads) ? ads : []), [ads]);
 
   // Close on Escape key
   React.useEffect(() => {
@@ -119,14 +113,14 @@ const LeafletMap = ({ ads, onViewAd }) => {
   const filteredAds = React.useMemo(() => {
     const query = mapQuery.trim().toLowerCase();
     const priceLimit = Number(mapMaxPrice);
-    return (ads || []).filter(ad => {
+    return safeAds.filter(ad => {
       const title = `${ad.title || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
       if (query && !title.includes(query)) return false;
       if (mapOnlyCoords && !(ad.latitude && ad.longitude)) return false;
       if (priceLimit > 0 && Number(ad.price || 0) > priceLimit) return false;
       return true;
     });
-  }, [ads, mapMaxPrice, mapOnlyCoords, mapQuery]);
+  }, [safeAds, mapMaxPrice, mapOnlyCoords, mapQuery]);
   const mapAds = React.useMemo(() => filteredAds.slice(0, expanded ? 60 : 14).map((ad, idx) => {
     if (ad.latitude && ad.longitude) return { ad, coords: [parseFloat(ad.latitude), parseFloat(ad.longitude)] };
     const stateName = ad.state || ad.location?.split(',')[1]?.trim() || ad.location?.split('·')[0]?.trim() || ad.location?.split(',')[0]?.trim() || '';
@@ -163,6 +157,12 @@ const LeafletMap = ({ ads, onViewAd }) => {
 
   return (
     <>
+      <SEO
+        title="Mercasto | Compra, Vende y Renta en Todo México"
+        description="Marketplace de clasificados para México: autos, inmuebles, servicios, empleo, electrónica y más. Publica gratis y encuentra lo que necesitas cerca de ti."
+        image="https://mercasto.com/icon-512x512.png"
+      />
+      <h1 style={{position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", borderWidth: 0}}>Mercasto - Compra, Vende y Renta en Todo México | Marketplace de Autos, Inmuebles, Servicios y Empleo</h1>
       <div className="osm-embed-shell relative mb-4 md:mb-6 h-[190px] md:h-[320px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-md">
         {mapBody}
       </div>
@@ -321,9 +321,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
   );
 };
 
-export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds }) {
-  const worldCupCopy = WORLD_CUP_COPY[lang] || WORLD_CUP_COPY.es;
-    const categoryRailRef = React.useRef(null);
+export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds, user, token, onSearchArea }) {
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
     const [showMap, setShowMap] = React.useState(false);
@@ -332,13 +330,21 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     const homeToastTimerRef = React.useRef(null);
     const [featuredAds, setFeaturedAds] = React.useState([]);
     const navigate = useNavigate();
+    const safeServerAds = React.useMemo(() => (Array.isArray(serverAds) ? serverAds : []), [serverAds]);
+    const safeRealEstateAds = React.useMemo(() => (Array.isArray(realEstateAds) ? realEstateAds : []), [realEstateAds]);
+    const safeJobAds = React.useMemo(() => (Array.isArray(jobAds) ? jobAds : []), [jobAds]);
+    const safeServiceAds = React.useMemo(() => (Array.isArray(serviceAds) ? serviceAds : []), [serviceAds]);
+    const safeAutomotiveAds = React.useMemo(() => (Array.isArray(automotiveAds) ? automotiveAds : []), [automotiveAds]);
 
     // Fetch Destacados on mount
     React.useEffect(() => {
       const API_URL = (typeof window !== 'undefined' && window.__API_URL__) || import.meta.env?.VITE_API_URL || '/api';
       fetch(`${API_URL}/ads/featured`, { headers: { 'Accept': 'application/json' } })
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data?.data?.length) setFeaturedAds(data.data); })
+        .then(data => {
+          const nextFeaturedAds = Array.isArray(data?.data) ? data.data : [];
+          setFeaturedAds(nextFeaturedAds);
+        })
         .catch(() => {});
     }, []);
     const VERTICAL_SLUGS = {
@@ -348,7 +354,14 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       'inmobiliaria': '/inmuebles',
       'empleo': '/empleos',
       'servicios': '/servicios',
-      'tiendas': '/tiendas',
+      'electronica': '/electronica',
+      'hogar': '/hogar',
+      'moda': '/moda',
+      'ocio': '/ocio',
+      'infantil': '/infantil',
+      'mascotas': '/mascotas',
+      'negocios': '/negocios',
+      'boletos': '/boletos',
     };
     const getVerticalPath = React.useCallback((slug = '') => {
       if (VERTICAL_SLUGS[slug]) return VERTICAL_SLUGS[slug];
@@ -356,34 +369,42 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       if (slug.startsWith('inmobiliaria/')) return '/inmuebles';
       if (slug.startsWith('empleo/')) return '/empleos';
       if (slug.startsWith('servicios/')) return '/servicios';
+      if (slug.startsWith('electronica/')) return '/electronica';
+      if (slug.startsWith('hogar/')) return '/hogar';
+      if (slug.startsWith('moda/')) return '/moda';
+      if (slug.startsWith('ocio/')) return '/ocio';
+      if (slug.startsWith('infantil/')) return '/infantil';
+      if (slug.startsWith('mascotas/')) return '/mascotas';
+      if (slug.startsWith('negocios/')) return '/negocios';
+      if (slug.startsWith('boletos/')) return '/boletos';
       return null;
     }, []);
 
-    const primaryHomeCategories = React.useMemo(() => ([
-      { slug: 'clasificados', name: { es: 'Clasificados', en: 'Classifieds' }, icon: 'LayoutGrid', action: 'home' },
-      { slug: 'motor', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
-      { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
-      { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
-      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
-      { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store' },
+    const homeCategories = React.useMemo(() => ([
+      { slug: 'motor', name: { es: 'Motor', en: 'Motor', pt: 'Motor', fr: 'Moteur', zh: '汽车和摩托车', ko: '자동차/오토바이', de: 'Motor', it: 'Motore', ar: 'المحركات', he: 'מנוע', yi: 'מאָטאָр', ru: 'Авто и Мото', ja: '自動車・バイク' }, icon: 'Car' },
+      { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate', pt: 'Imóveis', fr: 'Immobilier', zh: '房地产', ko: '부동산', de: 'Immobilien', it: 'Immobiliare', ar: 'العقارات', he: 'נדל״ן', yi: 'איממאָביליען', ru: 'Недвижимость', ja: '不動産' }, icon: 'Home' },
+      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs', pt: 'Empregos', fr: 'Emplois', zh: '工作', ko: '채용', de: 'Jobs', it: 'Lavoro', ar: 'وظائف', he: 'משרות', yi: 'דזשאָבс', ru: 'Работа', ja: '求人' }, icon: 'Briefcase' },
+      { slug: 'servicios', name: { es: 'Servicios', en: 'Services', pt: 'Serviços', fr: 'Services', zh: '服务', ko: '서비스', de: 'Dienstleistungen', it: 'Servizi', ar: 'خدمات', he: 'שירותים', yi: 'סערוויסעס', ru: 'Услуги', ja: 'サービス' }, icon: 'Wrench' },
+      { slug: 'electronica', name: { es: 'Electrónica', en: 'Electronics', pt: 'Eletrônicos', fr: 'Électronique', zh: '电子产品', ko: '전자제품', de: 'Elektronik', it: 'Elettronica', ar: 'إلكترونيات', he: 'אלקטרוניקה', yi: 'עלעקטראָניк', ru: 'Электроника', ja: '電子機器' }, icon: 'Cpu' },
+      { slug: 'hogar', name: { es: 'Hogar', en: 'Home', pt: 'Casa', fr: 'Maison', zh: '家居', ko: '가정', de: 'Zuhause', it: 'Casa', ar: 'المنزل', he: 'בית', yi: 'היים', ru: 'Дом', ja: '住まい' }, icon: 'Sofa' },
+      { slug: 'moda', name: { es: 'Moda', en: 'Fashion', pt: 'Moda', fr: 'Mode', zh: '时尚', ko: '패션', de: 'Mode', it: 'Moda', ar: 'موضة', he: 'אופנה', yi: 'מאָדע', ru: 'Мода', ja: 'ファッション' }, icon: 'Shirt' },
+      { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure', pt: 'Lazer', fr: 'Loisirs', zh: '休闲', ko: '여가', de: 'Freizeit', it: 'Tempo libero', ar: 'ترفيه', he: 'פנאי', yi: 'פרייַע צייַט', ru: 'Хобби', ja: 'レジャー' }, icon: 'Bike' },
+      { slug: 'infantil', name: { es: 'Infantil', en: 'Kids', pt: 'Infantil', fr: 'Enfants', zh: '儿童', ko: '아동', de: 'Kinder', it: 'Bambini', ar: 'الأطفال', he: 'ילדים', yi: 'קינדער', ru: 'Детские товары', ja: 'キッズ' }, icon: 'Baby' },
+      { slug: 'mascotas', name: { es: 'Mascotas', en: 'Pets', pt: 'Animais', fr: 'Animaux', zh: '宠物', ko: '애완동물', de: 'Haustiere', it: 'Animali', ar: 'حيوانات أليفة', he: 'חיות מחמד', yi: 'חנות חיות', ru: 'Животные', ja: 'ペット' }, icon: 'PawPrint' },
+      { slug: 'negocios', name: { es: 'Negocios', en: 'Business', pt: 'Negócios', fr: 'Affaires', zh: '商务', ko: '비즈니스', de: 'Geschäft', it: 'Affari', ar: 'أعمال', he: 'עסקים', yi: 'ביזנעס', ru: 'Бизнес', ja: 'ビジネス' }, icon: 'Store' },
+      { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets', pt: 'Ingressos', fr: 'Billets', zh: '门票', ko: '티켓', de: 'Tickets', it: 'Biglietti', ar: 'تذاكر', he: 'כרטיסים', yi: 'בילעטן', ru: 'Билеты', ja: 'チケット' }, icon: 'Ticket' },
+      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing', pt: 'Tarifas', fr: 'Tarifs', zh: '资费', ko: '요금', de: 'Tarife', it: 'Tariffe', ar: 'الأسعار', he: 'תעриפים', yi: 'טאַריפֿן', ru: 'Тарифы', ja: '料金' }, icon: 'Crown', action: 'pricing' },
     ]), []);
-    const homeCategories = primaryHomeCategories;
-
-    React.useEffect(() => {
-      const rail = categoryRailRef.current;
-      if (!rail) return;
-      rail.scrollTo({ left: 0, behavior: 'instant' });
-    }, [lang]);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
-      return (serverAds || [])
+      return safeServerAds
         .filter(ad => {
           if (!ad?.id || seen.has(ad.id)) return false;
           seen.add(ad.id);
           return true;
         })
         .slice(0, 6);
-    }, [serverAds]);
+    }, [safeServerAds]);
     const getHomeRating = React.useCallback((ad = {}) => {
       const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
       const rating = rawRating > 0 ? rawRating : 4 + (((Number(ad.id) || 1) % 10) / 10);
@@ -394,7 +415,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     const displayImageMap = React.useMemo(() => {
       const seen = new Map();
       const result = new Map();
-      (serverAds || []).forEach(ad => {
+      safeServerAds.forEach(ad => {
         const raw = ad.image_url || ad.image || '';
         const key = typeof raw === 'string' ? raw : JSON.stringify(raw);
         const count = seen.get(key) || 0;
@@ -405,7 +426,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
         }
       });
       return result;
-    }, [serverAds, activeCat]);
+    }, [safeServerAds, activeCat]);
     const applyCityFilter = React.useCallback((cityName) => {
       setSearchLocation?.(null);
       setSearchLocationInput?.(cityName);
@@ -434,31 +455,52 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
           
           {/* Кнопка фильтров для мобильных устройств */}
           <div className="md:hidden flex items-center justify-between mb-2">
-             <h2 className="text-[18px] font-bold text-slate-900 dark:text-white">{t.search_results || 'Resultados'} <span className="text-slate-400 text-[14px] font-normal ml-1">({serverAds.length})</span></h2>
+             <h2 className="text-[18px] font-bold text-slate-900 dark:text-white">{t.search_results || 'Resultados'} <span className="text-slate-400 text-[14px] font-normal ml-1">({safeServerAds.length})</span></h2>
              <button onClick={() => setShowMobileFilters(!showMobileFilters)} className={`btn-sm flex items-center gap-2 border transition-colors ${showMobileFilters ? 'bg-slate-900 text-white border-slate-900 dark:bg-[#84CC16] dark:text-slate-950 dark:border-[#84CC16]' : 'bg-white text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'}`}>
                <Settings2 size={16} /> Filtros
              </button>
           </div>
 
-          {/* Динамическая боковая панель (Адаптивная: скрывается на мобилках, открывается по кнопке) */}
-          <aside className={`w-full lg:w-1/4 shrink-0 ${showMobileFilters ? 'block' : 'hidden md:block'}`}>
+          {/* Динамическая боковая панель (Адаптивная: липкая на desktop, drawer/bottom-sheet на mobile/tablet) */}
+          <aside className="hidden lg:block lg:w-1/4 shrink-0">
              <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
+             {user && <SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); }} />}
           </aside>
 
-          {/* Сетка результатов (товары) */}
-          <div className="flex-1">
-            <div className="hidden md:flex justify-between items-center mb-6">
-              <h2 className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-white">{t.search_results || 'Resultados de búsqueda'} <span className="text-slate-400 text-[14px] font-normal ml-2">({serverAds.length})</span></h2>
+          {/* Mobile Bottom Sheet (< md) */}
+          <BottomSheet
+            isOpen={showMobileFilters}
+            onClose={() => setShowMobileFilters(false)}
+            title={t.filters || 'Filtros'}
+            maxHeight="90vh"
+            zIndex={9999}
+          >
+            <div className="block md:hidden p-6">
+              <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
+              {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); setShowMobileFilters(false); }} /></div>}
             </div>
+          </BottomSheet>
 
-            {/* Map and Layout Control Panel */}
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-              <button 
-                onClick={() => setShowMap(prev => !prev)} 
-                className={`btn-sm flex items-center gap-2 border transition-all ${showMap ? 'bg-[#0f8f7d] text-white border-[#0f8f7d]' : 'bg-white text-slate-700 border-slate-300 hover:border-[#0f8f7d] dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'}`}
-              >
-                <MapPin size={16} /> {showMap ? 'Ocultar mapa' : 'Mostrar en mapa'}
-              </button>
+          {/* Tablet Side Drawer (md to lg) */}
+          {showMobileFilters && (
+            <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm hidden md:flex items-stretch justify-start lg:hidden">
+              <div className="absolute inset-0 -z-10" onClick={() => setShowMobileFilters(false)} />
+              <div className="bg-white dark:bg-slate-900 w-[360px] h-full overflow-y-auto p-6 shadow-2xl animate-slideRight border-r border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-base">{t.filters || 'Filtros'}</h3>
+                  <button onClick={() => setShowMobileFilters(false)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">✕</button>
+                </div>
+                <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
+                {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); setShowMobileFilters(false); }} /></div>}
+              </div>
+            </div>
+          )}
+
+
+          {/* Split View: список + карта (desktop) или toggle (mobile) */}
+          <div className="flex-1">
+            {/* Панель управления (только для desktop, на mobile есть toggle в SplitViewContainer) */}
+            <div className="hidden lg:flex items-center justify-between mb-6 flex-wrap gap-3">
               <button
                 onClick={handleSaveSearchAlert}
                 disabled={savingSearchAlert}
@@ -467,74 +509,21 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 {savingSearchAlert ? <Loader2 size={15} className="animate-spin" /> : <Bell size={15} />}
                 Guardar búsqueda
               </button>
-              
-              <div className="flex items-center gap-2 border border-slate-200 rounded-xl p-1 bg-white dark:bg-slate-800 dark:border-slate-700">
-                <button 
-                  onClick={() => setViewLayout('grid')} 
-                  className={`btn-sm px-2.5 py-1 rounded-lg transition-all ${viewLayout === 'grid' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-                  title="Vista Cuadrícula"
-                >
-                  <LayoutGrid size={15} />
-                </button>
-                <button 
-                  onClick={() => setViewLayout('list')} 
-                  className={`btn-sm px-2.5 py-1 rounded-lg transition-all ${viewLayout === 'list' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-                  title="Vista Lista"
-                >
-                  <List size={15} />
-                </button>
-              </div>
             </div>
 
-            {showMap && (
-              <MapV3 ads={serverAds} title={selectedState || t.all_mexico || 'Todo México'} onMarkerClick={handleViewAd} className="mb-4 h-[220px] md:mb-6 md:h-[340px]" />
-            )}
-
-          {loadingAds ? (
-
-            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#84CC16]" size={40}/></div>
-
-          ) : serverAds.length === 0 ? (
-
-            <div className="py-20 text-center flex flex-col items-center">
-
-              <Search size={48} className="text-slate-300 mb-4" />
-
-              <span className="text-slate-400 font-bold uppercase tracking-widest">{t.noAds}</span>
-
-            </div>
-
-          ) : (
-
-            <>
-
-              <div className={viewLayout === 'list' ? "list-layout" : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"}>
-
-                {serverAds.map((ad, index) => (
-
-                  <React.Fragment key={ad.id}>
-
-                    {renderAdCard(ad, { displayImageUrl: displayImageMap.get(ad.id) })}
-
-                    {/* Показываем рекламный баннер после каждого 7-го объявления */}
-
-                    {(index + 1) % 7 === 0 && <AdSenseBanner key={`ad-banner-${ad.id}`} />}
-
-                  </React.Fragment>
-
-                ))}
-
-              </div>
-
-              <div ref={lastAdElementRef} />
-
-              {loadingMore && <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#84CC16]" size={32}/></div>}
-
-              {!loadingMore && !hasMore && serverAds.length > 0 && <div className="text-center text-slate-400 font-bold uppercase tracking-widest text-xs py-10 mt-6">Has llegado al final</div>}
-
-            </>
-
-          )}
+            <SplitViewContainer
+              ads={safeServerAds}
+              onAdClick={handleViewAd}
+              renderAdCard={renderAdCard}
+              title={selectedState || t.all_mexico || 'Todo México'}
+              selectedState={selectedState}
+              loadingAds={loadingAds}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              lastAdElementRef={lastAdElementRef}
+              getImageUrl={getImageUrl}
+              onSearchArea={onSearchArea}
+            />
           </div>
 
         </div>
@@ -542,8 +531,6 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       );
 
     }
-
-
 
     return (
 
@@ -554,35 +541,6 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
           </div>
         )}
 
-        {SHOW_WORLD_CUP_CAMPAIGN && (
-          <section className="world-cup-ribbon" aria-label={worldCupCopy.title}>
-            <div className="world-cup-ribbon__pitch" aria-hidden="true" />
-            <div className="world-cup-ribbon__content">
-              <div className="world-cup-ribbon__mark">
-                <Trophy size={22} strokeWidth={2.2} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="world-cup-ribbon__eyebrow">{worldCupCopy.eyebrow}</p>
-                <h2 className="world-cup-ribbon__title">{worldCupCopy.title}</h2>
-                <p className="world-cup-ribbon__body">{worldCupCopy.body}</p>
-              </div>
-              <button
-                type="button"
-                className="world-cup-ribbon__action"
-                onClick={() => runSearch('fútbol', 'boletos')}
-              >
-                {worldCupCopy.action}
-                <ArrowRight size={15} />
-              </button>
-            </div>
-            <div className="world-cup-ribbon__hosts" aria-hidden="true">
-              <span className="host-mx" />
-              <span className="host-us" />
-              <span className="host-ca" />
-            </div>
-          </section>
-        )}
-
         {/* 1. HERO STATS */}
 
         <div className="hidden md:block bg-white/75 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
@@ -591,7 +549,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[13px] text-slate-700">
 
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] dark:text-white font-semibold">{Number(adsTotal || serverAds.length || 0).toLocaleString('es-MX')}</strong> {t.active_listings || 'anuncios disponibles'}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] dark:text-white font-semibold">{Number(adsTotal || safeServerAds.length || 0).toLocaleString('es-MX')}</strong> {t.active_listings || 'anuncios disponibles'}</span>
 
               <span className="text-slate-300 hidden sm:block">•</span>
 
@@ -621,17 +579,17 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
 
 
-        <main className="max-w-[1440px] mx-auto px-4 lg:px-6 pt-3 pb-6 lg:pt-4 lg:pb-8">
+        <main className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
 
-          <div className="grid grid-cols-12 gap-x-6 gap-y-4 lg:gap-y-5">
+          <div className="grid grid-cols-12 gap-6">
 
             
 
             {/* 2. FEATURED CATEGORIES */}
 
-            <section className="col-span-12">
+            <section className="col-span-12 -mt-2">
 
-              <div ref={categoryRailRef} data-testid="home-category-rail" dir="ltr" className="category-rail rail-fade">
+              <div className="category-rail rail-fade -mx-4 px-6 lg:-mx-6 lg:px-6">
 
                 {homeCategories.map(cat => {
 
@@ -639,7 +597,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   return (
 
-                    <button data-testid={`home-category-${cat.slug}`} key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
+                    <button key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
                         if (cat.action === 'home') { navigate('/'); setActiveCat(''); executeSearch?.('', null, ''); return; }
                         if (cat.action === 'pricing') { setShowPricingModal?.(true); return; }
                         const vpath = cat.verticalPath || getVerticalPath(cat.slug);
@@ -722,7 +680,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                               {/* Golden badge */}
                               <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2 py-0.5 shadow-md">
                                 <Star size={9} className="fill-amber-900 text-amber-900" />
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-900">Destacado</span>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-900">{t.destacado || 'Destacado'}</span>
                               </div>
                               {/* Gradient overlay */}
                               <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/40 to-transparent" />
@@ -765,7 +723,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             {/* 4. TRENDING NOW */}
 
-            <section className="col-span-12 mt-2">
+            <section className="col-span-12 mt-2 min-h-[380px] cls-safe">
 
               <div className="flex items-center justify-between mb-4">
 
@@ -799,15 +757,20 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2">
 
-                  {trendingAds.map(ad => (
-
-                    <div key={ad.id} className="snap-start shrink-0 w-[260px]">
-
-                      {renderAdCard(ad)}
-
-                    </div>
-
-                  ))}
+                  {trendingAds.length === 0 ? (
+                    // Show skeleton cards while loading
+                    Array.from({ length: 6 }).map((_, idx) => (
+                      <div key={`skeleton-${idx}`} className="snap-start shrink-0 w-[260px]">
+                        <SkeletonCard />
+                      </div>
+                    ))
+                  ) : (
+                    trendingAds.map(ad => (
+                      <div key={ad.id} className="snap-start shrink-0 w-[260px]">
+                        {renderAdCard(ad)}
+                      </div>
+                    ))
+                  )}
 
                 </div>
 
@@ -819,7 +782,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             {/* 4. DEALS OF THE DAY */}
 
-            <section className="col-span-12">
+            <section className="col-span-12 min-h-[220px] cls-safe">
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
@@ -837,7 +800,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                     <div className="mt-auto flex items-center justify-between">
 
-                      <button onClick={() => setActiveCat('telefonia')} className="btn-md bg-white text-[#0F172A] hover:bg-slate-100">{t.shop_now || 'Comprar ahora →'}</button>
+                      <button onClick={() => setActiveCat('electronica')} className="btn-md bg-white text-[#0F172A] hover:bg-slate-100">{t.shop_now || 'Comprar ahora →'}</button>
 
                       <span className="text-[12px] font-medium bg-black/20 px-2 py-1 rounded-lg">{t.ends_in_8h || 'Termina en 8h'}</span>
 
@@ -891,6 +854,15 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
 
 
+            {/* AI RECOMMENDATIONS */}
+            <section className="col-span-12 mt-6">
+              <RecommendationsWidget
+                userId={user?.id}
+                limit={12}
+                onAdClick={handleViewAd}
+              />
+            </section>
+
             {/* 5. REAL ESTATE SPOTLIGHT */}
 
             <section className="col-span-12 mt-2">
@@ -922,7 +894,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 <div className="col-span-12 xl:col-span-8">
 
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {((realEstateAds && realEstateAds.length > 0) ? realEstateAds.slice(0, 3) : spotlightRealEstate).map((item, idx) => {
+                    {(safeRealEstateAds.length > 0 ? safeRealEstateAds.slice(0, 3) : spotlightRealEstate).map((item, idx) => {
                       const isReal = Boolean(item.id);
                       if (isReal) {
                         return (
@@ -956,7 +928,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <div className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900">
                     <MapV3
-                      ads={realEstateAds}
+                      ads={safeRealEstateAds}
                       category="inmobiliaria"
                       title={selectedState || t.all_mexico || 'Todo México'}
                       onMarkerClick={handleViewAd}
@@ -1011,7 +983,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                     </thead>
 
                     <tbody className="">
-                      {((jobAds && jobAds.length > 0) ? jobAds.slice(0, 3) : jobsBoard.slice(0, 3)).map((job, idx) => {
+                      {(safeJobAds.length > 0 ? safeJobAds.slice(0, 3) : jobsBoard.slice(0, 3)).map((job, idx) => {
                         const isReal = Boolean(job.id);
                         if (isReal) {
                           return (
@@ -1102,7 +1074,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
               </div>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {((serviceAds && serviceAds.length > 0) ? serviceAds.slice(0, 3) : servicesMarketplace.slice(0, 3)).map((srv, idx) => {
+                {(safeServiceAds.length > 0 ? safeServiceAds.slice(0, 3) : servicesMarketplace.slice(0, 3)).map((srv, idx) => {
                   const isReal = Boolean(srv.id);
                   if (isReal) {
                     const imgSrc = srv.image_url ? getImageUrl(srv.image_url) : '/placeholder-ad.svg';
@@ -1179,7 +1151,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                {((automotiveAds && automotiveAds.length > 0) ? automotiveAds.slice(0, 3) : automotiveDeals.slice(0, 3)).map((car, idx) => {
+                {(safeAutomotiveAds.length > 0 ? safeAutomotiveAds.slice(0, 3) : automotiveDeals.slice(0, 3)).map((car, idx) => {
                   const isReal = Boolean(car.id);
                   if (isReal) {
                     const imgSrc = car.image_url ? getImageUrl(car.image_url) : '/placeholder-ad.svg';
@@ -1228,7 +1200,8 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             {/* 9. RECENTLY VIEWED - localStorage */}
             {(() => {
-              const recentAds = getRecentlyViewed();
+              const storedRecentAds = getRecentlyViewed();
+              const recentAds = Array.isArray(storedRecentAds) ? storedRecentAds : [];
               if (recentAds.length === 0) return null;
               return (
                 <section className="col-span-12">
@@ -1579,6 +1552,17 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             </section>
 
+          </div>
+
+
+          {/* SEO: ItemList Schema for ads */}
+          {safeServerAds.length > 0 && (
+            <ItemListSchema items={safeServerAds} listName="Anuncios destacados en Mercasto" />
+          )}
+
+          {/* SEO: FAQ Section for AEO */}
+          <div className="container mx-auto px-4 py-8">
+            <FAQSchema faqs={FAQ_DATA.home} pageType="home" lang={lang} />
           </div>
 
         </main>
