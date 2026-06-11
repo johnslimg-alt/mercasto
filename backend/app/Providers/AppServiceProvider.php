@@ -18,9 +18,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // General API: 120 req/min per IP
+        // Public read APIs serve several parallel widgets on each marketplace page.
         RateLimiter::for("api", function ($request) {
-            return Limit::perMinute(120)->by($request->ip());
+            return Limit::perMinute(240)->by($request->ip());
         });
 
         // Auth endpoints (login, register, OTP): 10 req/min per IP
@@ -38,9 +38,9 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perDay(20)->by(optional($request->user())->id ?: $request->ip());
         });
 
-        // Search/listing: 60 req/min per IP
+        // Allow normal navigation across category landings without false 429s.
         RateLimiter::for("search", function ($request) {
-            return Limit::perMinute(60)->by($request->ip());
+            return Limit::perMinute(240)->by($request->ip());
         });
 
         Gate::define("viewHorizon", function ($user) {
