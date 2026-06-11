@@ -339,17 +339,39 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       return null;
     }, []);
 
-    const homeCategories = React.useMemo(() => ([
+    const primaryHomeCategories = React.useMemo(() => ([
       { slug: 'motor', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
       { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
       { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
-      { slug: 'electronica', name: { es: 'Tecnología', en: 'Tech' }, icon: 'Cpu' },
-      { slug: 'hogar', name: { es: 'Hogar', en: 'Home' }, icon: 'Sofa' },
-      { slug: 'moda', name: { es: 'Moda', en: 'Fashion' }, icon: 'Shirt' },
-      { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure' }, icon: 'Bike' },
-      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing' }, icon: 'Crown', action: 'pricing' },
     ]), []);
+    const categoryIcons = React.useMemo(() => ({
+      electronica: 'Cpu',
+      hogar: 'Sofa',
+      moda: 'Shirt',
+      ocio: 'Bike',
+      boletos: 'Ticket',
+      deportes: 'Dumbbell',
+      infantil: 'Baby',
+      mascotas: 'PawPrint',
+      negocios: 'Building2',
+      formacion: 'GraduationCap',
+    }), []);
+    const homeCategories = React.useMemo(() => {
+      const primarySlugs = new Set(primaryHomeCategories.map(category => category.slug));
+      const additional = (categoriesData || [])
+        .filter(category => category?.slug && !['coches', ...primarySlugs].includes(category.slug))
+        .map(category => ({
+          ...category,
+          icon: categoryIcons[category.slug] || category.icon || 'Star',
+        }));
+
+      return [
+        ...primaryHomeCategories,
+        ...additional,
+        { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing' }, icon: 'Crown', action: 'pricing' },
+      ];
+    }, [categoriesData, categoryIcons, primaryHomeCategories]);
 
     React.useEffect(() => {
       const rail = categoryRailRef.current;

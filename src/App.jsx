@@ -20,6 +20,7 @@ import i18n from './i18n';
 const SUPPORTED_LANGUAGES = new Set([
   'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
 ]);
+const LANGUAGE_OPTIONS = [...SUPPORTED_LANGUAGES];
 const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
 
 // Глобальный перехватчик фатальных ошибок (Защита от белого экрана)
@@ -3594,7 +3595,7 @@ function App() {
                 <div className="mobile-language-select" aria-label="Language switcher">
                   <Globe className="w-3.5 h-3.5" />
                   <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
-                    {Object.keys(translations).map(l => (
+                    {LANGUAGE_OPTIONS.map(l => (
                       <option key={l} value={l}>{l.toUpperCase()}</option>
                     ))}
                   </select>
@@ -3623,7 +3624,7 @@ function App() {
               <div className="header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
                 <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
-                  {Object.keys(translations).map(l => (
+                  {LANGUAGE_OPTIONS.map(l => (
                     <option key={l} value={l}>{l.toUpperCase()}</option>
                   ))}
                 </select>
