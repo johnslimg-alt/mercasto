@@ -192,6 +192,103 @@ class CategoryAttributeSeeder extends Seeder
             ]
         ];
 
+        $catalog = [
+            'motor' => [
+                ['marca', 'Marca', 'select', ['Nissan', 'Toyota', 'Honda', 'Volkswagen', 'Chevrolet', 'Ford', 'Otra']],
+                ['modelo', 'Modelo', 'text', null],
+                ['year', 'Año', 'number', null],
+                ['km', 'Kilometraje', 'number', null],
+                ['combustible', 'Combustible', 'select', ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico']],
+            ],
+            'servicios' => [
+                ['tipo', 'Tipo de servicio', 'select', ['Hogar', 'Reparaciones', 'Limpieza', 'Clases', 'Eventos', 'Transporte', 'Belleza']],
+                ['modalidad', 'Modalidad', 'select', ['A domicilio', 'En local', 'En línea']],
+                ['experiencia_servicio', 'Experiencia', 'select', ['Nuevo proveedor', '1-3 años', '4-7 años', '+8 años']],
+                ['tipo_cobro', 'Tipo de cobro', 'select', ['Por hora', 'Por visita', 'Por proyecto', 'Precio fijo']],
+            ],
+            'electronica' => [
+                ['marca', 'Marca', 'select', ['Apple', 'Samsung', 'Xiaomi', 'Motorola', 'Sony', 'LG', 'Dell', 'HP', 'Otra']],
+                ['modelo', 'Modelo', 'text', null],
+                ['almacenamiento', 'Almacenamiento', 'select', ['32 GB', '64 GB', '128 GB', '256 GB', '512 GB', '1 TB']],
+                ['ram', 'RAM', 'select', ['4 GB', '8 GB', '12 GB', '16 GB', '32 GB+']],
+            ],
+            'hogar' => [
+                ['tipo', 'Tipo', 'select', ['Muebles', 'Electrodomésticos', 'Decoración', 'Herramientas', 'Jardín']],
+                ['material', 'Material', 'select', ['Madera', 'Metal', 'Vidrio', 'Tela', 'Piel', 'Plástico']],
+                ['medidas', 'Medidas', 'text', null],
+                ['entrega', 'Entrega', 'select', ['A domicilio', 'Recoger', 'Envío disponible']],
+            ],
+            'moda' => [
+                ['tipo', 'Tipo de prenda', 'select', ['Ropa mujer', 'Ropa hombre', 'Calzado', 'Bolsos', 'Accesorios']],
+                ['talla', 'Talla', 'text', null],
+                ['marca_moda', 'Marca', 'text', null],
+                ['color_moda', 'Color', 'select', ['Negro', 'Blanco', 'Beige', 'Azul', 'Rojo', 'Verde', 'Multicolor']],
+            ],
+            'deportes' => [
+                ['tipo_deporte', 'Deporte o actividad', 'select', ['Fútbol', 'Ciclismo', 'Gimnasio', 'Running', 'Camping', 'Pesca', 'Surf', 'Náutica']],
+                ['marca', 'Marca', 'text', null],
+                ['talla', 'Talla o medida', 'text', null],
+            ],
+            'infantil' => [
+                ['tipo', 'Tipo', 'select', ['Juguetes', 'Ropa infantil', 'Escolar', 'Muebles', 'Seguridad']],
+                ['edad', 'Edad recomendada', 'select', ['0-6 meses', '6-12 meses', '1-2 años', '3-5 años', '6-9 años', '10+ años']],
+                ['marca', 'Marca', 'text', null],
+            ],
+            'mascotas' => [
+                ['especie', 'Especie', 'select', ['Perro', 'Gato', 'Ave', 'Pez', 'Reptil', 'Roedor']],
+                ['tamano', 'Tamaño', 'select', ['Pequeño', 'Mediano', 'Grande']],
+                ['servicio_mascota', 'Tipo', 'select', ['Adopción', 'Accesorios', 'Alimento', 'Veterinario', 'Estética']],
+            ],
+            'negocios' => [
+                ['tipo_negocio', 'Tipo de oportunidad', 'select', ['Traspaso', 'Franquicia', 'Maquinaria', 'Equipamiento', 'Insumos', 'Inversión']],
+                ['sector', 'Sector', 'select', ['Alimentos', 'Retail', 'Servicios', 'Industria', 'Turismo', 'Tecnología']],
+                ['antiguedad', 'Antigüedad', 'select', ['Nuevo', 'Menos de 1 año', '1-3 años', '4-10 años', '10+ años']],
+            ],
+            'formacion' => [
+                ['tipo_formacion', 'Tipo', 'select', ['Libro', 'Curso', 'Clases', 'Idiomas', 'Certificación', 'Material escolar']],
+                ['modalidad', 'Modalidad', 'select', ['Presencial', 'En línea', 'Híbrido', 'Material físico']],
+                ['nivel', 'Nivel', 'select', ['Principiante', 'Intermedio', 'Avanzado', 'Profesional']],
+                ['idioma', 'Idioma', 'text', null],
+            ],
+            'ocio' => [
+                ['tipo', 'Categoría', 'select', ['Videojuegos', 'Coleccionismo', 'Fotografía', 'Instrumentos', 'Camping', 'Viajes']],
+                ['formato', 'Formato', 'select', ['Digital', 'Físico']],
+            ],
+            'boletos' => [
+                ['tipo', 'Tipo de evento', 'select', ['Conciertos', 'Deportes', 'Teatro', 'Festivales', 'Conferencias']],
+                ['fecha_evento', 'Fecha del evento', 'text', null],
+                ['formato', 'Formato', 'select', ['Digital', 'Físico', 'Transferible']],
+                ['zona', 'Zona', 'text', null],
+            ],
+        ];
+
+        foreach (['coches', 'inmobiliaria', 'empleo'] as $categorySlug) {
+            $attributes[] = [
+                'category_slug' => $categorySlug,
+                'key' => 'subcategory',
+                'label' => ['es' => 'Subcategoría', 'en' => 'Subcategory'],
+                'type' => 'text',
+                'options' => null,
+                'required' => true,
+                'sort_order' => 5,
+            ];
+        }
+
+        foreach ($catalog as $categorySlug => $fields) {
+            array_unshift($fields, ['subcategory', 'Subcategoría', 'text', null]);
+            foreach ($fields as $index => [$key, $label, $type, $options]) {
+                $attributes[] = [
+                    'category_slug' => $categorySlug,
+                    'key' => $key,
+                    'label' => ['es' => $label, 'en' => $label],
+                    'type' => $type,
+                    'options' => $options,
+                    'required' => $key === 'subcategory',
+                    'sort_order' => ($index + 1) * 10,
+                ];
+            }
+        }
+
         foreach ($attributes as $attr) {
             $categoryId = DB::table('categories')->where('slug', $attr['category_slug'])->value('id');
 

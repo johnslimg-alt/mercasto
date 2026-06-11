@@ -1,5 +1,5 @@
 import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
-import { filterConfig } from '../../constants/filterConfig';
+import { getCategoryFields, resolveCategorySchema } from '../../constants/categorySchema';
 import MEXICO_STATES from '../../utils/mexicoStates';
 import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell } from "lucide-react";
@@ -42,11 +42,11 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
       if (!form.category) return [];
       const apiFields = apiCategoryFields;
       if (!apiFields) {
-        return filterConfig[form.category] ?? [];
+        return getCategoryFields(form.category, form.attributes?.subcategory) ?? [];
       }
 
-      const localFields = filterConfig[form.category] ?? [];
-      return apiFields.map(apiField => {
+      const localFields = getCategoryFields(form.category, form.attributes?.subcategory) ?? [];
+      const normalizedApiFields = apiFields.map(apiField => {
         const apiFieldId = apiField.id || apiField.key;
 
         // Normalize backend key to match frontend key consistently
@@ -89,12 +89,23 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
           minPlaceholder: resolvedMinPlaceholder,
         };
       });
-    }, [apiCategoryFields, form.category]);
+
+      const apiKeys = new Set(normalizedApiFields.map(field => field.id || field.key));
+      return [
+        ...normalizedApiFields,
+        ...localFields.filter(field => !apiKeys.has(field.id || field.key)),
+      ];
+    }, [apiCategoryFields, form.attributes?.subcategory, form.category]);
+
+    const selectedCategorySchema = React.useMemo(
+      () => resolveCategorySchema(form.category),
+      [form.category]
+    );
 
     React.useEffect(() => {
       if (!form.category || categoryFields.length === 0 || !form.attributes) return;
 
-      const allowedKeys = new Set(categoryFields.map(field => field.id || field.key));
+      const allowedKeys = new Set(['subcategory', ...categoryFields.map(field => field.id || field.key)]);
       const cleanedAttributes = Object.fromEntries(
         Object.entries(form.attributes).filter(([key]) => allowedKeys.has(key))
       );
@@ -154,7 +165,7 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div>
                       <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.category || 'Categoría'}</label>
-                      <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
+                      <select data-testid="post-category" value={form.category} onChange={e => setForm({...form, category: e.target.value, attributes: {}})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all">
                           <option value="">{(t.select || 'Seleccionar')}...</option>
                           {categoriesData.map(c => <option key={c.slug} value={c.slug}>{c.name[lang] || c.name['es']}</option>)}
                       </select>
@@ -174,6 +185,31 @@ export default function PostScreen({ categoriesData, debouncedLocation, editingA
                       </div>
                   </div>
               </div>
+
+              {form.category && selectedCategorySchema.subcategories.length > 0 && (
+                <div>
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    {t.subcategory || 'Subcategoría'} <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    data-testid="post-subcategory"
+                    value={form.attributes?.subcategory || ''}
+                    onChange={e => setForm({
+                      ...form,
+                      attributes: { subcategory: e.target.value },
+                    })}
+                    required
+                    className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all"
+                  >
+                    <option value="">{(t.select || 'Seleccionar')}...</option>
+                    {selectedCategorySchema.subcategories.map(subcategory => (
+                      <option key={subcategory.slug} value={subcategory.slug}>
+                        {subcategory.label[lang] || subcategory.label.es}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* DYNAMIC CATEGORY ATTRIBUTES */}
               {form.category && (loadingCategoryFields || categoryFields.length > 0) && (
