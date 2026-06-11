@@ -304,6 +304,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
 };
 
 export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds }) {
+    const categoryRailRef = React.useRef(null);
     const [showMobileFilters, setShowMobileFilters] = React.useState(false);
     const [showAllCategories, setShowAllCategories] = React.useState(false);
     const [showMap, setShowMap] = React.useState(false);
@@ -339,7 +340,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     }, []);
 
     const homeCategories = React.useMemo(() => ([
-      { slug: 'motor', name: { es: 'Motor', en: 'Motor' }, icon: 'Car' },
+      { slug: 'motor', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
       { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
       { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
@@ -349,6 +350,12 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure' }, icon: 'Bike' },
       { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing' }, icon: 'Crown', action: 'pricing' },
     ]), []);
+
+    React.useEffect(() => {
+      const rail = categoryRailRef.current;
+      if (!rail) return;
+      rail.scrollTo({ left: 0, behavior: 'instant' });
+    }, [lang]);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
       return (serverAds || [])
@@ -589,7 +596,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
               </div>
 
-              <div className="category-rail rail-fade -mx-4 px-4 lg:mx-0 lg:px-0">
+              <div ref={categoryRailRef} data-testid="home-category-rail" dir="ltr" className="category-rail rail-fade">
 
                 {homeCategories.map(cat => {
 
@@ -597,7 +604,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   return (
 
-                    <button key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
+                    <button data-testid={`home-category-${cat.slug}`} key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
                         if (cat.action === 'home') { navigate('/'); setActiveCat(''); executeSearch?.('', null, ''); return; }
                         if (cat.action === 'pricing') { setShowPricingModal?.(true); return; }
                         const vpath = cat.verticalPath || getVerticalPath(cat.slug);
