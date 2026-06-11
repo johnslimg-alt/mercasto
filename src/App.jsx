@@ -64,14 +64,14 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const showDetails = import.meta.env.DEV;
+      const errorMessage = this.state.error?.message || String(this.state.error || 'Unknown runtime error');
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
           <h1 className="text-[24px] font-bold text-white mb-2">No pudimos cargar esta sección</h1>
           <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba dañada, podrás iniciar sesión otra vez.</p>
-          {showDetails && (
-            <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
-          )}
+          <div className="text-left bg-slate-900 text-red-300 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-900/50 shadow-sm whitespace-pre-wrap">
+            <strong>Error code:</strong> {errorMessage}
+          </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">Abrir como invitado</button>
             <button onClick={() => ErrorBoundary.recoverFromStaleApp()} className="px-6 py-3 bg-slate-800 text-white rounded-xl shadow-md hover:bg-slate-700 transition-colors">Recargar</button>
@@ -397,7 +397,19 @@ function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [recentSearches, setRecentSearches] = useState(() => { try { return JSON.parse(localStorage.getItem('mercasto_recent_searches') || '[]').slice(0, 5); } catch { return []; } });
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const storedSearches = JSON.parse(localStorage.getItem('mercasto_recent_searches') || '[]');
+      if (!Array.isArray(storedSearches)) {
+        localStorage.removeItem('mercasto_recent_searches');
+        return [];
+      }
+      return storedSearches.filter(item => typeof item === 'string').slice(0, 5);
+    } catch {
+      localStorage.removeItem('mercasto_recent_searches');
+      return [];
+    }
+  });
   const suggestionDebounceRef = useRef(null);
   const desktopSearchRef = useRef(null);
   const mobileSearchRef = useRef(null);
@@ -479,7 +491,7 @@ function App() {
   const setCurrentTab = useCallback((tab) => {
     // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
     if (currentTab === 'post' && tab !== 'post') {
-        images.forEach(img => {
+        (Array.isArray(images) ? images : []).forEach(img => {
             if (img.source === 'new' && img.preview) {
                 URL.revokeObjectURL(img.preview);
             }
@@ -1430,7 +1442,11 @@ function App() {
       const res = await fetch(`${API_URL}/user/favorite-ads`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setFavoriteAds(Array.isArray(data) ? data : (data.data || []));
+        setFavoriteAds(
+          Array.isArray(data)
+            ? data
+            : (Array.isArray(data?.data) ? data.data : [])
+        );
       }
     } catch (err) { console.error("Error fetching favorite ads", err); }
   }, [user]);
