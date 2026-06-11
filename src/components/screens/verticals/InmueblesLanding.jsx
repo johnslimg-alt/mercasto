@@ -4,7 +4,6 @@ import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { Building2, Castle, FileCheck2, Home, KeyRound, LandPlot, MapPinned, SearchCheck, Store } from 'lucide-react';
-import { useUI } from '../../../contexts/UIContext';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -36,9 +35,8 @@ const SUBSECTIONS = [
   { name: 'Vacacional', query: 'renta vacacional', Icon: Castle },
 ];
 
-export default function InmueblesLanding() {
+export default function InmueblesLanding({ lang = 'es' }) {
   const navigate = useNavigate();
-  const { lang } = useUI();
   const copy = getVerticalCopy(lang, 'inmuebles');
   const [operacion, setOperacion] = useState('');
   const [tipo, setTipo] = useState('');

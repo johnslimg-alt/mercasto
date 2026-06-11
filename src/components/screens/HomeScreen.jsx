@@ -348,6 +348,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       'inmobiliaria': '/inmuebles',
       'empleo': '/empleos',
       'servicios': '/servicios',
+      'tiendas': '/tiendas',
     };
     const getVerticalPath = React.useCallback((slug = '') => {
       if (VERTICAL_SLUGS[slug]) return VERTICAL_SLUGS[slug];
@@ -359,38 +360,14 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     }, []);
 
     const primaryHomeCategories = React.useMemo(() => ([
+      { slug: 'clasificados', name: { es: 'Clasificados', en: 'Classifieds' }, icon: 'LayoutGrid', action: 'home' },
       { slug: 'motor', name: { es: 'Autos', en: 'Cars' }, icon: 'Car' },
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate' }, icon: 'Home' },
-      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
       { slug: 'servicios', name: { es: 'Servicios', en: 'Services' }, icon: 'Wrench' },
+      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs' }, icon: 'Briefcase' },
+      { slug: 'tiendas', name: { es: 'Tiendas', en: 'Stores' }, icon: 'Store' },
     ]), []);
-    const categoryIcons = React.useMemo(() => ({
-      electronica: 'Cpu',
-      hogar: 'Sofa',
-      moda: 'Shirt',
-      ocio: 'Bike',
-      boletos: 'Ticket',
-      deportes: 'Dumbbell',
-      infantil: 'Baby',
-      mascotas: 'PawPrint',
-      negocios: 'Building2',
-      formacion: 'GraduationCap',
-    }), []);
-    const homeCategories = React.useMemo(() => {
-      const primarySlugs = new Set(primaryHomeCategories.map(category => category.slug));
-      const additional = (categoriesData || [])
-        .filter(category => category?.slug && !['coches', ...primarySlugs].includes(category.slug))
-        .map(category => ({
-          ...category,
-          icon: categoryIcons[category.slug] || category.icon || 'Star',
-        }));
-
-      return [
-        ...primaryHomeCategories,
-        ...additional,
-        { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing' }, icon: 'Crown', action: 'pricing' },
-      ];
-    }, [categoriesData, categoryIcons, primaryHomeCategories]);
+    const homeCategories = primaryHomeCategories;
 
     React.useEffect(() => {
       const rail = categoryRailRef.current;

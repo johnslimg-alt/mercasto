@@ -100,7 +100,7 @@ export default function PrivacidadScreen() {
 
                 <section id="responsable">
                   <SectionTitle n="1">Responsable del Tratamiento</SectionTitle>
-                  <p><strong>Mercasto México S.A. de C.V.</strong>, con domicilio en la Ciudad de México, es el responsable del tratamiento de tus datos personales recopilados a través de la plataforma mercasto.com y sus aplicaciones relacionadas.</p>
+                  <p><strong>Mercasto</strong>, plataforma hecha en México, es responsable del tratamiento de tus datos personales recopilados a través de mercasto.com y sus aplicaciones relacionadas.</p>
                   <p className="mt-3">Para ejercer tus derechos o resolver dudas sobre el tratamiento de tus datos, puedes contactar a nuestro Departamento de Protección de Datos en: <a href="mailto:privacidad@mercasto.com" className="text-lime-600 hover:text-lime-700 font-medium">privacidad@mercasto.com</a></p>
                 </section>
 
@@ -258,7 +258,7 @@ function BulletList({ items }) {
 function ContactBox({ email, label }) {
   return (
     <div className="mt-4 p-4 bg-lime-50 rounded-xl border border-lime-100">
-      <p className="font-semibold text-slate-800 mb-0.5">Mercasto México S.A. de C.V.</p>
+      <p className="font-semibold text-slate-800 mb-0.5">Mercasto · Hecho en México</p>
       {label && <p className="text-slate-600 text-sm">{label}</p>}
       <p className="text-slate-600 text-sm">Ciudad de México, México</p>
       <a href={`mailto:${email}`} className="inline-flex items-center gap-1.5 mt-2 text-lime-600 hover:text-lime-700 text-sm font-medium transition-colors">

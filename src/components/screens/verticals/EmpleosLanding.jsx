@@ -4,7 +4,6 @@ import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { BriefcaseBusiness, ChartNoAxesCombined, Clock, GraduationCap, HeartPulse, Hotel, Landmark, Laptop, Megaphone, Palette, UserSearch } from 'lucide-react';
-import { useUI } from '../../../contexts/UIContext';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -32,9 +31,8 @@ const SUBSECTIONS = [
   { name: 'Cursos', query: 'cursos capacitación', Icon: GraduationCap },
 ];
 
-export default function EmpleosLanding() {
+export default function EmpleosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
-  const { lang } = useUI();
   const copy = getVerticalCopy(lang, 'empleos');
   const [area, setArea] = useState('');
   const [modalidad, setModalidad] = useState('');
