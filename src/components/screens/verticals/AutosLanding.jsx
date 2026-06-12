@@ -175,7 +175,7 @@ export default function AutosLanding({ lang = 'es' }) {
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=motor&per_page=8`}
             viewAllUrl="/?category=motor"
-            viewAllLabel="Ver todos los vehículos →"
+            viewAllLabel={copy.labels.viewAll}
             cols={4}
           />
         </section>

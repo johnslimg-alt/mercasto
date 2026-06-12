@@ -104,7 +104,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=servicios&per_page=6`}
             viewAllUrl="/?category=servicios"
-            viewAllLabel="Ver todos los servicios →"
+            viewAllLabel={copy.labels.viewAll}
             cols={3}
           />
         </section>

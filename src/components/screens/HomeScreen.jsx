@@ -1259,7 +1259,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   </ul>
 
-                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-transparent border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white hover:bg-[#84CC16]/10 dark:hover:bg-[#84CC16]/10 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-[#84CC16] dark:hover:border-[#84CC16] hover:text-[#65A30D] dark:hover:text-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/20">Elegir plan</button>
+                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-transparent border border-slate-300 dark:border-slate-700 text-[#0F172A] dark:text-white hover:bg-[#84CC16]/10 dark:hover:bg-[#84CC16]/10 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md hover:border-[#84CC16] dark:hover:border-[#84CC16] hover:text-[#65A30D] dark:hover:text-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/20">{t.view_plans}</button>
 
                 </div>
 
@@ -1285,7 +1285,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   </ul>
 
-                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#84CC16] text-white hover:bg-[#65A30D]">See pricing</button>
+                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.view_plans}</button>
 
                 </div>
 

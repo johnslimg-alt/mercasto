@@ -121,7 +121,7 @@ export default function EmpleosLanding({ lang = 'es' }) {
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=empleo&per_page=6`}
             viewAllUrl="/?category=empleo"
-            viewAllLabel="Ver todos los empleos →"
+            viewAllLabel={copy.labels.viewAll}
             cols={3}
           />
         </section>

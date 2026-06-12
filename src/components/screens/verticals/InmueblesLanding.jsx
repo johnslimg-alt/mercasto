@@ -126,7 +126,7 @@ export default function InmueblesLanding({ lang = 'es' }) {
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=inmobiliaria&per_page=8`}
             viewAllUrl="/?category=inmobiliaria"
-            viewAllLabel="Ver todas las propiedades →"
+            viewAllLabel={copy.labels.viewAll}
             cols={4}
           />
         </section>
