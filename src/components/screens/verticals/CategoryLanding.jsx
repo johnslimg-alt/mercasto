@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
+import SEO from '../../SEO';
 import { subcategoriesMap } from '../../../constants/mockData';
+import { categoryLandingTranslations } from '../../../constants/categoryLandingTranslations';
+import { getTranslations, normalizeLanguage } from '../../../utils/translations';
 import {
   BadgeCheck, ShieldCheck, Star, Zap, MessageCircle, BarChart3,
   Tv, Headphones, Laptop, Camera, Gamepad2, Printer, Tablet,
@@ -284,7 +287,22 @@ const COLOR_CLASSES = {
 
 export default function CategoryLanding({ category, lang = 'es' }) {
   const navigate = useNavigate();
-  const cfg = CATEGORY_CONFIG[category];
+  const activeLang = normalizeLanguage(
+    localStorage.getItem('lang') || localStorage.getItem('mercasto_language') || lang
+  );
+  const t = getTranslations(activeLang);
+  const baseConfig = CATEGORY_CONFIG[category];
+  const translatedConfig = categoryLandingTranslations[activeLang]?.[category];
+  const cfg = baseConfig && translatedConfig
+    ? {
+        ...baseConfig,
+        ...translatedConfig,
+        trust: baseConfig.trust.map((item, index) => ({
+          ...item,
+          ...(translatedConfig.trust?.[index] || {}),
+        })),
+      }
+    : baseConfig;
   const c = COLOR_CLASSES[cfg?.color] || COLOR_CLASSES.blue;
 
   // Resolve subcategories from the shared constants map (same source as the rest of the app)
@@ -292,20 +310,18 @@ export default function CategoryLanding({ category, lang = 'es' }) {
   const iconMap = SUBCAT_ICONS[category] || {};
 
   React.useEffect(() => {
-    if (!cfg) return;
-    document.title = cfg.seoTitle;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', cfg.seoDesc);
-    let ogTitle = document.querySelector('meta[property="og:title"]');
-    if (!ogTitle) { ogTitle = document.createElement('meta'); ogTitle.setAttribute('property', 'og:title'); document.head.appendChild(ogTitle); }
-    ogTitle.setAttribute('content', cfg.seoTitle);
-    let ogDesc = document.querySelector('meta[property="og:description"]');
-    if (!ogDesc) { ogDesc = document.createElement('meta'); ogDesc.setAttribute('property', 'og:description'); document.head.appendChild(ogDesc); }
-    ogDesc.setAttribute('content', cfg.seoDesc);
+    if (!cfg) return undefined;
+    const frame = requestAnimationFrame(() => {
+      document.title = cfg.seoTitle;
+      document.querySelector('meta[name="description"]')?.setAttribute('content', cfg.seoDesc);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', cfg.seoTitle);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', cfg.seoDesc);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [cfg]);
 
   if (!cfg) {
-    return <div className="flex h-screen items-center justify-center text-slate-500">Categoría no encontrada.</div>;
+    return <div className="flex h-screen items-center justify-center text-slate-500">{t.noAds}</div>;
   }
 
   const categoryParam = cfg.slug;
@@ -328,23 +344,31 @@ export default function CategoryLanding({ category, lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={cfg.seoTitle} description={cfg.seoDesc} url={`/${category}`} />
       <VerticalHero
         title={cfg.title}
         subtitle={cfg.subtitle}
-        searchPlaceholder={`Buscar en ${cfg.title.toLowerCase()}…`}
+        searchPlaceholder={`${t.search_btn} ${cfg.title.toLowerCase()}…`}
         color={cfg.color}
         mapQuery={`${cfg.title} en México`}
         onSearch={handleSearch}
         subsections={heroSubsections}
         onSubsectionSelect={(item) => navigate(`/?category=${categoryParam}&search=${encodeURIComponent(item.query)}`)}
-        labels={{ viewList: 'Ver lista', viewAll: 'Ver todo', search: 'Buscar', allMexico: 'Todo México', allCity: 'Toda la ciudad', city: 'Ciudad' }}
+        labels={{
+          viewList: t.view_list,
+          viewAll: t.view_all,
+          search: t.search_btn,
+          allMexico: t.all_mexico,
+          allCity: t.all_city || t.city,
+          city: t.city,
+        }}
       />
 
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-14">
 
         {/* H1 + description */}
         <section>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-3">{cfg.title} en México</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-3">{cfg.title}</h1>
           <p className="text-slate-600 dark:text-slate-400 max-w-2xl text-base leading-relaxed">{cfg.description}</p>
         </section>
 
@@ -352,12 +376,12 @@ export default function CategoryLanding({ category, lang = 'es' }) {
         <section>
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{cfg.title} en el mapa</h2>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Encuentra anuncios cerca de ti.</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{cfg.title} · {t.map}</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t.near_you}</p>
             </div>
             <button onClick={() => navigate(`/?category=${categoryParam}`)}
               className={`hidden rounded-full px-4 py-2 text-sm font-bold text-white sm:inline-flex ${c.viewBtn}`}>
-              Ver lista
+              {t.view_list}
             </button>
           </div>
           <MapV3 category={categoryParam} title={`${cfg.title} en México`} className="h-[260px] md:h-[420px]" />
@@ -366,7 +390,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
         {/* Subcategory grid — sourced from subcategoriesMap (same as the rest of the app) */}
         {subcats.length > 0 && (
           <section>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-5">¿Qué estás buscando?</h2>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-5">{t.search_placeholder}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {subcats.map((name, idx) => {
                 const Icon = iconMap[name] || FALLBACK_ICONS[idx % FALLBACK_ICONS.length];
@@ -388,7 +412,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
                 <span className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${c.iconBase} ${c.iconHover} transition-colors`}>
                   <Globe size={23} strokeWidth={2.2} />
                 </span>
-                <span className="text-[14px] font-semibold text-slate-500 group-hover:text-slate-900">Ver todo</span>
+                <span className="text-[14px] font-semibold text-slate-500 group-hover:text-slate-900">{t.view_all}</span>
               </button>
             </div>
           </section>
@@ -397,23 +421,23 @@ export default function CategoryLanding({ category, lang = 'es' }) {
         {/* Featured ads */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{cfg.title} destacados</h2>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{cfg.title} · {t.featured}</h2>
             <a onClick={() => navigate(`/?category=${categoryParam}`)}
               className={`text-[13px] font-semibold cursor-pointer hover:underline ${c.viewAll}`}>
-              Ver todos →
+              {t.view_all} →
             </a>
           </div>
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=${categoryParam}&per_page=6`}
             viewAllUrl={`/?category=${categoryParam}`}
-            viewAllLabel={`Ver todos en ${cfg.title} →`}
+            viewAllLabel={`${t.view_all} · ${cfg.title} →`}
             cols={3}
           />
         </section>
 
         {/* Trust */}
         <section className={`${c.trust} rounded-3xl p-8`}>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">¿Por qué Mercasto?</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">{t.why_mercasto || 'Mercasto'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {cfg.trust.map(item => {
               const Icon = item.Icon;
