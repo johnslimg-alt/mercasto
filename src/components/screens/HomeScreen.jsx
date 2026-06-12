@@ -553,7 +553,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
               <span className="text-slate-300 hidden sm:block">•</span>
 
-              <span>{t.verified_marketplace || 'Compra con vendedores verificados y anuncios moderados'}</span>
+              <span>{t.verified_sellers_desc || t.verified_sellers}</span>
 
               <span className="text-slate-300 hidden sm:block">•</span>
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
-import { translations } from './constants/mockData';
+import { getTranslations } from './utils/translations';
 import AdSenseBanner from './components/common/AdSenseBanner';
 import OnboardingModal from './components/OnboardingModal';
 import {
@@ -22,6 +22,21 @@ const SUPPORTED_LANGUAGES = new Set([
 ]);
 const LANGUAGE_OPTIONS = [...SUPPORTED_LANGUAGES];
 const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
+const NAV_LABELS = {
+  es: ['Todo', 'Autos', 'Inmuebles', 'Servicios', 'Empleo', 'Tiendas'],
+  en: ['All', 'Cars', 'Real estate', 'Services', 'Jobs', 'Stores'],
+  pt: ['Tudo', 'Carros', 'Imóveis', 'Serviços', 'Empregos', 'Lojas'],
+  fr: ['Tout', 'Voitures', 'Immobilier', 'Services', 'Emplois', 'Boutiques'],
+  zh: ['全部', '汽车', '房地产', '服务', '招聘', '商店'],
+  ko: ['전체', '자동차', '부동산', '서비스', '채용', '상점'],
+  de: ['Alle', 'Autos', 'Immobilien', 'Dienstleistungen', 'Jobs', 'Shops'],
+  it: ['Tutto', 'Auto', 'Immobili', 'Servizi', 'Lavoro', 'Negozi'],
+  ar: ['الكل', 'سيارات', 'عقارات', 'خدمات', 'وظائف', 'متاجر'],
+  he: ['הכל', 'רכבים', 'נדל״ן', 'שירותים', 'משרות', 'חנויות'],
+  yi: ['אַלץ', 'אויטאָס', 'גרונטייגנס', 'באַדינונגען', 'אַרבעט', 'קראָמען'],
+  ru: ['Все', 'Авто', 'Недвижимость', 'Услуги', 'Работа', 'Магазины'],
+  ja: ['すべて', '自動車', '不動産', 'サービス', '求人', 'ショップ'],
+};
 
 // Глобальный перехватчик фатальных ошибок (Защита от белого экрана)
 class ErrorBoundary extends React.Component {
@@ -384,7 +399,7 @@ function App() {
     const saved = localStorage.getItem('lang');
     return SUPPORTED_LANGUAGES.has(saved) ? saved : 'es';
   });
-  const t = translations[lang] || translations.en || translations.es;
+  const t = getTranslations(lang);
 
   const [serverAds, setServerAds] = useState([]);
   const [realEstateAds, setRealEstateAds] = useState([]);
@@ -3346,13 +3361,14 @@ function App() {
   const conversionRate = useMemo(() => totalViews > 0 ? ((totalContactClicks / totalViews) * 100).toFixed(1) : 0, [totalViews, totalContactClicks]);
   const catObj = useMemo(() => safeCategoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [safeCategoriesData, lang]);
   const categoryStats = useMemo(() => safeCategoriesData.map(c => ({ name: getCatName(c, lang), count: safeUserAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [safeCategoriesData, safeUserAds, lang]);
+  const navLabels = NAV_LABELS[lang] || NAV_LABELS.en;
   const headerCategories = useMemo(() => ([
-    { slug: 'motor', label: lang === 'en' ? 'Cars' : 'Autos' },
-    { slug: 'inmobiliaria', label: lang === 'en' ? 'Real Estate' : 'Inmuebles' },
-    { slug: 'servicios', label: lang === 'en' ? 'Services' : 'Servicios' },
-    { slug: 'empleo', label: lang === 'en' ? 'Jobs' : 'Empleo' },
-    { slug: 'tiendas', label: lang === 'en' ? 'Stores' : 'Tiendas' },
-  ]), [lang]);
+    { slug: 'motor', label: navLabels[1] },
+    { slug: 'inmobiliaria', label: navLabels[2] },
+    { slug: 'servicios', label: navLabels[3] },
+    { slug: 'empleo', label: navLabels[4] },
+    { slug: 'tiendas', label: navLabels[5] },
+  ]), [navLabels]);
 
   const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
@@ -3746,7 +3762,7 @@ function App() {
               </div>
             <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title="Directorio de Tiendas">
                 <Store className="w-[22px] h-[22px]" />
-                <span className="text-[13px] font-bold hidden md:block">Tiendas</span>
+                <span className="text-[13px] font-bold hidden md:block">{navLabels[5]}</span>
             </button>
             <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block">
                 <Heart className="w-[22px] h-[22px]" />

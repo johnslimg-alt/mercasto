@@ -1,4 +1,5 @@
 import { translations } from '../constants/mockData';
+import { generatedTranslations } from '../constants/generatedTranslations';
 
 export const SUPPORTED_LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja'];
 export const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
@@ -11,9 +12,9 @@ export function normalizeLanguage(language = 'es') {
 export function getTranslations(language = 'es') {
   const lang = normalizeLanguage(language);
   return {
-    ...(translations.es || {}),
-    ...(lang === 'es' ? {} : translations.en || {}),
+    ...(translations.en || {}),
     ...(translations[lang] || {}),
+    ...(generatedTranslations[lang] || {}),
   };
 }
 
