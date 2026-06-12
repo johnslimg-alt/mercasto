@@ -47,7 +47,7 @@
     "gate:prod": "npm run check:scripts && npm run check:compose && npm run check:recovery && npm run check:static-safety && npm run check:ai-description-editor && npm run smoke:port-ownership && npm run smoke:auth-providers && npm run smoke:sms-readiness && npm run smoke:business-profile && npm run smoke:share-og && npm run smoke:public-manifests && npm run smoke:cache-headers && npm run build && npm run verify:quick",
     "maintenance:precheck": "bash scripts/os-maintenance-precheck.sh",
     "smoke": "npm run smoke:prod",
-    "check:compose": "DB_PASSWORD=${DB_PASSWORD:-ci} REDIS_PASSWORD=${REDIS_PASSWORD:-ci} docker compose config >/tmp/mercasto_compose_base.$(id -u).out && DB_PASSWORD=${DB_PASSWORD:-ci} REDIS_PASSWORD=${REDIS_PASSWORD:-ci} docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.$(id -u).out",
+    "check:compose": "DB_PASSWORD=${DB_PASSWORD:-ci} REDIS_PASSWORD=${REDIS_PASSWORD:-ci} GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-ci} docker compose config >/tmp/mercasto_compose_base.$(id -u).out && DB_PASSWORD=${DB_PASSWORD:-ci} REDIS_PASSWORD=${REDIS_PASSWORD:-ci} GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-ci} docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.$(id -u).out",
     "check:scripts": "find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n",
     "check:recovery": "node scripts/check-recovery-guards.mjs",
     "check:payment-retention": "bash scripts/payment-retention-scan.sh",
