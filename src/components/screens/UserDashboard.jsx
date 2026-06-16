@@ -332,6 +332,8 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
           </div>
           
           <div className="bg-slate-200 dark:bg-slate-700 p-1 rounded-xl flex items-center w-fit">
+            {/* Кнопку "Particular" скрываем для платных/PRO (business) кабинетов — в ней нет смысла */}
+            {userRole !== 'business' && (
             <button 
               onClick={() => setAccountType('particular')} 
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
@@ -342,6 +344,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             >
               {t.particular}
             </button>
+            )}
             <button 
               onClick={() => setAccountType('pro')} 
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${

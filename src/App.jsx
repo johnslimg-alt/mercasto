@@ -1231,6 +1231,8 @@ function App() {
     if (i18n.language !== lang) i18n.changeLanguage(lang);
   }, [lang]);
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
+  // Для платных/PRO (business) кабинетов принудительно показываем PRO-вид — кнопки "Particular" там нет
+  useEffect(() => { if (userRole === 'business') setAccountType('pro'); }, [userRole]);
 
   const promotableAds = useMemo(
     () => (Array.isArray(userAds) ? userAds : []).filter(ad => ad.status === 'active'),
@@ -3173,6 +3175,16 @@ function App() {
   const renderPricingModal = () => {
     if (!showPricingModal) return null;
 
+    // Текущий активный план пользователя (если оплачен и не истёк)
+    const planActive = user?.plan_code && (!user?.plan_expires_at || new Date(user.plan_expires_at) > new Date());
+    const currentPlanCode = planActive ? user.plan_code : 'package_free';
+    // Кнопка плана: если это текущий активный план — показываем "активен", иначе "Adquirir plan"
+    const renderPlanBtn = (code, onBuy, buyClass, buyLabel = 'Adquirir plan') => (
+      currentPlanCode === code
+        ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#65A30D] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan || 'Plan activo'}</button>
+        : <button onClick={onBuy} className={buyClass}>{buyLabel}</button>
+    );
+
     return (
       <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-end md:items-center justify-center p-0 md:p-6 backdrop-blur-sm">
         <div className="bg-slate-50 dark:bg-slate-950 w-full max-w-5xl md:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0">
@@ -3198,7 +3210,9 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 3 anuncios activos</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Contacto por Whatsapp/Telegram</li>
                     </ul>
-                    <button className="py-2.5 w-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Plan actual</button>
+                    {currentPlanCode === 'package_free'
+                      ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#65A30D] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan || 'Plan activo'}</button>
+                      : <button disabled className="py-2.5 w-full border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 rounded-xl text-xs font-bold cursor-default">Gratis</button>}
                   </div>
                   {/* Impulso */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -3208,7 +3222,7 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 10 anuncios activos</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Más visibilidad</li>
                     </ul>
-                    <button onClick={() => handleClipPayment(99, 'Plan Impulso', null, 'package_impulso')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                    {renderPlanBtn('package_impulso', () => handleClipPayment(99, 'Plan Impulso', null, 'package_impulso'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Negocio */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -3218,7 +3232,7 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 30 anuncios activos</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Insignia de negocio</li>
                     </ul>
-                    <button onClick={() => handleClipPayment(249, 'Plan Negocio', null, 'package_negocio')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                    {renderPlanBtn('package_negocio', () => handleClipPayment(249, 'Plan Negocio', null, 'package_negocio'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Pro */}
                   <div className="bg-slate-900 dark:bg-slate-900 rounded-2xl p-5 border border-slate-800 flex flex-col shadow-lg relative ring-2 ring-[#84CC16]">
@@ -3230,7 +3244,7 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Página de empresa</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Soporte preferente</li>
                     </ul>
-                    <button onClick={() => handleClipPayment(599, 'Plan Pro', null, 'package_pro')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                    {renderPlanBtn('package_pro', () => handleClipPayment(599, 'Plan Pro', null, 'package_pro'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Agencia */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -3241,7 +3255,7 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Carga masiva XML/CSV</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> API acceso</li>
                     </ul>
-                    <button onClick={() => handleClipPayment(1499, 'Plan Agencia', null, 'package_agencia')} className="py-2.5 w-full bg-slate-900 dark:bg-slate-950 hover:bg-black dark:hover:bg-slate-800 text-white dark:text-slate-300 rounded-xl text-xs font-bold transition-colors shadow-sm">Adquirir plan</button>
+                    {renderPlanBtn('package_agencia', () => handleClipPayment(1499, 'Plan Agencia', null, 'package_agencia'), "py-2.5 w-full bg-slate-900 dark:bg-slate-950 hover:bg-black dark:hover:bg-slate-800 text-white dark:text-slate-300 rounded-xl text-xs font-bold transition-colors shadow-sm")}
                   </div>
                 </div>
 
