@@ -90,7 +90,7 @@ export default function SidebarFilters({
     ] },
     { id: 'payment_method', label: 'Pago aceptado', options: [
       'Efectivo', 'Transferencia SPEI', 'Tarjeta de crédito', 'Tarjeta de débito',
-      'Pago seguro (escrow)', 'Contra entrega', 'Mercado Pago', 'PayPal',
+      'Pago seguro (escrow)', 'Contra entrega', 'PayPal',
       'Criptomonedas', 'Financiamiento propio', 'Crédito bancario'
     ] },
     { id: 'delivery', label: 'Entrega', options: [

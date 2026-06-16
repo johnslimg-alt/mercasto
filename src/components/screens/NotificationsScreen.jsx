@@ -110,7 +110,8 @@ export default function NotificationsScreen({ user }) {
                   type="button"
                   onClick={() => {
                     markRead(notification.id);
-                    if (payload?.ad_url) navigate(payload.ad_url);
+                    const dest = payload?.ad_url || notification.link;
+                    if (dest) navigate(dest);
                   }}
                   className={`w-full text-left flex items-start gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${!notification.is_read ? 'bg-lime-50 dark:bg-lime-400/10' : ''}`}
                 >

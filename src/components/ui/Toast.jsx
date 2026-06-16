@@ -4,10 +4,21 @@ import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
 
 const ToastContext = createContext();
 
+const noopToast = {
+  addToast: () => {},
+  removeToast: () => {},
+  success: () => {},
+  error: () => {},
+  warning: () => {},
+  info: () => {},
+};
+
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within ToastProvider');
+    // Защита: если провайдер не смонтирован, не роняем весь экран — возвращаем no-op
+    if (typeof console !== 'undefined') console.warn('useToast used outside ToastProvider — usando fallback no-op');
+    return noopToast;
   }
   return context;
 };

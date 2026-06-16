@@ -3737,7 +3737,8 @@ function App() {
                               key={n.id}
                               onClick={() => {
                                 handleMarkNotificationRead(n.id);
-                                if (notificationData?.ad_url) navigate(notificationData.ad_url);
+                                const dest = notificationData?.ad_url || n.link;
+                                if (dest) { setShowNotifications(false); navigate(dest); }
                               }}
                               className={`p-4 border-b border-slate-50 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors relative group ${!n.is_read ? 'bg-[#84CC16]/5 dark:bg-[#84CC16]/10' : ''}`}
                             >

@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import AppWrapper from './App.jsx'
 import { UIProvider } from './contexts/UIContext.jsx'
+import { ToastProvider } from './components/ui/Toast.jsx'
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -15,9 +16,11 @@ if (rootElement) {
   createRoot(rootElement).render(
     <React.StrictMode>
       <UIProvider>
-        <BrowserRouter>
-          <AppWrapper />
-        </BrowserRouter>
+        <ToastProvider>
+          <BrowserRouter>
+            <AppWrapper />
+          </BrowserRouter>
+        </ToastProvider>
       </UIProvider>
     </React.StrictMode>
   );
