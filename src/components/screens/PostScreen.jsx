@@ -6,6 +6,7 @@ import {
   BookOpen, Package, Cpu, Settings2, Ticket, Building2
 } from 'lucide-react';
 import { mexicoLocations, subcategoriesMap } from '../../constants/mockData';
+import MapV3 from '../common/MapV3';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -164,7 +165,6 @@ export default function PostScreen({
   const goBack = () => setStep(prev => Math.max(1, prev - 1));
 
   const mapQuery = form.location || form.state || 'México';
-  const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
 
   // Render a dynamic attribute field
   const renderAttrField = (field) => {
@@ -568,22 +568,16 @@ export default function PostScreen({
                   </button>
                 </div>
 
-                {/* Google Maps embed */}
-                <div className="w-full h-48 bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
-                  {isMapUpdating && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50">
-                      <Loader2 className="w-8 h-8 text-[#84CC16] animate-spin" />
-                    </div>
-                  )}
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    scrolling="no"
-                    src={mapUrl}
-                    title="Mapa"
-                    style={{ border: 0, filter: 'grayscale(0.1) contrast(1.05)' }}
-                    className={`transition-opacity duration-300 ${isMapUpdating ? 'opacity-40' : 'opacity-100'}`}
+                {/* Интерактивная карта: тап задаёт точные координаты (lat/lng) */}
+                <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-2">{t.tap_map_hint || 'Toca el mapa para marcar la ubicación exacta de tu anuncio.'}</p>
+                <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
+                  <MapV3
+                    locationPicker
+                    showFullscreen={false}
+                    locationQuery={mapQuery}
+                    markers={form.latitude && form.longitude ? [{ label: t.selected_label || 'Seleccionado', coords: [Number(form.latitude), Number(form.longitude)], tone: 'lime' }] : []}
+                    onLocationSelect={({ lat, lng }) => setForm(prev => ({ ...prev, latitude: lat, longitude: lng }))}
+                    className="h-full rounded-none border-0 shadow-none"
                   />
                 </div>
               </div>
