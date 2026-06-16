@@ -54,9 +54,11 @@ class AdIndexController extends Controller
 
             // Всегда фильтруем по тексту (title/description) — это гарантирует результаты
             // даже когда эмбеддинги в БД не заполнены.
-            $query->where(function ($q) use ($search): void {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+            // ILIKE (а не LIKE) — т.к. в Postgres LIKE регистрозависим: "iphone" не совпадал с "iPhone".
+            $like = '%' . $search . '%';
+            $query->where(function ($q) use ($like): void {
+                $q->whereRaw('title ILIKE ?', [$like])
+                    ->orWhereRaw('description ILIKE ?', [$like]);
             });
 
             // Семантические эмбеддинги используем ТОЛЬКО для улучшения сортировки,
