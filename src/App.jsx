@@ -1114,16 +1114,25 @@ function App() {
 
     // Обработка возврата с платежного шлюза
     if (paymentStatus === 'success') {
-      // UX Fix: Мгновенно обновляем профиль (роль и баланс), чтобы пользователь сразу увидел свой PRO-статус
+      // UX Fix: обновляем профиль (роль и баланс). Вебхук Clip прилетает асинхронно,
+      // поэтому опрашиваем /user несколько раз, пока роль не станет business / не появится план.
       const token = localStorage.getItem('auth_token');
       if (token) {
-        fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(res => res.json())
-          .then(userData => {
-            setUser(userData);
-            setUserRole(userData.role || 'individual');
-            localStorage.setItem('user', JSON.stringify(userData));
-          }).catch(() => {});
+        const refreshUserAfterPayment = async () => {
+          for (let attempt = 0; attempt < 6; attempt++) {
+            try {
+              const res = await fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } });
+              const userData = await res.json();
+              setUser(userData);
+              setUserRole(userData.role || 'individual');
+              localStorage.setItem('user', JSON.stringify(userData));
+              // Останавливаемся, как только сервер подтвердил PRO/бизнес-статус
+              if (userData.role === 'business' || userData.plan_code) break;
+            } catch { /* пробуем снова */ }
+            await new Promise(r => setTimeout(r, 2500));
+          }
+        };
+        refreshUserAfterPayment();
       }
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (paymentStatus === 'error') {
