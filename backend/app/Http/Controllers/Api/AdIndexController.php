@@ -51,27 +51,32 @@ class AdIndexController extends Controller
 
         if ($request->filled('search')) {
             $search = (string) $request->search;
+
+            // Всегда фильтруем по тексту (title/description) — это гарантирует результаты
+            // даже когда эмбеддинги в БД не заполнены.
+            $query->where(function ($q) use ($search): void {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+
+            // Семантические эмбеддинги используем ТОЛЬКО для улучшения сортировки,
+            // не исключая объявления без эмбеддинга (иначе поиск возвращал 0).
             $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-            $vectorSearchSuccess = false;
-
             if ($apiKey) {
-                $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
-                    'model' => 'models/text-embedding-004',
-                    'content' => ['parts' => [['text' => $search]]],
-                ]);
+                try {
+                    $response = Http::timeout(4)->post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
+                        'model' => 'models/text-embedding-004',
+                        'content' => ['parts' => [['text' => $search]]],
+                    ]);
 
-                if ($response->successful() && $embedding = $response->json('embedding.values')) {
-                    $embeddingString = '[' . implode(',', $embedding) . ']';
-                    $query->whereNotNull('embedding')->orderByRaw('embedding <=> ?', [$embeddingString]);
-                    $vectorSearchSuccess = true;
+                    if ($response->successful() && $embedding = $response->json('embedding.values')) {
+                        $embeddingString = '[' . implode(',', $embedding) . ']';
+                        // NULLS LAST: объявления с эмбеддингом ранжируются по близости, остальные — после
+                        $query->orderByRaw('CASE WHEN embedding IS NULL THEN 1 ELSE 0 END, embedding <=> ?', [$embeddingString]);
+                    }
+                } catch (\Throwable $e) {
+                    // Если сервис эмбеддингов недоступен — просто остаёмся на текстовом поиске
                 }
-            }
-
-            if (! $vectorSearchSuccess) {
-                $query->where(function ($q) use ($search): void {
-                    $q->where('title', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
-                });
             }
         }
 
