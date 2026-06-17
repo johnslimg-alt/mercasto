@@ -150,7 +150,7 @@ export default function SplitViewContainer({
           
           {/* Map overlay info */}
           {!mapCollapsed && (
-            <div className="absolute bottom-3 left-3 right-3 z-[5] flex items-center justify-between gap-2">
+            <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[5] flex items-center justify-between gap-2">
               <div className="rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-2 shadow-lg">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <MapPin size={14} className="text-[#84CC16]" />
