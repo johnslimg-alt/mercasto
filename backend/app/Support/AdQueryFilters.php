@@ -14,6 +14,19 @@ class AdQueryFilters
 {
     private const MAX_STRING_LENGTH = 80;
 
+    /** Полное название штата → аббревиатура, как она встречается в поле location ("Ciudad, ABBR"). */
+    private const STATE_ABBR = [
+        'Aguascalientes' => 'AGS', 'Baja California' => 'BC', 'Baja California Sur' => 'BCS',
+        'Campeche' => 'CAMP', 'Chiapas' => 'CHIS', 'Chihuahua' => 'CHIH', 'Ciudad de México' => 'CDMX',
+        'Coahuila' => 'COAH', 'Colima' => 'COL', 'Durango' => 'DGO', 'Estado de México' => 'MEX',
+        'Guanajuato' => 'GTO', 'Guerrero' => 'GRO', 'Hidalgo' => 'HGO', 'Jalisco' => 'JAL',
+        'Michoacán' => 'MICH', 'Morelos' => 'MOR', 'Nayarit' => 'NAY', 'Nuevo León' => 'NL',
+        'Oaxaca' => 'OAX', 'Puebla' => 'PUE', 'Querétaro' => 'QRO', 'Quintana Roo' => 'ROO',
+        'San Luis Potosí' => 'SLP', 'Sinaloa' => 'SIN', 'Sonora' => 'SON', 'Tabasco' => 'TAB',
+        'Tamaulipas' => 'TAMS', 'Tlaxcala' => 'TLAX', 'Veracruz' => 'VER', 'Yucatán' => 'YUC',
+        'Zacatecas' => 'ZAC',
+    ];
+
     public static function apply(Builder $query, Request $request): void
     {
         self::applyGlobalFilters($query, $request);
@@ -115,9 +128,16 @@ class AdQueryFilters
         if ($locationStates !== []) {
             $query->where(function (Builder $inner) use ($locationStates): void {
                 foreach ($locationStates as $st) {
-                    $like = '%' . trim((string) $st) . '%';
+                    $name = trim((string) $st);
+                    $like = '%' . $name . '%';
                     $inner->orWhereRaw('state ILIKE ?', [$like])
                           ->orWhereRaw('location ILIKE ?', [$like]);
+                    // Часть объявлений хранит штат сокращением в location ("Guadalajara, JAL"),
+                    // поэтому матчим и по аббревиатуре штата.
+                    $abbr = self::STATE_ABBR[$name] ?? null;
+                    if ($abbr) {
+                        $inner->orWhereRaw('location ILIKE ?', ['%, ' . $abbr]);
+                    }
                 }
             });
         }
