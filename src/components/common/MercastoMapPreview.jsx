@@ -228,7 +228,7 @@ export default function MercastoMapPreview({
       center,
       zoom,
       zoomControl: true,
-      attributionControl: false,
+      attributionControl: true,
       scrollWheelZoom: isLarge,
       fadeAnimation: false,
       markerZoomAnimation: false,
@@ -254,7 +254,7 @@ export default function MercastoMapPreview({
     L.tileLayer(tileUrl, {
       maxZoom: 19,
       crossOrigin: true,
-      attribution: '&copy; OpenStreetMap',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
     })
       .on('tileerror', () => {
         if (mountedRef.current && instanceRef.current === map) setLoadFailed(true);

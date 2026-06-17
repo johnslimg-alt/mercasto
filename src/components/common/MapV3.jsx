@@ -646,7 +646,7 @@ function createPopupElement(ad, marker) {
         center,
         zoom,
         zoomControl: true,
-        attributionControl: false,
+        attributionControl: true,
         scrollWheelZoom: isLarge,
         fadeAnimation: false,
         markerZoomAnimation: false,
@@ -669,7 +669,7 @@ function createPopupElement(ad, marker) {
     const tileLayerInstance = L.tileLayer(tileUrl, {
       maxZoom: 19,
       crossOrigin: true,
-      attribution: '&copy; OpenStreetMap',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
     });
     
     tileLayerInstance.on('tileload', () => { tileLoadCount++; });
