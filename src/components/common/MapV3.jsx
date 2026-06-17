@@ -793,7 +793,10 @@ function createPopupElement(ad, marker) {
       }
 
       leafMarker.on('click', () => {
-        onMarkerClick?.(marker.ad || marker);
+        // Для объявлений показываем красивый попап (bindPopup открывается сам);
+        // переход на объявление — по кнопке "Ver anuncio" внутри попапа.
+        // Для маркеров без объявления (напр. режим выбора локации) — старое поведение.
+        if (!ad) onMarkerClick?.(marker.ad || marker);
       });
 
       markerGroup.addLayer(leafMarker);
