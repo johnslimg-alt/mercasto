@@ -318,7 +318,7 @@ html.dark .btn-lg.bg-white:hover {
   }
 
   .header-search-shell {
-    overflow: hidden;
+    overflow: visible;
   }
 
   .header-search-shell button {
