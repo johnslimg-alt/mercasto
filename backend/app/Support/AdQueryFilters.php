@@ -109,7 +109,50 @@ class AdQueryFilters
             }
         }
 
-        foreach (['listing_type', 'payment_method', 'delivery', 'seller_response'] as $key) {
+        // Локация из сайдбара: фронт шлёт filters[location_state] / filters[location_city].
+        // Город/штат у объявлений лежат в полях location/state/city, поэтому матчим ILIKE по ним.
+        $locationStates = self::filterValues($filters, 'location_state');
+        if ($locationStates !== []) {
+            $query->where(function (Builder $inner) use ($locationStates): void {
+                foreach ($locationStates as $st) {
+                    $like = '%' . trim((string) $st) . '%';
+                    $inner->orWhereRaw('state ILIKE ?', [$like])
+                          ->orWhereRaw('location ILIKE ?', [$like]);
+                }
+            });
+        }
+
+        $locationCities = self::filterValues($filters, 'location_city');
+        if ($locationCities !== []) {
+            $query->where(function (Builder $inner) use ($locationCities): void {
+                foreach ($locationCities as $city) {
+                    $like = '%' . trim((string) $city) . '%';
+                    $inner->orWhereRaw('location ILIKE ?', [$like])
+                          ->orWhereRaw('city ILIKE ?', [$like]);
+                }
+            });
+        }
+
+        // Тип объявления: атрибут listing_type у объявлений обычно не заполнен.
+        // Матчим по атрибуту ИЛИ по тексту (title/description), а "Venta" считаем
+        // значением по умолчанию для объявлений без явного типа (маркетплейс — преимущественно продажа).
+        $listingTypes = self::filterValues($filters, 'listing_type');
+        if ($listingTypes !== []) {
+            $hasVenta = in_array('venta', self::lowerValues($listingTypes), true);
+            $query->where(function (Builder $inner) use ($listingTypes, $hasVenta): void {
+                $inner->whereIn('attributes->listing_type', $listingTypes);
+                foreach ($listingTypes as $val) {
+                    $like = '%' . trim((string) $val) . '%';
+                    $inner->orWhereRaw('title ILIKE ?', [$like])
+                          ->orWhereRaw('description ILIKE ?', [$like]);
+                }
+                if ($hasVenta) {
+                    $inner->orWhereRaw("(attributes->>'listing_type') IS NULL");
+                }
+            });
+        }
+
+        foreach (['payment_method', 'delivery', 'seller_response'] as $key) {
             $values = self::filterValues($filters, $key);
             if ($values !== []) {
                 self::applyExactAttributeFilter($query, $key, $values, 'string');
