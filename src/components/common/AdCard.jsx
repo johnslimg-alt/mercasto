@@ -68,10 +68,11 @@ const AdCard = memo(({
       className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
-        <img 
-          src={safeImage} 
-          loading="lazy" 
-          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" 
+        <img
+          src={safeImage}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={handleImageError}
           alt={ad.title}
         />

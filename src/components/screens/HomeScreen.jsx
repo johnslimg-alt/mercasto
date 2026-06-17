@@ -329,6 +329,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     const [homeToast, setHomeToast] = React.useState(null);
     const homeToastTimerRef = React.useRef(null);
     const [featuredAds, setFeaturedAds] = React.useState([]);
+    const [featuredLoading, setFeaturedLoading] = React.useState(true);
     const navigate = useNavigate();
     const safeServerAds = React.useMemo(() => (Array.isArray(serverAds) ? serverAds : []), [serverAds]);
     const safeRealEstateAds = React.useMemo(() => (Array.isArray(realEstateAds) ? realEstateAds : []), [realEstateAds]);
@@ -345,7 +346,8 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
           const nextFeaturedAds = Array.isArray(data?.data) ? data.data : [];
           setFeaturedAds(nextFeaturedAds);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setFeaturedLoading(false));
     }, []);
     const VERTICAL_SLUGS = {
       'coches-y-motor': '/autos',
@@ -628,7 +630,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
             {/* 3. DESTACADOS — Promoted ads block */}
 
-            {featuredAds.length > 0 && (
+            {(featuredLoading || featuredAds.length > 0) && (
               <section className="col-span-12 mt-2">
 
                 {/* Header */}
@@ -653,7 +655,21 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 {/* Cards — horizontal scroll on mobile, grid on desktop */}
                 <div className="-mx-4 lg:mx-0 px-4 lg:px-0">
                   <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible">
-                    {featuredAds.slice(0, 4).map(ad => {
+                    {featuredAds.length === 0 ? (
+                      Array.from({ length: 4 }).map((_, i) => (
+                        <div key={`feat-skel-${i}`} className="snap-start shrink-0 w-[240px] lg:w-auto">
+                          <div className="relative overflow-hidden rounded-2xl border-2 border-amber-300/40 bg-white dark:bg-slate-800 dark:border-amber-600/30">
+                            <div className="aspect-[4/3] w-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                            <div className="p-3 space-y-2">
+                              <div className="h-3.5 w-3/4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                              <div className="h-4 w-1/3 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                              <div className="h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                    featuredAds.slice(0, 4).map(ad => {
                       const imgUrl = getImageUrl
                         ? getImageUrl(ad.image_url || ad.image)
                         : (ad.image_url || ad.image || `https://picsum.photos/seed/feat-${ad.id}/600/450`);
@@ -674,8 +690,9 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                                 src={imgUrl}
                                 alt={ad.title}
                                 loading="lazy"
+                                decoding="async"
                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                onError={e => { e.currentTarget.src = `https://picsum.photos/seed/feat-${ad.id}/600/450`; }}
+                                onError={e => { e.currentTarget.src = `https://picsum.photos/seed/feat-${ad.id}/480/360`; }}
                               />
                               {/* Golden badge */}
                               <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2 py-0.5 shadow-md">
@@ -712,7 +729,8 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                           </div>
                         </div>
                       );
-                    })}
+                    })
+                    )}
                   </div>
                 </div>
 
