@@ -172,25 +172,13 @@ class AdQueryFilters
             });
         }
 
-        // Фасетные фильтры, которых объявления обычно не хранят в attributes
-        // (способ оплаты, доставка, ответ продавца, гарантия, торг).
-        // Делаем их null-терпимыми: матчим по атрибуту ИЛИ по тексту, а объявления
-        // без явного значения НЕ исключаем — иначе фильтр обнулял выдачу.
-        // Когда у объявлений появятся эти данные — фильтр начнёт реально сужать.
-        foreach (['payment_method', 'delivery', 'seller_response', 'warranty', 'negotiable'] as $key) {
+        // Фасеты, которые задаются при публикации и хранятся в attributes.
+        // Строгий матч по значению атрибута (delivery исключён — доставки на платформе нет).
+        foreach (['payment_method', 'seller_response', 'warranty', 'negotiable'] as $key) {
             $values = self::filterValues($filters, $key);
-            if ($values === []) {
-                continue;
+            if ($values !== []) {
+                self::applyExactAttributeFilter($query, $key, $values, 'string');
             }
-            $query->where(function (Builder $inner) use ($key, $values): void {
-                $inner->whereIn("attributes->{$key}", $values)
-                      ->orWhereRaw("(attributes->>'{$key}') IS NULL");
-                foreach ($values as $v) {
-                    $like = '%' . trim((string) $v) . '%';
-                    $inner->orWhereRaw('title ILIKE ?', [$like])
-                          ->orWhereRaw('description ILIKE ?', [$like]);
-                }
-            });
         }
     }
 

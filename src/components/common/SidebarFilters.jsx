@@ -93,10 +93,6 @@ export default function SidebarFilters({
       'Pago seguro (escrow)', 'Contra entrega', 'PayPal',
       'Criptomonedas', 'Financiamiento propio', 'Crédito bancario'
     ] },
-    { id: 'delivery', label: 'Entrega', options: [
-      'Entrega local', 'Envío nacional', 'Envío express', 'Recoger en punto seguro',
-      'Entrega hoy', 'Envío internacional', 'Envío gratis', 'Instalación incluida'
-    ] },
     { id: 'seller_response', label: 'Respuesta del vendedor', options: [
       'Responde rápido (< 1 hora)', 'Responde hoy', 'Disponible hoy',
       'Atiende por chat', 'Atiende por email', 'Atiende por teléfono', 'Atiende por Telegram'

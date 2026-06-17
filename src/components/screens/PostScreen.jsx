@@ -22,6 +22,16 @@ const CATEGORY_ICONS = {
   informatica: Cpu, coleccionismo: Package,
 };
 
+// Фасеты публикации — сохраняются в form.attributes и используются фильтрами поиска
+// (доставки нет: продажа напрямую покупатель↔продавец).
+const SALE_FACETS = [
+  { key: 'listing_type', label: 'Tipo de anuncio', options: ['Venta', 'Renta', 'Renta con opción a compra', 'Traspaso', 'Gratis', 'Intercambio'] },
+  { key: 'payment_method', label: 'Pago aceptado', options: ['Efectivo', 'Transferencia SPEI', 'Tarjeta de crédito', 'Tarjeta de débito', 'Pago seguro (escrow)', 'PayPal', 'Criptomonedas'] },
+  { key: 'warranty', label: 'Garantía', options: ['Sin garantía', 'Con garantía', 'Garantía de fábrica', '30 días de garantía', '90 días de garantía', '1 año de garantía'] },
+  { key: 'negotiable', label: 'Precio', options: ['Precio fijo', 'Negociable', 'Acepto ofertas'] },
+  { key: 'seller_response', label: 'Respuesta al comprador', options: ['Responde rápido (< 1 hora)', 'Responde hoy', 'Atiende por chat', 'Atiende por teléfono'] },
+];
+
 // Lightweight photo grid — no dnd-kit required
 function PhotoGrid({ images, onRemove }) {
   return (
@@ -371,6 +381,29 @@ export default function PostScreen({
                   </div>
                 </div>
               )}
+
+              {/* Detalles de venta (фасеты для фильтров поиска) */}
+              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-950/50">
+                <h3 className="text-[14px] font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <Zap size={16} className="text-[#84CC16]" />
+                  {t.sale_details || 'Detalles de venta'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {SALE_FACETS.map(f => (
+                    <div key={f.key} className="space-y-2">
+                      <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">{f.label}</label>
+                      <select
+                        value={form.attributes?.[f.key] || ''}
+                        onChange={e => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), [f.key]: e.target.value } }))}
+                        className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white cursor-pointer transition-all"
+                      >
+                        <option value="">{t.select_optional || 'Seleccionar (opcional)...'}</option>
+                        {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* AI Description */}
               <div>

@@ -901,7 +901,7 @@ class AdController extends Controller
             return response()->json(['message' => 'No tienes permisos para cambiar el estado de este anuncio'], 403);
         }
 
-        $request->validate(['status' => 'required|in:active,inactive,archived,pending,paused,expired']);
+        $request->validate(['status' => 'required|in:active,inactive,archived,pending,paused,expired,rejected']);
 
         // Защита от обхода модерации: только админ может активировать объявление со статусом pending/rejected
         if ($request->status === 'active' && in_array($ad->status, ['pending', 'rejected']) && $request->user()->role !== 'admin') {
