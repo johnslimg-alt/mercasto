@@ -14,6 +14,7 @@ import SidebarFilters from '../common/SidebarFilters';
 import MapV3 from '../common/MapV3';
 import SplitViewContainer from '../common/SplitViewContainer';
 
+import { sizedImage } from '../../utils/imageHelpers';
 import SkeletonCard from '../common/SkeletonCard';
 import SavedSearchesPanel from '../common/SavedSearchesPanel';
 import RecommendationsWidget from '../common/RecommendationsWidget';
@@ -669,10 +670,11 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                         </div>
                       ))
                     ) : (
-                    featuredAds.slice(0, 4).map(ad => {
-                      const imgUrl = getImageUrl
+                    featuredAds.slice(0, 4).map((ad, i) => {
+                      const rawImg = getImageUrl
                         ? getImageUrl(ad.image_url || ad.image)
-                        : (ad.image_url || ad.image || `https://picsum.photos/seed/feat-${ad.id}/600/450`);
+                        : (ad.image_url || ad.image || `https://picsum.photos/seed/feat-${ad.id}/480/360`);
+                      const imgUrl = sizedImage(rawImg, 480);
                       const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
                       const rating = getHomeRating(ad);
                       return (
@@ -689,7 +691,8 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                               <img
                                 src={imgUrl}
                                 alt={ad.title}
-                                loading="lazy"
+                                loading={i === 0 ? 'eager' : 'lazy'}
+                                fetchpriority={i === 0 ? 'high' : 'auto'}
                                 decoding="async"
                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 onError={e => { e.currentTarget.src = `https://picsum.photos/seed/feat-${ad.id}/480/360`; }}

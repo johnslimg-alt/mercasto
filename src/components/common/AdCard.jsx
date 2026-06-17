@@ -1,5 +1,6 @@
 import React, { memo, useCallback } from 'react';
 import { Heart, Star } from 'lucide-react';
+import { sizedImage } from '../../utils/imageHelpers';
 
 const AdRatingStars = memo(({ ad, compact = false }) => {
   const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
@@ -37,7 +38,7 @@ const AdCard = memo(({
   const isHighlighted = ad.promoted === 'highlight';
   const isPro = ad.user?.role === 'business';
   const isFav = favoriteIds.includes(ad.id);
-  const safeImage = options.displayImageUrl || getImageUrl(ad.image_url, ad.image);
+  const safeImage = sizedImage(options.displayImageUrl || getImageUrl(ad.image_url, ad.image), 520);
 
   const handleCardClick = useCallback(() => {
     handleViewAd(ad);

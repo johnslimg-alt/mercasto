@@ -48,6 +48,35 @@ export const getImageUrl = (path, fallback = null) => {
 };
 
 /**
+ * Downsize remote images that support on-the-fly resizing (Unsplash, Picsum)
+ * so list/card thumbnails don't ship full-resolution files. Storage uploads and
+ * unknown hosts are returned unchanged.
+ *
+ * @param {string} url - Resolved image URL
+ * @param {number} width - Target display width (CSS px); served at ~2x for retina
+ * @returns {string} Possibly-resized URL
+ */
+export const sizedImage = (url, width = 480) => {
+  if (!url || typeof url !== 'string') return url;
+  const w = Math.max(120, Math.round(width));
+  try {
+    if (url.includes('images.unsplash.com')) {
+      const u = new URL(url);
+      u.searchParams.set('w', String(w));
+      u.searchParams.set('q', '60');
+      u.searchParams.set('auto', 'format');
+      u.searchParams.set('fit', 'crop');
+      return u.toString();
+    }
+    if (url.includes('picsum.photos')) {
+      const h = Math.round(w * 0.75);
+      return url.replace(/\/(\d+)\/(\d+)(?=($|\?))/, `/${w}/${h}`);
+    }
+  } catch (e) {}
+  return url;
+};
+
+/**
  * Resolve multiple image paths to an array of full URLs.
  *
  * @param {string|string[]} pathStr - Image path(s) from the API
