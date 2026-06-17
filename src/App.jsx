@@ -1053,7 +1053,8 @@ function App() {
     const adIdParam = params.get('ad');
     const storeIdParam = params.get('store');
     const hash = location.hash || window.location.hash;
-    const targetAdId = adIdParam || (hash.startsWith('#ad-') ? hash.replace('#ad-', '') : null);
+    const pathAdMatch = location.pathname.match(/^\/(?:ads|anuncio)\/(\d+)$/);
+    const targetAdId = adIdParam || (hash.startsWith('#ad-') ? hash.replace('#ad-', '') : null) || (pathAdMatch ? pathAdMatch[1] : null);
     const targetStoreId = storeIdParam || (hash.startsWith('#company-') ? hash.replace('#company-', '') : null);
     if (!targetAdId && !targetStoreId) return;
 
@@ -1098,7 +1099,7 @@ function App() {
     }
 
     return () => { cancelled = true; };
-  }, [location.hash, location.search, navigate, setCurrentTab]);
+  }, [location.hash, location.search, location.pathname, navigate, setCurrentTab]);
 
   // --- ПЕРЕХВАТ OAuth ТОКЕНА ИЗ URL ---
   useEffect(() => {
@@ -1302,8 +1303,20 @@ function App() {
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
     document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
     document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content', window.location.href);
+    const canonicalHref = viewedAd
+      ? `https://mercasto.com/ads/${viewedAd.id}`
+      : viewedCompany
+        ? `https://mercasto.com/vendedor/${viewedCompany.id}`
+        : `${window.location.origin}${window.location.pathname}`;
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalHref);
     document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
+    let canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (!canonicalEl) {
+      canonicalEl = document.createElement('link');
+      canonicalEl.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalEl);
+    }
+    canonicalEl.setAttribute('href', canonicalHref);
 
     // Внедрение Schema.org JSON-LD структурированных данных
     const existingScript = document.getElementById('schema-ld-json');
@@ -1322,6 +1335,7 @@ function App() {
         "image": getImageUrl(viewedAd.image_url),
         "offers": {
           "@type": "Offer",
+          "url": `https://mercasto.com/ads/${viewedAd.id}`,
           "price": viewedAd.price,
           "priceCurrency": "MXN",
           "itemCondition": viewedAd.condition === 'new' ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
@@ -3883,6 +3897,8 @@ function App() {
               <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
               <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense></RequireAuth>} />
               <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
+              <Route path="/ads/:id" element={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
+              <Route path="/anuncio/:id" element={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
               <Route path="/autos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding lang={lang} /></React.Suspense>} />
               <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding lang={lang} /></React.Suspense>} />
               <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding lang={lang} /></React.Suspense>} />

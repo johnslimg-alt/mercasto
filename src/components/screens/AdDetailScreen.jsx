@@ -440,11 +440,11 @@ export default function AdDetailScreen({
         "@type": "Product",
         "name": ad.title || "Anuncio en Mercasto",
         "description": ad.description || "Anuncio clasificado en Mercasto",
-        "image": ad.images?.[0] ? `https://mercasto.com/storage/${ad.images[0]}` : "https://mercasto.com/placeholder-ad.svg",
+        "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
         "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
         "offers": {
           "@type": "Offer",
-          "url": `https://mercasto.com/anuncio/${ad.id}`,
+          "url": `https://mercasto.com/ads/${ad.id}`,
           "priceCurrency": "MXN",
           "price": ad.price || "0",
           "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",

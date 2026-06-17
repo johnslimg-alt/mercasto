@@ -52,7 +52,7 @@ class SitemapController extends Controller
 
     public function ads()
     {
-        $content = Cache::remember('sitemap_ads_v2', 1800, function () {
+        $content = Cache::remember('sitemap_ads_v3', 1800, function () {
             return $this->generateAdsSitemap();
         });
 
@@ -205,7 +205,7 @@ class SitemapController extends Controller
 
         foreach ($ads as $ad) {
             $xml .= $this->urlEntry(
-                "{$baseUrl}/share/ads/{$ad->id}",
+                "{$baseUrl}/ads/{$ad->id}",
                 'daily',
                 '0.7',
                 $ad->updated_at->toW3cString()
