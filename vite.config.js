@@ -3,6 +3,25 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+// Make the bundled stylesheet non-render-blocking: load it as media="print" and
+// flip to "all" once downloaded (loadCSS pattern). The inline #app-splash in
+// index.html covers the brief unstyled window, so first paint no longer waits on
+// the full CSS download. <noscript> keeps it working without JS.
+function deferStylesheets() {
+  return {
+    name: 'mercasto-defer-stylesheets',
+    enforce: 'post',
+    transformIndexHtml(html) {
+      return html.replace(
+        /<link\s+rel="stylesheet"((?:(?!\bmedia=)[^>])*?)href="([^"]+)"((?:(?!\bmedia=)[^>])*?)>/g,
+        (match, pre, href, post) =>
+          `<link rel="stylesheet"${pre}href="${href}"${post} media="print" onload="this.media='all'">` +
+          `<noscript><link rel="stylesheet"${pre}href="${href}"${post}></noscript>`
+      );
+    }
+  };
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -13,7 +32,8 @@ export default defineConfig({
       authToken: process.env.SENTRY_AUTH_TOKEN,
       telemetry: false,
       disable: !process.env.SENTRY_AUTH_TOKEN
-    })
+    }),
+    deferStylesheets()
   ],
   build: {
     cssCodeSplit: true,

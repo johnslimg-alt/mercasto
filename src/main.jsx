@@ -5,9 +5,8 @@ import { BrowserRouter } from 'react-router-dom'
 import AppWrapper from './App.jsx'
 import { UIProvider } from './contexts/UIContext.jsx'
 import { ToastProvider } from './components/ui/Toast.jsx'
-import 'leaflet/dist/leaflet.css';
-import 'leaflet.markercluster/dist/MarkerCluster.css';
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+// Leaflet CSS is loaded lazily alongside the map bundle (see MapV3 loadLeaflet)
+// so it no longer bloats the render-blocking critical stylesheet.
 import './index.css'
 import './i18n'; // Multi-language support
 
