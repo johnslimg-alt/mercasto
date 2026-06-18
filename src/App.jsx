@@ -438,6 +438,7 @@ function App() {
   const [dynamicFilters, setDynamicFilters] = useState({});
 
   const [viewedAd, setViewedAd] = useState(null);
+  const [deepLinkAdMissing, setDeepLinkAdMissing] = useState(false);
   const [viewedCompany, setViewedCompany] = useState(null);
   const [companyAds, setCompanyAds] = useState([]);
   const [loadingCompanyAds, setLoadingCompanyAds] = useState(false);
@@ -1061,18 +1062,20 @@ function App() {
     let cancelled = false;
 
     if (targetAdId) {
+      if (pathAdMatch) setDeepLinkAdMissing(false);
       const token = localStorage.getItem('auth_token');
       fetch(`${API_URL}/ads/${targetAdId}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
         .then(res => res.ok ? res.json() : null)
         .then(adData => {
-          if (cancelled || !adData) return;
+          if (cancelled) return;
+          if (!adData) { if (pathAdMatch) setDeepLinkAdMissing(true); return; }
           setViewedCompany(null);
           setViewedAd(adData);
           if (adIdParam) navigate(`/#ad-${targetAdId}`, { replace: true });
         })
-        .catch(() => console.error("Error loading deep link ad"));
+        .catch(() => { if (!cancelled && pathAdMatch) setDeepLinkAdMissing(true); });
     } else if (targetStoreId) {
       fetch(`${API_URL}/users/${targetStoreId}/profile`)
         .then(res => res.ok ? res.json() : null)
@@ -3897,8 +3900,8 @@ function App() {
               <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
               <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense></RequireAuth>} />
               <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
-              <Route path="/ads/:id" element={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
-              <Route path="/anuncio/:id" element={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
+              <Route path="/ads/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
+              <Route path="/anuncio/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
               <Route path="/autos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding lang={lang} /></React.Suspense>} />
               <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding lang={lang} /></React.Suspense>} />
               <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding lang={lang} /></React.Suspense>} />
