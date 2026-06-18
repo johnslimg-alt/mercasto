@@ -63,6 +63,39 @@
       html.dark body {
         background: #0f172a;
       }
+      /* Instant-paint app shell: renders from HTML+inline CSS before the JS bundle
+         loads, improving FCP/LCP on slow connections. position:fixed keeps it out of
+         document flow so removing it cannot cause layout shift (CLS-safe). */
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #0f172a;
+        transition: opacity .35s ease;
+      }
+      html:not(.dark) #app-splash { background: #F8FAFC; }
+      #app-splash.app-splash--hide { opacity: 0; pointer-events: none; }
+      #app-splash .as-logo {
+        font: 800 40px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: -.03em;
+        color: #fff;
+      }
+      html:not(.dark) #app-splash .as-logo { color: #0F172A; }
+      #app-splash .as-logo b { color: #84CC16; }
+      #app-splash .as-spin {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 3px solid rgba(132, 204, 22, .25);
+        border-top-color: #84CC16;
+        animation: as-rot .8s linear infinite;
+      }
+      @keyframes as-rot { to { transform: rotate(360deg); } }
     </style>
     <script type="application/ld+json">
       {
@@ -80,6 +113,10 @@
     </script>
 </head>
   <body class="antialiased bg-[#F8FAFC] dark:bg-slate-950">
+    <div id="app-splash" aria-hidden="true">
+      <div class="as-logo">Merca<b>sto</b></div>
+      <div class="as-spin"></div>
+    </div>
     <script>
       if (typeof window.Notification === 'undefined') {
         window.Notification = function NotificationFallback() { return null; };
@@ -112,5 +149,21 @@
 
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (function () {
+        function hideSplash() {
+          var s = document.getElementById('app-splash');
+          if (!s) return;
+          s.classList.add('app-splash--hide');
+          setTimeout(function () { if (s && s.parentNode) s.parentNode.removeChild(s); }, 450);
+        }
+        if (document.readyState === 'complete') {
+          setTimeout(hideSplash, 200);
+        } else {
+          window.addEventListener('load', function () { setTimeout(hideSplash, 200); }, { once: true });
+        }
+        setTimeout(hideSplash, 8000); // safety net so the shell never sticks
+      })();
+    </script>
   </body>
 </html>
