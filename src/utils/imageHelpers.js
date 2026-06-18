@@ -48,9 +48,11 @@ export const getImageUrl = (path, fallback = null) => {
 };
 
 /**
- * Downsize remote images that support on-the-fly resizing (Unsplash, Picsum)
- * so list/card thumbnails don't ship full-resolution files. Storage uploads and
- * unknown hosts are returned unchanged.
+ * Downsize images for list/card thumbnails so they don't ship full-resolution
+ * files:
+ *   - Unsplash / Picsum  -> their native on-the-fly resize params;
+ *   - storage uploads     -> our /api/img WebP thumbnail endpoint;
+ *   - unknown hosts       -> returned unchanged.
  *
  * @param {string} url - Resolved image URL
  * @param {number} width - Target display width (CSS px); served at ~2x for retina
@@ -71,6 +73,13 @@ export const sizedImage = (url, width = 480) => {
     if (url.includes('picsum.photos')) {
       const h = Math.round(w * 0.75);
       return url.replace(/\/(\d+)\/(\d+)(?=($|\?))/, `/${w}/${h}`);
+    }
+    // Storage-hosted uploads -> serve a width-constrained WebP via /api/img.
+    // Only route real image files (jpg/png/webp); leave SVGs/placeholders alone.
+    const storageMatch = url.match(/\/storage\/(.+\.(?:jpe?g|png|webp))(?:\?.*)?$/i);
+    if (storageMatch) {
+      const apiBase = (typeof window !== 'undefined' && window.__API_URL__) || '/api';
+      return `${apiBase}/img?path=${encodeURIComponent(storageMatch[1])}&w=${w}`;
     }
   } catch (e) {}
   return url;
