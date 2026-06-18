@@ -38,17 +38,13 @@
           gtag('js', new Date());
           gtag('config', GA_ID);
         }
-        var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 2000); };
-        function schedule() { idle(loadGA); }
-        if (document.readyState === 'complete') {
-          schedule();
-        } else {
-          window.addEventListener('load', schedule, { once: true });
-        }
-        // Guarantee GA fires on first interaction even if the page never goes idle.
-        ['scroll', 'click', 'keydown', 'touchstart', 'pointerdown'].forEach(function (ev) {
+        // Load GA on the first real user interaction so it never competes with
+        // the critical render path. Real visitors interact within moments;
+        // a long safety-net timeout still captures non-interacting sessions.
+        ['scroll', 'click', 'keydown', 'touchstart', 'pointerdown', 'mousemove'].forEach(function (ev) {
           window.addEventListener(ev, loadGA, { once: true, passive: true });
         });
+        setTimeout(loadGA, 10000);
       })();
     </script>
     <script>
