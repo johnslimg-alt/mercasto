@@ -68,7 +68,22 @@ export default defineConfig({
           if (id.includes('/@headlessui/') || id.includes('/@heroicons/') || id.includes('/framer-motion/')) {
             return 'vendor-ui';
           }
-          
+
+          // Heavy libs NOT used on the homepage — split out of vendor-misc so they
+          // load lazily only with the screens that need them (cuts unused JS on home).
+          // Charts -> only the dashboard (lazy). recharts pulls d3-*/victory-vendor.
+          if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-vendor/') || id.includes('/internmap/') || id.includes('/decimal.js-light/')) {
+            return 'vendor-charts';
+          }
+          // Drag & drop -> only post/profile image editors (lazy).
+          if (id.includes('/@dnd-kit/')) {
+            return 'vendor-dnd';
+          }
+          // QR code -> only the ad detail share modal (lazy).
+          if (id.includes('/qrcode/') || id.includes('/dijkstrajs/') || id.includes('/encode-utf8/') || id.includes('/pngjs/')) {
+            return 'vendor-qrcode';
+          }
+
           // All other node_modules
           return 'vendor-misc';
         },
