@@ -3,6 +3,7 @@ import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { getTranslations } from './utils/translations';
 import { localizedText } from './utils/localize';
+import { sizedImage } from './utils/imageHelpers';
 import AdSenseBanner from './components/common/AdSenseBanner';
 import OnboardingModal from './components/OnboardingModal';
 import {
@@ -3005,7 +3006,7 @@ function App() {
     const isHighlighted = ad.promoted === 'highlight';
     const isPro = ad.user?.role === 'business';
     const isFav = favoriteIds.includes(ad.id);
-    const safeImage = options.displayImageUrl || getImageUrl(ad.image_url, ad.image);
+    const safeImage = sizedImage(options.displayImageUrl || getImageUrl(ad.image_url, ad.image), 520);
 
     return (
       <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
