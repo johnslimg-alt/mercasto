@@ -15,6 +15,7 @@ import MapV3 from '../common/MapV3';
 import SplitViewContainer from '../common/SplitViewContainer';
 
 import { sizedImage } from '../../utils/imageHelpers';
+import { localizedText } from '../../utils/localize';
 import SkeletonCard from '../common/SkeletonCard';
 import SavedSearchesPanel from '../common/SavedSearchesPanel';
 import RecommendationsWidget from '../common/RecommendationsWidget';
@@ -690,7 +691,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                             <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-700">
                               <img
                                 src={imgUrl}
-                                alt={ad.title}
+                                alt={localizedText(ad.title, lang)}
                                 loading={i === 0 ? 'eager' : 'lazy'}
                                 fetchpriority={i === 0 ? 'high' : 'auto'}
                                 decoding="async"
@@ -708,7 +709,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                             {/* Info */}
                             <div className="p-3">
-                              <p className="mb-1 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-800 dark:text-white">{ad.title}</p>
+                              <p className="mb-1 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-800 dark:text-white">{localizedText(ad.title, lang)}</p>
                               <p className="text-[15px] font-bold text-amber-600 dark:text-amber-400">{price}</p>
                               <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                                 <span className="tracking-tight text-amber-400">★★★★★</span>

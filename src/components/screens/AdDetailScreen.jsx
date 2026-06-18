@@ -1,4 +1,5 @@
 import useDocumentMeta from '../../hooks/useDocumentMeta';
+import { localizedText } from '../../utils/localize';
 import QRCode from 'qrcode';
 import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
@@ -356,7 +357,7 @@ export default function AdDetailScreen({
 
   // Dynamic OG tags for social sharing
   useDocumentMeta({
-    title: ad?.title || 'Mercasto',
+    title: localizedText(ad?.title, lang) || 'Mercasto',
     description: ad ? `$${Number(ad.price || 0).toLocaleString('es-MX')} - ${ad.state || ad.location || 'México'}` : '',
     image: ad ? getImageUrl(ad.image_url || ad.image?.[0]) : '',
     url: typeof window !== 'undefined' ? window.location.href : ''
@@ -438,7 +439,7 @@ export default function AdDetailScreen({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Product",
-        "name": ad.title || "Anuncio en Mercasto",
+        "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
         "description": ad.description || "Anuncio clasificado en Mercasto",
         "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
         "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
@@ -504,7 +505,7 @@ export default function AdDetailScreen({
 
           {/* AD DETAILS */}
           <div className="mt-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{ad.title}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
             <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>
             <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
               <RatingStars rating={ratingStats.rating} />

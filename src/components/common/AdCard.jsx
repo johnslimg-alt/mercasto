@@ -1,6 +1,7 @@
 import React, { memo, useCallback } from 'react';
 import { Heart, Star } from 'lucide-react';
 import { sizedImage } from '../../utils/imageHelpers';
+import { localizedText } from '../../utils/localize';
 
 const AdRatingStars = memo(({ ad, compact = false }) => {
   const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
@@ -75,7 +76,7 @@ const AdCard = memo(({
           decoding="async"
           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={handleImageError}
-          alt={ad.title}
+          alt={localizedText(ad.title)}
         />
         <button
           type="button"
@@ -95,7 +96,7 @@ const AdCard = memo(({
         <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">
           ${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span>
         </div>
-        <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{ad.title}</h3>
+        <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{localizedText(ad.title)}</h3>
         <div className="mt-1.5">
           <AdRatingStars ad={ad} compact />
         </div>
