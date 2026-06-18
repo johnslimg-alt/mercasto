@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ContactController;
 
 // Public routes
+Route::get('/img', \App\Http\Controllers\ImageController::class); // on-the-fly thumbnail resizer (WebP)
 Route::middleware('throttle:search')->get('/search/suggestions', [SearchController::class, 'suggestions']);
 Route::middleware('throttle:search')->get('/search/semantic', [SearchController::class, 'semanticSearch']);
 Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'index']);
