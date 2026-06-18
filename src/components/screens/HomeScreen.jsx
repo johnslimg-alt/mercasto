@@ -786,9 +786,9 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                       </div>
                     ))
                   ) : (
-                    trendingAds.map(ad => (
+                    trendingAds.map((ad, idx) => (
                       <div key={ad.id} className="snap-start shrink-0 w-[260px]">
-                        {renderAdCard(ad)}
+                        {renderAdCard(ad, idx === 0 ? { priority: true } : {})}
                       </div>
                     ))
                   )}
