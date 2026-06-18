@@ -21,14 +21,35 @@
     <meta name="twitter:image" content="https://mercasto.com/icon-512x512.png" />
     <link rel="manifest" href="/manifest.json">
     <title>Mercasto</title>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VX87HQC817"></script>
+    <!-- Google tag (gtag.js) — deferred off the critical path to protect load performance -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-VX87HQC817');
+      (function () {
+        var GA_ID = 'G-VX87HQC817';
+        var loaded = false;
+        function loadGA() {
+          if (loaded) return;
+          loaded = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+          document.head.appendChild(s);
+          gtag('js', new Date());
+          gtag('config', GA_ID);
+        }
+        var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 2000); };
+        function schedule() { idle(loadGA); }
+        if (document.readyState === 'complete') {
+          schedule();
+        } else {
+          window.addEventListener('load', schedule, { once: true });
+        }
+        // Guarantee GA fires on first interaction even if the page never goes idle.
+        ['scroll', 'click', 'keydown', 'touchstart', 'pointerdown'].forEach(function (ev) {
+          window.addEventListener(ev, loadGA, { once: true, passive: true });
+        });
+      })();
     </script>
     <script>
       try {
