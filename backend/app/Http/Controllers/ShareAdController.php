@@ -14,8 +14,8 @@ class ShareAdController extends Controller
             ->where('status', 'active')
             ->findOrFail($id);
 
-        $title = Str::limit($ad->title ?: 'Anuncio en Mercasto', 80, '');
-        $description = Str::limit(trim(strip_tags((string) $ad->description)) ?: 'Mira este anuncio en Mercasto, marketplace de clasificados para México.', 180, '');
+        $title = Str::limit($this->localized($ad->title) ?: 'Anuncio en Mercasto', 80, '');
+        $description = Str::limit(trim(strip_tags($this->localized($ad->description))) ?: 'Mira este anuncio en Mercasto, marketplace de clasificados para México.', 180, '');
         $canonicalUrl = url('/ads/' . $ad->id);
         $shareUrl = url('/share/ads/' . $ad->id);
         $imageUrl = $this->resolveImage($ad);
@@ -65,6 +65,45 @@ HTML;
     private function json(string $value): string
     {
         return json_encode($value, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+    }
+
+    /**
+     * Some fields (title/description) may be stored as a multilingual object or a
+     * JSON string like {"es":"...","en":"..."}. Return a plain localized string
+     * (es preferred, then en, then any) so OG/meta never expose raw JSON.
+     * Plain strings pass through unchanged.
+     */
+    private function localized($value): string
+    {
+        if (is_array($value)) {
+            return $this->pickLocale($value);
+        }
+        if (! is_string($value) || $value === '') {
+            return $value === null ? '' : (string) $value;
+        }
+        $trimmed = trim($value);
+        if (str_starts_with($trimmed, '{')) {
+            $decoded = json_decode($trimmed, true);
+            if (is_array($decoded)) {
+                return $this->pickLocale($decoded);
+            }
+        }
+        return $value;
+    }
+
+    private function pickLocale(array $obj): string
+    {
+        foreach (['es', 'en'] as $key) {
+            if (! empty($obj[$key]) && is_string($obj[$key])) {
+                return $obj[$key];
+            }
+        }
+        foreach ($obj as $v) {
+            if (is_string($v) && trim($v) !== '') {
+                return $v;
+            }
+        }
+        return '';
     }
 
     /**
