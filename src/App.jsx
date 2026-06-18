@@ -3007,7 +3007,7 @@ function App() {
       <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
           <img src={safeImage} loading={options.priority ? 'eager' : 'lazy'} fetchpriority={options.priority ? 'high' : 'auto'} decoding="async" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
-          <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
+          <button type="button" aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'} aria-pressed={isFav} onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
             <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
           </button>
           {isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}

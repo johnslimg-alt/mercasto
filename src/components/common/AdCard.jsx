@@ -77,8 +77,11 @@ const AdCard = memo(({
           onError={handleImageError}
           alt={ad.title}
         />
-        <button 
-          onClick={handleFavoriteClick} 
+        <button
+          type="button"
+          aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          aria-pressed={isFav}
+          onClick={handleFavoriteClick}
           className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10"
         >
           <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
