@@ -272,7 +272,7 @@ const getAdRatingStats = (ad = {}) => {
 
 function RatingStars({ rating }) {
   return (
-    <span className="inline-flex items-center gap-0.5 text-amber-400" aria-label={`${rating.toFixed(1)} de 5`}>
+    <span className="inline-flex items-center gap-0.5 text-amber-400" role="img" aria-label={`${rating.toFixed(1)} de 5`}>
       {[1, 2, 3, 4, 5].map(i => (
         <Star
           key={i}

@@ -114,7 +114,7 @@ const AdRatingStars = ({ ad, compact = false }) => {
   const filled = Math.round(rating);
   return (
     <div className={`flex items-center gap-1 ${compact ? 'text-[11px]' : 'text-[13px]'}`}>
-      <div className="flex text-amber-400" aria-label={`${rating.toFixed(1)} estrellas`}>
+      <div className="flex text-amber-400" role="img" aria-label={`${rating.toFixed(1)} estrellas`}>
         {[1, 2, 3, 4, 5].map(i => (
           <Star key={i} className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} ${i <= filled ? 'fill-amber-400' : 'fill-none'} text-amber-400`} />
         ))}
@@ -3701,7 +3701,7 @@ function App() {
                   </select>
                 </div>
                 <div className="relative">
-                  <button type="button" onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
+                  <button type="button" aria-label={user ? 'Abrir menú de cuenta' : 'Iniciar sesión'} onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
                     {user?.avatar_url ? (
                       <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-7 h-7 rounded-full object-cover" alt=""/>
                     ) : (

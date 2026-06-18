@@ -1,0 +1,28 @@
+# Mercasto
+
+> Mercasto es un marketplace de clasificados para todo México: compra, vende y renta autos, inmuebles, electrónica, servicios, empleos y más, con contacto directo y seguro entre personas.
+
+Mercasto conecta a compradores y vendedores en México. Los anuncios cubren vehículos, bienes raíces, empleos, servicios profesionales, electrónica, hogar, moda, mascotas y artículos de segunda mano. La plataforma ofrece búsqueda por categoría y ubicación, mapa interactivo, perfiles de vendedor verificados y pagos a través de Clip.
+
+## Categorías principales
+
+- [Autos y motos](https://mercasto.com/autos): coches nuevos y usados, motocicletas y refacciones.
+- [Inmuebles](https://mercasto.com/inmuebles): casas y departamentos en venta y renta.
+- [Empleos](https://mercasto.com/empleos): ofertas de trabajo en todo México.
+- [Servicios](https://mercasto.com/servicios): profesionales y oficios.
+- [Electrónica](https://mercasto.com/electronica): teléfonos, computadoras y gadgets.
+- [Tiendas](https://mercasto.com/tiendas): directorio de negocios y tiendas oficiales.
+
+## Páginas útiles
+
+- [Inicio](https://mercasto.com/): búsqueda y anuncios destacados.
+- [Acerca de Mercasto](https://mercasto.com/acerca-de): qué es la plataforma.
+- [Centro de ayuda](https://mercasto.com/ayuda): cómo comprar y vender.
+- [Consejos de seguridad](https://mercasto.com/safety): cómo operar de forma segura.
+- [Contacto](https://mercasto.com/contacto): soporte y consultas.
+
+## Legal
+
+- [Términos de uso](https://mercasto.com/terminos)
+- [Aviso de privacidad](https://mercasto.com/privacidad)
+- [Política de cookies](https://mercasto.com/cookies)

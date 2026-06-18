@@ -11,7 +11,7 @@ const AdRatingStars = memo(({ ad, compact = false }) => {
 
   return (
     <div className={`flex items-center gap-1 ${compact ? 'text-[11px]' : 'text-[13px]'}`}>
-      <div className="flex text-amber-400" aria-label={`${rating.toFixed(1)} estrellas`}>
+      <div className="flex text-amber-400" role="img" aria-label={`${rating.toFixed(1)} estrellas`}>
         {[1, 2, 3, 4, 5].map(i => (
           <Star key={i} className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} ${i <= filled ? 'fill-amber-400' : 'fill-none'} text-amber-400`} />
         ))}
