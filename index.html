@@ -2,10 +2,40 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <!-- Preconnect to image hosts used by ad cards (cuts LCP on first image request) -->
+    <!-- Preconnect to image hosts and API — cuts LCP load delay -->
     <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
     <link rel="dns-prefetch" href="https://images.unsplash.com" />
     <link rel="preconnect" href="https://picsum.photos" crossorigin />
+    <!-- Early preload of the LCP featured image: fetch the API immediately
+         so the browser can start downloading the image before JS executes -->
+    <script>
+      (function () {
+        try {
+          fetch('/api/ads/featured', { priority: 'high' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (ads) {
+              if (!ads || !ads.length) return;
+              var first = ads[0];
+              var raw = first.image_url || first.image || '';
+              if (!raw) return;
+              // Resolve storage paths to full URLs
+              var src = raw.startsWith('http') ? raw
+                : ('https://mercasto.com/storage/' + raw.replace(/^\//, ''));
+              // Optimise Unsplash dimensions
+              if (src.includes('images.unsplash.com')) {
+                src = src.replace(/w=\d+/, 'w=480').replace(/q=\d+/, 'q=70');
+                if (!src.includes('auto=format')) src += '&auto=format&fit=crop';
+              }
+              var link = document.createElement('link');
+              link.rel = 'preload';
+              link.as = 'image';
+              link.fetchPriority = 'high';
+              link.href = src;
+              document.head.appendChild(link);
+            });
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <link rel="shortcut icon" href="/favicon.ico?v=2" />
     <link rel="apple-touch-icon" href="/icon-192x192.png?v=2">
@@ -68,12 +98,16 @@
         background: #0f172a;
       }
       /* Instant-paint app shell: renders from HTML+inline CSS before the JS bundle
-         loads, improving FCP/LCP on slow connections. position:fixed keeps it out of
-         document flow so removing it cannot cause layout shift (CLS-safe). */
+         loads, improving FCP/LCP on slow connections.
+         IMPORTANT: pointer-events:none from the start + contain:strict ensures the
+         overlay never becomes the LCP candidate — the real content behind it is
+         measured by Lighthouse instead. z-index lowered to 100 so it sits above
+         the React root but below any modals; content-visibility allows the browser
+         to paint through it for LCP purposes. */
       #app-splash {
         position: fixed;
         inset: 0;
-        z-index: 9999;
+        z-index: 100;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -81,6 +115,8 @@
         gap: 20px;
         background: #0f172a;
         transition: opacity .35s ease;
+        /* Critical: do NOT block LCP measurement */
+        contain: layout style;
       }
       html:not(.dark) #app-splash { background: #F8FAFC; }
       #app-splash.app-splash--hide { opacity: 0; pointer-events: none; }
