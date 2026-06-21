@@ -7,16 +7,32 @@ const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/st
 function getImg(path) {
   if (!path) return '/placeholder-ad.svg';
 
+  const safeExternalImage = (url) => {
+    if (typeof url === 'string' && url.includes('images.unsplash.com')) {
+      let optimized = url.replace(/w=\d+/, 'w=400');
+      if (optimized.includes('q=')) {
+        optimized = optimized.replace(/q=\d+/, 'q=70');
+      } else {
+        optimized += '&q=70';
+      }
+      if (!optimized.includes('auto=format')) {
+        optimized += '&auto=format&fit=crop';
+      }
+      return optimized;
+    }
+    return url;
+  };
+
   if (Array.isArray(path)) {
     return path.length ? getImg(path[0]) : '/placeholder-ad.svg';
   }
-  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  if (path.startsWith('http') || path.startsWith('data:')) return safeExternalImage(path);
   if (path.startsWith('[')) {
     try {
       const a = JSON.parse(path);
       if (a && a.length) {
         const first = a[0];
-        return first.startsWith('http') || first.startsWith('data:') ? first : `${STORAGE_URL}/${first}`;
+        return first.startsWith('http') || first.startsWith('data:') ? safeExternalImage(first) : `${STORAGE_URL}/${first}`;
       }
     } catch (e) {}
   }

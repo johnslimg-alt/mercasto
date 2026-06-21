@@ -157,7 +157,22 @@ const getImageUrl = (path, fallback = null) => {
   const defaultFallback = fallback || '/placeholder-ad.svg';
   if (!path) return defaultFallback;
 
-  const safeExternalImage = (url) => url;
+  const safeExternalImage = (url) => {
+    if (typeof url === 'string' && url.includes('images.unsplash.com')) {
+      let optimized = url.replace(/w=\d+/, 'w=400');
+      if (optimized.includes('q=')) {
+        optimized = optimized.replace(/q=\d+/, 'q=70');
+      } else {
+        optimized += '&q=70';
+      }
+      if (!optimized.includes('auto=format')) {
+        optimized += '&auto=format&fit=crop';
+      }
+      return optimized;
+    }
+    return url;
+  };
+
   if (Array.isArray(path)) {
     if (path.length > 0) {
       const first = path[0];
