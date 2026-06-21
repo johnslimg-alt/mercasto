@@ -36,6 +36,7 @@ export default defineConfig({
     deferStylesheets()
   ],
   build: {
+    modulePreload: false,
     cssCodeSplit: true,
     emptyOutDir: true,
     sourcemap: 'hidden',

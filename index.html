@@ -97,7 +97,7 @@
         ['scroll', 'click', 'keydown', 'touchstart', 'pointerdown', 'mousemove'].forEach(function (ev) {
           window.addEventListener(ev, loadGA, { once: true, passive: true });
         });
-        setTimeout(loadGA, 10000);
+        setTimeout(loadGA, 30000);
       })();
     </script>
     <script>
@@ -197,13 +197,7 @@
         showBootMessage('Mercasto no pudo cargar', 'Actualiza la página. Si sigue igual, borra los datos del sitio en Safari/Chrome e intenta de nuevo.');
       });
 
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          registrations.forEach(function(registration) {
-            registration.unregister();
-          });
-        }).catch(function() {});
-      }
+
     </script>
 
     <div id="root"></div>
