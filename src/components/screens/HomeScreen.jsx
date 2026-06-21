@@ -339,18 +339,26 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     const safeServiceAds = React.useMemo(() => (Array.isArray(serviceAds) ? serviceAds : []), [serviceAds]);
     const safeAutomotiveAds = React.useMemo(() => (Array.isArray(automotiveAds) ? automotiveAds : []), [automotiveAds]);
 
-    // Fetch Destacados on mount
+    // Fetch Destacados on mount — use the pre-fetched promise from index.html if available
+    // so the image is ready before React mounts (eliminates ~1s LCP load delay).
     React.useEffect(() => {
       const API_URL = (typeof window !== 'undefined' && window.__API_URL__) || import.meta.env?.VITE_API_URL || '/api';
-      fetch(`${API_URL}/ads/featured`, { headers: { 'Accept': 'application/json' } })
-        .then(r => r.ok ? r.json() : null)
+      const prefetched = typeof window !== 'undefined' && window.__FEATURED_ADS_PROMISE__;
+      const dataPromise = prefetched
+        ? prefetched
+        : fetch(`${API_URL}/ads/featured`, { headers: { 'Accept': 'application/json' } })
+            .then(r => r.ok ? r.json() : null);
+
+      dataPromise
         .then(data => {
-          const nextFeaturedAds = Array.isArray(data?.data) ? data.data : [];
+          const nextFeaturedAds = Array.isArray(data?.data) ? data.data
+            : Array.isArray(data) ? data : [];
           setFeaturedAds(nextFeaturedAds);
         })
         .catch(() => {})
         .finally(() => setFeaturedLoading(false));
     }, []);
+
     const VERTICAL_SLUGS = {
       'coches-y-motor': '/autos',
       'motor': '/autos',
