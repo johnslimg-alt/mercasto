@@ -352,7 +352,7 @@ const MediaSlider = ({ media, autoplay }) => {
 
 const AdminScreen = React.lazy(() => import('./components/screens/AdminScreen'));
 
-const HomeScreen = React.lazy(() => import('./components/screens/HomeScreen'));
+import HomeScreen from './components/screens/HomeScreen';
 
 const PostScreen = React.lazy(() => import('./components/screens/PostScreen'));
 
