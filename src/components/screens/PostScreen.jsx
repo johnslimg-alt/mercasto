@@ -5,7 +5,7 @@ import {
   ShoppingBag, Dog, Monitor, Smartphone, Shirt, Baby, Dumbbell,
   BookOpen, Package, Cpu, Settings2, Ticket, Building2
 } from 'lucide-react';
-import { mexicoLocations, subcategoriesMap } from '../../constants/mockData';
+import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import MapV3 from '../common/MapV3';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';

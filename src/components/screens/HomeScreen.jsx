@@ -1,7 +1,8 @@
 import SEO from "../SEO";
 import AdSenseBanner from '../common/AdSenseBanner';
 import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyViewed';
-import { mexicoLocations, subcategoriesMap, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
+// Keep only data needed for initial render; heavy fallback arrays lazy-loaded below
+import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair } from "lucide-react";
@@ -11,7 +12,8 @@ import FAQSchema, { FAQ_DATA } from '../seo/FAQSchema';
 import ItemListSchema from '../seo/ItemListSchema';
 import { IconMap } from '../../constants/iconMap';
 import SidebarFilters from '../common/SidebarFilters';
-import MapV3 from '../common/MapV3';
+// MapV3 pulls Leaflet (~215 kB) — lazy load so it never blocks initial parse/paint
+const MapV3 = React.lazy(() => import('../common/MapV3'));
 import SplitViewContainer from '../common/SplitViewContainer';
 
 import { sizedImage } from '../../utils/imageHelpers';
@@ -146,7 +148,9 @@ const LeafletMap = ({ ads, onViewAd }) => {
 
   const mapBody = (
     <div className="relative h-full">
-      <MapV3 title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
+      <React.Suspense fallback={<div className="h-full bg-slate-800 animate-pulse rounded-xl" />}>
+        <MapV3 title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
+      </React.Suspense>
       <button
         type="button"
         onClick={() => setExpanded(true)}
@@ -266,13 +270,15 @@ const LeafletMap = ({ ads, onViewAd }) => {
 
           {/* ── Map area ── */}
           <div className="relative flex-1 overflow-hidden">
-            <MapV3
-              title="Todo México"
-              markers={markers}
-              onMarkerClick={onViewAd}
-              showFullscreen={false}
-              className="h-full w-full border-0 shadow-none rounded-none"
-            />
+            <React.Suspense fallback={<div className="h-full w-full bg-slate-800 animate-pulse" />}>
+              <MapV3
+                title="Todo México"
+                markers={markers}
+                onMarkerClick={onViewAd}
+                showFullscreen={false}
+                className="h-full w-full border-0 shadow-none rounded-none"
+              />
+            </React.Suspense>
 
             {/* ── Bottom info panel ── */}
             <div className="absolute inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-[5] rounded-2xl border border-slate-700/50 bg-slate-900/95 p-3 text-white shadow-2xl backdrop-blur-md">
@@ -358,6 +364,25 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
         .catch(() => {})
         .finally(() => setFeaturedLoading(false));
     }, []);
+
+    // Lazy-load heavy mockData fallbacks only when needed (after mount, off critical path)
+    const [mockFallbacks, setMockFallbacks] = React.useState(null);
+    React.useEffect(() => {
+      import('../../constants/mockData').then(m => {
+        setMockFallbacks({
+          spotlightRealEstate: m.spotlightRealEstate,
+          jobsBoard: m.jobsBoard,
+          servicesMarketplace: m.servicesMarketplace,
+          automotiveDeals: m.automotiveDeals,
+          recentlyViewed: m.recentlyViewed,
+        });
+      });
+    }, []);
+    const spotlightRealEstate = mockFallbacks?.spotlightRealEstate || [];
+    const jobsBoard = mockFallbacks?.jobsBoard || [];
+    const servicesMarketplace = mockFallbacks?.servicesMarketplace || [];
+    const automotiveDeals = mockFallbacks?.automotiveDeals || [];
+    const recentlyViewed = mockFallbacks?.recentlyViewed || [];
 
     const VERTICAL_SLUGS = {
       'coches-y-motor': '/autos',
@@ -957,13 +982,16 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 <div className="col-span-12 xl:col-span-4">
 
                   <div className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900">
-                    <MapV3
-                      ads={safeRealEstateAds}
-                      category="inmobiliaria"
-                      title={selectedState || t.all_mexico || 'Todo México'}
-                      onMarkerClick={handleViewAd}
-                      className="absolute inset-0 h-full rounded-none border-0 shadow-none"
-                    />
+                    <React.Suspense fallback={<div className="absolute inset-0 bg-slate-200 dark:bg-slate-800 animate-pulse" />}>
+                      <MapV3
+                        ads={safeRealEstateAds}
+                        category="inmobiliaria"
+                        title={selectedState || t.all_mexico || 'Todo México'}
+                        onMarkerClick={handleViewAd}
+                        className="absolute inset-0 h-full rounded-none border-0 shadow-none"
+                      />
+                    </React.Suspense>
+
                     <div className="absolute inset-x-4 bottom-4 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-medium text-slate-800 dark:text-white">{selectedState ? `Propiedades en ${selectedState}` : 'Propiedades en todo México'}</span>

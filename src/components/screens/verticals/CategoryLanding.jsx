@@ -4,7 +4,7 @@ import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import SEO from '../../SEO';
-import { subcategoriesMap } from '../../../constants/mockData';
+import { subcategoriesMap } from '../../../constants/locationsAndCategories';
 import { categoryLandingTranslations } from '../../../constants/categoryLandingTranslations';
 import { getTranslations, normalizeLanguage } from '../../../utils/translations';
 import {
