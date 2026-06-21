@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Loader2, CheckCircle, XCircle, Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -8,6 +9,7 @@ export default function VerificarEmailScreen() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'error'
   const [message, setMessage] = useState('');
+  const { t } = useTranslation();
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -15,7 +17,7 @@ export default function VerificarEmailScreen() {
 
     if (!token || !email) {
       setStatus('error');
-      setMessage('El enlace de verificación no es válido. Faltan parámetros.');
+      setMessage(t('verification.invalidLink', { defaultValue: 'The verification link is invalid.' }));
       return;
     }
 
@@ -28,15 +30,15 @@ export default function VerificarEmailScreen() {
         const data = await res.json();
         if (res.ok && data.ok) {
           setStatus('success');
-          setMessage(data.message || '¡Email verificado correctamente!');
+          setMessage(data.message || t('verification.success', { defaultValue: 'Email verified successfully.' }));
         } else {
           setStatus('error');
-          setMessage(data.error || 'Token inválido o expirado.');
+          setMessage(data.error || t('verification.expired', { defaultValue: 'The token is invalid or expired.' }));
         }
       })
       .catch(() => {
         setStatus('error');
-        setMessage('No se pudo conectar con el servidor. Inténtalo de nuevo.');
+        setMessage(t('errors.networkError'));
       });
   }, [searchParams]);
 
@@ -53,24 +55,24 @@ export default function VerificarEmailScreen() {
         {status === 'loading' && (
           <>
             <Loader2 className="w-10 h-10 text-lime-500 animate-spin mx-auto" />
-            <h1 className="text-xl font-bold text-slate-900">Verificando tu correo…</h1>
-            <p className="text-slate-500 text-sm">Solo un momento.</p>
+            <h1 className="text-xl font-bold text-slate-900">{t('verification.checking', { defaultValue: 'Verifying your email...' })}</h1>
+            <p className="text-slate-500 text-sm">{t('common.loading')}</p>
           </>
         )}
 
         {status === 'success' && (
           <>
             <CheckCircle className="w-12 h-12 text-lime-500 mx-auto" />
-            <h1 className="text-xl font-bold text-slate-900">¡Correo verificado!</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('verification.verified', { defaultValue: 'Email verified' })}</h1>
             <p className="text-slate-600 text-sm">{message}</p>
             <p className="text-slate-500 text-sm">
-              Tu cuenta ahora muestra la insignia de email verificado ✉️ en tu perfil.
+              {t('verification.badge', { defaultValue: 'Your profile now displays the verified email badge.' })}
             </p>
             <Link
               to="/"
               className="inline-block mt-2 px-6 py-2.5 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl transition-colors text-sm"
             >
-              Ir a Mercasto
+              {t('home.home', { defaultValue: 'Go to Mercasto' })}
             </Link>
           </>
         )}
@@ -78,16 +80,16 @@ export default function VerificarEmailScreen() {
         {status === 'error' && (
           <>
             <XCircle className="w-12 h-12 text-red-400 mx-auto" />
-            <h1 className="text-xl font-bold text-slate-900">Verificación fallida</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('verification.failed', { defaultValue: 'Verification failed' })}</h1>
             <p className="text-slate-600 text-sm">{message}</p>
             <p className="text-slate-500 text-sm">
-              Inicia sesión y solicita un nuevo enlace desde el aviso en la parte superior de la página.
+              {t('verification.retry', { defaultValue: 'Log in and request a new verification link.' })}
             </p>
             <Link
               to="/"
               className="inline-block mt-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl transition-colors text-sm"
             >
-              Volver al inicio
+              {t('common.back')}
             </Link>
           </>
         )}

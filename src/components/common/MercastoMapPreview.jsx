@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 const DEFAULT_MARKERS = [
@@ -92,6 +92,21 @@ export default function MercastoMapPreview({
   React.useEffect(() => () => {
     mountedRef.current = false;
   }, []);
+
+  // Close fullscreen on Escape key
+  React.useEffect(() => {
+    if (!expanded) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setExpanded(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    // Prevent body scroll when fullscreen is open
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [expanded]);
 
   const removeMap = (instanceRef) => {
     if (!instanceRef.current) return;
@@ -223,7 +238,7 @@ export default function MercastoMapPreview({
       center,
       zoom,
       zoomControl: true,
-      attributionControl: false,
+      attributionControl: true,
       scrollWheelZoom: isLarge,
       fadeAnimation: false,
       markerZoomAnimation: false,
@@ -249,7 +264,7 @@ export default function MercastoMapPreview({
     L.tileLayer(tileUrl, {
       maxZoom: 19,
       crossOrigin: true,
-      attribution: '&copy; OpenStreetMap',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
     })
       .on('tileerror', () => {
         if (mountedRef.current && instanceRef.current === map) setLoadFailed(true);
@@ -410,37 +425,118 @@ export default function MercastoMapPreview({
         )}
       </div>
 
+      {/* ===================== FULLSCREEN MAP MODAL ===================== */}
       {expanded && (
-        <div className="fixed inset-0 z-[9999] bg-slate-950/90 p-0 backdrop-blur-sm sm:p-3">
-          <div className="relative h-full overflow-hidden bg-slate-950 shadow-2xl sm:rounded-3xl sm:border sm:border-slate-700">
-            <div className="absolute inset-x-0 top-0 z-[5] rounded-b-3xl bg-white/95 p-3 shadow-xl dark:bg-slate-900/95 sm:inset-x-3 sm:top-3 sm:rounded-2xl md:grid md:grid-cols-[1fr_140px_auto_auto_auto] md:gap-2">
-              <div className="mb-2 flex items-center justify-between md:hidden">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#65A30D]">Mapa fullscreen</p>
-                  <p className="text-[13px] font-bold text-slate-900 dark:text-white">{visibleMarkers.length} anuncios visibles</p>
-                </div>
-                <button type="button" onClick={() => setExpanded(false)} className="rounded-2xl bg-slate-950 p-2 text-white dark:bg-slate-700" aria-label="Cerrar mapa">
-                  <X size={18} />
-                </button>
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col bg-slate-950"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mapa interactivo"
+        >
+          {/* ── Header bar ── */}
+          <div className="relative z-[10] flex items-center gap-3 border-b border-slate-800 bg-slate-900/98 px-4 py-3 shadow-lg backdrop-blur sm:px-6">
+            {/* Title section */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#84CC16]">
+                <MapPin size={18} className="text-slate-950" />
               </div>
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
-                <Search size={16} className="text-[#84CC16]" />
-                <input value={mapQuery} onChange={(e) => setMapQuery(e.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none dark:text-white" placeholder="Buscar en el mapa..." />
+              <div className="min-w-0">
+                <h2 className="text-sm font-black text-white truncate">Mapa interactivo</h2>
+                <p className="text-[11px] font-semibold text-slate-400">
+                  {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}{mapArea ? ` · radio ${mapArea.radius} km` : ''}
+                </p>
               </div>
-              <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-2 md:mt-0 md:contents">
-              <input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} type="number" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="Precio máx." />
-              <button type="button" onClick={() => setOnlyWithCoords(v => !v)} className={`inline-flex items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black ${onlyWithCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>
-                <SlidersHorizontal size={14} /> GPS
+            </div>
+
+            {/* Search + filters (center) */}
+            <div className="hidden flex-1 items-center gap-2 md:flex">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
+                <Search size={15} className="shrink-0 text-[#84CC16]" />
+                <input
+                  value={mapQuery}
+                  onChange={(e) => setMapQuery(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+                  placeholder="Buscar en el mapa..."
+                />
+              </div>
+              <input
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                type="number"
+                className="w-28 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+                placeholder="Precio máx."
+              />
+              <button
+                type="button"
+                onClick={() => setOnlyWithCoords(v => !v)}
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
+                  onlyWithCoords
+                    ? 'bg-[#84CC16] text-slate-950'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <SlidersHorizontal size={14} /> GPS real
               </button>
-              <button type="button" onClick={handleSearchArea} className="inline-flex items-center justify-center gap-1 rounded-xl bg-[#84CC16] px-3 py-2 text-xs font-black text-slate-950 hover:bg-[#a3e635]">
-                <Crosshair size={14} /> Zona
-              </button>
-              </div>
-              <button type="button" onClick={() => setExpanded(false)} className="hidden rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white hover:bg-slate-800 dark:bg-slate-700 md:block" aria-label="Cerrar mapa">
-                <X size={18} />
+              <button
+                type="button"
+                onClick={handleSearchArea}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2 text-xs font-black text-slate-950 hover:bg-[#a3e635] transition-colors"
+              >
+                <Crosshair size={14} /> Buscar en zona
               </button>
             </div>
-            
+
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-colors sm:h-10 sm:w-auto sm:gap-2 sm:px-4"
+              aria-label="Cerrar mapa"
+              title="Cerrar (Esc)"
+            >
+              <X size={20} />
+              <span className="hidden text-sm font-black sm:inline">Cerrar</span>
+            </button>
+          </div>
+
+          {/* ── Mobile search bar (shown below header on small screens) ── */}
+          <div className="relative z-[10] flex items-center gap-2 border-b border-slate-800 bg-slate-900/95 px-3 py-2 md:hidden">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
+              <Search size={15} className="shrink-0 text-[#84CC16]" />
+              <input
+                value={mapQuery}
+                onChange={(e) => setMapQuery(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+                placeholder="Buscar..."
+              />
+            </div>
+            <input
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              type="number"
+              className="w-24 rounded-xl border border-slate-700 bg-slate-800 px-2 py-2 text-xs font-semibold text-white outline-none placeholder:text-slate-500"
+              placeholder="$ máx"
+            />
+            <button
+              type="button"
+              onClick={() => setOnlyWithCoords(v => !v)}
+              className={`rounded-xl px-2 py-2 text-xs font-black ${
+                onlyWithCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-800 text-slate-300'
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={handleSearchArea}
+              className="rounded-xl bg-[#84CC16] px-2.5 py-2 text-xs font-black text-slate-950"
+            >
+              <Crosshair size={14} />
+            </button>
+          </div>
+
+          {/* ── Map area ── */}
+          <div className="relative flex-1 overflow-hidden">
             {leaflet && !loadFailed ? (
               <div ref={largeMapContainerRef} className="h-full w-full" style={{ zIndex: 1 }} />
             ) : (
@@ -456,22 +552,53 @@ export default function MercastoMapPreview({
                 })}
               </div>
             )}
-            <div className="absolute inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-[5] rounded-3xl bg-slate-950/90 p-3 text-white shadow-xl backdrop-blur">
-              <div className="flex items-center justify-between gap-3 text-xs font-bold">
-                <span>{visibleMarkers.length} anuncios{mapArea ? ` · ${mapArea.radius} km` : ''}</span>
-                <button type="button" onClick={() => { setMapQuery(''); setMaxPrice(''); setOnlyWithCoords(false); }} className="text-[#BEF264]">Limpiar filtros</button>
+
+            {/* ── Bottom info panel ── */}
+            <div className="absolute inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-[5] rounded-2xl border border-slate-700/50 bg-slate-900/95 p-3 text-white shadow-2xl backdrop-blur-md">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 text-xs font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <Layers size={14} className="text-[#84CC16]" />
+                    {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}
+                    {mapArea && <span className="text-slate-400">· radio {mapArea.radius} km</span>}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setMapQuery(''); setMaxPrice(''); setOnlyWithCoords(false); }}
+                    className="rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 transition-colors"
+                  >
+                    Limpiar filtros
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(false)}
+                    className="rounded-lg bg-red-500/20 px-3 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-500/30 transition-colors"
+                  >
+                    <X size={14} className="inline mr-1" />
+                    Cerrar
+                  </button>
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black">
-                <span className="rounded-full bg-[#84CC16] px-2 py-1 text-slate-950">GPS real</span>
-                <span className="rounded-full bg-amber-300 px-2 py-1 text-slate-950">Approx ciudad/estado</span>
+                <span className="rounded-full bg-[#84CC16] px-2 py-1 text-slate-950">● GPS real</span>
+                <span className="rounded-full bg-amber-300 px-2 py-1 text-slate-950">● Approx ciudad/estado</span>
               </div>
-              <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar">
-                {visibleMarkers.slice(0, 8).map((marker, index) => (
-                  <button key={marker.id || index} type="button" onClick={() => onMarkerClick?.(marker.ad || marker)} className="shrink-0 rounded-full bg-[#84CC16] px-3 py-2 text-xs font-black text-slate-950">
-                    {marker.label || 'Ver'}
-                  </button>
-                ))}
-              </div>
+              {visibleMarkers.length > 0 && (
+                <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {visibleMarkers.slice(0, 10).map((marker, index) => (
+                    <button
+                      key={marker.id || index}
+                      type="button"
+                      onClick={() => onMarkerClick?.(marker.ad || marker)}
+                      className="shrink-0 rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-[11px] font-black text-white hover:bg-[#84CC16] hover:text-slate-950 hover:border-[#84CC16] transition-colors"
+                    >
+                      {marker.label || 'Ver'}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import {
   Building2, Search, MapPin, Star, CheckCircle, ArrowRight, 
   ChevronRight, Sparkles, Store, Loader2, Globe, Heart, ShieldCheck, Briefcase
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -28,6 +29,7 @@ const CATEGORIES = [
 
 export default function StoresScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -115,13 +117,13 @@ export default function StoresScreen() {
         />
         <div className="relative max-w-5xl mx-auto px-4 z-10">
           <div className="inline-flex items-center gap-2 bg-lime-500/20 text-lime-400 border border-lime-500/30 rounded-full px-4.5 py-1.5 text-xs font-bold uppercase tracking-widest mb-6">
-            <Sparkles className="w-3.5 h-3.5" /> Directorio PRO México
+            <Sparkles className="w-3.5 h-3.5" /> {t('stores.directory', { defaultValue: 'Mexico PRO Directory' })}
           </div>
           <h1 className="text-4xl md:text-5.5xl font-black mb-4 leading-tight tracking-tight">
-            Tiendas y Negocios Oficiales
+            {t('stores.title', { defaultValue: 'Official stores and businesses' })}
           </h1>
           <p className="text-slate-300 text-base md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
-            Compra directamente con vendedores profesionales y empresas con perfiles RFC verificados y alta reputación en todo el país.
+            {t('stores.subtitle', { defaultValue: 'Buy directly from professional, verified sellers throughout Mexico.' })}
           </p>
         </div>
       </section>
@@ -134,7 +136,7 @@ export default function StoresScreen() {
             <Search className="absolute left-4 top-3.5 text-slate-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Buscar tienda por nombre o descripción..."
+              placeholder={t('stores.search', { defaultValue: 'Search stores by name or description...' })}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500 text-sm font-medium transition-all"
@@ -149,7 +151,7 @@ export default function StoresScreen() {
               onChange={(e) => { setSelectedState(e.target.value); setPage(1); }}
               className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500 text-sm font-medium transition-all appearance-none cursor-pointer bg-white"
             >
-              <option value="">Todo México 🇲🇽</option>
+              <option value="">{t('filters.allStates')} 🇲🇽</option>
               {MEXICO_STATES.map(st => (
                 <option key={st} value={st}>{st}</option>
               ))}
@@ -164,7 +166,7 @@ export default function StoresScreen() {
               onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
               className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500 text-sm font-medium transition-all appearance-none cursor-pointer bg-white"
             >
-              <option value="">Todas las categorías</option>
+              <option value="">{t('filters.allCategories')}</option>
               {CATEGORIES.map(cat => (
                 <option key={cat.slug} value={cat.name}>{cat.name}</option>
               ))}
@@ -182,7 +184,7 @@ export default function StoresScreen() {
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            Todos los rubros
+            {t('filters.allCategories')}
           </button>
           {CATEGORIES.map(cat => (
             <button
@@ -204,8 +206,8 @@ export default function StoresScreen() {
       <main className="max-w-7xl mx-auto px-4 mt-12">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-2">
-            <Store className="w-6 h-6 text-lime-500" /> Negocios activos
-            <span className="text-xs font-bold bg-slate-200 text-slate-700 px-3 py-1 rounded-full">{totalStores} en total</span>
+            <Store className="w-6 h-6 text-lime-500" /> {t('stores.active', { defaultValue: 'Active businesses' })}
+            <span className="text-xs font-bold bg-slate-200 text-slate-700 px-3 py-1 rounded-full">{totalStores} {t('stores.total', { defaultValue: 'total' })}</span>
           </h2>
         </div>
 
@@ -227,13 +229,13 @@ export default function StoresScreen() {
         ) : stores.length === 0 ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center max-w-xl mx-auto shadow-sm">
             <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-slate-900 mb-1">No encontramos tiendas</h3>
-            <p className="text-slate-500 text-sm mb-6">Prueba a cambiar los filtros de búsqueda o ubicación para ver otros negocios.</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">{t('stores.empty', { defaultValue: 'No stores found' })}</h3>
+            <p className="text-slate-500 text-sm mb-6">{t('home.tryDifferentFilters')}</p>
             <button
               onClick={() => { setSearch(''); setSelectedState(''); setSelectedCategory(''); setPage(1); }}
               className="btn-md bg-slate-950 text-white hover:bg-black font-bold px-6 py-2.5 rounded-full text-xs uppercase tracking-wider transition-all shadow-md"
             >
-              Restablecer filtros
+              {t('common.reset')}
             </button>
           </div>
         ) : (
@@ -260,7 +262,7 @@ export default function StoresScreen() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                     {store.is_verified && (
                       <span className="absolute top-3 right-3 bg-lime-500/90 text-white font-bold text-[10px] px-2.5 py-1 rounded-full flex items-center gap-1 shadow backdrop-blur-sm">
-                        <CheckCircle className="w-3 h-3" /> VERIFICADO
+                        <CheckCircle className="w-3 h-3" /> {t('ads.verified')}
                       </span>
                     )}
                   </div>
@@ -303,10 +305,10 @@ export default function StoresScreen() {
                     {/* Stats Footer Bar */}
                     <div className="w-full border-t border-slate-100 pt-3.5 mt-4 flex items-center justify-between shrink-0">
                       <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
-                        {store.active_ads_count || 0} anuncios activos
+                        {store.active_ads_count || 0} {t('ads.activeAds')}
                       </span>
                       <span className="text-xs font-bold text-lime-600 flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
-                        Ver vitrina <ChevronRight className="w-3.5 h-3.5" />
+                        {t('stores.view', { defaultValue: 'View store' })} <ChevronRight className="w-3.5 h-3.5" />
                       </span>
                     </div>
                   </div>
@@ -324,7 +326,7 @@ export default function StoresScreen() {
               disabled={page === 1}
               className="btn-sm border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-50 disabled:hover:bg-transparent"
             >
-              Anterior
+              {t('common.previous')}
             </button>
             {[...Array(totalPages)].map((_, i) => {
               const p = i + 1;
@@ -347,7 +349,7 @@ export default function StoresScreen() {
               disabled={page === totalPages}
               className="btn-sm border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-50 disabled:hover:bg-transparent"
             >
-              Siguiente
+              {t('common.next')}
             </button>
           </div>
         )}
@@ -358,23 +360,23 @@ export default function StoresScreen() {
         <div className="bg-gradient-to-br from-lime-600 to-emerald-700 rounded-3.5xl p-8 md:p-12 text-white relative overflow-hidden shadow-lg">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_30%_30%,white_1px,transparent_1px)] bg-[size:20px_20px]" />
           <div className="relative z-10 max-w-2xl">
-            <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 border border-white/30 rounded-full px-3 py-1 mb-4 inline-block">MÁS CONFIANZA</span>
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight leading-tight">¿Tienes un negocio o eres vendedor frecuente?</h2>
+            <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 border border-white/30 rounded-full px-3 py-1 mb-4 inline-block">{t('stores.trust', { defaultValue: 'MORE TRUST' })}</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight leading-tight">{t('stores.proTitle', { defaultValue: 'Do you run a business or sell frequently?' })}</h2>
             <p className="text-white/90 text-sm md:text-base leading-relaxed mb-6 font-light">
-              Únete a Mercasto PRO y obtén una vitrina profesional exclusiva, carga tu propio banner de portada, logo comercial, horarios de atención, enlace de sitio web, verificación RFC y destaca tus productos en el directorio nacional.
+              {t('stores.proDescription', { defaultValue: 'Join Mercasto PRO to create a professional storefront and promote your products nationwide.' })}
             </p>
             <div className="flex flex-wrap gap-4">
               <button
                 onClick={() => navigate('/profile')}
                 className="bg-white text-emerald-700 font-extrabold text-sm px-6 py-3 rounded-full hover:bg-slate-50 transition-colors shadow-lg"
               >
-                Activar Perfil PRO
+                {t('stores.activatePro', { defaultValue: 'Activate PRO profile' })}
               </button>
               <button
                 onClick={() => navigate('/ayuda')}
                 className="bg-emerald-800/40 border border-white/20 text-white font-extrabold text-sm px-6 py-3 rounded-full hover:bg-emerald-800/60 transition-colors"
               >
-                Conocer planes
+                {t('stores.viewPlans', { defaultValue: 'View plans' })}
               </button>
             </div>
           </div>

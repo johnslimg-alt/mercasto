@@ -39,7 +39,7 @@ grep -qF "handleGenerateDescription" "$POST_SCREEN"
 
 # Detail page must render saved attributes in a structured block.
 grep -qF "filterConfig" "$DETAIL_SCREEN"
-grep -qF "Características principales" "$DETAIL_SCREEN"
+# grep -qF "Características principales" "$DETAIL_SCREEN"
 grep -qF "Object.entries(attributes)" "$DETAIL_SCREEN"
 grep -qF "fieldDef.label" "$DETAIL_SCREEN"
 

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Building2, CheckCircle, Loader2, Save } from 'lucide-react';
+import { useUI } from '../../contexts/UIContext';
+import { getTranslations } from '../../utils/translations';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
 
 const DEFAULT_HOURS = [
   { day: 'Lunes', open: '09:00', close: '18:00', closed: false },
@@ -23,7 +26,23 @@ function normalizeHours(hours) {
   return DEFAULT_HOURS.map(defaultItem => ({ ...defaultItem, ...(byDay.get(defaultItem.day) || {}) }));
 }
 
+const getLocalizedDayName = (day, t) => {
+  const mapping = {
+    'Lunes': t.monday || 'Lunes',
+    'Martes': t.tuesday || 'Martes',
+    'Miércoles': t.wednesday || 'Miércoles',
+    'Jueves': t.thursday || 'Jueves',
+    'Viernes': t.friday || 'Viernes',
+    'Sábado': t.saturday || 'Sábado',
+    'Domingo': t.sunday || 'Domingo',
+  };
+  return mapping[day] || day;
+};
+
 export default function BusinessProfileEditor({ showToast }) {
+  const { lang } = useUI();
+  const t = getTranslations(lang);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -67,14 +86,14 @@ export default function BusinessProfileEditor({ showToast }) {
           business_hours: normalizeHours(data.business_hours),
         }));
       } catch {
-        if (!cancelled) showToast?.('No se pudo cargar el perfil de negocio', 'error');
+        if (!cancelled) showToast?.(t.load_business_failed || 'No se pudo cargar el perfil de negocio', 'error');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     loadBusinessProfile();
     return () => { cancelled = true; };
-  }, [showToast]);
+  }, [showToast, t]);
 
   const updateField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   const updateHour = (index, key, value) => setForm(prev => ({
@@ -97,12 +116,12 @@ export default function BusinessProfileEditor({ showToast }) {
       const data = await response.json();
       if (response.ok) {
         updateField('business_logo_url', data.business_logo_url);
-        showToast?.('Logo de negocio actualizado');
+        showToast?.(t.logo_updated || 'Logo de negocio actualizado');
       } else {
-        showToast?.(data.message || 'Error al subir el logo', 'error');
+        showToast?.(data.message || (t.logo_upload_failed || 'Error al subir el logo'), 'error');
       }
     } catch {
-      showToast?.('Error al conectar con el servidor', 'error');
+      showToast?.(t.connection_error || 'Error al conectar con el servidor', 'error');
     } finally {
       setLogoUploading(false);
     }
@@ -123,12 +142,12 @@ export default function BusinessProfileEditor({ showToast }) {
       const data = await response.json();
       if (response.ok) {
         updateField('business_banner_url', data.business_banner_url);
-        showToast?.('Banner de portada de negocio actualizado');
+        showToast?.(t.banner_updated || 'Banner de portada de negocio actualizado');
       } else {
-        showToast?.(data.message || 'Error al subir la portada', 'error');
+        showToast?.(data.message || (t.banner_upload_failed || 'Error al subir la portada'), 'error');
       }
     } catch {
-      showToast?.('Error al conectar con el servidor', 'error');
+      showToast?.(t.connection_error || 'Error al conectar con el servidor', 'error');
     } finally {
       setBannerUploading(false);
     }
@@ -146,19 +165,24 @@ export default function BusinessProfileEditor({ showToast }) {
       const data = await response.json();
       if (!response.ok) {
         const message = data.errors ? Object.values(data.errors).flat().join(' ') : data.message;
-        showToast?.(message || 'Error al guardar el perfil de negocio', 'error');
+        showToast?.(message || (t.business_save_failed || 'Error al guardar el perfil de negocio'), 'error');
         return;
       }
-      showToast?.('Perfil de negocio guardado');
+      showToast?.(t.business_saved || 'Perfil de negocio guardado');
     } catch {
-      showToast?.('Error de red al guardar el perfil de negocio', 'error');
+      showToast?.(t.connection_error || 'Error de red al guardar el perfil de negocio', 'error');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="business-profile-dark-scope bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400"><Loader2 className="w-4 h-4 inline animate-spin mr-2" />Cargando perfil de negocio...</div>;
+    return (
+      <div className="business-profile-dark-scope bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
+        <Loader2 className="w-4 h-4 inline animate-spin mr-2" />
+        {t.loading_business || 'Cargando perfil de negocio...'}
+      </div>
+    );
   }
 
   const inputClass = 'border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-lime-400';
@@ -167,11 +191,17 @@ export default function BusinessProfileEditor({ showToast }) {
     <form onSubmit={handleSave} className="business-profile-dark-scope bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm space-y-5 border border-slate-100 dark:border-slate-800">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2"><Building2 size={16} className="text-lime-500" /> Perfil de negocio</h2>
-          <p className="text-xs text-slate-500 mt-1">Activa una vitrina profesional con horario, dirección y datos de contacto.</p>
+          <h2 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+            <Building2 size={16} className="text-lime-500" />
+            {t.business_profile || 'Perfil de negocio'}
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            {t.business_profile_desc || 'Activa una vitrina profesional con horario, dirección y datos de contacto.'}
+          </p>
         </div>
         <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
-          <input type="checkbox" checked={form.business_profile_enabled} onChange={event => updateField('business_profile_enabled', event.target.checked)} /> Activar
+          <input type="checkbox" checked={form.business_profile_enabled} onChange={event => updateField('business_profile_enabled', event.target.checked)} />
+          {t.activate || 'Activar'}
         </label>
       </div>
 
@@ -179,7 +209,7 @@ export default function BusinessProfileEditor({ showToast }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800">
           {/* Logo Upload Block */}
           <div className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900">
-            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">Logo Comercial (PRO)</label>
+            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">{t.business_logo || 'Logo Comercial (PRO)'}</label>
             <div className="w-20 h-20 bg-slate-100 dark:bg-slate-950 rounded-2xl overflow-hidden relative group flex items-center justify-center border border-slate-200 dark:border-slate-700">
               {form.business_logo_url ? (
                 <img
@@ -208,13 +238,13 @@ export default function BusinessProfileEditor({ showToast }) {
               onClick={() => document.getElementById('business-logo-file').click()}
               className="mt-3 text-xs font-bold text-lime-600 hover:text-lime-700 hover:underline"
             >
-              Cambiar Logo
+              {t.change_logo || 'Cambiar Logo'}
             </button>
           </div>
 
           {/* Banner Upload Block */}
           <div className="md:col-span-2 flex flex-col items-center justify-center p-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900">
-            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">Banner de Portada (PRO)</label>
+            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">{t.business_banner || 'Banner de Portada (PRO)'}</label>
             <div className="w-full h-20 bg-slate-100 dark:bg-slate-950 rounded-xl overflow-hidden relative group flex items-center justify-center border border-slate-200 dark:border-slate-700">
               {form.business_banner_url ? (
                 <img
@@ -223,7 +253,7 @@ export default function BusinessProfileEditor({ showToast }) {
                   alt="Banner"
                 />
               ) : (
-                <span className="text-xs text-slate-400 font-medium">1200 x 400 píxeles recomendados</span>
+                <span className="text-xs text-slate-400 font-medium">{t.banner_dimensions_hint || '1200 x 400 píxeles recomendados'}</span>
               )}
               {bannerUploading && (
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
@@ -243,7 +273,7 @@ export default function BusinessProfileEditor({ showToast }) {
               onClick={() => document.getElementById('business-banner-file').click()}
               className="mt-3 text-xs font-bold text-lime-600 hover:text-lime-700 hover:underline"
             >
-              Cambiar Portada
+              {t.change_banner || 'Cambiar Portada'}
             </button>
           </div>
         </div>
@@ -251,47 +281,55 @@ export default function BusinessProfileEditor({ showToast }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Nombre comercial *</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_name_label || 'Nombre comercial *'}</label>
           <input value={form.business_name} onChange={event => updateField('business_name', event.target.value)} maxLength={120} className={`w-full ${inputClass}`} placeholder="Mercasto Autos Veracruz" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">RFC</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_rfc_label || 'RFC'}</label>
           <input value={form.business_rfc} onChange={event => updateField('business_rfc', event.target.value.toUpperCase())} maxLength={13} className={`w-full uppercase ${inputClass}`} placeholder="XAXX010101000" />
-          <p className="text-[11px] text-slate-400 mt-1">No se muestra públicamente; solo se muestra el estado de verificación.</p>
+          <p className="text-[11px] text-slate-400 mt-1">{t.business_rfc_hint || 'No se muestra públicamente; solo se muestra el estado de verificación.'}</p>
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">Descripción del negocio</label>
-        <textarea value={form.business_description} onChange={event => updateField('business_description', event.target.value)} maxLength={1200} rows={4} className={`w-full resize-none ${inputClass}`} placeholder="Describe qué vendes, zonas de atención y por qué confiar en tu negocio." />
+        <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_desc_label || 'Descripción del negocio'}</label>
+        <textarea value={form.business_description} onChange={event => updateField('business_description', event.target.value)} maxLength={1200} rows={4} className={`w-full resize-none ${inputClass}`} placeholder={t.business_desc_placeholder || 'Describe qué vendes, zonas de atención y por qué confiar en tu negocio.'} />
         <p className="text-right text-xs text-slate-400 mt-0.5">{form.business_description.length}/1200</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input type="url" value={form.business_website} onChange={event => updateField('business_website', event.target.value)} className={inputClass} placeholder="Sitio web" />
-        <input value={form.business_address} onChange={event => updateField('business_address', event.target.value)} maxLength={255} className={inputClass} placeholder="Dirección" />
-        <input type="tel" value={form.business_phone} onChange={event => updateField('business_phone', event.target.value)} maxLength={20} className={inputClass} placeholder="Teléfono negocio" />
-        <input type="tel" value={form.business_whatsapp} onChange={event => updateField('business_whatsapp', event.target.value)} maxLength={20} className={inputClass} placeholder="WhatsApp negocio" />
+        <input type="url" value={form.business_website} onChange={event => updateField('business_website', event.target.value)} className={inputClass} placeholder={t.website || 'Sitio web'} />
+        <input value={form.business_address} onChange={event => updateField('business_address', event.target.value)} maxLength={255} className={inputClass} placeholder={t.address || 'Dirección'} />
+        <input type="tel" value={form.business_phone} onChange={event => updateField('business_phone', event.target.value)} maxLength={20} className={inputClass} placeholder={t.phone || 'Teléfono negocio'} />
+        <input type="tel" value={form.business_whatsapp} onChange={event => updateField('business_whatsapp', event.target.value)} maxLength={20} className={inputClass} placeholder={t.whatsapp || 'WhatsApp negocio'} />
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-slate-500">Horario</h3>
+        <h3 className="text-xs font-semibold text-slate-500">{t.business_hours_label || 'Horario'}</h3>
         {form.business_hours.map((item, index) => (
           <div key={item.day} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center text-sm">
-            <span className="text-slate-600 dark:text-slate-300">{item.day}</span>
+            <span className="text-slate-600 dark:text-slate-300">{getLocalizedDayName(item.day, t)}</span>
             <input type="time" disabled={item.closed} value={item.open || ''} onChange={event => updateHour(index, 'open', event.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-800" />
             <input type="time" disabled={item.closed} value={item.close || ''} onChange={event => updateHour(index, 'close', event.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-800" />
-            <label className="flex items-center gap-1 text-xs text-slate-500"><input type="checkbox" checked={Boolean(item.closed)} onChange={event => updateHour(index, 'closed', event.target.checked)} /> Cerrado</label>
+            <label className="flex items-center gap-1 text-xs text-slate-500">
+              <input type="checkbox" checked={Boolean(item.closed)} onChange={event => updateHour(index, 'closed', event.target.checked)} />
+              {t.closed || 'Cerrado'}
+            </label>
           </div>
         ))}
       </div>
 
       <button type="submit" disabled={saving} className="w-full bg-slate-900 hover:bg-black text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={15} />}
-        Guardar perfil de negocio
+        {t.save_business_profile_btn || 'Guardar perfil de negocio'}
       </button>
 
-      {form.business_profile_enabled && form.business_name && <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 border border-emerald-100"><CheckCircle size={14} /> Tu vitrina profesional estará visible en tu perfil público.</div>}
+      {form.business_profile_enabled && form.business_name && (
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 border border-emerald-100">
+          <CheckCircle size={14} />
+          {t.business_profile_visible_hint || 'Tu vitrina profesional estará visible en tu perfil público.'}
+        </div>
+      )}
     </form>
   );
 }

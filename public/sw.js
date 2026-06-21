@@ -5,7 +5,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         Promise.all([
-            self.caches ? caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))) : Promise.resolve(),
+            self['caches'] ? self['caches'].keys().then(keys => Promise.all(keys.map(key => self['caches'].delete(key)))) : Promise.resolve(),
             self.clients.claim()
         ])
     );

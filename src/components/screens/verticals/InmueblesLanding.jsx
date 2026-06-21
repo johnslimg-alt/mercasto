@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import AdsMap from '../../common/AdsMap';
+import MapV3 from '../../common/MapV3';
 import { Building2, Castle, FileCheck2, Home, KeyRound, LandPlot, MapPinned, SearchCheck, Store } from 'lucide-react';
+import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -34,16 +36,11 @@ const SUBSECTIONS = [
   { name: 'Vacacional', query: 'renta vacacional', Icon: Castle },
 ];
 
-export default function InmueblesLanding() {
+export default function InmueblesLanding({ lang = 'es' }) {
   const navigate = useNavigate();
+  const copy = getVerticalCopy(lang, 'inmuebles');
   const [operacion, setOperacion] = useState('');
   const [tipo, setTipo] = useState('');
-
-  React.useEffect(() => {
-    document.title = 'Comprar y rentar propiedades en México — Mercasto';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Encuentra casas, departamentos y terrenos en venta o renta en México. Las mejores propiedades en Mercasto.');
-  }, []);
 
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'inmobiliaria' });
@@ -63,10 +60,12 @@ export default function InmueblesLanding() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/inmuebles" />
       <VerticalHero
-        title="Encuentra propiedades en México"
-        subtitle="Compra, renta o invierte en los mejores inmuebles del país"
-        searchPlaceholder="Buscar por ciudad, colonia, tipo de propiedad…"
+        title={copy.title}
+        subtitle={copy.subtitle}
+        searchPlaceholder={copy.placeholder}
+        labels={copy.labels}
         color="green"
         mapQuery="inmuebles en México"
         onSearch={handleSearch}
@@ -111,23 +110,23 @@ export default function InmueblesLanding() {
             </div>
             <button onClick={() => navigate('/?category=inmobiliaria')}
               className="hidden rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 sm:inline-flex">
-              Ver listado
+              {copy.labels.viewList}
             </button>
           </div>
-          <AdsMap category="inmobiliaria" title="Inmuebles en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="inmobiliaria" title="Inmuebles en México" className="h-[260px] md:h-[420px]" />
         </section>
 
         {/* Featured listings */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-2xl font-bold text-slate-900">Propiedades destacadas</h2>
-            <a href="/?category=inmobiliaria" onClick={(e) => { e.preventDefault(); navigate('/?category=inmobiliaria'); }}
-              className="text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer">Ver todas →</a>
+            <h2 className="text-2xl font-bold text-slate-900">{copy.featured}</h2>
+            <a onClick={() => navigate('/?category=inmobiliaria')}
+              className="text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer">{copy.labels.viewAll} →</a>
           </div>
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=inmobiliaria&per_page=8`}
             viewAllUrl="/?category=inmobiliaria"
-            viewAllLabel="Ver todas las propiedades →"
+            viewAllLabel={copy.labels.viewAll}
             cols={4}
           />
         </section>

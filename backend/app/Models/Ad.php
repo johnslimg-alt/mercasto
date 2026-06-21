@@ -20,6 +20,7 @@ class Ad extends Model
         'latitude',
         'longitude',
         'category',
+        'subcategory',
         'condition',
         'attributes',
         'image_url',
@@ -35,6 +36,7 @@ class Ad extends Model
         'boost_type',
         'boost_expires_at',
         'state',
+        'city',
     ];
 
     protected function casts(): array
@@ -56,5 +58,10 @@ class Ad extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function contactClicks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ContactClick::class);
     }
 }

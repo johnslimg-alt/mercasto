@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import AdsMap from '../../common/AdsMap';
+import MapV3 from '../../common/MapV3';
 import { BadgeCheck, Brush, Camera, Car, GraduationCap, Hammer, HeartHandshake, Leaf, PawPrint, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
+import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -30,14 +32,9 @@ const TRUST = [
     body: 'Contacta directamente al profesional y negocia el precio sin comisiones.' },
 ];
 
-export default function ServiciosLanding() {
+export default function ServiciosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
-
-  React.useEffect(() => {
-    document.title = 'Contratar servicios profesionales en México — Mercasto';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Contrata plomeros, electricistas, diseñadores y más en México. Profesionales verificados con reseñas en Mercasto.');
-  }, []);
+  const copy = getVerticalCopy(lang, 'servicios');
 
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'servicios' });
@@ -50,10 +47,12 @@ export default function ServiciosLanding() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/servicios" />
       <VerticalHero
-        title="Contrata profesionales verificados"
-        subtitle="Plomeros, electricistas, diseñadores y más — cerca de ti"
-        searchPlaceholder="Buscar servicio, profesional o ciudad…"
+        title={copy.title}
+        subtitle={copy.subtitle}
+        searchPlaceholder={copy.placeholder}
+        labels={copy.labels}
         color="orange"
         mapQuery="servicios profesionales en México"
         onSearch={handleSearch}
@@ -70,10 +69,10 @@ export default function ServiciosLanding() {
             </div>
             <button onClick={() => navigate('/?category=servicios')}
               className="hidden rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600 sm:inline-flex">
-              Ver listado
+              {copy.labels.viewList}
             </button>
           </div>
-          <AdsMap category="servicios" title="Servicios en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="servicios" title="Servicios en México" className="h-[260px] md:h-[420px]" />
         </section>
 
         {/* Service category grid */}
@@ -98,14 +97,14 @@ export default function ServiciosLanding() {
         {/* Featured services */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-2xl font-bold text-slate-900">Servicios destacados</h2>
-            <a href="/?category=servicios" onClick={(e) => { e.preventDefault(); navigate('/?category=servicios'); }}
-              className="text-[13px] font-semibold text-orange-500 hover:underline cursor-pointer">Ver todos →</a>
+            <h2 className="text-2xl font-bold text-slate-900">{copy.featured}</h2>
+            <a onClick={() => navigate('/?category=servicios')}
+              className="text-[13px] font-semibold text-orange-500 hover:underline cursor-pointer">{copy.labels.viewAll} →</a>
           </div>
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=servicios&per_page=6`}
             viewAllUrl="/?category=servicios"
-            viewAllLabel="Ver todos los servicios →"
+            viewAllLabel={copy.labels.viewAll}
             cols={3}
           />
         </section>

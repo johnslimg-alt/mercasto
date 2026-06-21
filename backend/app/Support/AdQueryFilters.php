@@ -14,6 +14,19 @@ class AdQueryFilters
 {
     private const MAX_STRING_LENGTH = 80;
 
+    /** Полное название штата → аббревиатура, как она встречается в поле location ("Ciudad, ABBR"). */
+    private const STATE_ABBR = [
+        'Aguascalientes' => 'AGS', 'Baja California' => 'BC', 'Baja California Sur' => 'BCS',
+        'Campeche' => 'CAMP', 'Chiapas' => 'CHIS', 'Chihuahua' => 'CHIH', 'Ciudad de México' => 'CDMX',
+        'Coahuila' => 'COAH', 'Colima' => 'COL', 'Durango' => 'DGO', 'Estado de México' => 'MEX',
+        'Guanajuato' => 'GTO', 'Guerrero' => 'GRO', 'Hidalgo' => 'HGO', 'Jalisco' => 'JAL',
+        'Michoacán' => 'MICH', 'Morelos' => 'MOR', 'Nayarit' => 'NAY', 'Nuevo León' => 'NL',
+        'Oaxaca' => 'OAX', 'Puebla' => 'PUE', 'Querétaro' => 'QRO', 'Quintana Roo' => 'ROO',
+        'San Luis Potosí' => 'SLP', 'Sinaloa' => 'SIN', 'Sonora' => 'SON', 'Tabasco' => 'TAB',
+        'Tamaulipas' => 'TAMS', 'Tlaxcala' => 'TLAX', 'Veracruz' => 'VER', 'Yucatán' => 'YUC',
+        'Zacatecas' => 'ZAC',
+    ];
+
     public static function apply(Builder $query, Request $request): void
     {
         self::applyGlobalFilters($query, $request);
@@ -109,7 +122,59 @@ class AdQueryFilters
             }
         }
 
-        foreach (['listing_type', 'payment_method', 'delivery', 'seller_response'] as $key) {
+        // Локация из сайдбара: фронт шлёт filters[location_state] / filters[location_city].
+        // Город/штат у объявлений лежат в полях location/state/city, поэтому матчим ILIKE по ним.
+        $locationStates = self::filterValues($filters, 'location_state');
+        if ($locationStates !== []) {
+            $query->where(function (Builder $inner) use ($locationStates): void {
+                foreach ($locationStates as $st) {
+                    $name = trim((string) $st);
+                    $like = '%' . $name . '%';
+                    $inner->orWhereRaw('state ILIKE ?', [$like])
+                          ->orWhereRaw('location ILIKE ?', [$like]);
+                    // Часть объявлений хранит штат сокращением в location ("Guadalajara, JAL"),
+                    // поэтому матчим и по аббревиатуре штата.
+                    $abbr = self::STATE_ABBR[$name] ?? null;
+                    if ($abbr) {
+                        $inner->orWhereRaw('location ILIKE ?', ['%, ' . $abbr]);
+                    }
+                }
+            });
+        }
+
+        $locationCities = self::filterValues($filters, 'location_city');
+        if ($locationCities !== []) {
+            $query->where(function (Builder $inner) use ($locationCities): void {
+                foreach ($locationCities as $city) {
+                    $like = '%' . trim((string) $city) . '%';
+                    $inner->orWhereRaw('location ILIKE ?', [$like])
+                          ->orWhereRaw('city ILIKE ?', [$like]);
+                }
+            });
+        }
+
+        // Тип объявления: атрибут listing_type у объявлений обычно не заполнен.
+        // Матчим по атрибуту ИЛИ по тексту (title/description), а "Venta" считаем
+        // значением по умолчанию для объявлений без явного типа (маркетплейс — преимущественно продажа).
+        $listingTypes = self::filterValues($filters, 'listing_type');
+        if ($listingTypes !== []) {
+            $hasVenta = in_array('venta', self::lowerValues($listingTypes), true);
+            $query->where(function (Builder $inner) use ($listingTypes, $hasVenta): void {
+                $inner->whereIn('attributes->listing_type', $listingTypes);
+                foreach ($listingTypes as $val) {
+                    $like = '%' . trim((string) $val) . '%';
+                    $inner->orWhereRaw('title ILIKE ?', [$like])
+                          ->orWhereRaw('description ILIKE ?', [$like]);
+                }
+                if ($hasVenta) {
+                    $inner->orWhereRaw("(attributes->>'listing_type') IS NULL");
+                }
+            });
+        }
+
+        // Фасеты, которые задаются при публикации и хранятся в attributes.
+        // Строгий матч по значению атрибута (delivery исключён — доставки на платформе нет).
+        foreach (['payment_method', 'seller_response', 'warranty', 'negotiable'] as $key) {
             $values = self::filterValues($filters, $key);
             if ($values !== []) {
                 self::applyExactAttributeFilter($query, $key, $values, 'string');

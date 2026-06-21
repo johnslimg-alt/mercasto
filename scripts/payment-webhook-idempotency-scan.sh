@@ -22,6 +22,7 @@ grep -qF "where('clip_checkout_id'" "$CONTROLLER"
 grep -qF "where('status', '!=', 'paid')" "$CONTROLLER"
 grep -qF "'status' => 'paid'" "$CONTROLLER"
 grep -qF 'if ($updated)' "$CONTROLLER"
+grep -qE "DB::table\('ad_promotions'\)->(insert|updateOrInsert)" "$CONTROLLER"
 grep -qF 'broadcast(new NewNotification' "$CONTROLLER"
 
 updated_line="$(grep -nF 'if ($updated)' "$CONTROLLER" | head -1 | cut -d: -f1)"

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import AdsMap from '../../common/AdsMap';
+import MapV3 from '../../common/MapV3';
 import { BriefcaseBusiness, ChartNoAxesCombined, Clock, GraduationCap, HeartPulse, Hotel, Landmark, Laptop, Megaphone, Palette, UserSearch } from 'lucide-react';
+import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -30,16 +32,11 @@ const SUBSECTIONS = [
   { name: 'Cursos', query: 'cursos capacitación', Icon: GraduationCap },
 ];
 
-export default function EmpleosLanding() {
+export default function EmpleosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
+  const copy = getVerticalCopy(lang, 'empleos');
   const [area, setArea] = useState('');
   const [modalidad, setModalidad] = useState('');
-
-  React.useEffect(() => {
-    document.title = 'Empleos y trabajos en México — Mercasto';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Encuentra trabajo en México. Miles de empleos en tecnología, ventas, administración y más. Busca o publica empleos gratis en Mercasto.');
-  }, []);
 
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'empleo' });
@@ -59,10 +56,12 @@ export default function EmpleosLanding() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/empleos" />
       <VerticalHero
-        title="Encuentra trabajo en México"
-        subtitle="Miles de oportunidades laborales en todo el país"
-        searchPlaceholder="Buscar por puesto, empresa, ciudad…"
+        title={copy.title}
+        subtitle={copy.subtitle}
+        searchPlaceholder={copy.placeholder}
+        labels={copy.labels}
         color="purple"
         mapQuery="empleos en México"
         onSearch={handleSearch}
@@ -106,23 +105,23 @@ export default function EmpleosLanding() {
             </div>
             <button onClick={() => navigate('/?category=empleo')}
               className="hidden rounded-full bg-purple-600 px-4 py-2 text-sm font-bold text-white hover:bg-purple-700 sm:inline-flex">
-              Ver listado
+              {copy.labels.viewList}
             </button>
           </div>
-          <AdsMap category="empleo" title="Empleos en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="empleo" title="Empleos en México" className="h-[260px] md:h-[420px]" />
         </section>
 
         {/* Featured jobs */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-2xl font-bold text-slate-900">Empleos recientes</h2>
-            <a href="/?category=empleo" onClick={(e) => { e.preventDefault(); navigate('/?category=empleo'); }}
-              className="text-[13px] font-semibold text-purple-600 hover:underline cursor-pointer">Ver todos →</a>
+            <h2 className="text-2xl font-bold text-slate-900">{copy.featured}</h2>
+            <a onClick={() => navigate('/?category=empleo')}
+              className="text-[13px] font-semibold text-purple-600 hover:underline cursor-pointer">{copy.labels.viewAll} →</a>
           </div>
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=empleo&per_page=6`}
             viewAllUrl="/?category=empleo"
-            viewAllLabel="Ver todos los empleos →"
+            viewAllLabel={copy.labels.viewAll}
             cols={3}
           />
         </section>

@@ -26,7 +26,7 @@ command -v python3 >/dev/null 2>&1 || {
 }
 
 echo "== Auth providers public smoke =="
-status="$(curl -k -sS -o "$BODY_FILE" -w '%{http_code}' --max-time 20 "$URL")"
+status="$(curl -k -sS --resolve mercasto.com:443:127.0.0.1 --resolve mercasto.com:80:127.0.0.1 -o "$BODY_FILE" -w '%{http_code}' --max-time 20 "$URL")"
 echo "$URL -> $status"
 
 if [[ "$status" != "200" ]]; then

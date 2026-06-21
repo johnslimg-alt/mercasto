@@ -1,24 +1,28 @@
 @extends('emails.layout')
 
-@section('subject', 'Verifica tu correo en Mercasto')
+@section('subject', __('emails.email_verify.subject'))
+
+@section('preheader', __('emails.email_verify.preheader'))
 
 @section('content')
-    <h1>Verifica tu dirección de correo</h1>
+    <h1>{{ __('emails.email_verify.title') }}</h1>
 
-    <p>Hola <strong>{{ $userName }}</strong>, gracias por registrarte en Mercasto.</p>
+    <p>{{ __('emails.common.greeting', ['name' => $userName]) }}</p>
 
-    <p>Para completar tu registro y acceder a todas las funciones de la plataforma, haz clic en el botón de abajo para verificar tu correo electrónico.</p>
+    <p>{{ __('emails.email_verify.intro') }}</p>
+
+    <p>{{ __('emails.email_verify.description') }}</p>
 
     <div class="btn-wrapper">
-        <a href="{{ $verificationUrl }}" class="btn">Verificar correo</a>
+        <a href="{{ $verificationUrl }}" class="btn">{{ __('emails.email_verify.button') }}</a>
     </div>
 
     <div class="info-box">
-        Si no solicitaste esto, puedes ignorar este correo de forma segura.
+        {{ __('emails.email_verify.ignore') }}
     </div>
 
     <div class="fallback-url">
-        <p style="margin: 0 0 6px 0;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+        <p style="margin: 0 0 6px 0;">{{ __('emails.common.button_not_working') }}</p>
         <a href="{{ $verificationUrl }}">{{ $verificationUrl }}</a>
     </div>
 @endsection

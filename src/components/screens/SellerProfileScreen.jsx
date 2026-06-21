@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MapPin, Globe, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -52,6 +53,7 @@ function StarRating({ avg, count }) {
 }
 
 export default function SellerProfileScreen({ currentUser }) {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [seller, setSeller] = useState(null);
@@ -159,11 +161,11 @@ export default function SellerProfileScreen({ currentUser }) {
               <div className="flex justify-center gap-6 pt-1 border-t border-slate-100">
                 <div className="text-center">
                   <p className="text-lg font-bold text-slate-900">{seller?.active_ads ?? 0}</p>
-                  <p className="text-xs text-slate-500">Anuncios</p>
+                  <p className="text-xs text-slate-500">{t('ads.activeAds')}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-bold text-slate-900">{seller?.rating_count ?? 0}</p>
-                  <p className="text-xs text-slate-500">Reseñas</p>
+                  <p className="text-xs text-slate-500">{t('ads.reviews', { defaultValue: 'Reviews' })}</p>
                 </div>
               </div>
             </div>

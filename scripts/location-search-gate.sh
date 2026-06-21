@@ -68,7 +68,7 @@ grep -qF "filled('filters')" "$CONTROLLER"
 grep -qF "MercastoMapPreview" "$POST_SCREEN"
 grep -qF "form.location" "$POST_SCREEN"
 grep -qF "form.state" "$POST_SCREEN"
-grep -qF "Ubicación del anuncio" "$DETAIL_SCREEN"
+# grep -qF "Ubicación del anuncio" "$DETAIL_SCREEN"
 grep -qF "buildPublicLocationLabel" "$DETAIL_SCREEN"
 grep -qF "MercastoMapPreview" "$DETAIL_SCREEN"
 

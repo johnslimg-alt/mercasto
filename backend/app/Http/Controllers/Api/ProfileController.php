@@ -776,4 +776,43 @@ class ProfileController extends Controller
         $user->save();
         return response()->json(['message' => 'Solicitud de verificación rechazada.']);
     }
+
+    /**
+     * Save user onboarding preferences (role, interests)
+     */
+    public function preferences(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'preferred_role' => 'nullable|string|in:buyer,seller,both',
+            'preferred_categories' => 'nullable|array|max:20',
+            'preferred_categories.*' => 'string|max:50',
+            'onboarding_completed_at' => 'nullable|date',
+        ]);
+
+        if ($request->has('preferred_role')) {
+            $user->preferred_role = $request->preferred_role;
+        }
+
+        if ($request->has('preferred_categories')) {
+            $user->preferred_categories = $request->preferred_categories;
+        }
+
+        if ($request->has('onboarding_completed_at')) {
+            $user->onboarding_completed_at = $request->onboarding_completed_at;
+        }
+
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Preferences saved successfully',
+            'data' => [
+                'preferred_role' => $user->preferred_role,
+                'preferred_categories' => $user->preferred_categories,
+                'onboarding_completed_at' => $user->onboarding_completed_at,
+            ]
+        ]);
+    }
 }

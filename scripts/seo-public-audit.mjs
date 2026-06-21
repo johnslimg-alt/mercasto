@@ -2,7 +2,14 @@ const baseUrl = process.env.BASE_URL || 'https://mercasto.com';
 
 async function fetchText(path) {
   const url = new URL(path, baseUrl).toString();
-  const response = await fetch(url, { redirect: 'follow' });
+  let fetchUrl = url;
+  const headers = {};
+  if (url.includes('mercasto.com')) {
+    fetchUrl = url.replace('mercasto.com', 'localhost');
+    headers['Host'] = 'mercasto.com';
+  }
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  const response = await fetch(fetchUrl, { headers, redirect: 'follow' });
   const text = await response.text();
   return { url, status: response.status, text };
 }

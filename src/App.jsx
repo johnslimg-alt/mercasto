@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
-import { translations } from './constants/mockData';
+import { getTranslations } from './utils/translations';
+import { localizedText } from './utils/localize';
+import { sizedImage } from './utils/imageHelpers';
 import AdSenseBanner from './components/common/AdSenseBanner';
 import OnboardingModal from './components/OnboardingModal';
 import {
@@ -15,6 +17,28 @@ import {
 import echo from './echo';
 import CookieBanner from './components/CookieBanner';
 import SearchSuggestions from './components/common/SearchSuggestions';
+import i18n from './i18n';
+
+const SUPPORTED_LANGUAGES = new Set([
+  'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
+]);
+const LANGUAGE_OPTIONS = [...SUPPORTED_LANGUAGES];
+const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
+const NAV_LABELS = {
+  es: ['Todo', 'Autos', 'Inmuebles', 'Servicios', 'Empleo', 'Tiendas'],
+  en: ['All', 'Cars', 'Real estate', 'Services', 'Jobs', 'Stores'],
+  pt: ['Tudo', 'Carros', 'Imóveis', 'Serviços', 'Empregos', 'Lojas'],
+  fr: ['Tout', 'Voitures', 'Immobilier', 'Services', 'Emplois', 'Boutiques'],
+  zh: ['全部', '汽车', '房地产', '服务', '招聘', '商店'],
+  ko: ['전체', '자동차', '부동산', '서비스', '채용', '상점'],
+  de: ['Alle', 'Autos', 'Immobilien', 'Dienstleistungen', 'Jobs', 'Shops'],
+  it: ['Tutto', 'Auto', 'Immobili', 'Servizi', 'Lavoro', 'Negozi'],
+  ar: ['الكل', 'سيارات', 'عقارات', 'خدمات', 'وظائف', 'متاجر'],
+  he: ['הכל', 'רכבים', 'נדל״ן', 'שירותים', 'משרות', 'חנויות'],
+  yi: ['אַלץ', 'אויטאָס', 'גרונטייגנס', 'באַדינונגען', 'אַרבעט', 'קראָמען'],
+  ru: ['Все', 'Авто', 'Недвижимость', 'Услуги', 'Работа', 'Магазины'],
+  ja: ['すべて', '自動車', '不動産', 'サービス', '求人', 'ショップ'],
+};
 
 // Глобальный перехватчик фатальных ошибок (Защита от белого экрана)
 class ErrorBoundary extends React.Component {
@@ -57,14 +81,14 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const showDetails = import.meta.env.DEV;
+      const errorMessage = this.state.error?.message || String(this.state.error || 'Unknown runtime error');
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
           <h1 className="text-[24px] font-bold text-white mb-2">No pudimos cargar esta sección</h1>
           <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba dañada, podrás iniciar sesión otra vez.</p>
-          {showDetails && (
-            <div className="text-left bg-red-50 text-red-600 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-100 shadow-sm whitespace-pre-wrap"><strong>{this.state.error?.toString()}</strong><br/><br/>{this.state.error?.stack || this.state.errorInfo?.componentStack}</div>
-          )}
+          <div className="text-left bg-slate-900 text-red-300 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-900/50 shadow-sm whitespace-pre-wrap">
+            <strong>Error code:</strong> {errorMessage}
+          </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">Abrir como invitado</button>
             <button onClick={() => ErrorBoundary.recoverFromStaleApp()} className="px-6 py-3 bg-slate-800 text-white rounded-xl shadow-md hover:bg-slate-700 transition-colors">Recargar</button>
@@ -92,7 +116,7 @@ const AdRatingStars = ({ ad, compact = false }) => {
   const filled = Math.round(rating);
   return (
     <div className={`flex items-center gap-1 ${compact ? 'text-[11px]' : 'text-[13px]'}`}>
-      <div className="flex text-amber-400" aria-label={`${rating.toFixed(1)} estrellas`}>
+      <div className="flex text-amber-400" role="img" aria-label={`${rating.toFixed(1)} estrellas`}>
         {[1, 2, 3, 4, 5].map(i => (
           <Star key={i} className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} ${i <= filled ? 'fill-amber-400' : 'fill-none'} text-amber-400`} />
         ))}
@@ -136,8 +160,15 @@ const MercastoLogo = ({ className = "h-11" }) => (
   </div>
 );
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
+const getEnvVar = (key, prodFallback) => {
+  const value = import.meta.env[key];
+  if (value) return value;
+  if (import.meta.env.PROD) return prodFallback;
+  throw new Error(`Environment variable ${key} is required in development/staging. Please check your .env file.`);
+};
+
+const API_URL = getEnvVar('VITE_API_BASE_URL', 'https://mercasto.com/api');
+const STORAGE_URL = getEnvVar('VITE_STORAGE_URL', 'https://mercasto.com/storage');
 const ENABLE_AI_PANEL = import.meta.env.VITE_ENABLE_AI_PANEL === 'true';
 const AI_PLACEHOLDERS = {
   postgresql: 'Ej: ¿Cuántos anuncios activos tenemos ahora?',
@@ -329,6 +360,7 @@ const AutosLanding = React.lazy(() => import('./components/screens/verticals/Aut
 const InmueblesLanding = React.lazy(() => import('./components/screens/verticals/InmueblesLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const EmpleosLanding = React.lazy(() => import('./components/screens/verticals/EmpleosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ServiciosLanding = React.lazy(() => import('./components/screens/verticals/ServiciosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const CategoryLanding = React.lazy(() => import('./components/screens/verticals/CategoryLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta categoría.</div> })));
 const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor de perfil.</div> })));
 const TerminosScreen = React.lazy(() => import('./components/screens/legal/TerminosScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const PrivacidadScreen = React.lazy(() => import('./components/screens/legal/PrivacidadScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
@@ -384,9 +416,9 @@ function App() {
   // Защита от Prototype Pollution (WSOD Crash): проверяем, что язык действительно существует в словаре
   const [lang, setLang] = useState(() => {
     const saved = localStorage.getItem('lang');
-    return Object.keys(translations).includes(saved) ? saved : 'es';
+    return SUPPORTED_LANGUAGES.has(saved) ? saved : 'es';
   });
-  const t = translations[lang] || translations['es'];
+  const t = getTranslations(lang);
 
   const [serverAds, setServerAds] = useState([]);
   const [realEstateAds, setRealEstateAds] = useState([]);
@@ -399,7 +431,19 @@ function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [recentSearches, setRecentSearches] = useState(() => { try { return JSON.parse(localStorage.getItem('mercasto_recent_searches') || '[]').slice(0, 5); } catch { return []; } });
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const storedSearches = JSON.parse(localStorage.getItem('mercasto_recent_searches') || '[]');
+      if (!Array.isArray(storedSearches)) {
+        localStorage.removeItem('mercasto_recent_searches');
+        return [];
+      }
+      return storedSearches.filter(item => typeof item === 'string').slice(0, 5);
+    } catch {
+      localStorage.removeItem('mercasto_recent_searches');
+      return [];
+    }
+  });
   const suggestionDebounceRef = useRef(null);
   const desktopSearchRef = useRef(null);
   const mobileSearchRef = useRef(null);
@@ -413,6 +457,7 @@ function App() {
   const [dynamicFilters, setDynamicFilters] = useState({});
 
   const [viewedAd, setViewedAd] = useState(null);
+  const [deepLinkAdMissing, setDeepLinkAdMissing] = useState(false);
   const [viewedCompany, setViewedCompany] = useState(null);
   const [companyAds, setCompanyAds] = useState([]);
   const [loadingCompanyAds, setLoadingCompanyAds] = useState(false);
@@ -453,7 +498,7 @@ function App() {
   const [accountType, setAccountType] = useState('particular');
   const [userRole, setUserRole] = useState(() => initialUser?.role || 'individual');
 
-  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
+  const [form, setForm] = useState({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
   const [debouncedLocation, setDebouncedLocation] = useState('');
   const [isMapUpdating, setIsMapUpdating] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
@@ -481,7 +526,7 @@ function App() {
   const setCurrentTab = useCallback((tab) => {
     // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
     if (currentTab === 'post' && tab !== 'post') {
-        images.forEach(img => {
+        (Array.isArray(images) ? images : []).forEach(img => {
             if (img.source === 'new' && img.preview) {
                 URL.revokeObjectURL(img.preview);
             }
@@ -490,7 +535,7 @@ function App() {
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
-        setForm({ title: '', price: '', description: '', location: '', state: '', category: '', condition: 'nuevo', attributes: {} });
+        setForm({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
     }
 
     if (tab === 'home') navigate('/'); else navigate(`/${tab}`);
@@ -502,7 +547,14 @@ function App() {
     setActiveCat(slug);
     setSearchQuery('');
     setDebouncedSearch('');
-    navigate(slug ? `/?category=${encodeURIComponent(slug)}` : '/');
+    const verticalPaths = {
+      motor: '/autos',
+      inmobiliaria: '/inmuebles',
+      servicios: '/servicios',
+      empleo: '/empleos',
+      tiendas: '/tiendas',
+    };
+    navigate(verticalPaths[slug] || '/');
     window.scrollTo(0, 0);
   }, [navigate]);
 
@@ -520,7 +572,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api'}/auth/providers`)
+    fetch(`${API_URL}/auth/providers`)
       .then(res => res.json())
       .then(data => {
         // Normalize: live server returns { providers: { apple: { enabled: bool } } }
@@ -628,13 +680,15 @@ function App() {
     if (String(nextSearch || '').trim()) params.set('search', String(nextSearch).trim());
     if (String(nextCategory || '').trim()) params.set('category', String(nextCategory).trim());
     if (String(nextLocation || '').trim()) params.set('location', String(nextLocation).trim());
+    if (String(locState || '').trim()) params.set('state', String(locState).trim());
+    if (String(locCity || '').trim()) params.set('city', String(locCity).trim());
     if (String(nextMinPrice || '').trim()) params.set('min_price', String(nextMinPrice).trim());
     if (String(nextMaxPrice || '').trim()) params.set('max_price', String(nextMaxPrice).trim());
     if (Array.isArray(nextCondition) && nextCondition.length > 0) params.set('condition', nextCondition.join(','));
 
     const query = params.toString();
     return query ? `/?${query}` : '/';
-  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, maxPrice, minPrice, selectedState]);
+  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, locCity, locState, maxPrice, minPrice, selectedState]);
 
   // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
   const executeSearch = useCallback((overrideSearch = null, overrideLoc = null, overrideCategory = undefined) => {
@@ -653,6 +707,17 @@ function App() {
       events.searchPerformed(nextSearch.trim(), nextCategory || "");
     }
   }, [activeCat, buildHomeFilterPath, navigate, searchQuery, searchLocationInput, setCurrentTab]);
+
+  const applyHeaderLocation = useCallback((mobile = false) => {
+    const locationLabel = locCity ? `${locCity}, ${locState}` : locState;
+    setSearchLocation(null);
+    setSearchLocationInput(locationLabel);
+    setSelectedState(locState);
+    setDebouncedLocInput(locationLabel);
+    if (mobile) setShowMobileLocationPicker(false);
+    else setShowLocationPicker(false);
+    executeSearch(null, locationLabel);
+  }, [executeSearch, locCity, locState]);
 
   const fetchSuggestions = useCallback((q) => {
     if (!q || q.length < 2) { setSuggestions([]); return; }
@@ -678,6 +743,13 @@ function App() {
     localStorage.setItem('mercasto_recent_searches', JSON.stringify(updated));
     setRecentSearches(updated.slice(0, 5));
   }, []);
+
+  const submitHeaderSearch = useCallback((event) => {
+    event?.preventDefault();
+    setShowSuggestions(false);
+    if (searchQuery.trim()) saveRecentSearch(searchQuery);
+    executeSearch();
+  }, [executeSearch, saveRecentSearch, searchQuery]);
 
   const handleSuggestionSelect = useCallback((suggestion) => {
     setSearchQuery(suggestion);
@@ -946,7 +1018,9 @@ function App() {
     skipFilterUrlSyncRef.current = true;
     const searchParam = params.get('search') || params.get('q');
     const categoryParam = params.get('category') || params.get('cat');
-    const locationParam = params.get('location') || params.get('city') || params.get('state');
+    const stateParam = params.get('state') || '';
+    const cityParam = params.get('city') || '';
+    const locationParam = params.get('location') || cityParam || stateParam;
     const minPriceParam = params.get('min_price');
     const maxPriceParam = params.get('max_price');
     const conditionParam = params.get('condition');
@@ -959,12 +1033,16 @@ function App() {
     if (locationParam) {
       setSearchLocation(null);
       setSearchLocationInput(locationParam);
-      setSelectedState(locationParam);
+      setSelectedState(stateParam || '');
+      setLocState(stateParam);
+      setLocCity(cityParam);
       setDebouncedLocInput(locationParam);
     } else {
       setSearchLocation(null);
       setSearchLocationInput('');
       setSelectedState('');
+      setLocState('');
+      setLocCity('');
       setDebouncedLocInput('');
     }
     setMinPrice(minPriceParam || '');
@@ -995,25 +1073,28 @@ function App() {
     const adIdParam = params.get('ad');
     const storeIdParam = params.get('store');
     const hash = location.hash || window.location.hash;
-    const targetAdId = adIdParam || (hash.startsWith('#ad-') ? hash.replace('#ad-', '') : null);
+    const pathAdMatch = location.pathname.match(/^\/(?:ads|anuncio)\/(\d+)$/);
+    const targetAdId = adIdParam || (hash.startsWith('#ad-') ? hash.replace('#ad-', '') : null) || (pathAdMatch ? pathAdMatch[1] : null);
     const targetStoreId = storeIdParam || (hash.startsWith('#company-') ? hash.replace('#company-', '') : null);
     if (!targetAdId && !targetStoreId) return;
 
     let cancelled = false;
 
     if (targetAdId) {
+      if (pathAdMatch) setDeepLinkAdMissing(false);
       const token = localStorage.getItem('auth_token');
       fetch(`${API_URL}/ads/${targetAdId}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
         .then(res => res.ok ? res.json() : null)
         .then(adData => {
-          if (cancelled || !adData) return;
+          if (cancelled) return;
+          if (!adData) { if (pathAdMatch) setDeepLinkAdMissing(true); return; }
           setViewedCompany(null);
           setViewedAd(adData);
           if (adIdParam) navigate(`/#ad-${targetAdId}`, { replace: true });
         })
-        .catch(() => console.error("Error loading deep link ad"));
+        .catch(() => { if (!cancelled && pathAdMatch) setDeepLinkAdMissing(true); });
     } else if (targetStoreId) {
       fetch(`${API_URL}/users/${targetStoreId}/profile`)
         .then(res => res.ok ? res.json() : null)
@@ -1040,7 +1121,7 @@ function App() {
     }
 
     return () => { cancelled = true; };
-  }, [location.hash, location.search, navigate, setCurrentTab]);
+  }, [location.hash, location.search, location.pathname, navigate, setCurrentTab]);
 
   // --- ПЕРЕХВАТ OAuth ТОКЕНА ИЗ URL ---
   useEffect(() => {
@@ -1056,16 +1137,25 @@ function App() {
 
     // Обработка возврата с платежного шлюза
     if (paymentStatus === 'success') {
-      // UX Fix: Мгновенно обновляем профиль (роль и баланс), чтобы пользователь сразу увидел свой PRO-статус
+      // UX Fix: обновляем профиль (роль и баланс). Вебхук Clip прилетает асинхронно,
+      // поэтому опрашиваем /user несколько раз, пока роль не станет business / не появится план.
       const token = localStorage.getItem('auth_token');
       if (token) {
-        fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(res => res.json())
-          .then(userData => {
-            setUser(userData);
-            setUserRole(userData.role || 'individual');
-            localStorage.setItem('user', JSON.stringify(userData));
-          }).catch(() => {});
+        const refreshUserAfterPayment = async () => {
+          for (let attempt = 0; attempt < 6; attempt++) {
+            try {
+              const res = await fetch(`${API_URL}/user`, { headers: { 'Authorization': `Bearer ${token}` } });
+              const userData = await res.json();
+              setUser(userData);
+              setUserRole(userData.role || 'individual');
+              localStorage.setItem('user', JSON.stringify(userData));
+              // Останавливаемся, как только сервер подтвердил PRO/бизнес-статус
+              if (userData.role === 'business' || userData.plan_code) break;
+            } catch { /* пробуем снова */ }
+            await new Promise(r => setTimeout(r, 2500));
+          }
+        };
+        refreshUserAfterPayment();
       }
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (paymentStatus === 'error') {
@@ -1167,12 +1257,17 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('lang', lang);
+    localStorage.setItem('mercasto_language', lang);
     document.documentElement.lang = lang;
+    document.documentElement.dir = RTL_LANGUAGES.has(lang) ? 'rtl' : 'ltr';
+    if (i18n.language !== lang) i18n.changeLanguage(lang);
   }, [lang]);
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
+  // Для платных/PRO (business) кабинетов принудительно показываем PRO-вид — кнопки "Particular" там нет
+  useEffect(() => { if (userRole === 'business') setAccountType('pro'); }, [userRole]);
 
   const promotableAds = useMemo(
-    () => userAds.filter(ad => ad.status === 'active'),
+    () => (Array.isArray(userAds) ? userAds : []).filter(ad => ad.status === 'active'),
     [userAds]
   );
 
@@ -1230,8 +1325,20 @@ function App() {
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
     document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
     document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content', window.location.href);
+    const canonicalHref = viewedAd
+      ? `https://mercasto.com/ads/${viewedAd.id}`
+      : viewedCompany
+        ? `https://mercasto.com/vendedor/${viewedCompany.id}`
+        : `${window.location.origin}${window.location.pathname}`;
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalHref);
     document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
+    let canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (!canonicalEl) {
+      canonicalEl = document.createElement('link');
+      canonicalEl.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalEl);
+    }
+    canonicalEl.setAttribute('href', canonicalHref);
 
     // Внедрение Schema.org JSON-LD структурированных данных
     const existingScript = document.getElementById('schema-ld-json');
@@ -1250,6 +1357,7 @@ function App() {
         "image": getImageUrl(viewedAd.image_url),
         "offers": {
           "@type": "Offer",
+          "url": `https://mercasto.com/ads/${viewedAd.id}`,
           "price": viewedAd.price,
           "priceCurrency": "MXN",
           "itemCondition": viewedAd.condition === 'new' ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
@@ -1380,7 +1488,11 @@ function App() {
       const res = await fetch(`${API_URL}/user/ads`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setUserAds(Array.isArray(data) ? data : (data.data || []));
+        setUserAds(
+          Array.isArray(data)
+            ? data
+            : (Array.isArray(data?.data) ? data.data : [])
+        );
       }
     } catch (err) { console.error("Error fetching user ads", err); }
   }, [user]);
@@ -1392,7 +1504,11 @@ function App() {
       const res = await fetch(`${API_URL}/user/favorite-ads`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setFavoriteAds(Array.isArray(data) ? data : (data.data || []));
+        setFavoriteAds(
+          Array.isArray(data)
+            ? data
+            : (Array.isArray(data?.data) ? data.data : [])
+        );
       }
     } catch (err) { console.error("Error fetching favorite ads", err); }
   }, [user]);
@@ -1410,7 +1526,11 @@ function App() {
       const res = await fetch(`${API_URL}/user/notifications/list`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(Array.isArray(data) ? data : (data.data || []));
+        setNotifications(
+          Array.isArray(data)
+            ? data
+            : (Array.isArray(data?.data) ? data.data : [])
+        );
       }
     } catch (err) { console.error("Error fetching notifications", err); }
   }, [user]);
@@ -1553,7 +1673,7 @@ function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        setFavoriteIds(data);
+        setFavoriteIds(Array.isArray(data) ? data : []);
       }
     } catch (err) { console.error("Error fetching favorites", err); }
   }, [user]);
@@ -1672,7 +1792,14 @@ function App() {
     setLoadingSearchAlerts(true);
     try {
       const res = await fetch(`${API_URL}/user/search-alerts`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setSearchAlerts(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setSearchAlerts(
+          Array.isArray(data)
+            ? data
+            : (Array.isArray(data?.data) ? data.data : [])
+        );
+      }
     } catch (err) {
       console.error('Error fetching search alerts', err);
     } finally {
@@ -1925,8 +2052,13 @@ function App() {
 
   useEffect(() => {
     fetch(`${API_URL}/categories`)
-      .then(res => res.json())
-      .then(data => setCategoriesData(Array.isArray(data) ? data : (data.data || [])))
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        const categories = Array.isArray(data)
+          ? data
+          : (Array.isArray(data?.data) ? data.data : []);
+        setCategoriesData(categories);
+      })
       .catch(err => console.error("Error fetching categories", err));
   }, []);
 
@@ -1947,7 +2079,12 @@ function App() {
 
       if (res.ok) {
         const catRes = await fetch(`${API_URL}/categories`);
-        setCategoriesData(await catRes.json());
+        const categoryPayload = catRes.ok ? await catRes.json() : [];
+        setCategoriesData(
+          Array.isArray(categoryPayload)
+            ? categoryPayload
+            : (Array.isArray(categoryPayload?.data) ? categoryPayload.data : [])
+        );
         cancelCatEdit();
         showToast('Categoría guardada exitosamente');
       } else showToast('Error al guardar la categoría', 'error');
@@ -2382,6 +2519,10 @@ function App() {
       setShowAuthModal(true);
       return;
     }
+    if (form.latitude === '' || form.longitude === '') {
+      showToast('Selecciona la ubicación exacta tocando el mapa.', 'error');
+      return;
+    }
 
     setPostLoading(true);
     const formData = new FormData();
@@ -2389,8 +2530,14 @@ function App() {
     formData.append('price', form.price);
     formData.append('description', form.description);
     formData.append('location', form.location || 'México');
+    formData.append('city', form.city || '');
     formData.append('state', form.state || '');
+    if (form.latitude !== '' && form.longitude !== '') {
+      formData.append('latitude', form.latitude);
+      formData.append('longitude', form.longitude);
+    }
     formData.append('category', form.category || 'general');
+    formData.append('condition', form.condition || 'usado');
     if (user && user.id) formData.append('user_id', user.id);
 
     // Добавляем динамические атрибуты (EAV JSON)
@@ -2442,7 +2589,7 @@ function App() {
         });
 
         // Сбрасываем состояние формы
-        setForm({ title: '', price: '', description: '', location: '', category: '', condition: 'nuevo', attributes: {} });
+        setForm({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
@@ -2453,7 +2600,8 @@ function App() {
         loadUserAds(); // Обновляем список моих объявлений
       } else {
         const errorData = await res.json();
-        showToast(`Error: ${errorData.message || 'No se pudo guardar el anuncio.'}`, 'error');
+        const validationError = Object.values(errorData.errors || {}).flat().find(Boolean);
+        showToast(`Error: ${validationError || errorData.message || 'No se pudo guardar el anuncio.'}`, 'error');
       }
     } catch (err) { console.error("Post error"); }
     finally { setPostLoading(false); }
@@ -2492,7 +2640,10 @@ function App() {
       price: ad.price,
       description: ad.description || '',
       location: ad.location || '',
+      city: ad.city || String(ad.location || '').split(',')[0].trim(),
       state: ad.state || '',
+      latitude: ad.latitude || '',
+      longitude: ad.longitude || '',
       category: ad.category || '',
       condition: ad.condition || 'usado',
       attributes: parsedAttributes
@@ -2872,13 +3023,13 @@ function App() {
     const isHighlighted = ad.promoted === 'highlight';
     const isPro = ad.user?.role === 'business';
     const isFav = favoriteIds.includes(ad.id);
-    const safeImage = options.displayImageUrl || getImageUrl(ad.image_url, ad.image);
+    const safeImage = sizedImage(options.displayImageUrl || getImageUrl(ad.image_url, ad.image), 520);
 
     return (
       <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
-          <img src={safeImage} loading={options.priority ? "eager" : "lazy"} fetchpriority={options.priority ? "high" : undefined} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
-          <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
+          <img src={safeImage} loading={options.priority ? 'eager' : 'lazy'} fetchpriority={options.priority ? 'high' : 'auto'} decoding="async" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={localizedText(ad.title, lang)}/>
+          <button type="button" aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'} aria-pressed={isFav} onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
             <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
           </button>
           {isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}
@@ -2888,7 +3039,7 @@ function App() {
         </div>
         <div className="ad-result-body p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-10 text-[#0F172A] dark:text-white">
 	          <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>
-	          <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{ad.title}</h3>
+	          <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{localizedText(ad.title, lang)}</h3>
 	          <div className="mt-1.5">
 	            <AdRatingStars ad={ad} compact />
 	          </div>
@@ -3069,6 +3220,16 @@ function App() {
   const renderPricingModal = () => {
     if (!showPricingModal) return null;
 
+    // Текущий активный план пользователя (если оплачен и не истёк)
+    const planActive = user?.plan_code && (!user?.plan_expires_at || new Date(user.plan_expires_at) > new Date());
+    const currentPlanCode = planActive ? user.plan_code : 'package_free';
+    // Кнопка плана: если это текущий активный план — показываем "активен", иначе "Adquirir plan"
+    const renderPlanBtn = (code, onBuy, buyClass, buyLabel = 'Adquirir plan') => (
+      currentPlanCode === code
+        ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#65A30D] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan || 'Plan activo'}</button>
+        : <button onClick={onBuy} className={buyClass}>{buyLabel}</button>
+    );
+
     return (
       <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-end md:items-center justify-center p-0 md:p-6 backdrop-blur-sm">
         <div className="bg-slate-50 dark:bg-slate-950 w-full max-w-5xl md:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0">
@@ -3094,7 +3255,9 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 3 anuncios activos</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Contacto por Whatsapp/Telegram</li>
                     </ul>
-                    <button className="py-2.5 w-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Plan actual</button>
+                    {currentPlanCode === 'package_free'
+                      ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#65A30D] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan || 'Plan activo'}</button>
+                      : <button disabled className="py-2.5 w-full border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 rounded-xl text-xs font-bold cursor-default">Gratis</button>}
                   </div>
                   {/* Impulso */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -3104,7 +3267,7 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 10 anuncios activos</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Más visibilidad</li>
                     </ul>
-                    <button onClick={() => handleClipPayment(99, 'Plan Impulso', null, 'package_impulso')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                    {renderPlanBtn('package_impulso', () => handleClipPayment(99, 'Plan Impulso', null, 'package_impulso'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Negocio */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -3114,7 +3277,7 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> 30 anuncios activos</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Insignia de negocio</li>
                     </ul>
-                    <button onClick={() => handleClipPayment(249, 'Plan Negocio', null, 'package_negocio')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                    {renderPlanBtn('package_negocio', () => handleClipPayment(249, 'Plan Negocio', null, 'package_negocio'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Pro */}
                   <div className="bg-slate-900 dark:bg-slate-900 rounded-2xl p-5 border border-slate-800 flex flex-col shadow-lg relative ring-2 ring-[#84CC16]">
@@ -3126,7 +3289,7 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Página de empresa</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Soporte preferente</li>
                     </ul>
-                    <button onClick={() => handleClipPayment(599, 'Plan Pro', null, 'package_pro')} className="py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm">Adquirir plan</button>
+                    {renderPlanBtn('package_pro', () => handleClipPayment(599, 'Plan Pro', null, 'package_pro'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Agencia */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -3137,7 +3300,7 @@ function App() {
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> Carga masiva XML/CSV</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> API acceso</li>
                     </ul>
-                    <button onClick={() => handleClipPayment(1499, 'Plan Agencia', null, 'package_agencia')} className="py-2.5 w-full bg-slate-900 dark:bg-slate-950 hover:bg-black dark:hover:bg-slate-800 text-white dark:text-slate-300 rounded-xl text-xs font-bold transition-colors shadow-sm">Adquirir plan</button>
+                    {renderPlanBtn('package_agencia', () => handleClipPayment(1499, 'Plan Agencia', null, 'package_agencia'), "py-2.5 w-full bg-slate-900 dark:bg-slate-950 hover:bg-black dark:hover:bg-slate-800 text-white dark:text-slate-300 rounded-xl text-xs font-bold transition-colors shadow-sm")}
                   </div>
                 </div>
 
@@ -3248,26 +3411,25 @@ function App() {
   };
 
   // --- РЕНДЕР ДАШБОРДА ПОЛЬЗОВАТЕЛЯ ---
-  const activeAds = useMemo(() => userAds.filter(a => a.status === 'active'), [userAds]);
-  const inactiveAds = useMemo(() => userAds.filter(a => a.status !== 'active'), [userAds]);
-  const totalViews = useMemo(() => userAds.reduce((sum, a) => sum + (a.views || 0), 0), [userAds]);
-  const totalContactClicks = useMemo(() => userAds.reduce((sum, a) => sum + (a.whatsapp_clicks || 0), 0), [userAds]);
+  const safeUserAds = useMemo(() => (Array.isArray(userAds) ? userAds : []), [userAds]);
+  const safeCategoriesData = useMemo(() => (Array.isArray(categoriesData) ? categoriesData : []), [categoriesData]);
+  const activeAds = useMemo(() => safeUserAds.filter(a => a.status === 'active'), [safeUserAds]);
+  const inactiveAds = useMemo(() => safeUserAds.filter(a => a.status !== 'active'), [safeUserAds]);
+  const totalViews = useMemo(() => safeUserAds.reduce((sum, a) => sum + (a.views || 0), 0), [safeUserAds]);
+  const totalContactClicks = useMemo(() => safeUserAds.reduce((sum, a) => sum + (a.whatsapp_clicks || 0), 0), [safeUserAds]);
   const conversionRate = useMemo(() => totalViews > 0 ? ((totalContactClicks / totalViews) * 100).toFixed(1) : 0, [totalViews, totalContactClicks]);
-  const catObj = useMemo(() => categoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [categoriesData, lang]);
-  const categoryStats = useMemo(() => categoriesData.map(c => ({ name: getCatName(c, lang), count: userAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [categoriesData, userAds, lang]);
-  const headerCategories = useMemo(() => ([
-    { slug: 'motor', label: lang === 'en' ? 'Cars' : 'Autos' },
-    { slug: 'inmobiliaria', label: lang === 'en' ? 'Real Estate' : 'Inmuebles' },
-    { slug: 'servicios', label: lang === 'en' ? 'Services' : 'Servicios' },
-    { slug: 'empleo', label: lang === 'en' ? 'Jobs' : 'Empleo' },
-    { slug: 'electronica', label: lang === 'en' ? 'Electronics' : 'Electrónica' },
-    { slug: 'moda', label: lang === 'en' ? 'Fashion' : 'Moda' },
-    { slug: 'hogar', label: lang === 'en' ? 'Home' : 'Hogar' },
-    { slug: 'informatica', label: lang === 'en' ? 'Tech' : 'Tecnología' },
-    { slug: 'telefonia', label: lang === 'en' ? 'Phones' : 'Teléfonos' },
-    { slug: 'mascotas', label: lang === 'en' ? 'Pets' : 'Mascotas' },
-    { slug: 'negocios', label: lang === 'en' ? 'Business' : 'Negocios' },
-  ]), [lang]);
+  const catObj = useMemo(() => safeCategoriesData.reduce((acc, cat) => { acc[cat.slug] = getCatName(cat, lang); return acc; }, {}), [safeCategoriesData, lang]);
+  const categoryStats = useMemo(() => safeCategoriesData.map(c => ({ name: getCatName(c, lang), count: safeUserAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [safeCategoriesData, safeUserAds, lang]);
+  const navLabels = NAV_LABELS[lang] || NAV_LABELS.en;
+  const headerCategories = useMemo(() => {
+    // Показываем ВСЕ категории из API в верхней навигации (а не только 5 вертикалей),
+    // плюс спец-пункт «Tiendas» (каталог магазинов) в конце.
+    const cats = (Array.isArray(safeCategoriesData) ? safeCategoriesData : [])
+      .filter(c => c && c.slug)
+      .map(c => ({ slug: c.slug, label: getCatName(c, lang) }));
+    cats.push({ slug: 'tiendas', label: navLabels[5] });
+    return cats;
+  }, [safeCategoriesData, lang, navLabels]);
 
   const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
@@ -3275,7 +3437,7 @@ function App() {
   const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
-  const renderPostScreen = () => <PostScreen categoriesData={categoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={images} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
+  const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} />;
 
   const renderCouponModal = () => {
     if (!showCouponModal) return null;
@@ -3343,10 +3505,10 @@ function App() {
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (
     <div className="mobile-tabbar md:hidden fixed bottom-0 w-full border-t pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[84px] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-      <button onClick={() => { setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className={`flex flex-col items-center p-1 ${currentTab === 'home' && !viewedAd ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button aria-label="Inicio" onClick={() => { setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className={`flex flex-col items-center p-1 ${currentTab === 'home' && !viewedAd ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
+      <button aria-label="Buscar" onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
       <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-6 hover:scale-105 transition-transform" aria-label="Publicar anuncio">
@@ -3354,7 +3516,7 @@ function App() {
           <Plus className="w-7 h-7 stroke-[3]" />
         </div>
       </button>
-      <button onClick={() => { user ? (setCurrentTab('profile'), setDashboardTab('notifications')) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'profile' && dashboardTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button aria-label="Notificaciones" onClick={() => { user ? (setCurrentTab('profile'), setDashboardTab('notifications')) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'profile' && dashboardTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Bell className="w-6 h-6 mb-1" />
         {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
       </button>
@@ -3491,15 +3653,15 @@ function App() {
             </a>
             <div className="hidden lg:flex flex-1 items-center">
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
-              <div className="header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
+              <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-              <input value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full px-3 py-2 bg-transparent outline-none text-[14px]" />
+              <input data-testid="desktop-search-input" value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
                 <div className="h-7 w-px bg-slate-200"></div>
 
                 {/* КАСТОМНЫЙ ПОПАП ВЫБОРА ЛОКАЦИИ (ШТАТ + ГОРОД) */}
                 <div className="relative flex items-center w-full max-w-[220px]">
                   <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
-                  <button onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
+                  <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
                     {searchLocationInput || t.all_mexico || "Todo México"}
                   </button>
 
@@ -3507,21 +3669,21 @@ function App() {
                     <div className="header-popover absolute top-full left-0 mt-3 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
                       <div className="mb-3">
                         <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
-                        <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
+                        <select data-testid="desktop-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
                           <option value="">{t.all_mexico || 'Todo México'}</option>
                           {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                         </select>
                       </div>
                     <div className="mb-4">
                       <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad / Municipio'}</label>
-                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400">
+                      <select data-testid="desktop-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400">
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
                     </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
-                      <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowLocationPicker(false); executeSearch(null, query); }} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                        <button type="button" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
+                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
                       </div>
                     </div>
                   )}
@@ -3539,11 +3701,11 @@ function App() {
                     </select>
                   </>
                 )}
-              <button onClick={() => { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); }} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
+              <button type="submit" data-testid="desktop-search-submit" className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn || "Buscar"}
                 </button>
-              </div>
+              </form>
               <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               </div>
             </div>
@@ -3555,13 +3717,13 @@ function App() {
                 <div className="mobile-language-select" aria-label="Language switcher">
                   <Globe className="w-3.5 h-3.5" />
                   <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
-                    {Object.keys(translations).map(l => (
+                    {LANGUAGE_OPTIONS.map(l => (
                       <option key={l} value={l}>{l.toUpperCase()}</option>
                     ))}
                   </select>
                 </div>
                 <div className="relative">
-                  <button type="button" onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
+                  <button type="button" aria-label={user ? 'Abrir menú de cuenta' : 'Iniciar sesión'} onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
                     {user?.avatar_url ? (
                       <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-7 h-7 rounded-full object-cover" alt=""/>
                     ) : (
@@ -3584,13 +3746,13 @@ function App() {
               <div className="header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
                 <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
-                  {Object.keys(translations).map(l => (
+                  {LANGUAGE_OPTIONS.map(l => (
                     <option key={l} value={l}>{l.toUpperCase()}</option>
                   ))}
                 </select>
               </div>
               <div className="relative hidden sm:block">
-              <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications || 'Notificaciones'}>
+              <button type="button" onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications || 'Notificaciones'}>
 
                   <Bell className="w-[22px] h-[22px]" />
                   {unreadCount > 0 && (
@@ -3622,7 +3784,8 @@ function App() {
                               key={n.id}
                               onClick={() => {
                                 handleMarkNotificationRead(n.id);
-                                if (notificationData?.ad_url) navigate(notificationData.ad_url);
+                                const dest = notificationData?.ad_url || n.link;
+                                if (dest) { setShowNotifications(false); navigate(dest); }
                               }}
                               className={`p-4 border-b border-slate-50 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors relative group ${!n.is_read ? 'bg-[#84CC16]/5 dark:bg-[#84CC16]/10' : ''}`}
                             >
@@ -3661,7 +3824,7 @@ function App() {
               </div>
             <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title="Directorio de Tiendas">
                 <Store className="w-[22px] h-[22px]" />
-                <span className="text-[13px] font-bold hidden md:block">Tiendas</span>
+                <span className="text-[13px] font-bold hidden md:block">{navLabels[5]}</span>
             </button>
             <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label={t.favorites || 'Favoritos'}>
                 <Heart className="w-[22px] h-[22px]" />
@@ -3693,14 +3856,17 @@ function App() {
           {/* Mobile Search + Location + Account */}
           <div className="mobile-search-row lg:hidden pb-1">
             <div ref={mobileSearchRef} className="relative min-w-0">
-              <div className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
+              <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Enter') { setShowSuggestions(false); if (searchQuery.trim()) saveRecentSearch(searchQuery); executeSearch(); } else if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
+                <input data-testid="mobile-search-input" ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
                 <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
                 </button>
-              </div>
+                <button type="submit" data-testid="mobile-search-submit" aria-label={t.search_btn || 'Buscar'} className="mobile-search-submit mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#84CC16] text-slate-950">
+                  <Search className="h-4 w-4" />
+                </button>
+              </form>
               <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               {showMobileLocationPicker && (
                 <div className="header-popover absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl border p-4 z-50">
@@ -3714,7 +3880,7 @@ function App() {
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
-                <button onClick={() => { const query = locCity ? `${locCity}, ${locState}` : locState; setSearchLocation(null); setSearchLocationInput(query || ''); setSelectedState(locCity || locState || ''); setShowMobileLocationPicker(false); executeSearch(null, query); }} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
+                <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
                 </div>
               )}
             </div>
@@ -3753,10 +3919,17 @@ function App() {
               <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
               <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense></RequireAuth>} />
               <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
-              <Route path="/autos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding /></React.Suspense>} />
-              <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding /></React.Suspense>} />
-              <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding /></React.Suspense>} />
-              <Route path="/servicios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ServiciosLanding /></React.Suspense>} />
+              <Route path="/ads/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
+              <Route path="/anuncio/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
+              <Route path="/autos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding lang={lang} /></React.Suspense>} />
+              <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding lang={lang} /></React.Suspense>} />
+              <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding lang={lang} /></React.Suspense>} />
+              <Route path="/servicios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ServiciosLanding lang={lang} /></React.Suspense>} />
+              {['electronica', 'moda', 'hogar', 'tecnologia', 'telefonos', 'mascotas', 'infantil', 'negocios', 'ocio', 'boletos'].map(category => (
+                <Route key={category} path={`/${category}`} element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category={category} lang={lang} /></React.Suspense>} />
+              ))}
+              <Route path="/informatica" element={<Navigate to="/tecnologia" replace />} />
+              <Route path="/telefonia" element={<Navigate to="/telefonos" replace />} />
               <Route path="/terminos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><TerminosScreen /></React.Suspense>} />
   <Route path="/privacidad" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><PrivacidadScreen /></React.Suspense>} />
   <Route path="/cookies" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CookiesScreen /></React.Suspense>} />
@@ -3785,13 +3958,13 @@ function App() {
               <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'El marketplace local de más rápido crecimiento en México. Compra, vende, renta y encuentra empleo de forma segura.'}</p>
             </div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
-            <div><div className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.pricing || 'Precios'}</button></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
+            <div><div className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.pricing || 'Tarifas'}</button></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</div><ul className="space-y-2 text-[13px]"><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">Mercasto Pro</button></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">Directorio de Tiendas</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">Soluciones</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.help || 'Ayuda'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.help_center || 'Centro de Ayuda'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_center || 'Centro de Seguridad'}</a></li><li><a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer">{t.privacy_policy || 'Aviso de Privacidad'}</a></li></ul></div>
           </div>
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-[12px] text-slate-400">
-              <span>© 2026 Mercasto México S.A. de C.V.</span>
+              <span>© 2026 Mercasto · Hecho en México</span>
         <span className="text-slate-600">·</span>
         <a href="/acerca-de" onClick={(e) => { e.preventDefault(); navigate('/acerca-de'); }} className="hover:text-white cursor-pointer transition-colors">Acerca de</a>
         <span className="text-slate-600">·</span>

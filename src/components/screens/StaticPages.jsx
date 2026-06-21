@@ -38,7 +38,7 @@ export default function StaticPages({ currentTab }) {
           <p className="text-sm text-slate-500 font-semibold mb-6">En cumplimiento con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).</p>
           
           <h3 className="text-[18px] font-bold text-slate-900 mt-6">1. Identidad del Responsable</h3>
-          <p>Mercasto México S.A. de C.V., es el responsable del tratamiento de los datos personales que nos proporcione.</p>
+          <p>Mercasto es responsable del tratamiento de los datos personales que nos proporcione.</p>
           
           <h3 className="text-[18px] font-bold text-slate-900 mt-6">2. Datos Personales que Recabamos</h3>
           <p>Para brindarle nuestros servicios, recabamos los siguientes datos personales:</p>

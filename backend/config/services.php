@@ -81,6 +81,14 @@ return [
     ],
 
     'ollama' => [
+        'url'     => env('OLLAMA_URL', 'http://mercasto_ollama:11434'),
+        'model'   => env('OLLAMA_MODEL', 'qwen2.5-coder:1.5b'),
+        'timeout' => env('OLLAMA_TIMEOUT', 60),
+        'base_url'   => env('OLLAMA_BASE_URL', 'http://ollama:11434'),
+        'chat_model' => env('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b'),
+    ],
+
+    'ollama_old' => [
         'base_url'   => env('OLLAMA_BASE_URL', 'http://ollama:11434'),
         'chat_model' => env('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b'),
     ],

@@ -1,0 +1,15 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Embedding extends Model
+{
+    protected $fillable = ['ad_id', 'embedding'];
+    
+    public function ad()
+    {
+        return $this->belongsTo(Ad::class);
+    }
+}

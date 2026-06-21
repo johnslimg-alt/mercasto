@@ -1,9 +1,11 @@
+import SEO from "../../SEO";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import AdsMap from '../../common/AdsMap';
+import MapV3 from '../../common/MapV3';
 import { Bike, Car, CarFront, Gauge, PackageSearch, Truck, Wrench } from 'lucide-react';
+import { getVerticalCopy } from '../../../utils/verticalCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -70,17 +72,12 @@ const SUBSECTIONS = [
   { name: 'Autopartes', query: 'autopartes', Icon: PackageSearch },
 ];
 
-export default function AutosLanding() {
+export default function AutosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
+  const copy = getVerticalCopy(lang, 'autos');
   const [condition, setCondition] = useState('');
   const [priceRange, setPriceRange] = useState(null);
   const [brand, setBrand] = useState('');
-
-  React.useEffect(() => {
-    document.title = 'Comprar y vender autos en México — Mercasto';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', 'Encuentra autos nuevos y usados en México. Miles de vehículos con los mejores precios. Publica gratis en Mercasto.');
-  }, []);
 
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'motor' });
@@ -103,10 +100,12 @@ export default function AutosLanding() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/autos" />
       <VerticalHero
-        title="Encuentra tu auto ideal en México"
-        subtitle="Miles de autos nuevos y usados al mejor precio"
-        searchPlaceholder="Buscar por marca, modelo, año…"
+        title={copy.title}
+        subtitle={copy.subtitle}
+        searchPlaceholder={copy.placeholder}
+        labels={copy.labels}
         color="blue"
         mapQuery="autos en México"
         onSearch={handleSearch}
@@ -158,25 +157,25 @@ export default function AutosLanding() {
             </div>
             <button onClick={() => navigate('/?category=motor')}
               className="hidden rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 sm:inline-flex">
-              Ver listado
+              {copy.labels.viewList}
             </button>
           </div>
-          <AdsMap category="motor" title="Autos en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="motor" title="Autos en México" className="h-[260px] md:h-[420px]" />
         </section>
 
         {/* Featured Listings */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-2xl font-bold text-slate-900">Vehículos destacados</h2>
-            <a href="/?category=motor" onClick={(e) => { e.preventDefault(); navigate('/?category=motor'); }}
+            <h2 className="text-2xl font-bold text-slate-900">{copy.featured}</h2>
+            <a onClick={() => navigate('/?category=motor')}
               className="text-[13px] font-semibold text-blue-600 hover:underline cursor-pointer">
-              Ver todos →
+              {copy.labels.viewAll} →
             </a>
           </div>
           <VerticalAdGrid
             apiUrl={`${API_URL}/ads?category=motor&per_page=8`}
             viewAllUrl="/?category=motor"
-            viewAllLabel="Ver todos los vehículos →"
+            viewAllLabel={copy.labels.viewAll}
             cols={4}
           />
         </section>

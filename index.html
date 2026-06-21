@@ -2,6 +2,10 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <!-- Preconnect to image hosts used by ad cards (cuts LCP on first image request) -->
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
+    <link rel="preconnect" href="https://picsum.photos" crossorigin />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <link rel="shortcut icon" href="/favicon.ico?v=2" />
     <link rel="apple-touch-icon" href="/icon-192x192.png?v=2">
@@ -11,16 +15,42 @@
     <meta name="theme-color" content="#84CC16">
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Mercasto" />
-    <meta property="og:title" content="Mercasto | Compra, Vende y Renta en Todo México" />
+    <meta property="og:title" content="Mercasto - Marketplace de México" />
     <meta property="og:description" content="Marketplace de clasificados para México: autos, inmuebles, servicios, empleo, electrónica y más." />
     <meta property="og:url" content="https://mercasto.com/" />
     <meta property="og:image" content="https://mercasto.com/icon-512x512.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Mercasto | Compra, Vende y Renta en Todo México" />
+    <meta name="twitter:title" content="Mercasto - Marketplace de México" />
     <meta name="twitter:description" content="Compra, vende y renta en todo México con Mercasto." />
     <meta name="twitter:image" content="https://mercasto.com/icon-512x512.png" />
     <link rel="manifest" href="/manifest.json">
-    <title>Mercasto | Compra, Vende y Renta en Todo México</title>
+    <title>Mercasto</title>
+    <!-- Google tag (gtag.js) — deferred off the critical path to protect load performance -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      (function () {
+        var GA_ID = 'G-VX87HQC817';
+        var loaded = false;
+        function loadGA() {
+          if (loaded) return;
+          loaded = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+          document.head.appendChild(s);
+          gtag('js', new Date());
+          gtag('config', GA_ID);
+        }
+        // Load GA on the first real user interaction so it never competes with
+        // the critical render path. Real visitors interact within moments;
+        // a long safety-net timeout still captures non-interacting sessions.
+        ['scroll', 'click', 'keydown', 'touchstart', 'pointerdown', 'mousemove'].forEach(function (ev) {
+          window.addEventListener(ev, loadGA, { once: true, passive: true });
+        });
+        setTimeout(loadGA, 10000);
+      })();
+    </script>
     <script>
       try {
         var theme = localStorage.getItem('theme');
@@ -37,6 +67,39 @@
       html.dark body {
         background: #0f172a;
       }
+      /* Instant-paint app shell: renders from HTML+inline CSS before the JS bundle
+         loads, improving FCP/LCP on slow connections. position:fixed keeps it out of
+         document flow so removing it cannot cause layout shift (CLS-safe). */
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #0f172a;
+        transition: opacity .35s ease;
+      }
+      html:not(.dark) #app-splash { background: #F8FAFC; }
+      #app-splash.app-splash--hide { opacity: 0; pointer-events: none; }
+      #app-splash .as-logo {
+        font: 800 40px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: -.03em;
+        color: #fff;
+      }
+      html:not(.dark) #app-splash .as-logo { color: #0F172A; }
+      #app-splash .as-logo b { color: #84CC16; }
+      #app-splash .as-spin {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 3px solid rgba(132, 204, 22, .25);
+        border-top-color: #84CC16;
+        animation: as-rot .8s linear infinite;
+      }
+      @keyframes as-rot { to { transform: rotate(360deg); } }
     </style>
     <script type="application/ld+json">
       {
@@ -54,6 +117,10 @@
     </script>
 </head>
   <body class="antialiased bg-[#F8FAFC] dark:bg-slate-950">
+    <div id="app-splash" aria-hidden="true">
+      <div class="as-logo">Merca<b>sto</b></div>
+      <div class="as-spin"></div>
+    </div>
     <script>
       if (typeof window.Notification === 'undefined') {
         window.Notification = function NotificationFallback() { return null; };
@@ -86,5 +153,21 @@
 
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (function () {
+        function hideSplash() {
+          var s = document.getElementById('app-splash');
+          if (!s) return;
+          s.classList.add('app-splash--hide');
+          setTimeout(function () { if (s && s.parentNode) s.parentNode.removeChild(s); }, 450);
+        }
+        if (document.readyState === 'complete') {
+          setTimeout(hideSplash, 200);
+        } else {
+          window.addEventListener('load', function () { setTimeout(hideSplash, 200); }, { once: true });
+        }
+        setTimeout(hideSplash, 8000); // safety net so the shell never sticks
+      })();
+    </script>
   </body>
 </html>

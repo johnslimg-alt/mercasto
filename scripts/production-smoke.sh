@@ -51,10 +51,10 @@ if [[ ! -f docker-compose.override.yml ]]; then
 fi
 
 echo "== Compose validation =="
-"${COMPOSE[@]}" config >/tmp/mercasto_compose_config.out
-grep -q 'mercasto-scheduler:' /tmp/mercasto_compose_config.out
-grep -q 'mercasto-reverb:' /tmp/mercasto_compose_config.out
-grep -q 'condition: service_healthy' /tmp/mercasto_compose_config.out
+"${COMPOSE[@]}" config >"/tmp/mercasto_compose_config.$(id -u).out"
+grep -q 'mercasto-scheduler:' "/tmp/mercasto_compose_config.$(id -u).out"
+grep -q 'mercasto-reverb:' "/tmp/mercasto_compose_config.$(id -u).out"
+grep -q 'condition: service_healthy' "/tmp/mercasto_compose_config.$(id -u).out"
 echo "compose config OK"
 
 echo "== Container status =="
@@ -88,7 +88,7 @@ if [[ "$PHP_POST_MAX" != "64M" ]]; then
 fi
 
 echo "== Redis host setting =="
-if [[ "$(sysctl -n vm.overcommit_memory 2>/dev/null || echo unknown)" != "1" ]]; then
+if [[ "$(uname)" != "Darwin" && "$(sysctl -n vm.overcommit_memory 2>/dev/null || echo unknown)" != "1" ]]; then
   echo "vm.overcommit_memory is not 1" >&2
   exit 1
 fi

@@ -22,9 +22,12 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\SearchAlertController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ContactController;
 
 // Public routes
+Route::get('/img', \App\Http\Controllers\ImageController::class); // on-the-fly thumbnail resizer (WebP)
 Route::middleware('throttle:search')->get('/search/suggestions', [SearchController::class, 'suggestions']);
+Route::middleware('throttle:search')->get('/search/semantic', [SearchController::class, 'semanticSearch']);
 Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'index']);
 Route::middleware('throttle:search')->get('/category-attributes', [CategoryAttributeController::class, 'index']); // Динамические атрибуты категории для PostScreen + SidebarFilters
 Route::middleware('throttle:api')->get('/ads/featured', [AdIndexController::class, 'featured']); // Объявления «Destacados» для блока на главной
@@ -145,6 +148,9 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::post('/ads/{id}/view', [AdController::class, 'recordView'])->whereNumber('id');
     Route::post('/ads/impressions', [AdController::class, 'recordImpressions']);
 });
+
+// Contactar al vendedor sin exponer su email (relay por backend, 5 mensajes/hora por IP)
+Route::middleware('throttle:5,60')->post('/ads/{id}/contact-seller', [ContactController::class, 'contactSeller'])->whereNumber('id');
 
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/ads/{id}/report', [AdController::class, 'report'])->whereNumber('id'); // Пожаловаться на объявление

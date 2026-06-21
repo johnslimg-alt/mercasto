@@ -66,6 +66,7 @@ export default function SearchSuggestions({
         ),
         suggItems.map((item, i) => {
           const flatIdx = recentItems.length + i;
+          const isFuzzy = query.length > 0 && !item.toLowerCase().includes(query.toLowerCase());
           return React.createElement('button', {
             key: 's' + i,
             onMouseDown: (e) => { e.preventDefault(); onSelect?.(item); },
@@ -74,7 +75,12 @@ export default function SearchSuggestions({
             React.createElement('svg', { className: 'w-3.5 h-3.5 text-[#84CC16] shrink-0', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', strokeWidth: 2.5 },
               React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', d: 'M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z' })
             ),
-            React.createElement('span', { className: 'text-slate-700 dark:text-slate-200 truncate' }, highlight(item))
+            isFuzzy
+              ? React.createElement('span', { className: 'truncate' },
+                  React.createElement('span', { className: 'text-slate-400 italic' }, 'Quizás: '),
+                  React.createElement('span', { className: 'text-slate-500 dark:text-slate-400 italic' }, item)
+                )
+              : React.createElement('span', { className: 'text-slate-700 dark:text-slate-200 truncate' }, highlight(item))
           );
         })
       ),

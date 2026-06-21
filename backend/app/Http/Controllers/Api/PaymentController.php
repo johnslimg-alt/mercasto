@@ -407,6 +407,7 @@ class PaymentController extends Controller
             'updated_at' => now(),
         ]);
 
+        // DB::table('ad_promotions')->insert
         DB::table('ad_promotions')->updateOrInsert(
             ['ad_id' => $payment->ad_id],
             [

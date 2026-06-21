@@ -26,14 +26,12 @@ function getImg(path) {
   if (Array.isArray(path)) {
     return path.length ? getImg(path[0]) : '/placeholder-ad.svg';
   }
+  if (typeof path !== 'string') return '/placeholder-ad.svg';
   if (path.startsWith('http') || path.startsWith('data:')) return safeExternalImage(path);
   if (path.startsWith('[')) {
     try {
       const a = JSON.parse(path);
-      if (a && a.length) {
-        const first = a[0];
-        return first.startsWith('http') || first.startsWith('data:') ? safeExternalImage(first) : `${STORAGE_URL}/${first}`;
-      }
+      if (Array.isArray(a) && a.length) return getImg(a[0]);
     } catch (e) {}
   }
   return `${STORAGE_URL}/${path}`;
@@ -62,7 +60,7 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
     fetch(apiUrl)
       .then(r => r.ok ? r.json() : { data: [] })
       .then(d => {
-        setAds(Array.isArray(d) ? d : (d.data || []));
+        setAds(Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []));
         setLoading(false);
       })
       .catch(() => setLoading(false));
