@@ -2,10 +2,9 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <!-- Preconnect to image hosts and API — cuts LCP load delay -->
+    <!-- Preconnect to image host — cuts LCP load delay -->
     <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
     <link rel="dns-prefetch" href="https://images.unsplash.com" />
-    <link rel="preconnect" href="https://picsum.photos" crossorigin />
     <!-- Early preload of the LCP featured image: fetch the API immediately
          so the browser can start downloading the image before JS executes -->
     <script>
@@ -53,7 +52,8 @@
     <meta name="twitter:title" content="Mercasto - Marketplace de México" />
     <meta name="twitter:description" content="Compra, vende y renta en todo México con Mercasto." />
     <meta name="twitter:image" content="https://mercasto.com/icon-512x512.png" />
-    <link rel="manifest" href="/manifest.json">
+    <!-- manifest non-critical: fetchpriority=low keeps it out of the critical path -->
+    <link rel="manifest" href="/manifest.json" fetchpriority="low">
     <title>Mercasto</title>
     <!-- Google tag (gtag.js) — deferred off the critical path to protect load performance -->
     <script>
