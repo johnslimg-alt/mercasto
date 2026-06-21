@@ -3036,6 +3036,12 @@ function App() {
     const isFav = favoriteIds.includes(ad.id);
     const safeImage = sizedImage(options.displayImageUrl || getImageUrl(ad.image_url, ad.image), 520);
 
+    if (options.priority) {
+      try {
+        localStorage.setItem('__mercasto_lcp_image', safeImage);
+      } catch (e) {}
+    }
+
     return (
       <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">

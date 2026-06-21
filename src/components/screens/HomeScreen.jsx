@@ -721,6 +721,11 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                         ? getImageUrl(ad.image_url || ad.image)
                         : (ad.image_url || ad.image || `https://picsum.photos/seed/feat-${ad.id}/480/360`);
                       const imgUrl = sizedImage(rawImg, 480);
+                      if (i === 0) {
+                        try {
+                          localStorage.setItem('__mercasto_lcp_image', imgUrl);
+                        } catch (e) {}
+                      }
                       const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
                       const rating = getHomeRating(ad);
                       return (
