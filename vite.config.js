@@ -60,9 +60,14 @@ export default defineConfig({
             return null;
           }
           
-          // Observability
-          if (id.includes('/@sentry/') || id.includes('/laravel-echo/') || id.includes('/pusher-js/')) {
+          // Observability (Sentry source maps only — no runtime import)
+          if (id.includes('/@sentry/')) {
             return 'vendor-observability';
+          }
+
+          // Real-time (laravel-echo + pusher) — lazy, only for logged-in users
+          if (id.includes('/laravel-echo/') || id.includes('/pusher-js/')) {
+            return 'vendor-realtime';
           }
           
           // UI / Tailwind related

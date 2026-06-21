@@ -14,7 +14,15 @@ import {
   ShieldCheck, Camera, Trash2, Download, PieChart as PieChartIcon, QrCode, Share2, Bell, MessageCircle
 } from 'lucide-react';
 
-import echo from './echo';
+// echo/pusher deferred: only needed for authenticated real-time notifications.
+// Dynamic import keeps laravel-echo + pusher-js (~73 KB) out of the critical bundle.
+let _echoInstance = null;
+async function getEcho() {
+  if (_echoInstance) return _echoInstance;
+  const mod = await import('./echo');
+  _echoInstance = mod.default;
+  return _echoInstance;
+}
 import CookieBanner from './components/CookieBanner';
 import SearchSuggestions from './components/common/SearchSuggestions';
 import i18n from './i18n';
@@ -1421,23 +1429,32 @@ function App() {
 
   // --- WEBSOCKETS LISTENER ---
   useEffect(() => {
-    if (user?.id && echo) {
-        const token = localStorage.getItem('auth_token');
-        if (token && echo.connector?.pusher?.config?.auth?.headers) {
-            echo.connector.pusher.config.auth.headers.Authorization = `Bearer ${token}`;
-        }
-        const channel = echo.private(`App.Models.User.${user.id}`);
-
-        channel.listen('.NewNotification', (e) => {
-            // The actual notification data is inside e.notification
-            setNotifications(prev => [e.notification, ...prev]);
-        });
-
-        return () => {
-            channel.stopListening('.NewNotification');
-            echo.leave(`private-App.Models.User.${user.id}`); // Закрываем приватный канал с правильным префиксом
-        };
-    }
+    if (!user?.id) return;
+    let cancelled = false;
+    let channel = null;
+    // Lazy-load Echo + Pusher only for authenticated users — keeps 73 KB off the critical path
+    getEcho().then((echo) => {
+      if (cancelled || !echo) return;
+      const token = localStorage.getItem('auth_token');
+      if (token && echo.connector?.pusher?.config?.auth?.headers) {
+          echo.connector.pusher.config.auth.headers.Authorization = `Bearer ${token}`;
+      }
+      channel = echo.private(`App.Models.User.${user.id}`);
+      channel.listen('.NewNotification', (e) => {
+          // The actual notification data is inside e.notification
+          setNotifications(prev => [e.notification, ...prev]);
+      });
+    });
+    return () => {
+      cancelled = true;
+      if (channel) {
+        channel.stopListening('.NewNotification');
+      }
+      // leave the private channel; echo may not be resolved yet — safe to ignore
+      if (_echoInstance) {
+        _echoInstance.leave(`private-App.Models.User.${user.id}`);
+      }
+    };
 // Защита от DDoS WebSockets (Connection Thrashing): привязываем зависимость ТОЛЬКО к ID,
 // иначе при любом обновлении профиля/баланса React будет рвать и заново создавать сокет-соединение
 }, [user?.id]);
