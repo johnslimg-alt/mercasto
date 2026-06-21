@@ -9,6 +9,23 @@
          so the browser can start downloading the image before JS executes -->
     <script>
       (function () {
+        var cachedLcp = null;
+        try {
+          cachedLcp = localStorage.getItem('__mercasto_lcp_image');
+          if (cachedLcp) {
+            var link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'image';
+            link.fetchPriority = 'high';
+            link.href = cachedLcp;
+            document.head.appendChild(link);
+          }
+          var cachedAds = localStorage.getItem('__mercasto_featured_ads');
+          if (cachedAds) {
+            window.__FEATURED_ADS_CACHE__ = JSON.parse(cachedAds);
+          }
+        } catch (e) {}
+
         try {
           // Start fetching featured ads immediately — before any JS bundles load.
           // HomeScreen will consume window.__FEATURED_ADS_PROMISE__ to skip its own fetch.
@@ -19,6 +36,9 @@
                 : (Array.isArray(data && data.data) ? data.data : []);
               // Inject preload link for the first image while we have the data
               if (ads.length) {
+                try {
+                  localStorage.setItem('__mercasto_featured_ads', JSON.stringify(ads));
+                } catch (e) {}
                 var first = ads[0];
                 var raw = first.image_url || first.image || '';
                 if (raw) {
@@ -52,12 +72,17 @@
                       if (!src.includes('auto=format')) src += '&auto=format&fit=crop';
                     }
                   }
-                  var link = document.createElement('link');
-                  link.rel = 'preload';
-                  link.as = 'image';
-                  link.fetchPriority = 'high';
-                  link.href = src;
-                  document.head.appendChild(link);
+                  try {
+                    localStorage.setItem('__mercasto_lcp_image', src);
+                  } catch (e) {}
+                  if (src !== cachedLcp) {
+                    var link = document.createElement('link');
+                    link.rel = 'preload';
+                    link.as = 'image';
+                    link.fetchPriority = 'high';
+                    link.href = src;
+                    document.head.appendChild(link);
+                  }
                 }
               }
               return ads;

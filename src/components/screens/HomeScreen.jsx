@@ -336,8 +336,20 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     const [viewLayout, setViewLayout] = React.useState('grid'); // 'grid' or 'list'
     const [homeToast, setHomeToast] = React.useState(null);
     const homeToastTimerRef = React.useRef(null);
-    const [featuredAds, setFeaturedAds] = React.useState([]);
-    const [featuredLoading, setFeaturedLoading] = React.useState(true);
+    const [featuredAds, setFeaturedAds] = React.useState(() => {
+      if (typeof window !== 'undefined') {
+        if (window.__FEATURED_ADS_CACHE__) return window.__FEATURED_ADS_CACHE__;
+        try {
+          var cached = localStorage.getItem('__mercasto_featured_ads');
+          if (cached) return JSON.parse(cached);
+        } catch (e) {}
+      }
+      return [];
+    });
+    const [featuredLoading, setFeaturedLoading] = React.useState(() => {
+      if (typeof window !== 'undefined' && window.__FEATURED_ADS_CACHE__) return false;
+      return true;
+    });
     const navigate = useNavigate();
     const safeServerAds = React.useMemo(() => (Array.isArray(serverAds) ? serverAds : []), [serverAds]);
     const safeRealEstateAds = React.useMemo(() => (Array.isArray(realEstateAds) ? realEstateAds : []), [realEstateAds]);

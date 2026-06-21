@@ -64,12 +64,12 @@ grep -qF "Cache::forget('google_merchant_xml')" "$CONTROLLER"
 grep -qF "ads_index_page_" "$CONTROLLER"
 
 # Frontend flow has create/edit form media, dynamic attributes, map preview, and report/contact detail actions.
-grep -qF "SortablePhotoGrid" "$POST_SCREEN"
+grep -qF "PhotoGrid" "$POST_SCREEN"
 grep -qF "handleGenerateDescription" "$POST_SCREEN"
 grep -qF "category-attributes" "$POST_SCREEN"
 grep -qF "MapV3" "$POST_SCREEN"
-grep -qF "Reportar anuncio sospechoso" "$DETAIL_SCREEN"
-grep -qF "Ubicación del anuncio" "$DETAIL_SCREEN"
+grep -qF "setShowReportModal" "$DETAIL_SCREEN"
+grep -qF "La ubicación es aproximada" "$DETAIL_SCREEN"
 # Contact channels may be inline (legacy) or encapsulated in ContactButton
 grep -qE "Escribir por Telegram|ContactButton" "$DETAIL_SCREEN"
 

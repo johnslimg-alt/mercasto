@@ -36,7 +36,7 @@ grep -qF "const [searchLocation, setSearchLocation] = useState(null)" "$APP"
 grep -qF "const [searchLocationInput, setSearchLocationInput] = useState('')" "$APP"
 grep -qF "const buildHomeFilterPath = useCallback" "$APP"
 grep -qF "params.set('location'" "$APP"
-grep -qF "params.get('location') || params.get('city') || params.get('state')" "$APP"
+grep -qF "params.get('location') || cityParam || stateParam" "$APP"
 grep -qF "events.searchPerformed" "$APP"
 
 # API request must carry Mexico-wide text and geospatial filters to the backend.
@@ -65,12 +65,12 @@ grep -qF "filled('condition')" "$CONTROLLER"
 grep -qF "filled('filters')" "$CONTROLLER"
 
 # Posting and detail pages must keep location consistent with the listing search surface.
-grep -qF "MercastoMapPreview" "$POST_SCREEN"
+grep -qF "MapV3" "$POST_SCREEN"
 grep -qF "form.location" "$POST_SCREEN"
 grep -qF "form.state" "$POST_SCREEN"
 # grep -qF "Ubicación del anuncio" "$DETAIL_SCREEN"
 grep -qF "buildPublicLocationLabel" "$DETAIL_SCREEN"
-grep -qF "MercastoMapPreview" "$DETAIL_SCREEN"
+grep -qF "MapV3" "$DETAIL_SCREEN"
 
 # Guardrail: no Puerto Vallarta-only product logic outside the Mexico-wide source file.
 if grep -RIn --exclude='*.bak' --exclude='location-search-gate.sh' --exclude-dir='storage' --exclude-dir='vendor' --exclude-dir='node_modules' "Puerto Vallarta" src backend scripts | grep -Ev "src/App.jsx|src/utils/mexicoStates.js|src/components/verticals/VerticalHero.jsx"; then

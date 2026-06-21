@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\AccountDeletionController;
 use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CategoryAttributeController;
+use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\AdminAnalyticsController;
@@ -31,6 +32,7 @@ Route::middleware('throttle:search')->get('/search/semantic', [SearchController:
 Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'index']);
 Route::middleware('throttle:search')->get('/category-attributes', [CategoryAttributeController::class, 'index']); // Динамические атрибуты категории для PostScreen + SidebarFilters
 Route::middleware('throttle:api')->get('/ads/featured', [AdIndexController::class, 'featured']); // Объявления «Destacados» для блока на главной
+Route::middleware('throttle:api')->get('/recommendations/trending', [RecommendationController::class, 'trending']);
 Route::middleware('throttle:api')->get('/ads/{id}', [AdController::class, 'show'])->whereNumber('id'); // Добавлен маршрут для прямых ссылок (SEO/Deep Links)
 Route::middleware('throttle:search')->get('/ads/{id}/similar', [AdController::class, 'similar'])->whereNumber('id'); // Похожие объявления через pgvector
 Route::middleware('throttle:api')->get('/ads/{id}/price-history', [AdController::class, 'priceHistory'])->whereNumber('id'); // Historial de precios
@@ -165,6 +167,7 @@ Route::middleware('throttle:60,1')->group(function () {
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware('throttle:api')->get('/recommendations', [RecommendationController::class, 'index']);
     Route::middleware('throttle:ads')->post('/ads', [AdController::class, 'store']);
     // Защита ИИ от спама и истощения лимитов API (максимум 5 генераций в минуту на пользователя)
     Route::middleware('throttle:5,1')->group(function () {

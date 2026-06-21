@@ -22,7 +22,7 @@ const CATEGORY_ICONS = {
   informatica: Cpu, coleccionismo: Package,
 };
 
-// Фасеты публикации — сохраняются в form.attributes и используются фильтрами поиска
+// Фасеты публикации — сохраняются в form.attributes (filterConfig) и используются фильтрами поиска
 // (доставки нет: продажа напрямую покупатель↔продавец).
 const SALE_FACETS = [
   { key: 'listing_type', label: 'Tipo de anuncio', options: ['Venta', 'Renta', 'Renta con opción a compra', 'Traspaso', 'Gratis', 'Intercambio'] },
