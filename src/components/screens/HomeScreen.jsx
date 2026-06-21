@@ -397,15 +397,18 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     // Lazy-load heavy mockData fallbacks only when needed (after mount, off critical path)
     const [mockFallbacks, setMockFallbacks] = React.useState(null);
     React.useEffect(() => {
-      import('../../constants/mockData').then(m => {
-        setMockFallbacks({
-          spotlightRealEstate: m.spotlightRealEstate,
-          jobsBoard: m.jobsBoard,
-          servicesMarketplace: m.servicesMarketplace,
-          automotiveDeals: m.automotiveDeals,
-          recentlyViewed: m.recentlyViewed,
+      const timer = setTimeout(() => {
+        import('../../constants/mockData').then(m => {
+          setMockFallbacks({
+            spotlightRealEstate: m.spotlightRealEstate,
+            jobsBoard: m.jobsBoard,
+            servicesMarketplace: m.servicesMarketplace,
+            automotiveDeals: m.automotiveDeals,
+            recentlyViewed: m.recentlyViewed,
+          });
         });
-      });
+      }, 3500);
+      return () => clearTimeout(timer);
     }, []);
     const spotlightRealEstate = mockFallbacks?.spotlightRealEstate || [];
     const jobsBoard = mockFallbacks?.jobsBoard || [];
