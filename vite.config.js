@@ -74,11 +74,11 @@ export default defineConfig({
           // load lazily only with the screens that need them (cuts unused JS on home).
           // Charts -> only the dashboard (lazy). recharts pulls d3-*/victory-vendor.
           if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-vendor/') || id.includes('/internmap/') || id.includes('/decimal.js-light/')) {
-            return 'vendor-charts';
+            return null;
           }
           // Drag & drop -> only post/profile image editors (lazy).
           if (id.includes('/@dnd-kit/')) {
-            return 'vendor-dnd';
+            return null;
           }
           // QR code -> only the ad detail share modal (lazy).
           if (id.includes('/qrcode/') || id.includes('/dijkstrajs/') || id.includes('/encode-utf8/') || id.includes('/pngjs/')) {
