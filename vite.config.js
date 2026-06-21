@@ -83,7 +83,18 @@ export default defineConfig({
           // Heavy libs NOT used on the homepage — split out of vendor-misc so they
           // load lazily only with the screens that need them (cuts unused JS on home).
           // Charts -> only the dashboard (lazy). recharts pulls d3-*/victory-vendor.
-          if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-vendor/') || id.includes('/internmap/') || id.includes('/decimal.js-light/')) {
+          // Also split recharts' transitive deps (redux, es-toolkit, etc.) off the critical path.
+          if (
+            id.includes('/recharts/') || id.includes('/d3-') ||
+            id.includes('/victory-vendor/') || id.includes('/internmap/') ||
+            id.includes('/decimal.js-light/') ||
+            // recharts transitive deps — not needed on homepage
+            id.includes('/es-toolkit/') || id.includes('/eventemitter3/') ||
+            id.includes('/@reduxjs/') || id.includes('/redux/') ||
+            id.includes('/redux-thunk/') || id.includes('/reselect/') ||
+            id.includes('/immer/') || id.includes('/react-redux/') ||
+            id.includes('/tiny-invariant/')
+          ) {
             return null;
           }
           // Drag & drop -> only post/profile image editors (lazy).
