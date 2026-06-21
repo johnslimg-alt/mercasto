@@ -42,6 +42,7 @@ class InviteOnlyMiddleware
         'api/category-attributes',
         'api/states/counts',
         'api/search/suggestions',
+        'api/recommendations/trending',
         'api/users/*/reviews',
         'api/users/*/profile',
         'api/users/*/business-profile',

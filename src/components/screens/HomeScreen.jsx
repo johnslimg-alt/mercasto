@@ -98,7 +98,16 @@ const LeafletMap = ({ ads, onViewAd }) => {
   const [mapQuery, setMapQuery] = React.useState('');
   const [mapMaxPrice, setMapMaxPrice] = React.useState('');
   const [mapOnlyCoords, setMapOnlyCoords] = React.useState(false);
+  const [mapLoaded, setMapLoaded] = React.useState(false);
   const safeAds = React.useMemo(() => (Array.isArray(ads) ? ads : []), [ads]);
+
+  React.useEffect(() => {
+    // Load map bundle lazily in the background after mount when the main thread is free
+    const timer = setTimeout(() => {
+      setMapLoaded(true);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Close on Escape key
   React.useEffect(() => {
@@ -147,13 +156,27 @@ const LeafletMap = ({ ads, onViewAd }) => {
   }));
 
   const mapBody = (
-    <div className="relative h-full">
-      <React.Suspense fallback={<div className="h-full bg-slate-800 animate-pulse rounded-xl" />}>
-        <MapV3 title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
-      </React.Suspense>
+    <div
+      className="relative h-full"
+      onMouseEnter={() => setMapLoaded(true)}
+      onTouchStart={() => setMapLoaded(true)}
+    >
+      {mapLoaded ? (
+        <React.Suspense fallback={<div className="h-full bg-slate-800 animate-pulse rounded-xl" />}>
+          <MapV3 title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
+        </React.Suspense>
+      ) : (
+        <div className="h-full w-full bg-slate-100 dark:bg-slate-900 flex flex-col items-center justify-center text-slate-400 gap-2 cursor-pointer">
+          <MapPin size={24} className="animate-bounce text-[#84CC16]" />
+          <span className="text-xs font-semibold">Cargando mapa...</span>
+        </div>
+      )}
       <button
         type="button"
-        onClick={() => setExpanded(true)}
+        onClick={() => {
+          setMapLoaded(true);
+          setExpanded(true);
+        }}
         className="absolute bottom-3 right-3 z-[5] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg hover:scale-105 active:scale-95 transition-all"
       >
         <MapPin size={13} /> Abrir mapa

@@ -3,37 +3,13 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 import es from './locales/es.json';
-import en from './locales/en.json';
-import pt from './locales/pt.json';
-import fr from './locales/fr.json';
-import zh from './locales/zh.json';
-import ko from './locales/ko.json';
-import de from './locales/de.json';
-import it from './locales/it.json';
-import ar from './locales/ar.json';
-import he from './locales/he.json';
-import yi from './locales/yi.json';
-import ru from './locales/ru.json';
-import ja from './locales/ja.json';
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
-      es: { translation: es },
-      en: { translation: en },
-      pt: { translation: pt },
-      fr: { translation: fr },
-      zh: { translation: zh },
-      ko: { translation: ko },
-      de: { translation: de },
-      it: { translation: it },
-      ar: { translation: ar },
-      he: { translation: he },
-      yi: { translation: yi },
-      ru: { translation: ru },
-      ja: { translation: ja }
+      es: { translation: es }
     },
     fallbackLng: (code) => {
       const language = String(code || '').split('-')[0];
@@ -50,5 +26,36 @@ i18n
       lookupLocalStorage: 'mercasto_language'
     }
   });
+
+// Dynamic resource loader for other languages to avoid bloating the main bundle
+export async function loadI18nLanguage(lang) {
+  const cleanLang = String(lang || '').toLowerCase().split('-')[0];
+  if (cleanLang === 'es' || i18n.hasResourceBundle(cleanLang, 'translation')) {
+    return;
+  }
+  try {
+    const res = await import(`./locales/${cleanLang}.json`);
+    i18n.addResourceBundle(cleanLang, 'translation', res.default || res);
+  } catch (e) {
+    console.error(`Failed to load i18n JSON for ${cleanLang}`, e);
+  }
+}
+
+// Hook into changeLanguage to load dynamic JSON bundles automatically
+const originalChangeLanguage = i18n.changeLanguage.bind(i18n);
+i18n.changeLanguage = async (lang, callback) => {
+  const cleanLang = String(lang || '').toLowerCase().split('-')[0];
+  await loadI18nLanguage(cleanLang);
+  return originalChangeLanguage(lang, callback);
+};
+
+// Initial load check for detected language
+const detected = i18n.language || 'es';
+const detectedBase = detected.split('-')[0];
+if (detectedBase !== 'es') {
+  loadI18nLanguage(detectedBase).then(() => {
+    i18n.changeLanguage(detected);
+  });
+}
 
 export default i18n;
