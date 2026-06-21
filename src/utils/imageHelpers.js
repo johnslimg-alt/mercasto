@@ -63,7 +63,7 @@ export const sizedImage = (url, width = 480) => {
     if (url.includes('images.unsplash.com')) {
       const u = new URL(url);
       u.searchParams.set('w', String(w));
-      u.searchParams.set('q', '60');
+      u.searchParams.set('q', '35');
       u.searchParams.set('auto', 'format');
       u.searchParams.set('fit', 'crop');
       return u.toString();

@@ -63,12 +63,12 @@
                     try {
                       var u = new URL(src);
                       u.searchParams.set('w', '480');
-                      u.searchParams.set('q', '60');
+                      u.searchParams.set('q', '35');
                       u.searchParams.set('auto', 'format');
                       u.searchParams.set('fit', 'crop');
                       src = u.toString();
                     } catch (e) {
-                      src = src.replace(/w=\d+/, 'w=480').replace(/q=\d+/, 'q=60');
+                      src = src.replace(/w=\d+/, 'w=480').replace(/q=\d+/, 'q=35');
                       if (!src.includes('auto=format')) src += '&auto=format&fit=crop';
                     }
                   }
