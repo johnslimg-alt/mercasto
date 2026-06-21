@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
-import { getTranslations } from './utils/translations';
+import { getTranslations, loadLanguage } from './utils/translations';
 import { localizedText } from './utils/localize';
 import { sizedImage } from './utils/imageHelpers';
 import AdSenseBanner from './components/common/AdSenseBanner';
@@ -418,6 +418,17 @@ function App() {
     const saved = localStorage.getItem('lang');
     return SUPPORTED_LANGUAGES.has(saved) ? saved : 'es';
   });
+
+  const [loadedLangVersion, setLoadedLangVersion] = useState(0);
+
+  useEffect(() => {
+    if (lang !== 'es') {
+      loadLanguage(lang).then(() => {
+        setLoadedLangVersion(v => v + 1);
+      });
+    }
+  }, [lang]);
+
   const t = getTranslations(lang);
 
   const [serverAds, setServerAds] = useState([]);

@@ -4,7 +4,8 @@ import AchievementsModal from '../gamification/AchievementsModal';
 
 import MyAdsScreen from './MyAdsScreen';
 import SellerStatsScreen from './SellerStatsScreen';
-import { mexicoLocations, subcategoriesMap, mockAds, translations, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
+import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
+import { mockAds, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
 import React from 'react';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, TrendingUp, CreditCard, TrendingDown, Eye, MousePointer, Calendar, Clock, Award, Target, Package, Bookmark, Filter, MoreVertical, ChevronDown, ChevronUp } from "lucide-react";
 

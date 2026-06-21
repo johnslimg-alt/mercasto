@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect } from 'react';
 import { useUI } from '../../contexts/UIContext';
-import { translations } from '../../constants/mockData';
+import { getTranslations } from '../../utils/translations';
 
 /**
  * Predefined FAQ data for different page types in all 13 languages
@@ -133,7 +133,7 @@ export const FAQ_DATA = {
 export default function FAQSchema({ faqs, pageType = 'general', lang = 'es' }) {
   useUI();
   const currentLang = lang || 'es';
-  const t = translations[currentLang] || translations['es'];
+  const t = getTranslations(currentLang);
 
   // Resolve localized home FAQs if pageType is home and no customized faqs passed, or if we want home FAQs specifically
   const activeFaqs = pageType === 'home' 

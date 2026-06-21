@@ -19,11 +19,21 @@ export function UIProvider({ children }) {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
+  const [loadedLangVersion, setLoadedLangVersion] = useState(0);
+
   useEffect(() => {
     localStorage.setItem('lang', lang);
     localStorage.setItem('mercasto_language', lang);
     applyDocumentLanguage(lang);
     if (i18n.language !== lang) i18n.changeLanguage(lang);
+    
+    if (lang !== 'es') {
+      import('../utils/translations').then(({ loadLanguage }) => {
+        loadLanguage(lang).then(() => {
+          setLoadedLangVersion(v => v + 1);
+        });
+      });
+    }
   }, [lang]);
 
   // === НАВИГАЦИЯ ===
@@ -71,6 +81,7 @@ export function UIProvider({ children }) {
     toggleDarkMode: () => setIsDarkMode(prev => !prev),
     lang,
     setLang,
+    loadedLangVersion,
     
     // Навигация
     currentTab,
