@@ -75,6 +75,11 @@ export default defineConfig({
             return 'vendor-ui';
           }
 
+          // Lucide icons — large tree of icon components, keep in own chunk
+          if (id.includes('/lucide-react/')) {
+            return 'vendor-lucide';
+          }
+
           // Heavy libs NOT used on the homepage — split out of vendor-misc so they
           // load lazily only with the screens that need them (cuts unused JS on home).
           // Charts -> only the dashboard (lazy). recharts pulls d3-*/victory-vendor.
