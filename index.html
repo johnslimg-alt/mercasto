@@ -32,11 +32,25 @@
                     } catch (e) {}
                   }
                   if (typeof src === 'string' && src.indexOf('http') !== 0 && src.indexOf('data:') !== 0) {
-                    src = 'https://mercasto.com/storage/' + src.replace(/^\//, '');
+                    var cleanSrc = src.replace(/^\//, '');
+                    if (cleanSrc.indexOf('storage/') === 0) {
+                      src = 'https://mercasto.com/' + cleanSrc;
+                    } else {
+                      src = 'https://mercasto.com/storage/' + cleanSrc;
+                    }
                   }
                   if (typeof src === 'string' && src.includes('images.unsplash.com')) {
-                    src = src.replace(/w=\d+/, 'w=480').replace(/q=\d+/, 'q=70');
-                    if (!src.includes('auto=format')) src += '&auto=format&fit=crop';
+                    try {
+                      var u = new URL(src);
+                      u.searchParams.set('w', '480');
+                      u.searchParams.set('q', '60');
+                      u.searchParams.set('auto', 'format');
+                      u.searchParams.set('fit', 'crop');
+                      src = u.toString();
+                    } catch (e) {
+                      src = src.replace(/w=\d+/, 'w=480').replace(/q=\d+/, 'q=60');
+                      if (!src.includes('auto=format')) src += '&auto=format&fit=crop';
+                    }
                   }
                   var link = document.createElement('link');
                   link.rel = 'preload';
