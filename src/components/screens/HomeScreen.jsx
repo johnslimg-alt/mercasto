@@ -1403,7 +1403,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                     <div className="w-11 h-11 mx-auto rounded-full bg-[#0F172A] text-white flex items-center justify-center font-bold shadow-lg">01</div>
 
-                    <h4 className="font-semibold mt-3">{t.post_60s || 'Publica en 60s'}</h4>
+                    <h3 className="font-semibold mt-3">{t.post_60s || 'Publica en 60s'}</h3>
 
                     <p className="text-[13px] text-slate-600 mt-1">{t.post_60s_desc || 'Fotos, precio, ubicación. La IA hace el resto.'}</p>
 
@@ -1413,7 +1413,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                     <div className="w-11 h-11 mx-auto rounded-full bg-[#0F172A] text-white flex items-center justify-center font-bold shadow-lg">02</div>
 
-                    <h4 className="font-semibold mt-3">{t.get_leads || 'Recibe contactos'}</h4>
+                    <h3 className="font-semibold mt-3">{t.get_leads || 'Recibe contactos'}</h3>
 
                     <p className="text-[13px] text-slate-600 mt-1">{t.get_leads_desc || 'Llamadas, WhatsApp o escaneo QR seguro.'}</p>
 
@@ -1423,7 +1423,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                     <div className="w-11 h-11 mx-auto rounded-full bg-[#0F172A] text-white flex items-center justify-center font-bold shadow-lg">03</div>
 
-                    <h4 className="font-semibold mt-3">{t.meet_safely || 'Encuentros seguros'}</h4>
+                    <h3 className="font-semibold mt-3">{t.meet_safely || 'Encuentros seguros'}</h3>
 
                     <p className="text-[13px] text-slate-600 mt-1">{t.meet_safely_desc || 'Perfiles verificados (KYC) para tu paz mental.'}</p>
 
@@ -1433,7 +1433,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                     <div className="w-11 h-11 mx-auto rounded-full bg-[#84CC16] text-white flex items-center justify-center font-bold shadow-lg">04</div>
 
-                    <h4 className="font-semibold mt-3">{t.sell_faster || 'Vende rápido'}</h4>
+                    <h3 className="font-semibold mt-3">{t.sell_faster || 'Vende rápido'}</h3>
 
                     <p className="text-[13px] text-slate-600 mt-1">{t.sell_faster_desc || 'Destaca tu anuncio y cierra el trato hoy.'}</p>
 
@@ -1457,7 +1457,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center"><Shield className="w-5 h-5 text-red-600" /></div>
 
-                  <h4 className="font-semibold mt-3">{t.avoid_scams || 'Evita fraudes'}</h4>
+                  <h3 className="font-semibold mt-3">{t.avoid_scams || 'Evita fraudes'}</h3>
 
           <p className="text-[13px] text-slate-600 mt-1">{t.avoid_scams_desc || 'Nunca pagues por adelantado. Revisa las insignias.'}</p>
 
@@ -1469,7 +1469,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center"><ShieldCheck className="w-5 h-5 text-blue-600" /></div>
 
-                  <h4 className="font-semibold mt-3">{t.safe_payments || 'Pagos seguros'}</h4>
+                  <h3 className="font-semibold mt-3">{t.safe_payments || 'Pagos seguros'}</h3>
 
                   <p className="text-[13px] text-slate-600 mt-1">{t.safe_payments_desc || 'Reúnete en público. Cuenta el dinero antes de irte.'}</p>
 
@@ -1481,7 +1481,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>
 
-                  <h4 className="font-semibold mt-3">{t.verified_sellers || 'Vendedores verificados'}</h4>
+                  <h3 className="font-semibold mt-3">{t.verified_sellers || 'Vendedores verificados'}</h3>
 
                   <p className="text-[13px] text-slate-600 mt-1">{t.verified_sellers_desc || 'Busca la insignia azul de identidad confirmada (KYC).'}</p>
 
@@ -1604,7 +1604,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 <div>
 
-                  <h4 className="font-bold text-[18px]">{t.newsletter_title || 'Recibe las mejores ofertas de México'}</h4>
+                  <h3 className="font-bold text-[18px]">{t.newsletter_title || 'Recibe las mejores ofertas de México'}</h3>
 
                   <p className="text-[13px] text-slate-600">{t.newsletter_desc || 'Resumen semanal de ofertas, caída de precios y nuevos empleos.'}</p>
 
