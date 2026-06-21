@@ -101,13 +101,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
   const [mapLoaded, setMapLoaded] = React.useState(false);
   const safeAds = React.useMemo(() => (Array.isArray(ads) ? ads : []), [ads]);
 
-  React.useEffect(() => {
-    // Load map bundle lazily in the background after mount when the main thread is free
-    const timer = setTimeout(() => {
-      setMapLoaded(true);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, []);
+  // Map is loaded on-demand via onMouseEnter, onTouchStart, or clicking the button.
 
   // Close on Escape key
   React.useEffect(() => {
