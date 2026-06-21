@@ -22,9 +22,19 @@
                 var first = ads[0];
                 var raw = first.image_url || first.image || '';
                 if (raw) {
-                  var src = raw.startsWith('http') ? raw
-                    : ('https://mercasto.com/storage/' + raw.replace(/^\//, ''));
-                  if (src.includes('images.unsplash.com')) {
+                  var src = raw;
+                  if (typeof src === 'string' && src.indexOf('[') === 0) {
+                    try {
+                      var parsed = JSON.parse(src);
+                      if (Array.isArray(parsed) && parsed.length > 0) {
+                        src = parsed[0];
+                      }
+                    } catch (e) {}
+                  }
+                  if (typeof src === 'string' && src.indexOf('http') !== 0 && src.indexOf('data:') !== 0) {
+                    src = 'https://mercasto.com/storage/' + src.replace(/^\//, '');
+                  }
+                  if (typeof src === 'string' && src.includes('images.unsplash.com')) {
                     src = src.replace(/w=\d+/, 'w=480').replace(/q=\d+/, 'q=70');
                     if (!src.includes('auto=format')) src += '&auto=format&fit=crop';
                   }
