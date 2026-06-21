@@ -70,6 +70,7 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
                 <img
                   src={getImg(ad.images || ad.image_url || ad.image)}
                   alt={ad.title}
+                  loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   onError={e => { if (!e.currentTarget.src.endsWith('placeholder-ad.svg')) e.currentTarget.src = '/placeholder-ad.svg'; }}
                 />
