@@ -6,13 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Read-only operation to run on production runner
+        description: Operation to run on production runner
         required: true
         default: status
         type: choice
         options:
           - status
           - verify_quick
+          - fix_images
 
 permissions:
   contents: read
@@ -27,11 +28,17 @@ jobs:
         if: github.event_name == 'push'
         run: echo "Server Operator is manual-only; push is covered by Deploy and Production checks."
 
-      - name: Run read-only status
+      - name: Run operation
         if: github.event_name != 'push'
         shell: bash
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          docker compose ps
-          curl -fsS --max-time 30 https://mercasto.com/api/categories | head -c 300
+          if [ "${{ github.event.inputs.operation }}" = "status" ]; then
+            docker compose ps
+            curl -fsS --max-time 30 https://mercasto.com/api/categories | head -c 300
+          elif [ "${{ github.event.inputs.operation }}" = "verify_quick" ]; then
+            docker compose exec -T mercasto-frontend npm run verify:quick
+          elif [ "${{ github.event.inputs.operation }}" = "fix_images" ]; then
+            docker compose exec -T mercasto-backend php artisan mercasto:fix-images
+          fi

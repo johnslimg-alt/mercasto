@@ -8,9 +8,20 @@ export default function NotFoundScreen() {
   useEffect(() => {
     document.title = 'Página no encontrada | Mercasto';
     let meta = document.querySelector('meta[name="robots"]');
-    if (!meta) { meta = document.createElement('meta'); meta.name = 'robots'; document.head.appendChild(meta); }
+    let created = false;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'robots';
+      document.head.appendChild(meta);
+      created = true;
+    }
     meta.content = 'noindex, nofollow';
     window.scrollTo(0, 0);
+    return () => {
+      if (meta) {
+        meta.remove();
+      }
+    };
   }, []);
 
   return (

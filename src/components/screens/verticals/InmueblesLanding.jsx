@@ -121,7 +121,7 @@ export default function InmueblesLanding() {
         <section>
           <div className="flex items-baseline justify-between mb-5">
             <h2 className="text-2xl font-bold text-slate-900">Propiedades destacadas</h2>
-            <a onClick={() => navigate('/?category=inmobiliaria')}
+            <a href="/?category=inmobiliaria" onClick={(e) => { e.preventDefault(); navigate('/?category=inmobiliaria'); }}
               className="text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer">Ver todas →</a>
           </div>
           <VerticalAdGrid

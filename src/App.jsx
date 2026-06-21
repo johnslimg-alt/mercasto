@@ -154,7 +154,9 @@ const AI_PLACEHOLDERS = {
 };
 
 const getImageUrl = (path, fallback = null) => {
-  if (!path) return fallback || '/placeholder-ad.svg';
+  const defaultFallback = fallback || '/placeholder-ad.svg';
+  if (!path) return defaultFallback;
+
   const safeExternalImage = (url) => url;
   if (Array.isArray(path)) {
     if (path.length > 0) {
@@ -162,7 +164,7 @@ const getImageUrl = (path, fallback = null) => {
       if (first && (first.startsWith('http') || first.startsWith('data:'))) return safeExternalImage(first);
       return `${STORAGE_URL}/${first}`;
     }
-    return fallback || '/placeholder-ad.svg';
+    return defaultFallback;
   }
   if (typeof path === 'string') {
     if (path.startsWith('http') || path.startsWith('data:')) return safeExternalImage(path);
@@ -178,7 +180,7 @@ const getImageUrl = (path, fallback = null) => {
     }
     return `${STORAGE_URL}/${path}`;
   }
-  return fallback || '/placeholder-ad.svg';
+  return defaultFallback;
 };
 
 const getImageUrls = (pathStr, fallbackArr = []) => {
@@ -2860,7 +2862,7 @@ function App() {
     return (
       <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
-          <img src={safeImage} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
+          <img src={safeImage} loading={options.priority ? "eager" : "lazy"} fetchpriority={options.priority ? "high" : undefined} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={ad.title}/>
           <button onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
             <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
           </button>
@@ -3573,7 +3575,7 @@ function App() {
                 </select>
               </div>
               <div className="relative hidden sm:block">
-              <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl">
+              <button onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications || 'Notificaciones'}>
 
                   <Bell className="w-[22px] h-[22px]" />
                   {unreadCount > 0 && (
@@ -3646,7 +3648,7 @@ function App() {
                 <Store className="w-[22px] h-[22px]" />
                 <span className="text-[13px] font-bold hidden md:block">Tiendas</span>
             </button>
-            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block">
+            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label={t.favorites || 'Favoritos'}>
                 <Heart className="w-[22px] h-[22px]" />
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
@@ -3767,10 +3769,10 @@ function App() {
               </div>
               <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'El marketplace local de más rápido crecimiento en México. Compra, vende, renta y encuentra empleo de forma segura.'}</p>
             </div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.pricing || 'Precios'}</button></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</h5><ul className="space-y-2 text-[13px]"><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">Mercasto Pro</button></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">Directorio de Tiendas</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">Soluciones</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
-            <div><h5 className="font-semibold text-white mb-3 text-[14px]">{t.help || 'Ayuda'}</h5><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.help_center || 'Centro de Ayuda'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_center || 'Centro de Seguridad'}</a></li><li><a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer">{t.privacy_policy || 'Aviso de Privacidad'}</a></li></ul></div>
+            <div><div className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
+            <div><div className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.pricing || 'Precios'}</button></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
+            <div><div className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</div><ul className="space-y-2 text-[13px]"><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">Mercasto Pro</button></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">Directorio de Tiendas</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">Soluciones</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
+            <div><div className="font-semibold text-white mb-3 text-[14px]">{t.help || 'Ayuda'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.help_center || 'Centro de Ayuda'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_center || 'Centro de Seguridad'}</a></li><li><a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer">{t.privacy_policy || 'Aviso de Privacidad'}</a></li></ul></div>
           </div>
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-[12px] text-slate-400">

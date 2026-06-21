@@ -350,7 +350,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <React.Fragment key={ad.id}>
 
-                    {renderAdCard(ad, { displayImageUrl: displayImageMap.get(ad.id) })}
+                    {renderAdCard(ad, { displayImageUrl: displayImageMap.get(ad.id), priority: index === 0 })}
 
                     {/* Показываем рекламный баннер после каждого 7-го объявления */}
 
@@ -514,7 +514,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 {/* Cards — horizontal scroll on mobile, grid on desktop */}
                 <div className="-mx-4 lg:mx-0 px-4 lg:px-0">
                   <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible">
-                    {featuredAds.slice(0, 4).map(ad => {
+                    {featuredAds.slice(0, 4).map((ad, index) => {
                       const imgUrl = getImageUrl
                         ? getImageUrl(ad.image_url || ad.image)
                         : (ad.image_url || ad.image || `https://picsum.photos/seed/feat-${ad.id}/600/450`);
@@ -534,7 +534,8 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                               <img
                                 src={imgUrl}
                                 alt={ad.title}
-                                loading="lazy"
+                                loading={index === 0 ? "eager" : "lazy"}
+                                fetchpriority={index === 0 ? "high" : undefined}
                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 onError={e => { e.currentTarget.src = `https://picsum.photos/seed/feat-${ad.id}/600/450`; }}
                               />
@@ -608,7 +609,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <button onClick={() => { setActiveCat(''); document.querySelector('.md\\:hidden button')?.click(); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter || 'Filtros'}</button>
 
-                  <a onClick={() => setActiveCat('')} className="text-[13px] font-semibold text-[#65A30D] hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
+                  <a href="/listings" onClick={(e) => { e.preventDefault(); setActiveCat(''); }} className="text-[13px] font-semibold text-[#65A30D] hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
 
                 </div>
 
@@ -730,7 +731,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   </div>
 
-                  <a onClick={() => setActiveCat('inmobiliaria')} className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer">{t.view_props || 'Ver propiedades →'}</a>
+                  <a href="/listings?category=inmobiliaria" onClick={(e) => { e.preventDefault(); setActiveCat('inmobiliaria'); }} className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer">{t.view_props || 'Ver propiedades →'}</a>
 
                 </div>
 
@@ -811,7 +812,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <button onClick={() => { runSearch('Tiempo Completo', 'empleo'); }} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700">{t.full_time || 'Tiempo completo'}</button>
 
-                  <a onClick={() => setActiveCat('empleo')} className="text-[13px] font-semibold text-[#65A30D] hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
+                  <a href="/listings?category=empleo" onClick={(e) => { e.preventDefault(); setActiveCat('empleo'); }} className="text-[13px] font-semibold text-[#65A30D] hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
 
                 </div>
 
@@ -916,7 +917,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 <h2 className="text-[22px] font-bold tracking-tight">{t.services_marketplace || 'Directorio de servicios'}</h2>
 
-                <a onClick={() => setActiveCat('servicios')} className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer">{t.browse_services || 'Ver todos →'}</a>
+                <a href="/listings?category=servicios" onClick={(e) => { e.preventDefault(); setActiveCat('servicios'); }} className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer">{t.browse_services || 'Ver todos →'}</a>
 
               </div>
 
@@ -1289,7 +1290,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   {['iphone 15', 'samsung s24', 'departamento renta cdmx', 'casa venta guadalajara', 'honda civic', 'toyota corolla', 'trabajo remoto', 'recepcionista', 'nintendo switch', 'ps5', 'macbook', 'trabajo medio tiempo', 'bicicleta', 'escritorio', 'sala', 'refrigerador', 'lavadora', 'golden retriever', 'gatitos', 'terreno', 'local comercial', 'moto italika', 'yamaha', 'abogado', 'contador', 'plomero', 'electricista', 'clases ingles', 'uber carro', 'airbnb amueblado'].map(term => (
 
-                    <a key={term} onClick={() => runSearch(term)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[13px] cursor-pointer">{term}</a>
+                    <a key={term} href={`/listings?q=${encodeURIComponent(term)}`} onClick={(e) => { e.preventDefault(); runSearch(term); }} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[13px] cursor-pointer">{term}</a>
 
                   ))}
 
@@ -1309,7 +1310,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 <h3 className="font-bold text-[17px]">{t.explore_city || 'Explorar por ciudad'}</h3>
 
-                <a onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="text-[13px] font-medium text-slate-600 hover:text-slate-900 cursor-pointer">{t.view_all_mexico || 'Ver todo México →'}</a>
+                <a href="/listings" onClick={(e) => { e.preventDefault(); setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="text-[13px] font-medium text-slate-600 hover:text-slate-900 cursor-pointer">{t.view_all_mexico || 'Ver todo México →'}</a>
 
               </div>
 
@@ -1356,7 +1357,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 ].map(city => (
 
-                  <a key={city.name} onClick={() => applyCityFilter(city.name)} className={`bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 hover:shadow-sm flex justify-between items-center cursor-pointer ${city.highlight ? 'ring-2 ring-[#84CC16]/40' : ''}`}>
+                  <a key={city.name} href={`/listings?location=${encodeURIComponent(city.name)}`} onClick={(e) => { e.preventDefault(); applyCityFilter(city.name); }} className={`bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 hover:shadow-sm flex justify-between items-center cursor-pointer ${city.highlight ? 'ring-2 ring-[#84CC16]/40' : ''}`}>
 
                     <span className={`text-[14px] ${city.highlight ? 'font-medium' : ''}`}>{city.name}</span>
 

@@ -136,30 +136,40 @@ export default function MercastoMapPreview({
 
   React.useEffect(() => {
     let active = true;
-    const fallbackTimer = window.setTimeout(() => {
-      if (active) {
-        setLoadFailed(true);
-        setLoading(false);
-      }
-    }, 2500);
+    let fallbackTimer = null;
+    let delayTimer = null;
 
-    loadLeaflet()
-      .then((L) => {
-        if (active) {
-          setLeaflet(L);
-          setLoadFailed(false);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
+    const startLoading = () => {
+      fallbackTimer = window.setTimeout(() => {
         if (active) {
           setLoadFailed(true);
           setLoading(false);
         }
-      });
+      }, 5000);
+
+      loadLeaflet()
+        .then((L) => {
+          if (active) {
+            setLeaflet(L);
+            setLoadFailed(false);
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setLoadFailed(true);
+            setLoading(false);
+          }
+        });
+    };
+
+    // Defer map loading unconditionally by 1500ms
+    delayTimer = window.setTimeout(startLoading, 1500);
+
     return () => {
       active = false;
-      window.clearTimeout(fallbackTimer);
+      window.clearTimeout(delayTimer);
+      if (fallbackTimer) window.clearTimeout(fallbackTimer);
     };
   }, []);
 

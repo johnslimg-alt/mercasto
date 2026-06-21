@@ -99,7 +99,7 @@ export default function ServiciosLanding() {
         <section>
           <div className="flex items-baseline justify-between mb-5">
             <h2 className="text-2xl font-bold text-slate-900">Servicios destacados</h2>
-            <a onClick={() => navigate('/?category=servicios')}
+            <a href="/?category=servicios" onClick={(e) => { e.preventDefault(); navigate('/?category=servicios'); }}
               className="text-[13px] font-semibold text-orange-500 hover:underline cursor-pointer">Ver todos →</a>
           </div>
           <VerticalAdGrid

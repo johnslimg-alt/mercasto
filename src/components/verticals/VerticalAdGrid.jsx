@@ -6,19 +6,18 @@ const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/st
 
 function getImg(path) {
   if (!path) return '/placeholder-ad.svg';
-  const safeUrl = (url) => (
-    typeof url === 'string' && url.includes('images.unsplash.com')
-      ? '/placeholder-ad.svg'
-      : url
-  );
+
   if (Array.isArray(path)) {
     return path.length ? getImg(path[0]) : '/placeholder-ad.svg';
   }
-  if (path.startsWith('http') || path.startsWith('data:')) return safeUrl(path);
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
   if (path.startsWith('[')) {
     try {
       const a = JSON.parse(path);
-      if (a && a.length) return a[0].startsWith('http') ? safeUrl(a[0]) : `${STORAGE_URL}/${a[0]}`;
+      if (a && a.length) {
+        const first = a[0];
+        return first.startsWith('http') || first.startsWith('data:') ? first : `${STORAGE_URL}/${first}`;
+      }
     } catch (e) {}
   }
   return `${STORAGE_URL}/${path}`;

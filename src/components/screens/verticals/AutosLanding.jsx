@@ -168,7 +168,7 @@ export default function AutosLanding() {
         <section>
           <div className="flex items-baseline justify-between mb-5">
             <h2 className="text-2xl font-bold text-slate-900">Vehículos destacados</h2>
-            <a onClick={() => navigate('/?category=motor')}
+            <a href="/?category=motor" onClick={(e) => { e.preventDefault(); navigate('/?category=motor'); }}
               className="text-[13px] font-semibold text-blue-600 hover:underline cursor-pointer">
               Ver todos →
             </a>

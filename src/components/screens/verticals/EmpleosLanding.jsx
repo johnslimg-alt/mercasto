@@ -116,7 +116,7 @@ export default function EmpleosLanding() {
         <section>
           <div className="flex items-baseline justify-between mb-5">
             <h2 className="text-2xl font-bold text-slate-900">Empleos recientes</h2>
-            <a onClick={() => navigate('/?category=empleo')}
+            <a href="/?category=empleo" onClick={(e) => { e.preventDefault(); navigate('/?category=empleo'); }}
               className="text-[13px] font-semibold text-purple-600 hover:underline cursor-pointer">Ver todos →</a>
           </div>
           <VerticalAdGrid
