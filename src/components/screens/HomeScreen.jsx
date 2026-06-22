@@ -355,6 +355,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     const [showMap, setShowMap] = React.useState(false);
     const [viewLayout, setViewLayout] = React.useState('grid'); // 'grid' or 'list'
     const [homeToast, setHomeToast] = React.useState(null);
+    const [reMapLoaded, setReMapLoaded] = React.useState(false);
     const homeToastTimerRef = React.useRef(null);
     const [featuredAds, setFeaturedAds] = React.useState(() => {
       if (typeof window !== 'undefined') {
@@ -1022,16 +1023,27 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 <div className="col-span-12 xl:col-span-4">
 
-                  <div className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900">
-                    <React.Suspense fallback={<div className="absolute inset-0 bg-slate-200 dark:bg-slate-800 animate-pulse" />}>
-                      <MapV3
-                        ads={safeRealEstateAds}
-                        category="inmobiliaria"
-                        title={selectedState || t.all_mexico || 'Todo México'}
-                        onMarkerClick={handleViewAd}
-                        className="absolute inset-0 h-full rounded-none border-0 shadow-none"
-                      />
-                    </React.Suspense>
+                  <div
+                    className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900"
+                    onMouseEnter={() => setReMapLoaded(true)}
+                    onTouchStart={() => setReMapLoaded(true)}
+                  >
+                    {reMapLoaded ? (
+                      <React.Suspense fallback={<div className="absolute inset-0 bg-slate-200 dark:bg-slate-800 animate-pulse" />}>
+                        <MapV3
+                          ads={safeRealEstateAds}
+                          category="inmobiliaria"
+                          title={selectedState || t.all_mexico || 'Todo México'}
+                          onMarkerClick={handleViewAd}
+                          className="absolute inset-0 h-full rounded-none border-0 shadow-none"
+                        />
+                      </React.Suspense>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-2 cursor-pointer bg-slate-50 dark:bg-slate-900">
+                        <MapPin size={24} className="animate-bounce text-[#84CC16]" />
+                        <span className="text-xs font-semibold">Cargando mapa de propiedades...</span>
+                      </div>
+                    )}
 
                     <div className="absolute inset-x-4 bottom-4 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
                       <div className="flex items-center justify-between gap-3">
