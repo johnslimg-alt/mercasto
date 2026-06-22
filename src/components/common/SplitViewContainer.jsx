@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { MapPin, List, LayoutGrid, ChevronDown, Search } from 'lucide-react';
-import MapV3 from './MapV3';
+
+const MapV3 = React.lazy(() => import('./MapV3'));
 
 /**
  * SplitViewContainer — Карта сверху, объявления снизу с переключателем Grid/List
@@ -30,7 +31,13 @@ export default function SplitViewContainer({
   const [viewLayout, setViewLayout] = useState('grid'); // 'grid' or 'list'
   const [hoveredAdId, setHoveredAdId] = useState(null);
   const [selectedAdId, setSelectedAdId] = useState(null);
-  const [mapCollapsed, setMapCollapsed] = useState(false);
+  const [mapCollapsed, setMapCollapsed] = useState(() => {
+    try {
+      return window.innerWidth < 768;
+    } catch (e) {
+      return true;
+    }
+  });
   const listContainerRef = useRef(null);
   const adRefs = useRef({});
 
@@ -136,16 +143,18 @@ export default function SplitViewContainer({
       <div className="mb-5">
         <div className={`relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md transition-all duration-300 ${mapCollapsed ? 'h-[60px]' : 'h-[220px] md:h-[320px] lg:h-[360px]'}`}>
           {!mapCollapsed && (
-            <MapV3
-              markers={mapMarkers}
-              title={selectedState || title}
-              onMarkerClick={handleMarkerClick}
-              showFullscreen={true}
-              className="h-full border-0 shadow-none rounded-none"
-              highlightedAdId={hoveredAdId}
-              selectedAdId={selectedAdId}
-              onSearchArea={onSearchArea}
-            />
+            <React.Suspense fallback={<div className="h-full bg-slate-800 animate-pulse rounded-xl" />}>
+              <MapV3
+                markers={mapMarkers}
+                title={selectedState || title}
+                onMarkerClick={handleMarkerClick}
+                showFullscreen={true}
+                className="h-full border-0 shadow-none rounded-none"
+                highlightedAdId={hoveredAdId}
+                selectedAdId={selectedAdId}
+                onSearchArea={onSearchArea}
+              />
+            </React.Suspense>
           )}
           
           {/* Map overlay info */}
