@@ -5,7 +5,7 @@ import { getTranslations, loadLanguage } from './utils/translations';
 import { localizedText } from './utils/localize';
 import { sizedImage } from './utils/imageHelpers';
 import AdSenseBanner from './components/common/AdSenseBanner';
-import OnboardingModal from './components/OnboardingModal';
+const OnboardingModal = React.lazy(() => import('./components/OnboardingModal'));
 import {
   Search, Home, PlusCircle, Plus, User, Users, Settings, Shield, Menu,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
@@ -23,8 +23,8 @@ async function getEcho() {
   _echoInstance = mod.default;
   return _echoInstance;
 }
-import CookieBanner from './components/CookieBanner';
-import SearchSuggestions from './components/common/SearchSuggestions';
+const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
+const SearchSuggestions = React.lazy(() => import('./components/common/SearchSuggestions'));
 import i18n from './i18n';
 
 const SUPPORTED_LANGUAGES = new Set([
@@ -3740,7 +3740,9 @@ function App() {
                   {t.search_btn || "Buscar"}
                 </button>
               </form>
-              <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
+              <Suspense fallback={null}>
+                <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
+              </Suspense>
               </div>
             </div>
             <div className="flex items-center gap-1 ml-auto">
@@ -3901,7 +3903,9 @@ function App() {
                   <Search className="h-4 w-4" />
                 </button>
               </form>
-              <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
+              <Suspense fallback={null}>
+                <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
+              </Suspense>
               {showMobileLocationPicker && (
                 <div className="header-popover absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl border p-4 z-50">
                   <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
@@ -4034,15 +4038,17 @@ function App() {
 
       {/* ONBOARDING MODAL */}
       {showOnboarding && (
-        <OnboardingModal
-          user={user}
-          t={t}
-          lang={lang}
-          onClose={() => {
-            localStorage.setItem('onboarding_done', '1');
-            setShowOnboarding(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <OnboardingModal
+            user={user}
+            t={t}
+            lang={lang}
+            onClose={() => {
+              localStorage.setItem('onboarding_done', '1');
+              setShowOnboarding(false);
+            }}
+          />
+        </Suspense>
       )}
 
       {showAuthModal && (
@@ -4230,7 +4236,9 @@ function App() {
         </div>
       )}
 
-      <CookieBanner t={t} lang={lang} />
+      <Suspense fallback={null}>
+        <CookieBanner t={t} lang={lang} />
+      </Suspense>
     </div>
   );
 }
