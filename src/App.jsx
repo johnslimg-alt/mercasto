@@ -154,7 +154,7 @@ function RequireAuth({ user, authReady, setAuthMode, setShowAuthModal, admin = f
 }
 
 // --- ЛОГОТИП И ИКОНКИ ---
-const MercastoLogo = ({ className = "h-11" }) => (
+const MercastoLogo = ({ className = "h-11", isFooter = false }) => (
   <div className={`flex items-center gap-2 ${className}`}>
     {/* Новый лаконичный логотип: Буква "M" внутри геолокационного пина */}
     <svg viewBox="0 0 100 100" className="h-full w-auto drop-shadow-md">
@@ -162,8 +162,8 @@ const MercastoLogo = ({ className = "h-11" }) => (
       <path d="M30 60 L30 35 L50 50 L70 35 L70 60" fill="none" stroke="#ffffff" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
     <div className="flex flex-col justify-center">
-      <span className="font-sans text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-none tracking-tight">Mercasto</span>
-      <span className="text-[7.5px] font-bold text-[#3f6212] dark:text-[#84CC16] uppercase tracking-widest leading-none mt-1">Marketplace</span>
+      <span className={`font-sans text-xl md:text-2xl font-black leading-none tracking-tight ${isFooter ? 'text-white' : 'text-slate-900 dark:text-white'}`}>Mercasto</span>
+      <span className={`text-[7.5px] font-bold uppercase tracking-widest leading-none mt-1 ${isFooter ? 'text-[#84CC16]' : 'text-[#3f6212] dark:text-[#84CC16]'}`}>Marketplace</span>
     </div>
   </div>
 );
@@ -3991,7 +3991,7 @@ function App() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div>
               <div className="footer-logo flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
-                <MercastoLogo className="h-8" />
+                <MercastoLogo className="h-8" isFooter={true} />
               </div>
               <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'El marketplace local de más rápido crecimiento en México. Compra, vende, renta y encuentra empleo de forma segura.'}</p>
             </div>

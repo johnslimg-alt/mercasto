@@ -77,7 +77,7 @@ export default function CookieBanner({ t, lang }) {
           </button>
           <button
             onClick={accept}
-            className="px-3 sm:px-4 py-2 text-xs font-semibold text-white bg-[#0f8f7d] hover:bg-[#0b6f61] rounded-xl transition-colors shadow-sm"
+            className="px-3 sm:px-4 py-2 text-xs font-semibold text-white bg-[#0b6f61] hover:bg-[#085147] rounded-xl transition-colors shadow-sm"
           >
             {dictionary.cookies_accept_all || "Aceptar todas"}
           </button>
