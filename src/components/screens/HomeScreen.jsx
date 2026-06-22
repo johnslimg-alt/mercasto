@@ -5,12 +5,15 @@ import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyView
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair, Car, Briefcase, Wrench, Sofa, Shirt, Bike, Baby, PawPrint, Home as HomeIcon } from "lucide-react";
 
 // SEO Components for AEO
 import FAQSchema, { FAQ_DATA } from '../seo/FAQSchema';
 import ItemListSchema from '../seo/ItemListSchema';
-import { IconMap } from '../../constants/iconMap';
+
+const LOCAL_ICON_MAP = {
+  Car, Home: HomeIcon, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, Store, Ticket, Crown, Star
+};
 const SidebarFilters = React.lazy(() => import('../common/SidebarFilters'));
 // MapV3 pulls Leaflet (~215 kB) — lazy load so it never blocks initial parse/paint
 const MapV3 = React.lazy(() => import('../common/MapV3'));
@@ -661,7 +664,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 {homeCategories.map(cat => {
 
-                  const Icon = IconMap[cat.icon] || Star;
+                  const Icon = LOCAL_ICON_MAP[cat.icon] || Star;
 
                   return (
 
