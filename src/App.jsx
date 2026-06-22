@@ -3735,7 +3735,7 @@ function App() {
                     </select>
                   </>
                 )}
-              <button type="submit" data-testid="desktop-search-submit" className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
+              <button type="submit" data-testid="desktop-search-submit" className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn || "Buscar"}
                 </button>
@@ -3884,7 +3884,7 @@ function App() {
                 </div>
               )}
               </div>
-              <button onClick={() => { setCurrentTab('post'); setViewedAd(null); setViewedCompany(null); }} className="btn-lg bg-[#84CC16] hover:bg-[#65A30D] text-white shadow-md shadow-[#84CC16]/20 ml-1 hidden sm:inline-flex items-center gap-1.5">
+              <button onClick={() => { setCurrentTab('post'); setViewedAd(null); setViewedCompany(null); }} className="btn-lg bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white shadow-md shadow-[#84CC16]/20 ml-1 hidden sm:inline-flex items-center gap-1.5">
               <PlusCircle className="w-4 h-4" /> {t.post_ad || "Publicar"}
               </button>
             </div>

@@ -163,7 +163,7 @@ const LeafletMap = ({ ads, onViewAd }) => {
           <MapV3 title="Todo México" markers={markers} onMarkerClick={onViewAd} showFullscreen={false} className="h-full border-0 shadow-none" />
         </React.Suspense>
       ) : (
-        <div className="h-full w-full bg-slate-100 dark:bg-slate-900 flex flex-col items-center justify-center text-slate-400 gap-2 cursor-pointer">
+        <div className="h-full w-full bg-slate-100 dark:bg-slate-900 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-2 cursor-pointer">
           <MapPin size={24} className="animate-bounce text-[#84CC16]" />
           <span className="text-xs font-semibold">Cargando mapa...</span>
         </div>
@@ -1039,7 +1039,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                         />
                       </React.Suspense>
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-2 cursor-pointer bg-slate-50 dark:bg-slate-900">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-2 cursor-pointer bg-slate-50 dark:bg-slate-900">
                         <MapPin size={24} className="animate-bounce text-[#84CC16]" />
                         <span className="text-xs font-semibold">Cargando mapa de propiedades...</span>
                       </div>
@@ -1376,7 +1376,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 <div className="bg-slate-900 text-white rounded-3xl p-6 card relative overflow-hidden ring-2 ring-[#84CC16]">
 
-                  <span className="absolute top-4 right-4 badge bg-[#84CC16] text-white">POPULAR</span>
+                  <span className="absolute top-4 right-4 badge bg-[#84CC16] text-slate-950">POPULAR</span>
 
                   <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3"><ShieldCheck className="w-5 h-5 text-white" /></div>
 
@@ -1472,7 +1472,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <div className="text-center relative">
 
-                    <div className="w-11 h-11 mx-auto rounded-full bg-[#84CC16] text-white flex items-center justify-center font-bold shadow-lg">04</div>
+                    <div className="w-11 h-11 mx-auto rounded-full bg-[#84CC16] text-slate-950 flex items-center justify-center font-bold shadow-lg">04</div>
 
                     <h3 className="font-semibold mt-3">{t.sell_faster || 'Vende rápido'}</h3>
 
@@ -1625,7 +1625,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                     <span className={`text-[14px] ${city.highlight ? 'font-medium' : ''}`}>{city.name}</span>
 
-                    <span className={`text-[12px] ${city.highlight ? 'text-[#65A30D] font-semibold' : 'text-slate-500'}`}>{city.count}</span>
+                    <span className={`text-[12px] ${city.highlight ? 'text-lime-800 dark:text-lime-400 font-semibold' : 'text-slate-500'}`}>{city.count}</span>
 
                   </a>
 
