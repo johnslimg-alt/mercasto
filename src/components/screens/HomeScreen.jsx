@@ -783,7 +783,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                             {/* Info */}
                             <div className="p-3">
                               <p className="mb-1 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-800 dark:text-white">{localizedText(ad.title, lang)}</p>
-                              <p className="text-[15px] font-bold text-amber-600 dark:text-amber-400">{price}</p>
+                              <p className="text-[15px] font-bold text-amber-800 dark:text-amber-400">{price}</p>
                               <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                                 <span className="tracking-tight text-amber-400">★★★★★</span>
                                 <span>{rating.rating.toFixed(1)}</span>
@@ -797,7 +797,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                               )}
                               {/* Seller badge */}
                               {ad.user?.is_verified && (
-                                <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                                <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-emerald-800 dark:text-emerald-400">
                                   <CheckCircle size={10} />
                                   {t.verified_seller || 'Vendedor verificado'}
                                 </div>

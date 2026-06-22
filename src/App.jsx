@@ -163,7 +163,7 @@ const MercastoLogo = ({ className = "h-11" }) => (
     </svg>
     <div className="flex flex-col justify-center">
       <span className="font-sans text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-none tracking-tight">Mercasto</span>
-      <span className="text-[7.5px] font-bold text-[#65A30D] uppercase tracking-widest leading-none mt-1">Marketplace</span>
+      <span className="text-[7.5px] font-bold text-[#3f6212] dark:text-[#84CC16] uppercase tracking-widest leading-none mt-1">Marketplace</span>
     </div>
   </div>
 );
