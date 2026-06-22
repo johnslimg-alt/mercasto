@@ -130,7 +130,7 @@ const AdRatingStars = ({ ad, compact = false }) => {
         ))}
       </div>
       <span className="font-bold text-slate-700 dark:text-slate-200">{rating.toFixed(1)}</span>
-      <span className="text-slate-400">({count})</span>
+      <span className="text-slate-500 dark:text-slate-400">({count})</span>
     </div>
   );
 };

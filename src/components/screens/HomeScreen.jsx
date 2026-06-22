@@ -842,7 +842,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <button onClick={() => { setActiveCat(''); document.querySelector('.md\\:hidden button')?.click(); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter || 'Filtros'}</button>
 
-                  <a href="/listings" onClick={(e) => { e.preventDefault(); setActiveCat(''); }} className="text-[13px] font-semibold text-[#65A30D] hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
+                  <a href="/listings" onClick={(e) => { e.preventDefault(); setActiveCat(''); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
 
                 </div>
 
@@ -909,7 +909,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#84CC16]/10 rounded-full blur-2xl"></div>
 
-                  <span className="text-[11px] uppercase tracking-wider text-[#65A30D] font-semibold">{t.furniture || 'Muebles'}</span>
+                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.furniture || 'Muebles'}</span>
 
                   <h3 className="text-[22px] font-bold mt-2">{t.living_room_sets || 'Salas de estar'}</h3>
 
@@ -927,13 +927,13 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <p className="text-white/70 text-[14px]">{t.zero_comm || '0% comisión esta semana'}</p>
 
-                  <button className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white mt-auto w-fit" onClick={() => setActiveCat('motor')}>{t.browse_cars || 'Explorar 124k →'}</button>
+                  <button className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 mt-auto w-fit" onClick={() => setActiveCat('motor')}>{t.browse_cars || 'Explorar 124k →'}</button>
 
                 </div>
 
                 <div className="market-card border-2 border-[#84CC16]/30 rounded-3xl p-6 h-[190px] flex flex-col">
 
-                  <span className="text-[11px] uppercase tracking-wider text-[#65A30D] font-semibold">{t.for_sellers || 'Para vendedores'}</span>
+                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.for_sellers || 'Para vendedores'}</span>
 
                   <h3 className="text-[22px] font-bold mt-2">{t.boost_ad || 'Destaca tu anuncio'}</h3>
 
@@ -980,7 +980,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   </div>
 
-                  <a href="/listings?category=inmobiliaria" onClick={(e) => { e.preventDefault(); setActiveCat('inmobiliaria'); }} className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer">{t.view_props || 'Ver propiedades →'}</a>
+                  <a href="/listings?category=inmobiliaria" onClick={(e) => { e.preventDefault(); setActiveCat('inmobiliaria'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline cursor-pointer">{t.view_props || 'Ver propiedades →'}</a>
 
                 </div>
 
@@ -1048,7 +1048,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                     <div className="absolute inset-x-4 bottom-4 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-medium text-slate-800 dark:text-white">{selectedState ? `Propiedades en ${selectedState}` : 'Propiedades en todo México'}</span>
-                        <span onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-[#65A30D] hover:underline">{t.view_all_mexico || 'Ver todo México'} →</span>
+                        <span onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-lime-800 dark:text-lime-400 hover:underline">{t.view_all_mexico || 'Ver todo México'} →</span>
                       </div>
                     </div>
                   </div>
@@ -1075,7 +1075,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <button onClick={() => { runSearch('Tiempo Completo', 'empleo'); }} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700">{t.full_time || 'Tiempo completo'}</button>
 
-                  <a href="/listings?category=empleo" onClick={(e) => { e.preventDefault(); setActiveCat('empleo'); }} className="text-[13px] font-semibold text-[#65A30D] hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
+                  <a href="/listings?category=empleo" onClick={(e) => { e.preventDefault(); setActiveCat('empleo'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
 
                 </div>
 
@@ -1180,7 +1180,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                 <h2 className="text-[22px] font-bold tracking-tight">{t.services_marketplace || 'Directorio de servicios'}</h2>
 
-                <a href="/listings?category=servicios" onClick={(e) => { e.preventDefault(); setActiveCat('servicios'); }} className="text-[13px] font-semibold text-[#65A30D] hover:underline cursor-pointer">{t.browse_services || 'Ver todos →'}</a>
+                <a href="/listings?category=servicios" onClick={(e) => { e.preventDefault(); setActiveCat('servicios'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline cursor-pointer">{t.browse_services || 'Ver todos →'}</a>
 
               </div>
 
@@ -1202,7 +1202,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                         <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.description}</p>
                         <div className="flex items-center justify-between mt-3">
                           <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>${Number(srv.price || 0).toLocaleString()} MXN</strong></span>
-                          <button onClick={(e) => { e.stopPropagation(); handleViewAd(srv); }} className="btn-sm bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.view || 'Ver'}</button>
+                          <button onClick={(e) => { e.stopPropagation(); handleViewAd(srv); }} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.view || 'Ver'}</button>
                         </div>
                       </div>
                     );
@@ -1220,7 +1220,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                       <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.desc}</p>
                       <div className="flex items-center justify-between mt-3">
                         <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>{srv.price}</strong></span>
-                        <button onClick={(e) => { e.stopPropagation(); setActiveCat('servicios'); }} className="btn-sm bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.book_now || 'Reservar'}</button>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveCat('servicios'); }} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.book_now || 'Reservar'}</button>
                       </div>
                     </div>
                   );
@@ -1396,7 +1396,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   </ul>
 
-                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.view_plans}</button>
+                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.view_plans}</button>
 
                 </div>
 
@@ -1655,7 +1655,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
 
                   <input type="email" required placeholder={t.your_email || 'Tu correo electrónico'} className="w-full md:w-[300px] px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]"/>
 
-                  <button type="submit" className="btn-md bg-[#84CC16] text-white hover:bg-[#65A30D] whitespace-nowrap">{t.subscribe || 'Suscribirse'}</button>
+                  <button type="submit" className="btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white whitespace-nowrap">{t.subscribe || 'Suscribirse'}</button>
 
                 </form>
 
