@@ -40,6 +40,7 @@ Run from repository root:
 
 ```bash
 npm run check:payment-webhook-idempotency
+npm run check:payment-webhook-fixtures
 npm run check:payment-retention
 npm run smoke:security
 REQUIRE_ENV_READY=1 npm run smoke:env-readiness
@@ -55,6 +56,8 @@ Fixture files, if added later, must:
 - contain fake customer/payment identifiers;
 - include both valid and invalid signature cases;
 - assert idempotency by checking only non-sensitive state.
+
+`npm run check:payment-webhook-fixtures` is the local provider-safe fixture check for this gate. It does not call Clip, does not require card data, and verifies signed acceptance, invalid signature rejection, duplicate-event idempotency, failed-payment non-mutation, and no fixture secret in command output.
 
 ## Manual recovery checklist
 
