@@ -154,21 +154,24 @@ function nearestListingId(el) {
   );
 }
 
-function handleTelegramClick(event) {
+function markTelegramClickForSharedAnalytics(event) {
   if (!(event.target instanceof Element)) return;
   const el = event.target.closest('a, button, [role="button"], [data-telegram], [data-analytics-event="telegram_click"]');
   if (!el || !isTelegramTarget(el)) return;
 
-  const item = {
-    event: 'telegram_click',
-    ad_id: nearestListingId(el),
-    method: 'telegram',
-    page_location: window.location.href,
-    href_path: safeHref(el.getAttribute('href') || ''),
-  };
+  el.setAttribute('data-analytics-event', 'telegram_click');
+  el.setAttribute('data-analytics-label', 'telegram');
+  el.setAttribute('data-contact-method', 'telegram');
 
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push(item);
+  const listingId = nearestListingId(el);
+  if (listingId && !el.getAttribute('data-ad-id')) {
+    el.setAttribute('data-ad-id', listingId);
+  }
+
+  const hrefPath = safeHref(el.getAttribute('href') || '');
+  if (hrefPath && !el.getAttribute('data-safe-href')) {
+    el.setAttribute('data-safe-href', hrefPath);
+  }
 }
 
 export function installMetaCapiBridge() {
@@ -185,5 +188,5 @@ export function installMetaCapiBridge() {
     return result;
   };
 
-  document.addEventListener('click', handleTelegramClick, true);
+  document.addEventListener('click', markTelegramClickForSharedAnalytics, true);
 }
