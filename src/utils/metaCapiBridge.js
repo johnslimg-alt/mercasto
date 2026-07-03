@@ -7,6 +7,7 @@ const EVENT_MAP = {
   add_to_wishlist: { endpoint: 'wishlist', metaName: 'AddToWishlist' },
   contact_click: { endpoint: 'contact', metaName: 'Contact' },
   whatsapp_click: { endpoint: 'contact', metaName: 'Contact', method: 'whatsapp' },
+  telegram_click: { endpoint: 'contact', metaName: 'Contact', method: 'telegram' },
   phone_click: { endpoint: 'contact', metaName: 'Contact', method: 'phone' },
   email_click: { endpoint: 'contact', metaName: 'Contact', method: 'email' },
   message_started: { endpoint: 'contact', metaName: 'Contact', method: 'message' },
@@ -28,6 +29,18 @@ function eventId(prefix, listingId = '') {
 function clean(value) {
   if (value === null || value === undefined) return '';
   return String(value).trim().slice(0, 140);
+}
+
+function safeHref(href = '') {
+  if (!href || !isBrowser()) return '';
+  try {
+    const url = new URL(href, window.location.origin);
+    if (url.origin === window.location.origin) return `${url.pathname}${url.search}`;
+    if (url.protocol === 'tg:') return 'tg:';
+    return url.hostname;
+  } catch {
+    return clean(href);
+  }
 }
 
 function extractListingId(payload = {}) {
@@ -92,12 +105,7 @@ function sendBrowserEvent(metaConfig, payload, eventID) {
   }
 }
 
-function handleDataLayerItem(item = {}) {
-  if (!item || typeof item !== 'object') return;
-  const normalizedEvent = String(item.event || '').trim().toLowerCase();
-  const metaConfig = EVENT_MAP[normalizedEvent];
-  if (!metaConfig) return;
-
+function sendMappedEvent(metaConfig, item = {}) {
   const payload = buildPayload(item);
   if (!payload.listing_id) return;
 
@@ -113,6 +121,56 @@ function handleDataLayerItem(item = {}) {
   void sendServerEvent(metaConfig.endpoint, serverPayload);
 }
 
+function handleDataLayerItem(item = {}) {
+  if (!item || typeof item !== 'object') return;
+  const normalizedEvent = String(item.event || '').trim().toLowerCase();
+  const metaConfig = EVENT_MAP[normalizedEvent];
+  if (!metaConfig) return;
+  sendMappedEvent(metaConfig, item);
+}
+
+function isTelegramTarget(el) {
+  const href = clean(el.getAttribute('href') || '').toLowerCase();
+  const text = clean(el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '').toLowerCase();
+
+  return href.startsWith('tg:')
+    || href.includes('t.me/')
+    || href.includes('telegram.me/')
+    || href.includes('telegram.dog/')
+    || href.includes('web.telegram.org')
+    || text.includes('telegram');
+}
+
+function nearestListingId(el) {
+  const adNode = el.closest('[data-ad-id], [data-listing-id], [data-content-id]');
+  return clean(
+    adNode?.getAttribute('data-ad-id')
+    || adNode?.getAttribute('data-listing-id')
+    || adNode?.getAttribute('data-content-id')
+    || el.getAttribute('data-ad-id')
+    || el.getAttribute('data-listing-id')
+    || el.getAttribute('data-content-id')
+    || ''
+  );
+}
+
+function handleTelegramClick(event) {
+  if (!(event.target instanceof Element)) return;
+  const el = event.target.closest('a, button, [role="button"], [data-telegram], [data-analytics-event="telegram_click"]');
+  if (!el || !isTelegramTarget(el)) return;
+
+  const item = {
+    event: 'telegram_click',
+    ad_id: nearestListingId(el),
+    method: 'telegram',
+    page_location: window.location.href,
+    href_path: safeHref(el.getAttribute('href') || ''),
+  };
+
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(item);
+}
+
 export function installMetaCapiBridge() {
   if (!isBrowser() || window.__mercastoMetaCapiBridgeInstalled) return;
   window.__mercastoMetaCapiBridgeInstalled = true;
@@ -126,4 +184,6 @@ export function installMetaCapiBridge() {
     items.forEach(handleDataLayerItem);
     return result;
   };
+
+  document.addEventListener('click', handleTelegramClick, true);
 }
