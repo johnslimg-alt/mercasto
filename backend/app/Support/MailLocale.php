@@ -11,11 +11,13 @@ class MailLocale
         'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
     ];
 
+    public const FALLBACK = 'es';
+
     public static function normalize(?string $locale): string
     {
         $locale = strtolower(trim((string) $locale));
         if ($locale === '') {
-            return config('app.fallback_locale', 'es');
+            return self::FALLBACK;
         }
 
         $locale = str_replace('_', '-', $locale);
@@ -23,7 +25,7 @@ class MailLocale
 
         return in_array($primary, self::SUPPORTED, true)
             ? $primary
-            : config('app.fallback_locale', 'es');
+            : self::FALLBACK;
     }
 
     public static function resolve(?Request $request = null, mixed $user = null): string
