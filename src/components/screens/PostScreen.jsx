@@ -221,9 +221,16 @@ export default function PostScreen({
       if (!form.description?.trim()) errs.description = 'La descripción es obligatoria.';
       // Validate required dynamic attributes
       dynamicAttributes.forEach(field => {
-        const key = field.id || field.key;
-        if (field.required && !form.attributes?.[key]) {
-          errs[`attr_${key}`] = `${field.label || key} es obligatorio.`;
+        const key = field.id || field.key || '';
+        const label = field.label || '';
+        if (key === 'subcategory' || /subcategor/i.test(label)) {
+          if (field.required && !form.subcategory) {
+            errs[`attr_${key}`] = `${field.label || key} es obligatorio.`;
+          }
+        } else {
+          if (field.required && !form.attributes?.[key]) {
+            errs[`attr_${key}`] = `${field.label || key} es obligatorio.`;
+          }
         }
       });
       if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -480,7 +487,11 @@ export default function PostScreen({
                     {attributesLoading && <Loader2 size={14} className="animate-spin" style={{ color: '#8A867B' }} />}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {dynamicAttributes.map(field => renderAttrField(field))}
+                    {dynamicAttributes.filter(field => {
+                      const k = field.id || field.key || '';
+                      const label = field.label || '';
+                      return k !== 'subcategory' && !/subcategor/i.test(label);
+                    }).map(field => renderAttrField(field))}
                   </div>
                 </div>
               )}

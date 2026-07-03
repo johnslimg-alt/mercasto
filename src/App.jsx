@@ -2622,6 +2622,7 @@ function App() {
         setVideoFile(null);
         setEditingAd(null);
         setCurrentTab('profile');
+        navigate('/profile');
         // GA4 ad posted event
         if (!editingAd) events.adPosted(form.category || "general");
         loadAds(1); // Reload after create/update
@@ -4020,7 +4021,7 @@ function App() {
         </div>
       </footer>
 
-      {!viewedAd && renderTabBar()}
+      {!viewedAd && currentTab !== 'post' && renderTabBar()}
       {renderPricingModal()}
       {renderProfileModal()}
       {renderCouponModal()}
