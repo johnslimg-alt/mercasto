@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\EmailVerifyMail;
+use App\Support\MailLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -35,7 +36,11 @@ class EmailVerificationController extends Controller
                 . '?token=' . $token
                 . '&email=' . urlencode($user->email);
 
-            Mail::to($user->email)->send(new EmailVerifyMail($user->name, $verificationUrl));
+            Mail::to($user->email)->send(new EmailVerifyMail(
+                $user->name,
+                $verificationUrl,
+                MailLocale::resolve($request, $user),
+            ));
         } catch (\Throwable $e) {
             Log::warning('Could not send verification email: ' . $e->getMessage());
             return response()->json(['message' => 'No pudimos enviar el correo de verificación. Inténtalo de nuevo.'], 503);
