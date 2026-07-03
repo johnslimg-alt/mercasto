@@ -52,6 +52,22 @@ function requireSitemapUrl(sitemapText, path) {
   requireMatch(`sitemap includes ${path}`, sitemapText, new RegExp(`<loc>${escaped}<\\/loc>`, 'i'));
 }
 
+async function resolveSitemapUrls(sitemapText) {
+  if (!/<sitemapindex/i.test(sitemapText)) {
+    return sitemapText;
+  }
+
+  const childPaths = [...sitemapText.matchAll(/<loc>([^<]+)<\/loc>/gi)]
+    .map((match) => new URL(match[1], baseUrl).pathname);
+  const childSitemaps = await Promise.all(childPaths.map(async (path) => {
+    const child = await checkStatus(path, [200]);
+    requireMatch(`${path} content`, child.text, /<urlset/i);
+    return child.text;
+  }));
+
+  return childSitemaps.join('\n');
+}
+
 console.log('== Mercasto public SEO audit ==');
 console.log(`BASE_URL=${baseUrl}`);
 
@@ -72,6 +88,7 @@ if (robots.status === 200) {
 const sitemap = await checkStatus('/sitemap.xml', [200, 403, 404]);
 if (sitemap.status === 200) {
   requireMatch('sitemap content', sitemap.text, /<urlset|<sitemapindex/i);
+  const sitemapUrls = await resolveSitemapUrls(sitemap.text);
   [
     '/terminos',
     '/privacidad',
@@ -81,7 +98,7 @@ if (sitemap.status === 200) {
     '/safety',
     '/reembolsos',
     '/moderacion',
-  ].forEach((path) => requireSitemapUrl(sitemap.text, path));
+  ].forEach((path) => requireSitemapUrl(sitemapUrls, path));
 }
 
 console.log('public SEO audit OK');

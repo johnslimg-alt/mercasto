@@ -22,7 +22,7 @@ class SitemapController extends Controller
 
     public function index()
     {
-        $content = Cache::remember('sitemap_main_v2', 3600, function () {
+        $content = Cache::remember('sitemap_main_v3', 3600, function () {
             return $this->generateMainSitemap();
         });
 
@@ -118,6 +118,8 @@ class SitemapController extends Controller
             'contacto' => ['monthly', '0.5'],
             'ayuda' => ['monthly', '0.5'],
             'safety' => ['monthly', '0.5'],
+            'reembolsos' => ['monthly', '0.5'],
+            'moderacion' => ['monthly', '0.5'],
         ];
 
         foreach ($legalPages as $page => [$freq, $priority]) {
