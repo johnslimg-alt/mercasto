@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\SellerContactMail;
 use App\Models\Ad;
+use App\Support\MailLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -53,12 +54,14 @@ class ContactController extends Controller
         }
 
         try {
+            $locale = MailLocale::resolve($request, $ad->user);
             Mail::to($ad->user->email)->queue(new SellerContactMail(
                 strip_tags($data['name']),
                 $data['email'],
                 strip_tags($data['message']),
                 (string) $ad->title,
                 (int) $ad->id,
+                $locale,
             ));
         } catch (\Throwable $e) {
             Log::error('contact-seller mail failed', [

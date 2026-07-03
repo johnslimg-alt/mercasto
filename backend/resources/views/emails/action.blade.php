@@ -1,9 +1,25 @@
+@php
+    $rawTitle = (string) ($title ?? '');
+    $emailKey = $emailKey ?? null;
+    if (!$emailKey && str_contains($rawTitle, 'Restablecer')) {
+        $emailKey = 'password_reset';
+    }
+    if (!$emailKey && str_contains($rawTitle, 'Confirma')) {
+        $emailKey = 'email_change';
+    }
+
+    $titleText = $emailKey ? __('emails.' . $emailKey . '.title') : $rawTitle;
+    $bodyText = $emailKey ? __('emails.' . $emailKey . '.description') : ($body ?? '');
+    $buttonText = $emailKey ? __('emails.' . $emailKey . '.button') : ($actionText ?? 'Open');
+    $footerText = $emailKey ? __('emails.' . $emailKey . '.ignore') : ($footer ?? '');
+    $emailLocale = app()->getLocale();
+@endphp
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{ $emailLocale }}" dir="{{ \App\Support\MailLocale::rtl($emailLocale) ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title }}</title>
+    <title>{{ $titleText }}</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 0; color: #0F172A; }
         .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
@@ -27,23 +43,23 @@
             <h2>Mercasto</h2>
         </div>
         <div class="content">
-            <h1>{{ $title }}</h1>
-            <p>{{ $body }}</p>
+            <h1>{{ $titleText }}</h1>
+            <p>{{ $bodyText }}</p>
             
             <div class="btn-wrapper">
-                <a href="{{ $actionUrl }}" class="btn">{{ $actionText }}</a>
+                <a href="{{ $actionUrl }}" class="btn">{{ $buttonText }}</a>
             </div>
             
-            <p>{{ $footer }}</p>
+            <p>{{ $footerText }}</p>
             
             <div class="fallback-link">
-                <p style="margin-bottom: 5px; color: #94A3B8;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+                <p style="margin-bottom: 5px; color: #94A3B8;">{{ __('emails.common.button_not_working') }}</p>
                 <a href="{{ $actionUrl }}">{{ $actionUrl }}</a>
             </div>
         </div>
         <div class="footer">
-            &copy; {{ date('Y') }} Mercasto · Hecho en México<br>
-            Has recibido este correo porque estás registrado en <a href="{{ config('app.frontend_url', 'https://mercasto.com') }}">Mercasto.com</a>.
+            &copy; {{ date('Y') }} Mercasto · {{ __('emails.layout.made_in_mexico') }}<br>
+            {{ __('emails.layout.footer_reason') }} <a href="{{ config('app.frontend_url', 'https://mercasto.com') }}">Mercasto.com</a>.
         </div>
     </div>
 </body>

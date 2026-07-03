@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}">
+@php($emailLocale = app()->getLocale())
+<html lang="{{ $emailLocale }}" dir="{{ \App\Support\MailLocale::rtl($emailLocale) ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>@yield('subject', 'Mercasto')</title>
     <!-- Preheader (hidden preview text in inbox) -->
-    <span style="display:none;font-size:0;max-height:0;mso-hide:all;overflow:hidden;">@yield('preheader', 'Mercasto — Compra, vende y descubre cerca de ti')</span>
+    <span style="display:none;font-size:0;max-height:0;mso-hide:all;overflow:hidden;">@yield('preheader', __('emails.layout.default_preheader'))</span>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -119,18 +120,18 @@
         </div>
         <div class="footer">
             <div class="social-links">
-                <a href="{{ config('app.frontend_url', 'https://mercasto.com') }}">@yield('footer_website_text', 'Visitar sitio web')</a>
+                <a href="{{ config('app.frontend_url', 'https://mercasto.com') }}">@yield('footer_website_text', __('emails.layout.visit_site'))</a>
                 &middot;
-                <a href="mailto:soporte@mercasto.com">@yield('footer_support_text', 'Soporte')</a>
+                <a href="mailto:soporte@mercasto.com">@yield('footer_support_text', __('emails.layout.support'))</a>
             </div>
             <p style="margin: 12px 0 6px 0;">
                 &copy; {{ date('Y') }} Mercasto &middot; M&eacute;xico
             </p>
             <p style="margin: 0;">
-                @yield('footer_reason', 'Recibiste este correo porque tienes una cuenta en Mercasto.')
+                @yield('footer_reason', __('emails.layout.footer_reason'))
                 <br>
                 <a href="{{ config('app.frontend_url', 'https://mercasto.com') }}/configuracion?tab=notificaciones">
-                    @yield('footer_unsubscribe_text', 'Gestionar preferencias')
+                    @yield('footer_unsubscribe_text', __('emails.layout.manage_preferences'))
                 </a>
             </p>
         </div>
