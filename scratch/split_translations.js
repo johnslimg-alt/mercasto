@@ -75,7 +75,7 @@ languages.forEach(lang => {
   // English fallback: if not ES, we merge EN manual translations for complete UI coverage
   const enManual = translationsObj['en'] || {};
   
-  let merged = {};
+  let merged;
   if (lang === 'es') {
     merged = { ...manual };
   } else if (lang === 'en') {
