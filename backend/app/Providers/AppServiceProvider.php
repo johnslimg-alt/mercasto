@@ -8,8 +8,6 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Lang;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\MetaEventController;
 use App\Models\Ad;
 use App\Observers\AdObserver;
 use App\Support\MailLocale;
@@ -31,14 +29,6 @@ class AppServiceProvider extends ServiceProvider
         if (! $this->app->runningInConsole()) {
             App::setLocale(MailLocale::resolve(request()));
         }
-
-        Route::middleware(['auth:sanctum', 'throttle:api'])
-            ->prefix('api/meta/events')
-            ->group(function () {
-                Route::post('/post-ad', [MetaEventController::class, 'postAd']);
-                Route::post('/contact', [MetaEventController::class, 'contact']);
-                Route::post('/wishlist', [MetaEventController::class, 'addToWishlist']);
-            });
 
         // Public read APIs serve several parallel widgets on each marketplace page.
         RateLimiter::for("api", function ($request) {
