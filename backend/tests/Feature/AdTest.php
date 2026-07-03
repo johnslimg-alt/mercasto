@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Ad;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -22,14 +23,27 @@ class AdTest extends TestCase
         
         // Создаем фейкового пользователя в памяти и авторизуемся под ним
         $user = User::factory()->create();
+        Category::create([
+            'slug' => 'telefonia',
+            'name' => ['es' => 'Telefonía', 'en' => 'Phones'],
+            'icon' => 'Smartphone',
+            'sort_order' => 1,
+        ]);
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/ads', [
             'title' => 'iPhone 15 Pro',
             'price' => 18000,
             'description' => 'Nuevo en caja sellada.',
             'location' => 'Ciudad de México',
+            'city' => 'Ciudad de México',
+            'state' => 'Ciudad de México',
+            'latitude' => 19.4326,
+            'longitude' => -99.1332,
             'category' => 'telefonia',
             'condition' => 'nuevo',
+            'attributes' => [
+                'subcategory' => 'smartphones',
+            ],
         ]);
 
         $response->assertStatus(201)->assertJsonFragment(['title' => 'iPhone 15 Pro', 'category' => 'telefonia']);
