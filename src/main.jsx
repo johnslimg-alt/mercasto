@@ -5,10 +5,13 @@ import { BrowserRouter } from 'react-router-dom'
 import AppWrapper from './App.jsx'
 import { UIProvider } from './contexts/UIContext.jsx'
 import { ToastProvider } from './components/ui/Toast.jsx'
+import { initBehaviorAnalytics } from './utils/analytics'
 // Leaflet CSS is loaded lazily alongside the map bundle (see MapV3 loadLeaflet)
 // so it no longer bloats the render-blocking critical stylesheet.
 import './index.css'
 import './i18n'; // Multi-language support
+
+initBehaviorAnalytics();
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
