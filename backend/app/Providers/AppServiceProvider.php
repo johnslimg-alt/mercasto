@@ -23,9 +23,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         foreach (MailLocale::SUPPORTED as $locale) {
-            if ($locale !== 'ru') {
-                Lang::addLines(MailTranslations::lines($locale), $locale);
-            }
+            Lang::addLines(MailTranslations::lines($locale), $locale);
         }
 
         if (! $this->app->runningInConsole()) {
