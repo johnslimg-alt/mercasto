@@ -118,6 +118,8 @@ class SitemapController extends Controller
             'contacto' => ['monthly', '0.5'],
             'ayuda' => ['monthly', '0.5'],
             'safety' => ['monthly', '0.5'],
+            'reembolsos' => ['monthly', '0.5'],
+            'moderacion' => ['monthly', '0.5'],
         ];
 
         foreach ($legalPages as $page => [$freq, $priority]) {

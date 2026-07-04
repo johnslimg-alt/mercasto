@@ -5,7 +5,7 @@ import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2, Send, Star, X } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { addRecentlyViewed } from '../../utils/recentlyViewed';
@@ -292,6 +292,7 @@ export default function AdDetailScreen({
   currentUser,
   handleRenewAd
 }) {
+  const navigate = useNavigate();
   const [similarAds, setSimilarAds] = useState([]);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
