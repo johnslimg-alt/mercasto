@@ -400,9 +400,7 @@ export default function PostScreen({
                   {categoriesData
                     .filter(cat => {
                       const excludedSlugs = new Set([
-                        'coches', 'electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas',
-                        'deportes', 'telefonos', 'bebes', 'informatica', 'coleccionismo', 'formacion',
-                        'hospedaje', 'tours', 'boletos_turismo', 'articulos_camping', 'souvenirs'
+                        'electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'formacion',
                       ]);
                       return !excludedSlugs.has(cat.slug);
                     })

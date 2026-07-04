@@ -3534,10 +3534,7 @@ function App() {
   const headerCategories = useMemo(() => {
     // Показываем корневые категории, исключая внутренние разделы «Товаров» и дубликаты
     const excludedSlugs = new Set([
-      'coches', 'electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas',
-      'deportes', 'telefonos', 'bebes', 'informatica', 'coleccionismo', 'formacion',
-      'hospedaje', 'tours', 'boletos_turismo', 'articulos_camping', 'souvenirs',
-      'renta_vehiculos', 'guias_servicios', 'atracciones_exp', 'retiros_bienestar'
+      'electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'formacion',
     ]);
     const cats = (Array.isArray(safeCategoriesData) ? safeCategoriesData : [])
       .filter(c => c && c.slug && !excludedSlugs.has(c.slug))
