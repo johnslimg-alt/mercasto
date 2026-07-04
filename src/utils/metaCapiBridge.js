@@ -67,6 +67,7 @@ async function sendServerEvent(endpoint, payload) {
     }
 
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
     await fetch(`${META_API_BASE}/${endpoint}`, {
       method: 'POST',
       credentials: 'same-origin',
@@ -75,6 +76,7 @@ async function sendServerEvent(endpoint, payload) {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(payload),
     });
