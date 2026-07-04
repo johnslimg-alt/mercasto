@@ -2,8 +2,7 @@
 // Falls back to Spanish (the canonical taxonomy) for any language/category not listed here.
 export const subcategoriesByLang = {
   es: {
-    coches: ['Compactos', 'SUV', 'Pickup', 'Sedán', 'Hatchback', 'Coupé', 'Deportivos', 'Clásicos', 'Eléctricos', 'Accesorios'],
-    motor: ['Motos', 'Scooters', 'Cuatrimotos', 'UTV', 'Motos de agua', 'Refacciones', 'Cascos', 'Equipamiento'],
+    motor: ['Compactos', 'SUV', 'Pickup', 'Sedán', 'Hatchback', 'Coupé', 'Deportivos', 'Clásicos', 'Eléctricos', 'Accesorios', 'Camiones', 'Motos', 'Scooters', 'Cuatrimotos', 'UTV', 'Motos de agua', 'Refacciones', 'Cascos', 'Equipamiento'],
     inmobiliaria: ['Casas en venta', 'Casas en renta', 'Departamentos', 'Terrenos', 'Locales comerciales', 'Oficinas', 'Bodegas', 'Renta vacacional'],
     empleo: ['Ventas', 'Chofer', 'Construcción', 'Administración', 'Atención al cliente', 'Tecnología', 'Hotelería', 'Medio tiempo'],
     servicios: ['Mudanzas', 'Limpieza', 'Plomería', 'Electricidad', 'Cerrajería', 'Clases', 'Diseño', 'Eventos'],
@@ -36,8 +35,7 @@ export const subcategoriesByLang = {
     },
   },
   en: {
-    coches: ['Compact cars', 'SUVs', 'Pickup trucks', 'Sedans', 'Hatchbacks', 'Coupes', 'Sports cars', 'Classic cars', 'Electric cars', 'Accessories'],
-    motor: ['Motorcycles', 'Scooters', 'ATVs', 'UTVs', 'Jet skis', 'Parts', 'Helmets', 'Gear'],
+    motor: ['Compact cars', 'SUVs', 'Pickup trucks', 'Sedans', 'Hatchbacks', 'Coupes', 'Sports cars', 'Classic cars', 'Electric cars', 'Accessories', 'Trucks', 'Motorcycles', 'Scooters', 'ATVs', 'UTVs', 'Jet skis', 'Parts', 'Helmets', 'Gear'],
     inmobiliaria: ['Houses for sale', 'Houses for rent', 'Apartments', 'Land', 'Commercial spaces', 'Offices', 'Warehouses', 'Vacation rentals'],
     empleo: ['Sales', 'Driver', 'Construction', 'Administration', 'Customer service', 'Technology', 'Hospitality', 'Part-time'],
     servicios: ['Moving', 'Cleaning', 'Plumbing', 'Electrical', 'Locksmith', 'Classes', 'Design', 'Events'],
@@ -70,8 +68,7 @@ export const subcategoriesByLang = {
     },
   },
   fr: {
-    coches: ['Citadines', 'SUV', 'Pick-up', 'Berlines', 'Compactes à hayon', 'Coupés', 'Voitures de sport', 'Voitures classiques', 'Voitures électriques', 'Accessoires'],
-    motor: ['Motos', 'Scooters', 'Quads', 'UTV', 'Motomarines', 'Pièces détachées', 'Casques', 'Équipement'],
+    motor: ['Citadines', 'SUV', 'Pick-up', 'Berlines', 'Compactes à hayon', 'Coupés', 'Voitures de sport', 'Voitures classiques', 'Voitures électriques', 'Accessoires', 'Camions', 'Motos', 'Scooters', 'Quads', 'UTV', 'Motomarines', 'Pièces détachées', 'Casques', 'Équipement'],
     inmobiliaria: ['Maisons à vendre', 'Maisons à louer', 'Appartements', 'Terrains', 'Locaux commerciaux', 'Bureaux', 'Entrepôts', 'Locations de vacances'],
     empleo: ['Ventes', 'Chauffeur', 'Construction', 'Administration', 'Service client', 'Technologie', 'Hôtellerie', 'Temps partiel'],
     servicios: ['Déménagement', 'Nettoyage', 'Plomberie', 'Électricité', 'Serrurerie', 'Cours', 'Design', 'Événements'],
@@ -104,8 +101,7 @@ export const subcategoriesByLang = {
     },
   },
   de: {
-    coches: ['Kompaktwagen', 'SUV', 'Pickup', 'Limousinen', 'Kompaktklasse', 'Coupés', 'Sportwagen', 'Oldtimer', 'Elektroautos', 'Zubehör'],
-    motor: ['Motorräder', 'Roller', 'Quads', 'UTV', 'Jetskis', 'Ersatzteile', 'Helme', 'Ausrüstung'],
+    motor: ['Kompaktwagen', 'SUV', 'Pickup', 'Limousinen', 'Kompaktklasse', 'Coupés', 'Sportwagen', 'Oldtimer', 'Elektroautos', 'Zubehör', 'Lastwagen', 'Motorräder', 'Roller', 'Quads', 'UTV', 'Jetskis', 'Ersatzteile', 'Helme', 'Ausrüstung'],
     inmobiliaria: ['Häuser zu verkaufen', 'Häuser zu vermieten', 'Wohnungen', 'Grundstücke', 'Gewerbeflächen', 'Büros', 'Lagerhallen', 'Ferienvermietung'],
     empleo: ['Verkauf', 'Fahrer', 'Bau', 'Verwaltung', 'Kundenservice', 'Technologie', 'Gastgewerbe', 'Teilzeit'],
     servicios: ['Umzüge', 'Reinigung', 'Klempnerei', 'Elektrik', 'Schlüsseldienst', 'Kurse', 'Design', 'Veranstaltungen'],
@@ -138,8 +134,7 @@ export const subcategoriesByLang = {
     },
   },
   it: {
-    coches: ['Compatte', 'SUV', 'Pickup', 'Berline', 'Utilitarie', 'Coupé', 'Auto sportive', "Auto d'epoca", 'Auto elettriche', 'Accessori'],
-    motor: ['Moto', 'Scooter', 'Quad', 'UTV', "Moto d'acqua", 'Ricambi', 'Caschi', 'Equipaggiamento'],
+    motor: ['Compatte', 'SUV', 'Pickup', 'Berline', 'Utilitarie', 'Coupé', 'Auto sportive', "Auto d'epoca", 'Auto elettriche', 'Accessori', 'Camion', 'Moto', 'Scooter', 'Quad', 'UTV', "Moto d'acqua", 'Ricambi', 'Caschi', 'Equipaggiamento'],
     inmobiliaria: ['Case in vendita', 'Case in affitto', 'Appartamenti', 'Terreni', 'Locali commerciali', 'Uffici', 'Magazzini', 'Affitti vacanze'],
     empleo: ['Vendite', 'Autista', 'Edilizia', 'Amministrazione', 'Servizio clienti', 'Tecnologia', 'Ospitalità', 'Part-time'],
     servicios: ['Traslochi', 'Pulizie', 'Idraulica', 'Elettricità', 'Fabbro', 'Corsi', 'Design', 'Eventi'],
@@ -172,8 +167,7 @@ export const subcategoriesByLang = {
     },
   },
   pt: {
-    coches: ['Compactos', 'SUV', 'Picapes', 'Sedãs', 'Hatchbacks', 'Cupês', 'Esportivos', 'Clássicos', 'Elétricos', 'Acessórios'],
-    motor: ['Motos', 'Scooters', 'Quadriciclos', 'UTV', 'Jet skis', 'Peças', 'Capacetes', 'Equipamentos'],
+    motor: ['Compactos', 'SUV', 'Picapes', 'Sedãs', 'Hatchbacks', 'Cupês', 'Esportivos', 'Clássicos', 'Elétricos', 'Acessórios', 'Caminhões', 'Motos', 'Scooters', 'Quadriciclos', 'UTV', 'Jet skis', 'Peças', 'Capacetes', 'Equipamentos'],
     inmobiliaria: ['Casas à venda', 'Casas para alugar', 'Apartamentos', 'Terrenos', 'Pontos comerciais', 'Escritórios', 'Galpões', 'Aluguel de temporada'],
     empleo: ['Vendas', 'Motorista', 'Construção', 'Administração', 'Atendimento ao cliente', 'Tecnologia', 'Hotelaria', 'Meio período'],
     servicios: ['Mudanças', 'Limpeza', 'Encanamento', 'Elétrica', 'Chaveiro', 'Aulas', 'Design', 'Eventos'],
@@ -206,8 +200,7 @@ export const subcategoriesByLang = {
     },
   },
   ru: {
-    coches: ['Компактные', 'Внедорожники', 'Пикапы', 'Седаны', 'Хэтчбеки', 'Купе', 'Спортивные', 'Классические', 'Электромобили', 'Аксессуары'],
-    motor: ['Мотоциклы', 'Скутеры', 'Квадроциклы', 'Багги (UTV)', 'Гидроциклы', 'Запчасти', 'Шлемы', 'Экипировка'],
+    motor: ['Компактные', 'Внедорожники', 'Пикапы', 'Седаны', 'Хэтчбеки', 'Купе', 'Спортивные', 'Классические', 'Электромобили', 'Аксессуары', 'Грузовики', 'Мотоциклы', 'Скутеры', 'Квадроциклы', 'Багги (UTV)', 'Гидроциклы', 'Запчасти', 'Шлемы', 'Экипировка'],
     inmobiliaria: ['Дома продажа', 'Дома аренда', 'Квартиры', 'Земельные участки', 'Коммерческие помещения', 'Офисы', 'Склады', 'Аренда для отдыха'],
     empleo: ['Продажи', 'Водитель', 'Строительство', 'Администрирование', 'Работа с клиентами', 'Технологии', 'Гостиничное дело', 'Подработка'],
     servicios: ['Переезды', 'Уборка', 'Сантехника', 'Электрика', 'Услуги слесаря', 'Курсы', 'Дизайн', 'Мероприятия'],
@@ -240,8 +233,7 @@ export const subcategoriesByLang = {
     },
   },
   zh: {
-    coches: ['紧凑型车', 'SUV', '皮卡', '轿车', '掀背车', '双门轿跑车', '跑车', '经典车', '电动车', '配件'],
-    motor: ['摩托车', '踏板车', '沙滩车', '全地形车', '水上摩托', '配件', '头盔', '装备'],
+    motor: ['紧凑型车', 'SUV', '皮卡', '轿车', '掀背车', '双门轿跑车', '跑车', '经典车', '电动车', '配件', '卡车', '摩托车', '踏板车', '沙滩车', '全地形车', '水上摩托', '配件', '头盔', '装备'],
     inmobiliaria: ['出售房屋', '出租房屋', '公寓', '土地', '商铺', '办公室', '仓库', '度假租赁'],
     empleo: ['销售', '司机', '建筑', '行政', '客户服务', '技术', '酒店业', '兼职'],
     servicios: ['搬家', '清洁', '水管工', '电工', '开锁服务', '课程', '设计', '活动'],
@@ -274,8 +266,7 @@ export const subcategoriesByLang = {
     },
   },
   ja: {
-    coches: ['コンパクトカー', 'SUV', 'ピックアップトラック', 'セダン', 'ハッチバック', 'クーペ', 'スポーツカー', 'クラシックカー', '電気自動車', 'アクセサリー'],
-    motor: ['バイク', 'スクーター', 'ATV', 'UTV', '水上バイク', 'パーツ', 'ヘルメット', '装備'],
+    motor: ['コンパクトカー', 'SUV', 'ピックアップトラック', 'セダン', 'ハッチバック', 'クーペ', 'スポーツカー', 'クラシックカー', '電気自動車', 'アクセサリー', 'トラック', 'バイク', 'スクーター', 'ATV', 'UTV', '水上バイク', 'パーツ', 'ヘルメット', '装備'],
     inmobiliaria: ['販売住宅', '賃貸住宅', 'アパート', '土地', '商業スペース', 'オフィス', '倉庫', 'バケーションレンタル'],
     empleo: ['営業', 'ドライバー', '建設', '事務', 'カスタマーサービス', 'テクノロジー', 'ホスピタリティ', 'パートタイム'],
     servicios: ['引っ越し', '清掃', '配管工事', '電気工事', '鍵屋', '講座', 'デザイン', 'イベント'],
@@ -308,8 +299,7 @@ export const subcategoriesByLang = {
     },
   },
   ko: {
-    coches: ['소형차', 'SUV', '픽업트럭', '세단', '해치백', '쿠페', '스포츠카', '클래식카', '전기차', '액세서리'],
-    motor: ['오토바이', '스쿠터', 'ATV', 'UTV', '수상 오토바이', '부품', '헬멧', '장비'],
+    motor: ['소형차', 'SUV', '픽업트럭', '세단', '해치백', '쿠페', '스포츠카', '클래식카', '전기차', '액세서리', '트럭', '오토바이', '스쿠터', 'ATV', 'UTV', '수상 오토바이', '부품', '헬멧', '장비'],
     inmobiliaria: ['주택 매매', '주택 임대', '아파트', '토지', '상업 공간', '사무실', '창고', '휴가용 임대'],
     empleo: ['영업', '운전기사', '건설', '행정', '고객 서비스', '기술', '호텔업', '파트타임'],
     servicios: ['이사', '청소', '배관', '전기', '열쇠공', '강좌', '디자인', '이벤트'],
@@ -342,8 +332,7 @@ export const subcategoriesByLang = {
     },
   },
   ar: {
-    coches: ['سيارات مدمجة', 'دفع رباعي', 'بيك أب', 'سيدان', 'هاتشباك', 'كوبيه', 'سيارات رياضية', 'سيارات كلاسيكية', 'سيارات كهربائية', 'إكسسوارات'],
-    motor: ['دراجات نارية', 'سكوتر', 'دراجات رباعية', 'مركبات UTV', 'دراجات مائية', 'قطع غيار', 'خوذات', 'معدات'],
+    motor: ['سيارات مدمجة', 'دفع رباعي', 'بيك أب', 'سيدان', 'هاتشباك', 'كوبيه', 'سيارات رياضية', 'سيارات كلاسيكية', 'سيارات كهربائية', 'إكسسوارات', 'شاحنات', 'دراجات نارية', 'سكوتر', 'دراجات رباعية', 'مركبات UTV', 'دراجات مائية', 'قطع غيار', 'خوذات', 'معدات'],
     inmobiliaria: ['منازل للبيع', 'منازل للإيجار', 'شقق', 'أراضٍ', 'محلات تجارية', 'مكاتب', 'مستودعات', 'إيجار عطلات'],
     empleo: ['مبيعات', 'سائق', 'بناء', 'إدارة', 'خدمة العملاء', 'تقنية', 'ضيافة', 'دوام جزئي'],
     servicios: ['نقل عفش', 'تنظيف', 'سباكة', 'كهرباء', 'أعمال أقفال', 'دورات', 'تصميم', 'فعاليات'],
@@ -376,8 +365,7 @@ export const subcategoriesByLang = {
     },
   },
   he: {
-    coches: ['רכבים קומפקטיים', 'רכבי שטח', 'טנדרים', 'סדאן', "האצ'בק", 'קופה', 'מכוניות ספורט', 'מכוניות קלאסיות', 'רכבים חשמליים', 'אביזרים'],
-    motor: ['אופנועים', 'קטנועים', 'טרקטורונים', 'רכבי UTV', 'אופנועי ים', 'חלקי חילוף', 'קסדות', 'ציוד'],
+    motor: ['רכבים קומפקטיים', 'רכבי שטח', 'טנדרים', 'סדאן', "האצ'בק", 'קופה', 'מכוניות ספורט', 'מכוניות קלאסיות', 'רכבים חשמליים', 'אביזרים', 'משאיות', 'אופנועים', 'קטנועים', 'טרקטורונים', 'רכבי UTV', 'אופנועי ים', 'חלקי חילוף', 'קסדות', 'ציוד'],
     inmobiliaria: ['בתים למכירה', 'בתים להשכרה', 'דירות', 'קרקעות', 'שטחים מסחריים', 'משרדים', 'מחסנים', 'השכרות נופש'],
     empleo: ['מכירות', 'נהג', 'בנייה', 'מנהלה', 'שירות לקוחות', 'טכנולוגיה', 'אירוח', 'משרה חלקית'],
     servicios: ['הובלות', 'ניקיון', 'אינסטלציה', 'חשמל', 'מנעולנות', 'קורסים', 'עיצוב', 'אירועים'],
@@ -410,8 +398,7 @@ export const subcategoriesByLang = {
     },
   },
   yi: {
-    coches: ['קאמפאקטע אויטאס', 'SUV', 'פיקאפ', 'סעדאן', "האטשבעק", 'קופע', 'ספארט אויטאס', 'קלאסישע אויטאס', 'עלעקטרישע אויטאס', 'אקסעסאריז'],
-    motor: ['מאטאציקלען', 'סקוטערס', 'קוואדראציקלען', 'UTV', 'וואסער-מאטאציקלען', 'טיילן', 'העלמען', 'געציג'],
+    motor: ['קאמפאקטע אויטאס', 'SUV', 'פיקאפ', 'סעדאן', "האטשבעק", 'קופע', 'ספארט אויטאס', 'קלאסישע אויטאס', 'עלעקטרישע אויטאס', 'אקסעסאריז', 'לאָריס', 'מאטאציקלען', 'סקוטערס', 'קוואדראציקלען', 'UTV', 'וואסער-מאטאציקלען', 'טיילן', 'העלמען', 'געציג'],
     inmobiliaria: ['הייזער צום פארקויפן', 'הייזער צום דינגען', 'דירות', 'ערד', 'געשעפט פלעצער', 'אפיסעס', 'לאגער הייזער', 'וואקאציע דינגען'],
     empleo: ['פארקויף', 'שאפער', 'בוי', 'אדמיניסטראציע', 'קונים סערוויס', 'טעכנאלאגיע', 'האטעלערייע', 'טייל-צייט'],
     servicios: ['איבערפירן', 'ריינקייט', 'רערן ארבעט', 'עלעקטריק', 'שלעסער', 'קלאסן', 'דיזיין', 'געשעענישן'],
