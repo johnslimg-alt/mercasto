@@ -11,6 +11,13 @@ const autoBrands = [
   'BYD', 'MG', 'Chirey', 'JAC', 'GWM (Haval)', 'Changan', 'Omoda/Jaecoo', 'DFSK', 'Foton',
   // Camiones y autobuses comerciales
   'Scania', 'International', 'Freightliner', 'MAN', 'Iveco', 'Dina', 'Hino',
+  // Motocicletas
+  'Yamaha', 'Kawasaki', 'Harley-Davidson', 'Ducati', 'Triumph', 'KTM', 'Royal Enfield',
+  'Vespa/Piaggio', 'Italika', 'Vento', 'Bajaj', 'Benelli', 'Husqvarna',
+  // Movilidad eléctrica y micromovilidad
+  'Segway-Ninebot', 'InMotion', 'KingSong', 'Zacua', 'Kandi',
+  // Karts de golf
+  'Club Car', 'E-Z-GO', 'Garia',
   'Otra'
 ];
 
@@ -75,11 +82,35 @@ export const autoModelsByBrand = {
   'Iveco': ['Daily', 'Eurocargo', 'Stralis'],
   'Dina': ['Linner', 'Avante', 'Ciela'],
   'Hino': ['300', '500', '700'],
+  'Yamaha': ['FZ', 'MT-03', 'R3', 'YBR', 'XTZ 250', 'Bws', 'Crux', 'Ténéré'],
+  'Kawasaki': ['Ninja 300', 'Ninja 400', 'Z400', 'Versys', 'KLR 650', 'Vulcan'],
+  'Harley-Davidson': ['Sportster', 'Iron 883', 'Street Bob', 'Fat Boy', 'Road King'],
+  'Ducati': ['Monster', 'Panigale', 'Scrambler', 'Multistrada'],
+  'Triumph': ['Bonneville', 'Street Triple', 'Tiger', 'Speed Twin'],
+  'KTM': ['Duke 200', 'Duke 390', 'RC 390', 'Adventure 390'],
+  'Royal Enfield': ['Classic 350', 'Meteor 350', 'Himalayan', 'Bullet'],
+  'Vespa/Piaggio': ['Primavera', 'Sprint', 'GTS', 'Liberty'],
+  'Italika': ['FT 150', 'DT 150', 'AT 110', 'Cuatrimoto CS 125'],
+  'Vento': ['Phantom R4', 'Crossmax', 'Nitrox'],
+  'Bajaj': ['Pulsar', 'Dominar', 'Discover'],
+  'Benelli': ['TNT', 'Leoncino', '502C'],
+  'Husqvarna': ['Svartpilen', 'Vitpilen', 'FE 350'],
+  'Segway-Ninebot': ['Ninebot Max', 'Ninebot E22', 'Ninebot KickScooter'],
+  'InMotion': ['V11', 'V10', 'V8'],
+  'KingSong': ['S18', 'S22', '16X'],
+  'Zacua': ['MX2', 'MX3'],
+  'Kandi': ['K23', 'K27'],
+  'Club Car': ['Tempo', 'Onward', 'Precedent'],
+  'E-Z-GO': ['RXV', 'TXT', 'Express'],
+  'Garia': ['Golf Car', 'Utility'],
 };
 
 const electronicsBrands = [
   'Apple', 'Samsung', 'Xiaomi', 'Motorola', 'Huawei', 'Oppo', 'Google Pixel', 'Honor',
-  'Vivo', 'Dell', 'HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Otra'
+  'Vivo', 'Dell', 'HP', 'Lenovo', 'Asus', 'Acer', 'MSI',
+  // Drones
+  'DJI', 'Autel', 'Hubsan', 'Parrot',
+  'Otra'
 ];
 
 const autoFilters = [
