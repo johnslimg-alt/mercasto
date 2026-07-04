@@ -101,9 +101,9 @@ class SitemapController extends Controller
 
         // Основные вертикали
         $verticals = [
-            'autos', 'inmuebles', 'servicios', 'empleos', 'electronica',
+            'motor', 'inmuebles', 'servicios', 'empleos', 'electronica',
             'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'negocios',
-            'boletos', 'tiendas',
+            'boletos', 'tiendas', 'turismo', 'productos',
         ];
         foreach ($verticals as $vertical) {
             $xml .= $this->urlEntry("{$baseUrl}/{$vertical}", 'daily', '0.9', $now);
@@ -139,8 +139,7 @@ class SitemapController extends Controller
         $categories = Category::all();
         
         $verticalRoutes = [
-            'coches' => 'autos',
-            'motor' => 'autos',
+            'motor' => 'motor',
             'inmobiliaria' => 'inmuebles',
             'empleo' => 'empleos',
             'servicios' => 'servicios',
@@ -152,6 +151,8 @@ class SitemapController extends Controller
             'mascotas' => 'mascotas',
             'negocios' => 'negocios',
             'boletos' => 'boletos',
+            'turismo' => 'turismo',
+            'productos' => 'productos',
         ];
 
         $seenUrls = [];
