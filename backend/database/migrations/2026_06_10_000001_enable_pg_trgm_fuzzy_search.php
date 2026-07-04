@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         // Enable pg_trgm extension (requires PostgreSQL superuser or pg_extension_owner)
         DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
 
@@ -23,6 +27,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('DROP INDEX IF EXISTS ads_title_trgm_idx');
         DB::statement('DROP INDEX IF EXISTS ads_description_trgm_idx');
         // We intentionally do NOT drop the extension as other parts may depend on it

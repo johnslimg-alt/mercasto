@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Ad;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +20,9 @@ class AdTest extends TestCase
     {
         // Фейковое хранилище, чтобы не засорять реальную папку картинками/видео
         Storage::fake('public');
-        
+
+        Category::create(['slug' => 'electronica', 'name' => ['es' => 'Electrónica', 'en' => 'Electronics'], 'icon' => 'Monitor']);
+
         // Создаем фейкового пользователя в памяти и авторизуемся под ним
         $user = User::factory()->create();
 
@@ -28,11 +31,16 @@ class AdTest extends TestCase
             'price' => 18000,
             'description' => 'Nuevo en caja sellada.',
             'location' => 'Ciudad de México',
-            'category' => 'telefonia',
+            'city' => 'Ciudad de México',
+            'state' => 'Ciudad de México',
+            'latitude' => 19.4326,
+            'longitude' => -99.1332,
+            'category' => 'electronica',
             'condition' => 'nuevo',
+            'attributes' => ['subcategory' => 'Smartphones'],
         ]);
 
-        $response->assertStatus(201)->assertJsonFragment(['title' => 'iPhone 15 Pro', 'category' => 'telefonia']);
+        $response->assertStatus(201)->assertJsonFragment(['title' => 'iPhone 15 Pro', 'category' => 'electronica']);
 
         $this->assertDatabaseHas('ads', [
             'title' => 'iPhone 15 Pro',
