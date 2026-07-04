@@ -34,7 +34,7 @@ export const mexicoLocations = {
 };
 
 export const subcategoriesMap = {
-  'motor': ['Compactos', 'SUV', 'Pickup', 'Sedán', 'Hatchback', 'Coupé', 'Deportivos', 'Clásicos', 'Eléctricos', 'Accesorios', 'Camiones', 'Autobuses', 'Motos', 'Scooters', 'Cuatrimotos', 'UTV', 'Motos de agua', 'Refacciones', 'Cascos', 'Equipamiento'],
+  'motor': ['Compactos', 'SUV', 'Pickup', 'Sedán', 'Hatchback', 'Coupé', 'Deportivos', 'Clásicos', 'Eléctricos', 'Accesorios', 'Camiones', 'Autobuses', 'Motos', 'Scooters', 'Cuatrimotos', 'UTV', 'Motos de agua', 'Refacciones', 'Cascos', 'Equipamiento', 'Bicicletas eléctricas', 'Patines eléctricos', 'Monociclos eléctricos', 'Karts de golf', 'Micro autos'],
   'inmobiliaria': ['Casas en venta', 'Casas en renta', 'Departamentos', 'Terrenos', 'Locales comerciales', 'Oficinas', 'Bodegas', 'Renta vacacional'],
   'empleo': ['Ventas', 'Chofer', 'Construcción', 'Administración', 'Atención al cliente', 'Tecnología', 'Hotelería', 'Medio tiempo'],
   'servicios': ['Mudanzas', 'Limpieza', 'Plomería', 'Electricidad', 'Cerrajería', 'Clases', 'Diseño', 'Eventos'],
