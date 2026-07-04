@@ -72,7 +72,8 @@ if (robots.status === 200) {
 const sitemap = await checkStatus('/sitemap.xml', [200, 403, 404]);
 if (sitemap.status === 200) {
   requireMatch('sitemap content', sitemap.text, /<urlset|<sitemapindex/i);
-  [
+
+  const legalPagePaths = [
     '/terminos',
     '/privacidad',
     '/cookies',
@@ -81,7 +82,21 @@ if (sitemap.status === 200) {
     '/safety',
     '/reembolsos',
     '/moderacion',
-  ].forEach((path) => requireSitemapUrl(sitemap.text, path));
+  ];
+
+  if (/<sitemapindex/i.test(sitemap.text)) {
+    // Sitemap index: legal pages live in the referenced sub-sitemap, not inline.
+    const subSitemapUrls = [...sitemap.text.matchAll(/<loc>([^<]+)<\/loc>/gi)].map((m) => m[1]);
+    const mainSitemapUrl = subSitemapUrls.find((u) => /sitemap-main\.xml/i.test(u));
+    if (!mainSitemapUrl) {
+      throw new Error('sitemap index missing sitemap-main.xml reference');
+    }
+    const mainPath = new URL(mainSitemapUrl).pathname;
+    const { text: mainText } = await fetchText(mainPath);
+    legalPagePaths.forEach((path) => requireSitemapUrl(mainText, path));
+  } else {
+    legalPagePaths.forEach((path) => requireSitemapUrl(sitemap.text, path));
+  }
 }
 
 console.log('public SEO audit OK');
