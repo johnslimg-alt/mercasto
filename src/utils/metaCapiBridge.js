@@ -122,11 +122,7 @@ function sendMappedEvent(metaConfig, item = {}) {
   };
 
   sendBrowserEvent(metaConfig, serverPayload, id);
-  
-  // Skip CAPI server event for PostAd/listing_published: backend AdController sends it directly
-  if (metaConfig.metaName !== 'PostAd') {
-    void sendServerEvent(metaConfig.endpoint, serverPayload);
-  }
+  void sendServerEvent(metaConfig.endpoint, serverPayload);
 }
 
 function handleDataLayerItem(item = {}) {
