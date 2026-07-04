@@ -49,6 +49,10 @@ class AdIndexController extends Controller
             $query->where('category', $request->category);
         }
 
+        if ($request->filled('subcategory')) {
+            $query->whereRaw('subcategory ILIKE ?', [(string) $request->subcategory]);
+        }
+
         if ($request->filled('search')) {
             $search = (string) $request->search;
 
@@ -170,6 +174,7 @@ class AdIndexController extends Controller
             'radius',
             'user_id',
             'category',
+            'subcategory',
             'search',
             'location',
             'city',

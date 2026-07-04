@@ -8,8 +8,21 @@ import {
 } from 'lucide-react';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import { filterConfig } from '../../constants/filterConfig';
+import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
 import MapV3 from '../common/MapV3';
 import SortablePhotoGrid from '../SortablePhotoGrid';
+
+// Mirrors App.jsx's getSubcategoryOptions: some categories (currently only "turismo") store a
+// stable slug as the subcategory value (matching real listing data + the search filter dropdown),
+// while the rest store the canonical Spanish label text as-is. Always posts in Spanish, since ad
+// content itself is not translated per-poster-language.
+function getPostSubcategoryOptions(category) {
+  const bySlug = subcategoriesByLang.es[category];
+  if (bySlug && !Array.isArray(bySlug)) {
+    return Object.keys(bySlug).map((slug) => ({ value: slug, label: bySlug[slug] }));
+  }
+  return (subcategoriesMap[category] || []).map((label) => ({ value: label, label }));
+}
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -230,7 +243,7 @@ export default function PostScreen({
   const goNext = () => {
     if (step === 1) {
       if (!form.category) { alert('Selecciona una categoría.'); return; }
-      const subs = subcategoriesMap[form.category] || [];
+      const subs = getPostSubcategoryOptions(form.category);
       if (subs.length > 0 && !form.subcategory) { alert('Selecciona una subcategoría.'); return; }
       setStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -429,20 +442,20 @@ export default function PostScreen({
 
 
               {/* SUBCATEGORY (Level 3) */}
-              {form.category && (subcategoriesMap[form.category] || []).length > 0 && (
+              {form.category && getPostSubcategoryOptions(form.category).length > 0 && (
                 <div className="mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
                   <label className="block text-[14px] font-bold text-slate-700 dark:text-slate-300 mb-3">
                     Selecciona una Subcategoría
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {(subcategoriesMap[form.category] || []).map(sub => (
+                    {getPostSubcategoryOptions(form.category).map(({ value, label }) => (
                       <button
-                        key={sub}
+                        key={value}
                         type="button"
-                        onClick={() => setForm({ ...form, subcategory: sub })}
-                        className={`p-3 rounded-lg border text-center transition-all text-xs font-semibold ${form.subcategory === sub ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16]' : 'border-slate-200 dark:border-slate-800 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                        onClick={() => setForm({ ...form, subcategory: value })}
+                        className={`p-3 rounded-lg border text-center transition-all text-xs font-semibold ${form.subcategory === value ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16]' : 'border-slate-200 dark:border-slate-800 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                       >
-                        {sub}
+                        {label}
                       </button>
                     ))}
                   </div>
@@ -452,7 +465,7 @@ export default function PostScreen({
               <div className="hidden md:flex justify-end pt-6">
                 <button
                   type="button"
-                  disabled={!form.category || ((subcategoriesMap[form.category] || []).length > 0 && !form.subcategory)}
+                  disabled={!form.category || (getPostSubcategoryOptions(form.category).length > 0 && !form.subcategory)}
                   onClick={goNext}
                   className="btn-lg bg-[#0F172A] text-white hover:bg-black flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -861,7 +874,7 @@ export default function PostScreen({
         {step < 3 ? (
           <button
             type="button"
-            disabled={step === 1 && (!form.category || ((subcategoriesMap[form.category] || []).length > 0 && !form.subcategory))}
+            disabled={step === 1 && (!form.category || (getPostSubcategoryOptions(form.category).length > 0 && !form.subcategory))}
             onClick={goNext}
             className="btn-lg bg-[#0F172A] text-white hover:bg-black flex-[2] flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
