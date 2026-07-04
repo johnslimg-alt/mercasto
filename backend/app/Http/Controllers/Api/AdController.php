@@ -569,27 +569,9 @@ class AdController extends Controller
             ProcessVideoWatermark::dispatch($ad);
         }
 
-        // Dispatch Meta Conversions API (CAPI) tracking event
-        try {
-            $adUser = $request->user();
-            $customData = [
-                'content_name' => $ad->title,
-                'content_category' => $ad->category,
-                'content_ids' => [(string) $ad->id],
-                'value' => (float) $ad->price,
-                'currency' => 'MXN',
-            ];
-            \App\Jobs\SendMetaCapiEventJob::dispatch(
-                'SubmitApplication', // Standard event name for submitting forms/ads
-                $adUser->email,
-                $adUser->phone_number ?? $adUser->whatsapp,
-                $request->ip(),
-                $request->userAgent(),
-                $customData
-            );
-        } catch (\Throwable $e) {
-            \Log::warning('Meta CAPI Dispatch Error: ' . $e->getMessage());
-        }
+        // Meta CAPI PostAd tracking is handled by the frontend bridge (metaCapiBridge.js ->
+        // /api/meta/events/post-ad) using the same event_id as the browser Pixel call, so it
+        // dedupes correctly. This controller intentionally does not send its own CAPI event.
 
         // --- AI СИСТЕМА: СЕМАНТИЧЕСКИЙ ПОИСК (EMBEDDINGS) И АВТО-МОДЕРАЦИЯ ---
         dispatch(function () use ($ad) {
