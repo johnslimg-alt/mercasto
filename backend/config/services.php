@@ -104,4 +104,10 @@ return [
         'from'  => env('TWILIO_FROM', '+15005550006'),
     ],
 
+    'facebook' => [
+        'pixel_id' => env('FACEBOOK_PIXEL_ID'),
+        'access_token' => env('FACEBOOK_ACCESS_TOKEN'),
+        'graph_version' => env('FACEBOOK_GRAPH_VERSION', 'v20.0'),
+    ],
+
 ];
