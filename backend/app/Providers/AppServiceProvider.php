@@ -6,8 +6,12 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Lang;
 use App\Models\Ad;
 use App\Observers\AdObserver;
+use App\Support\MailLocale;
+use App\Support\MailTranslations;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,6 +22,14 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        foreach (MailLocale::SUPPORTED as $locale) {
+            Lang::addLines(MailTranslations::lines($locale), $locale);
+        }
+
+        if (! $this->app->runningInConsole()) {
+            App::setLocale(MailLocale::resolve(request()));
+        }
+
         // Public read APIs serve several parallel widgets on each marketplace page.
         RateLimiter::for("api", function ($request) {
             $user = $request->user();
