@@ -103,7 +103,7 @@ class SitemapController extends Controller
         $verticals = [
             'autos', 'inmuebles', 'servicios', 'empleos', 'electronica',
             'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'negocios',
-            'boletos', 'tiendas',
+            'boletos', 'tiendas', 'turismo',
         ];
         foreach ($verticals as $vertical) {
             $xml .= $this->urlEntry("{$baseUrl}/{$vertical}", 'daily', '0.9', $now);
@@ -152,6 +152,7 @@ class SitemapController extends Controller
             'mascotas' => 'mascotas',
             'negocios' => 'negocios',
             'boletos' => 'boletos',
+            'turismo' => 'turismo',
         ];
 
         $seenUrls = [];

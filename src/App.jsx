@@ -5,6 +5,19 @@ import { getTranslations, loadLanguage } from './utils/translations';
 import { localizedText } from './utils/localize';
 import { sizedImage } from './utils/imageHelpers';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
+
+// Subcategory data is either an array of Spanish labels (canonical value == display label)
+// or an object keyed by a stable slug (canonical value == slug, label is translated).
+// Always returns [{ value, label }] pairs so the dropdown can render either shape uniformly.
+function getSubcategoryOptions(activeCat, lang) {
+  const canonical = subcategoriesByLang.es[activeCat];
+  if (!canonical) return null;
+  const localized = subcategoriesByLang[lang]?.[activeCat] || canonical;
+  if (Array.isArray(canonical)) {
+    return canonical.map((label, idx) => ({ value: label, label: localized[idx] || label }));
+  }
+  return Object.keys(canonical).map((slug) => ({ value: slug, label: localized[slug] || canonical[slug] }));
+}
 import AdSenseBanner from './components/common/AdSenseBanner';
 const OnboardingModal = React.lazy(() => import('./components/OnboardingModal'));
 import {
@@ -3966,7 +3979,7 @@ function App() {
                 <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               </Suspense>
             </div>
-            {activeCat && (subcategoriesByLang[lang]?.[activeCat] || subcategoriesByLang.es[activeCat]) && (
+            {activeCat && getSubcategoryOptions(activeCat, lang) && (
               <div className="mt-2 w-full">
                 <select
                   value={activeSub}
@@ -3988,10 +4001,8 @@ function App() {
                   }}
                 >
                   <option value="">{lang === 'es' ? 'Todas las subcategorías' : 'All subcategories'}</option>
-                  {subcategoriesByLang.es[activeCat].map((canonicalLabel, idx) => (
-                    <option key={canonicalLabel} value={canonicalLabel}>
-                      {(subcategoriesByLang[lang]?.[activeCat] || subcategoriesByLang.es[activeCat])[idx] || canonicalLabel}
-                    </option>
+                  {getSubcategoryOptions(activeCat, lang).map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
               </div>
@@ -4005,7 +4016,7 @@ function App() {
               {headerCategories.map(c => (
                 <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{c.label}</button>
               ))}
-              {activeCat && (subcategoriesByLang[lang]?.[activeCat] || subcategoriesByLang.es[activeCat]) && (
+              {activeCat && getSubcategoryOptions(activeCat, lang) && (
                 <div className="relative ml-2 shrink-0 flex items-center">
                   <span className="text-[12px] text-slate-400 mr-2">/</span>
                   <select
@@ -4022,10 +4033,8 @@ function App() {
                     className="h-[32px] px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-[12px] font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:ring-2 focus:ring-[#84CC16]/30"
                   >
                     <option value="">{lang === 'es' ? 'Todas las subcategorías' : 'All subcategories'}</option>
-                    {subcategoriesByLang.es[activeCat].map((canonicalLabel, idx) => (
-                      <option key={canonicalLabel} value={canonicalLabel}>
-                        {(subcategoriesByLang[lang]?.[activeCat] || subcategoriesByLang.es[activeCat])[idx] || canonicalLabel}
-                      </option>
+                    {getSubcategoryOptions(activeCat, lang).map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
                 </div>
