@@ -70,6 +70,7 @@ async function sendServerEvent(endpoint, payload) {
     await fetch(`${META_API_BASE}/${endpoint}`, {
       method: 'POST',
       credentials: 'same-origin',
+      keepalive: true,
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
@@ -111,8 +112,9 @@ function sendBrowserEvent(metaConfig, payload, eventID) {
 function sendMappedEvent(metaConfig, item = {}) {
   const payload = buildPayload(item);
   const isReg = metaConfig.metaName === 'CompleteRegistration';
+  const isPostAd = metaConfig.metaName === 'PostAd';
   
-  if (!isReg && !payload.listing_id) return;
+  if (!isReg && !isPostAd && !payload.listing_id) return;
 
   const id = eventId(metaConfig.endpoint, payload.listing_id || 'user');
   const method = clean(item.method || item.contact_method || metaConfig.method || '');
