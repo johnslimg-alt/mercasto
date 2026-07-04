@@ -1,6 +1,7 @@
 .git
 .github
 .gitignore
+.claude/worktrees
 .env
 .env.*
 *.pem
