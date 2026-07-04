@@ -194,7 +194,15 @@ class CategoryAttributeSeeder extends Seeder
 
         $catalog = [
             'motor' => [
-                ['marca', 'Marca', 'select', ['Nissan', 'Toyota', 'Honda', 'Volkswagen', 'Chevrolet', 'Ford', 'Otra']],
+                ['marca', 'Marca', 'select', [
+                    'Chevrolet', 'Ford', 'RAM', 'Dodge', 'Jeep', 'Chrysler', 'GMC', 'Cadillac', 'Buick', 'Lincoln', 'Tesla',
+                    'Toyota', 'Honda', 'Nissan', 'Mazda', 'Mitsubishi', 'Suzuki', 'Subaru', 'Lexus', 'Acura', 'Infiniti', 'Isuzu', 'Kia', 'Hyundai', 'Genesis',
+                    'Volkswagen', 'BMW', 'Mercedes-Benz', 'Audi', 'Porsche', 'MINI', 'Smart',
+                    'SEAT', 'Renault', 'Peugeot', 'Citroën', 'Fiat', 'Alfa Romeo', 'Volvo', 'Land Rover', 'Jaguar',
+                    'BYD', 'MG', 'Chirey', 'JAC', 'GWM (Haval)', 'Changan', 'Omoda/Jaecoo', 'DFSK', 'Foton',
+                    'Scania', 'International', 'Freightliner', 'MAN', 'Iveco', 'Dina', 'Hino',
+                    'Otra',
+                ]],
                 ['modelo', 'Modelo', 'text', null],
                 ['year', 'Año', 'number', null],
                 ['km', 'Kilometraje', 'number', null],
