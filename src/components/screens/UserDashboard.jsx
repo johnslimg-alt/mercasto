@@ -745,17 +745,34 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                               {/* Actions */}
                               <div className="flex flex-col gap-2">
+                                <a 
+                                  href={`/#ad-${ad.id}`}
+                                  onClick={() => setCurrentTab('home')}
+                                  title="Ver anuncio"
+                                  className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 flex items-center justify-center"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </a>
                                 <button 
                                   onClick={() => handleEditAd(ad)}
+                                  title="Editar anuncio"
                                   className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
                                 >
                                   <Pencil className="w-4 h-4" />
                                 </button>
                                 <button 
                                   onClick={() => handleToggleAdStatus(ad)}
+                                  title={ad.status === 'active' ? "Pausar anuncio" : "Activar anuncio"}
                                   className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
                                 >
                                   {ad.status === 'active' ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteAd(ad.id)}
+                                  title="Eliminar anuncio"
+                                  className="btn-sm bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
+                                >
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
                             </div>

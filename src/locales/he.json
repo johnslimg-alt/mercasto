@@ -121,7 +121,10 @@
     "call": "התקשר",
     "sendMessage": "שלח הודעה",
     "quickResponse": "תגובה מהירה",
-    "securityWarning": "אזהרת בטיחות: אל תשלם מקדמה מבלי לבדוק את המוצר תחילה."
+    "securityWarning": "אזהרת בטיחות: אל תשלם מקדמה מבלי לבדוק את המוצר תחילה.",
+    "register_to_contact": "הירשם כדי לראות את פרטי הקשר של המוכר.",
+    "login_to_comment": "התחבר או הירשם כדי להשאיר תגובה.",
+    "login_register": "התחבר / הירשם"
   },
   "gamification": {
     "level": "רמה",

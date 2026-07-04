@@ -8,6 +8,13 @@ const content = {
     de: ['Finden Sie Ihr ideales Auto in Mexiko', 'Tausende Neu- und Gebrauchtwagen', 'Marke, Modell oder Baujahr…', 'Empfohlene Fahrzeuge'],
     fr: ['Trouvez votre voiture idéale au Mexique', 'Des milliers de voitures neuves et d’occasion', 'Marque, modèle ou année…', 'Véhicules en vedette'],
   },
+  motor: {
+    es: ['Encuentra tu vehículo ideal y repuestos', 'Autos, motos, camionetas, refacciones y más al mejor precio', 'Buscar por marca, modelo, tipo…', 'Destacados en Motor'],
+    en: ['Find your ideal vehicle and parts', 'Cars, bikes, trucks, parts and more at the best price', 'Search by make, model or type…', 'Featured in Motor'],
+    ru: ['Найдите транспорт и запчасти в Мексике', 'Авто, мотоциклы, грузовики и автозапчасти', 'Марка, модель или тип…', 'Популярное в разделе Мотор'],
+    de: ['Finden Sie Ihr ideales Fahrzeug und Teile', 'Autos, Motorräder, LKWs, Teile und mehr', 'Marke, Modell oder Typ…', 'Beliebt in Motor'],
+    fr: ['Trouvez votre véhicule idéal et pièces', 'Voitures, motos, camions, pièces et plus', 'Marque, modèle ou type…', 'En vedette dans Moteur'],
+  },
   inmuebles: {
     es: ['Encuentra propiedades en México', 'Compra, renta o invierte en los mejores inmuebles del país', 'Ciudad, colonia o tipo de propiedad…', 'Propiedades destacadas'],
     en: ['Find properties in Mexico', 'Buy, rent or invest in properties across the country', 'City, neighborhood or property type…', 'Featured properties'],
@@ -28,6 +35,20 @@ const content = {
     ru: ['Найдите работу в Мексике', 'Тысячи вакансий по всей стране', 'Должность, компания или город…', 'Новые вакансии'],
     de: ['Jobs in Mexiko finden', 'Tausende Stellenangebote im ganzen Land', 'Position, Unternehmen oder Stadt…', 'Aktuelle Stellen'],
     fr: ['Trouvez un emploi au Mexique', 'Des milliers d’opportunités dans tout le pays', 'Poste, entreprise ou ville…', 'Offres récentes'],
+  },
+  productos: {
+    es: ['Compra y vende artículos en México', 'Miles de productos nuevos y usados al mejor precio', 'Buscar productos, marcas, categorías…', 'Artículos destacados'],
+    en: ['Buy and sell items in Mexico', 'Thousands of new and used products at the best price', 'Search goods, brands, categories…', 'Featured items'],
+    ru: ['Покупайте и продавайте товары в Мексике', 'Тысячи новых и б/у товаров по лучшим ценам', 'Поиск товаров, брендов, категорий…', 'Популярные товары'],
+    de: ['Kaufen und verkaufen Sie Artikel in Mexiko', 'Tausende neue und gebrauchte Produkte', 'Waren, Marken, Kategorien suchen…', 'Empfohlene Artikel'],
+    fr: ['Achetez et vendez des articles au Mexique', 'Des milliers de produits neufs et d\'occasion', 'Rechercher des articles, marques, catégories…', 'Articles en vedette'],
+  },
+  turismo: {
+    es: ['Explora el turismo y aventuras en México', 'Hoteles, hospedaje, tours, boletos a eventos y artículos de viaje', 'Buscar hoteles, tours, destinos…', 'Destacados en Turismo'],
+    en: ['Explore tourism and adventures in Mexico', 'Hotels, lodging, tours, event tickets and travel gear', 'Search hotels, tours, destinations…', 'Featured in Tourism'],
+    ru: ['Откройте для себя туризм и отдых в Мексике', 'Отели, жилье, туры, билеты на мероприятия и товары для туризма', 'Поиск отелей, туров, направлений…', 'Популярное в разделе Туризм'],
+    de: ['Entdecken Sie Tourismus und Abenteuer in Mexiko', 'Hotels, Unterkünfte, Touren und Tickets', 'Nach Hotels, Touren, Zielen suchen…', 'Beliebt in Tourismus'],
+    fr: ['Découvrez le tourisme et l\'aventure au Mexique', 'Hôtels, hébergement, circuits et billets', 'Rechercher des hôtels, circuits, destinations…', 'En vedette dans Tourisme'],
   },
 };
 

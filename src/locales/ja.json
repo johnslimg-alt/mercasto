@@ -121,7 +121,10 @@
     "call": "電話をかける",
     "sendMessage": "メッセージを送信",
     "quickResponse": "クイック返信",
-    "securityWarning": "安全警告：現物を確認する前の前払いは避けてください。"
+    "securityWarning": "安全警告：現物を確認する前の前払いは避けてください。",
+    "register_to_contact": "販売者の連絡先を確認するには登録してください。",
+    "login_to_comment": "コメントを投稿するにはログインまたは登録してください。",
+    "login_register": "ログイン / 登録"
   },
   "gamification": {
     "level": "レベル",

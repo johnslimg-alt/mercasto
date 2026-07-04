@@ -150,6 +150,114 @@ const educationFilters = [
   { id: 'certificado', label: 'Certificación', type: 'checkbox', options: ['Constancia', 'Certificado oficial', 'Validez SEP', 'Sin certificado'] },
 ];
 
+const hospedajeFilters = [
+  { id: 'tipo_alojamiento', label: 'Tipo de alojamiento', type: 'select', options: ['Hotel', 'Casa de huéspedes', 'Hostal', 'Villas y Cabañas', 'Departamento', 'Glamping/Camping'] },
+  { id: 'duracion_renta', label: 'Esquema de renta', type: 'checkbox', options: ['Por noche', 'Por semana', 'Por mes', 'Fin de semana'] },
+  { id: 'habitaciones', label: 'Habitaciones/Dormitorios', type: 'select', options: ['1 habitación', '2 habitaciones', '3 habitaciones', '4+ habitaciones'] },
+  { id: 'amenidades_hospedaje', label: 'Servicios y Amenidades', type: 'checkbox', options: ['Alberca / Piscina', 'Wi-Fi gratis', 'Aire acondicionado', 'Estacionamiento', 'Pet friendly', 'Desayuno incluido', 'Todo incluido', 'Cocina equipada'] },
+  { id: 'cercania_playa', label: 'Cercanía a la playa', type: 'checkbox', options: ['Primera línea de playa', 'A menos de 500m', 'A menos de 1km', 'Zona céntrica', 'Zona ecoturística'] },
+  { id: 'estrellas', label: 'Categoría (Estrellas)', type: 'checkbox', options: ['1 estrella', '2 estrellas', '3 estrellas', '4 estrellas', '5 estrellas', 'Boutique / Sin estrellas'] },
+];
+
+const toursFilters = [
+  { id: 'tipo_tour', label: 'Tipo de viaje', type: 'select', options: ['Excursión de 1 día', 'Aventura y Naturaleza', 'Tour Cultural/Histórico', 'Excursión de Playa/Acuático', 'Ecoturismo / Senderismo'] },
+  { id: 'duracion_viaje', label: 'Duración', type: 'checkbox', options: ['Unas horas', '1 día completo', '2-3 días', '1 semana', 'Más de 1 semana'] },
+  { id: 'dificultad', label: 'Dificultad física', type: 'checkbox', options: ['Fácil (Apto para todos)', 'Moderada', 'Difícil / Extrema'] },
+  { id: 'incluye_tour', label: 'Servicios incluidos', type: 'checkbox', options: ['Transporte incluido', 'Guía bilingüe', 'Comida incluida', 'Entradas y equipo'] },
+  { id: 'tamano_grupo', label: 'Tamaño del grupo', type: 'checkbox', options: ['Privado (Individual)', 'Grupo pequeño (<10)', 'Grupo grande (>10)'] },
+];
+
+const rentaAutosFilters = [
+  { id: 'tipo_auto', label: 'Tipo de vehículo', type: 'select', options: ['Sedán', 'Hatchback', 'SUV (Camioneta)', 'Pickup', 'Van / Minivan', 'Convertible', 'Deportivo'] },
+  { id: 'transmision', label: 'Transmisión', type: 'checkbox', options: ['Automática', 'Manual'] },
+  { id: 'combustible', label: 'Combustible', type: 'checkbox', options: ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico'] },
+  { id: 'capacidad_pasajeros', label: 'Pasajeros', type: 'checkbox', options: ['2 personas', '4 personas', '5 personas', '7 personas', '8+ personas'] },
+  { id: 'servicios_incluidos', label: 'Incluido en la renta', type: 'checkbox', options: ['Seguro de cobertura amplia', 'Kilometraje ilimitado', 'Segundo conductor gratis', 'Entrega en aeropuerto', 'Silla de bebé'] },
+  { id: 'requisitos', label: 'Requisitos', type: 'checkbox', options: ['Edad mínima 21 años', 'Edad mínima 25 años', 'Tarjeta de crédito', 'Depósito en garantía'] }
+];
+
+const rentaMotosFilters = [
+  { id: 'tipo_moto', label: 'Tipo de moto', type: 'select', options: ['Scooter', 'Motoneta urbana', 'Motos de trabajo', 'Chopper / Cruiser', 'Deportiva', 'Enduro / Cross / Off-road'] },
+  { id: 'cilindrada', label: 'Cilindrada', type: 'select', options: ['Menos de 125cc', '125cc - 250cc', '250cc - 600cc', 'Más de 600cc'] },
+  { id: 'transmision', label: 'Transmisión', type: 'checkbox', options: ['Automática', 'Semiautomática', 'Manual'] },
+  { id: 'equipo_incluido', label: 'Equipo incluido', type: 'checkbox', options: ['Casco extra', 'Soporte para celular', 'Candado / Cadena de seguridad', 'Seguro básico'] },
+  { id: 'licencia_requerida', label: 'Requisitos de licencia', type: 'checkbox', options: ['Licencia de moto obligatoria', 'No requiere licencia'] }
+];
+
+const rentaBicisFilters = [
+  { id: 'tipo_bici', label: 'Tipo de bicicleta', type: 'select', options: ['De ruta (Carreras)', 'De montaña (MTB)', 'Urbana / Paseo', 'Eléctrica (E-bike)', 'Infantil'] },
+  { id: 'accesorios_incluidos', label: 'Accesorios incluidos', type: 'checkbox', options: ['Casco', 'Luces delantera/trasera', 'Candado de seguridad', 'Portabultos / Canastilla', 'Kit de herramientas'] },
+  { id: 'talla_cuadro', label: 'Talla del cuadro', type: 'checkbox', options: ['Talla S', 'Talla M', 'Talla L', 'Talla XL'] }
+];
+
+const rentaYatesFilters = [
+  { id: 'tipo_embarcacion', label: 'Tipo de embarcación', type: 'select', options: ['Yate de lujo', 'Lancha rápida', 'Catamarán', 'Velero', 'Pontón'] },
+  { id: 'eslora', label: 'Eslora (Largo del barco)', type: 'select', options: ['Menos de 30 pies', '30 - 45 pies', '45 - 60 pies', 'Más de 60 pies (Megayate)'] },
+  { id: 'capacidad_personas', label: 'Capacidad de personas', type: 'checkbox', options: ['Hasta 6 personas', '6 - 12 personas', '12 - 20 personas', 'Más de 20 personas'] },
+  { id: 'tripulacion', label: 'Tripulación', type: 'checkbox', options: ['Incluye Capitán y marinero', 'Renta sin tripulación (Bareboat)', 'Servicio de chef a bordo'] },
+  { id: 'servicios_bordo', label: 'Uso y comodidades', type: 'checkbox', options: ['Aire acondicionado', 'Cocina / Parrilla', 'Equipo de sonido Bluetooth', 'Aguas y refrescos incluidos', 'Equipo de snorkel'] }
+];
+
+const rentaAcuaticoFilters = [
+  { id: 'potencia_jetski', label: 'Potencia / Tipo', type: 'select', options: ['Recreativo estándar', 'Alto rendimiento (High Performance)', 'Modo familiar'] },
+  { id: 'pasajeros_jetski', label: 'Capacidad', type: 'checkbox', options: ['1 persona', '2 personas', '3 personas'] },
+  { id: 'duracion_minima', label: 'Duración mínima', type: 'checkbox', options: ['30 minutos', '1 hora', 'Medio día', 'Día completo'] },
+  { id: 'seguridad_jetski', label: 'Seguridad', type: 'checkbox', options: ['Chalecos salvavidas incluidos', 'Instructor / Guía incluido', 'Seguro de accidentes'] }
+];
+
+const rentaEquipamientoFilters = [
+  { id: 'tipo_equipo', label: 'Tipo de equipo', type: 'select', options: ['Tabla de Surf', 'Tabla de Paddle / SUP', 'Kayak individual', 'Kayak doble', 'Equipo de Windsurf', 'Equipo de Snorkel'] },
+  { id: 'accesorios_surf', label: 'Accesorios incluidos', type: 'checkbox', options: ['Remos', 'Chaleco salvavidas', 'Leash / Correa de seguridad', 'Neopreno / Traje de agua'] }
+];
+
+const rentaQuadsFilters = [
+  { id: 'tipo_quad', label: 'Tipo de vehículo off-road', type: 'select', options: ['ATV / Cuatrimoto', 'UTV / Buggy (Side-by-Side)', 'Dirt Bike / Moto de cross'] },
+  { id: 'capacidad_quad', label: 'Pasajeros', type: 'checkbox', options: ['1 persona', '2 personas', '4 personas'] },
+  { id: 'cilindrada_quad', label: 'Cilindrada', type: 'select', options: ['150cc - 300cc', '300cc - 570cc', '800cc - 1000cc'] },
+  { id: 'proteccion_quad', label: 'Equipo de protección', type: 'checkbox', options: ['Casco incluido', 'Goggles / Lentes de protección', 'Guantes y coderas'] }
+];
+
+const rentaCampersFilters = [
+  { id: 'tipo_casa_rodante', label: 'Tipo de casa rodante', type: 'select', options: ['Autocaravana Clase A/B/C', 'Camper Van (Furgoneta)', 'Remolque / Caravana / Trailer'] },
+  { id: 'capacidad_dormir', label: 'Спальных мест / Plazas', type: 'checkbox', options: ['2 personas', '3 - 4 personas', '5 - 6 personas', '6+ personas'] },
+  { id: 'equipamiento_camper', label: 'Equipamiento', type: 'checkbox', options: ['Cocina con estufa', 'Refrigerador', 'Baño con ducha', 'Aire acondicionado', 'Paneles solares', 'Toldo exterior'] }
+];
+
+const rentalVehiclesFilters = [
+  { id: 'tipo_vehiculo', label: 'Tipo de transporte', type: 'select', options: ['Auto / Camioneta', 'Yate / Lancha', 'Кемперы / RVs', 'Motos y Quads', 'Bicicletas / Patines'] },
+  { id: 'esquema_renta', label: 'Esquema de renta', type: 'checkbox', options: ['Por hora', 'Por día / Por jornada', 'Semanal', 'Mensual'] },
+  { id: 'capacidad_pasajeros', label: 'Capacidad de pasajeros', type: 'select', options: ['1-2 personas', '3-5 personas', '6-10 personas', 'Más de 10 personas'] },
+  { id: 'tripulacion', label: 'Tripulación / Chofer', type: 'checkbox', options: ['Sin chofer / Bareboat', 'Con chofer / Capitán', 'Servicio todo incluido'] },
+  { id: 'combustible_renta', label: 'Combustible / Transmisión', type: 'checkbox', options: ['Automático', 'Manual', 'Gasolina', 'Eléctrico / Híbrido', 'Diésel'] },
+];
+
+const travelGearFilters = [
+  { id: 'categoria_articulo', label: 'Categoría de artículo', type: 'select', options: ['Casas de campaña y Sacos', 'Mochilas y Maletas', 'Ropa de senderismo', 'Utensilios de cocina y Estufas', 'Linternas y GPS', 'Artículos de playa / Picnic'] },
+  { id: 'condicion', label: 'Condición', type: 'checkbox', options: ['Nuevo', 'Como nuevo', 'Usado', 'Restaurado'] },
+  { id: 'publico', label: 'Público objetivo', type: 'checkbox', options: ['Hombre', 'Mujer', 'Unisex', 'Niños'] },
+];
+
+const souvenirsFilters = [
+  { id: 'tipo_souvenir', label: 'Tipo de recuerdo', type: 'select', options: ['Artesanías locales', 'Ropa y Textiles típicos', 'Tequila / Mezcal / Alimentos', 'Joyería y Accesorios', 'Imanes y Recuerdos pequeños'] },
+  { id: 'material_souvenir', label: 'Material principal', type: 'checkbox', options: ['Cerámica / Barro', 'Madera tallada', 'Plata / Oro', 'Lana / Algodón', 'Vidrio soplado'] },
+];
+
+const guiasFilters = [
+  { id: 'tipo_servicio', label: 'Servicio brindado', type: 'select', options: ['Guía turístico / Certificado', 'Traductor / Intérprete', 'Fotógrafo de viajes', 'Chofer privado / Transfer'] },
+  { id: 'idiomas_servicio', label: 'Idiomas dominados', type: 'checkbox', options: ['Español', 'Inglés', 'Ruso', 'Francés', 'Alemán', 'Portugués', 'Italiano'] },
+  { id: 'transporte_guias', label: 'Movilidad', type: 'checkbox', options: ['Cuenta con transporte propio', 'El cliente provee transporte', 'Tours a pie'] },
+];
+
+const atraccionesFilters = [
+  { id: 'tipo_actividad', label: 'Tipo de actividad', type: 'select', options: ['Parques temáticos / Acuáticos', 'Buceo / Surf / Snorkel', 'Tours de aventura (tirolesa, etc)', 'Catas / Clases de cocina', 'Zoológicos / Acuarios'] },
+  { id: 'ideal_para', label: 'Ideal para', type: 'checkbox', options: ['Familias con niños', 'Parejas', 'Grupos / Despedidas', 'Viajeros solitarios', 'Aventureros / Extremo'] },
+];
+
+const retirosFilters = [
+  { id: 'enfoque_retiro', label: 'Enfoque del retiro', type: 'select', options: ['Yoga y Meditación', 'Detox y Masajes (Spa)', 'Espiritual / Temazcal', 'Fitness y Deporte', 'Retiros de salud holística'] },
+  { id: 'formato_retiro', label: 'Alojamiento', type: 'checkbox', options: ['Hospedaje completo incluido', 'Solo Day Pass (Pase de un día)', 'Alimentos saludables incluidos'] },
+];
+
 export const filterConfig = {
   coches: autoFilters,
   motor: autoFilters,
@@ -268,4 +376,32 @@ export const filterConfig = {
   'boletos/conciertos': ticketFilters,
   'boletos/deportes': ticketFilters,
   'boletos/teatro': ticketFilters,
+
+  turismo: hospedajeFilters,
+  hospedaje: hospedajeFilters,
+  'turismo/hospedaje': hospedajeFilters,
+  tours: toursFilters,
+  'turismo/tours': toursFilters,
+  boletos_turismo: ticketFilters,
+  'turismo/boletos_turismo': ticketFilters,
+  articulos_camping: travelGearFilters,
+  'turismo/articulos_camping': travelGearFilters,
+  souvenirs: souvenirsFilters,
+  'turismo/souvenirs': souvenirsFilters,
+  renta_vehiculos: rentalVehiclesFilters,
+  'turismo/renta_vehiculos': rentalVehiclesFilters,
+  'renta_vehiculos/renta_autos': rentaAutosFilters,
+  'renta_vehiculos/renta_motos': rentaMotosFilters,
+  'renta_vehiculos/renta_bicis': rentaBicisFilters,
+  'renta_vehiculos/renta_yates': rentaYatesFilters,
+  'renta_vehiculos/renta_acuatico': rentaAcuaticoFilters,
+  'renta_vehiculos/renta_equipamiento': rentaEquipamientoFilters,
+  'renta_vehiculos/renta_quads': rentaQuadsFilters,
+  'renta_vehiculos/renta_campers': rentaCampersFilters,
+  guias_servicios: guiasFilters,
+  'turismo/guias_servicios': guiasFilters,
+  atracciones_exp: atraccionesFilters,
+  'turismo/atracciones_exp': atraccionesFilters,
+  retiros_bienestar: retirosFilters,
+  'turismo/retiros_bienestar': retirosFilters,
 };

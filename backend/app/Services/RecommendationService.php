@@ -81,13 +81,13 @@ class RecommendationService
         // Get categories and states from reference ads
         $referenceAds = Ad::whereIn('id', $referenceIds)
             ->where('status', 'active')
-            ->get(['id', 'category_id', 'state', 'price']);
+            ->get(['id', 'category', 'state', 'price']);
 
         if ($referenceAds->isEmpty()) {
             return [];
         }
 
-        $categoryIds = $referenceAds->pluck('category_id')->unique()->toArray();
+        $categoryIds = $referenceAds->pluck('category')->unique()->toArray();
         $states = $referenceAds->pluck('state')->unique()->filter()->toArray();
         $avgPrice = $referenceAds->avg('price');
 
@@ -102,7 +102,7 @@ class RecommendationService
 
         // Filter by category (high priority)
         if (!empty($categoryIds)) {
-            $query->whereIn('category_id', $categoryIds);
+            $query->whereIn('category', $categoryIds);
         }
 
         // Filter by state (medium priority)
@@ -183,7 +183,7 @@ class RecommendationService
         $preferredCategories = DB::table('favorites')
             ->join('ads', 'favorites.ad_id', '=', 'ads.id')
             ->where('favorites.user_id', $user->id)
-            ->pluck('ads.category_id')
+            ->pluck('ads.category')
             ->unique()
             ->toArray();
 
@@ -191,7 +191,7 @@ class RecommendationService
             return [];
         }
 
-        $ads = Ad::whereIn('category_id', $preferredCategories)
+        $ads = Ad::whereIn('category', $preferredCategories)
             ->where('status', 'active')
             ->where('id', '!=', $excludeAdId)
             ->whereNotIn('id', function($query) use ($user) {
@@ -279,7 +279,7 @@ class RecommendationService
                 'currency' => $ad->currency ?? 'MXN',
                 'state' => $ad->state,
                 'city' => $ad->city,
-                'category_id' => $ad->category_id,
+                'category' => $ad->category,
                 'images' => $ad->images ?? [],
                 'views' => $ad->views ?? 0,
                 'created_at' => $ad->created_at,

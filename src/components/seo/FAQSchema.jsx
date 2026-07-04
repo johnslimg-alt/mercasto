@@ -9,21 +9,21 @@ import { getTranslations } from '../../utils/translations';
 export const FAQ_DATA = {
   home: {
     es: [
-      { question: "¿Qué es Mercasto?", answer: "Mercasto es el marketplace líder de anuncios clasificados en México donde puedes comprar, vender y rentar autos, inmuebles, servicios, empleo, electrónica y más en los 32 estados del país." },
+      { question: "¿Qué es Mercasto?", answer: "Mercasto es el portal líder de anuncios clasificados en México donde puedes comprar, vender y rentar autos, inmuebles, servicios, empleo, electrónica y más en los 32 estados del país." },
       { question: "¿Es gratis publicar anuncios en Mercasto?", answer: "Sí, publicar anuncios básicos es completamente gratuito. También ofrecemos planes PRO con características avanzadas como fotos ilimitadas, posicionamiento prioritario y estadísticas detalladas." },
       { question: "¿En qué estados de México opera Mercasto?", answer: "Mercasto opera en los 32 estados de México: Aguascalientes, Baja California, Baja California Sur, Campeche, Chiapas, Chihuahua, Ciudad de México, Coahuila, Colima, Durango, Estado de México, Guanajuato, Guerrero, Hidalgo, Jalisco, Michoacán, Morelos, Nayarit, Nuevo León, Oaxaca, Puebla, Querétaro, Quintana Roo, San Luis Potosí, Sinaloa, Sonora, Tabasco, Tamaulipas, Tlaxcala, Veracruz, Yucatán y Zacatecas." },
       { question: "¿Cómo puedo verificar mi cuenta?", answer: "Puedes verificar tu cuenta a través de email, teléfono o documento de identidad (KYC). La verificación aumenta la confianza de otros usuarios y te permite acceder a funciones premium." },
       { question: "¿Mercasto es seguro?", answer: "Sí, Mercasto cuenta con verificación de usuarios, encriptación SSL, protección contra fraudes, sistema de reportes y moderación 24/7 para garantizar transacciones seguras." }
     ],
     en: [
-      { question: "What is Mercasto?", answer: "Mercasto is the leading classifieds marketplace in Mexico where you can buy, sell, and rent cars, real estate, services, jobs, electronics, and more across all 32 states." },
+      { question: "What is Mercasto?", answer: "Mercasto is the leading classifieds site in Mexico where you can buy, sell, and rent cars, real estate, services, jobs, electronics, and more across all 32 states." },
       { question: "Is it free to post ads on Mercasto?", answer: "Yes, posting basic ads is completely free. We also offer PRO plans with advanced features like unlimited photos, priority positioning, and detailed statistics." },
       { question: "In which states of Mexico does Mercasto operate?", answer: "Mercasto operates in all 32 Mexican states: Aguascalientes, Baja California, Baja California Sur, Campeche, Chiapas, Chihuahua, Mexico City, Coahuila, Colima, Durango, State of Mexico, Guanajuato, Guerrero, Hidalgo, Jalisco, Michoacán, Morelos, Nayarit, Nuevo León, Oaxaca, Puebla, Querétaro, Quintana Roo, San Luis Potosí, Sinaloa, Sonora, Tabasco, Tamaulipas, Tlaxcala, Veracruz, Yucatán, and Zacatecas." },
       { question: "How can I verify my account?", answer: "You can verify your account via email, phone, or identity document (KYC). Verification increases trust among other users and grants access to premium features." },
       { question: "Is Mercasto safe?", answer: "Yes, Mercasto features user verification, SSL encryption, fraud protection, a reporting system, and 24/7 moderation to ensure safe transactions." }
     ],
     pt: [
-      { question: "O que é o Mercasto?", answer: "O Mercasto é o principal marketplace de classificados no México, onde você pode comprar, vender e alugar carros, imóveis, serviços, empregos, eletrônicos e muito mais em todos os 32 estados do país." },
+      { question: "O que é o Mercasto?", answer: "O Mercasto é o principal site de classificados no México, onde você pode comprar, vender e alugar carros, imóveis, serviços, empregos, eletrônicos e muito mais em todos os 32 estados do país." },
       { question: "É grátis publicar anúncios no Mercasto?", answer: "Sim, publicar anúncios básicos é totalmente gratuito. Também oferecemos planos PRO com recursos avançados, como fotos ilimitadas, posicionamento prioritário e estatísticas detalhadas." },
       { question: "Em quais estados do México o Mercasto opera?", answer: "O Mercasto opera em todos os 32 estados do México: Aguascalientes, Baja California, Baja California Sur, Campeche, Chiapas, Chihuahua, Cidade do México, Coahuila, Colima, Durango, Estado do México, Guanajuato, Guerrero, Hidalgo, Jalisco, Michoacán, Morelos, Nayarit, Nuevo León, Oaxaca, Puebla, Querétaro, Quintana Roo, San Luis Potosí, Sinaloa, Sonora, Tabasco, Tamaulipas, Tlaxcala, Veracruz, Yucatán e Zacatecas." },
       { question: "Como posso verificar minha conta?", answer: "Você pode verificar sua conta via e-mail, telefone ou documento de identidade (KYC). A verificação aumenta a confiança de outros usuários e permite acessar recursos premium." },

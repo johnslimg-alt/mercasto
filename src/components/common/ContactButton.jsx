@@ -208,8 +208,31 @@ export default function ContactButton({ ad, user, className = '' }) {
             </div>
 
             {/* Contact Channels */}
-            <div className="p-6 space-y-3">
-              {whatsappUrl && (
+            <div className="p-6">
+              {(!user || !user.id) ? (
+                <div className="text-center py-4 px-2 space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-2">
+                    <Shield className="w-6 h-6" />
+                  </div>
+                  <h4 className="font-bold text-[16px] text-gray-900 dark:text-white leading-tight">
+                    Acceso Restringido
+                  </h4>
+                  <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-normal">
+                    Зарегистрируйтесь для того, чтобы увидеть контакты продавца.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      window.location.href = '/profile';
+                    }}
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                  >
+                    Iniciar sesión / Registrarse
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {whatsappUrl && (
                 <button
                   onClick={handleWhatsAppClick}
                   className="w-full flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-800/50 rounded-xl transition-all group"
@@ -349,6 +372,8 @@ export default function ContactButton({ ad, user, className = '' }) {
                     Tu mensaje se envía por Mercasto. El correo del vendedor no se comparte.
                   </p>
                 </form>
+              )}
+                </div>
               )}
             </div>
 

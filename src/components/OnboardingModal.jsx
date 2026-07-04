@@ -109,7 +109,7 @@ export default function OnboardingModal({ onClose, user, t, lang }) {
       id: 'welcome',
       emoji: '🎉',
       title: dictionary.onboarding_welcome_title || `¡Bienvenido${user?.name ? `, ${user.name.split(' ')[0]}` : ''}!`,
-      subtitle: dictionary.onboarding_welcome_subtitle || 'Tu nuevo marketplace de confianza',
+      subtitle: dictionary.onboarding_welcome_subtitle || 'Los clasificados de confianza para México',
     },
     // Step 1: Role selection
     {
@@ -205,7 +205,7 @@ export default function OnboardingModal({ onClose, user, t, lang }) {
     if (selectedRole === 'seller') {
       return {
         primary: 'Crear mi primer anuncio',
-        secondary: 'Explorar el marketplace',
+        secondary: 'Explorar clasificados',
         icon: Store,
       };
     }

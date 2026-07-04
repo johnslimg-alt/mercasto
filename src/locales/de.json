@@ -121,7 +121,10 @@
     "call": "Anrufen",
     "sendMessage": "Nachricht senden",
     "quickResponse": "Schnelle Antwort",
-    "securityWarning": "Sicherheitshinweis: Zahlen Sie keine Anzahlungen, ohne das Produkt geprüft zu haben."
+    "securityWarning": "Sicherheitshinweis: Zahlen Sie keine Anzahlungen, ohne das Produkt geprüft zu haben.",
+    "register_to_contact": "Registrieren Sie sich, um die Kontaktdaten des Verkäufers zu sehen.",
+    "login_to_comment": "Anmelden oder registrieren, um einen Kommentar zu hinterlassen.",
+    "login_register": "Anmelden / Registrieren"
   },
   "gamification": {
     "level": "Stufe",

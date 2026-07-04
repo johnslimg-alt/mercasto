@@ -121,7 +121,10 @@
     "call": "전화하기",
     "sendMessage": "메시지 보내기",
     "quickResponse": "빠른 답장",
-    "securityWarning": "안전 경고: 상품을 확인하기 전에 선금을 지불하지 마십시오."
+    "securityWarning": "안전 경고: 상품을 확인하기 전에 선금을 지불하지 마십시오.",
+    "register_to_contact": "판매자 연락처를 보려면 가입하세요.",
+    "login_to_comment": "댓글을 남기려면 로그인하거나 가입하세요.",
+    "login_register": "로그인 / 회원가입"
   },
   "gamification": {
     "level": "레벨",

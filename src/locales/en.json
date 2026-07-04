@@ -121,7 +121,10 @@
     "call": "Call",
     "sendMessage": "Send message",
     "quickResponse": "Quick response",
-    "securityWarning": "Security: Don't pay in advance without verifying the product."
+    "securityWarning": "Security: Don't pay in advance without verifying the product.",
+    "register_to_contact": "Register to see the seller's contact details.",
+    "login_to_comment": "Sign in or register to leave a comment.",
+    "login_register": "Sign in / Register"
   },
   "gamification": {
     "level": "Level",

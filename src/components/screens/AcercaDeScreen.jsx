@@ -42,10 +42,10 @@ export default function AcercaDeScreen() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Acerca de Mercasto | El Marketplace de Confianza de México';
+    document.title = 'Acerca de Mercasto | El Portal de Clasificados de Confianza de México';
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
-    meta.content = 'Conoce la historia, misión y valores de Mercasto — el marketplace 100% mexicano que conecta compradores y vendedores con confianza y seguridad.';
+    meta.content = 'Conoce la historia, misión y valores de Mercasto — el portal de clasificados 100% mexicano que conecta compradores y vendedores con confianza y seguridad.';
     window.scrollTo(0, 0);
   }, []);
 
@@ -121,7 +121,7 @@ export default function AcercaDeScreen() {
               Fundamos Mercasto con una obsesión: hacer que cada transacción entre mexicanos sea segura. Verificamos perfiles, moderamos anuncios y ofrecemos herramientas de protección al comprador que ninguna otra plataforma ofrece en el país.
             </p>
             <p className="text-slate-600 leading-relaxed">
-              Hoy somos una comunidad vibrante que crece día a día, cubriendo los 32 estados y construyendo el marketplace de clasificados más confiable de México.
+              Hoy somos una comunidad vibrante que crece día a día, cubriendo los 32 estados y construyendo el portal de clasificados más confiable de México.
             </p>
           </div>
           <div className="bg-gradient-to-br from-lime-50 to-teal-50 rounded-2xl p-8 border border-lime-100">
@@ -171,7 +171,7 @@ export default function AcercaDeScreen() {
           Construido con <span className="text-red-500">❤️</span> en México
         </h2>
         <p className="text-slate-500 max-w-xl mx-auto mb-8 leading-relaxed">
-          Somos un equipo de ingenieros, diseñadores y expertos en marketplace apasionados por hacer que el comercio local funcione mejor para todos los mexicanos.
+          Somos un equipo de ingenieros, diseñadores y expertos en clasificados apasionados por hacer que el comercio local funcione mejor para todos los mexicanos.
         </p>
         <div className="flex flex-wrap justify-center gap-3 text-sm text-slate-500">
           {['Ciudad de México 🌆', 'Guadalajara 🌵', 'Monterrey ⛰️', 'Remoto 🇲🇽'].map(loc => (

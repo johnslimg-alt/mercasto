@@ -5,14 +5,14 @@ import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyView
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair, Car, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, Home as HomeIcon } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair, Car, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, ShoppingBag, Compass, Home as HomeIcon } from "lucide-react";
 
 // SEO Components for AEO
 import FAQSchema, { FAQ_DATA } from '../seo/FAQSchema';
 import ItemListSchema from '../seo/ItemListSchema';
 
 const LOCAL_ICON_MAP = {
-  Car, Home: HomeIcon, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, Store, Ticket, Crown, Star
+  Car, Home: HomeIcon, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, Store, Ticket, Crown, Star, ShoppingBag, Compass
 };
 const SidebarFilters = React.lazy(() => import('../common/SidebarFilters'));
 // MapV3 pulls Leaflet (~215 kB) — lazy load so it never blocks initial parse/paint
@@ -185,10 +185,10 @@ const LeafletMap = ({ ads, onViewAd }) => {
     <>
       <SEO
         title="Mercasto | Compra, Vende y Renta en Todo México"
-        description="Marketplace de clasificados para México: autos, inmuebles, servicios, empleo, electrónica y más. Publica gratis y encuentra lo que necesitas cerca de ti."
+        description="Clasificados en México: autos, inmuebles, servicios, empleo, electrónica y más. Publica gratis y encuentra lo que necesitas cerca de ti."
         image="https://mercasto.com/icon-512x512.png"
       />
-      <h1 style={{position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", borderWidth: 0}}>Mercasto - Compra, Vende y Renta en Todo México | Marketplace de Autos, Inmuebles, Servicios y Empleo</h1>
+      <h1 style={{position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", borderWidth: 0}}>Mercasto - Compra, Vende y Renta en Todo México | Clasificados de Autos, Inmuebles, Servicios y Empleo</h1>
       <div className="osm-embed-shell relative mb-4 md:mb-6 h-[190px] md:h-[320px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-md">
         {mapBody}
       </div>
@@ -294,7 +294,12 @@ const LeafletMap = ({ ads, onViewAd }) => {
               <MapV3
                 title="Todo México"
                 markers={markers}
-                onMarkerClick={onViewAd}
+                onMarkerClick={handleViewAdWrapper}
+                onSearchArea={(area) => {
+                  onSearchArea?.(area);
+                  setExpanded(false);
+                  showHomeToast("Búsqueda por área aplicada");
+                }}
                 showFullscreen={false}
                 className="h-full w-full border-0 shadow-none rounded-none"
               />
@@ -331,12 +336,12 @@ const LeafletMap = ({ ads, onViewAd }) => {
                 <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar pb-1">
                   {mapAds.slice(0, 10).map(({ ad }, index) => (
                     <button
-                      key={ad.id || index}
-                      type="button"
-                      onClick={() => onViewAd(ad)}
-                      className="shrink-0 rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-[11px] font-black text-white hover:bg-[#84CC16] hover:text-slate-950 hover:border-[#84CC16] transition-colors"
+                       key={ad.id || index}
+                       type="button"
+                       onClick={() => handleViewAdWrapper(ad)}
+                       className="shrink-0 rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-[11px] font-black text-white hover:bg-[#84CC16] hover:text-slate-950 hover:border-[#84CC16] transition-colors"
                     >
-                      ${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}
+                       ${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}
                     </button>
                   ))}
                 </div>
@@ -372,6 +377,10 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       return true;
     });
     const navigate = useNavigate();
+    const handleViewAdWrapper = React.useCallback((ad) => {
+      setExpanded(false);
+      handleViewAd?.(ad);
+    }, [handleViewAd]);
     const safeServerAds = React.useMemo(() => (Array.isArray(serverAds) ? serverAds : []), [serverAds]);
     const safeRealEstateAds = React.useMemo(() => (Array.isArray(realEstateAds) ? realEstateAds : []), [realEstateAds]);
     const safeJobAds = React.useMemo(() => (Array.isArray(jobAds) ? jobAds : []), [jobAds]);
@@ -421,52 +430,62 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
     const recentlyViewed = mockFallbacks?.recentlyViewed || [];
 
     const VERTICAL_SLUGS = {
-      'coches-y-motor': '/autos',
-      'motor': '/autos',
-      'coches': '/autos',
+      'coches-y-motor': '/motor',
+      'motor': '/motor',
+      'coches': '/motor',
       'inmobiliaria': '/inmuebles',
       'empleo': '/empleos',
       'servicios': '/servicios',
-      'electronica': '/electronica',
-      'hogar': '/hogar',
-      'moda': '/moda',
-      'ocio': '/ocio',
-      'infantil': '/infantil',
-      'mascotas': '/mascotas',
+      'productos': '/productos',
+      'electronica': '/productos',
+      'hogar': '/productos',
+      'moda': '/productos',
+      'ocio': '/productos',
+      'infantil': '/productos',
+      'mascotas': '/productos',
+      'formacion': '/productos',
       'negocios': '/negocios',
+      'turismo': '/turismo',
       'boletos': '/boletos',
+      'renta_vehiculos': '/turismo',
+      'guias_servicios': '/turismo',
+      'atracciones_exp': '/turismo',
+      'retiros_bienestar': '/turismo',
     };
     const getVerticalPath = React.useCallback((slug = '') => {
       if (VERTICAL_SLUGS[slug]) return VERTICAL_SLUGS[slug];
-      if (slug.startsWith('coches-y-motor/')) return '/autos';
+      if (slug.startsWith('coches-y-motor/')) return '/motor';
       if (slug.startsWith('inmobiliaria/')) return '/inmuebles';
       if (slug.startsWith('empleo/')) return '/empleos';
       if (slug.startsWith('servicios/')) return '/servicios';
-      if (slug.startsWith('electronica/')) return '/electronica';
-      if (slug.startsWith('hogar/')) return '/hogar';
-      if (slug.startsWith('moda/')) return '/moda';
-      if (slug.startsWith('ocio/')) return '/ocio';
-      if (slug.startsWith('infantil/')) return '/infantil';
-      if (slug.startsWith('mascotas/')) return '/mascotas';
+      if (slug.startsWith('productos/')) return '/productos';
+      if (slug.startsWith('electronica/')) return '/productos';
+      if (slug.startsWith('hogar/')) return '/productos';
+      if (slug.startsWith('moda/')) return '/productos';
+      if (slug.startsWith('ocio/')) return '/productos';
+      if (slug.startsWith('infantil/')) return '/productos';
+      if (slug.startsWith('mascotas/')) return '/productos';
+      if (slug.startsWith('formacion/')) return '/productos';
       if (slug.startsWith('negocios/')) return '/negocios';
+      if (slug.startsWith('turismo/')) return '/turismo';
       if (slug.startsWith('boletos/')) return '/boletos';
+      if (slug.startsWith('renta_vehiculos/')) return '/turismo';
+      if (slug.startsWith('guias_servicios/')) return '/turismo';
+      if (slug.startsWith('atracciones_exp/')) return '/turismo';
+      if (slug.startsWith('retiros_bienestar/')) return '/turismo';
       return null;
     }, []);
 
     const homeCategories = React.useMemo(() => ([
-      { slug: 'motor', name: { es: 'Motor', en: 'Motor', pt: 'Motor', fr: 'Moteur', zh: '汽车和摩托车', ko: '자동차/오토바이', de: 'Motor', it: 'Motore', ar: 'المحركات', he: 'מנוע', yi: 'מאָטאָр', ru: 'Авто и Мото', ja: '自動車・バイク' }, icon: 'Car' },
+      { slug: 'motor', name: { es: 'Motor', en: 'Motor', pt: 'Motor', fr: 'Moteur', zh: '机动车', ko: '모터', de: 'Motor', it: 'Motor', ar: 'محرك', he: 'מנוע', yi: 'מאטאר', ru: 'Мотор', ja: 'モーター' }, icon: 'Car' },
       { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate', pt: 'Imóveis', fr: 'Immobilier', zh: '房地产', ko: '부동산', de: 'Immobilien', it: 'Immobiliare', ar: 'العقارات', he: 'נדל״ן', yi: 'איממאָביליען', ru: 'Недвижимость', ja: '不動産' }, icon: 'Home' },
-      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs', pt: 'Empregos', fr: 'Emplois', zh: '工作', ko: '채용', de: 'Jobs', it: 'Lavoro', ar: 'وظائف', he: 'משרות', yi: 'דזשאָבс', ru: 'Работа', ja: '求人' }, icon: 'Briefcase' },
+      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs', pt: 'Empregos', fr: 'Emplois', zh: '工作', ko: '채용', de: 'Jobs', it: 'Lavoro', ar: 'وظائف', he: 'משרות', yi: 'דזשאָбс', ru: 'Работа', ja: '求人' }, icon: 'Briefcase' },
       { slug: 'servicios', name: { es: 'Servicios', en: 'Services', pt: 'Serviços', fr: 'Services', zh: '服务', ko: '서비스', de: 'Dienstleistungen', it: 'Servizi', ar: 'خدمات', he: 'שירותים', yi: 'סערוויסעס', ru: 'Услуги', ja: 'サービス' }, icon: 'Wrench' },
-      { slug: 'electronica', name: { es: 'Electrónica', en: 'Electronics', pt: 'Eletrônicos', fr: 'Électronique', zh: '电子产品', ko: '전자제품', de: 'Elektronik', it: 'Elettronica', ar: 'إلكترونيات', he: 'אלקטרוניקה', yi: 'עלעקטראָניк', ru: 'Электроника', ja: '電子機器' }, icon: 'Cpu' },
-      { slug: 'hogar', name: { es: 'Hogar', en: 'Home', pt: 'Casa', fr: 'Maison', zh: '家居', ko: '가정', de: 'Zuhause', it: 'Casa', ar: 'المنزل', he: 'בית', yi: 'היים', ru: 'Дом', ja: '住まい' }, icon: 'Sofa' },
-      { slug: 'moda', name: { es: 'Moda', en: 'Fashion', pt: 'Moda', fr: 'Mode', zh: '时尚', ko: '패션', de: 'Mode', it: 'Moda', ar: 'موضة', he: 'אופנה', yi: 'מאָדע', ru: 'Мода', ja: 'ファッション' }, icon: 'Shirt' },
-      { slug: 'ocio', name: { es: 'Ocio', en: 'Leisure', pt: 'Lazer', fr: 'Loisirs', zh: '休闲', ko: '여가', de: 'Freizeit', it: 'Tempo libero', ar: 'ترفيه', he: 'פנאי', yi: 'פרייַע צייַט', ru: 'Хобби', ja: 'レジャー' }, icon: 'Bike' },
-      { slug: 'infantil', name: { es: 'Infantil', en: 'Kids', pt: 'Infantil', fr: 'Enfants', zh: '儿童', ko: '아동', de: 'Kinder', it: 'Bambini', ar: 'الأطفال', he: 'ילדים', yi: 'קינדער', ru: 'Детские товары', ja: 'キッズ' }, icon: 'Baby' },
-      { slug: 'mascotas', name: { es: 'Mascotas', en: 'Pets', pt: 'Animais', fr: 'Animaux', zh: '宠物', ko: '애완동물', de: 'Haustiere', it: 'Animali', ar: 'حيوانات أليفة', he: 'חיות מחמד', yi: 'חנות חיות', ru: 'Животные', ja: 'ペット' }, icon: 'PawPrint' },
-      { slug: 'negocios', name: { es: 'Negocios', en: 'Business', pt: 'Negócios', fr: 'Affaires', zh: '商务', ko: '비즈니스', de: 'Geschäft', it: 'Affari', ar: 'أعمال', he: 'עסקים', yi: 'ביזנעס', ru: 'Бизнес', ja: 'ビジネス' }, icon: 'Store' },
+      { slug: 'productos', name: { es: 'Productos', en: 'Goods', pt: 'Produtos', fr: 'Articles', zh: '商品', ko: '상품', de: 'Waren', it: 'Prodotti', ar: 'سلع', he: 'מוצרים', yi: 'סחורה', ru: 'Товары', ja: '商品' }, icon: 'ShoppingBag' },
+      { slug: 'negocios', name: { es: 'Negocios', en: 'Business', pt: 'Negocios', fr: 'Affaires', zh: '商务', ko: '비즈니스', de: 'Geschäft', it: 'Affari', ar: 'أعمال', he: 'עסקים', yi: 'ביזנעס', ru: 'Бизнес', ja: 'ビジネス' }, icon: 'Store' },
+      { slug: 'turismo', name: { es: 'Turismo', en: 'Tourism', pt: 'Turismo', fr: 'Tourisme', zh: '旅游', ko: '관광', de: 'Tourismus', it: 'Turismo', ar: 'سياحة', he: 'תיירות', yi: 'טוריזם', ru: 'Туризм', ja: '観光' }, icon: 'Compass' },
       { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets', pt: 'Ingressos', fr: 'Billets', zh: '门票', ko: '티켓', de: 'Tickets', it: 'Biglietti', ar: 'تذاكر', he: 'כרטיסים', yi: 'בילעטן', ru: 'Билеты', ja: 'チケット' }, icon: 'Ticket' },
-      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing', pt: 'Tarifas', fr: 'Tarifs', zh: '资费', ko: '요금', de: 'Tarife', it: 'Tariffe', ar: 'الأسعار', he: 'תעриפים', yi: 'טאַריפֿן', ru: 'Тарифы', ja: '料金' }, icon: 'Crown', action: 'pricing' },
+      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing', pt: 'Tarifas', fr: 'Tarifs', zh: '资费', ko: '요금', de: 'Tarife', it: 'Tariffe', ar: 'الأسعار', he: 'תעריפים', yi: 'טאַריפֿן', ru: 'Тарифы', ja: '料金' }, icon: 'Crown', action: 'pricing' },
     ]), []);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
@@ -595,7 +614,10 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                 loadingMore={loadingMore}
                 lastAdElementRef={lastAdElementRef}
                 getImageUrl={getImageUrl}
-                onSearchArea={onSearchArea}
+                onSearchArea={(area) => {
+                  onSearchArea?.(area);
+                  showHomeToast("Búsqueda por área aplicada");
+                }}
               />
             </div>
 

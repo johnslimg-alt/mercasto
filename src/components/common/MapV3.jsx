@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter, Navigation, Locate } from 'lucide-react';
+import { Pencil, Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter, Navigation, Locate } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 import { useTranslation } from 'react-i18next';
@@ -107,18 +107,30 @@ const STATE_COORDS = {
   Puebla: [19.0414, -98.2063],
   Querétaro: [20.5888, -100.3899],
   'Baja California': [32.5149, -117.0382],
-  'Quintana Roo': [21.1619, -86.8515],
-  Yucatán: [20.9674, -89.5926],
-  Veracruz: [19.1738, -96.1342],
-  Guanajuato: [21.019, -101.2574],
-  Chihuahua: [28.6329, -106.0691],
-  Sonora: [29.2972, -110.3309],
-  Sinaloa: [25.1721, -107.4795],
-  Oaxaca: [17.0732, -96.7266],
+  'Baja California Sur': [24.1426, -110.3126],
+  Campeche: [19.8301, -90.5349],
   Chiapas: [16.7569, -93.1292],
-  Michoacán: [19.5665, -101.7068],
+  Chihuahua: [28.6329, -106.0691],
+  Coahuila: [27.0587, -101.7068],
+  Colima: [19.2452, -103.7241],
+  Durango: [24.0277, -104.6532],
+  Guanajuato: [21.019, -101.2574],
   Guerrero: [17.4392, -99.5451],
+  Hidalgo: [20.0911, -98.7624],
+  Michoacán: [19.5665, -101.7068],
+  Morelos: [18.9261, -99.2307],
+  Nayarit: [21.7514, -104.8454],
+  Oaxaca: [17.0732, -96.7266],
+  'Quintana Roo': [19.1817, -88.4791],
+  'San Luis Potosí': [22.1565, -100.9855],
+  Sinaloa: [25.1721, -107.4795],
+  Sonora: [29.2972, -110.3309],
+  Tabasco: [17.8409, -92.6189],
   Tamaulipas: [24.2669, -98.8363],
+  Tlaxcala: [19.3182, -98.2375],
+  Veracruz: [19.1738, -96.1342],
+  Yucatán: [20.9674, -89.5926],
+  Zacatecas: [22.7709, -102.5832]
 };
 
 const CITY_COORDS = {
@@ -292,6 +304,20 @@ export default function MapV3({
 
   const config = apiConfig ?? (selectedCategory ? (filterConfig[selectedCategory] || null) : null);
 
+  const normalizedConfig = useMemo(() => {
+    if (!config) return [];
+    if (Array.isArray(config)) {
+      return config.filter(f => f.type === 'select' || f.type === 'checkbox');
+    }
+    return Object.entries(config)
+      .filter(([key]) => key !== 'condition')
+      .map(([key, options]) => ({
+        id: key,
+        label: key.replace(/_/g, ' '),
+        options: options
+      }));
+  }, [config]);
+
   // Convert ads to markers
   const adsMarkers = useMemo(() => {
     const sourceAds = propAds || fetchedAds;
@@ -362,8 +388,14 @@ export default function MapV3({
   const removeMap = (instanceRef) => {
     if (!instanceRef.current) return;
     try {
-      instanceRef.current.off();
-      instanceRef.current.remove();
+      const map = instanceRef.current;
+      if (map._freehandDrawListeners) {
+        Object.entries(map._freehandDrawListeners).forEach(([evt, listener]) => {
+          map.off(evt, listener);
+        });
+      }
+      map.off();
+      map.remove();
     } catch {
       // Leaflet can still have pending tile events during route changes.
     }
@@ -403,9 +435,14 @@ export default function MapV3({
         condition: conditionFilter,
         dynamic: dynamicFilters,
       });
-      return;
+    } else {
+      onSearch?.();
     }
-    onSearch?.();
+    
+    // Auto-close fullscreen modal to display results list
+    if (expanded) {
+      setExpanded(false);
+    }
   };
 
   const clearAllFilters = () => {
@@ -471,18 +508,6 @@ export default function MapV3({
       window.clearTimeout(fallbackTimer);
     };
   }, []);
-
-  useEffect(() => {
-    window.__onMapAdClick = (adId) => {
-      const found = normalizedMarkers.find(m => m.id === adId || m.ad?.id === adId);
-      if (found) {
-        onMarkerClick?.(found.ad || found);
-      }
-    };
-    return () => {
-      delete window.__onMapAdClick;
-    };
-  }, [normalizedMarkers, onMarkerClick]);
 
 
 // Factory function — creates a fresh popup DOM element each time
@@ -551,9 +576,7 @@ function createPopupElement(ad, marker) {
   btn.type = 'button';
   btn.className = 'leaflet-popup-card__btn';
   btn.textContent = 'Ver anuncio';
-  btn.addEventListener('click', () => {
-    window.__onMapAdClick?.(adId);
-  });
+  btn.setAttribute('onclick', `window.__onMapAdClick?.(${adId})`);
   body.appendChild(btn);
 
   popupWrapper.appendChild(body);
@@ -585,22 +608,35 @@ function createPopupElement(ad, marker) {
         if (activeMap && leaflet) {
           activeMap.setView([latitude, longitude], 14, { animate: true });
           
-          // Удаляем старый маркер если есть
-          if (userMarkerRef.current && activeMap.hasLayer(userMarkerRef.current)) {
-            activeMap.removeLayer(userMarkerRef.current);
+          if (locationPicker) {
+            onLocationSelect?.({ lat: latitude, lng: longitude });
+            if (pickerMarkerRef.current) {
+              pickerMarkerRef.current.setLatLng([latitude, longitude]);
+            } else {
+              pickerMarkerRef.current = leaflet.marker([latitude, longitude], { draggable: true }).addTo(activeMap);
+              pickerMarkerRef.current.on('dragend', (event) => {
+                const point = event.target.getLatLng();
+                onLocationSelect?.({ lat: point.lat, lng: point.lng });
+              });
+            }
+          } else {
+            // Удаляем старый маркер если есть
+            if (userMarkerRef.current && activeMap.hasLayer(userMarkerRef.current)) {
+              activeMap.removeLayer(userMarkerRef.current);
+            }
+            
+            // Добавляем маркер "Ты здесь"
+            const userIcon = leaflet.divIcon({
+              className: 'user-location-marker',
+              html: '<div style="width:20px;height:20px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 0 0 4px rgba(59,130,246,0.3),0 2px 8px rgba(0,0,0,0.3);"></div>',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10]
+            });
+            
+            userMarkerRef.current = leaflet.marker([latitude, longitude], { icon: userIcon, zIndexOffset: 1000 })
+              .addTo(activeMap)
+              .bindPopup('<strong>📍 Estás aquí</strong>');
           }
-          
-          // Добавляем маркер "Ты здесь"
-          const userIcon = leaflet.divIcon({
-            className: 'user-location-marker',
-            html: '<div style="width:20px;height:20px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 0 0 4px rgba(59,130,246,0.3),0 2px 8px rgba(0,0,0,0.3);"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-          });
-          
-          userMarkerRef.current = leaflet.marker([latitude, longitude], { icon: userIcon, zIndexOffset: 1000 })
-            .addTo(activeMap)
-            .bindPopup('<strong>📍 Estás aquí</strong>');
         }
       },
       (error) => {
@@ -641,12 +677,17 @@ function createPopupElement(ad, marker) {
     const queryCity = Object.keys(CITY_COORDS).find((key) => normalizedQuery.includes(key));
     const queryState = Object.keys(STATE_COORDS).find((key) => normalizedQuery.includes(normalizeLocationText(key)));
 
-    if (locationPicker && (queryCity || queryState)) {
+    // Center map on selected dropdown state/city filters
+    if (selectedCity && CITY_COORDS[selectedCity.toLowerCase()]) {
+      center = CITY_COORDS[selectedCity.toLowerCase()];
+      zoom = 12;
+    } else if (selectedState && STATE_COORDS[selectedState]) {
+      center = STATE_COORDS[selectedState];
+      zoom = 7;
+    } else if (locationPicker && (queryCity || queryState)) {
       center = queryCity ? CITY_COORDS[queryCity] : STATE_COORDS[queryState];
       zoom = queryCity ? 12 : 7;
-    }
-    
-    if (validMarkers.length > 0) {
+    } else if (validMarkers.length > 0) {
       if (validMarkers.length === 1) {
         center = [Number(validMarkers[0].coords[0]), Number(validMarkers[0].coords[1])];
         zoom = 10;
@@ -838,33 +879,148 @@ function createPopupElement(ad, marker) {
       }
     }
 
-    // ── Draw control (polygon area search) ──
-    if (isDrawMode && L.Control && L.Control.Draw) {
-      const drawItems = new L.FeatureGroup();
-      map.addLayer(drawItems);
-      const drawControl = new L.Control.Draw({
-        draw: {
-          polygon: { allowIntersection: false, showArea: true },
-          rectangle: true,
-          circle: false,
-          marker: false,
-          polyline: false,
-          circlemarker: false,
-        },
-        edit: { featureGroup: drawItems },
-      });
-      map.addControl(drawControl);
-      map.on(L.Draw.Event.CREATED, (e) => {
-        drawItems.addLayer(e.layer);
-        const bounds = e.layer.getBounds();
-        onSearchArea?.({
-          lat: bounds.getCenter().lat,
-          lng: bounds.getCenter().lng,
-          radius: Math.round(bounds.getNorthEast().distanceTo(bounds.getSouthWest()) / 2000),
-          polygon: e.layer.toGeoJSON(),
-        });
+    // ── Freehand Draw (polygon area search) ──
+    if (isDrawMode) {
+      // Disable map panning/zooming while drawing
+      map.dragging.disable();
+      if (map.touchZoom) map.touchZoom.disable();
+      if (map.doubleClickZoom) map.doubleClickZoom.disable();
+      if (map.scrollWheelZoom) map.scrollWheelZoom.disable();
+
+      let isDrawing = false;
+      let points = [];
+      let drawLayer = null;
+
+      const getEventLatLng = (e) => {
+        try {
+          if (e.latlng) return e.latlng;
+          if (e.originalEvent) {
+            const touch = (e.originalEvent.touches && e.originalEvent.touches[0]) || 
+                          (e.originalEvent.changedTouches && e.originalEvent.changedTouches[0]);
+            if (touch) {
+              return map.mouseEventToLatLng(touch);
+            }
+          }
+        } catch (err) {
+          console.error("Error converting touch to latlng", err);
+        }
+        return null;
+      };
+
+      const onDrawStart = (e) => {
+        const latlng = getEventLatLng(e);
+        if (!latlng) return;
+        isDrawing = true;
+        points = [latlng];
+        if (drawLayer) map.removeLayer(drawLayer);
+        drawLayer = L.polyline(points, {
+          color: '#84CC16',
+          weight: 4,
+          opacity: 0.85,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(map);
+      };
+
+      const onDrawMove = (e) => {
+        if (!isDrawing || !drawLayer) return;
+        const latlng = getEventLatLng(e);
+        if (!latlng) return;
+        const lastPt = points[points.length - 1];
+        if (!lastPt || lastPt.distanceTo(latlng) > 5) {
+          points.push(latlng);
+          drawLayer.setLatLngs(points);
+        }
+      };
+
+      const onDrawEnd = (e) => {
+        if (!isDrawing) return;
+        isDrawing = false;
+
+        const latlng = getEventLatLng(e);
+        if (latlng && points.length > 0) {
+          const lastPt = points[points.length - 1];
+          if (lastPt.distanceTo(latlng) > 5) {
+            points.push(latlng);
+          }
+        }
+
+        if (points.length > 3) {
+          points.push(points[0]); // Close loop
+          const polygon = L.polygon(points, {
+            color: '#84CC16',
+            fillColor: '#84CC16',
+            fillOpacity: 0.2
+          }).addTo(map);
+
+          const bounds = polygon.getBounds();
+          onSearchArea?.({
+            ...updateMapArea(map),
+            lat: bounds.getCenter().lat,
+            lng: bounds.getCenter().lng,
+            radius: Math.round(bounds.getNorthEast().distanceTo(bounds.getSouthWest()) / 2000),
+            polygon: polygon.toGeoJSON(),
+          });
+
+          // Keep polygon briefly visible then remove
+          setTimeout(() => {
+            if (map.hasLayer(polygon)) map.removeLayer(polygon);
+          }, 1500);
+
+          if (expanded) {
+            setExpanded(false);
+          }
+        }
+
+        if (drawLayer) {
+          map.removeLayer(drawLayer);
+          drawLayer = null;
+        }
+
+        // Re-enable controls
+        map.dragging.enable();
+        if (map.touchZoom) map.touchZoom.enable();
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
+
         setDrawMode(false);
+      };
+
+      map.on('mousedown', onDrawStart);
+      map.on('mousemove', onDrawMove);
+      map.on('mouseup', onDrawEnd);
+
+      // Touch support for mobile devices
+      map.on('touchstart', (e) => {
+        if (e.originalEvent) {
+          e.originalEvent.stopPropagation();
+          e.originalEvent.preventDefault();
+        }
+        onDrawStart(e);
       });
+      map.on('touchmove', (e) => {
+        if (e.originalEvent) {
+          e.originalEvent.stopPropagation();
+          e.originalEvent.preventDefault();
+        }
+        onDrawMove(e);
+      });
+      map.on('touchend', (e) => {
+        if (e.originalEvent) {
+          e.originalEvent.stopPropagation();
+          e.originalEvent.preventDefault();
+        }
+        onDrawEnd(e);
+      });
+
+      map._freehandDrawListeners = {
+        mousedown: onDrawStart,
+        mousemove: onDrawMove,
+        mouseup: onDrawEnd,
+        touchstart: onDrawStart,
+        touchmove: onDrawMove,
+        touchend: onDrawEnd
+      };
     }
 
     window.requestAnimationFrame(() => {
@@ -885,7 +1041,7 @@ function createPopupElement(ad, marker) {
     return () => {
       removeMap(mapInstanceRef);
     };
-  }, [leaflet, expanded, drawMode, visibleMarkers, locationPicker, locationQuery]);
+  }, [leaflet, expanded, drawMode, visibleMarkers, locationPicker, locationQuery, selectedState, selectedCity]);
 
   useEffect(() => {
     if (leaflet && expanded) {
@@ -897,7 +1053,7 @@ function createPopupElement(ad, marker) {
     return () => {
       removeMap(largeMapInstanceRef);
     };
-  }, [leaflet, expanded, drawMode, visibleMarkers, locationPicker, locationQuery]);
+  }, [leaflet, expanded, drawMode, visibleMarkers, locationPicker, locationQuery, selectedState, selectedCity]);
 
   const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
 
@@ -1016,27 +1172,49 @@ function createPopupElement(ad, marker) {
       )}
 
       {/* Dynamic Filters */}
-      {config && Object.entries(config).filter(([key]) => key !== 'condition').map(([key, options]) => (
-        <div key={key} className="space-y-2">
-          <p className="text-xs font-black text-slate-400 capitalize">{key.replace(/_/g, ' ')}</p>
-          <div className="flex flex-wrap gap-2">
-            {options.map(opt => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => handleDynamicToggle(key, opt)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
-                  (dynamicFilters[key] || []).includes(opt)
-                    ? 'bg-[#84CC16] text-slate-950'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
+      {normalizedConfig.map(field => {
+        const hasOptions = Array.isArray(field.options) && field.options.length > 0;
+        const currentVals = dynamicFilters[field.id] || [];
+        const currentVal = Array.isArray(currentVals) ? (currentVals[0] || '') : (currentVals || '');
+
+        return (
+          <div key={field.id} className="space-y-2">
+            <p className="text-xs font-black text-slate-400 capitalize">{field.label}</p>
+            {hasOptions ? (
+              <select
+                value={currentVal}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDynamicFilters(prev => ({
+                    ...prev,
+                    [field.id]: val ? [val] : []
+                  }));
+                }}
+                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
               >
-                {opt}
-              </button>
-            ))}
+                <option value="">{`Cualquier ${field.label.toLowerCase()}`}</option>
+                {field.options.map(opt => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={currentVal}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDynamicFilters(prev => ({
+                    ...prev,
+                    [field.id]: val
+                  }));
+                }}
+                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+                placeholder={field.placeholder || field.label}
+              />
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Toggles */}
       <div className="flex flex-wrap gap-2">
@@ -1073,6 +1251,51 @@ function createPopupElement(ad, marker) {
 
   return (
     <>
+      <style dangerouslySetInnerHTML={{__html: `
+        /* Complete override of Leaflet default cluster markers to make them circular and modern */
+        .marker-cluster, .marker-cluster-custom {
+          background-color: rgba(132, 204, 22, 0.2) !important;
+          border: 2px solid #84CC16 !important;
+          border-radius: 50% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          box-shadow: 0 4px 15px rgba(132, 204, 22, 0.35) !important;
+          overflow: hidden !important;
+        }
+        .marker-cluster div, .marker-cluster-custom div {
+          width: 32px !important;
+          height: 32px !important;
+          border-radius: 50% !important;
+          background-color: #84CC16 !important;
+          color: #0F172A !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 12px !important;
+          font-weight: 900 !important;
+          box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
+          margin: 0 !important;
+        }
+        .marker-cluster-medium, .marker-cluster-medium.marker-cluster {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+          border-color: #3B82F6 !important;
+          box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35) !important;
+        }
+        .marker-cluster-medium div {
+          background-color: #3B82F6 !important;
+          color: #FFFFFF !important;
+        }
+        .marker-cluster-large, .marker-cluster-large.marker-cluster {
+          background-color: rgba(239, 68, 68, 0.2) !important;
+          border-color: #EF4444 !important;
+          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35) !important;
+        }
+        .marker-cluster-large div {
+          background-color: #EF4444 !important;
+          color: #FFFFFF !important;
+        }
+      `}} />
       <div className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-md dark:border-slate-700 dark:bg-slate-950 ${className}`}>
         {(loading || fetchingAds) && (
           <div className="absolute inset-0 z-[10] flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-[2px] dark:bg-slate-950/20">
@@ -1157,7 +1380,7 @@ function createPopupElement(ad, marker) {
             }`}
             title="Dibujar área de búsqueda"
           >
-            <Crosshair size={13} />
+            <Pencil size={13} />
             <span className="hidden sm:inline">Dibujar área</span>
           </button>
         )}
@@ -1211,13 +1434,13 @@ function createPopupElement(ad, marker) {
               type="button"
               onClick={getUserLocation}
               disabled={locating}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed h-10 w-10 shrink-0 sm:w-auto sm:px-4 text-xs font-black transition-colors"
               title="Buscar cerca de mí"
             >
               {locating ? (
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 size={18} className="animate-spin" />
               ) : (
-                <Locate size={14} />
+                <Locate size={18} />
               )}
               <span className="hidden sm:inline">Cerca de mí</span>
             </button>
@@ -1226,14 +1449,14 @@ function createPopupElement(ad, marker) {
             <button
               type="button"
               onClick={() => setDrawMode((v) => !v)}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
+              className={`inline-flex items-center justify-center gap-1.5 rounded-xl transition-colors h-10 w-10 shrink-0 sm:w-auto sm:px-4 text-xs font-black ${
                 drawMode
                   ? 'bg-[#84CC16] text-slate-950'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
               title="Dibujar área de búsqueda"
             >
-              <Crosshair size={14} />
+              <Pencil size={18} />
               <span className="hidden sm:inline">Dibujar área</span>
             </button>
 

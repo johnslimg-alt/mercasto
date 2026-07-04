@@ -5,6 +5,7 @@ import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import SEO from '../../SEO';
 import { subcategoriesMap } from '../../../constants/locationsAndCategories';
+import { categorySchema } from '../../../constants/categorySchema';
 import { categoryLandingTranslations } from '../../../constants/categoryLandingTranslations';
 import { getTranslations, normalizeLanguage } from '../../../utils/translations';
 import {
@@ -291,7 +292,22 @@ export default function CategoryLanding({ category, lang = 'es' }) {
     localStorage.getItem('lang') || localStorage.getItem('mercasto_language') || lang
   );
   const t = getTranslations(activeLang);
-  const baseConfig = CATEGORY_CONFIG[category];
+  const baseConfig = CATEGORY_CONFIG[category] || {
+    title: categorySchema[category]?.label?.[activeLang] || categorySchema[category]?.label?.es || category,
+    subtitle: activeLang === 'es' ? 'Explora anuncios en esta categoría' : 'Explore ads in this category',
+    description: activeLang === 'es' ? `Encuentra anuncios de ${categorySchema[category]?.label?.es || category} en México.` : `Find ${categorySchema[category]?.label?.en || category} ads in Mexico.`,
+    seoTitle: `${categorySchema[category]?.label?.[activeLang] || categorySchema[category]?.label?.es || category} en México | Mercasto`,
+    seoDesc: activeLang === 'es' ? `Compra y vende ${categorySchema[category]?.label?.es || category} en México.` : `Buy and sell ${categorySchema[category]?.label?.en || category} in Mexico.`,
+    color: 'blue',
+    slug: category,
+    trust: [
+      { Icon: BadgeCheck, title: 'Verificado', body: 'Revisamos cada anuncio para garantizar tu seguridad.' },
+      { Icon: ShieldCheck, title: 'Seguro', body: 'Compara y encuentra las mejores ofertas.' },
+    ],
+    cta: '¿Quieres publicar un anuncio?',
+    ctaDesc: 'Es gratis y toma menos de un minuto.',
+    ctaBtn: 'Publicar anuncio →',
+  };
   const translatedConfig = categoryLandingTranslations[activeLang]?.[category];
   const cfg = baseConfig && translatedConfig
     ? {

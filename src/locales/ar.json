@@ -121,7 +121,10 @@
     "call": "اتصال",
     "sendMessage": "إرسال رسالة",
     "quickResponse": "رد سريع",
-    "securityWarning": "تحذير أمني: لا تدفع عربونًا دون فحص المنتج أولاً."
+    "securityWarning": "تحذير أمني: لا تدفع عربونًا دون فحص المنتج أولاً.",
+    "register_to_contact": "سجّل للاطلاع على بيانات الاتصال بالبائع.",
+    "login_to_comment": "سجّل الدخول أو أنشئ حساباً لترك تعليق.",
+    "login_register": "دخول / تسجيل"
   },
   "gamification": {
     "level": "المستوى",

@@ -28,7 +28,7 @@ const FAQ_ITEMS = [
   },
   {
     question: '¿Puedo vender autos, inmuebles y servicios?',
-    answer: 'Sí, Mercasto es un marketplace generalista. Puedes vender autos, motos, inmuebles (casas, departamentos, terrenos), servicios profesionales, electrónica, moda, y mucho más. Cada categoría tiene filtros específicos para facilitar la búsqueda.'
+    answer: 'Sí, Mercasto es una plataforma de clasificados generalista. Puedes publicar autos, motos, inmuebles (casas, departamentos, terrenos), servicios profesionales, electrónica, moda, y mucho más. Cada categoría tiene filtros específicos para facilitar la búsqueda.'
   },
   {
     question: '¿Cómo contacto al vendedor?',

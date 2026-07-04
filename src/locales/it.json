@@ -121,7 +121,10 @@
     "call": "Chiama",
     "sendMessage": "Invia messaggio",
     "quickResponse": "Risposta rapida",
-    "securityWarning": "Avviso di sicurezza: Non pagare acconti senza aver prima verificato il prodotto."
+    "securityWarning": "Avviso di sicurezza: Non pagare acconti senza aver prima verificato il prodotto.",
+    "register_to_contact": "Registrati per vedere i dati di contatto del venditore.",
+    "login_to_comment": "Accedi o registrati per lasciare un commento.",
+    "login_register": "Accedi / Registrati"
   },
   "gamification": {
     "level": "Livello",

@@ -74,7 +74,7 @@ const SUBSECTIONS = [
 
 export default function AutosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
-  const copy = getVerticalCopy(lang, 'autos');
+  const copy = getVerticalCopy(lang, 'motor');
   const [condition, setCondition] = useState('');
   const [priceRange, setPriceRange] = useState(null);
   const [brand, setBrand] = useState('');

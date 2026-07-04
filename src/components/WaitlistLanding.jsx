@@ -66,7 +66,7 @@ export default function WaitlistLanding() {
 
   const shareReferral = (platform) => {
     const referralLink = `${window.location.origin}/waitlist?ref=${referralCode}`;
-    const message = `🚀 Únete a Mercasto - El marketplace del futuro con AI. Estoy en la posición #${position}, ¡ayúdame a subir!\n\n${referralLink}`;
+    const message = `🚀 Únete a Mercasto - Los clasificados del futuro con AI. Estoy en la posición #${position}, ¡ayúdame a subir!\n\n${referralLink}`;
     
     let url = '';
     switch(platform) {
@@ -219,7 +219,7 @@ export default function WaitlistLanding() {
               🚀 Próximamente
             </div>
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              El marketplace del futuro
+              Los clasificados del futuro
               <span className="text-lime-600"> está llegando</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">

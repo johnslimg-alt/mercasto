@@ -121,7 +121,10 @@
     "call": "拨打电话",
     "sendMessage": "发送消息",
     "quickResponse": "快速回复",
-    "securityWarning": "安全警示：未确认商品前请勿支付预付款。"
+    "securityWarning": "安全警示：未确认商品前请勿支付预付款。",
+    "register_to_contact": "注册后即可查看卖家联系方式。",
+    "login_to_comment": "登录或注册后发表评论。",
+    "login_register": "登录 / 注册"
   },
   "gamification": {
     "level": "等级",

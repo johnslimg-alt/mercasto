@@ -214,7 +214,7 @@ export default function SplitViewContainer({
             title="Vista cuadrícula"
           >
             <LayoutGrid size={15} />
-            <span className="hidden sm:inline">Cuadrícula</span>
+            <span className="text-[11px] font-black">Cuadrícula</span>
           </button>
           <button
             onClick={() => setViewLayout('list')}
@@ -226,7 +226,7 @@ export default function SplitViewContainer({
             title="Vista lista"
           >
             <List size={15} />
-            <span className="hidden sm:inline">Lista</span>
+            <span className="text-[11px] font-black">Lista</span>
           </button>
         </div>
       </div>

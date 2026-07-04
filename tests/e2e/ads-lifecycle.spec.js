@@ -61,51 +61,121 @@ async function createTestAd(page) {
   // Navigate to the post screen (the route in SPA is /post)
   await page.goto('/post');
 
-  // Scope elements within the post form to prevent any footer collision
-  const formContainer = page.locator('form').first();
+  // Dismiss onboarding modal if it appears (safeguard)
+  const skipButton = page.locator('button').filter({ hasText: /Omitir|Skip/i }).first();
+  await skipButton.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
+  if (await skipButton.isVisible().catch(() => false)) {
+    await skipButton.click().catch(() => {});
+    await skipButton.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
+  }
 
+  // Scope elements within the post form to prevent any header/footer collision
+  const formContainer = page.locator('main form').first();
+
+  // === STEP 1 — Categoría ===
+  // Select category button Coches
+  const categoryBtn = formContainer.locator('button').filter({ hasText: /Coches|Cars/i }).first();
+  await expect(categoryBtn).toBeVisible({ timeout: 10000 });
+  await categoryBtn.click();
+
+  // Select subcategory button Sedán
+  const subcategoryBtn = formContainer.locator('button').filter({ hasText: /Sedán|Sedan/i }).first();
+  await expect(subcategoryBtn).toBeVisible({ timeout: 5000 });
+  await subcategoryBtn.click();
+
+  // Wait for the category attributes API request to complete to prevent race conditions
+  await page.waitForResponse(
+    response => response.url().includes('/api/category-attributes') && response.status() === 200,
+    { timeout: 5000 }
+  ).catch(() => {});
+
+  // Go to step 2
+  const nextBtn1 = page.locator('button').filter({ hasText: /Siguiente/i }).filter({ visible: true }).first();
+  await nextBtn1.click({ force: true });
+
+  // === STEP 2 — Detalles ===
   // Basic Fields
-  await formContainer.locator('input[placeholder*="Ej:"]').first().fill('Toyota Corolla 2022 Excelente Estado');
+  const titleInput = formContainer.locator('input[placeholder*="Ej:"]').first();
+  await expect(titleInput).toBeVisible({ timeout: 5000 });
+  await titleInput.fill('Toyota Corolla 2022 Excelente Estado');
+
   await formContainer.locator('textarea').first().fill('Vendo mi Toyota Corolla 2022 en excelente estado. Único dueño, todos los servicios de agencia.');
   await formContainer.locator('input[type="number"]').first().fill('320000');
 
-  // Select category (Coches)
-  const categorySelect = formContainer.locator('select').first();
-  await categorySelect.selectOption({ value: 'coches' });
-
-  // Fill dynamic attributes
-  const brandSelect = formContainer.locator('select').filter({ hasText: /Toyota|Chevrolet/i }).first();
+  // Fill dynamic attributes (Brand, Model, Year, Kilometers, Fuel) using robust locators matching either English or Spanish labels
+  const brandSelect = formContainer.locator('div:has(> label:has-text("Marca")), div:has(> label:has-text("Brand"))').locator('select').first();
   await expect(brandSelect).toBeVisible();
   await brandSelect.selectOption({ label: 'Toyota' });
 
-  const modelInput = formContainer.locator('div').filter({ has: page.locator('label', { hasText: /^Modelo$/i }) }).locator('input').first();
-  await modelInput.fill('Corolla');
+  const modelWrapper = formContainer.locator('div:has(> label:has-text("Model")), div:has(> label:has-text("Modelo"))');
+  const modelSelect = modelWrapper.locator('select').first();
+  const modelInput = modelWrapper.locator('input').first();
+  if (await modelSelect.count() > 0 && await modelSelect.isVisible()) {
+    await modelSelect.selectOption({ label: 'Corolla' });
+  } else {
+    await modelInput.fill('Corolla');
+  }
 
-  const yearInput = formContainer.locator('input[placeholder="Desde"]').first();
+  const yearInput = formContainer.locator('div:has(> label:has-text("Año")) input, div:has(> label:has-text("Year")) input').first();
   await yearInput.fill('2022');
 
-  const kmsInput = formContainer.locator('input[placeholder="Mín."]').first();
+  const kmsInput = formContainer.locator('div:has(> label:has-text("Kilómetros")) input, div:has(> label:has-text("Kilometer")) input').first();
   await kmsInput.fill('45000');
 
-  const fuelSelect = formContainer.locator('select').filter({ hasText: /Gasolina/i }).first();
+  const fuelSelect = formContainer.locator('div:has(> label:has-text("Combustible")), div:has(> label:has-text("Fuel"))').locator('select').first();
   await fuelSelect.selectOption({ label: 'Gasolina' });
-
-  // Select state
-  const stateSelect = formContainer.locator('select').filter({ hasText: /Seleccionar estado|Select state/i }).first();
-  await stateSelect.selectOption({ value: 'Ciudad de México' });
-
-  // Fill location/city
-  const locationInput = formContainer.locator('input[placeholder*="ciudad"]');
-  await locationInput.fill('CDMX, México');
 
   // Upload mock photo file
   await formContainer.locator('input[type="file"]').first().setInputFiles(path.join(process.cwd(), 'public/icon-192x192.png'));
 
-  // Submit the form
-  await formContainer.locator('button[type="submit"]').click();
+  // Go to step 3
+  const nextBtn2 = page.locator('button').filter({ hasText: /Siguiente/i }).filter({ visible: true }).first();
+  await nextBtn2.click({ force: true });
+
+  // === STEP 3 — Contacto ===
+  // Select state
+  const stateSelect = formContainer.locator('select').filter({ hasText: /Seleccionar estado|Select state/i }).first();
+  await expect(stateSelect).toBeVisible({ timeout: 10000 });
+  await stateSelect.selectOption({ value: 'Ciudad de México' });
+
+  // Select city
+  const citySelect = formContainer.locator('select').filter({ hasText: /Seleccionar ciudad|Select city/i }).first();
+  await expect(citySelect).toBeVisible({ timeout: 5000 });
+  await citySelect.selectOption({ value: 'Cuauhtémoc' });
+
+  // Fill location input (supports both English and Spanish labels/placeholders)
+  const locationInput = formContainer.locator('div:has(> label:has-text("Ubicación")) input, div:has(> label:has-text("Location")) input, input[placeholder*="dirección"], input[placeholder*="address"]').first();
+  await locationInput.fill('CDMX, México');
+
+  // Click on the map to set required latitude and longitude coords
+  const mapContainer = formContainer.locator('.leaflet-container');
+  await expect(mapContainer).toBeVisible({ timeout: 10000 });
+  await mapContainer.click({ position: { x: 100, y: 100 } });
+
+  // Select contact method (WhatsApp) if not already selected
+  const whatsappTab = formContainer.locator('button').filter({ hasText: /WhatsApp/i }).first();
+  const isSelected = await whatsappTab.evaluate(el => el.className.includes('border-[#84CC16]') || el.className.includes('text-[#65A30D]'));
+  if (!isSelected) {
+    await whatsappTab.click();
+  }
+
+  const phoneInput = formContainer.locator('input[type="tel"]').first();
+  await phoneInput.waitFor({ state: 'visible', timeout: 5000 });
+  await phoneInput.fill('5512345678');
+
+  // Submit the form (Works on both desktop and mobile layouts)
+  const submitBtn = page.locator('main button').filter({ hasText: /Publicar|Publish/i }).filter({ visible: true }).first();
+  await expect(submitBtn).toBeVisible();
+  await submitBtn.click({ force: true });
 
   // Verification: should redirect to /profile (my_ads tab) and show the new ad
-  await page.waitForURL('**/profile', { timeout: 10000 });
+  await page.waitForURL('**/profile', { timeout: 15000 });
+
+  // Switch to the "Revisión" (In Review) tab to make the pending ad visible
+  const revisionTab = page.locator('button').filter({ hasText: /Revisión|Review|Pending/i }).first();
+  await expect(revisionTab).toBeVisible({ timeout: 5000 });
+  await revisionTab.click();
+  await page.waitForTimeout(500);
 }
 
 test.describe('Ads Lifecycle E2E Flow', () => {
@@ -116,7 +186,7 @@ test.describe('Ads Lifecycle E2E Flow', () => {
     await page.evaluate(() => sessionStorage.clear());
 
     // Dismiss cookie banner
-    const acceptCookies = page.locator('button:has-text("Aceptar")').first();
+    const acceptCookies = page.locator('button').filter({ hasText: /Aceptar|Accept/i }).first();
     await acceptCookies.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
     if (await acceptCookies.isVisible().catch(() => false)) {
       await acceptCookies.click().catch(() => {});
@@ -137,24 +207,47 @@ test.describe('Ads Lifecycle E2E Flow', () => {
     // 2. Navigate to dashboard
     await page.goto('/profile');
 
-    // Click edit on the first active ad
-    const editButton = page.locator('a[title*="Editar"], button[title*="Editar"], a:has-text("Editar")').first();
+    // Switch to the "Revisión" (In Review) tab to see the pending ad
+    const revisionTab = page.locator('button').filter({ hasText: /Revisión|Review|Pending/i }).first();
+    await expect(revisionTab).toBeVisible({ timeout: 5000 });
+    await revisionTab.click();
+    await page.waitForTimeout(500);
+
+    // Click edit on the first active/pending ad
+    const editButton = page.locator('a[title*="Editar"], button[title*="Editar"], a:has-text("Editar"), button:has(.lucide-pencil)').first();
     await expect(editButton).toBeVisible();
     await editButton.click();
 
-    // Wait for the edit ad screen to load
-    await page.waitForURL('**/anuncio/*/editar', { timeout: 10000 });
+    // Wait for the edit ad screen to load (we switch to the post tab in SPA)
+    const titleInput = page.locator('main form').first().locator('input[placeholder*="Ej:"]').first();
+    
+    // Go past Step 1
+    const nextBtn1 = page.locator('button').filter({ hasText: /Siguiente/i }).filter({ visible: true }).first();
+    await expect(nextBtn1).toBeVisible({ timeout: 5000 });
+    await nextBtn1.click({ force: true });
 
-    // Modify fields
-    const formContainer = page.locator('form').first();
-    await formContainer.locator('input[type="number"]').first().fill('310000');
-    await formContainer.locator('input[placeholder*="Ej:"]').first().fill('Toyota Corolla 2022 Excelente Estado - Precio Reducido');
+    // Modify fields on Step 2
+    await expect(titleInput).toBeVisible({ timeout: 5000 });
+    const priceInput = page.locator('main form').first().locator('input[type="number"]').first();
+    await priceInput.fill('310000');
+    await titleInput.fill('Toyota Corolla 2022 Excelente Estado - Precio Reducido');
 
-    // Submit
-    await formContainer.locator('button[type="submit"]').click();
+    // Go past Step 2
+    const nextBtn2 = page.locator('button').filter({ hasText: /Siguiente/i }).filter({ visible: true }).first();
+    await nextBtn2.click({ force: true });
 
-    // Verification: should redirect to home with ?ad= and show updated price/title
-    await page.waitForURL('**/?ad=*', { timeout: 10000 });
+    // Submit on Step 3
+    const saveButton = page.locator('main button').filter({ hasText: /Guardar|Save/i }).filter({ visible: true }).first();
+    await expect(saveButton).toBeVisible({ timeout: 5000 });
+    await saveButton.click({ force: true });
+
+    // Verification: should redirect back to profile and show updated title
+    await page.waitForURL('**/profile', { timeout: 15000 });
+
+    // Switch to the "Revisión" (In Review) tab to see the updated pending ad
+    const revisionTabAfter = page.locator('button').filter({ hasText: /Revisión|Review|Pending/i }).first();
+    await expect(revisionTabAfter).toBeVisible({ timeout: 5000 });
+    await revisionTabAfter.click();
     await expect(page.locator('body')).toContainText(/Precio Reducido/i);
   });
 
@@ -163,7 +256,7 @@ test.describe('Ads Lifecycle E2E Flow', () => {
     await createTestAd(page);
 
     // 2. We are already on /profile. Click the "Ver" button of our newly created ad
-    const verButton = page.locator('a[title*="Ver"], button[title*="Ver"], a:has-text("Ver")').first();
+    const verButton = page.locator('a[title*="Ver"], button[title*="Ver"], a:has-text("Ver"), a:has(.lucide-eye)').first();
     await expect(verButton).toBeVisible();
     await verButton.click();
 
@@ -175,7 +268,7 @@ test.describe('Ads Lifecycle E2E Flow', () => {
     // Fill report modal form
     const reportModal = page.locator('.fixed.inset-0').filter({ hasText: /Reportar/i }).first();
     await expect(reportModal).toBeVisible();
-    await reportModal.locator('select').selectOption({ value: 'spam' });
+    await reportModal.locator('select').selectOption({ index: 1 });
     await reportModal.locator('textarea').fill('Este anuncio contains spam y enlaces inapropiados.');
     await reportModal.locator('button').filter({ hasText: /Enviar|Reportar/i }).click();
 
@@ -189,13 +282,18 @@ test.describe('Ads Lifecycle E2E Flow', () => {
 
     await page.goto('/profile');
 
+    // Switch to the "Revisión" (In Review) tab to see the pending ad
+    const revisionTab = page.locator('button').filter({ hasText: /Revisión|Review|Pending/i }).first();
+    await expect(revisionTab).toBeVisible({ timeout: 5000 });
+    await revisionTab.click();
+    await page.waitForTimeout(500);
+
     // Verify the delete button of the ad card is visible
     const deleteButton = page.locator('button[title*="Eliminar"], button[title*="Delete"], button:has(.lucide-trash-2), button:has(svg.lucide-trash-2)').first();
     await expect(deleteButton).toBeVisible();
 
-    // Playwright handles confirm dialogs automatically or we can register a handler
     page.once('dialog', async dialog => {
-      expect(dialog.message()).toContain('seguro');
+      expect(dialog.message().toLowerCase()).toMatch(/seguro|sure/);
       await dialog.accept();
     });
 

@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\SearchAlertController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\MetaEventController;
 
 // Public routes
 Route::get('/img', \App\Http\Controllers\ImageController::class); // on-the-fly thumbnail resizer (WebP)
@@ -299,7 +300,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Email Verification
     Route::middleware('throttle:3,60')->post('/email/send-verification', [EmailVerificationController::class, 'send']);
+
+    // Meta CAPI events (Authenticated)
+    Route::post('/meta/events/post-ad', [MetaEventController::class, 'postAd']);
+    Route::post('/meta/events/wishlist', [MetaEventController::class, 'addToWishlist']);
 });
+
+// Meta CAPI events (Public)
+Route::middleware('throttle:60,1')->post('/meta/events/contact', [MetaEventController::class, 'contact']);
 
 // Email Verification (public — no auth required)
 Route::middleware('throttle:10,1')->post('/email/verify', [EmailVerificationController::class, 'verify']);

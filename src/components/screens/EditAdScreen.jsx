@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, AlertTriangle, Loader2, X, Plus, Image, Pencil, Sparkles, Settings2 } from 'lucide-react';
 import SortablePhotoGrid from '../SortablePhotoGrid';
 import MEXICO_STATES from '../../utils/mexicoStates';
+import { filterConfig } from '../../constants/filterConfig';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -115,7 +116,8 @@ export default function EditAdScreen({ t, lang }) {
 
   const categoryFields = useMemo(() => {
     if (!form.category) return [];
-    return apiCategoryFields ?? [];
+    if (apiCategoryFields && apiCategoryFields.length > 0) return apiCategoryFields;
+    return filterConfig[form.category] || [];
   }, [apiCategoryFields, form.category]);
 
   const handleAttrChange = (fieldId, value) =>

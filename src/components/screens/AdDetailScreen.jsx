@@ -424,10 +424,10 @@ export default function AdDetailScreen({
       try {
         await navigator.share({ title: ad.title, text: shareText, url: shareUrl });
         handleWhatsAppClick(ad, 'share');
-        return;
       } catch (err) {
-        // User cancelled native share or not supported — fall through to BottomSheet
+        // User cancelled native share or not supported
       }
+      return;
     }
     setShowShareMenu(prev => !prev);
   };
@@ -597,6 +597,34 @@ export default function AdDetailScreen({
                   </div>
                 ))}
               </div>
+
+              {/* Comment form / login gate */}
+              <div className="mt-4">
+                {currentUser && currentUser.id ? (
+                  <form onSubmit={(e) => { e.preventDefault(); }} className="flex flex-col gap-3">
+                    <textarea
+                      rows={3}
+                      placeholder={t.write_comment || 'Escribe una reseña...'}
+                      className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-[14px] text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#84CC16]/40 resize-none"
+                    />
+                    <button type="submit" className="self-end px-5 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 font-semibold rounded-xl text-sm transition-colors">
+                      {t.submit_comment || 'Publicar'}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3">
+                    <span className="text-[13px] text-slate-500 dark:text-slate-400 flex-1">
+                      {t.login_to_comment || 'Inicia sesión o regístrate para dejar un comentario.'}
+                    </span>
+                    <button
+                      onClick={() => navigate('/profile')}
+                      className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                    >
+                      {t.login_register || 'Entrar'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">
@@ -623,7 +651,21 @@ export default function AdDetailScreen({
               </div>
             </div>
 
-            <ContactButton ad={ad} user={currentUser} className="w-full mb-3" />
+            {(!currentUser || !currentUser.id) ? (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
+                <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
+                  {t.register_to_contact || 'Regístrate para ver los datos de contacto del vendedor.'}
+                </p>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                >
+                  {t.login_register || 'Iniciar sesión / Registrarse'}
+                </button>
+              </div>
+            ) : (
+              <ContactButton ad={ad} user={currentUser} className="w-full mb-3" />
+            )}
 
             <div className="flex gap-3 mt-4">
               <button onClick={(e) => handleToggleFavorite(e, ad.id)} className={`btn-md flex-1 flex items-center justify-center gap-2 border transition-colors ${isFav ? 'bg-red-50 border-red-100 text-red-600' : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}>

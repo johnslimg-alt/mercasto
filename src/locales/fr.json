@@ -121,7 +121,10 @@
     "call": "Appeler",
     "sendMessage": "Envoyer un message",
     "quickResponse": "Réponse rapide",
-    "securityWarning": "Sécurité: Ne payez pas d'avance sans vérifier le produit."
+    "securityWarning": "Sécurité: Ne payez pas d'avance sans vérifier le produit.",
+    "register_to_contact": "Inscrivez-vous pour voir les coordonnées du vendeur.",
+    "login_to_comment": "Connectez-vous ou inscrivez-vous pour laisser un commentaire.",
+    "login_register": "Connexion / Inscription"
   },
   "gamification": {
     "level": "Niveau",

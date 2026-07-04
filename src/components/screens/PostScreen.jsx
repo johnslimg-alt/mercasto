@@ -4,9 +4,10 @@ import {
   Sparkles, Video, MapPin, Tag, Zap, Car, Home, Briefcase,
   ShoppingBag, Dog, Monitor, Smartphone, Shirt, Baby, Dumbbell,
   BookOpen, Package, Cpu, Settings2, Ticket, Building2, Check,
-  Phone, MessageCircle, Send, Locate,
+  Phone, MessageCircle, Send, Locate, Compass,
 } from 'lucide-react';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
+import { filterConfig } from '../../constants/filterConfig';
 import MapV3 from '../common/MapV3';
 import SortablePhotoGrid from '../SortablePhotoGrid';
 
@@ -21,8 +22,30 @@ const CATEGORY_ICONS = {
   servicios: Settings2, moda: Shirt, hogar: Home, electronica: Monitor,
   telefonos: Smartphone, deportes: Dumbbell, infantil: Baby, bebes: Baby,
   mascotas: Dog, negocios: Building2, formacion: BookOpen,
-  informatica: Cpu, coleccionismo: Package,
+  informatica: Cpu, coleccionismo: Package, productos: ShoppingBag, turismo: Compass,
 };
+
+const PRODUCT_GROUPS = [
+  { slug: 'electronica', label: { es: 'Electrónica', en: 'Electronics', ru: 'Электроника' } },
+  { slug: 'hogar', label: { es: 'Hogar y jardín', en: 'Home & Garden', ru: 'Дом и сад' } },
+  { slug: 'moda', label: { es: 'Moda y belleza', en: 'Fashion & Beauty', ru: 'Мода' } },
+  { slug: 'ocio', label: { es: 'Ocio', en: 'Hobbies', ru: 'Хобби' } },
+  { slug: 'infantil', label: { es: 'Infantil', en: 'Kids', ru: 'Детский мир' } },
+  { slug: 'mascotas', label: { es: 'Mascotas', en: 'Pets', ru: 'Животные' } },
+  { slug: 'formacion', label: { es: 'Libros y Cursos', en: 'Books & Courses', ru: 'Книги и курсы' } },
+];
+
+const TURISMO_GROUPS = [
+  { slug: 'hospedaje', label: { es: 'Hoteles y Hospedaje', en: 'Hotels & Lodging', ru: 'Отели и жилье' } },
+  { slug: 'tours', label: { es: 'Tours y Viajes', en: 'Tours & Trips', ru: 'Туры и путешествия' } },
+  { slug: 'boletos_turismo', label: { es: 'Boletos a Eventos', en: 'Event Tickets', ru: 'Билеты на мероприятия' } },
+  { slug: 'articulos_camping', label: { es: 'Artículos de Viaje', en: 'Travel & Outdoor Gear', ru: 'Товары для туризма' } },
+  { slug: 'souvenirs', label: { es: 'Souvenirs y Regalos', en: 'Souvenirs & Gifts', ru: 'Сувениры и подарки' } },
+  { slug: 'renta_vehiculos', label: { es: 'Renta de Vehículos y Yates', en: 'Vehicle & Yacht Rental', ru: 'Аренда транспорта и яхт' } },
+  { slug: 'guias_servicios', label: { es: 'Guías y Servicios', en: 'Guides & Services', ru: 'Гиды и услуги' } },
+  { slug: 'atracciones_exp', label: { es: 'Atracciones y Experiencias', en: 'Attractions & Experiences', ru: 'Развлечения и впечатления' } },
+  { slug: 'retiros_bienestar', label: { es: 'Retiros y Bienestar', en: 'Retreats & Wellness', ru: 'Ретриты и велнес' } },
+];
 
 // Фасеты публикации — сохраняются в form.attributes (filterConfig) и используются фильтрами поиска
 // (доставки нет: продажа напрямую покупатель↔продавец).
@@ -110,6 +133,42 @@ export default function PostScreen({
   const [errors, setErrors] = useState({});
   const [savingContact, setSavingContact] = useState(false);
 
+  const [selectedParentCategory, setSelectedParentCategory] = useState(() => {
+    const parentMap = {
+      electronica: 'productos',
+      hogar: 'productos',
+      moda: 'productos',
+      ocio: 'productos',
+      infantil: 'productos',
+      mascotas: 'productos',
+      formacion: 'productos',
+      hospedaje: 'turismo',
+      tours: 'turismo',
+      boletos_turismo: 'turismo',
+      articulos_camping: 'turismo',
+      souvenirs: 'turismo',
+      renta_vehiculos: 'turismo',
+      guias_servicios: 'turismo',
+      atracciones_exp: 'turismo',
+      retiros_bienestar: 'turismo',
+    };
+    return parentMap[form.category] || '';
+  });
+
+  const handleParentCategorySelect = (slug) => {
+    if (slug === 'productos' || slug === 'turismo') {
+      setSelectedParentCategory(slug);
+      setForm({ ...form, category: '', subcategory: '', attributes: {} });
+    } else {
+      setSelectedParentCategory('');
+      setForm({ ...form, category: slug, subcategory: '', attributes: {} });
+    }
+  };
+
+  const handleProductGroupSelect = (slug) => {
+    setForm({ ...form, category: slug, subcategory: '', attributes: {} });
+  };
+
   /* ---------- contact step state ---------- */
   const [contactMethods, setContactMethods] = useState(() => {
     const methods = [];
@@ -148,7 +207,10 @@ export default function PostScreen({
   }, [form.category]);
 
   // Prune stale attribute keys when category's attribute list changes
-  const dynamicAttributes = useMemo(() => apiAttributes || [], [apiAttributes]);
+  const dynamicAttributes = useMemo(() => {
+    if (apiAttributes && apiAttributes.length > 0) return apiAttributes;
+    return filterConfig[form.category] || [];
+  }, [apiAttributes, form.category]);
 
   useEffect(() => {
     if (!form.category || dynamicAttributes.length === 0 || !form.attributes) return;
@@ -200,9 +262,16 @@ export default function PostScreen({
       if (!form.description?.trim()) errs.description = 'La descripción es obligatoria.';
       // Validate required dynamic attributes
       dynamicAttributes.forEach(field => {
-        const key = field.id || field.key;
-        if (field.required && !form.attributes?.[key]) {
-          errs[`attr_${key}`] = `${field.label || key} es obligatorio.`;
+        const key = field.id || field.key || '';
+        const label = field.label || '';
+        if (key === 'subcategory' || /subcategor/i.test(label)) {
+          if (field.required && !form.subcategory) {
+            errs[`attr_${key}`] = `${field.label || key} es obligatorio.`;
+          }
+        } else {
+          if (field.required && !form.attributes?.[key]) {
+            errs[`attr_${key}`] = `${field.label || key} es obligatorio.`;
+          }
         }
       });
       if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -328,26 +397,84 @@ export default function PostScreen({
                   Selecciona una Categoría
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {categoriesData.map(cat => {
-                    const Icon = CATEGORY_ICONS[cat.slug] || Tag;
-                    const selected = form.category === cat.slug;
-                    return (
-                      <button
-                        key={cat.slug}
-                        type="button"
-                        onClick={() => setForm({ ...form, category: cat.slug, subcategory: '', attributes: {} })}
-                        className={`flex flex-col items-center justify-center p-4 rounded-xl border text-center transition-all ${selected ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16]' : 'border-slate-200 dark:border-slate-800 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                      >
-                        <Icon size={24} className={selected ? 'text-[#65A30D]' : 'text-slate-500'} />
-                        <span className="text-[13px] font-bold mt-2 text-slate-800 dark:text-slate-100">
-                          {cat.name?.[lang] || cat.name?.es || cat.slug}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {categoriesData
+                    .filter(cat => {
+                      const excludedSlugs = new Set([
+                        'coches', 'electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas',
+                        'deportes', 'telefonos', 'bebes', 'informatica', 'coleccionismo', 'formacion',
+                        'hospedaje', 'tours', 'boletos_turismo', 'articulos_camping', 'souvenirs'
+                      ]);
+                      return !excludedSlugs.has(cat.slug);
+                    })
+                    .map(cat => {
+                      const Icon = CATEGORY_ICONS[cat.slug] || Tag;
+                      const selected = selectedParentCategory === cat.slug || (selectedParentCategory === '' && form.category === cat.slug);
+                      return (
+                        <button
+                          key={cat.slug}
+                          type="button"
+                          onClick={() => handleParentCategorySelect(cat.slug)}
+                          className={`flex flex-col items-center justify-center p-4 rounded-xl border text-center transition-all ${selected ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16]' : 'border-slate-200 dark:border-slate-800 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                        >
+                          <Icon size={24} className={selected ? 'text-[#65A30D]' : 'text-slate-500'} />
+                          <span className="text-[13px] font-bold mt-2 text-slate-800 dark:text-slate-100">
+                            {cat.name?.[lang] || cat.name?.es || cat.slug}
+                          </span>
+                        </button>
+                      );
+                    })}
                 </div>
               </div>
 
+              {/* PRODUCT GROUPS (Level 2 for Goods) */}
+              {selectedParentCategory === 'productos' && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                  <label className="block text-[14px] font-bold text-slate-700 dark:text-slate-300 mb-3">
+                    {lang === 'es' ? 'Selecciona el Tipo de Producto' : 'Select Product Type'}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {PRODUCT_GROUPS.map(group => {
+                      const selected = form.category === group.slug;
+                      return (
+                        <button
+                          key={group.slug}
+                          type="button"
+                          onClick={() => handleProductGroupSelect(group.slug)}
+                          className={`p-3 rounded-lg border text-center transition-all text-xs font-semibold ${selected ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16]' : 'border-slate-200 dark:border-slate-800 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                        >
+                          {group.label[lang] || group.label.es}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* TURISMO GROUPS (Level 2 for Tourism) */}
+              {selectedParentCategory === 'turismo' && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                  <label className="block text-[14px] font-bold text-slate-700 dark:text-slate-300 mb-3">
+                    {lang === 'es' ? 'Selecciona el Tipo de Servicio Turístico' : 'Select Tourism Type'}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {TURISMO_GROUPS.map(group => {
+                      const selected = form.category === group.slug;
+                      return (
+                        <button
+                          key={group.slug}
+                          type="button"
+                          onClick={() => handleProductGroupSelect(group.slug)}
+                          className={`p-3 rounded-lg border text-center transition-all text-xs font-semibold ${selected ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16]' : 'border-slate-200 dark:border-slate-800 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                        >
+                          {group.label[lang] || group.label.es}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* SUBCATEGORY (Level 3) */}
               {form.category && (subcategoriesMap[form.category] || []).length > 0 && (
                 <div className="mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
                   <label className="block text-[14px] font-bold text-slate-700 dark:text-slate-300 mb-3">
@@ -490,7 +617,11 @@ export default function PostScreen({
                     {attributesLoading && <Loader2 size={14} className="animate-spin text-slate-400" />}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {dynamicAttributes.map(field => renderAttrField(field))}
+                    {dynamicAttributes.filter(field => {
+                      const k = field.id || field.key || '';
+                      const label = field.label || '';
+                      return k !== 'subcategory' && !/subcategor/i.test(label);
+                    }).map(field => renderAttrField(field))}
                   </div>
                 </div>
               )}

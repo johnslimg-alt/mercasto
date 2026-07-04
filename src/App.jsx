@@ -163,7 +163,7 @@ const MercastoLogo = ({ className = "h-11", isFooter = false }) => (
     </svg>
     <div className="flex flex-col justify-center">
       <span className={`font-sans text-xl md:text-2xl font-black leading-none tracking-tight ${isFooter ? 'text-white' : 'text-slate-900 dark:text-white'}`}>Mercasto</span>
-      <span className={`text-[7.5px] font-bold uppercase tracking-widest leading-none mt-1 ${isFooter ? 'text-[#84CC16]' : 'text-[#3f6212] dark:text-[#84CC16]'}`}>Marketplace</span>
+      <span className={`text-[7.5px] font-bold uppercase tracking-widest leading-none mt-1 ${isFooter ? 'text-[#84CC16]' : 'text-[#3f6212] dark:text-[#84CC16]'}`}>Clasificados</span>
     </div>
   </div>
 );
@@ -369,6 +369,8 @@ const InmueblesLanding = React.lazy(() => import('./components/screens/verticals
 const EmpleosLanding = React.lazy(() => import('./components/screens/verticals/EmpleosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ServiciosLanding = React.lazy(() => import('./components/screens/verticals/ServiciosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const CategoryLanding = React.lazy(() => import('./components/screens/verticals/CategoryLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta categoría.</div> })));
+const ProductosLanding = React.lazy(() => import('./components/screens/verticals/ProductosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
+const TurismoLanding = React.lazy(() => import('./components/screens/verticals/TurismoLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor de perfil.</div> })));
 const TerminosScreen = React.lazy(() => import('./components/screens/legal/TerminosScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const PrivacidadScreen = React.lazy(() => import('./components/screens/legal/PrivacidadScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
@@ -468,6 +470,7 @@ function App() {
   const mobileSearchRef = useRef(null);
   const [selectedState, setSelectedState] = useState('');
   const [activeCat, setActiveCat] = useState(''); // Фильтр по категории
+  const [activeSub, setActiveSub] = useState(''); // Фильтр по подкатегории
 
   // Состояния для динамической фильтрации (EAV JSON)
   const [minPrice, setMinPrice] = useState('');
@@ -690,6 +693,7 @@ function App() {
   const buildHomeFilterPath = useCallback((overrides = {}) => {
     const nextSearch = overrides.search ?? debouncedSearch;
     const nextCategory = overrides.category ?? activeCat;
+    const nextSubcategory = overrides.subcategory ?? activeSub;
     const nextLocation = overrides.location ?? (debouncedLocInput || selectedState);
     const nextMinPrice = overrides.minPrice ?? minPrice;
     const nextMaxPrice = overrides.maxPrice ?? maxPrice;
@@ -698,6 +702,7 @@ function App() {
 
     if (String(nextSearch || '').trim()) params.set('search', String(nextSearch).trim());
     if (String(nextCategory || '').trim()) params.set('category', String(nextCategory).trim());
+    if (String(nextSubcategory || '').trim()) params.set('subcategory', String(nextSubcategory).trim());
     if (String(nextLocation || '').trim()) params.set('location', String(nextLocation).trim());
     if (String(locState || '').trim()) params.set('state', String(locState).trim());
     if (String(locCity || '').trim()) params.set('city', String(locCity).trim());
@@ -707,7 +712,7 @@ function App() {
 
     const query = params.toString();
     return query ? `/?${query}` : '/';
-  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, locCity, locState, maxPrice, minPrice, selectedState]);
+  }, [activeCat, activeSub, conditionFilter, debouncedLocInput, debouncedSearch, locCity, locState, maxPrice, minPrice, selectedState]);
 
   // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
   const executeSearch = useCallback((overrideSearch = null, overrideLoc = null, overrideCategory = undefined) => {
@@ -1049,6 +1054,7 @@ function App() {
     setSearchQuery(searchParam || '');
     setDebouncedSearch(searchParam || '');
     setActiveCat(categoryParam || '');
+    setActiveSub(params.get('subcategory') || '');
     if (locationParam) {
       setSearchLocation(null);
       setSearchLocationInput(locationParam);
@@ -1085,7 +1091,7 @@ function App() {
     const nextPath = buildHomeFilterPath();
     const currentPath = `${location.pathname}${location.search}`;
     if (nextPath !== currentPath) navigate(nextPath, { replace: true });
-  }, [activeCat, buildHomeFilterPath, debouncedLocInput, debouncedSearch, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany]);
+  }, [activeCat, activeSub, buildHomeFilterPath, debouncedLocInput, debouncedSearch, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1655,6 +1661,7 @@ function App() {
     }
     if (debouncedSearch) params.append('search', debouncedSearch);
     if (activeCat) params.append('category', activeCat);
+    if (activeSub) params.append('subcategory', activeSub);
     if (selectedState && !searchLocation && !debouncedLocInput) params.append('location', selectedState);
 
         // Прикрепляем значения глобальных фильтров и EAV-атрибутов для Laravel Controller
@@ -1689,7 +1696,7 @@ function App() {
       }
     } catch (err) { console.error("Error fetching ads", err); }
     finally { setLoadingAds(false); setLoadingMore(false); }
-  }, [debouncedSearch, debouncedLocInput, activeCat, selectedState, searchLocation, radius, minPrice, maxPrice, conditionFilter, dynamicFilters]); // Защита от бага Stale Closure в React
+  }, [debouncedSearch, debouncedLocInput, activeCat, activeSub, selectedState, searchLocation, radius, minPrice, maxPrice, conditionFilter, dynamicFilters]); // Защита от бага Stale Closure в React
 
   const loadFavorites = useCallback(async () => {
     if (!user) return;
@@ -2576,6 +2583,10 @@ function App() {
         }
       });
     }
+    if (form.subcategory) {
+      formData.append('subcategory', form.subcategory);
+      formData.append('attributes[subcategory]', form.subcategory);
+    }
 
     // Обработка изображений для создания и обновления
     images.forEach(img => {
@@ -2602,6 +2613,12 @@ function App() {
       // Для обновлений Laravel может имитировать PUT/PATCH с полем _method, но мы определили маршрут POST.
       // Поэтому мы просто отправляем POST на эндпоинт обновления.
 
+      console.log("=== SUBMITTING FORM DATA ===");
+      for (let pair of formData.entries()) {
+        console.log(`FORM DATA FIELD: ${pair[0]} = ${pair[1]}`);
+      }
+      console.log("============================");
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -2622,6 +2639,7 @@ function App() {
         setVideoFile(null);
         setEditingAd(null);
         setCurrentTab('profile');
+        navigate('/profile');
         // GA4 ad posted event
         if (!editingAd) events.adPosted(form.category || "general");
         loadAds(1); // Reload after create/update
@@ -2673,6 +2691,7 @@ function App() {
       latitude: ad.latitude || '',
       longitude: ad.longitude || '',
       category: ad.category || '',
+      subcategory: ad.subcategory || '',
       condition: ad.condition || 'usado',
       attributes: parsedAttributes
     });
@@ -2684,6 +2703,7 @@ function App() {
     })));
     setVideoFile(ad.video_url ? { name: 'Video adjunto (Haz clic en la papelera para eliminar)', isExisting: true } : null); // Исправляем баг потери видео при редактировании
     setCurrentTab('post');
+    navigate('/post');
   };
 
   // --- CONTACT / SHARE CLICK ANALYTICS ---
@@ -2694,16 +2714,19 @@ function App() {
       body: JSON.stringify({ channel })
     }).catch(() => {});
 
-      // GTM Event push para conversiones
-      if (typeof window !== 'undefined') {
-        window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({
-          event: `${channel}_click`,
-          ad_id: ad.id,
-          ad_title: ad.title,
-          ad_category: ad.category
-        });
-      }
+    // GTM Event push para conversiones
+    if (typeof window !== 'undefined') {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: `${channel}_click`,
+        ad_id: ad.id,
+        ad_title: ad.title,
+        ad_category: ad.category
+      });
+    }
+
+    // Meta Pixel: Contact event with channel method
+    events.messageStarted(channel);
   };
 
   const handleReviewSubmit = async (e) => {
@@ -3026,6 +3049,42 @@ function App() {
       })
       .catch(err => console.error("Error recording view", err));
   };
+
+  const handleMapAdClickGlobal = useCallback((adId) => {
+    const allAdLists = [
+      ...(Array.isArray(serverAds) ? serverAds : []),
+      ...(Array.isArray(realEstateAds) ? realEstateAds : []),
+      ...(Array.isArray(automotiveAds) ? automotiveAds : []),
+      ...(Array.isArray(jobAds) ? jobAds : []),
+      ...(Array.isArray(serviceAds) ? serviceAds : [])
+    ];
+    
+    const foundAd = allAdLists.find(ad => ad && ad.id == adId);
+    if (foundAd) {
+      handleViewAd(foundAd);
+    } else {
+      const token = localStorage.getItem('auth_token');
+      fetch(`${API_URL}/ads/${adId}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(adData => {
+          if (adData) {
+            handleViewAd(adData);
+          }
+        })
+        .catch(err => console.error("Error fetching ad for map click", err));
+    }
+  }, [serverAds, realEstateAds, automotiveAds, jobAds, serviceAds, handleViewAd]);
+
+  useEffect(() => {
+    window.__onMapAdClick = (adId) => {
+      handleMapAdClickGlobal(adId);
+    };
+    return () => {
+      delete window.__onMapAdClick;
+    };
+  }, [handleMapAdClickGlobal]);
 
   // --- ПРОСМОТР ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
   const handleViewCompany = (seller) => {
@@ -3456,10 +3515,15 @@ function App() {
   const categoryStats = useMemo(() => safeCategoriesData.map(c => ({ name: getCatName(c, lang), count: safeUserAds.filter(a => a.category === c.slug).length })).filter(c => c.count > 0), [safeCategoriesData, safeUserAds, lang]);
   const navLabels = NAV_LABELS[lang] || NAV_LABELS.en;
   const headerCategories = useMemo(() => {
-    // Показываем ВСЕ категории из API в верхней навигации (а не только 5 вертикалей),
-    // плюс спец-пункт «Tiendas» (каталог магазинов) в конце.
+    // Показываем корневые категории, исключая внутренние разделы «Товаров» и дубликаты
+    const excludedSlugs = new Set([
+      'coches', 'electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas',
+      'deportes', 'telefonos', 'bebes', 'informatica', 'coleccionismo', 'formacion',
+      'hospedaje', 'tours', 'boletos_turismo', 'articulos_camping', 'souvenirs',
+      'renta_vehiculos', 'guias_servicios', 'atracciones_exp', 'retiros_bienestar'
+    ]);
     const cats = (Array.isArray(safeCategoriesData) ? safeCategoriesData : [])
-      .filter(c => c && c.slug)
+      .filter(c => c && c.slug && !excludedSlugs.has(c.slug))
       .map(c => ({ slug: c.slug, label: getCatName(c, lang) }));
     cats.push({ slug: 'tiendas', label: navLabels[5] });
     return cats;
@@ -3467,8 +3531,13 @@ function App() {
 
   const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
+  const handleSearchArea = useCallback(({ lat, lng, radius }) => {
+    setSearchLocation({ lat, lng });
+    setRadius(radius);
+  }, []);
+
   // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
-  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} />;
+  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} user={user} token={localStorage.getItem('auth_token')} onSearchArea={handleSearchArea} />;
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} user={user} setUser={setUser} />;
@@ -3614,40 +3683,13 @@ function App() {
           </div>
 
           {/* Theme / Settings Footer */}
-          <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800 flex items-center justify-between">
-            <div className="flex gap-1.5">
-              <button 
-                type="button" 
-                onClick={() => {
-                  const isDark = document.documentElement.classList.contains('dark');
-                  document.documentElement.classList.toggle('dark', !isDark);
-                  localStorage.setItem('theme', !isDark ? 'dark' : 'light');
-                }} 
-                className="rounded-xl bg-slate-100 p-2 text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:scale-105 transition-transform"
-                title="Cambiar tema"
-              >
-                <Moon size={15} className="dark:hidden" />
-                <Sun size={15} className="hidden dark:block" />
-              </button>
-              
-              <button 
-                type="button" 
-                onClick={() => {
-                  const nextLang = lang === 'es' ? 'en' : 'es';
-                  setLang(nextLang);
-                }} 
-                className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600 dark:bg-slate-900 dark:text-slate-300 hover:scale-105 transition-transform"
-              >
-                {lang === 'es' ? 'EN' : 'ES'}
-              </button>
-            </div>
-
-            {user && (
+          {user && (
+            <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800 flex items-center justify-end">
               <button onClick={() => { setShowTabBarMenu(false); handleLogout(); }} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
                 <LogOut size={14} /> Salir
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -3690,39 +3732,6 @@ function App() {
               <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
               <input data-testid="desktop-search-input" value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
-                <div className="h-7 w-px bg-slate-200"></div>
-
-                {/* КАСТОМНЫЙ ПОПАП ВЫБОРА ЛОКАЦИИ (ШТАТ + ГОРОД) */}
-                <div className="relative flex items-center w-full max-w-[220px]">
-                  <MapPin className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
-                  <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="w-full px-2 py-2 bg-transparent outline-none text-[14px] text-left truncate text-slate-700">
-                    {searchLocationInput || t.all_mexico || "Todo México"}
-                  </button>
-
-                  {showLocationPicker && (
-                    <div className="header-popover absolute top-full left-0 mt-3 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
-                      <div className="mb-3">
-                        <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.state || 'Estado'}</label>
-                        <select data-testid="desktop-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer">
-                          <option value="">{t.all_mexico || 'Todo México'}</option>
-                          {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
-                        </select>
-                      </div>
-                    <div className="mb-4">
-                      <label className="block text-[12px] font-semibold text-slate-700 mb-1">{t.city || 'Ciudad / Municipio'}</label>
-                      <select data-testid="desktop-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 cursor-pointer disabled:bg-slate-50 disabled:text-slate-400">
-                        <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
-                        {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
-                      </select>
-                    </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200">{t.cancel || 'Cerrar'}</button>
-                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {searchLocation?.lat && (
                   <>
                     <div className="h-7 w-px bg-slate-200"></div>
@@ -3735,7 +3744,7 @@ function App() {
                     </select>
                   </>
                 )}
-              <button type="submit" data-testid="desktop-search-submit" className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white m-1 ml-2 flex items-center gap-1.5 rounded-xl shadow-sm shadow-[#84CC16]/30">
+                <button type="submit" data-testid="desktop-search-submit" className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white m-1 ml-2 flex items-center gap-1.5 rounded-full shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn || "Buscar"}
                 </button>
@@ -3759,6 +3768,27 @@ function App() {
                   </select>
                 </div>
                 <div className="relative">
+                  <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label="Cambiar ubicación">
+                    <MapPin className="w-3 h-3 text-[#84CC16]" />
+                    <span className="truncate max-w-[45px] text-[10px] font-extrabold uppercase">{searchLocationInput || t.all_mexico || "Todo México"}</span>
+                  </button>
+                  {showMobileLocationPicker && (
+                    <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
+                      <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
+                        <option value="">{t.all_mexico || 'Todo México'}</option>
+                        {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
+                      </select>
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad'}</label>
+                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
+                        <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
+                        {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
+                      </select>
+                      <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
                   <button type="button" aria-label={user ? 'Abrir menú de cuenta' : 'Iniciar sesión'} onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
                     {user?.avatar_url ? (
                       <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-7 h-7 rounded-full object-cover" alt=""/>
@@ -3779,6 +3809,35 @@ function App() {
               <button type="button" onClick={() => setIsDarkMode(v => !v)} className="header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
+              {/* DESKTOP LOCATION SELECTOR */}
+              <div className="relative hidden lg:block">
+                <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="header-lang-select hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-bold text-slate-700 dark:text-slate-200 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer mr-1">
+                  <MapPin className="w-3.5 h-3.5 text-[#84CC16]" />
+                  <span className="truncate max-w-[110px]">{searchLocationInput || t.all_mexico || "Todo México"}</span>
+                </button>
+                {showLocationPicker && (
+                  <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50 bg-white dark:bg-slate-950">
+                    <div className="mb-3">
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
+                      <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
+                        <option value="">{t.all_mexico || 'Todo México'}</option>
+                        {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
+                      </select>
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad / Municipio'}</label>
+                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
+                        <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
+                        {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">{t.cancel || 'Cerrar'}</button>
+                      <button type="button" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
                 <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
@@ -3890,38 +3949,47 @@ function App() {
             </div>
           </div>
           {/* Mobile Search + Location + Account */}
-          <div className="mobile-search-row lg:hidden pb-1">
+          <div className="mobile-search-row lg:hidden pt-7 pb-7">
             <div ref={mobileSearchRef} className="relative min-w-0">
-              <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-2xl focus-within:ring-2 focus-within:ring-[#84CC16]/30">
+              <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-full focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
                 <input data-testid="mobile-search-input" ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
-                <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-chip flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left">
-                  <MapPin className="w-4 h-4 shrink-0" />
-                  <span>{searchLocationInput || t.all_mexico || "Todo México"}</span>
-                </button>
-                <button type="submit" data-testid="mobile-search-submit" aria-label={t.search_btn || 'Buscar'} className="mobile-search-submit mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#84CC16] text-slate-950">
+                <button type="submit" data-testid="mobile-search-submit" aria-label={t.search_btn || 'Buscar'} className="mobile-search-submit mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#84CC16] text-slate-950">
                   <Search className="h-4 w-4" />
                 </button>
               </form>
               <Suspense fallback={null}>
                 <SearchSuggestions show={showSuggestions} suggestions={suggestions} query={searchQuery} recentSearches={recentSearches} onSelect={handleSuggestionSelect} onClearRecent={() => { localStorage.removeItem('mercasto_recent_searches'); setRecentSearches([]); }} highlightedIndex={highlightedIndex} />
               </Suspense>
-              {showMobileLocationPicker && (
-                <div className="header-popover absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-xl border p-4 z-50">
-                  <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
-                  <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-                    <option value="">{t.all_mexico || 'Todo México'}</option>
-                    {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
-                  </select>
-                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad'}</label>
-                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
-                        <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
-                        {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
-                      </select>
-                <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
-                </div>
-              )}
             </div>
+            {activeCat && categorySchema[activeCat]?.subcategories && (
+              <div className="mt-2 w-full">
+                <select
+                  value={activeSub}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setActiveSub(val);
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('category', activeCat);
+                    if (val) params.set('subcategory', val);
+                    else params.delete('subcategory');
+                    navigate(`/?${params.toString()}`);
+                  }}
+                  className="w-full h-[38px] px-3.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-[13px] font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:ring-2 focus:ring-[#84CC16]/30 appearance-none"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    backgroundSize: '16px'
+                  }}
+                >
+                  <option value="">{lang === 'es' ? 'Todas las subcategorías' : 'All subcategories'}</option>
+                  {categorySchema[activeCat].subcategories.map(([slug, esLabel, enLabel]) => (
+                    <option key={slug} value={slug}>{lang === 'es' ? esLabel : enLabel}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
         <div className="header-category-bar border-t">
@@ -3931,6 +3999,29 @@ function App() {
               {headerCategories.map(c => (
                 <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{c.label}</button>
               ))}
+              {activeCat && categorySchema[activeCat]?.subcategories && (
+                <div className="relative ml-2 shrink-0 flex items-center">
+                  <span className="text-[12px] text-slate-400 mr-2">/</span>
+                  <select
+                    value={activeSub}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setActiveSub(val);
+                      const params = new URLSearchParams(window.location.search);
+                      params.set('category', activeCat);
+                      if (val) params.set('subcategory', val);
+                      else params.delete('subcategory');
+                      navigate(`/?${params.toString()}`);
+                    }}
+                    className="h-[32px] px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-[12px] font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:ring-2 focus:ring-[#84CC16]/30"
+                  >
+                    <option value="">{lang === 'es' ? 'Todas las subcategorías' : 'All subcategories'}</option>
+                    {categorySchema[activeCat].subcategories.map(([slug, esLabel, enLabel]) => (
+                      <option key={slug} value={slug}>{lang === 'es' ? esLabel : enLabel}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </nav>
           </div>
         </div>
@@ -3959,11 +4050,14 @@ function App() {
               <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
               <Route path="/ads/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
               <Route path="/anuncio/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
-              <Route path="/autos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding lang={lang} /></React.Suspense>} />
+              <Route path="/motor" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding lang={lang} /></React.Suspense>} />
+              <Route path="/autos" element={<Navigate to="/motor" replace />} />
               <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding lang={lang} /></React.Suspense>} />
               <Route path="/empleos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EmpleosLanding lang={lang} /></React.Suspense>} />
               <Route path="/servicios" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ServiciosLanding lang={lang} /></React.Suspense>} />
-              {['electronica', 'moda', 'hogar', 'tecnologia', 'telefonos', 'mascotas', 'infantil', 'negocios', 'ocio', 'boletos'].map(category => (
+              <Route path="/productos" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProductosLanding lang={lang} /></React.Suspense>} />
+              <Route path="/turismo" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><TurismoLanding lang={lang} /></React.Suspense>} />
+              {['electronica', 'moda', 'hogar', 'tecnologia', 'telefonos', 'mascotas', 'infantil', 'negocios', 'ocio', 'boletos', 'hospedaje', 'tours', 'boletos_turismo', 'articulos_camping', 'souvenirs', 'renta_vehiculos', 'guias_servicios', 'atracciones_exp', 'retiros_bienestar'].map(category => (
                 <Route key={category} path={`/${category}`} element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><CategoryLanding category={category} lang={lang} /></React.Suspense>} />
               ))}
               <Route path="/informatica" element={<Navigate to="/tecnologia" replace />} />
@@ -3986,14 +4080,14 @@ function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="mt-10 bg-[#0F172A] text-slate-300">
+      <footer className="mt-10 bg-[#0F172A] text-slate-300 pb-24 md:pb-0">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div>
               <div className="footer-logo flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
                 <MercastoLogo className="h-8" isFooter={true} />
               </div>
-              <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'El marketplace local de más rápido crecimiento en México. Compra, vende, renta y encuentra empleo de forma segura.'}</p>
+              <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'Los clasificados locales de más rápido crecimiento en México. Compra, vende, renta y encuentra empleo de forma segura.'}</p>
             </div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/safety" onClick={(e) => { e.preventDefault(); navigate('/safety'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><button type="button" onClick={() => setShowPricingModal(true)} className="hover:text-white cursor-pointer text-left">{t.pricing || 'Tarifas'}</button></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
@@ -4020,7 +4114,7 @@ function App() {
         </div>
       </footer>
 
-      {!viewedAd && renderTabBar()}
+      {!viewedAd && currentTab !== 'post' && renderTabBar()}
       {renderPricingModal()}
       {renderProfileModal()}
       {renderCouponModal()}
