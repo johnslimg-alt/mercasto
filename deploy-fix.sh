@@ -23,7 +23,6 @@ scp src/components/screens/AdDetailScreen.jsx mercasto:/var/www/mercasto/src/com
 scp src/components/common/ContactButton.jsx mercasto:/var/www/mercasto/src/components/common/
 scp backend/app/Providers/AppServiceProvider.php mercasto:/var/www/mercasto/backend/app/Providers/
 scp backend/app/Http/Controllers/Api/AdController.php mercasto:/var/www/mercasto/backend/app/Http/Controllers/Api/
-scp backend/app/Jobs/SendMetaCapiEventJob.php mercasto:/var/www/mercasto/backend/app/Jobs/
 scp src/components/common/MapV3.jsx mercasto:/var/www/mercasto/src/components/common/
 scp src/components/common/SidebarFilters.jsx mercasto:/var/www/mercasto/src/components/common/
 scp src/index.css mercasto:/var/www/mercasto/src/
@@ -35,6 +34,8 @@ scp src/components/screens/verticals/ProductosLanding.jsx mercasto:/var/www/merc
 scp src/components/screens/verticals/TurismoLanding.jsx mercasto:/var/www/mercasto/src/components/screens/verticals/
 scp src/components/screens/verticals/CategoryLanding.jsx mercasto:/var/www/mercasto/src/components/screens/verticals/
 scp src/utils/verticalCopy.js mercasto:/var/www/mercasto/src/utils/
+scp src/utils/analytics.js mercasto:/var/www/mercasto/src/utils/
+scp src/utils/metaCapiBridge.js mercasto:/var/www/mercasto/src/utils/
 
 # 4. На сервере: пересобрать и задеплоить
 echo "🔨 Пересобираю на сервере..."
