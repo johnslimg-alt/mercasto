@@ -285,7 +285,8 @@ function sendToMeta(eventName, params) {
     'telegram_click',
     'phone_click',
     'email_click',
-    'message_started'
+    'message_started',
+    'sign_up'
   ];
   if (ignoredForBridge.includes(eventName)) return;
 
@@ -819,4 +820,7 @@ export const events = {
       items: [{ item_name: plan, item_category: 'promotion' }],
       ...params,
     }),
+
+  registered: (params = {}) =>
+    trackEvent('sign_up', params),
 };

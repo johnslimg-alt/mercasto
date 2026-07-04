@@ -2210,7 +2210,10 @@ function App() {
             if (authMode === 'register') await applyPendingReferral(result.access_token);
           }
           // Mark new registrations for onboarding
-          if (authMode === 'register') localStorage.setItem('just_registered', '1');
+          if (authMode === 'register') {
+            localStorage.setItem('just_registered', '1');
+            events.registered();
+          }
           setShowAuthModal(false);
         }
       } else {

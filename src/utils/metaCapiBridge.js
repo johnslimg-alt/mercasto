@@ -11,6 +11,7 @@ const EVENT_MAP = {
   phone_click: { endpoint: 'contact', metaName: 'Contact', method: 'phone' },
   email_click: { endpoint: 'contact', metaName: 'Contact', method: 'email' },
   message_started: { endpoint: 'contact', metaName: 'Contact', method: 'message' },
+  sign_up: { endpoint: 'register', metaName: 'CompleteRegistration' },
 };
 
 function isBrowser() {
@@ -87,7 +88,8 @@ async function sendServerEvent(endpoint, payload) {
 function sendBrowserEvent(metaConfig, payload, eventID) {
   if (typeof window.fbq !== 'function') return;
 
-  const params = {
+  const isReg = metaConfig.metaName === 'CompleteRegistration';
+  const params = isReg ? {} : {
     content_type: 'classified_ad',
     listing_id: payload.listing_id,
     category: payload.category,
@@ -96,7 +98,7 @@ function sendBrowserEvent(metaConfig, payload, eventID) {
     value: 0,
   };
 
-  if (payload.method) params.contact_method = payload.method;
+  if (!isReg && payload.method) params.contact_method = payload.method;
 
   if (metaConfig.custom) {
     window.fbq('trackCustom', metaConfig.metaName, params, { eventID });
@@ -107,9 +109,11 @@ function sendBrowserEvent(metaConfig, payload, eventID) {
 
 function sendMappedEvent(metaConfig, item = {}) {
   const payload = buildPayload(item);
-  if (!payload.listing_id) return;
+  const isReg = metaConfig.metaName === 'CompleteRegistration';
+  
+  if (!isReg && !payload.listing_id) return;
 
-  const id = eventId(metaConfig.endpoint, payload.listing_id);
+  const id = eventId(metaConfig.endpoint, payload.listing_id || 'user');
   const method = clean(item.method || item.contact_method || metaConfig.method || '');
   const serverPayload = {
     event_id: id,

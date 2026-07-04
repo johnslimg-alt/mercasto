@@ -23,6 +23,29 @@ class MetaEventController extends Controller
         return $this->sendClassifiedEvent($request, $meta, 'AddToWishlist');
     }
 
+    public function register(Request $request, MetaCapiService $meta)
+    {
+        $validated = $request->validate([
+            'event_id' => ['required', 'string', 'max:120'],
+            'url' => ['nullable', 'url'],
+        ]);
+
+        $result = $meta->send(
+            'CompleteRegistration',
+            $request,
+            $request->user(),
+            [],
+            $validated['event_id'],
+            $validated['url'] ?? null
+        );
+
+        return response()->json([
+            'ok' => (bool) ($result['ok'] ?? false),
+            'event_id' => $validated['event_id'],
+            'skipped' => (bool) ($result['skipped'] ?? false),
+        ]);
+    }
+
     private function sendClassifiedEvent(Request $request, MetaCapiService $meta, string $eventName)
     {
         $validated = $request->validate([

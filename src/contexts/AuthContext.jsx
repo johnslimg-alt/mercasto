@@ -1,5 +1,5 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { events } from '../utils/analytics';
 
 const AuthContext = createContext(null);
 
@@ -95,6 +95,7 @@ export function AuthProvider({ children }) {
         setUser(data.user);
         setShowAuthModal(false);
         localStorage.setItem('just_registered', '1');
+        events.registered();
         return { success: true };
       }
       

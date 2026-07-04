@@ -307,7 +307,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Meta CAPI events (Public)
-Route::middleware('throttle:60,1')->post('/meta/events/contact', [MetaEventController::class, 'contact']);
+Route::middleware('throttle:60,1')->group(function () {
+    Route::post('/meta/events/contact', [MetaEventController::class, 'contact']);
+    Route::post('/meta/events/register', [MetaEventController::class, 'register']);
+});
 
 // Email Verification (public — no auth required)
 Route::middleware('throttle:10,1')->post('/email/verify', [EmailVerificationController::class, 'verify']);
