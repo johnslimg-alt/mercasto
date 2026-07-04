@@ -35,18 +35,6 @@ const PRODUCT_GROUPS = [
   { slug: 'formacion', label: { es: 'Libros y Cursos', en: 'Books & Courses', ru: 'Книги и курсы' } },
 ];
 
-const TURISMO_GROUPS = [
-  { slug: 'hospedaje', label: { es: 'Hoteles y Hospedaje', en: 'Hotels & Lodging', ru: 'Отели и жилье' } },
-  { slug: 'tours', label: { es: 'Tours y Viajes', en: 'Tours & Trips', ru: 'Туры и путешествия' } },
-  { slug: 'boletos_turismo', label: { es: 'Boletos a Eventos', en: 'Event Tickets', ru: 'Билеты на мероприятия' } },
-  { slug: 'articulos_camping', label: { es: 'Artículos de Viaje', en: 'Travel & Outdoor Gear', ru: 'Товары для туризма' } },
-  { slug: 'souvenirs', label: { es: 'Souvenirs y Regalos', en: 'Souvenirs & Gifts', ru: 'Сувениры и подарки' } },
-  { slug: 'renta_vehiculos', label: { es: 'Renta de Vehículos y Yates', en: 'Vehicle & Yacht Rental', ru: 'Аренда транспорта и яхт' } },
-  { slug: 'guias_servicios', label: { es: 'Guías y Servicios', en: 'Guides & Services', ru: 'Гиды и услуги' } },
-  { slug: 'atracciones_exp', label: { es: 'Atracciones y Experiencias', en: 'Attractions & Experiences', ru: 'Развлечения и впечатления' } },
-  { slug: 'retiros_bienestar', label: { es: 'Retiros y Bienestar', en: 'Retreats & Wellness', ru: 'Ретриты и велнес' } },
-];
-
 // Фасеты публикации — сохраняются в form.attributes (filterConfig) и используются фильтрами поиска
 // (доставки нет: продажа напрямую покупатель↔продавец).
 const SALE_FACETS = [
@@ -142,21 +130,12 @@ export default function PostScreen({
       infantil: 'productos',
       mascotas: 'productos',
       formacion: 'productos',
-      hospedaje: 'turismo',
-      tours: 'turismo',
-      boletos_turismo: 'turismo',
-      articulos_camping: 'turismo',
-      souvenirs: 'turismo',
-      renta_vehiculos: 'turismo',
-      guias_servicios: 'turismo',
-      atracciones_exp: 'turismo',
-      retiros_bienestar: 'turismo',
     };
     return parentMap[form.category] || '';
   });
 
   const handleParentCategorySelect = (slug) => {
-    if (slug === 'productos' || slug === 'turismo') {
+    if (slug === 'productos') {
       setSelectedParentCategory(slug);
       setForm({ ...form, category: '', subcategory: '', attributes: {} });
     } else {
@@ -448,29 +427,6 @@ export default function PostScreen({
                 </div>
               )}
 
-              {/* TURISMO GROUPS (Level 2 for Tourism) */}
-              {selectedParentCategory === 'turismo' && (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-                  <label className="block text-[14px] font-bold text-slate-700 dark:text-slate-300 mb-3">
-                    {lang === 'es' ? 'Selecciona el Tipo de Servicio Turístico' : 'Select Tourism Type'}
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {TURISMO_GROUPS.map(group => {
-                      const selected = form.category === group.slug;
-                      return (
-                        <button
-                          key={group.slug}
-                          type="button"
-                          onClick={() => handleProductGroupSelect(group.slug)}
-                          className={`p-3 rounded-lg border text-center transition-all text-xs font-semibold ${selected ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16]' : 'border-slate-200 dark:border-slate-800 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                        >
-                          {group.label[lang] || group.label.es}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
 
               {/* SUBCATEGORY (Level 3) */}
               {form.category && (subcategoriesMap[form.category] || []).length > 0 && (
