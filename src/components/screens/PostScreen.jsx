@@ -7,7 +7,7 @@ import {
   Phone, MessageCircle, Send, Locate, Compass,
 } from 'lucide-react';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
-import { filterConfig } from '../../constants/filterConfig';
+import { filterConfig, autoModelsByBrand } from '../../constants/filterConfig';
 import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
 import MapV3 from '../common/MapV3';
 import SortablePhotoGrid from '../SortablePhotoGrid';
@@ -326,6 +326,35 @@ export default function PostScreen({
     const hasErr = !!errors[errKey];
     const baseClass = `w-full px-3.5 py-2.5 border ${hasErr ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-all`;
     const onChange = v => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), [key]: v } }));
+
+    if (key === 'modelo') {
+      const selectedBrand = form.attributes?.marca || '';
+      const models = autoModelsByBrand[selectedBrand];
+      if (models?.length > 0) {
+        return (
+          <div key={key} className="space-y-2">
+            <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+              {field.label || key}{field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <select value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
+              <option value="">Seleccionar...</option>
+              {models.map(m => <option key={m} value={m}>{m}</option>)}
+              <option value="Otro">Otro modelo</option>
+            </select>
+            {val === 'Otro' && (
+              <input
+                type="text"
+                value={form.attributes?.modelo_otro || ''}
+                onChange={e => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), modelo_otro: e.target.value, modelo: e.target.value } }))}
+                placeholder="Especifica el modelo"
+                className={baseClass + ' mt-2'}
+              />
+            )}
+            {hasErr && <p className="text-xs text-red-500">{errors[errKey]}</p>}
+          </div>
+        );
+      }
+    }
 
     if (field.type === 'select' && field.options?.length > 0) {
       return (

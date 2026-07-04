@@ -1,7 +1,81 @@
 const autoBrands = [
-  'Chevrolet', 'Nissan', 'Volkswagen', 'Toyota', 'Honda', 'Ford', 'BMW', 'Mercedes-Benz',
-  'Audi', 'Kia', 'Hyundai', 'Mazda', 'Jeep', 'Tesla', 'MG', 'BYD', 'Otra'
+  // Norteamérica
+  'Chevrolet', 'Ford', 'RAM', 'Dodge', 'Jeep', 'Chrysler', 'GMC', 'Cadillac', 'Buick', 'Lincoln', 'Tesla',
+  // Japón / Corea
+  'Toyota', 'Honda', 'Nissan', 'Mazda', 'Mitsubishi', 'Suzuki', 'Subaru', 'Lexus', 'Acura', 'Infiniti', 'Isuzu', 'Kia', 'Hyundai', 'Genesis',
+  // Alemania
+  'Volkswagen', 'BMW', 'Mercedes-Benz', 'Audi', 'Porsche', 'MINI', 'Smart',
+  // Europa (otros)
+  'SEAT', 'Renault', 'Peugeot', 'Citroën', 'Fiat', 'Alfa Romeo', 'Volvo', 'Land Rover', 'Jaguar',
+  // China
+  'BYD', 'MG', 'Chirey', 'JAC', 'GWM (Haval)', 'Changan', 'Omoda/Jaecoo', 'DFSK', 'Foton',
+  // Camiones y autobuses comerciales
+  'Scania', 'International', 'Freightliner', 'MAN', 'Iveco', 'Dina', 'Hino',
+  'Otra'
 ];
+
+// Modelos reales más comunes por marca en el mercado mexicano.
+// Se usa para el select dependiente Marca -> Modelo al publicar; marcas sin
+// entrada aquí (o "Otra") caen a un campo de texto libre.
+export const autoModelsByBrand = {
+  'Chevrolet': ['Aveo', 'Onix', 'Silverado', 'Equinox', 'Tracker', 'Captiva', 'Cavalier', 'Suburban', 'Spark', 'Blazer', 'Colorado'],
+  'Nissan': ['Versa', 'Sentra', 'Altima', 'March', 'Frontier', 'Kicks', 'X-Trail', 'Pathfinder', 'Tsuru', 'NP300', 'V-Drive'],
+  'Volkswagen': ['Jetta', 'Golf', 'Tiguan', 'Vento', 'Polo', 'Taos', 'Virtus', 'Taigun', 'Nivus', 'Beetle'],
+  'Toyota': ['Corolla', 'Camry', 'RAV4', 'Tacoma', 'Yaris', 'Prius', 'Hilux', 'Sienna', 'Land Cruiser', 'Corolla Cross', 'Highlander'],
+  'Honda': ['Civic', 'Accord', 'CR-V', 'Fit', 'HR-V', 'City', 'Pilot', 'Odyssey', 'BR-V'],
+  'Ford': ['Mustang', 'Lobo', 'Explorer', 'Ranger', 'Focus', 'Escape', 'Bronco', 'F-150', 'Edge', 'Territory', 'Maverick'],
+  'BMW': ['Serie 3', 'Serie 1', 'X3', 'X5', 'Serie 5', 'X1', 'X6', 'Serie 4', 'X2'],
+  'Mercedes-Benz': ['Clase C', 'Clase A', 'GLC', 'GLE', 'Clase E', 'GLA', 'CLA', 'GLB'],
+  'Audi': ['A3', 'A4', 'Q3', 'Q5', 'A1', 'A6', 'Q7', 'Q2'],
+  'Kia': ['Rio', 'Forte', 'Sportage', 'Seltos', 'Soul', 'Sorento', 'Picanto', 'K3'],
+  'Hyundai': ['Accent', 'Elantra', 'Tucson', 'Creta', 'Santa Fe', 'Grand i10', 'Venue', 'Kona'],
+  'Mazda': ['Mazda 3', 'Mazda 2', 'CX-30', 'CX-5', 'CX-3', 'Mazda 6', 'MX-5', 'CX-50'],
+  'Jeep': ['Grand Cherokee', 'Wrangler', 'Compass', 'Renegade', 'Cherokee', 'Gladiator'],
+  'Tesla': ['Model 3', 'Model Y', 'Model S', 'Model X'],
+  'MG': ['MG5', 'HS', 'ZS', 'RX5', 'GT', 'One'],
+  'BYD': ['Dolphin', 'Yuan Plus', 'Song Plus', 'Han', 'Tang', 'Seal'],
+  'SEAT': ['Ibiza', 'León', 'Ateca', 'Arona', 'Tarraco'],
+  'Renault': ['Kwid', 'Kangoo', 'Duster', 'Logan', 'Stepway', 'Oroch', 'Captur'],
+  'Peugeot': ['208', '2008', '3008', '308', 'Partner', '408'],
+  'Mitsubishi': ['L200', 'Outlander', 'ASX', 'Mirage', 'Eclipse Cross', 'Xpander'],
+  'Suzuki': ['Swift', 'Vitara', 'Ciaz', 'S-Cross', 'Jimny'],
+  'RAM': ['700', '1500', '2500', 'ProMaster'],
+  'Dodge': ['Attitude', 'Journey', 'Durango', 'Ram (versión anterior)'],
+  'Chirey': ['Tiggo 2', 'Tiggo 7', 'Tiggo 8', 'Arrizo 5'],
+  'Chrysler': ['300', 'Pacifica', 'Voyager'],
+  'GMC': ['Sierra', 'Terrain', 'Yukon', 'Acadia', 'Canyon'],
+  'Cadillac': ['Escalade', 'XT4', 'XT5', 'XT6', 'CT5'],
+  'Buick': ['Encore', 'Envision', 'Enclave'],
+  'Lincoln': ['Nautilus', 'Aviator', 'Corsair', 'Navigator'],
+  'Subaru': ['Forester', 'Outback', 'Impreza', 'XV', 'Crosstrek'],
+  'Lexus': ['NX', 'RX', 'ES', 'UX', 'GX'],
+  'Acura': ['ILX', 'RDX', 'MDX', 'TLX'],
+  'Infiniti': ['Q50', 'QX50', 'QX60'],
+  'Isuzu': ['D-Max', 'MU-X', 'NPR'],
+  'Genesis': ['G70', 'G80', 'GV70', 'GV80'],
+  'Porsche': ['911', 'Cayenne', 'Macan', 'Panamera', 'Taycan'],
+  'MINI': ['Cooper', 'Countryman', 'Clubman'],
+  'Smart': ['Fortwo', 'Forfour'],
+  'Citroën': ['C3', 'C4', 'Berlingo', 'C3 Aircross'],
+  'Fiat': ['500', 'Mobi', 'Argo', 'Pulse', 'Strada'],
+  'Alfa Romeo': ['Giulia', 'Stelvio', 'Tonale'],
+  'Volvo': ['XC40', 'XC60', 'XC90', 'S60'],
+  'Land Rover': ['Range Rover', 'Range Rover Sport', 'Discovery', 'Defender', 'Evoque'],
+  'Jaguar': ['F-Pace', 'XE', 'XF', 'E-Pace'],
+  'JAC': ['Sei4', 'JS4', 'S3'],
+  'GWM (Haval)': ['H6', 'Jolion', 'H9', 'Poer'],
+  'Changan': ['CS35 Plus', 'CS55', 'Alsvin'],
+  'Omoda/Jaecoo': ['Omoda 5', 'Jaecoo 5', 'Jaecoo 7'],
+  'DFSK': ['Glory 580', 'Glory 500', 'K01'],
+  'Foton': ['Toano', 'View', 'Tunland'],
+  'Scania': ['R-Series', 'P-Series', 'G-Series'],
+  'International': ['DuraStar', 'ProStar', 'IC Bus'],
+  'Freightliner': ['Cascadia', 'M2', 'Coronado'],
+  'MAN': ['TGX', 'TGS', 'Lion\'s Coach'],
+  'Iveco': ['Daily', 'Eurocargo', 'Stralis'],
+  'Dina': ['Linner', 'Avante', 'Ciela'],
+  'Hino': ['300', '500', '700'],
+};
 
 const electronicsBrands = [
   'Apple', 'Samsung', 'Xiaomi', 'Motorola', 'Huawei', 'Oppo', 'Google Pixel', 'Honor',
