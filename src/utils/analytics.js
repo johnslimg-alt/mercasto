@@ -273,6 +273,22 @@ function sendToMeta(eventName, params) {
   const fbq = getFbq();
   if (!fbq) return;
 
+  // These events are sent and deduplicated with eventID via metaCapiBridge.js.
+  // We MUST NOT send them directly here as it creates duplicates without eventID.
+  const ignoredForBridge = [
+    'ad_posted',
+    'listing_published',
+    'favorite_added',
+    'add_to_wishlist',
+    'contact_click',
+    'whatsapp_click',
+    'telegram_click',
+    'phone_click',
+    'email_click',
+    'message_started'
+  ];
+  if (ignoredForBridge.includes(eventName)) return;
+
   const standardName = META_STANDARD_EVENT_MAP[eventName];
   const metaParams = buildMetaParams(eventName, params);
   if (standardName) fbq('track', standardName, metaParams);
