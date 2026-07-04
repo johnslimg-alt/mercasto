@@ -55,6 +55,7 @@ function buildPayload(dataLayerItem = {}) {
     category: clean(dataLayerItem.category || dataLayerItem.content_category || ''),
     city: clean(dataLayerItem.city || dataLayerItem.location_city || ''),
     url: clean(dataLayerItem.page_location || window.location.href),
+    user_id: clean(dataLayerItem.user_id || ''),
   };
 }
 

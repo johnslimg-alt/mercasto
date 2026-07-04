@@ -782,8 +782,8 @@ export const events = {
   adImpression: (adId, category, placement = 'feed') =>
     trackEvent('ad_impression', { content_type: 'ad', content_id: `ad_${adId}`, ad_id: adId, category, placement }),
 
-  adPosted: (category, params = {}) =>
-    trackEvent('ad_posted', { content_type: 'ad', category, ...params }),
+  adPosted: (adId, category, params = {}) =>
+    trackEvent('ad_posted', { content_type: 'ad', content_id: `ad_${adId}`, ad_id: adId, category, ...params }),
 
   adUpdated: (adId, category, params = {}) =>
     trackEvent('ad_updated', { content_type: 'ad', content_id: `ad_${adId}`, ad_id: adId, category, ...params }),

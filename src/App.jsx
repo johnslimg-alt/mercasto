@@ -2643,6 +2643,8 @@ function App() {
       });
 
       if (res.ok) {
+        const savedAd = await res.json().catch(() => null);
+
         // Очищаем оперативную память браузера от временных файлов (Memory Leak fix)
         images.forEach(img => {
           if (img.source === 'new' && img.preview) {
@@ -2657,8 +2659,8 @@ function App() {
         setEditingAd(null);
         setCurrentTab('profile');
         navigate('/profile');
-        // GA4 ad posted event
-        if (!editingAd) events.adPosted(form.category || "general");
+        // GA4 + Meta Pixel/CAPI ad posted event
+        if (!editingAd && savedAd?.id) events.adPosted(savedAd.id, form.category || "general");
         loadAds(1); // Reload after create/update
         loadUserAds(); // Обновляем список моих объявлений
       } else {

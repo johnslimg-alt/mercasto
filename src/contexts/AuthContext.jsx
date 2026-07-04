@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
         setUser(data.user);
         setShowAuthModal(false);
         localStorage.setItem('just_registered', '1');
-        events.registered();
+        events.registered({ user_id: data.user?.id });
         return { success: true };
       }
       
