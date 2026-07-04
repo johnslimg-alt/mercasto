@@ -67,6 +67,7 @@ class AuthTest extends TestCase
 
         $response->assertOk()->assertExactJson([
             'google' => true,
+            'apple' => false,
             'twitter' => false,
             'telegram' => true,
             'telegram_bot_id' => '123456',
