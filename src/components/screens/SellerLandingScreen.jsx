@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, MessageSquare, DollarSign, PlusCircle, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { CheckCircle2, MessageSquare, DollarSign, PlusCircle, ArrowRight, ShieldCheck, Sparkles, ChevronDown } from 'lucide-react';
 import { trackPageView } from '../../utils/analytics';
 
 export default function SellerLandingScreen({ lang = 'es' }) {
   const navigate = useNavigate();
+  const [activeFaq, setActiveFaq] = useState(null);
 
   useEffect(() => {
     // Track page view for analytics
@@ -15,10 +16,29 @@ export default function SellerLandingScreen({ lang = 'es' }) {
     navigate('/post');
   };
 
+  const faqItems = [
+    {
+      q: '¿Es realmente gratis publicar anuncios en Mercasto?',
+      a: 'Sí, publicar anuncios es 100% gratuito. No cobramos comisiones por venta, cuotas mensuales ni tarifas ocultas. Te quedas con el 100% del dinero de tu venta.'
+    },
+    {
+      q: '¿Cómo me contactarán los interesados?',
+      a: 'En Mercasto los compradores te contactan de forma directa. Puedes configurar tu perfil para recibir mensajes directamente en tu WhatsApp, Telegram o recibir llamadas telefónicas tradicionales.'
+    },
+    {
+      q: '¿Qué categorías de anuncios puedo publicar?',
+      a: 'Puedes publicar prácticamente cualquier tipo de clasificado: autos y motocicletas (Motor), inmuebles (venta o renta), servicios profesionales, artículos personales, tecnología, ofertas de empleo y más.'
+    },
+    {
+      q: '¿Cuántos anuncios puedo publicar de forma gratuita?',
+      a: 'No hay límites restrictivos para los vendedores particulares. Puedes publicar múltiples anuncios activos para dar a conocer todos tus productos o servicios.'
+    }
+  ];
+
   return (
     <div className="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-white transition-colors duration-300">
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 pb-16 md:pt-32 md:pb-24 flex flex-col items-center text-center px-4 max-w-5xl mx-auto">
+      <section className="relative overflow-hidden pt-20 pb-12 md:pt-32 md:pb-16 flex flex-col items-center text-center px-4 max-w-5xl mx-auto">
         {/* Glow Effects */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-[#84CC16]/10 dark:bg-[#84CC16]/5 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
 
@@ -32,7 +52,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
           <span className="text-[#84CC16] drop-shadow-sm">sin pagar comisiones</span>
         </h1>
 
-        <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mb-10 leading-relaxed font-medium">
+        <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mb-8 leading-relaxed font-medium">
           Publica tus autos, casas, servicios o productos gratis. Los compradores te contactan directamente por WhatsApp o Telegram sin intermediarios.
         </p>
 
@@ -46,6 +66,21 @@ export default function SellerLandingScreen({ lang = 'es' }) {
             <ArrowRight size={18} className="ml-1" />
           </button>
         </div>
+      </section>
+
+      {/* Visual Product Mockup Section */}
+      <section className="px-4 max-w-5xl mx-auto mb-16 md:mb-24">
+        <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl bg-white dark:bg-slate-900/50 p-2 md:p-3">
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#84CC16]/5 to-transparent pointer-events-none" />
+          <img
+            src="/seller-dashboard-mockup.jpg"
+            alt="Mercasto Seller Panel Interface Dashboard Mockup"
+            className="w-full h-auto rounded-2xl"
+          />
+        </div>
+        <p className="text-center text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-4 font-medium">
+          Vista previa del panel de control de vendedor: administra tus anuncios y visualiza estadísticas en tiempo real.
+        </p>
       </section>
 
       {/* Main Features Grid */}
@@ -128,8 +163,44 @@ export default function SellerLandingScreen({ lang = 'es' }) {
         </div>
       </section>
 
+      {/* FAQ Section */}
+      <section className="py-16 md:py-24 px-4 max-w-3xl mx-auto">
+        <h2 className="text-3xl font-extrabold text-center mb-12">Preguntas Frecuentes</h2>
+        <div className="space-y-4">
+          {faqItems.map((item, index) => {
+            const isOpen = activeFaq === index;
+            return (
+              <div
+                key={index}
+                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden transition-all duration-300"
+              >
+                <button
+                  onClick={() => setActiveFaq(isOpen ? null : index)}
+                  className="w-full flex items-center justify-between p-5 text-left font-bold text-base md:text-lg focus:outline-none hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors"
+                >
+                  <span>{item.q}</span>
+                  <ChevronDown
+                    size={20}
+                    className={`text-[#84CC16] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                <div
+                  className={`transition-all duration-300 overflow-hidden ${
+                    isOpen ? 'max-h-40 border-t border-slate-100 dark:border-slate-800/80' : 'max-h-0'
+                  }`}
+                >
+                  <p className="p-5 text-sm md:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {item.a}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       {/* Safety Section */}
-      <section className="py-16 md:py-24 px-4 max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-10">
+      <section className="py-16 px-4 max-w-4xl mx-auto border-t border-slate-200 dark:border-slate-800/80 flex flex-col md:flex-row items-center gap-10">
         <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-lime-500/10 flex items-center justify-center text-[#84CC16] shrink-0">
           <ShieldCheck size={40} />
         </div>
