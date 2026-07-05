@@ -18,6 +18,8 @@ const autoBrands = [
   'Segway-Ninebot', 'InMotion', 'KingSong', 'Zacua', 'Kandi',
   // Karts de golf
   'Club Car', 'E-Z-GO', 'Garia',
+  // Embarcaciones (lanchas, yates, motos de agua)
+  'Sea-Doo', 'Bayliner', 'Sea Ray', 'Bertram', 'Azimut', 'Beneteau', 'Boston Whaler', 'Chaparral', 'Four Winns',
   'Otra'
 ];
 
@@ -302,6 +304,9 @@ const sportsBrands = [
   'Daiwa', 'Rapala', 'Pflueger',
   // Surf
   'Quiksilver', 'Billabong', 'Rip Curl', 'O\'Neill',
+  // Náutica — botes inflables, kayaks y motores fuera de borda (embarcaciones
+  // completas/yates van en Vehículos)
+  'Zodiac', 'Bestway', 'Sevylor', 'Mercury', 'Evinrude', 'Suzuki Marine',
   // Electrónica deportiva
   'Garmin', 'Fitbit',
   'Otra'
