@@ -335,6 +335,16 @@ const ocioBrands = [
   'Funko', 'Lego',
   // Camping
   'Coleman', 'The North Face',
+  // Bicicletas (subcategoría real de Ocio)
+  'Trek', 'Giant', 'Specialized', 'Mercurio', 'Benotto',
+  // Gym
+  'TRX', 'Everlast', 'Reebok',
+  // Running
+  'Asics', 'Brooks', 'New Balance',
+  // Pesca
+  'Daiwa', 'Rapala', 'Pflueger', 'Shimano',
+  // Surf / Kayak
+  'Quiksilver', 'Billabong', 'Rip Curl',
   'Otra'
 ];
 
