@@ -324,6 +324,20 @@ const kidsBrands = [
   'Otra'
 ];
 
+const ocioBrands = [
+  // Videojuegos
+  'Sony', 'Microsoft', 'Nintendo', 'Sega',
+  // Fotografía
+  'Canon', 'Nikon', 'Fujifilm', 'GoPro', 'Polaroid', 'Panasonic',
+  // Instrumentos musicales
+  'Yamaha', 'Fender', 'Gibson', 'Casio', 'Roland', 'Ibanez', 'Pearl',
+  // Coleccionismo
+  'Funko', 'Lego',
+  // Camping
+  'Coleman', 'The North Face',
+  'Otra'
+];
+
 const sportsFilters = [
   { id: 'tipo_deporte', label: 'Deporte / actividad', type: 'select', options: ['Fútbol', 'Ciclismo', 'Gimnasio', 'Running', 'Camping', 'Pesca', 'Surf', 'Náutica', 'Otro'] },
   { id: 'marca', label: 'Marca', type: 'select', options: sportsBrands },
@@ -575,6 +589,7 @@ export const filterConfig = {
 
   ocio: [
     { id: 'tipo', label: 'Categoría', type: 'select', options: ['Deportes', 'Videojuegos', 'Libros/Música', 'Coleccionismo', 'Fotografía', 'Instrumentos', 'Camping', 'Viajes'] },
+    { id: 'marca_ocio', label: 'Marca', type: 'select', options: ocioBrands },
     { id: 'formato', label: 'Formato', type: 'checkbox', options: ['Digital', 'Físico'] },
   ],
 

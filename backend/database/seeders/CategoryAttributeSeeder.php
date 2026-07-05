@@ -303,6 +303,14 @@ class CategoryAttributeSeeder extends Seeder
             ],
             'ocio' => [
                 ['tipo', 'Categoría', 'select', ['Videojuegos', 'Coleccionismo', 'Fotografía', 'Instrumentos', 'Camping', 'Viajes']],
+                ['marca_ocio', 'Marca', 'select', [
+                    'Sony', 'Microsoft', 'Nintendo', 'Sega',
+                    'Canon', 'Nikon', 'Fujifilm', 'GoPro', 'Polaroid', 'Panasonic',
+                    'Yamaha', 'Fender', 'Gibson', 'Casio', 'Roland', 'Ibanez', 'Pearl',
+                    'Funko', 'Lego',
+                    'Coleman', 'The North Face',
+                    'Otra',
+                ]],
                 ['formato', 'Formato', 'select', ['Digital', 'Físico']],
             ],
             'boletos' => [
