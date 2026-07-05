@@ -289,7 +289,8 @@ const ticketFilters = [
 const sportsBrands = [
   // Fútbol
   'Nike', 'Adidas', 'Puma', 'Under Armour', 'Umbro', 'Charly', 'Kappa',
-  // Ciclismo (accesorios; marcas de bicicletas completas van en Vehículos)
+  // Ciclismo — bicicletas y componentes/accesorios
+  'Trek', 'Giant', 'Specialized', 'Cannondale', 'Scott', 'Merida', 'Bianchi', 'GT', 'Raleigh', 'Schwinn', 'Mercurio', 'Benotto', 'Turbo',
   'Shimano', 'Giro',
   // Gimnasio
   'TRX', 'Everlast', 'Reebok',

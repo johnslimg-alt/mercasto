@@ -260,6 +260,7 @@ class CategoryAttributeSeeder extends Seeder
                 ['tipo_deporte', 'Deporte o actividad', 'select', ['Fútbol', 'Ciclismo', 'Gimnasio', 'Running', 'Camping', 'Pesca', 'Surf', 'Náutica']],
                 ['marca', 'Marca', 'select', [
                     'Nike', 'Adidas', 'Puma', 'Under Armour', 'Umbro', 'Charly', 'Kappa',
+                    'Trek', 'Giant', 'Specialized', 'Cannondale', 'Scott', 'Merida', 'Bianchi', 'GT', 'Raleigh', 'Schwinn', 'Mercurio', 'Benotto', 'Turbo',
                     'Shimano', 'Giro',
                     'TRX', 'Everlast', 'Reebok',
                     'Asics', 'Brooks', 'Saucony', 'New Balance', 'Hoka',
