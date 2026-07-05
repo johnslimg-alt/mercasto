@@ -233,7 +233,17 @@ class CategoryAttributeSeeder extends Seeder
             'moda' => [
                 ['tipo', 'Tipo de prenda', 'select', ['Ropa mujer', 'Ropa hombre', 'Calzado', 'Bolsos', 'Accesorios']],
                 ['talla', 'Talla', 'text', null],
-                ['marca_moda', 'Marca', 'text', null],
+                ['marca_moda', 'Marca', 'select', [
+                    'Zara', 'H&M', 'Bershka', 'Pull&Bear', 'Stradivarius', 'Mango', 'Massimo Dutti', 'Old Navy', 'Forever 21', 'Shein', 'C&A', 'Suburbia',
+                    'Levi\'s', 'Wrangler', 'Lee', 'Tommy Hilfiger', 'Calvin Klein', 'Guess', 'Ralph Lauren', 'Carhartt',
+                    'Nike', 'Adidas', 'Puma', 'Under Armour', 'Reebok', 'New Balance', 'Skechers', 'Vans', 'Converse', 'Fila', 'Crocs',
+                    'Cklass', 'Andrea', 'Flexi',
+                    'Michael Kors', 'Coach', 'Kate Spade', 'Louis Vuitton', 'Gucci', 'Prada',
+                    'Casio', 'Fossil', 'Citizen', 'Seiko', 'Swatch', 'Invicta', 'Rolex',
+                    'Pandora', 'Swarovski', 'Tous',
+                    'Otra',
+                ]],
+                ['modelo_moda', 'Modelo / línea', 'text', null],
                 ['color_moda', 'Color', 'select', ['Negro', 'Blanco', 'Beige', 'Azul', 'Rojo', 'Verde', 'Multicolor']],
             ],
             'deportes' => [

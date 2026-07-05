@@ -105,6 +105,49 @@ export const autoModelsByBrand = {
   'Garia': ['Golf Car', 'Utility'],
 };
 
+const fashionBrands = [
+  // Ropa / moda rápida
+  'Zara', 'H&M', 'Bershka', 'Pull&Bear', 'Stradivarius', 'Mango', 'Massimo Dutti', 'Old Navy', 'Forever 21', 'Shein', 'C&A', 'Suburbia',
+  // Denim / casual
+  'Levi\'s', 'Wrangler', 'Lee', 'Tommy Hilfiger', 'Calvin Klein', 'Guess', 'Ralph Lauren', 'Carhartt',
+  // Deportivo / calzado
+  'Nike', 'Adidas', 'Puma', 'Under Armour', 'Reebok', 'New Balance', 'Skechers', 'Vans', 'Converse', 'Fila', 'Crocs',
+  // Calzado formal / marcas mexicanas
+  'Cklass', 'Andrea', 'Flexi',
+  // Bolsos y accesorios
+  'Michael Kors', 'Coach', 'Kate Spade', 'Louis Vuitton', 'Gucci', 'Prada',
+  // Relojes
+  'Casio', 'Fossil', 'Citizen', 'Seiko', 'Swatch', 'Invicta', 'Rolex',
+  // Joyería
+  'Pandora', 'Swarovski', 'Tous',
+  'Otra'
+];
+
+// Modelos/líneas reales más conocidas por marca, solo para marcas de calzado
+// y relojería donde el "modelo" es un producto identificable (ej. Nike Air Force 1,
+// Casio G-Shock). Marcas de ropa, bolsos o joyería no tienen catálogo de modelos
+// y usan el campo de texto libre.
+export const fashionModelsByBrand = {
+  'Nike': ['Air Force 1', 'Air Max 90', 'Air Max 97', 'Dunk Low', 'Jordan 1', 'Cortez', 'Blazer'],
+  'Adidas': ['Superstar', 'Stan Smith', 'Samba', 'Gazelle', 'Ultraboost', 'Campus'],
+  'Puma': ['Suede Classic', 'RS-X', 'Cali'],
+  'Under Armour': ['Charged Assert', 'HOVR Phantom', 'Curry'],
+  'Reebok': ['Classic Leather', 'Club C 85', 'Nano'],
+  'New Balance': ['550', '990', '574', '327'],
+  'Skechers': ['D\'Lites', 'Go Walk', 'Max Cushioning'],
+  'Vans': ['Old Skool', 'Sk8-Hi', 'Authentic', 'Era'],
+  'Converse': ['Chuck Taylor All Star', 'Chuck 70', 'One Star'],
+  'Fila': ['Disruptor', 'Ray'],
+  'Crocs': ['Classic Clog', 'Bayaband', 'Literide'],
+  'Casio': ['G-Shock', 'Casio Vintage', 'Edifice', 'Baby-G', 'Pro Trek'],
+  'Fossil': ['Grant', 'Neutra', 'Gen 6 Smartwatch', 'Machine'],
+  'Citizen': ['Eco-Drive', 'Promaster'],
+  'Seiko': ['Seiko 5', 'Prospex', 'Presage'],
+  'Swatch': ['Originals', 'Bioceramic'],
+  'Invicta': ['Pro Diver', 'Bolt', 'Specialty'],
+  'Rolex': ['Submariner', 'Datejust', 'GMT-Master II', 'Daytona'],
+};
+
 const electronicsBrands = [
   'Apple', 'Samsung', 'Xiaomi', 'Motorola', 'Huawei', 'Oppo', 'Google Pixel', 'Honor',
   'Vivo', 'Dell', 'HP', 'Lenovo', 'Asus', 'Acer', 'MSI',
@@ -203,7 +246,8 @@ const homeFilters = [
 const fashionFilters = [
   { id: 'tipo', label: 'Tipo de prenda', type: 'select', options: ['Ropa mujer', 'Ropa hombre', 'Calzado', 'Bolsos', 'Accesorios', 'Joyería', 'Relojes'] },
   { id: 'talla', label: 'Talla', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '24', '26', '28', '30', '32', '34'] },
-  { id: 'marca_moda', label: 'Marca', type: 'text', placeholder: 'Ej. Zara, Nike, Levi’s' },
+  { id: 'marca_moda', label: 'Marca', type: 'select', options: fashionBrands },
+  { id: 'modelo_moda', label: 'Modelo / línea', type: 'text', placeholder: 'Ej. Air Force 1, G-Shock, Superstar' },
   { id: 'genero', label: 'Género', type: 'checkbox', options: ['Mujer', 'Hombre', 'Unisex', 'Niñas', 'Niños'] },
   { id: 'estado_moda', label: 'Estado', type: 'checkbox', options: ['Nuevo con etiqueta', 'Nuevo sin etiqueta', 'Usado excelente', 'Vintage', 'Original verificado'] },
   { id: 'color_moda', label: 'Color', type: 'select', options: ['Negro', 'Blanco', 'Beige', 'Azul', 'Rojo', 'Verde', 'Rosa', 'Multicolor'] },
