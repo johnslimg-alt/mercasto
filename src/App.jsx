@@ -369,6 +369,7 @@ const AdminScreen = React.lazy(() => import('./components/screens/AdminScreen'))
 import HomeScreen from './components/screens/HomeScreen';
 
 const PostScreen = React.lazy(() => import('./components/screens/PostScreen'));
+const SellerLandingScreen = React.lazy(() => import('./components/screens/SellerLandingScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500 font-medium">No pudimos cargar esta página.</div> })));
 
 const UserDashboard = React.lazy(() => import('./components/screens/UserDashboard'));
 
@@ -4053,6 +4054,8 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={renderHomeScreen()} />
+              <Route path="/vendedores" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerLandingScreen lang={lang} /></React.Suspense>} />
+              <Route path="/publicar-gratis" element={<Navigate to="/vendedores" replace />} />
               <Route path="/post" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderPostScreen()}</RequireAuth>} />
               <Route path="/notificaciones" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotificationsScreen user={user} /></React.Suspense></RequireAuth>} />
               <Route path="/profile" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderUserDashboard()}</RequireAuth>} />
