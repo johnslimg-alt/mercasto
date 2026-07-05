@@ -286,9 +286,41 @@ const ticketFilters = [
   { id: 'zona', label: 'Zona', type: 'text', placeholder: 'Ej. General, VIP, Preferente' },
 ];
 
+const sportsBrands = [
+  // Fútbol
+  'Nike', 'Adidas', 'Puma', 'Under Armour', 'Umbro', 'Charly', 'Kappa',
+  // Ciclismo (accesorios; marcas de bicicletas completas van en Vehículos)
+  'Shimano', 'Giro',
+  // Gimnasio
+  'TRX', 'Everlast', 'Reebok',
+  // Running
+  'Asics', 'Brooks', 'Saucony', 'New Balance', 'Hoka',
+  // Camping
+  'Coleman', 'The North Face', 'Columbia', 'Eureka', 'Ozark Trail',
+  // Pesca
+  'Daiwa', 'Rapala', 'Pflueger',
+  // Surf
+  'Quiksilver', 'Billabong', 'Rip Curl', 'O\'Neill',
+  // Electrónica deportiva
+  'Garmin', 'Fitbit',
+  'Otra'
+];
+
+const kidsBrands = [
+  // Juguetes
+  'Lego', 'Fisher-Price', 'Mattel', 'Hasbro', 'Hot Wheels', 'Barbie', 'Nerf', 'VTech', 'Playskool',
+  // Ropa infantil
+  'Carter\'s', 'OshKosh B\'gosh', 'Gerber',
+  // Escolar
+  'Norma', 'Scribe', 'BIC', 'Pelikan',
+  // Seguridad / carriolas / autoasientos
+  'Chicco', 'Graco', 'Britax', 'Evenflo', 'Peg Pérego', 'Bugaboo', 'Cybex', 'Safety 1st',
+  'Otra'
+];
+
 const sportsFilters = [
   { id: 'tipo_deporte', label: 'Deporte / actividad', type: 'select', options: ['Fútbol', 'Ciclismo', 'Gimnasio', 'Running', 'Camping', 'Pesca', 'Surf', 'Náutica', 'Otro'] },
-  { id: 'marca', label: 'Marca', type: 'text', placeholder: 'Ej. Shimano, Nike, Garmin' },
+  { id: 'marca', label: 'Marca', type: 'select', options: sportsBrands },
   { id: 'talla', label: 'Talla / medida', type: 'text', placeholder: 'Ej. M, 27.5, 10 ft' },
   { id: 'condicion', label: 'Condición', type: 'select', options: ['Nuevo', 'Como nuevo', 'Usado', 'Restaurado'] },
   { id: 'disciplina', label: 'Disciplina', type: 'checkbox', options: ['Recreativo', 'Entrenamiento', 'Competencia', 'Profesional'] },
@@ -298,7 +330,7 @@ const kidsFilters = [
   { id: 'tipo', label: 'Tipo', type: 'select', options: ['Juguetes', 'Ropa infantil', 'Escolar', 'Muebles', 'Seguridad', 'Carriolas', 'Autoasientos'] },
   { id: 'edad', label: 'Edad recomendada', type: 'select', options: ['0-6 meses', '6-12 meses', '1-2 años', '3-5 años', '6-9 años', '10+ años'] },
   { id: 'condicion', label: 'Condición', type: 'select', options: ['Nuevo', 'Como nuevo', 'Usado'] },
-  { id: 'marca', label: 'Marca', type: 'text', placeholder: 'Ej. Chicco, Lego, Fisher-Price' },
+  { id: 'marca', label: 'Marca', type: 'select', options: kidsBrands },
   { id: 'seguridad', label: 'Seguridad', type: 'checkbox', options: ['Certificado', 'Sin piezas pequeñas', 'Funda lavable', 'Manual incluido'] },
 ];
 
