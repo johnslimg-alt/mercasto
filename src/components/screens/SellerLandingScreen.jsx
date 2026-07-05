@@ -1,15 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, MessageSquare, DollarSign, PlusCircle, ArrowRight, ShieldCheck, Sparkles, ChevronDown } from 'lucide-react';
-import { trackPageView } from '../../utils/analytics';
+import { 
+  CheckCircle2, 
+  MessageSquare, 
+  DollarSign, 
+  PlusCircle, 
+  ArrowRight, 
+  ShieldCheck, 
+  Sparkles, 
+  ChevronDown,
+  Car,
+  Home,
+  Briefcase,
+  Wrench,
+  ShoppingBag
+} from 'lucide-react';
+import { trackPageView, trackEvent } from '../../utils/analytics';
 
 const TRANSLATIONS = {
   es: {
+    seo_title: 'Publica Anuncios Gratis en México | Mercasto',
     badge: 'Clasificados 100% Gratis en México',
     hero_title: 'Vende más rápido y sin pagar comisiones',
     hero_desc: 'Publica tus autos, casas, servicios o productos gratis. Los compradores te contactan directamente por WhatsApp o Telegram sin intermediarios.',
     cta_btn: 'Publicar Anuncio Gratis',
     mockup_caption: 'Vista previa del panel de control de vendedor: administra tus anuncios y visualiza estadísticas en tiempo real.',
+    categories_title: '¿Qué puedes publicar en Mercasto?',
+    categories_desc: 'Elige una categoría y comienza a recibir ofertas de compradores interesados en todo México.',
+    cat_motor: 'Motor',
+    cat_motor_desc: 'Autos, camionetas, motos y repuestos.',
+    cat_inmuebles: 'Inmuebles',
+    cat_inmuebles_desc: 'Casas, departamentos y terrenos.',
+    cat_empleos: 'Empleos',
+    cat_empleos_desc: 'Vacantes y perfiles profesionales.',
+    cat_servicios: 'Servicios',
+    cat_servicios_desc: 'Servicios profesionales y del hogar.',
+    cat_productos: 'Productos',
+    cat_productos_desc: 'Artículos personales, tecnología y más.',
     feature1_title: 'Publicación Fácil',
     feature1_desc: 'Sube tus fotos y descripción en menos de 2 minutos. Diseñado para verse increíble tanto en móviles como en computadoras.',
     feature2_title: '0% Comisiones',
@@ -39,11 +66,24 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Empezar Ahora'
   },
   en: {
+    seo_title: 'Publish Free Classified Ads in Mexico | Mercasto',
     badge: '100% Free Classifieds in Mexico',
     hero_title: 'Sell faster and without paying commissions',
     hero_desc: 'Publish your cars, houses, services, or products for free. Buyers contact you directly via WhatsApp or Telegram without intermediaries.',
     cta_btn: 'Publish Free Ad',
     mockup_caption: 'Seller control panel preview: manage your ads and view real-time statistics.',
+    categories_title: 'What can you publish on Mercasto?',
+    categories_desc: 'Choose a category and start receiving offers from interested buyers all over Mexico.',
+    cat_motor: 'Motor',
+    cat_motor_desc: 'Cars, trucks, motorcycles, and parts.',
+    cat_inmuebles: 'Real Estate',
+    cat_inmuebles_desc: 'Houses, apartments, and land.',
+    cat_empleos: 'Jobs',
+    cat_empleos_desc: 'Vacancies and professional profiles.',
+    cat_servicios: 'Services',
+    cat_servicios_desc: 'Professional and home services.',
+    cat_productos: 'Products',
+    cat_productos_desc: 'Personal items, tech, and more.',
     feature1_title: 'Easy Publishing',
     feature1_desc: 'Upload your photos and description in less than 2 minutes. Designed to look great on both mobile and desktop.',
     feature2_title: '0% Commissions',
@@ -73,11 +113,24 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Get Started'
   },
   pt: {
+    seo_title: 'Publique anúncios classificados gratuitos no México | Mercasto',
     badge: 'Classificados 100% Gratuitos no México',
     hero_title: 'Venda mais rápido e sem pagar comissões',
     hero_desc: 'Publique seus carros, casas, serviços ou produtos gratuitamente. Os compradores entram em contato diretamente via WhatsApp ou Telegram, sem intermediários.',
     cta_btn: 'Publicar Anúncio Grátis',
     mockup_caption: 'Prévia do painel de controle do vendedor: gerencie seus anúncios e visualize estatísticas em tempo real.',
+    categories_title: 'O que você pode publicar no Mercasto?',
+    categories_desc: 'Escolha uma categoria e comece a receber propostas de compradores interessados em todo o México.',
+    cat_motor: 'Motor',
+    cat_motor_desc: 'Carros, caminhonetes, motos e peças.',
+    cat_inmuebles: 'Imóveis',
+    cat_inmuebles_desc: 'Casas, apartamentos e terrenos.',
+    cat_empleos: 'Empregos',
+    cat_empleos_desc: 'Vagas e perfis profissionais.',
+    cat_servicios: 'Serviços',
+    cat_servicios_desc: 'Serviços profissionais e residenciais.',
+    cat_productos: 'Produtos',
+    cat_productos_desc: 'Itens pessoais, tecnologia e muito mais.',
     feature1_title: 'Publicação Fácil',
     feature1_desc: 'Envie suas fotos e descrição em menos de 2 minutos. Projetado para ficar incrível no celular e no computador.',
     feature2_title: '0% de Comissões',
@@ -107,11 +160,24 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Começar Agora'
   },
   fr: {
+    seo_title: 'Publiez des petites annonces gratuites au Mexique | Mercasto',
     badge: 'Petites annonces 100% gratuites au Mexique',
     hero_title: 'Vendez plus vite et sans payer de commissions',
     hero_desc: 'Publiez gratuitement vos voitures, maisons, services ou produits. Les acheteurs vous contactent directement par WhatsApp ou Telegram sans intermédiaire.',
     cta_btn: 'Publier une annonce gratuite',
     mockup_caption: 'Aperçu du panneau de contrôle du vendeur : gérez vos annonces et visualisez les statistiques en temps réel.',
+    categories_title: 'Que pouvez-vous publier sur Mercasto ?',
+    categories_desc: 'Choisissez une catégorie et commencez à recevoir des offres d’acheteurs intéressés dans tout le Mexique.',
+    cat_motor: 'Moteur',
+    cat_motor_desc: 'Voitures, camionnettes, motos et pièces.',
+    cat_inmuebles: 'Immobilier',
+    cat_inmuebles_desc: 'Maisons, appartements et terrains.',
+    cat_empleos: 'Emplois',
+    cat_empleos_desc: 'Offres d’emploi et profils professionnels.',
+    cat_servicios: 'Services',
+    cat_servicios_desc: 'Services professionnels et à domicile.',
+    cat_productos: 'Produits',
+    cat_productos_desc: 'Effets personnels, technologie et plus.',
     feature1_title: 'Publication facile',
     feature1_desc: 'Téléchargez vos photos et votre description en moins de 2 minutes. Conçu pour être superbe sur mobile et sur ordinateur.',
     feature2_title: '0% de commissions',
@@ -141,11 +207,24 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Commencer maintenant'
   },
   de: {
+    seo_title: 'Kostenlose Kleinanzeigen in Mexiko veröffentlichen | Mercasto',
     badge: '100% kostenlose Kleinanzeigen in Mexiko',
     hero_title: 'Schneller verkaufen und ohne Provisionen zu zahlen',
     hero_desc: 'Veröffentlichen Sie Ihre Autos, Häuser, Dienstleistungen oder Produkte kostenlos. Käufer kontaktieren Sie direkt über WhatsApp oder Telegram ohne Zwischenhändler.',
     cta_btn: 'Kostenlose Anzeige aufgeben',
     mockup_caption: 'Vorschau des Verkäufer-Dashboards: Verwalten Sie Ihre Anzeigen und sehen Sie Statistiken in Echtzeit.',
+    categories_title: 'Was können Sie auf Mercasto veröffentlichen?',
+    categories_desc: 'Wählen Sie eine Kategorie und erhalten Sie Angebote von interessierten Käufern in ganz Mexiko.',
+    cat_motor: 'Motor',
+    cat_motor_desc: 'Autos, Transporter, Motorräder und Teile.',
+    cat_inmuebles: 'Immobilien',
+    cat_inmuebles_desc: 'Häuser, Wohnungen und Grundstücke.',
+    cat_empleos: 'Jobs',
+    cat_empleos_desc: 'Stellenangebote und Bewerberprofile.',
+    cat_servicios: 'Dienstleistungen',
+    cat_servicios_desc: 'Professionelle und haushaltsnahe Dienste.',
+    cat_productos: 'Produkte',
+    cat_productos_desc: 'Persönliche Artikel, Technik und mehr.',
     feature1_title: 'Einfaches Veröffentlichen',
     feature1_desc: 'Laden Sie Ihre Fotos und Beschreibung in weniger als 2 Minuten hoch. Optimiert für Mobilgeräte und Computer.',
     feature2_title: '0% Provisionen',
@@ -175,11 +254,24 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Jetzt starten'
   },
   it: {
+    seo_title: 'Pubblica annunci gratuiti in Messico | Mercasto',
     badge: 'Annunci classificati gratuiti al 100% in Messico',
     hero_title: 'Vendi più velocemente e senza pagare commissioni',
     hero_desc: 'Pubblica gratis auto, case, servizi o prodotti. Gli acquirenti ti contattano direttamente tramite WhatsApp o Telegram senza intermediari.',
     cta_btn: 'Pubblica annuncio gratuito',
-    mockup_caption: 'Anteprima del pannello di controllo del venditore: gestisci i tuoi annunci e visualizza le statistiche in tempo real.',
+    mockup_caption: 'Anteprima del pannello di controllo del venditore: gestisci i tuoi annunci e visualizza le statistiche in tempo reale.',
+    categories_title: 'Cosa puoi pubblicare su Mercasto?',
+    categories_desc: 'Scegli una categoria e inizia a ricevere offerte da acquirenti interessati in tutto il Messico.',
+    cat_motor: 'Motori',
+    cat_motor_desc: 'Auto, moto, furgoni e ricambi.',
+    cat_inmuebles: 'Immobili',
+    cat_inmuebles_desc: 'Case, appartamenti e terreni.',
+    cat_empleos: 'Lavoro',
+    cat_empleos_desc: 'Offerte di lavoro e profili professionali.',
+    cat_servicios: 'Servizi',
+    cat_servicios_desc: 'Servizi professionali e per la casa.',
+    cat_productos: 'Prodotti',
+    cat_productos_desc: 'Articoli personali, tecnologia e altro.',
     feature1_title: 'Pubblicazione facile',
     feature1_desc: 'Carica foto e descrizione in meno di 2 minuti. Progettato per essere perfetto sia su dispositivi mobili che su computer.',
     feature2_title: '0% Commissioni',
@@ -195,9 +287,9 @@ const TRANSLATIONS = {
     step3_desc: 'Ricevi i messaggi degli acquirenti direttamente sul tuo cellulare e coordina la consegna.',
     faq_title: 'Domande frequenti',
     faq_q1: 'È davvero gratuito pubblicare annunci su Mercasto?',
-    faq_a1: 'Sì, la pubblicazione degli annunci è gratuita al 100%. Non applichiamo commissioni sulle vendite, canoni mensili o costi nascosti. Trattieni il 100% dell’importo della tua vendita.',
+    faq_a1: 'Sí, la pubblicazione degli annunci è gratuita al 100%. Non applichiamo commissioni sulle vendite, canoni mensili o costi nascosti. Trattieni il 100% dell’importo della tua vendita.',
     faq_q2: 'In che modo mi contatteranno gli acquirenti interessati?',
-    faq_a2: 'Su Mercasto, gli acquirenti ti contattano direttamente. Puoi impostare il tuo profilo per ricevere messaggi direttamente su WhatsApp, Telegram o ricevere chiamate telefoniche tradizionali.',
+    faq_a2: 'Su Messico, gli acquirenti ti contattano direttamente. Puoi impostare il tuo profilo per ricevere messaggi direttamente su WhatsApp, Telegram o ricevere chiamate telefoniche tradizionali.',
     faq_q3: 'Quali categorie di annunci posso pubblicare?',
     faq_a3: 'Puoi pubblicare quasi qualsiasi tipo di annuncio: auto e moto (Motor), immobili (vendita o affitto), servizi professionali, articoli personali, tecnologia, offerte di lavoro e altro ancora.',
     faq_q4: 'Quanti annunci posso pubblicare gratuitamente?',
@@ -209,11 +301,24 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Inizia ora'
   },
   ru: {
+    seo_title: 'Подать бесплатные объявления в Мексике | Mercasto',
     badge: '100% бесплатные объявления в Мексике',
     hero_title: 'Продавайте быстрее и без комиссии',
     hero_desc: 'Публикуйте объявления об авто, недвижимости, услугах или товарах бесплатно. Покупатели свяжутся с вами напрямую через WhatsApp или Telegram без посредников.',
     cta_btn: 'Подать объявление бесплатно',
     mockup_caption: 'Предварительный просмотр панели продавца: управляйте своими объявлениями и просматривайте статистику в реальном времени.',
+    categories_title: 'Что вы можете опубликовать на Mercasto?',
+    categories_desc: 'Выберите категорию и начните получать предложения от заинтересованных покупателей по всей Мексике.',
+    cat_motor: 'Транспорт',
+    cat_motor_desc: 'Автомобили, мотоциклы и запчасти.',
+    cat_inmuebles: 'Недвижимость',
+    cat_inmuebles_desc: 'Дома, квартиры и участки.',
+    cat_empleos: 'Работа',
+    cat_empleos_desc: 'Вакансии и резюме кандидатов.',
+    cat_servicios: 'Услуги',
+    cat_servicios_desc: 'Бытовые и профессиональные услуги.',
+    cat_productos: 'Товары',
+    cat_productos_desc: 'Личные вещи, техника и другое.',
     feature1_title: 'Простая публикация',
     feature1_desc: 'Загрузите фотографии и описание менее чем за 2 минуты. Отлично выглядит как на мобильных телефонах, так и на компьютерах.',
     feature2_title: '0% комиссии',
@@ -243,11 +348,24 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Начать сейчас'
   },
   zh: {
+    seo_title: '在墨西哥发布免费分类广告 | Mercasto',
     badge: '墨西哥 100% 免费分类广告',
     hero_title: '销售更快且无需支付佣金',
     hero_desc: '免费发布您的汽车、房屋、服务或产品。买家直接通过 WhatsApp 或 Telegram 与您联系，无需中介。',
     cta_btn: '免费发布广告',
     mockup_caption: '卖家控制面板预览：管理您的广告并实时查看统计数据。',
+    categories_title: '您可以在 Mercasto 发布什么？',
+    categories_desc: '选择一个类别，开始接收来自墨西哥各地感兴趣买家的报价。',
+    cat_motor: '车辆交通',
+    cat_motor_desc: '轿车、皮卡、摩托车和配件。',
+    cat_inmuebles: '房地产',
+    cat_inmuebles_desc: '房屋、公寓和土地。',
+    cat_empleos: '招贤纳士',
+    cat_empleos_desc: '职位空缺和求职简历。',
+    cat_servicios: '生活服务',
+    cat_servicios_desc: '专业和家庭便民服务。',
+    cat_productos: '二手商品',
+    cat_productos_desc: '个人物品、数码科技及其他。',
     feature1_title: '轻松发布',
     feature1_desc: '在不到 2 分钟的时间内上传您的照片和描述。专为手机和电脑端完美显示而设计。',
     feature2_title: '0% 佣金',
@@ -269,19 +387,32 @@ const TRANSLATIONS = {
     faq_q3: '我可以发布哪些类别的广告？',
     faq_a3: '您几乎可以发布任何类型的分类广告：汽车和摩托车 (Motor)、房地产（出售或出租）、专业服务、个人物品、科技产品、工作机会等。',
     faq_q4: '我可以免费发布多少个广告？',
-    faq_a4: '对于私人卖家，没有限制性的额度。您可以发布多个活动广告来展示您的所有产品或服务。',
+    faq_a4: '对于私人卖家，没有限制性的额度。您可以发布多个活动广告来展示您的所有产品 or 服务。',
     safety_title: '您的安全是我们的首要任务',
-    safety_desc: '在 Mercasto，我们持续验证用户资料以确保销售社区的真实可信。为了您的安心，请记住务必在公共且安全的地方进行交易。',
+    safety_desc: '在 Mercasto， we 持续验证用户资料以确保销售社区的真实可信。为了您的安心，请记住务必在公共且安全的地方进行交易。',
     cta_footer_title: '准备好今天开始销售了吗？',
     cta_footer_desc: '墨西哥各地成千上万的人正在寻找您提供的东西。完全免费发布您的广告！',
     cta_footer_btn: '立即开始'
   },
   ja: {
+    seo_title: 'メキシコで無料広告を掲載 | Mercasto',
     badge: 'メキシコで100%無料のクラシファイド広告',
     hero_title: '手数料なしでより速く売却',
     hero_desc: '車、不動産、サービス、製品を無料で掲載。仲介者なしで、購入者からWhatsAppやTelegramを通じて直接連絡が届きます。',
     cta_btn: '無料で広告を掲載する',
     mockup_caption: '出品者管理画面プレビュー：掲載中の広告管理や統計データのリアルタイム確認が可能です。',
+    categories_title: 'Mercastoには何を掲載できますか？',
+    categories_desc: 'カテゴリを選択して、メキシコ国内の興味のある購入者から直接オファーを受け取りましょう。',
+    cat_motor: 'モビリティ',
+    cat_motor_desc: '乗用車、トラック、バイク、部品類。',
+    cat_inmuebles: '不動産',
+    cat_inmuebles_desc: '一戸建て、アパート、土地など。',
+    cat_empleos: '採用・求人',
+    cat_empleos_desc: '求人募集および就職プロフィール。',
+    cat_servicios: 'サービス',
+    cat_servicios_desc: '各種専門サービスおよび家庭向け代行。',
+    cat_productos: '物品販売',
+    cat_productos_desc: '私物、電子機器、その他商品。',
     feature1_title: '簡単掲載',
     feature1_desc: '2分以内に写真と説明文をアップロード。スマートフォンでもパソコンでも綺麗に表示されるように設計されています。',
     feature2_title: '手数料0%',
@@ -311,11 +442,24 @@ const TRANSLATIONS = {
     cta_footer_btn: '今すぐ始める'
   },
   ko: {
+    seo_title: '멕시코 무료 분류 광고 등록 | Mercasto',
     badge: '멕시코 100% 무료 분류 광고',
     hero_title: '수수료 없이 더 빠르게 판매하세요',
     hero_desc: '자동차, 부동산, 서비스 또는 상품을 무료로 등록하세요. 중개인 없이 구매자가 WhatsApp이나 Telegram으로 직접 연락합니다.',
     cta_btn: '무료 광고 등록하기',
     mockup_caption: '판매자 대시보드 미리보기: 등록한 광고를 관리하고 실시간 방문 통계를 확인하세요.',
+    categories_title: 'Mercasto에 무엇을 올릴 수 있나요?',
+    categories_desc: '카테고리를 선택하고 멕시코 전역의 구매 희망자들로부터 거래 제안을 받아보세요.',
+    cat_motor: '차량·오토바이',
+    cat_motor_desc: '자동차, 트럭, 이륜차 및 부품.',
+    cat_inmuebles: '부동산',
+    cat_inmuebles_desc: '주택, 아파트 및 토지 매매/임대.',
+    cat_empleos: '구인구직',
+    cat_empleos_desc: '채용 공고 및 인재 프로필.',
+    cat_servicios: '서비스',
+    cat_servicios_desc: '전문 기술 및 가정용 편의 서비스.',
+    cat_productos: '상품·중고',
+    cat_productos_desc: '개인 물품, 전자 제품 및 기타 소품.',
     feature1_title: '쉬운 등록',
     feature1_desc: '2분 안에 사진과 상세 정보를 업로드하세요. 모바일과 PC 화면 모두에 완벽하게 최적화되어 있습니다.',
     feature2_title: '수수료 0%',
@@ -345,11 +489,24 @@ const TRANSLATIONS = {
     cta_footer_btn: '지금 시작하기'
   },
   ar: {
+    seo_title: 'انشر إعلانات مبوبة مجانية في المكسيك | Mercasto',
     badge: 'إعلانات مبوبة مجانية 100% في المكسيك',
     hero_title: 'بع أسرع وبدون دفع أي عمولات',
     hero_desc: 'انشر إعلانات سياراتك، عقاراتك، خدماتك أو منتجاتك مجاناً. يتواصل معك المشترون مباشرة عبر واتساب أو تليجرام بدون وسطاء.',
     cta_btn: 'انشر إعلانك مجاناً',
     mockup_caption: 'معاينة لوحة تحكم البائع: إدارة إعلاناتك واستعراض إحصائيات المشاهدة في الوقت الفعلي.',
+    categories_title: 'ماذا يمكنك أن تنشر على Mercasto؟',
+    categories_desc: 'اختر تصنيفاً وابدأ في تلقي العروض من المشترين المهتمين في جميع أنحاء المكسيك.',
+    cat_motor: 'مركبات',
+    cat_motor_desc: 'سيارات، شاحنات، دراجات نارية وقطع غيار.',
+    cat_inmuebles: 'عقارات',
+    cat_inmuebles_desc: 'منازل، شقق وأراضٍ.',
+    cat_empleos: 'وظائف',
+    cat_empleos_desc: 'فرص عمل وسير ذاتية مهنية.',
+    cat_servicios: 'خدمات',
+    cat_servicios_desc: 'خدمات مهنية ومنزلية.',
+    cat_productos: 'منتجات وسلع',
+    cat_productos_desc: 'أغراض شخصية، تكنولوجيا والمزيد.',
     feature1_title: 'نشر سهل وسريع',
     feature1_desc: 'ارفع صورك واكتب وصف إعلانك في أقل من دقيقتين. مصمم ليظهر بشكل رائع على الهواتف وأجهزة الكمبيوتر.',
     feature2_title: '0% عمولات',
@@ -369,7 +526,7 @@ const TRANSLATIONS = {
     faq_q2: 'كيف سيتواصل معي المشترون المهتمون؟',
     faq_a2: 'على Mercasto يتواصل معك المشترون مباشرة. يمكنك إعداد ملفك الشخصي لتلقي الرسائل عبر واتساب أو تليجرام أو تلقي مكالمات هاتفية تقليدية.',
     faq_q3: 'ما هي فئات الإعلانات التي يمكنني نشرها؟',
-    faq_a3: 'يمكنك نشر أي نوع تقريباً من الإعلانات المبوبة: السيارات والدراجات النارية (Motor)، العقارات (بيع أو إيجار)، الخدمات المهنية، الأغراض الشخصية، الإلكترونيات، فرص العمل والمزيد.',
+    faq_a3: 'يمكنك نشر أي نوع تقريباً من الإعلانات المبوبة: السيارات والدراجات النارية (Motor), العقارات (بيع أو إيجار)، الخدمات المهنية، الأغراض الشخصية، الإلكترونيات، فرص العمل والمزيد.',
     faq_q4: 'كم عدد الإعلانات التي يمكنني نشرها مجاناً؟',
     faq_a4: 'لا توجد حدود تقييدية للبائعين الأفراد. يمكنك نشر إعلانات متعددة ونشطة لعرض جميع منتجاتك أو خدماتك.',
     safety_title: 'أمانك هو أولويتنا',
@@ -379,11 +536,24 @@ const TRANSLATIONS = {
     cta_footer_btn: 'ابدأ الآن'
   },
   he: {
+    seo_title: 'פרסם מודעות לוח בחינם במקסיקו | Mercasto',
     badge: 'לוח מודעות 100% חינם במקסיקו',
     hero_title: 'למכור מהר יותר וללא תשלום עמלות',
     hero_desc: 'פרסם את הרכבים, הבתים, השירותים או המוצרים שלך בחינם. הקונים יוצרים איתך קשר ישירות בוואטסאפ או בטלגרם ללא מתווכים.',
     cta_btn: 'פרסם מודעה בחינם',
     mockup_caption: 'תצוגה מקדימה של לוח הבקרה של המוכר: נהל את המודעות שלך וצפה בסטטיסטיקות בזמן אמת.',
+    categories_title: 'מה ניתן לפרסם ב-Mercasto?',
+    categories_desc: 'בחר קטגוריה והתחל לקבל פניות מקונים מתעניינים בכל רחבי מקסיקו.',
+    cat_motor: 'רכב ותחבורה',
+    cat_motor_desc: 'מכוניות, אופנועים, חלפים ורכבי שטח.',
+    cat_inmuebles: 'נדל"ן',
+    cat_inmuebles_desc: 'בתים, דירות, משרדים ושטחים.',
+    cat_empleos: 'דרושים',
+    cat_empleos_desc: 'משרות פנויות ופרופילי מועמדים.',
+    cat_servicios: 'שירותים',
+    cat_servicios_desc: 'בעלי מקצוע ושירותים לבית.',
+    cat_productos: 'חפצים ומוצרים',
+    cat_productos_desc: 'ציוד אישי, אלקטרוניקה ועוד.',
     feature1_title: 'פרסום קל ומהיר',
     feature1_desc: 'העלה תמונות ותיאור בתוך פחות מ-2 דקות. מעוצב להראות מעולה הן בנייד והן במחשב.',
     feature2_title: '0% עמלות',
@@ -407,41 +577,54 @@ const TRANSLATIONS = {
     faq_q4: 'כמה מודעות אוכל לפרסם בחינם?',
     faq_a4: 'אין מגבלות חונקות למוכרים פרטיים. תוכל לפרסם מספר מודעות פעילות כדי להציג את כל המוצרים או השירותים שלך.',
     safety_title: 'הבטיחות שלך היא בעדיפות הראשונה שלנו',
-    safety_desc: 'ב-Mercasto אנו מאמתים פרופילים באופן שוטף כדי להבטיح קהילת מכירות אמינה ובטוחה. זכור תמיד לבצע עסקאות במקומות ציבוריים ובטוחים.',
+    safety_desc: 'ב-Mercasto אנו מאמתים פרופילים באופן שוטף כדי להבטיח קהילת מכירות אמינה ובטוחה. זכור תמיד לבצע עסקאות במקומות ציבוריים ובטוחים.',
     cta_footer_title: 'מוכן להתחיל למכור כבר היום?',
     cta_footer_desc: 'אלפי אנשים ברחבי מקסיקו מחפשים את מה שאתה מציע. פרסם מודעה בחינם לגמרי!',
     cta_footer_btn: 'להתחיל עכשיו'
   },
   yi: {
+    seo_title: 'פרסם פרייע קלאסיפייד מודעות אין מעקסיקא | Mercasto',
     badge: '100% פרייע קלאסיפיידס אין מעקסיקא',
     hero_title: 'פאַרקויפֿן פאַסטער און אָן צאָלן קאָמיסיעס',
     hero_desc: 'פרסם דיין קאַרס, הייזער, באַדינונגען אָדער פּראָדוקטן פֿאַר פֿרייַ. קויפערס קאָנטאַקט איר גלייך דורך WhatsApp אָדער Telegram אָן אינמיטלערס.',
     cta_btn: 'פרסם פרייע מודעה',
     mockup_caption: 'פֿאַרקויפער קאָנטראָל טאַפליע פאָרויסזאָגן: פירן דיין מודעות און זען פאַקטיש-צייט סטאַטיסטיק.',
-    feature1_title: 'גרינגע פּובליקאַציע',
-    feature1_desc: 'לאָדן דיין פאָטאָס און באַשרייבונג אין ווייניקער ווי 2 מינוט. דיזיינד צו קוקן גרויס אויף מאָביל און קאָמפּיוטער.',
+    categories_title: 'וואָס קען מען פּובליקירן אויף Mercasto?',
+    categories_desc: 'קלייַבן א קאַטעגאָריע און אָנהייבן באַקומען אָפפערס פון קויפערס איבער מעקסיקא.',
+    cat_motor: 'מאטארן',
+    cat_motor_desc: 'קאַרס, טראַקס, מאָטאָציקלעך און טיילן.',
+    cat_inmuebles: 'גרונטייגנס',
+    cat_inmuebles_desc: 'הייזער, דירות און שטחים.',
+    cat_empleos: 'דזשאָבס',
+    cat_empleos_desc: 'וואַקאַנסיעס און פערזענלעכע פּראָפילעס.',
+    cat_servicios: 'באדינונגען',
+    cat_servicios_desc: 'פאַכמאַן און היים באַדינונגען.',
+    cat_productos: 'סחורה',
+    cat_productos_desc: 'פערזענלעכע זאכן, טעכנאָלאָגיע און מער.',
+    feature1_title: 'גריнгע פּובליקאַציע',
+    feature1_desc: 'לאָדן דיין פאָטאָס און באַשרייבונג אין ווייניקער ווי 2 מינוט. דיזייнд צו קוקן גרויס אויף מאָביל און קאָמפּיוטער.',
     feature2_title: '0% קאָמיסיעס',
     feature2_desc: 'דער גאנצער נוץ איז דיינער. Mercasto טוט נישט אריינמישן אין דיינע צאָלונגען אָדער אָפּגעצויגן פראצענטן פון דיינע פאַרקויפן.',
     feature3_title: 'דירעקטע קאָנטאַקט',
-    feature3_desc: 'פארגעסן פון פּאַמעלעך טשאַץ אויף קאָמפּלעקס פּלאַטפאָרמס. אינטערעסירט קונים שרייבן צו איר דירעקט אויף דיין פערזענלעכע WhatsApp.',
+    feature3_desc: 'פארגעסן פון פּאַמעלעך טשאַץ אויף קאָמפּלעקס פּלאַטפאָרמס. אינטערעסירט קונים שרייבן צו איר דירעקט אויף دיין פערזענלעכע WhatsApp.',
     how_title: 'ווי אַזוי אַרבעט Mercasto?',
     step1_title: 'שאַפֿן דיין קאנטע',
     step1_desc: 'פאַרשרייַבן זיך סיקיורלי מיט דיין בליצפּאָסט. איר וועט זיין גרייט צו פרסם גלייך.',
     step2_title: 'לאָדן דיין מודעה',
-    step2_desc: 'לייג דעם טיטל, פּרייַז, פאָטאָס און פרטים פון דיין פּראָדוקט, מאַשין, דינסט אָדער פאַרמאָג.',
+    step2_desc: 'לייג דעם טיטל, פּרייַז, פאָטאָס און פרטים פון دיין פּראָדוקט, מאַשין, דינסט אָדער פאַרמאָг.',
     step3_title: 'פאַרקויפן דירעקט',
     step3_desc: 'באַקומען אַרטיקלען פון קויפערס גלייך אויף דיין מאָביל און קאָאָרדינירן די עקספּרעס.',
     faq_title: 'אָפט געשטעלטע פראגעס',
     faq_q1: 'איז עס טאַקע פריי צו פרסם מודעות אויף Mercasto?',
-    faq_a1: 'יאָ, פּובליקירן מודעות איז 100% פריי. מיר טאָן ניט אָפּצאָל פארקויפונג קאָמיסיעס, כוידעשלעך פיז אָדער פאַרבאָרגן רייץ. איר האלט 100% פון דיין פארקויפונג געלט.',
+    faq_a1: 'יאָ, פּובליקירן מודעות איז 100% פריי. מיר טאָן ניט אָפּצאָل פארקויפונг קאָמיסיעס, כוידעשלעך פיז אָדער פאַרבאָרגן רייץ. איר האלט 100% פון דיין פארקויפונג געלט.',
     faq_q2: 'ווי וועט אינטערעסירט קויפערס קאָנטאַקט מיר?',
-    faq_a2: 'אויף Mercasto קויפערס קאָנטאַקט איר דירעקט. איר קענען שטעלן דיין פּראָפיל צו באַקומען אַרטיקלען גלייך אויף דיין WhatsApp, Telegram אָדער באַקומען טראדיציאנעלן טעלעפאָן קאַללס.',
+    faq_a2: 'איוו אויף Mercasto קויפערס קאָנטאַקט איר דירעקט. איר קענען שטעלן דיין פּראָפיל צו באַקומען אַרטיקלען גלייך אויף דיין WhatsApp, Telegram אָדער באַקומען טראדיציאנелן טעלעפאָן קאַללס.',
     faq_q3: 'וואָס קאַטעגאָריעס פון מודעות קען איך פרסם?',
-    faq_a3: 'איר קענען פרסם כּמעט קיין טיפּ פון קלאַסיפיידס: קאַרס און מאָטאָציקלעך (Motor), גרונטייגנס (פאַרקויף אָדער דינגען), פאַכמאַן באַדינונגען, פערזענלעכע זאכן, טעכנאָלאָגיע, אַרבעט אָפפערס און מער.',
+    faq_a3: 'איר קענען פרסם כּמעט קיין טיפּ פון קלאַסיפייдס: קאַרס און מאָטאָציקלעך (Motor), גרונטייגנס (פאַרקויף אָדער דינגען), פאַכמאַן באַדינונגען, פערזענלעכע זאכן, טעכנאָלאָגיע, אַרבעט אָפפערס און מער.',
     faq_q4: 'ווי פילע מודעות קען איך פרסם פֿאַר פריי?',
     faq_a4: 'עס זענען קיין ריסטריקטיוו לימאַץ פֿאַר פּריוואַט פארקויפער. איר קענען פרסם קייפל אַקטיוו מודעות צו וויטרינע אַלע דיין פּראָדוקטן אָדער באַדינונגען.',
     safety_title: 'דיין זיכערקייַט איז אונדזער בילכערקייַט',
-    safety_desc: 'אין Mercasto מיר קעסיידער וואַלאַדייט פּראָפילעס צו גאַראַנטירן אַ טראַסטיד סעלינג קהל. געדענקט שטענדיק צו מאַכן טראַנזאַקשאַנז אין עפנטלעך און זיכער ערטער.',
+    safety_desc: 'אין Mercasto מיר קעסיידער וואַלאַדייט פּראָפילעס צו גאַראַנטירן אַ טראַסטיד סעלינג קהл. געדענקט שטענדיק צו מאַכן טראַנזאַקשאַנז אין עפנטלעך און זיכער ערטער.',
     cta_footer_title: 'גרייט צו אָנהייבן פאַרקויפן היינט?',
     cta_footer_desc: 'טויזנטער מענטשן איבער מעקסיקא זוכן פֿאַר וואָס איר פאָרשלאָגן. מאַכן דיין פּובליקאַציע גאָר פריי!',
     cta_footer_btn: 'אָנהייבן איצט'
@@ -456,12 +639,40 @@ export default function SellerLandingScreen({ lang = 'es' }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.es;
 
   useEffect(() => {
+    // Dynamic SEO title
+    const oldTitle = document.title;
+    document.title = t.seo_title;
+    
     // Track page view for analytics
     trackPageView('/vendedores', 'Para Vendedores - Publica Gratis');
-  }, []);
 
-  const handleStart = () => {
-    navigate('/post');
+    return () => {
+      // Restore previous title on unmount
+      document.title = oldTitle;
+    };
+  }, [lang, t.seo_title]);
+
+  const handleStart = (categorySlug = '') => {
+    // Navigate to post form, potentially passing selected category
+    if (categorySlug) {
+      navigate('/post', { state: { preselectedCategory: categorySlug } });
+    } else {
+      navigate('/post');
+    }
+  };
+
+  const handleFaqToggle = (index) => {
+    const nextFaq = activeFaq === index ? null : index;
+    setActiveFaq(nextFaq);
+    
+    if (nextFaq !== null) {
+      // Track FAQ expand action as a micro-conversion
+      trackEvent('ui_click', {
+        element_type: 'faq',
+        element_text: `faq_${index + 1}`,
+        page_path: '/vendedores'
+      });
+    }
   };
 
   const faqItems = [
@@ -469,6 +680,14 @@ export default function SellerLandingScreen({ lang = 'es' }) {
     { q: t.faq_q2, a: t.faq_a2 },
     { q: t.faq_q3, a: t.faq_a3 },
     { q: t.faq_q4, a: t.faq_a4 }
+  ];
+
+  const categories = [
+    { slug: 'motor', label: t.cat_motor, desc: t.cat_motor_desc, icon: Car },
+    { slug: 'inmuebles', label: t.cat_inmuebles, desc: t.cat_inmuebles_desc, icon: Home },
+    { slug: 'empleos', label: t.cat_empleos, desc: t.cat_empleos_desc, icon: Briefcase },
+    { slug: 'servicios', label: t.cat_servicios, desc: t.cat_servicios_desc, icon: Wrench },
+    { slug: 'productos', label: t.cat_productos, desc: t.cat_productos_desc, icon: ShoppingBag }
   ];
 
   return (
@@ -499,7 +718,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full sm:w-auto">
           <button
-            onClick={handleStart}
+            onClick={() => handleStart()}
             className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-[#84CC16] hover:bg-[#72B013] text-white font-bold px-8 py-4 rounded-2xl shadow-lg shadow-[#84CC16]/20 transition-all duration-200 text-lg hover:scale-[1.02] active:scale-[0.98]"
           >
             <PlusCircle size={22} />
@@ -524,8 +743,37 @@ export default function SellerLandingScreen({ lang = 'es' }) {
         </p>
       </section>
 
+      {/* Categories block ("Qué puedes publicar") */}
+      <section className="py-16 px-4 max-w-6xl mx-auto border-t border-slate-200 dark:border-slate-800/80">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <h2 className="text-3xl font-extrabold mb-4 tracking-tight">{t.categories_title}</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base font-medium">{t.categories_desc}</p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.slug}
+                onClick={() => handleStart(cat.slug)}
+                className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-3xl hover:border-[#84CC16] hover:ring-2 hover:ring-[#84CC16]/10 transition-all duration-300 shadow-sm hover:scale-[1.03] active:scale-[0.97] group text-center"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-lime-50 dark:bg-lime-950/40 flex items-center justify-center text-[#84CC16] mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <Icon size={24} />
+                </div>
+                <span className="font-bold text-sm md:text-base mb-1.5">{cat.label}</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-tight">
+                  {cat.desc}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       {/* Main Features Grid */}
-      <section className="py-16 px-4 max-w-6xl mx-auto">
+      <section className="py-16 px-4 max-w-6xl mx-auto border-t border-slate-200 dark:border-slate-800/80">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Card 1: Easy & Fast */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 p-8 rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col items-start group">
@@ -616,7 +864,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
                 className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden transition-all duration-300"
               >
                 <button
-                  onClick={() => setActiveFaq(isOpen ? null : index)}
+                  onClick={() => handleFaqToggle(index)}
                   className="w-full flex items-center justify-between p-5 text-left font-bold text-base md:text-lg focus:outline-none hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors"
                 >
                   <span>{item.q}</span>
@@ -664,7 +912,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
           {t.cta_footer_desc}
         </p>
         <button
-          onClick={handleStart}
+          onClick={() => handleStart()}
           className="flex items-center justify-center gap-2 mx-auto bg-[#84CC16] hover:bg-[#72B013] text-white font-bold px-10 py-4.5 rounded-2xl shadow-xl shadow-[#84CC16]/10 transition-all duration-200 text-lg hover:scale-[1.02] active:scale-[0.98]"
         >
           <PlusCircle size={22} />

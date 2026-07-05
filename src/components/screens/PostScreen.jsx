@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   PlusCircle, ChevronRight, ChevronLeft, Trash2, Camera, Loader2,
   Sparkles, Video, MapPin, Tag, Zap, Car, Home, Briefcase,
@@ -127,6 +128,15 @@ export default function PostScreen({
   setUser,
 }) {
   const [step, setStep] = useState(1);
+  const location = useLocation();
+
+  useEffect(() => {
+    const preselected = location.state?.preselectedCategory;
+    if (preselected) {
+      handleParentCategorySelect(preselected);
+    }
+  }, [location.state]);
+
   const [apiAttributes, setApiAttributes] = useState(null);
   const [attributesLoading, setAttributesLoading] = useState(false);
   const [customCity, setCustomCity] = useState(false);
