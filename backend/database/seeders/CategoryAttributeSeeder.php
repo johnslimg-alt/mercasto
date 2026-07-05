@@ -226,6 +226,16 @@ class CategoryAttributeSeeder extends Seeder
             ],
             'hogar' => [
                 ['tipo', 'Tipo', 'select', ['Muebles', 'Electrodomésticos', 'Decoración', 'Herramientas', 'Jardín']],
+                ['marca_hogar', 'Marca', 'select', [
+                    'IKEA',
+                    'Whirlpool', 'Mabe', 'LG', 'Samsung', 'GE', 'Frigidaire', 'Winia', 'Hisense', 'Midea', 'Daewoo', 'Acros', 'Koblenz', 'Oster', 'Black+Decker', 'Hamilton Beach', 'Philips', 'Panasonic', 'Rowenta',
+                    'Vasconia', 'Tramontina', 'Cinsa', 'T-fal',
+                    'Truper', 'Pretul', 'Urrea', 'Bosch', 'DeWalt', 'Makita', 'Milwaukee', 'Stanley', 'Total',
+                    'Husqvarna', 'Stihl', 'Toro', 'Craftsman',
+                    'Sylvania',
+                    'Steren', 'Hikvision', 'TP-Link', 'Yale', 'Kwikset', 'Ring', 'Dahua',
+                    'Otra',
+                ]],
                 ['material', 'Material', 'select', ['Madera', 'Metal', 'Vidrio', 'Tela', 'Piel', 'Plástico']],
                 ['medidas', 'Medidas', 'text', null],
                 ['entrega', 'Entrega', 'select', ['A domicilio', 'Recoger', 'Envío disponible']],

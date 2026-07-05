@@ -234,9 +234,28 @@ const serviceFilters = [
   { id: 'facturacion', label: 'Formalidad', type: 'checkbox', options: ['Factura', 'Contrato', 'Garantía por escrito', 'Seguro', 'Equipo propio'] },
 ];
 
+const homeBrands = [
+  // Muebles
+  'IKEA',
+  // Electrodomésticos
+  'Whirlpool', 'Mabe', 'LG', 'Samsung', 'GE', 'Frigidaire', 'Winia', 'Hisense', 'Midea', 'Daewoo', 'Acros', 'Koblenz', 'Oster', 'Black+Decker', 'Hamilton Beach', 'Philips', 'Panasonic', 'Rowenta',
+  // Cocina / menaje
+  'Vasconia', 'Tramontina', 'Cinsa', 'T-fal',
+  // Herramientas
+  'Truper', 'Pretul', 'Urrea', 'Bosch', 'DeWalt', 'Makita', 'Milwaukee', 'Stanley', 'Total',
+  // Jardín
+  'Husqvarna', 'Stihl', 'Toro', 'Craftsman',
+  // Iluminación
+  'Sylvania',
+  // Seguridad
+  'Steren', 'Hikvision', 'TP-Link', 'Yale', 'Kwikset', 'Ring', 'Dahua',
+  'Otra'
+];
+
 const homeFilters = [
   { id: 'tipo', label: 'Categoría', type: 'select', options: ['Muebles', 'Electrodomésticos', 'Decoración', 'Herramientas', 'Jardín', 'Iluminación', 'Cocina', 'Seguridad'] },
   { id: 'condicion', label: 'Condición', type: 'checkbox', options: ['Nuevo', 'Usado', 'Como nuevo', 'Restaurado'] },
+  { id: 'marca_hogar', label: 'Marca', type: 'select', options: homeBrands },
   { id: 'material', label: 'Material', type: 'checkbox', options: ['Madera', 'Metal', 'Vidrio', 'Tela', 'Piel', 'Plástico', 'MDF'] },
   { id: 'entrega', label: 'Entrega', type: 'checkbox', options: ['Entrega a domicilio', 'Recoger en domicilio', 'Envío disponible', 'Instalación incluida'] },
   { id: 'medidas', label: 'Medidas', type: 'text', placeholder: 'Ej. 180x90 cm' },
