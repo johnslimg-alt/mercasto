@@ -18,7 +18,9 @@ class ChatController extends Controller {
                     'ad:id,title,price,image_url',
                     'buyer:id,name,avatar_url',
                     'seller:id,name,avatar_url',
-                    'latestMessage:id,conversation_id,sender_id,body,read_at,created_at',
+                    // Column-restricted eager load collides with latestOfMany()'s own subquery
+                    // column (ambiguous "conversation_id" on some drivers) — load unrestricted.
+                    'latestMessage',
                 ])
                 ->where('buyer_id', $userId)
                 ->orWhere('seller_id', $userId)
@@ -99,24 +101,37 @@ class ChatController extends Controller {
             $adId = $request->filled('ad_id') ? (int) $request->ad_id : null;
             $ad = $adId ? Ad::select('id', 'user_id', 'title')->find($adId) : null;
 
-            $sellerId = $ad?->user_id ?: $receiverId;
-            $buyerId = $userId === $sellerId ? $receiverId : $userId;
+            // Reuse whichever conversation already exists between these two users for this ad
+            // (in either buyer/seller role) instead of re-deriving buyer/seller from who's
+            // sending vs receiving — that flips per message direction and split every reply
+            // into a brand new duplicate conversation.
+            $conversation = Conversation::where('ad_id', $adId)
+                ->where(function ($query) use ($userId, $receiverId) {
+                    $query->where(['buyer_id' => $userId, 'seller_id' => $receiverId])
+                        ->orWhere(['buyer_id' => $receiverId, 'seller_id' => $userId]);
+                })
+                ->first();
 
-            $conversation = Conversation::firstOrCreate(
-                [
+            if (! $conversation) {
+                $sellerId = $ad?->user_id ?: $receiverId;
+                $buyerId = $userId === $sellerId ? $receiverId : $userId;
+                $conversation = Conversation::create([
                     'buyer_id' => $buyerId,
                     'seller_id' => $sellerId,
                     'ad_id' => $adId,
-                ],
-                [
                     'status' => 'active',
                     'last_message_at' => now(),
-                ]
-            );
+                ]);
+            }
 
             $message = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id' => $userId,
+                // receiver_id/content predate the conversations schema and are still NOT NULL;
+                // kept in sync with buyer/seller + body rather than a migration (no doctrine/dbal
+                // installed, so Blueprint::change() isn't available to make them nullable).
+                'receiver_id' => $receiverId,
+                'content' => $request->content,
                 'body' => $request->content,
                 'type' => 'text',
             ]);

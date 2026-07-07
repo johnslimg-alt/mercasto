@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, MessageCircle, Mail, Phone, Shield, AlertTriangle, Copy, Check } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
 export default function ContactButton({ ad, user, className = '' }) {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
@@ -51,6 +53,8 @@ export default function ContactButton({ ad, user, className = '' }) {
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
   const phoneUrl = phone ? `tel:+${phone}` : null;
+  const sellerId = ad?.user_id || ad?.user?.id || null;
+  const isOwnAd = user?.id && sellerId && user.id === sellerId;
 
   // Email-канал siempre disponible vía backend relay
   const hasContacts = true;
@@ -110,6 +114,12 @@ export default function ContactButton({ ad, user, className = '' }) {
   const handlePhoneClick = () => {
     logContact('phone');
     window.location.href = phoneUrl;
+  };
+
+  const handleInternalMessageClick = () => {
+    logContact('internal_message');
+    setIsOpen(false);
+    navigate(`/mensajes/${sellerId}${ad?.id ? `?ad_id=${ad.id}` : ''}`);
   };
 
   const handleCopyPhone = () => {
@@ -232,6 +242,24 @@ export default function ContactButton({ ad, user, className = '' }) {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {sellerId && !isOwnAd && (
+                    <button
+                      onClick={handleInternalMessageClick}
+                      className="w-full flex items-center gap-4 p-4 bg-lime-50 dark:bg-lime-500/10 hover:bg-lime-100 dark:hover:bg-lime-500/20 border border-lime-200 dark:border-lime-500/30 rounded-xl transition-all group"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-[#84CC16] flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <MessageCircle className="w-6 h-6 text-slate-950" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-gray-900 dark:text-white">Mensaje por Mercasto</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Chatea sin salir del sitio</div>
+                      </div>
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  )}
+
                   {whatsappUrl && (
                 <button
                   onClick={handleWhatsAppClick}

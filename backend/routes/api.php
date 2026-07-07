@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\SearchAlertController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\MetaEventController;
 
 // Public routes
@@ -304,6 +305,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Meta CAPI events (Authenticated)
     Route::post('/meta/events/post-ad', [MetaEventController::class, 'postAd']);
     Route::post('/meta/events/wishlist', [MetaEventController::class, 'addToWishlist']);
+
+    // Chat interno comprador-vendedor (real-time vía Reverb, ver routes/channels.php)
+    Route::get('/conversations', [ChatController::class, 'getConversations']);
+    Route::get('/conversations/{otherUserId}/messages', [ChatController::class, 'getMessages'])->whereNumber('otherUserId');
+    Route::middleware('throttle:30,1')->post('/messages', [ChatController::class, 'sendMessage']); // 30 mensajes/minuto por usuario
 });
 
 // Meta CAPI events (Public)
