@@ -449,12 +449,12 @@ const rentaQuadsFilters = [
 
 const rentaCampersFilters = [
   { id: 'tipo_casa_rodante', label: 'Tipo de casa rodante', type: 'select', options: ['Autocaravana Clase A/B/C', 'Camper Van (Furgoneta)', 'Remolque / Caravana / Trailer'] },
-  { id: 'capacidad_dormir', label: 'Спальных мест / Plazas', type: 'checkbox', options: ['2 personas', '3 - 4 personas', '5 - 6 personas', '6+ personas'] },
+  { id: 'capacidad_dormir', label: 'Plazas para dormir', type: 'checkbox', options: ['2 personas', '3 - 4 personas', '5 - 6 personas', '6+ personas'] },
   { id: 'equipamiento_camper', label: 'Equipamiento', type: 'checkbox', options: ['Cocina con estufa', 'Refrigerador', 'Baño con ducha', 'Aire acondicionado', 'Paneles solares', 'Toldo exterior'] }
 ];
 
 const rentalVehiclesFilters = [
-  { id: 'tipo_vehiculo', label: 'Tipo de transporte', type: 'select', options: ['Auto / Camioneta', 'Yate / Lancha', 'Кемперы / RVs', 'Motos y Quads', 'Bicicletas / Patines'] },
+  { id: 'tipo_vehiculo', label: 'Tipo de transporte', type: 'select', options: ['Auto / Camioneta', 'Yate / Lancha', 'Campers / RVs', 'Motos y Quads', 'Bicicletas / Patines'] },
   { id: 'esquema_renta', label: 'Esquema de renta', type: 'checkbox', options: ['Por hora', 'Por día / Por jornada', 'Semanal', 'Mensual'] },
   { id: 'capacidad_pasajeros', label: 'Capacidad de pasajeros', type: 'select', options: ['1-2 personas', '3-5 personas', '6-10 personas', 'Más de 10 personas'] },
   { id: 'tripulacion', label: 'Tripulación / Chofer', type: 'checkbox', options: ['Sin chofer / Bareboat', 'Con chofer / Capitán', 'Servicio todo incluido'] },
