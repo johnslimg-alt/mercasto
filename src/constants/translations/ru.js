@@ -1,4 +1,8 @@
 export default {
+  "access_denied": "Доступ запрещён",
+  "ads": "Объявления",
+  "verified_account": "Подтверждённый аккаунт",
+  "verify": "Верифицировать",
   "renew": "Продлить",
   "sort_recent": "Сначала новые",
   "sort_oldest": "Сначала старые",

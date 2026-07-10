@@ -1,4 +1,8 @@
 export default {
+  "access_denied": "アクセスが拒否されました",
+  "ads": "広告",
+  "verified_account": "認証済みアカウント",
+  "verify": "確認",
   "renew": "更新",
   "sort_recent": "新着順",
   "sort_oldest": "古い順",

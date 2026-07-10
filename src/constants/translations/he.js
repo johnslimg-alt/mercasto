@@ -1,4 +1,8 @@
 export default {
+  "access_denied": "הגישה נדחתה",
+  "ads": "מודעות",
+  "verified_account": "חשבון מאומת",
+  "verify": "אימות",
   "renew": "חידוש",
   "sort_recent": "החדשים ביותר",
   "sort_oldest": "הישנים ביותר",

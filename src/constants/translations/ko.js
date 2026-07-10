@@ -1,4 +1,8 @@
 export default {
+  "access_denied": "접근 거부됨",
+  "ads": "광고",
+  "verified_account": "인증된 계정",
+  "verify": "인증",
   "renew": "갱신",
   "sort_recent": "최신순",
   "sort_oldest": "오래된순",

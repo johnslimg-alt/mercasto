@@ -1,4 +1,8 @@
 export default {
+  "access_denied": "צוטריט פארווערט",
+  "ads": "אַנאָנסן",
+  "verified_account": "באַשטעטיקט קאָנטע",
+  "verify": "באַשטעטיקן",
   "renew": "פֿאַרנײַען",
   "sort_recent": "נײַסטע",
   "sort_oldest": "עלטסטע",

@@ -1,4 +1,8 @@
 export default {
+  "access_denied": "الوصول مرفوض",
+  "ads": "الإعلانات",
+  "verified_account": "حساب موثّق",
+  "verify": "تحقق",
   "renew": "تجديد",
   "sort_recent": "الأحدث",
   "sort_oldest": "الأقدم",

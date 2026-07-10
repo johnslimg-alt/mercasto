@@ -1,4 +1,8 @@
 export default {
+  "access_denied": "拒绝访问",
+  "ads": "广告",
+  "verified_account": "已验证账户",
+  "verify": "验证",
   "renew": "续期",
   "sort_recent": "最新",
   "sort_oldest": "最早",

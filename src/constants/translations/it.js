@@ -1,4 +1,8 @@
 export default {
+  "access_denied": "Accesso negato",
+  "ads": "Annunci",
+  "verified_account": "Account verificato",
+  "verify": "Verifica",
   "renew": "Rinnova",
   "sort_recent": "Più recenti",
   "sort_oldest": "Meno recenti",
