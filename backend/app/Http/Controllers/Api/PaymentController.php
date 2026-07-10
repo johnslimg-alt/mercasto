@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\MetaCapiService;
 use Illuminate\Http\Request;
 use App\Events\NewNotification;
 use Illuminate\Support\Facades\Http;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use function Illuminate\Support\defer;
 
 class PaymentController extends Controller
 {
@@ -128,6 +130,8 @@ class PaymentController extends Controller
             ]);
         }
 
+        $this->rememberMetaPurchaseContext($checkoutId, $request);
+
         $clipToken = 'Basic ' . base64_encode(config('services.clip.api_key') . ':' . config('services.clip.api_secret'));
 
         try {
@@ -206,7 +210,7 @@ class PaymentController extends Controller
     /**
      * Обработка веб-хука от Clip
      */
-    public function handleWebhook(Request $request)
+    public function handleWebhook(Request $request, MetaCapiService $meta)
     {
         // Verify webhook signature — FAIL CLOSED: reject if secret not configured
         $secret = config('services.clip.webhook_secret');
@@ -340,6 +344,7 @@ class PaymentController extends Controller
                 }
                 
                 $this->activateAdPromotion($payment);
+                defer(fn () => $this->sendMetaPurchase($meta, $request, $payment));
 
                 // Безопасная генерация Push-уведомления в реальном времени через WebSocket
                 $notificationData = [
@@ -359,6 +364,96 @@ class PaymentController extends Controller
         }
 
         return response()->json(['status' => 'received'], 200);
+    }
+
+    private function rememberMetaPurchaseContext(string $checkoutId, Request $request): void
+    {
+        try {
+            Cache::put($this->metaPurchaseContextKey($checkoutId), array_filter([
+                'client_ip_address' => $request->ip(),
+                'client_user_agent' => $request->userAgent(),
+                'fbp' => $request->cookie('_fbp'),
+                'fbc' => $request->cookie('_fbc'),
+            ], fn ($value) => $value !== null && $value !== ''), now()->addDay());
+        } catch (\Throwable $e) {
+            Log::warning('Unable to cache Meta purchase context', [
+                'checkout_id' => $checkoutId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendMetaPurchase(MetaCapiService $meta, Request $request, object $payment): void
+    {
+        $productId = $payment->product_code
+            ?: ($payment->ad_id ? 'ad_promotion_' . $payment->ad_id : 'payment_' . $payment->id);
+        $orderId = $payment->clip_payment_request_id
+            ?: $payment->clip_checkout_id
+            ?: (string) $payment->id;
+        $contextKey = $this->metaPurchaseContextKey((string) $payment->clip_checkout_id);
+
+        try {
+            $userData = Cache::get($contextKey, []);
+        } catch (\Throwable $e) {
+            $userData = [];
+            Log::warning('Unable to read cached Meta purchase context', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        if (! is_array($userData)) {
+            $userData = [];
+        }
+
+        $result = $meta->send(
+            'Purchase',
+            $request,
+            DB::table('users')->where('id', $payment->user_id)->first(),
+            [
+                'currency' => 'MXN',
+                'value' => (float) $payment->amount,
+                'order_id' => (string) $orderId,
+                'content_ids' => [(string) $productId],
+                'contents' => [[
+                    'id' => (string) $productId,
+                    'quantity' => 1,
+                    'item_price' => (float) $payment->amount,
+                ]],
+                'content_type' => 'product',
+                'content_name' => (string) $payment->description,
+                'num_items' => 1,
+            ],
+            'purchase_clip_' . $payment->id,
+            config('app.frontend_url', 'https://mercasto.com') . '/?payment=success',
+            $userData
+        );
+
+        if ($result['ok'] ?? false) {
+            try {
+                Cache::forget($contextKey);
+            } catch (\Throwable $e) {
+                Log::warning('Unable to clear Meta purchase context', [
+                    'payment_id' => $payment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return;
+        }
+
+        Log::warning('Meta CAPI Purchase was not accepted', [
+            'payment_id' => $payment->id,
+            'event_id' => $result['event_id'] ?? null,
+            'status' => $result['status'] ?? null,
+            'skipped' => (bool) ($result['skipped'] ?? false),
+            'reason' => $result['reason'] ?? null,
+        ]);
+    }
+
+    private function metaPurchaseContextKey(string $checkoutId): string
+    {
+        return 'meta_purchase_context:' . $checkoutId;
     }
 
     private function activatePaidProduct(object $payment): void

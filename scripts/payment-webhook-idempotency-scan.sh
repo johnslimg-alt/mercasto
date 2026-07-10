@@ -23,18 +23,23 @@ grep -qF "where('status', '!=', 'paid')" "$CONTROLLER"
 grep -qF "'status' => 'paid'" "$CONTROLLER"
 grep -qF 'if ($updated)' "$CONTROLLER"
 grep -qE "DB::table\('ad_promotions'\)->(insert|updateOrInsert)" "$CONTROLLER"
+grep -qF 'defer(fn () => $this->sendMetaPurchase($meta, $request, $payment))' "$CONTROLLER"
+grep -qF "'currency' => 'MXN'" "$CONTROLLER"
+grep -qF "'value' => (float) \$payment->amount" "$CONTROLLER"
+grep -qF "'purchase_clip_' . \$payment->id" "$CONTROLLER"
 grep -qF 'broadcast(new NewNotification' "$CONTROLLER"
 
 updated_line="$(grep -nF 'if ($updated)' "$CONTROLLER" | head -1 | cut -d: -f1)"
 promotion_line="$(grep -n -E "DB::table\('ad_promotions'\)->(insert|updateOrInsert)" "$CONTROLLER" | head -1 | cut -d: -f1)"
+meta_purchase_line="$(grep -nF 'defer(fn () => $this->sendMetaPurchase($meta, $request, $payment))' "$CONTROLLER" | head -1 | cut -d: -f1)"
 notification_line="$(grep -nF 'broadcast(new NewNotification' "$CONTROLLER" | head -1 | cut -d: -f1)"
 
-if [ -z "$updated_line" ] || [ -z "$promotion_line" ] || [ -z "$notification_line" ]; then
+if [ -z "$updated_line" ] || [ -z "$promotion_line" ] || [ -z "$meta_purchase_line" ] || [ -z "$notification_line" ]; then
   echo "unable to locate webhook side-effect lines" >&2
   exit 1
 fi
 
-if [ "$promotion_line" -le "$updated_line" ] || [ "$notification_line" -le "$updated_line" ]; then
+if [ "$promotion_line" -le "$updated_line" ] || [ "$meta_purchase_line" -le "$updated_line" ] || [ "$notification_line" -le "$updated_line" ]; then
   echo "webhook side effects appear before atomic paid-transition guard" >&2
   exit 1
 fi
