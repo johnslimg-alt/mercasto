@@ -73,6 +73,10 @@ return [
         'webhook_secret' => env('CLIP_WEBHOOK_SECRET'),
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+    ],
+
     'deepseek' => [
         'api_key'    => env('DEEPSEEK_API_KEY'),
         'base_url'   => env('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
@@ -108,6 +112,10 @@ return [
         'pixel_id' => env('FACEBOOK_PIXEL_ID'),
         'access_token' => env('FACEBOOK_ACCESS_TOKEN'),
         'graph_version' => env('FACEBOOK_GRAPH_VERSION', 'v25.0'),
+    ],
+
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
     ],
 
 ];
