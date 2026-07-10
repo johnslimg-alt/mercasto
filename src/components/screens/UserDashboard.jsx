@@ -5,6 +5,8 @@ import AchievementsModal from '../gamification/AchievementsModal';
 
 import MyAdsScreen from './MyAdsScreen';
 import CompanyRfcScreen from '../profile/CompanyRfcScreen';
+import BusinessProfileEditor from '../profile/BusinessProfileEditor';
+import TwoFactorAuthSection from '../profile/TwoFactorAuthSection';
 import SellerStatsScreen from './SellerStatsScreen';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import { mockAds, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
@@ -220,7 +222,7 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
   );
 };
 
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
   const [dashToast, setDashToast] = React.useState(null);
   const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
   const [profileVisible, setProfileVisible] = React.useState(() => localStorage.getItem('mercasto_privacy_profile_visible') !== 'false');
@@ -768,8 +770,11 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 <SavedSearchesPanel token={token} />
               </div>
             ) : dashboardTab === 'company' ? (
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-                <CompanyRfcScreen lang={lang} token={token} />
+              <div className="space-y-6">
+                <BusinessProfileEditor showToast={showDashToast} />
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+                  <CompanyRfcScreen lang={lang} token={token} />
+                </div>
               </div>
             ) : dashboardTab === 'stats' ? (
               <div className="space-y-6">
@@ -787,7 +792,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                     </select>
                   </div>
                   <React.Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-lime-500" /></div>}>
-                    <DashboardCharts data={analyticsData} />
+                    <DashboardCharts analyticsData={analyticsData || []} categoryStats={categoryStats || []} isDarkMode={isDarkMode} />
                   </React.Suspense>
                 </div>
 
@@ -1174,6 +1179,8 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                       {notificationsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
                     </button>
                   </form>
+
+                  <TwoFactorAuthSection user={user} setUser={setUser} t={t} showToast={showDashToast} />
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-red-200 dark:border-red-500/30 p-6">

@@ -209,6 +209,13 @@ export default function MyAdsScreen({
             <span className="text-slate-500 dark:text-slate-400 font-medium ml-2 text-[15px]">({counts[filter]})</span>
           </h2>
           <div className="flex items-center gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="shrink-0 text-[12.5px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#84CC16]/30"
+            >
+              {sortOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+            </select>
             <button onClick={() => selectionMode ? cancelSelection() : setSelectionMode(true)} className="btn-sm border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5">
               {selectionMode ? <X className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{selectionMode ? (t.cancel || 'Cancelar') : (t.select || 'Seleccionar')}</span>
@@ -238,30 +245,21 @@ export default function MyAdsScreen({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-5 pt-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {selectionMode && (
-              <button
-                onClick={() => setSelectedIds(allVisibleSelected ? new Set() : new Set(filteredAds.map(ad => ad.id)))}
-                className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-600 dark:text-slate-300 mr-4 shrink-0 pb-3"
-              >
-                {allVisibleSelected ? <CheckSquare className="w-4 h-4 text-[#84CC16]" /> : <Square className="w-4 h-4 text-slate-400" />}
-                {t.select_all || 'Seleccionar todo'}
-              </button>
-            )}
-            {filters.map(([key, label, count]) => (
-              <button key={key} onClick={() => { setFilter(key); cancelSelection(); }} className={`pb-3 px-1 mr-4 text-[14px] font-semibold border-b-2 transition-colors shrink-0 ${filter === key ? 'border-[#84CC16] text-slate-900 dark:text-white' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
-                {label}<span className="text-[12px] font-normal ml-1 text-slate-400">({count})</span>
-              </button>
-            ))}
-          </div>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="mb-3 shrink-0 text-[12.5px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#84CC16]/30"
-          >
-            {sortOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-          </select>
+        <div className="flex items-center gap-1 overflow-x-auto px-5 pt-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+          {selectionMode && (
+            <button
+              onClick={() => setSelectedIds(allVisibleSelected ? new Set() : new Set(filteredAds.map(ad => ad.id)))}
+              className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-600 dark:text-slate-300 mr-4 shrink-0 pb-3"
+            >
+              {allVisibleSelected ? <CheckSquare className="w-4 h-4 text-[#84CC16]" /> : <Square className="w-4 h-4 text-slate-400" />}
+              {t.select_all || 'Seleccionar todo'}
+            </button>
+          )}
+          {filters.map(([key, label, count]) => (
+            <button key={key} onClick={() => { setFilter(key); cancelSelection(); }} className={`pb-3 px-1 mr-4 text-[14px] font-semibold border-b-2 transition-colors shrink-0 ${filter === key ? 'border-[#84CC16] text-slate-900 dark:text-white' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+              {label}<span className="text-[12px] font-normal ml-1 text-slate-400">({count})</span>
+            </button>
+          ))}
         </div>
 
         {filteredAds.length === 0 ? (
@@ -333,7 +331,7 @@ export default function MyAdsScreen({
                     return (
                       <button
                         key={key}
-                        onClick={() => handlePromoteAd(ad)}
+                        onClick={() => handlePromoteAd(ad, key)}
                         title={isActiveHere ? `${promo.name} · ${promo.remainingLabel}` : label}
                         className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${isActiveHere ? 'bg-[#84CC16] text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}
                       >

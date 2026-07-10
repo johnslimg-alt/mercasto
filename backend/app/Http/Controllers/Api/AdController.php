@@ -992,11 +992,18 @@ class AdController extends Controller
     /**
      * Продвижение объявления с использованием кредитов пользователя
      */
+    private const CREDITS_PROMO_TYPES = [
+        'boost' => ['promoted' => 'urgente', 'boost_type' => 'boost_1_day', 'ledger_type' => 'lift', 'days' => 1],
+        'highlight' => ['promoted' => 'highlight', 'boost_type' => 'highlight_7_days', 'ledger_type' => 'highlight', 'days' => 7],
+        'top' => ['promoted' => 'destacado', 'boost_type' => 'featured_7_days', 'ledger_type' => 'vip', 'days' => 7],
+    ];
+
     public function promoteWithCredits(Request $request, $id)
     {
         $user = $request->user();
+        $type = self::CREDITS_PROMO_TYPES[$request->input('type')] ?? self::CREDITS_PROMO_TYPES['highlight'];
 
-        $result = DB::transaction(function () use ($id, $user) {
+        $result = DB::transaction(function () use ($id, $user, $type) {
             $ad = Ad::whereKey($id)->lockForUpdate()->firstOrFail();
 
             if ($user->id !== $ad->user_id && $user->role !== 'admin') {
@@ -1006,8 +1013,8 @@ class AdController extends Controller
             // Lock user + ad together so concurrent requests cannot double-spend credits.
             $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            if ($ad->promoted === 'destacado') {
-                return ['response' => response()->json(['message' => 'Este anuncio ya se encuentra destacado.'], 400)];
+            if ($ad->boost_expires_at && $ad->boost_expires_at->isFuture()) {
+                return ['response' => response()->json(['message' => 'Este anuncio ya tiene una promoción activa.'], 400)];
             }
 
             $cost = 50; // Стоимость продвижения в créditos pagados
@@ -1023,22 +1030,31 @@ class AdController extends Controller
             }
 
             $creditUser->save();
-            $ad->promoted = 'destacado';
+
+            $expiresAt = now()->addDays($type['days']);
+            $ad->promoted = $type['promoted'];
+            $ad->boost_type = $type['boost_type'];
+            $ad->boost_expires_at = $expiresAt;
             $ad->save();
 
-            // Финансовый Аудит (Recurring Revenue): ограничиваем услугу 7 днями, чтобы продавец платил снова
-            DB::table('ad_promotions')->insert([
-                'ad_id' => $ad->id,
-                'type' => 'highlight',
-                'expires_at' => now()->addDays(7),
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+            // Финансовый Аудит (Recurring Revenue): ограничиваем услугу по дням, чтобы продавец платил снова
+            DB::table('ad_promotions')->updateOrInsert(
+                ['ad_id' => $ad->id],
+                [
+                    'type' => $type['ledger_type'],
+                    'expires_at' => $expiresAt,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
 
             return [
                 'balance' => $creditUser->balance,
                 'referral_credits' => $creditUser->referral_credits,
                 'used_referral_credit' => $usedReferralCredit,
+                'boost_type' => $type['boost_type'],
+                'boost_expires_at' => $expiresAt->toIso8601String(),
+                'promoted' => $type['promoted'],
             ];
         });
 
@@ -1054,6 +1070,9 @@ class AdController extends Controller
             'balance' => $result['balance'],
             'referral_credits' => $result['referral_credits'],
             'used_referral_credit' => $result['used_referral_credit'],
+            'boost_type' => $result['boost_type'],
+            'boost_expires_at' => $result['boost_expires_at'],
+            'promoted' => $result['promoted'],
         ]);
     }
 
