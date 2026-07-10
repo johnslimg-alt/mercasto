@@ -318,7 +318,7 @@ export default function MyAdsScreen({
               )}
 
               {!selectionMode && (
-                <div className="flex w-full sm:w-auto gap-1.5 mt-1 sm:mt-0 flex-wrap" onClick={e => e.stopPropagation()}>
+                <div className="flex w-full sm:w-auto sm:min-w-0 sm:max-w-[60%] gap-1.5 mt-1 sm:mt-0 flex-wrap justify-end" onClick={e => e.stopPropagation()}>
                   <Link to={`/?ad=${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 text-[11px]"><ExternalLink className="w-3 h-3" /> {t.view || 'Ver'}</Link>
                   <Link to={`/anuncio/${ad.id}/editar`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 text-[11px]"><Pencil className="w-3 h-3" /> {t.edit || 'Editar'}</Link>
                   {ad.status === 'active' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.pause || 'Pausar'}</button>}
