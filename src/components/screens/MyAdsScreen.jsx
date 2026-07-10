@@ -12,37 +12,39 @@ function daysUntilExpiry(expiresAt) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-const PROMO_LABELS = {
-  boost_1_day: { name: 'Subir 24 horas', totalMs: 1 * 24 * 60 * 60 * 1000, category: 'boost' },
-  boost_3_days: { name: 'Subir 3 días', totalMs: 3 * 24 * 60 * 60 * 1000, category: 'boost' },
-  highlight_7_days: { name: 'Resaltado 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'highlight' },
-  featured_7_days: { name: 'Destacado 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'top' },
-  featured_30_days: { name: 'Destacado 30 días', totalMs: 30 * 24 * 60 * 60 * 1000, category: 'top' },
-  top_category_7_days: { name: 'Top categoría 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'top' },
-};
+function getPromoLabels(t) {
+  return {
+    boost_1_day: { name: t.pm_boost_1d_name || 'Subir 24 horas', totalMs: 1 * 24 * 60 * 60 * 1000, category: 'boost' },
+    boost_3_days: { name: t.pm_boost_3d_name || 'Subir 3 días', totalMs: 3 * 24 * 60 * 60 * 1000, category: 'boost' },
+    highlight_7_days: { name: t.pm_highlight_7d_name || 'Resaltado 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'highlight' },
+    featured_7_days: { name: t.pm_featured_7d_name || 'Destacado 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'top' },
+    featured_30_days: { name: t.pm_featured_30d_name || 'Destacado 30 días', totalMs: 30 * 24 * 60 * 60 * 1000, category: 'top' },
+    top_category_7_days: { name: t.pm_top_category_name || 'Top categoría 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'top' },
+  };
+}
 
 // Las 3 categorías de promoción que se pueden comprar (solo una puede estar activa a la vez por anuncio)
 const PROMO_CATEGORIES = ['boost', 'highlight', 'top'];
 
-function formatRemaining(remainingMs) {
+function formatRemaining(remainingMs, t) {
   const hours = Math.floor(remainingMs / (1000 * 60 * 60));
   const days = Math.floor(hours / 24);
   return days >= 1
-    ? `${days} ${days === 1 ? 'día' : 'días'} restante${days === 1 ? '' : 's'}`
-    : `${Math.max(1, hours)} h restante${hours === 1 ? '' : 's'}`;
+    ? `${days} ${days === 1 ? (t.pm_day || 'día') : (t.pm_days || 'días')} ${t.pm_remaining_suffix || 'restante(s)'}`
+    : `${Math.max(1, hours)} ${t.pm_hours_short || 'h'} ${t.pm_remaining_suffix || 'restante(s)'}`;
 }
 
 // Returns { name, remainingLabel, percentLeft, category } for an active (non-expired) promotion, or null
-function activePromotion(ad) {
+function activePromotion(ad, t) {
   if (!ad.boost_type || !ad.boost_expires_at) return null;
-  const meta = PROMO_LABELS[ad.boost_type];
+  const meta = getPromoLabels(t)[ad.boost_type];
   if (!meta) return null;
   const remainingMs = new Date(ad.boost_expires_at) - Date.now();
   if (remainingMs <= 0) return null;
 
   const percentLeft = Math.min(100, Math.max(0, Math.round((remainingMs / meta.totalMs) * 100)));
 
-  return { name: meta.name, remainingLabel: formatRemaining(remainingMs), percentLeft, category: meta.category };
+  return { name: meta.name, remainingLabel: formatRemaining(remainingMs, t), percentLeft, category: meta.category };
 }
 
 export default function MyAdsScreen({
@@ -266,7 +268,7 @@ export default function MyAdsScreen({
           <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px]">{t.noAds}</div>
         ) : filteredAds.map(ad => {
           const selected = selectedIds.has(ad.id);
-          const promo = activePromotion(ad);
+          const promo = activePromotion(ad, t);
           const CardBody = (
             <>
               {selectionMode && (
