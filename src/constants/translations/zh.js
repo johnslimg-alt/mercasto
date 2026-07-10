@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "置顶提升",
+  "promo_highlight": "高亮显示",
+  "promo_top": "置于顶部",
   "account_verification": "账户验证",
   "ads_per_month": "个广告/月",
   "ai_needs_title": "请先添加标题。",

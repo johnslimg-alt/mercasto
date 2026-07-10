@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "Поднять",
+  "promo_highlight": "Выделить",
+  "promo_top": "Закрепить сверху",
   "account_verification": "Верификация аккаунта",
   "ads_per_month": "объявлений/мес",
   "ai_needs_title": "Сначала добавьте заголовок.",

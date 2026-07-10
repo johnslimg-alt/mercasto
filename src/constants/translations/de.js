@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "Nach oben",
+  "promo_highlight": "Hervorheben",
+  "promo_top": "Oben platzieren",
   "account_verification": "Kontoverifizierung",
   "ads_per_month": "Anzeigen/Monat",
   "ai_needs_title": "Fügen Sie zuerst einen Titel hinzu.",

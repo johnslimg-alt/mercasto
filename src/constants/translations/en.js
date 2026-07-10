@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "Bump up",
+  "promo_highlight": "Highlight",
+  "promo_top": "Feature at top",
   "account_verification": "Account verification",
   "ads_per_month": "listings/month",
   "ai_needs_title": "Add a title first.",

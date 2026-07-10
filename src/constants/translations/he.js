@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "העלאה",
+  "promo_highlight": "הדגשה",
+  "promo_top": "הצגה למעלה",
   "account_verification": "אימות חשבון",
   "ads_per_month": "מודעות/חודש",
   "ai_needs_title": "הוסף כותרת קודם.",

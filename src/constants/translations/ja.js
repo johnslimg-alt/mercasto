@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "上位表示",
+  "promo_highlight": "ハイライト",
+  "promo_top": "トップに表示",
   "account_verification": "アカウント認証",
   "ads_per_month": "件/月",
   "ai_needs_title": "先にタイトルを追加してください。",

@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "Subir",
+  "promo_highlight": "Resaltar",
+  "promo_top": "Destacar arriba",
   "account_verification": "Verificación de cuenta",
   "ads_per_month": "anuncios/mes",
   "ai_needs_title": "Agrega un título primero.",

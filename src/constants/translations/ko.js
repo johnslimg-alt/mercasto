@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "끌어올리기",
+  "promo_highlight": "강조 표시",
+  "promo_top": "상단 고정",
   "account_verification": "계정 인증",
   "ads_per_month": "건/월",
   "ai_needs_title": "먼저 제목을 추가하세요.",

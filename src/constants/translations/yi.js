@@ -1,4 +1,7 @@
 export default {
+  "promo_boost": "אַרויפֿהייבן",
+  "promo_highlight": "אונטערשטרייַכן",
+  "promo_top": "ווייַזן אויבן",
   "account_verification": "קאָנטע באַשטעטיקונג",
   "ads_per_month": "אַנאָנסן/חודש",
   "ai_needs_title": "לייגט צו אַ טיטל ערשט.",

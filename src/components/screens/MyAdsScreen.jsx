@@ -22,11 +22,7 @@ const PROMO_LABELS = {
 };
 
 // Las 3 categorías de promoción que se pueden comprar (solo una puede estar activa a la vez por anuncio)
-const PROMO_CATEGORIES = [
-  { key: 'boost', label: 'Subir' },
-  { key: 'highlight', label: 'Resaltar' },
-  { key: 'top', label: 'Destacar arriba' },
-];
+const PROMO_CATEGORIES = ['boost', 'highlight', 'top'];
 
 function formatRemaining(remainingMs) {
   const hours = Math.floor(remainingMs / (1000 * 60 * 60));
@@ -329,8 +325,11 @@ export default function MyAdsScreen({
                   {ad.status === 'paused' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}
                   {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1 text-[11px]">{t.renew || 'Renew'}</button> : null; })()}
                   {ad.status === 'expired' && <button onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1 text-[11px]">{t.republish || 'Republicar'}</button>}
-                  {ad.status === 'active' && PROMO_CATEGORIES.map(({ key, label }) => {
+                  {ad.status === 'active' && PROMO_CATEGORIES.map((key) => {
                     const isActiveHere = promo && promo.category === key;
+                    const label = key === 'boost' ? (t.promo_boost || 'Subir')
+                      : key === 'highlight' ? (t.promo_highlight || 'Resaltar')
+                      : (t.promo_top || 'Destacar arriba');
                     return (
                       <button
                         key={key}
