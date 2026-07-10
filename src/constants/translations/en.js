@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "Apply filters",
+  "map_help": "Filter by state, city and radius.",
+  "radius": "radius",
+  "search_map": "View listings on map",
+  "view_map": "View listings on map",
   "promo_boost": "Bump up",
   "promo_highlight": "Highlight",
   "promo_top": "Feature at top",

@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "Aplicar filtros",
+  "map_help": "Filtra por estado, ciudad y radio.",
+  "radius": "radio",
+  "search_map": "Ver anuncios en el mapa",
+  "view_map": "Ver anuncios en el mapa",
   "promo_boost": "Subir",
   "promo_highlight": "Resaltar",
   "promo_top": "Destacar arriba",

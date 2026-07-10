@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "Appliquer les filtres",
+  "map_help": "Filtrer par état, ville et rayon.",
+  "radius": "rayon",
+  "search_map": "Voir les annonces sur la carte",
+  "view_map": "Voir les annonces sur la carte",
   "promo_boost": "Remonter",
   "promo_highlight": "Mettre en avant",
   "promo_top": "Mettre en tête",

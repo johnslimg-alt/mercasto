@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "필터 적용",
+  "map_help": "주, 도시 및 반경으로 필터링하세요.",
+  "radius": "반경",
+  "search_map": "지도에서 광고 보기",
+  "view_map": "지도에서 광고 보기",
   "promo_boost": "끌어올리기",
   "promo_highlight": "강조 표시",
   "promo_top": "상단 고정",

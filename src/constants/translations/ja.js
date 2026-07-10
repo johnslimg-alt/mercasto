@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "フィルターを適用",
+  "map_help": "州、都市、半径で絞り込む。",
+  "radius": "半径",
+  "search_map": "地図で広告を見る",
+  "view_map": "地図で広告を見る",
   "promo_boost": "上位表示",
   "promo_highlight": "ハイライト",
   "promo_top": "トップに表示",

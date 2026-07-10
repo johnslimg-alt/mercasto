@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "应用筛选",
+  "map_help": "按州、城市和半径筛选。",
+  "radius": "半径",
+  "search_map": "在地图上查看广告",
+  "view_map": "在地图上查看广告",
   "promo_boost": "置顶提升",
   "promo_highlight": "高亮显示",
   "promo_top": "置于顶部",

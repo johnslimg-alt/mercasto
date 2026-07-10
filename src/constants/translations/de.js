@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "Filter anwenden",
+  "map_help": "Nach Bundesland, Stadt und Radius filtern.",
+  "radius": "Radius",
+  "search_map": "Anzeigen auf der Karte anzeigen",
+  "view_map": "Anzeigen auf der Karte anzeigen",
   "promo_boost": "Nach oben",
   "promo_highlight": "Hervorheben",
   "promo_top": "Oben platzieren",

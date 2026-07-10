@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "تطبيق الفلاتر",
+  "map_help": "التصفية حسب الولاية والمدينة والنطاق.",
+  "radius": "النطاق",
+  "search_map": "عرض الإعلانات على الخريطة",
+  "view_map": "عرض الإعلانات على الخريطة",
   "promo_boost": "رفع الترتيب",
   "promo_highlight": "تمييز",
   "promo_top": "عرض في الأعلى",

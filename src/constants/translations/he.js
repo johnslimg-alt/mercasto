@@ -1,4 +1,9 @@
 export default {
+  "apply_filters": "החל מסננים",
+  "map_help": "סנן לפי מדינה, עיר ורדיוס.",
+  "radius": "רדיוס",
+  "search_map": "הצג מודעות על המפה",
+  "view_map": "הצג מודעות על המפה",
   "promo_boost": "העלאה",
   "promo_highlight": "הדגשה",
   "promo_top": "הצגה למעלה",
