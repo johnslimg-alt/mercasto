@@ -1058,6 +1058,88 @@ class AdController extends Controller
     }
 
     /**
+     * Продвижение нескольких объявлений сразу за кредиты (пакетная оплата с баланса)
+     */
+    public function promoteWithCreditsBulk(Request $request)
+    {
+        $validated = $request->validate([
+            'ad_ids' => 'required|array|min:1|max:100',
+            'ad_ids.*' => 'integer|min:1',
+        ]);
+
+        $user = $request->user();
+        $adIds = array_values(array_unique($validated['ad_ids']));
+        $costPerAd = 50;
+
+        $result = DB::transaction(function () use ($adIds, $user, $costPerAd) {
+            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            $ads = Ad::whereIn('id', $adIds)->where('user_id', $user->id)->lockForUpdate()->get();
+            if ($ads->count() !== count($adIds)) {
+                return ['response' => response()->json(['message' => 'No tienes permisos para promocionar uno o más de estos anuncios.'], 403)];
+            }
+
+            $eligibleAds = $ads->reject(fn ($ad) => $ad->promoted === 'destacado');
+            if ($eligibleAds->isEmpty()) {
+                return ['response' => response()->json(['message' => 'Todos los anuncios seleccionados ya están destacados.'], 400)];
+            }
+
+            $totalCost = $eligibleAds->count() * $costPerAd;
+            $referralCredits = (int) $creditUser->referral_credits;
+            $creditsToUseFromReferral = min($referralCredits, $eligibleAds->count());
+            $remainingAdsToCharge = $eligibleAds->count() - $creditsToUseFromReferral;
+            $balanceCost = $remainingAdsToCharge * $costPerAd;
+
+            if ((float) $creditUser->balance < $balanceCost) {
+                return ['response' => response()->json([
+                    'message' => "No tienes suficientes créditos. Necesitas {$balanceCost} créditos de saldo (más " . $creditsToUseFromReferral . " de referidos) para promocionar " . $eligibleAds->count() . ' anuncio(s).',
+                ], 400)];
+            }
+
+            $creditUser->referral_credits = $referralCredits - $creditsToUseFromReferral;
+            $creditUser->balance = (float) $creditUser->balance - $balanceCost;
+            $creditUser->save();
+
+            $now = now();
+            $promotedIds = [];
+            foreach ($eligibleAds as $ad) {
+                $ad->promoted = 'destacado';
+                $ad->save();
+                $promotedIds[] = $ad->id;
+
+                DB::table('ad_promotions')->insert([
+                    'ad_id' => $ad->id,
+                    'type' => 'highlight',
+                    'expires_at' => $now->copy()->addDays(7),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+
+            return [
+                'balance' => $creditUser->balance,
+                'referral_credits' => $creditUser->referral_credits,
+                'promoted_ids' => $promotedIds,
+                'skipped_count' => count($adIds) - $eligibleAds->count(),
+            ];
+        });
+
+        if (isset($result['response'])) {
+            return $result['response'];
+        }
+
+        Cache::forget('ads_featured_block');
+
+        return response()->json([
+            'success' => true,
+            'balance' => $result['balance'],
+            'referral_credits' => $result['referral_credits'],
+            'promoted_ids' => $result['promoted_ids'],
+            'skipped_count' => $result['skipped_count'],
+        ]);
+    }
+
+    /**
      * Удаление объявления
      */
     public function destroy(Request $request, $id)
@@ -1120,7 +1202,7 @@ class AdController extends Controller
         }
 
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt,xml|max:10240', // Максимум 10 МБ (CSV или XML)
+            'file' => 'required|file|mimes:csv,txt,xml,xlsx|max:10240', // Máximo 10 MB (CSV, XML o Excel)
         ]);
 
         // Защита от обхода квот: проверяем лимиты PRO-пользователя перед массовой загрузкой
@@ -1187,6 +1269,61 @@ class AdController extends Controller
                 }
                 $reader->close();
             }
+        } elseif (strtolower($extension) === 'xlsx') {
+            // Columnas esperadas (igual que CSV): title, price, description, location, category
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader('Xlsx');
+            $reader->setReadDataOnly(true);
+            $spreadsheet = $reader->load($path);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $isFirstRow = true;
+
+            foreach ($worksheet->getRowIterator() as $row) {
+                if ($isFirstRow) {
+                    $isFirstRow = false;
+                    continue; // Omitir encabezados
+                }
+
+                if ($count >= $availableQuota) {
+                    \Illuminate\Support\Facades\Log::warning("Bulk upload quota reached for user " . $user->id);
+                    break;
+                }
+
+                $cellIterator = $row->getCellIterator();
+                $cellIterator->setIterateOnlyExistingCells(false);
+                $cells = [];
+                foreach ($cellIterator as $cell) {
+                    $cells[] = trim((string) $cell->getValue());
+                }
+
+                if (count($cells) >= 5 && $cells[0] !== '') {
+                    $catSlug = substr($cells[4], 0, 100);
+                    if (!in_array($catSlug, $validCategories)) $catSlug = 'general';
+
+                    try {
+                        $batch[] = [
+                            'user_id' => $request->user()->id,
+                            'title' => substr($cells[0], 0, 255),
+                            'price' => is_numeric($cells[1]) ? abs((float) $cells[1]) : 0,
+                            'description' => $cells[2],
+                            'location' => substr($cells[3], 0, 255),
+                            'category' => $catSlug,
+                            'status' => 'pending',
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                        $count++;
+
+                        if (count($batch) >= $batchSize) {
+                            Ad::insert($batch);
+                            $batch = [];
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::warning("Skipped invalid XLSX row: " . $e->getMessage());
+                    }
+                }
+            }
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
         } else {
             // Потоковое чтение файла (Стриминг). Защищает сервер от падения по оперативной памяти (OOM)
             $handle = fopen($path, 'r');

@@ -186,6 +186,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ads/{id}/republish', [AdController::class, 'republish'])->whereNumber('id'); // Republish expired ad
     Route::put('/ads/{id}/renew', [AdController::class, 'renew'])->whereNumber('id'); // Renew active or expired ad
     Route::post('/ads/{id}/promote/credits', [AdController::class, 'promoteWithCredits'])->whereNumber('id'); // Продвижение за кредиты
+    Route::post('/ads/promote/credits/bulk', [AdController::class, 'promoteWithCreditsBulk']); // Пакетное продвижение за кредиты
     Route::delete('/ads/{id}', [AdController::class, 'destroy'])->whereNumber('id');
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [ProfileController::class, 'show']);

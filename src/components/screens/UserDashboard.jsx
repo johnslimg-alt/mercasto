@@ -635,47 +635,28 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
           {/* Main Content Area */}
           <div className="lg:col-span-3">
             {/* Content based on active tab */}
-            {dashboardTab === 'my_ads' || dashboardTab === 'favorites' ? (
+            {dashboardTab === 'my_ads' ? (
+              <MyAdsScreen
+                userAds={userAds}
+                getImageUrl={getImageUrl}
+                handleDeleteAd={handleDeleteAd}
+                handleToggleAdStatus={handleToggleAdStatus}
+                handlePromoteAd={handlePromoteAd}
+                handleRepublishAd={handleRepublishAd}
+                handleRenewAd={handleRenewAd}
+                t={t}
+                lang={lang}
+                accountType={accountType}
+                setCurrentTab={setCurrentTab}
+                setShowPricingModal={setShowPricingModal}
+                onRefreshAds={onRefreshAds}
+                handleBulkUpload={handleBulkUpload}
+                fileInputRef={fileInputRef}
+                isUploadingBulk={isUploadingBulk}
+                userRole={userRole}
+              />
+            ) : dashboardTab === 'favorites' ? (
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-                {/* Filter Tabs */}
-                {dashboardTab === 'my_ads' && (
-                  <div className="flex flex-wrap gap-2 p-4 border-b border-slate-200 dark:border-slate-700">
-                    {[
-                      { key: 'active',   label: t.active_status  || 'Activos',   count: activeAds.length,   color: 'emerald' },
-                      { key: 'draft',    label: t.draft_status   || 'Borrador',  count: draftAds.length,    color: 'slate'   },
-                      { key: 'pending',  label: t.pending_status || 'Revisión',  count: pendingAds.length,  color: 'amber'   },
-                      { key: 'sold',     label: t.sold_status    || 'Vendido',   count: soldAds.length,     color: 'blue'    },
-                      { key: 'inactive', label: t.inactive_status|| 'Inactivos', count: inactiveAds.length, color: 'red'     },
-                    ].map(({ key, label, count, color }) => {
-                      const colorMap = {
-                        emerald: 'bg-emerald-500 text-white shadow-md',
-                        slate:   'bg-slate-600 text-white shadow-md',
-                        amber:   'bg-amber-500 text-white shadow-md',
-                        blue:    'bg-blue-500 text-white shadow-md',
-                        red:     'bg-red-500 text-white shadow-md',
-                      };
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setAdStatusFilter(key)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                            adStatusFilter === key
-                              ? colorMap[color]
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                          }`}
-                        >
-                          {label}
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                            adStatusFilter === key ? 'bg-white/25' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
-                          }`}>
-                            {count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
                 {/* Ads List */}
                 <div className="divide-y divide-slate-100 dark:divide-slate-700">
                   {displayedAds.length === 0 ? (
@@ -684,14 +665,8 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                         <Package className="w-8 h-8 text-slate-400" />
                       </div>
                       <p className="text-slate-500 dark:text-slate-400 mb-4">
-                        {dashboardTab === 'my_ads' ? (t.no_ads_yet || 'No tienes anuncios') : (t.no_favorites_yet || 'No tienes favoritos')}
+                        {t.no_favorites_yet || 'No tienes favoritos'}
                       </p>
-                      {dashboardTab === 'my_ads' && (
-                        <button className="btn-md bg-lime-500 hover:bg-lime-600 text-white">
-                          <PlusCircle className="w-4 h-4 mr-2" />
-                          {t.create_ad_btn || 'Crear anuncio'}
-                        </button>
-                      )}
                     </div>
                   ) : (
                     <>
@@ -703,8 +678,8 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                               {/* Image */}
                               <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100 dark:bg-slate-700">
                                 {ad.images?.[0] ? (
-                                  <img 
-                                    src={getImageUrl(ad.images[0])} 
+                                  <img
+                                    src={getImageUrl(ad.images[0])}
                                     alt={localizedText(ad.title)}
                                     className="w-full h-full object-cover"
                                   />
@@ -746,7 +721,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                               {/* Actions */}
                               <div className="flex flex-col gap-2">
-                                <a 
+                                <a
                                   href={`/#ad-${ad.id}`}
                                   onClick={() => setCurrentTab('home')}
                                   title="Ver anuncio"
@@ -754,27 +729,6 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                 >
                                   <Eye className="w-4 h-4" />
                                 </a>
-                                <button 
-                                  onClick={() => handleEditAd(ad)}
-                                  title="Editar anuncio"
-                                  className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                                <button 
-                                  onClick={() => handleToggleAdStatus(ad)}
-                                  title={ad.status === 'active' ? "Pausar anuncio" : "Activar anuncio"}
-                                  className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
-                                >
-                                  {ad.status === 'active' ? <XCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteAd(ad.id)}
-                                  title="Eliminar anuncio"
-                                  className="btn-sm bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
                               </div>
                             </div>
                           </div>
@@ -787,14 +741,14 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                             {t.showing_pages || 'Mostrando'} {(safeDashboardPage - 1) * itemsPerPage + 1} {t.to_word || 'a'} {Math.min(safeDashboardPage * itemsPerPage, displayedAds.length)} {t.of_word || 'de'} {displayedAds.length}
                           </span>
                           <div className="flex items-center gap-2">
-                            <button 
+                            <button
                               onClick={() => setDashboardPage(Math.max(1, safeDashboardPage - 1))}
                               disabled={safeDashboardPage === 1}
                               className="btn-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all"
                             >
                               {t.prev_btn || 'Anterior'}
                             </button>
-                            <button 
+                            <button
                               onClick={() => setDashboardPage(Math.min(totalPages, safeDashboardPage + 1))}
                               disabled={safeDashboardPage === totalPages}
                               className="btn-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all"
