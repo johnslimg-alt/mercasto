@@ -192,31 +192,83 @@ class PaymentController extends Controller
      */
     public function handleWebhook(Request $request, MetaCapiService $meta)
     {
-        // Verify webhook signature — FAIL CLOSED: reject if secret not configured
-        $secret = config('services.clip.webhook_secret');
-        if (empty($secret)) {
-            Log::error('CLIP_WEBHOOK_SECRET not configured — webhook rejected');
-            return response()->json(['status' => 'misconfigured'], 503);
-        }
-
         $payload = $request->all();
-        $checkoutId = $payload['reference']
-            ?? data_get($payload, 'metadata.external_reference')
-            ?? data_get($payload, 'payment_request.metadata.external_reference')
-            // Real Clip settlement webhooks (as opposed to the checkout-creation
-            // response) carry our external_reference back as merch_inv_id instead.
-            ?? $payload['merch_inv_id']
-            ?? null;
-        $paymentRequestId = $payload['payment_request_id']
-            ?? $payload['id']
-            ?? data_get($payload, 'payment_request.id')
-            ?? data_get($payload, 'payment_request.payment_request_id');
-        $paymentStatus = strtolower((string) ($payload['status'] ?? data_get($payload, 'payment_request.status', '')));
+        $checkoutId = $this->firstClipString(
+            $payload['reference'] ?? null,
+            data_get($payload, 'metadata.external_reference'),
+            data_get($payload, 'payment_request.metadata.external_reference'),
+            $payload['merch_inv_id'] ?? null,
+            $payload['me_reference_id'] ?? null,
+        );
+        $paymentRequestId = $this->firstClipString(
+            $payload['payment_request_id'] ?? null,
+            data_get($payload, 'payment_request.id'),
+            data_get($payload, 'payment_request.payment_request_id'),
+        );
+        $resource = strtoupper($this->firstClipString(
+            $payload['resource'] ?? null,
+            data_get($payload, 'payment_request.resource'),
+        ) ?? '');
+        $paymentStatus = $this->normalizeClipStatus(
+            $this->firstClipString(
+                $payload['resource_status'] ?? null,
+                $payload['status'] ?? null,
+                data_get($payload, 'payment_request.resource_status'),
+                data_get($payload, 'payment_request.status'),
+            )
+        );
 
         $signature = $request->header('X-Clip-Signature') ?? $request->header('X-Webhook-Signature');
-        $expectedSignature = hash_hmac('sha256', $request->getContent(), $secret);
-        // Защита от криптографического бага ltrim (удалял нужные символы хэша, если они совпадали с маской)
-        $receivedHash = str_starts_with((string) $signature, 'sha256=') ? substr((string) $signature, 7) : (string) $signature;
+        if ($signature) {
+            $secret = config('services.clip.webhook_secret');
+            if (empty($secret)) {
+                Log::error('Signed Clip webhook received but CLIP_WEBHOOK_SECRET is not configured');
+                return response()->json(['status' => 'misconfigured'], 503);
+            }
+
+            $expectedSignature = hash_hmac('sha256', $request->getContent(), $secret);
+            // Do not use ltrim here: it can remove valid leading hash characters.
+            $receivedHash = str_starts_with((string) $signature, 'sha256=')
+                ? substr((string) $signature, 7)
+                : (string) $signature;
+
+            if (! hash_equals($expectedSignature, $receivedHash)) {
+                Log::warning('Invalid Clip webhook signature provided', [
+                    'ip_hash' => hash('sha256', (string) $request->ip()),
+                    'path' => $request->path(),
+                    'payment_request_id_present' => (bool) $paymentRequestId,
+                    'status' => $paymentStatus ?: null,
+                ]);
+
+                return response()->json(['status' => 'invalid_signature'], 401);
+            }
+        }
+
+        // Refund notifications use some of the same statuses. Never fulfill a
+        // checkout from a non-CHECKOUT resource.
+        if ($resource !== '' && $resource !== 'CHECKOUT') {
+            return response()->json(['status' => 'received'], 200);
+        }
+
+        if (! $checkoutId && ! $paymentRequestId) {
+            Log::info('Clip webhook test ping accepted', [
+                'ip_hash' => hash('sha256', (string) $request->ip()),
+                'payload_keys' => array_keys($payload),
+            ]);
+
+            return response()->json(['status' => 'test_ok'], 200);
+        }
+
+        $payment = $this->findClipPayment($checkoutId, $paymentRequestId);
+        if (! $payment) {
+            Log::info('Clip webhook references an unknown checkout', [
+                'checkout_id_present' => (bool) $checkoutId,
+                'payment_request_id_present' => (bool) $paymentRequestId,
+                'status' => $paymentStatus ?: null,
+            ]);
+
+            return response()->json(['status' => 'received'], 200);
+        }
 
         $paidStatuses = [
             'paid',
@@ -228,96 +280,48 @@ class PaymentController extends Controller
             'payment_completed',
         ];
 
-        if (!$signature || !hash_equals($expectedSignature, $receivedHash)) {
-            // IF THE SIGNATURE IS PRESENT BUT INVALID, IT MUST BE REJECTED IMMEDIATELY!
-            if ($signature) {
-                $clientIpHash = hash('sha256', (string) $request->ip());
-                Log::warning('Invalid Clip webhook signature provided', [
-                    'ip_hash' => $clientIpHash,
-                    'path' => $request->path(),
-                    'checkout_id_present' => (bool) $checkoutId,
-                    'status' => $paymentStatus ?: null,
-                ]);
-                return response()->json(['status' => 'invalid_signature'], 401);
-            }
-
-            // Clip dashboard can send an unsigned test ping. Accept only non-payment pings,
-            // never unsigned events that claim a checkout reference or paid status.
-            if (!$signature && !$checkoutId && !in_array($paymentStatus, $paidStatuses, true)) {
-                Log::info('Unsigned Clip webhook test ping accepted', [
-                    'ip_hash' => hash('sha256', (string) $request->ip()),
-                    'status' => $paymentStatus ?: null,
-                ]);
-
-                return response()->json(['status' => 'test_ok']);
-            }
-
-            $knownCheckout = $checkoutId
-                ? DB::table('payments')->where('clip_checkout_id', $checkoutId)->exists()
-                : false;
-            $knownPaymentRequest = $paymentRequestId
-                ? DB::table('payments')->where('clip_payment_request_id', $paymentRequestId)->exists()
-                : false;
-
-            if (!$knownCheckout && !$knownPaymentRequest) {
-                Log::info('Unsigned Clip webhook test/unknown checkout accepted', [
-                    'ip_hash' => hash('sha256', (string) $request->ip()),
-                    'path' => $request->path(),
-                    'payload_keys' => array_keys($payload),
-                    'checkout_id_present' => (bool) $checkoutId,
-                    'payment_request_id_present' => (bool) $paymentRequestId,
-                    'status' => $paymentStatus ?: null,
-                ]);
-
-                return response()->json(['status' => 'test_ok']);
-            }
-
-            $clientIpHash = hash('sha256', (string) $request->ip());
-            Log::warning('Invalid Clip webhook signature', [
-                'ip_hash' => $clientIpHash,
-                'path' => $request->path(),
-                'payload_keys' => array_keys($payload),
-                'checkout_id_present' => (bool) $checkoutId,
-                'payment_request_id_present' => (bool) $paymentRequestId,
-                'status' => $paymentStatus ?: null,
-                'signature_present' => (bool) $signature,
-            ]);
-            return response()->json(['status' => 'invalid_signature'], 401);
+        if (! in_array($paymentStatus, $paidStatuses, true) || $payment->status === 'paid') {
+            return response()->json(['status' => 'received'], 200);
         }
-        if (($checkoutId || $paymentRequestId) && in_array($paymentStatus, $paidStatuses, true)) {
-            // Атомарное обновление для абсолютной защиты от Race Condition (Double-Spend)
-            $updated = DB::table('payments')
-                ->where(function ($query) use ($checkoutId, $paymentRequestId) {
-                    if ($checkoutId) {
-                        $query->where('clip_checkout_id', $checkoutId);
-                    }
 
-                    if ($paymentRequestId) {
-                        $method = $checkoutId ? 'orWhere' : 'where';
-                        $query->{$method}('clip_payment_request_id', $paymentRequestId);
-                    }
-                })
-                ->where('status', '!=', 'paid')
-                ->update([
-                    'status' => 'paid',
-                    'webhook_payload' => json_encode($payload),
-                    'updated_at' => now(),
-                ]);
+        $verificationId = (string) ($paymentRequestId ?: $payment->clip_payment_request_id);
+        if ($verificationId === '') {
+            Log::warning('Completed Clip webhook has no payment_request_id', [
+                'payment_id' => $payment->id,
+            ]);
 
-            if ($updated) {
-                $payment = DB::table('payments')
-                    ->where(function ($query) use ($checkoutId, $paymentRequestId) {
-                        if ($checkoutId) {
-                            $query->where('clip_checkout_id', $checkoutId);
-                        }
+            return response()->json(['status' => 'missing_payment_request_id'], 503);
+        }
 
-                        if ($paymentRequestId) {
-                            $method = $checkoutId ? 'orWhere' : 'where';
-                            $query->{$method}('clip_payment_request_id', $paymentRequestId);
-                        }
-                    })
-                    ->first();
-                if ($payment && $payment->user_id) {
+        // Clip's documented Checkout webhook does not include a signature.
+        // Authenticate every paid transition by reading the checkout back from
+        // Clip and matching its final status, amount, currency and identifier.
+        $verification = $this->verifyClipCheckoutCompleted($verificationId, $payment);
+        if (! $verification['ok']) {
+            return response()->json(
+                ['status' => $verification['reason']],
+                $verification['http_status']
+            );
+        }
+
+        // Atomic paid transition prevents duplicate fulfillment and duplicate
+        // Meta Purchase events when Clip retries the same notification.
+        $updated = DB::table('payments')
+            ->where('id', $payment->id)
+            ->where('status', '!=', 'paid')
+            ->update([
+                'status' => 'paid',
+                'clip_payment_request_id' => $verificationId,
+                'webhook_payload' => json_encode($payload),
+                'updated_at' => now(),
+            ]);
+
+        if ($updated) {
+            $payment = DB::table('payments')->where('id', $payment->id)->first();
+            if ($payment && $payment->user_id) {
+                // Purchase reflects the verified payment itself, so schedule it
+                // before optional fulfillment/notification side effects.
+                defer(fn () => $this->sendMetaPurchase($meta, $request, $payment))->always();
 
                 $this->activatePaidProduct($payment);
 
@@ -326,9 +330,8 @@ class PaymentController extends Controller
                 if ((str_contains($desc, 'crédito') || str_contains($desc, 'credito')) && $payment->amount >= 1) {
                     DB::table('users')->where('id', $payment->user_id)->increment('balance', $payment->amount);
                 }
-                
+
                 $this->activateAdPromotion($payment);
-                defer(fn () => $this->sendMetaPurchase($meta, $request, $payment));
 
                 // Безопасная генерация Push-уведомления в реальном времени через WebSocket
                 $notificationData = [
@@ -341,13 +344,138 @@ class PaymentController extends Controller
                 ];
                 $notifId = DB::table('user_notifications')->insertGetId($notificationData);
                 $notificationData['id'] = $notifId;
-                
+
                 broadcast(new NewNotification((int) $payment->user_id, $notificationData));
-                }
             }
         }
 
         return response()->json(['status' => 'received'], 200);
+    }
+
+    private function findClipPayment(?string $checkoutId, ?string $paymentRequestId): ?object
+    {
+        if ($paymentRequestId) {
+            return DB::table('payments')
+                ->where('clip_payment_request_id', $paymentRequestId)
+                ->first();
+        }
+
+        if ($checkoutId) {
+            return DB::table('payments')
+                ->where('clip_checkout_id', $checkoutId)
+                ->first();
+        }
+
+        return null;
+    }
+
+    private function verifyClipCheckoutCompleted(string $paymentRequestId, object $payment): array
+    {
+        if (! preg_match('/^[A-Za-z0-9-]{1,36}$/', $paymentRequestId)) {
+            return ['ok' => false, 'reason' => 'invalid_payment_request_id', 'http_status' => 422];
+        }
+
+        $apiKey = config('services.clip.api_key');
+        $apiSecret = config('services.clip.api_secret');
+        if (empty($apiKey) || empty($apiSecret)) {
+            Log::error('Clip credentials unavailable while verifying completed checkout', [
+                'payment_id' => $payment->id,
+            ]);
+
+            return ['ok' => false, 'reason' => 'verification_misconfigured', 'http_status' => 503];
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->retry(2, 250)
+                ->withHeaders([
+                    'Authorization' => 'Basic ' . base64_encode($apiKey . ':' . $apiSecret),
+                    'Accept' => 'application/json',
+                ])
+                ->get('https://api.payclip.com/v2/checkout/' . rawurlencode($paymentRequestId));
+        } catch (\Throwable $e) {
+            Log::warning('Clip checkout verification request failed', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['ok' => false, 'reason' => 'verification_unavailable', 'http_status' => 503];
+        }
+
+        if (! $response->successful()) {
+            Log::warning('Clip checkout verification returned an error', [
+                'payment_id' => $payment->id,
+                'http_status' => $response->status(),
+            ]);
+
+            return ['ok' => false, 'reason' => 'verification_unavailable', 'http_status' => 503];
+        }
+
+        $verifiedId = (string) ($response->json('payment_request_id')
+            ?? $response->json('payment_request.payment_request_id')
+            ?? '');
+        $verifiedStatus = $this->normalizeClipStatus(
+            $response->json('status') ?? $response->json('payment_request.status')
+        );
+        $verifiedAmount = $response->json('amount') ?? $response->json('payment_request.amount');
+        $verifiedCurrency = strtoupper((string) (
+            $response->json('currency') ?? $response->json('payment_request.currency') ?? ''
+        ));
+
+        if ($verifiedId === '' || ! hash_equals($paymentRequestId, $verifiedId)) {
+            Log::warning('Clip checkout verification returned a mismatched identifier', [
+                'payment_id' => $payment->id,
+            ]);
+
+            return ['ok' => false, 'reason' => 'verification_mismatch', 'http_status' => 409];
+        }
+
+        if (! in_array($verifiedStatus, ['completed', 'checkout_completed'], true)) {
+            Log::info('Clip checkout is not completed yet', [
+                'payment_id' => $payment->id,
+                'verified_status' => $verifiedStatus ?: null,
+            ]);
+
+            return ['ok' => false, 'reason' => 'checkout_not_completed', 'http_status' => 409];
+        }
+
+        if (! is_numeric($verifiedAmount)
+            || abs((float) $verifiedAmount - (float) $payment->amount) > 0.009
+            || $verifiedCurrency !== 'MXN') {
+            Log::warning('Clip checkout verification amount or currency mismatch', [
+                'payment_id' => $payment->id,
+                'currency' => $verifiedCurrency ?: null,
+            ]);
+
+            return ['ok' => false, 'reason' => 'verification_mismatch', 'http_status' => 409];
+        }
+
+        return ['ok' => true, 'reason' => null, 'http_status' => 200];
+    }
+
+    private function normalizeClipStatus(mixed $status): string
+    {
+        if (! is_scalar($status)) {
+            return '';
+        }
+
+        return strtolower(str_replace(['-', ' '], '_', trim((string) $status)));
+    }
+
+    private function firstClipString(mixed ...$values): ?string
+    {
+        foreach ($values as $value) {
+            if (! is_scalar($value)) {
+                continue;
+            }
+
+            $value = trim((string) $value);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     private function rememberMetaPurchaseContext(string $checkoutId, Request $request): void
