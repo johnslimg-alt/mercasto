@@ -551,6 +551,7 @@ function App() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [priceTab, setPriceTab] = useState(accountType);
   const [promotionTargetAdId, setPromotionTargetAdId] = useState('');
+  const [customCreditsAmount, setCustomCreditsAmount] = useState('');
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [analyticsData, setAnalyticsData] = useState([]);
   const [analyticsDays, setAnalyticsDays] = useState(7);
@@ -2958,6 +2959,16 @@ function App() {
     handleClipPayment(amount, description, adId, productCode);
   };
 
+  const handleCreditsPayment = (amount, productCode) => {
+    if (!user) { setShowAuthModal(true); return; }
+    const numericAmount = Number(amount);
+    if (!numericAmount || numericAmount < 50 || numericAmount > 5000) {
+      showToast('Ingresa un monto entre $50 y $5,000.', 'error');
+      return;
+    }
+    handleClipPayment(numericAmount, `${numericAmount.toLocaleString('es-MX')} Créditos Mercasto`, null, productCode);
+  };
+
   // --- AI COMMAND CENTER LOGIC ---
   const handleAiSubmit = async (e) => {
     e.preventDefault();
@@ -3510,6 +3521,45 @@ function App() {
                         <button onClick={() => handlePromotionProductPayment(399, 'Top categoría 7 días', 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h4 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[12px] mb-1">Comprar créditos</h4>
+                  <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-4">1 crédito = $1 MXN. Úsalos para promocionar cualquiera de tus anuncios desde tu saldo.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    {[100, 200, 300, 500].map(v => (
+                      <button
+                        key={v}
+                        onClick={() => handleCreditsPayment(v, `credits_${v}`)}
+                        className="p-3 bg-slate-50 dark:bg-slate-800 hover:bg-lime-50 dark:hover:bg-lime-500/10 border border-slate-200 dark:border-slate-700 hover:border-[#84CC16] rounded-xl text-center transition-colors"
+                      >
+                        <p className="font-bold text-slate-900 dark:text-white text-[16px]">{v}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">créditos · ${v}</p>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                    <div className="flex-1">
+                      <label className="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-1 block">Monto personalizado</label>
+                      <input
+                        type="number"
+                        min="50"
+                        max="5000"
+                        step="10"
+                        placeholder="Ej. 250"
+                        value={customCreditsAmount}
+                        onChange={(e) => setCustomCreditsAmount(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-[14px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16]"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">Mínimo $50, máximo $5,000</p>
+                    </div>
+                    <button
+                      onClick={() => handleCreditsPayment(customCreditsAmount, 'credits_custom')}
+                      className="px-5 py-2.5 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors whitespace-nowrap"
+                    >
+                      Comprar créditos
+                    </button>
                   </div>
                 </div>
 

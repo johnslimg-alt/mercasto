@@ -33,7 +33,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'description' => 'required|string|max:255',
-            'product_code' => 'nullable|string|in:package_free,package_impulso,package_negocio,package_pro,package_agencia,credits_100,boost_1_day,boost_3_days,highlight_7_days,featured_7_days,featured_30_days,top_category_7_days,plus_monthly,pro_standard_monthly,pro_unlimited_monthly',
+            'product_code' => 'nullable|string|in:package_free,package_impulso,package_negocio,package_pro,package_agencia,credits_100,credits_200,credits_300,credits_500,credits_custom,boost_1_day,boost_3_days,highlight_7_days,featured_7_days,featured_30_days,top_category_7_days,plus_monthly,pro_standard_monthly,pro_unlimited_monthly',
             'ad_id' => 'nullable|integer|exists:ads,id', // Защита от создания призрачных платежей
         ]);
 
@@ -60,6 +60,9 @@ class PaymentController extends Controller
             'package_pro' => ['amount' => 599, 'description' => 'Plan Pro'],
             'package_agencia' => ['amount' => 1499, 'description' => 'Plan Agencia'],
             'credits_100' => ['amount' => 100, 'description' => '100 Créditos Mercasto'],
+            'credits_200' => ['amount' => 200, 'description' => '200 Créditos Mercasto'],
+            'credits_300' => ['amount' => 300, 'description' => '300 Créditos Mercasto'],
+            'credits_500' => ['amount' => 500, 'description' => '500 Créditos Mercasto'],
             'boost_1_day' => ['amount' => 19, 'description' => 'Subir 24 horas'],
             'boost_3_days' => ['amount' => 49, 'description' => 'Subir 3 días'],
             'highlight_7_days' => ['amount' => 79, 'description' => 'Resaltar 7 días'],
@@ -101,16 +104,24 @@ class PaymentController extends Controller
             }
         } else {
             $productCode = $request->product_code ?: ($legacyPackages[$description] ?? null);
-            if (! $productCode || ! array_key_exists($productCode, $packagesByCode)) {
-                return response()->json(['message' => 'Servicio no válido'], 400);
-            }
 
-            if ($this->promotionConfig($productCode)) {
-                return response()->json(['message' => 'Selecciona un anuncio antes de comprar promoción.'], 400);
+            if ($productCode === 'credits_custom') {
+                // Only product where the client-supplied amount is trusted, clamped to a safe range.
+                $request->validate(['amount' => 'required|numeric|min:50|max:5000']);
+                $amount = round((float) $request->amount);
+                $description = number_format($amount, 0) . ' Créditos Mercasto';
+            } else {
+                if (! $productCode || ! array_key_exists($productCode, $packagesByCode)) {
+                    return response()->json(['message' => 'Servicio no válido'], 400);
+                }
+
+                if ($this->promotionConfig($productCode)) {
+                    return response()->json(['message' => 'Selecciona un anuncio antes de comprar promoción.'], 400);
+                }
+
+                $amount = (float) $packagesByCode[$productCode]['amount'];
+                $description = $packagesByCode[$productCode]['description'];
             }
- 
-            $amount = (float) $packagesByCode[$productCode]['amount'];
-            $description = $packagesByCode[$productCode]['description'];
         }
 
         // Защита от DB Bloat DoS: переиспользуем 'pending' сессии
