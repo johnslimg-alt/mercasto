@@ -3,6 +3,7 @@ import { Pencil, Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, Ma
 import { filterConfig } from '../../constants/filterConfig';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 import { useTranslation } from 'react-i18next';
+import { localizedText } from '../../utils/localize';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -334,7 +335,7 @@ export default function MapV3({
         accuracyLabel: location.accuracyLabel,
         label: markerLabel(ad),
         tone: location.approximate ? 'dark' : 'lime',
-        title: ad.title,
+        title: localizedText(ad.title),
         price: ad.price,
         location: ad.location || ad.city || ad.state,
         category: ad.category,
@@ -351,7 +352,7 @@ export default function MapV3({
 
     return normalizedMarkers.filter(marker => {
       const ad = marker.ad || {};
-      const text = `${marker.label || ''} ${ad.title || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
+      const text = `${marker.label || ''} ${localizedText(ad.title) || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
       const price = Number(ad.price || String(marker.label || '').replace(/[^\d.]/g, '') || 0);
 
       if (query && !text.includes(query)) return false;
@@ -513,7 +514,7 @@ export default function MapV3({
 // Factory function — creates a fresh popup DOM element each time
 // Called by Leaflet every time the popup opens, so content is never stale
 function createPopupElement(ad, marker) {
-  const rawTitle = ad.title || 'Anuncio';
+  const rawTitle = localizedText(ad.title) || 'Anuncio';
   const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   const rawImg = getAdImageUrl(ad);
   const FALLBACK_IMG = `https://placehold.co/300x200/84cc16/020617/png?text=${encodeURIComponent(rawTitle.slice(0, 15))}`;
@@ -564,7 +565,7 @@ function createPopupElement(ad, marker) {
   }
 
   // Начало описания
-  const rawDesc = (ad.description || '').toString().replace(/\s+/g, ' ').trim();
+  const rawDesc = (localizedText(ad.description) || '').toString().replace(/\s+/g, ' ').trim();
   if (rawDesc) {
     const descP = document.createElement('p');
     descP.className = 'leaflet-popup-card__desc';

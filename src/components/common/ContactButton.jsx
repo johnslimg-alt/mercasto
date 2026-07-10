@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, MessageCircle, Mail, Phone, Shield, AlertTriangle, Copy, Check } from 'lucide-react';
+import { localizedText } from '../../utils/localize';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -47,7 +48,7 @@ export default function ContactButton({ ad, user, className = '' }) {
   const whatsappNumber = getSafeWhatsAppNumber(ad);
   const phone = getSafePhone(ad);
   
-  const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${ad?.title}" en Mercasto`);
+  const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${localizedText(ad?.title)}" en Mercasto`);
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
   const phoneUrl = phone ? `tel:+${phone}` : null;
@@ -191,7 +192,7 @@ export default function ContactButton({ ad, user, className = '' }) {
                     )}
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                    {ad?.title}
+                    {localizedText(ad?.title)}
                   </p>
                 </div>
               </div>

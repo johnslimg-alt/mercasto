@@ -1343,8 +1343,8 @@ function App() {
     let ogType = "website";
 
     if (viewedAd) {
-      title = `${viewedAd.title} - ${viewedAd.location?.split(',')[0]} | Mercasto`;
-      desc = viewedAd.description ? viewedAd.description.substring(0, 160) : desc;
+      title = `${localizedText(viewedAd.title, lang)} - ${viewedAd.location?.split(',')[0]} | Mercasto`;
+      desc = viewedAd.description ? localizedText(viewedAd.description, lang).substring(0, 160) : desc;
       ogImage = getImageUrl(viewedAd.image_url);
       ogType = "product";
     } else if (viewedCompany) {
@@ -1393,8 +1393,8 @@ function App() {
       schemaData = {
         "@context": "https://schema.org",
         "@type": "Product",
-        "name": viewedAd.title,
-        "description": viewedAd.description || '',
+        "name": localizedText(viewedAd.title, lang),
+        "description": localizedText(viewedAd.description, lang) || '',
         "image": getImageUrl(viewedAd.image_url),
         "offers": {
           "@type": "Offer",
@@ -2703,9 +2703,9 @@ function App() {
 
     setEditingAd(ad);
     setForm({
-      title: ad.title,
+      title: localizedText(ad.title, lang),
       price: ad.price,
-      description: ad.description || '',
+      description: localizedText(ad.description, lang) || '',
       location: ad.location || '',
       city: ad.city || String(ad.location || '').split(',')[0].trim(),
       state: ad.state || '',

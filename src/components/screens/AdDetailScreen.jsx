@@ -384,7 +384,7 @@ export default function AdDetailScreen({
   const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${localizedText(ad.title)}" en Mercasto`);
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/#ad-${ad.id}` : '';
-  const shareText = `${t.check_this_ad || 'Mira este anuncio en Mercasto'}: ${ad.title || ''}`;
+  const shareText = `${t.check_this_ad || 'Mira este anuncio en Mercasto'}: ${localizedText(ad.title, lang) || ''}`;
   const encodedShareUrl = encodeURIComponent(shareUrl);
   const encodedShareText = encodeURIComponent(shareText);
   const shareOptions = [
@@ -392,7 +392,7 @@ export default function AdDetailScreen({
     { label: 'Telegram', href: `https://t.me/share/url?url=${encodedShareUrl}&text=${encodedShareText}` },
     { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedShareUrl}` },
     { label: 'X / Twitter', href: `https://twitter.com/intent/tweet?text=${encodedShareText}&url=${encodedShareUrl}` },
-    { label: 'Email', href: `mailto:?subject=${encodeURIComponent(ad.title || 'Mercasto')}&body=${encodedShareText}%0A${encodedShareUrl}` },
+    { label: 'Email', href: `mailto:?subject=${encodeURIComponent(localizedText(ad.title, lang) || 'Mercasto')}&body=${encodedShareText}%0A${encodedShareUrl}` },
   ];
   const ratingStats = getAdRatingStats(ad);
   const commentPreview = [
@@ -423,7 +423,7 @@ export default function AdDetailScreen({
     const isMobile = window.innerWidth < 768;
     if (isMobile && navigator.share) {
       try {
-        await navigator.share({ title: ad.title, text: shareText, url: shareUrl });
+        await navigator.share({ title: localizedText(ad.title, lang), text: shareText, url: shareUrl });
         handleWhatsAppClick(ad, 'share');
       } catch (err) {
         // User cancelled native share or not supported
@@ -441,7 +441,7 @@ export default function AdDetailScreen({
         "@context": "https://schema.org",
         "@type": "Product",
         "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
-        "description": ad.description || "Anuncio clasificado en Mercasto",
+        "description": localizedText(ad.description, lang) || "Anuncio clasificado en Mercasto",
         "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
         "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
         "offers": {
@@ -573,7 +573,7 @@ export default function AdDetailScreen({
 
             <h3 className="text-[18px] font-bold text-slate-900 mb-4">{t.description || 'Description'}</h3>
             <div className="text-slate-700 leading-relaxed whitespace-pre-line text-[15px]">
-              {ad.description}
+              {localizedText(ad.description, lang)}
             </div>
 
             <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/40">

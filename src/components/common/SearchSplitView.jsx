@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Map, List, X, Filter, Search as SearchIcon } from 'lucide-react';
 import AdsMap from './AdsMap';
+import { localizedText } from '../../utils/localize';
 
 const SearchSplitView = ({
   ads,
@@ -23,7 +24,7 @@ const SearchSplitView = ({
     if (mapFilters.query) {
       const q = mapFilters.query.toLowerCase();
       result = result.filter(ad => 
-        ad.title?.toLowerCase().includes(q) || ad.description?.toLowerCase().includes(q)
+        localizedText(ad.title)?.toLowerCase().includes(q) || localizedText(ad.description)?.toLowerCase().includes(q)
       );
     }
     if (mapFilters.maxPrice) {

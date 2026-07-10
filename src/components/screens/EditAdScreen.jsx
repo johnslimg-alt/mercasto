@@ -4,6 +4,7 @@ import { ChevronLeft, AlertTriangle, Loader2, X, Plus, Image, Pencil, Sparkles, 
 import SortablePhotoGrid from '../SortablePhotoGrid';
 import MEXICO_STATES from '../../utils/mexicoStates';
 import { filterConfig } from '../../constants/filterConfig';
+import { localizedText } from '../../utils/localize';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -80,8 +81,8 @@ export default function EditAdScreen({ t, lang }) {
         const rawCond = adData.condition || '';
         const normalizedCondition = conditionMap[rawCond.toLowerCase()] || rawCond || 'Nuevo';
         setForm({
-          title: adData.title || '',
-          description: adData.description || '',
+          title: localizedText(adData.title) || '',
+          description: localizedText(adData.description) || '',
           price: adData.price ?? '',
           location: adData.location || '',
           state: adData.state || '',

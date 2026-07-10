@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { localizedText } from '../../utils/localize';
 
 /**
  * ItemList Schema for ad listings
@@ -17,10 +18,10 @@ export default function ItemListSchema({ items, listName = "Anuncios" }) {
         "position": index + 1,
         "item": {
           "@type": "Product",
-          "name": item.title,
+          "name": localizedText(item.title),
           "url": `https://mercasto.com/ad/${item.id}`,
           "image": item.images?.[0] || 'https://mercasto.com/icon-512x512.png',
-          "description": item.description?.substring(0, 200),
+          "description": localizedText(item.description)?.substring(0, 200),
           "offers": {
             "@type": "Offer",
             "price": item.price,

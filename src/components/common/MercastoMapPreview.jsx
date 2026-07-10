@@ -1,6 +1,7 @@
 import React from 'react';
 import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import { localizedText } from '../../utils/localize';
 
 const DEFAULT_MARKERS = [
   { label: '$1.7k', coords: [19.4326, -99.1332], tone: 'lime' },
@@ -79,7 +80,7 @@ export default function MercastoMapPreview({
 
     return normalizedMarkers.filter(marker => {
       const ad = marker.ad || {};
-      const text = `${marker.label || ''} ${ad.title || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
+      const text = `${marker.label || ''} ${localizedText(ad.title) || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
       const price = Number(ad.price || String(marker.label || '').replace(/[^\d.]/g, '') || 0);
 
       if (query && !text.includes(query)) return false;
@@ -301,7 +302,7 @@ export default function MercastoMapPreview({
 
       const ad = marker.ad;
       if (ad) {
-        const title = escapeHtml(ad.title || 'Anuncio');
+        const title = escapeHtml(localizedText(ad.title) || 'Anuncio');
         const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
         const imgUrl = escapeHtml(ad.image_url || ad.image || 'https://picsum.photos/seed/mercasto/100/75');
         
