@@ -222,7 +222,11 @@ class PaymentController extends Controller
         $payload = $request->all();
         $checkoutId = $payload['reference']
             ?? data_get($payload, 'metadata.external_reference')
-            ?? data_get($payload, 'payment_request.metadata.external_reference');
+            ?? data_get($payload, 'payment_request.metadata.external_reference')
+            // Real Clip settlement webhooks (as opposed to the checkout-creation
+            // response) carry our external_reference back as merch_inv_id instead.
+            ?? $payload['merch_inv_id']
+            ?? null;
         $paymentRequestId = $payload['payment_request_id']
             ?? $payload['id']
             ?? data_get($payload, 'payment_request.id')
@@ -276,9 +280,6 @@ class PaymentController extends Controller
                 : false;
 
             if (!$knownCheckout && !$knownPaymentRequest) {
-                // TEMPORARY diagnostic (safe fields only, no card/PII data): investigating
-                // whether real Clip settlement webhooks reference our payment via a field
-                // we don't currently match on (e.g. merch_inv_id). Remove once resolved.
                 Log::info('Unsigned Clip webhook test/unknown checkout accepted', [
                     'ip_hash' => hash('sha256', (string) $request->ip()),
                     'path' => $request->path(),
@@ -286,11 +287,6 @@ class PaymentController extends Controller
                     'checkout_id_present' => (bool) $checkoutId,
                     'payment_request_id_present' => (bool) $paymentRequestId,
                     'status' => $paymentStatus ?: null,
-                    'diag_merch_inv_id' => $payload['merch_inv_id'] ?? null,
-                    'diag_id' => $payload['id'] ?? null,
-                    'diag_transaction_id' => $payload['transaction_id'] ?? null,
-                    'diag_src_transaction_id' => $payload['src_transaction_id'] ?? null,
-                    'diag_receipt_no' => $payload['receipt_no'] ?? null,
                 ]);
 
                 return response()->json(['status' => 'test_ok']);
