@@ -1,4 +1,13 @@
 export default {
+  "renew": "פֿאַרנײַען",
+  "sort_recent": "נײַסטע",
+  "sort_oldest": "עלטסטע",
+  "sort_views": "מערסט געזען",
+  "sort_expiring": "באַלד אויסלויפן",
+  "ads_promoted": "אַנאָנסן פּראָמאָוטעד",
+  "bulk_upload": "אַרויפלאָדן Excel/CSV",
+  "extend_promotion": "פֿאַרלענגערן פּראָמאָציע",
+  "promote_with_credits": "פּראָמאָוטירן מיט קרעדיטן",
   "account_manager": "אייגענער שטיצע",
   "account_settings_soon": "קאנטע סעטינגס קומען באלד...",
   "achievements": "דערגרייכונגען",

@@ -1,4 +1,13 @@
 export default {
+  "renew": "تجديد",
+  "sort_recent": "الأحدث",
+  "sort_oldest": "الأقدم",
+  "sort_views": "الأكثر مشاهدة",
+  "sort_expiring": "قريبة الانتهاء",
+  "ads_promoted": "إعلانات تمت ترقيتها",
+  "bulk_upload": "رفع Excel/CSV",
+  "extend_promotion": "تمديد الترويج",
+  "promote_with_credits": "الترويج باستخدام الرصيد",
   "account_manager": "دعم مخصص",
   "account_settings_soon": "إعدادات الحساب قادمة قريبًا...",
   "achievements": "الإنجازات",

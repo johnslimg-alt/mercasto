@@ -13,15 +13,30 @@ function daysUntilExpiry(expiresAt) {
 }
 
 const PROMO_LABELS = {
-  boost_1_day: { name: 'Subir 24 horas', totalMs: 1 * 24 * 60 * 60 * 1000 },
-  boost_3_days: { name: 'Subir 3 días', totalMs: 3 * 24 * 60 * 60 * 1000 },
-  highlight_7_days: { name: 'Resaltado 7 días', totalMs: 7 * 24 * 60 * 60 * 1000 },
-  featured_7_days: { name: 'Destacado 7 días', totalMs: 7 * 24 * 60 * 60 * 1000 },
-  featured_30_days: { name: 'Destacado 30 días', totalMs: 30 * 24 * 60 * 60 * 1000 },
-  top_category_7_days: { name: 'Top categoría 7 días', totalMs: 7 * 24 * 60 * 60 * 1000 },
+  boost_1_day: { name: 'Subir 24 horas', totalMs: 1 * 24 * 60 * 60 * 1000, category: 'boost' },
+  boost_3_days: { name: 'Subir 3 días', totalMs: 3 * 24 * 60 * 60 * 1000, category: 'boost' },
+  highlight_7_days: { name: 'Resaltado 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'highlight' },
+  featured_7_days: { name: 'Destacado 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'top' },
+  featured_30_days: { name: 'Destacado 30 días', totalMs: 30 * 24 * 60 * 60 * 1000, category: 'top' },
+  top_category_7_days: { name: 'Top categoría 7 días', totalMs: 7 * 24 * 60 * 60 * 1000, category: 'top' },
 };
 
-// Returns { name, remainingLabel, percentLeft } for an active (non-expired) promotion, or null
+// Las 3 categorías de promoción que se pueden comprar (solo una puede estar activa a la vez por anuncio)
+const PROMO_CATEGORIES = [
+  { key: 'boost', label: 'Subir' },
+  { key: 'highlight', label: 'Resaltar' },
+  { key: 'top', label: 'Destacar arriba' },
+];
+
+function formatRemaining(remainingMs) {
+  const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  return days >= 1
+    ? `${days} ${days === 1 ? 'día' : 'días'} restante${days === 1 ? '' : 's'}`
+    : `${Math.max(1, hours)} h restante${hours === 1 ? '' : 's'}`;
+}
+
+// Returns { name, remainingLabel, percentLeft, category } for an active (non-expired) promotion, or null
 function activePromotion(ad) {
   if (!ad.boost_type || !ad.boost_expires_at) return null;
   const meta = PROMO_LABELS[ad.boost_type];
@@ -29,15 +44,9 @@ function activePromotion(ad) {
   const remainingMs = new Date(ad.boost_expires_at) - Date.now();
   if (remainingMs <= 0) return null;
 
-  const hours = Math.floor(remainingMs / (1000 * 60 * 60));
-  const days = Math.floor(hours / 24);
-  const remainingLabel = days >= 1
-    ? `${days} ${days === 1 ? 'día' : 'días'} restante${days === 1 ? '' : 's'}`
-    : `${Math.max(1, hours)} h restante${hours === 1 ? '' : 's'}`;
-
   const percentLeft = Math.min(100, Math.max(0, Math.round((remainingMs / meta.totalMs) * 100)));
 
-  return { name: meta.name, remainingLabel, percentLeft };
+  return { name: meta.name, remainingLabel: formatRemaining(remainingMs), percentLeft, category: meta.category };
 }
 
 export default function MyAdsScreen({
@@ -320,7 +329,20 @@ export default function MyAdsScreen({
                   {ad.status === 'paused' && <button onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}
                   {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1 text-[11px]">{t.renew || 'Renew'}</button> : null; })()}
                   {ad.status === 'expired' && <button onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1 text-[11px]">{t.republish || 'Republicar'}</button>}
-                  {ad.status === 'active' && <button onClick={() => handlePromoteAd(ad)} className="btn-sm flex-1 sm:flex-none bg-[#0F172A] hover:bg-black text-white flex items-center justify-center gap-1 text-[11px]"><TrendingUp className="w-3 h-3" /> {promo ? (t.extend_promotion || 'Extender promo') : t.promote}</button>}
+                  {ad.status === 'active' && PROMO_CATEGORIES.map(({ key, label }) => {
+                    const isActiveHere = promo && promo.category === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handlePromoteAd(ad)}
+                        title={isActiveHere ? `${promo.name} · ${promo.remainingLabel}` : label}
+                        className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${isActiveHere ? 'bg-[#84CC16] text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}
+                      >
+                        <TrendingUp className="w-3 h-3" />
+                        {isActiveHere ? promo.remainingLabel : label}
+                      </button>
+                    );
+                  })}
                   <button onClick={() => handleDeleteAd(ad.id)} className="btn-sm flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center gap-1 text-[11px]"><Trash2 className="w-3 h-3" /></button>
                 </div>
               )}

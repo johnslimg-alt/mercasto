@@ -1,4 +1,13 @@
 export default {
+  "renew": "갱신",
+  "sort_recent": "최신순",
+  "sort_oldest": "오래된순",
+  "sort_views": "조회수순",
+  "sort_expiring": "곧 만료",
+  "ads_promoted": "개 광고 홍보됨",
+  "bulk_upload": "Excel/CSV 업로드",
+  "extend_promotion": "프로모션 연장",
+  "promote_with_credits": "크레딧으로 홍보",
   "account_manager": "전담 지원",
   "account_settings_soon": "계정 설정이 곧 제공됩니다...",
   "achievements": "업적",

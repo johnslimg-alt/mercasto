@@ -1,4 +1,13 @@
 export default {
+  "renew": "更新",
+  "sort_recent": "新着順",
+  "sort_oldest": "古い順",
+  "sort_views": "閲覧数順",
+  "sort_expiring": "まもなく期限切れ",
+  "ads_promoted": "件の広告を宣伝しました",
+  "bulk_upload": "Excel/CSVをアップロード",
+  "extend_promotion": "プロモーションを延長",
+  "promote_with_credits": "クレジットで宣伝",
   "account_manager": "専任サポート",
   "account_settings_soon": "アカウント設定まもなく提供開始...",
   "achievements": "実績",

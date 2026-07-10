@@ -1,4 +1,13 @@
 export default {
+  "renew": "חידוש",
+  "sort_recent": "החדשים ביותר",
+  "sort_oldest": "הישנים ביותר",
+  "sort_views": "הנצפים ביותר",
+  "sort_expiring": "עומדים לפוג",
+  "ads_promoted": "מודעות קודמו",
+  "bulk_upload": "העלאת Excel/CSV",
+  "extend_promotion": "הארכת קידום",
+  "promote_with_credits": "קידום באמצעות קרדיטים",
   "account_manager": "תמיכה ייעודית",
   "account_settings_soon": "הגדרות חשבון בקרוב...",
   "achievements": "הישגים",

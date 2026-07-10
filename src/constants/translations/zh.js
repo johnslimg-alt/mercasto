@@ -1,4 +1,13 @@
 export default {
+  "renew": "续期",
+  "sort_recent": "最新",
+  "sort_oldest": "最早",
+  "sort_views": "最多浏览",
+  "sort_expiring": "即将到期",
+  "ads_promoted": "个广告已推广",
+  "bulk_upload": "上传 Excel/CSV",
+  "extend_promotion": "延长推广",
+  "promote_with_credits": "用积分推广",
   "account_manager": "专属支持",
   "account_settings_soon": "账户设置即将推出...",
   "achievements": "成就",

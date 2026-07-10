@@ -1,4 +1,13 @@
 export default {
+  "renew": "Продлить",
+  "sort_recent": "Сначала новые",
+  "sort_oldest": "Сначала старые",
+  "sort_views": "По просмотрам",
+  "sort_expiring": "Скоро истекает",
+  "ads_promoted": "объявлений продвинуто",
+  "bulk_upload": "Загрузить Excel/CSV",
+  "extend_promotion": "Продлить продвижение",
+  "promote_with_credits": "Продвинуть за кредиты",
   "account_manager": "Персональная поддержка",
   "account_settings_soon": "Настройки аккаунта скоро появятся...",
   "achievements": "Достижения",

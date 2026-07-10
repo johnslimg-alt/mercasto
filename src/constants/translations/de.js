@@ -1,4 +1,13 @@
 export default {
+  "renew": "Erneuern",
+  "sort_recent": "Neueste",
+  "sort_oldest": "Älteste",
+  "sort_views": "Meist gesehen",
+  "sort_expiring": "Läuft bald ab",
+  "ads_promoted": "Anzeigen beworben",
+  "bulk_upload": "Excel/CSV hochladen",
+  "extend_promotion": "Werbung verlängern",
+  "promote_with_credits": "Mit Guthaben bewerben",
   "account_manager": "Persönlicher Support",
   "account_settings_soon": "Kontoeinstellungen kommen bald...",
   "achievements": "Errungenschaften",

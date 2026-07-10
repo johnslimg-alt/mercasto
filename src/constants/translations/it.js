@@ -1,4 +1,13 @@
 export default {
+  "renew": "Rinnova",
+  "sort_recent": "Più recenti",
+  "sort_oldest": "Meno recenti",
+  "sort_views": "Più visti",
+  "sort_expiring": "In scadenza",
+  "ads_promoted": "annunci promossi",
+  "bulk_upload": "Carica Excel/CSV",
+  "extend_promotion": "Estendi promozione",
+  "promote_with_credits": "Promuovi con crediti",
   "account_manager": "Supporto dedicato",
   "account_settings_soon": "Impostazioni account in arrivo a breve...",
   "achievements": "Risultati",
