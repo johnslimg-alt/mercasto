@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\MetaEventController;
+use App\Http\Controllers\Api\SavedSearchController;
 
 // Public routes
 Route::get('/img', \App\Http\Controllers\ImageController::class); // on-the-fly thumbnail resizer (WebP)
@@ -264,6 +265,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ads/{id}/favorite', [AdController::class, 'toggleFavorite'])->whereNumber('id');
     Route::get('/user/ads', [AdController::class, 'myAds']);
     Route::get('/user/favorite-ads', [AdController::class, 'favoriteAds']);
+    Route::get('/user/saved-searches', [SavedSearchController::class, 'index']);
+    Route::post('/user/saved-searches', [SavedSearchController::class, 'store']);
+    Route::patch('/user/saved-searches/{savedSearch}', [SavedSearchController::class, 'update']);
+    Route::delete('/user/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy']);
+    Route::post('/user/saved-searches/{savedSearch}/reset', [SavedSearchController::class, 'resetCount']);
     Route::get('/user/analytics', [AdController::class, 'analytics']);
     
     // Защита от блокировки аккаунта Clip (Third-Party Cascade DoS): ограничиваем генерацию ссылок

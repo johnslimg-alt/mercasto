@@ -43,7 +43,7 @@ export default function AchievementsPanel() {
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
       if (!token) {
         throw new Error('No autenticado');
       }
