@@ -71,6 +71,13 @@ jobs:
 
           if [ -n "$UP_SERVICES" ]; then
             docker compose --env-file backend/.env up -d --no-build --no-deps $UP_SERVICES
+            # Recreating mercasto-backend gives it a new container IP; nginx caches the
+            # old fastcgi upstream IP until reloaded, causing 502s (incl. Clip webhooks)
+            # until the later "Кэш и очереди" step restarts the frontend. Reload now to
+            # close that window immediately.
+            case " $UP_SERVICES " in
+              *" mercasto-backend "*) docker compose exec -T mercasto-frontend nginx -s reload || true ;;
+            esac
           else
             echo "No service restart required for changed files."
           fi
