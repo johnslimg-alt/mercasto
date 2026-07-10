@@ -1,4 +1,8 @@
 export default {
+  "change_password": "Изменить пароль",
+  "change_email": "Изменить email",
+  "push_notifications": "Push-уведомления",
+  "marketing": "Акции и новости",
   "access_denied": "Доступ запрещён",
   "ads": "Объявления",
   "verified_account": "Подтверждённый аккаунт",

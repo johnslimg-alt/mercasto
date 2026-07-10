@@ -1,4 +1,8 @@
 export default {
+  "change_password": "修改密码",
+  "change_email": "修改邮箱",
+  "push_notifications": "推送通知",
+  "marketing": "优惠和最新消息",
   "access_denied": "拒绝访问",
   "ads": "广告",
   "verified_account": "已验证账户",

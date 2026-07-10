@@ -1,4 +1,8 @@
 export default {
+  "change_password": "تغيير كلمة المرور",
+  "change_email": "تغيير البريد الإلكتروني",
+  "push_notifications": "إشعارات فورية",
+  "marketing": "العروض والمستجدات",
   "access_denied": "الوصول مرفوض",
   "ads": "الإعلانات",
   "verified_account": "حساب موثّق",

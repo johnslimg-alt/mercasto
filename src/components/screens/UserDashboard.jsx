@@ -1132,9 +1132,57 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 })()}
               </div>
             ) : dashboardTab === 'settings' ? (
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">{t.settings || 'Configuración'}</h2>
-                <p className="text-slate-500 dark:text-slate-400">{t.account_settings_soon || 'Configuración de cuenta próximamente...'}</p>
+              <div className="space-y-6">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">{t.settings || 'Configuración'}</h2>
+
+                  <form onSubmit={handlePasswordSubmit} className="max-w-md space-y-3 mb-8">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{t.change_password || 'Cambiar contraseña'}</h3>
+                    <input type="password" required value={passwordForm.current_password} onChange={e => setPasswordForm({ ...passwordForm, current_password: e.target.value })} placeholder={t.curr_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <input type="password" required minLength={8} value={passwordForm.new_password} onChange={e => setPasswordForm({ ...passwordForm, new_password: e.target.value })} placeholder={t.new_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <input type="password" required value={passwordForm.confirm_password} onChange={e => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })} placeholder={t.conf_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <button type="submit" disabled={passwordLoading} className="btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
+                      {passwordLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
+                    </button>
+                  </form>
+
+                  <form onSubmit={handleEmailSubmit} className="max-w-md space-y-3 mb-8 pt-6 border-t border-slate-100 dark:border-slate-700">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{t.change_email || 'Cambiar correo electrónico'}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
+                    <input type="email" required value={emailForm.new_email} onChange={e => setEmailForm({ ...emailForm, new_email: e.target.value })} placeholder={t.new_email} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <input type="password" required value={emailForm.password} onChange={e => setEmailForm({ ...emailForm, password: e.target.value })} placeholder={t.curr_password} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500" />
+                    <button type="submit" disabled={emailLoading} className="btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
+                      {emailLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
+                    </button>
+                  </form>
+
+                  <form onSubmit={handleNotificationsSubmit} className="max-w-md space-y-3 pt-6 border-t border-slate-100 dark:border-slate-700">
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{t.notifications || 'Notificaciones'}</h3>
+                    <label className="flex items-center justify-between py-1.5">
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{t.email_alerts || 'Alertas por correo'}</span>
+                      <input type="checkbox" checked={notificationsForm.email_alerts} onChange={e => setNotificationsForm({ ...notificationsForm, email_alerts: e.target.checked })} className="w-4 h-4 accent-lime-500" />
+                    </label>
+                    <label className="flex items-center justify-between py-1.5">
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{t.push_notifications || 'Notificaciones push'}</span>
+                      <input type="checkbox" checked={notificationsForm.push_notifications} onChange={e => setNotificationsForm({ ...notificationsForm, push_notifications: e.target.checked })} className="w-4 h-4 accent-lime-500" />
+                    </label>
+                    <label className="flex items-center justify-between py-1.5">
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{t.marketing || 'Ofertas y novedades'}</span>
+                      <input type="checkbox" checked={notificationsForm.marketing} onChange={e => setNotificationsForm({ ...notificationsForm, marketing: e.target.checked })} className="w-4 h-4 accent-lime-500" />
+                    </label>
+                    <button type="submit" disabled={notificationsLoading} className="btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">
+                      {notificationsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.save_changes || 'Guardar Cambios')}
+                    </button>
+                  </form>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-red-200 dark:border-red-500/30 p-6">
+                  <h3 className="font-bold text-sm text-red-600 dark:text-red-400 mb-1">{t.danger_zone || 'Zona de Peligro'}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 max-w-md">{t.del_warning || 'Una vez que elimines tu cuenta perderás todo...'}</p>
+                  <button onClick={handleDeleteAccount} className="btn-sm bg-red-50 hover:bg-red-100 text-red-600 border border-red-200">
+                    {t.del_account || 'Eliminar Cuenta'}
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>

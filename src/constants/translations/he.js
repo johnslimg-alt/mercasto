@@ -1,4 +1,8 @@
 export default {
+  "change_password": "שינוי סיסמה",
+  "change_email": "שינוי אימייל",
+  "push_notifications": "התראות דחיפה",
+  "marketing": "מבצעים וחידושים",
   "access_denied": "הגישה נדחתה",
   "ads": "מודעות",
   "verified_account": "חשבון מאומת",

@@ -1,4 +1,8 @@
 export default {
+  "change_password": "パスワードを変更",
+  "change_email": "メールアドレスを変更",
+  "push_notifications": "プッシュ通知",
+  "marketing": "お得情報とお知らせ",
   "access_denied": "アクセスが拒否されました",
   "ads": "広告",
   "verified_account": "認証済みアカウント",

@@ -1,4 +1,8 @@
 export default {
+  "change_password": "Changer le mot de passe",
+  "change_email": "Changer l'e-mail",
+  "push_notifications": "Notifications push",
+  "marketing": "Offres et nouveautés",
   "access_denied": "Accès refusé",
   "ads": "Annonces",
   "verified_account": "Compte vérifié",

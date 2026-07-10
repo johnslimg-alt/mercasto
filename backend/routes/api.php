@@ -26,6 +26,9 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\MetaEventController;
 use App\Http\Controllers\Api\SavedSearchController;
+use App\Http\Controllers\Api\GamificationController;
+use App\Http\Controllers\Api\PushController;
+use App\Http\Controllers\Api\AdBannerController;
 
 // Public routes
 Route::get('/img', \App\Http\Controllers\ImageController::class); // on-the-fly thumbnail resizer (WebP)
@@ -110,6 +113,9 @@ Route::middleware('throttle:api')->get('/users/{id}/reviews', [ReviewController:
 Route::middleware('throttle:api')->get('/users/{id}/profile', [ProfileController::class, 'publicProfile'])->whereNumber('id'); // Публичный профиль продавца (Storefront)
 Route::middleware('throttle:api')->get('/users/{id}/business-profile', [BusinessProfileController::class, 'publicShow'])->whereNumber('id');
 Route::middleware('throttle:api')->get('/stores', [BusinessProfileController::class, 'directory']);
+Route::middleware('throttle:api')->get('/banners', [AdBannerController::class, 'publicBanners']);
+Route::middleware('throttle:api')->post('/banners/{id}/click', [AdBannerController::class, 'trackClick'])->whereNumber('id');
+Route::middleware('throttle:api')->get('/push/vapid-key', [PushController::class, 'vapidPublicKey']);
 
 // Регистрация маршрутов для WebSockets (Reverb / Echo) с авторизацией Sanctum
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
@@ -270,6 +276,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/user/saved-searches/{savedSearch}', [SavedSearchController::class, 'update']);
     Route::delete('/user/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy']);
     Route::post('/user/saved-searches/{savedSearch}/reset', [SavedSearchController::class, 'resetCount']);
+    Route::get('/gamification/profile', [GamificationController::class, 'profile']);
+    Route::post('/gamification/activity', [GamificationController::class, 'recordActivity']);
+    Route::get('/gamification/leaderboard', [GamificationController::class, 'leaderboard']);
+    Route::post('/push/subscribe', [PushController::class, 'subscribe']);
+    Route::post('/push/unsubscribe', [PushController::class, 'unsubscribe']);
+    Route::middleware('throttle:5,1')->post('/push/test', [PushController::class, 'test']);
+    Route::get('/admin/banners', [AdBannerController::class, 'index']);
+    Route::post('/admin/banners', [AdBannerController::class, 'store']);
+    Route::put('/admin/banners/{id}', [AdBannerController::class, 'update'])->whereNumber('id');
+    Route::delete('/admin/banners/{id}', [AdBannerController::class, 'destroy'])->whereNumber('id');
+    Route::post('/admin/banners/upload', [AdBannerController::class, 'uploadImage']);
+    Route::get('/admin/banners/stats', [AdBannerController::class, 'stats']);
+    Route::get('/admin/placements', [AdBannerController::class, 'placements']);
+    Route::post('/admin/placements', [AdBannerController::class, 'createPlacement']);
+    Route::put('/admin/placements/{id}', [AdBannerController::class, 'updatePlacement'])->whereNumber('id');
+    Route::delete('/admin/placements/{id}', [AdBannerController::class, 'destroyPlacement'])->whereNumber('id');
     Route::get('/user/analytics', [AdController::class, 'analytics']);
     
     // Защита от блокировки аккаунта Clip (Third-Party Cascade DoS): ограничиваем генерацию ссылок

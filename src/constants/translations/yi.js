@@ -1,4 +1,8 @@
 export default {
+  "change_password": "ביטן פּאַראָל",
+  "change_email": "ביטן אימעיל",
+  "push_notifications": "פּוש נאָטיפֿיקאַציעס",
+  "marketing": "אָנגעבאָטן און נײַעס",
   "access_denied": "צוטריט פארווערט",
   "ads": "אַנאָנסן",
   "verified_account": "באַשטעטיקט קאָנטע",

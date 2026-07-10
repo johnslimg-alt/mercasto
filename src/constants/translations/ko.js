@@ -1,4 +1,8 @@
 export default {
+  "change_password": "비밀번호 변경",
+  "change_email": "이메일 변경",
+  "push_notifications": "푸시 알림",
+  "marketing": "혜택 및 소식",
   "access_denied": "접근 거부됨",
   "ads": "광고",
   "verified_account": "인증된 계정",

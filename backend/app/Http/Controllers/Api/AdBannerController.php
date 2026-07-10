@@ -13,6 +13,20 @@ use Illuminate\Support\Str;
 
 class AdBannerController extends Controller
 {
+    /**
+     * Todas las rutas de este controlador salvo publicBanners()/trackClick() son de
+     * administración; no hay middleware de rol a nivel de ruta en este proyecto, así
+     * que cada método admin valida aquí en lugar de confiar solo en el frontend.
+     */
+    private function ensureAdmin(Request $request)
+    {
+        if ($request->user()?->role !== 'admin') {
+            return response()->json(['message' => 'Acceso denegado'], 403);
+        }
+
+        return null;
+    }
+
     // ==================== ADMIN: BANNERS ====================
 
     /**
@@ -20,6 +34,8 @@ class AdBannerController extends Controller
      */
     public function index(Request $request)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $query = AdBanner::with(['placement', 'creator:id,name'])
             ->orderByDesc('priority')
             ->orderByDesc('created_at');
@@ -42,6 +58,8 @@ class AdBannerController extends Controller
      */
     public function store(Request $request)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $validated = $request->validate([
             'placement_id' => 'required|exists:ad_placements,id',
             'title' => 'required|string|max:255',
@@ -78,6 +96,8 @@ class AdBannerController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $banner = AdBanner::findOrFail($id);
 
         $validated = $request->validate([
@@ -111,6 +131,8 @@ class AdBannerController extends Controller
      */
     public function destroy(Request $request, $id)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $banner = AdBanner::findOrFail($id);
         $banner->delete();
 
@@ -127,6 +149,8 @@ class AdBannerController extends Controller
      */
     public function uploadImage(Request $request)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB
         ]);
@@ -156,6 +180,8 @@ class AdBannerController extends Controller
      */
     public function placements(Request $request)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $placements = AdPlacement::withCount('banners')
             ->orderBy('sort_order')
             ->orderBy('name')
@@ -176,6 +202,8 @@ class AdBannerController extends Controller
      */
     public function createPlacement(Request $request)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $validated = $request->validate([
             'slug' => 'required|string|max:100|unique:ad_placements,slug|regex:/^[a-z0-9_]+$/',
             'name' => 'required|string|max:255',
@@ -204,6 +232,8 @@ class AdBannerController extends Controller
      */
     public function updatePlacement(Request $request, $id)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $placement = AdPlacement::findOrFail($id);
 
         $validated = $request->validate([
@@ -227,6 +257,8 @@ class AdBannerController extends Controller
      */
     public function destroyPlacement(Request $request, $id)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $placement = AdPlacement::findOrFail($id);
 
         // Проверяем что нет активных баннеров
@@ -350,6 +382,8 @@ class AdBannerController extends Controller
      */
     public function stats(Request $request)
     {
+        if ($guard = $this->ensureAdmin($request)) return $guard;
+
         $stats = [
             'total_banners' => AdBanner::count(),
             'active_banners' => AdBanner::where('is_active', true)->count(),
