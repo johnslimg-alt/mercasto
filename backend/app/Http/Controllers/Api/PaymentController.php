@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\MetaCapiService;
 use Illuminate\Http\Request;
 use App\Events\NewNotification;
@@ -25,6 +26,37 @@ class PaymentController extends Controller
         'pro_unlimited_monthly' => ['name' => 'Suscripción PRO Ilimitado', 'limit' => 999999, 'business' => true],
     ];
 
+    // Защита от подмены цен (Client-Side Pricing Exploit): Жестко фиксируем все цены
+    private const PACKAGES_BY_CODE = [
+        'package_free' => ['amount' => 0, 'description' => 'Plan Gratis'],
+        'package_impulso' => ['amount' => 99, 'description' => 'Plan Impulso'],
+        'package_negocio' => ['amount' => 249, 'description' => 'Plan Negocio'],
+        'package_pro' => ['amount' => 599, 'description' => 'Plan Pro'],
+        'package_agencia' => ['amount' => 1499, 'description' => 'Plan Agencia'],
+        'credits_100' => ['amount' => 100, 'description' => '100 Créditos Mercasto'],
+        'credits_200' => ['amount' => 200, 'description' => '200 Créditos Mercasto'],
+        'credits_300' => ['amount' => 300, 'description' => '300 Créditos Mercasto'],
+        'credits_500' => ['amount' => 500, 'description' => '500 Créditos Mercasto'],
+        'boost_1_day' => ['amount' => 19, 'description' => 'Subir 24 horas'],
+        'boost_3_days' => ['amount' => 49, 'description' => 'Subir 3 días'],
+        'highlight_7_days' => ['amount' => 79, 'description' => 'Resaltar 7 días'],
+        'featured_7_days' => ['amount' => 149, 'description' => 'Destacado 7 días'],
+        'featured_30_days' => ['amount' => 399, 'description' => 'Destacado 30 días'],
+        'top_category_7_days' => ['amount' => 399, 'description' => 'Top categoría 7 días'],
+        // Legacy/fallback support
+        'plus_monthly' => ['amount' => 99, 'description' => 'Suscripción Paquete Plus'],
+        'pro_standard_monthly' => ['amount' => 500, 'description' => 'Suscripción PRO Estándar'],
+        'pro_unlimited_monthly' => ['amount' => 1500, 'description' => 'Suscripción PRO Ilimitado'],
+    ];
+
+    private const LEGACY_PACKAGES = [
+        'Suscripción Paquete Plus' => 'plus_monthly',
+        'Suscripción PRO Estándar' => 'pro_standard_monthly',
+        'Suscripción PRO Ilimitado' => 'pro_unlimited_monthly',
+    ];
+
+    private const PRODUCT_CODES_LIST = 'package_free,package_impulso,package_negocio,package_pro,package_agencia,credits_100,credits_200,credits_300,credits_500,credits_custom,boost_1_day,boost_3_days,highlight_7_days,featured_7_days,featured_30_days,top_category_7_days,plus_monthly,pro_standard_monthly,pro_unlimited_monthly';
+
     /**
      * Создание сессии оплаты через Clip Mexico
      */
@@ -33,7 +65,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:1',
             'description' => 'required|string|max:255',
-            'product_code' => 'nullable|string|in:package_free,package_impulso,package_negocio,package_pro,package_agencia,credits_100,credits_200,credits_300,credits_500,credits_custom,boost_1_day,boost_3_days,highlight_7_days,featured_7_days,featured_30_days,top_category_7_days,plus_monthly,pro_standard_monthly,pro_unlimited_monthly',
+            'product_code' => 'nullable|string|in:' . self::PRODUCT_CODES_LIST,
             'ad_id' => 'nullable|integer|exists:ads,id', // Защита от создания призрачных платежей
         ]);
 
@@ -52,77 +84,14 @@ class PaymentController extends Controller
         $amount = (float) $request->amount;
         $description = $request->description;
 
-        // Защита от подмены цен (Client-Side Pricing Exploit): Жестко фиксируем все цены
-        $packagesByCode = [
-            'package_free' => ['amount' => 0, 'description' => 'Plan Gratis'],
-            'package_impulso' => ['amount' => 99, 'description' => 'Plan Impulso'],
-            'package_negocio' => ['amount' => 249, 'description' => 'Plan Negocio'],
-            'package_pro' => ['amount' => 599, 'description' => 'Plan Pro'],
-            'package_agencia' => ['amount' => 1499, 'description' => 'Plan Agencia'],
-            'credits_100' => ['amount' => 100, 'description' => '100 Créditos Mercasto'],
-            'credits_200' => ['amount' => 200, 'description' => '200 Créditos Mercasto'],
-            'credits_300' => ['amount' => 300, 'description' => '300 Créditos Mercasto'],
-            'credits_500' => ['amount' => 500, 'description' => '500 Créditos Mercasto'],
-            'boost_1_day' => ['amount' => 19, 'description' => 'Subir 24 horas'],
-            'boost_3_days' => ['amount' => 49, 'description' => 'Subir 3 días'],
-            'highlight_7_days' => ['amount' => 79, 'description' => 'Resaltar 7 días'],
-            'featured_7_days' => ['amount' => 149, 'description' => 'Destacado 7 días'],
-            'featured_30_days' => ['amount' => 399, 'description' => 'Destacado 30 días'],
-            'top_category_7_days' => ['amount' => 399, 'description' => 'Top categoría 7 días'],
-            // Legacy/fallback support
-            'plus_monthly' => ['amount' => 99, 'description' => 'Suscripción Paquete Plus'],
-            'pro_standard_monthly' => ['amount' => 500, 'description' => 'Suscripción PRO Estándar'],
-            'pro_unlimited_monthly' => ['amount' => 1500, 'description' => 'Suscripción PRO Ilimitado'],
-        ];
+        $packagesByCode = self::PACKAGES_BY_CODE;
+        $legacyPackages = self::LEGACY_PACKAGES;
 
-        $legacyPackages = [
-            'Suscripción Paquete Plus' => 'plus_monthly',
-            'Suscripción PRO Estándar' => 'pro_standard_monthly',
-            'Suscripción PRO Ilimitado' => 'pro_unlimited_monthly',
-        ];
-        
-        if ($request->ad_id) {
-            // Защита от IDOR: убеждаемся, что пользователь продвигает только свои объявления
-            $ad = DB::table('ads')->where('id', $request->ad_id)->first();
-            if (!$ad || $ad->user_id !== $user->id) {
-                return response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403);
-            }
-            
-            // Финансовая защита (Fraud Prevention): блокируем оплату для уже продвинутых или неактивных объявлений
-            if ($ad->status !== 'active') {
-                return response()->json(['message' => 'Solo puedes promocionar anuncios que estén activos.'], 400);
-            }
-
-            // If a valid boost product code is supplied with ad_id, use its price/description. Otherwise fallback to standard promotion.
-            $productCode = $request->product_code;
-            if ($productCode && array_key_exists($productCode, $packagesByCode)) {
-                $amount = (float) $packagesByCode[$productCode]['amount'];
-                $description = $packagesByCode[$productCode]['description'] . " (Anuncio #" . $request->ad_id . ")";
-            } else {
-                $amount = 50; // Жесткая цена за продвижение по умолчанию
-                $description = "Promoción de anuncio #" . $request->ad_id;
-            }
-        } else {
-            $productCode = $request->product_code ?: ($legacyPackages[$description] ?? null);
-
-            if ($productCode === 'credits_custom') {
-                // Only product where the client-supplied amount is trusted, clamped to a safe range.
-                $request->validate(['amount' => 'required|numeric|min:50|max:5000']);
-                $amount = round((float) $request->amount);
-                $description = number_format($amount, 0) . ' Créditos Mercasto';
-            } else {
-                if (! $productCode || ! array_key_exists($productCode, $packagesByCode)) {
-                    return response()->json(['message' => 'Servicio no válido'], 400);
-                }
-
-                if ($this->promotionConfig($productCode)) {
-                    return response()->json(['message' => 'Selecciona un anuncio antes de comprar promoción.'], 400);
-                }
-
-                $amount = (float) $packagesByCode[$productCode]['amount'];
-                $description = $packagesByCode[$productCode]['description'];
-            }
+        $resolved = $this->resolvePurchasePricing($request, $user, $description);
+        if ($resolved['error']) {
+            return $resolved['error'];
         }
+        ['amount' => $amount, 'description' => $description, 'productCode' => $productCode] = $resolved;
 
         // Защита от DB Bloat DoS: переиспользуем 'pending' сессии
         $existing = DB::table('payments')->where(['user_id' => $user->id, 'ad_id' => $request->ad_id, 'description' => $description, 'status' => 'pending'])->first();
@@ -529,6 +498,153 @@ class PaymentController extends Controller
         );
 
         $this->forgetAdPromotionCaches();
+    }
+
+    /**
+     * Resuelve monto/descripción/product_code para una compra a partir de precios fijos del servidor.
+     * Devuelve ['error' => JsonResponse|null, 'amount', 'description', 'productCode'].
+     */
+    private function resolvePurchasePricing(Request $request, object $user, string $description): array
+    {
+        $packagesByCode = self::PACKAGES_BY_CODE;
+        $legacyPackages = self::LEGACY_PACKAGES;
+
+        if ($request->ad_id) {
+            // Защита от IDOR: убеждаемся, что пользователь продвигает только свои объявления
+            $ad = DB::table('ads')->where('id', $request->ad_id)->first();
+            if (!$ad || $ad->user_id !== $user->id) {
+                return ['error' => response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403)];
+            }
+
+            // Финансовая защита (Fraud Prevention): блокируем оплату для уже продвинутых или неактивных объявлений
+            if ($ad->status !== 'active') {
+                return ['error' => response()->json(['message' => 'Solo puedes promocionar anuncios que estén activos.'], 400)];
+            }
+
+            $productCode = $request->product_code;
+            if ($productCode && array_key_exists($productCode, $packagesByCode)) {
+                $amount = (float) $packagesByCode[$productCode]['amount'];
+                $description = $packagesByCode[$productCode]['description'] . " (Anuncio #" . $request->ad_id . ")";
+            } else {
+                $amount = 50; // Жесткая цена за продвижение по умолчанию
+                $description = "Promoción de anuncio #" . $request->ad_id;
+            }
+
+            return ['error' => null, 'amount' => $amount, 'description' => $description, 'productCode' => $productCode];
+        }
+
+        $productCode = $request->product_code ?: ($legacyPackages[$description] ?? null);
+
+        if ($productCode === 'credits_custom') {
+            $request->validate(['amount' => 'required|numeric|min:50|max:5000']);
+            $amount = round((float) $request->amount);
+            $description = number_format($amount, 0) . ' Créditos Mercasto';
+
+            return ['error' => null, 'amount' => $amount, 'description' => $description, 'productCode' => $productCode];
+        }
+
+        if (! $productCode || ! array_key_exists($productCode, $packagesByCode)) {
+            return ['error' => response()->json(['message' => 'Servicio no válido'], 400)];
+        }
+
+        if ($this->promotionConfig($productCode)) {
+            return ['error' => response()->json(['message' => 'Selecciona un anuncio antes de comprar promoción.'], 400)];
+        }
+
+        $amount = (float) $packagesByCode[$productCode]['amount'];
+        $description = $packagesByCode[$productCode]['description'];
+
+        return ['error' => null, 'amount' => $amount, 'description' => $description, 'productCode' => $productCode];
+    }
+
+    /**
+     * Pagar cualquier tarifa/promoción directamente desde el saldo (créditos) de la cuenta.
+     * El saldo solo puede recargarse con tarjeta (createClipCheckout, credits_*), nunca al revés.
+     */
+    public function payWithBalance(Request $request)
+    {
+        $request->validate([
+            'description' => 'required|string|max:255',
+            'product_code' => 'nullable|string|in:' . self::PRODUCT_CODES_LIST,
+            'ad_id' => 'nullable|integer|exists:ads,id',
+        ]);
+
+        $user = $request->user();
+
+        if (str_starts_with((string) $request->product_code, 'credits_')) {
+            return response()->json(['message' => 'La recarga de créditos solo se puede pagar con tarjeta.'], 400);
+        }
+
+        $resolved = $this->resolvePurchasePricing($request, $user, (string) $request->description);
+        if ($resolved['error']) {
+            return $resolved['error'];
+        }
+        ['amount' => $amount, 'description' => $description, 'productCode' => $productCode] = $resolved;
+
+        if ($amount <= 0) {
+            return response()->json(['message' => 'Este plan no requiere pago.'], 400);
+        }
+
+        $result = DB::transaction(function () use ($user, $amount, $description, $productCode, $request) {
+            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            if ((float) $creditUser->balance < $amount) {
+                return ['response' => response()->json([
+                    'message' => "Saldo insuficiente. Necesitas {$amount} créditos y tienes " . (float) $creditUser->balance . '.',
+                ], 400)];
+            }
+
+            $creditUser->balance = (float) $creditUser->balance - $amount;
+            $creditUser->save();
+
+            $paymentId = DB::table('payments')->insertGetId([
+                'user_id' => $user->id,
+                'ad_id' => $request->ad_id,
+                'clip_checkout_id' => 'balance_' . Str::uuid(),
+                'amount' => $amount,
+                'description' => $description,
+                'product_code' => $productCode,
+                'status' => 'paid',
+                'webhook_payload' => json_encode(['method' => 'account_balance', 'paid_at' => now()->toIso8601String()]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $payment = DB::table('payments')->where('id', $paymentId)->first();
+
+            $this->activatePaidProduct($payment);
+            $this->activateAdPromotion($payment);
+
+            $notificationData = [
+                'user_id' => $payment->user_id,
+                'title' => '¡Pago exitoso!',
+                'message' => 'Se descontaron $' . number_format($amount, 2) . ' de tu saldo por "' . $description . '".',
+                'is_read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+            $notifId = DB::table('user_notifications')->insertGetId($notificationData);
+            $notificationData['id'] = $notifId;
+
+            return [
+                'payment' => $payment,
+                'balance' => $creditUser->balance,
+                'notificationData' => $notificationData,
+            ];
+        });
+
+        if (isset($result['response'])) {
+            return $result['response'];
+        }
+
+        broadcast(new NewNotification((int) $result['payment']->user_id, $result['notificationData']));
+        Cache::forget('ads_featured_block');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pago realizado con tu saldo',
+            'balance' => $result['balance'],
+        ]);
     }
 
     private function promotionConfig(?string $productCode): ?array

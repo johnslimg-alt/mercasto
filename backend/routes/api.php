@@ -265,6 +265,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Защита от блокировки аккаунта Clip (Third-Party Cascade DoS): ограничиваем генерацию ссылок
     Route::middleware('throttle:10,1')->group(function () {
         Route::post('/payment/clip', [PaymentController::class, 'createClipCheckout']); // Генерация оплаты Clip
+        Route::post('/payment/balance', [PaymentController::class, 'payWithBalance']); // Pago con saldo de la cuenta
     });
 
     // Subscription Routes

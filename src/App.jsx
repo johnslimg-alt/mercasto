@@ -2933,6 +2933,39 @@ function App() {
   // --- PAYMENT CHECKOUT ---
   const handleClipPayment = async (amount, description, adId = null, productCode = null) => {
     if (!user) { setShowAuthModal(true); return; }
+
+    // Cualquier tarifa (excepto recargas de créditos) puede pagarse con el saldo de la cuenta.
+    const isCreditsTopUp = typeof productCode === 'string' && productCode.startsWith('credits_');
+    const balance = parseFloat(user?.balance || 0);
+    if (!isCreditsTopUp && balance >= amount && amount > 0) {
+      const useBalance = window.confirm(`¿Pagar $${amount} con tu saldo? (Saldo actual: $${balance.toLocaleString('es-MX')})\n\nCancelar para pagar con tarjeta/OXXO en su lugar.`);
+      if (useBalance) {
+        try {
+          const token = localStorage.getItem('auth_token');
+          const res = await fetch(`${API_URL}/payment/balance`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ description, ad_id: adId, product_code: productCode }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showToast('¡Pago realizado con tu saldo!');
+            const updatedUser = { ...user, balance: data.balance };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            loadUserAds?.();
+            return;
+          }
+          showToast(data.message || t.payment_error_generating || 'Error al pagar con saldo', 'error');
+          return;
+        } catch (err) {
+          console.error('Balance payment error', err);
+          showToast(t.connection_error || 'Error de conexión', 'error');
+          return;
+        }
+      }
+    }
+
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/payment/clip`, {
