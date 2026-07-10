@@ -74,7 +74,7 @@ export default function OnboardingModal({ onClose, user, t, lang }) {
     localStorage.setItem('onboarding_interests', JSON.stringify(selectedInterests));
     
     // Try to save to backend if user is authenticated
-    const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+    const token = localStorage.getItem('auth_token');
     if (token) {
       try {
         await fetch(`${API_URL}/user/preferences`, {

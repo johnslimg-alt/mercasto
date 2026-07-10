@@ -228,6 +228,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])->whereNumber('id');
     Route::post('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений
     Route::delete('/user/notifications/{id}', [ProfileController::class, 'deleteNotification'])->whereNumber('id'); // Удалить уведомление
+    Route::post('/user/preferences', [ProfileController::class, 'updatePreferences']); // Onboarding preferences
     Route::get('/user/search-alerts', [SearchAlertController::class, 'index']);
     Route::post('/user/search-alerts', [SearchAlertController::class, 'store'])->middleware('throttle:10,1');
     Route::patch('/user/search-alerts/{searchAlert}', [SearchAlertController::class, 'update'])->whereNumber('searchAlert');

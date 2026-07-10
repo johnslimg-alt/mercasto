@@ -388,6 +388,25 @@ class ProfileController extends Controller
         return response()->json(['message' => 'Preferencias actualizadas.', 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])]);
     }
 
+    /**
+     * Guarda las preferencias del onboarding (rol e intereses elegidos por el usuario nuevo).
+     */
+    public function updatePreferences(Request $request)
+    {
+        $data = $request->validate([
+            'preferred_role' => 'nullable|string|max:50',
+            'preferred_categories' => 'nullable|array',
+            'preferred_categories.*' => 'string|max:100',
+            'onboarding_completed_at' => 'nullable|date',
+        ]);
+
+        $user = $request->user();
+        $user->fill($data);
+        $user->save();
+
+        return response()->json(['success' => true]);
+    }
+
     public function changeRole(Request $request, $id)
     {
         if ($request->user()->role !== 'admin') {

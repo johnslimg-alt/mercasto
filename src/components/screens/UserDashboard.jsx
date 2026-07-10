@@ -1215,7 +1215,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
       )}
 
       {/* Achievements Modal */}
-      <AchievementsModal isOpen={showAchievementsModal} onClose={() => setShowAchievementsModal(false)} />
+      <AchievementsModal isOpen={showAchievementsModal} onClose={() => setShowAchievementsModal(false)} lang={lang} />
     </div>
   );
 }

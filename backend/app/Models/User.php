@@ -62,6 +62,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'business_rfc_verified_at',
         'kyc_document_url',
         'kyc_status',
+        'preferred_role',
+        'preferred_categories',
+        'onboarding_completed_at',
     ];
 
     /**
@@ -113,6 +116,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'business_hours' => 'array',
             'business_profile_enabled' => 'boolean',
             'business_rfc_verified_at' => 'datetime',
+            'preferred_categories' => 'array',
+            'onboarding_completed_at' => 'datetime',
         ];
     }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Flame, Star, Lock, Zap, TrendingUp } from 'lucide-react';
+import { getAchievementsTranslations } from './achievementsI18n';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mercasto.com/api';
 
@@ -24,14 +25,8 @@ const RARITY_BORDER = {
   legendary: 'border-amber-300 dark:border-amber-700',
 };
 
-const RARITY_LABELS = {
-  common: 'Común',
-  rare: 'Raro',
-  epic: 'Épico',
-  legendary: 'Legendario',
-};
-
-export default function AchievementsPanel() {
+export default function AchievementsPanel({ lang = 'es' }) {
+  const tr = getAchievementsTranslations(lang);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,20 +40,20 @@ export default function AchievementsPanel() {
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        throw new Error('No autenticado');
+        throw new Error(tr.notAuthenticated);
       }
 
       const response = await fetch(`${API_URL}/gamification/profile`, {
-        headers: { 
+        headers: {
           'Accept': 'application/json',
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
+        throw new Error(tr.fetchFailed);
       }
-      
+
       const data = await response.json();
       setProfile(data.data);
     } catch (err) {
@@ -84,7 +79,7 @@ export default function AchievementsPanel() {
   if (error) {
     return (
       <div className="p-6 text-center text-red-500">
-        Error loading achievements: {error}
+        {tr.errorLoading}: {error}
       </div>
     );
   }
@@ -103,32 +98,32 @@ export default function AchievementsPanel() {
       <div className="bg-gradient-to-br from-lime-500 to-green-600 rounded-2xl p-6 text-white shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="text-sm opacity-80">Nivel</div>
+            <div className="text-sm opacity-80">{tr.level}</div>
             <div className="text-4xl font-bold flex items-center gap-2">
               {level.level} <span className="text-2xl">{level.icon}</span>
             </div>
             <div className="text-sm font-medium">{level.name}</div>
           </div>
           <div className="text-right">
-            <div className="text-sm opacity-80">Total XP</div>
+            <div className="text-sm opacity-80">{tr.totalXp}</div>
             <div className="text-2xl font-bold">{total_xp.toLocaleString()}</div>
           </div>
         </div>
-        
+
         {level.next_min_xp && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Progreso al nivel {level.next_level} ({level.next_name})</span>
+              <span>{tr.progressToLevel} {level.next_level} ({level.next_name})</span>
               <span>{level.progress}%</span>
             </div>
             <div className="h-3 bg-white/20 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-white rounded-full transition-all duration-500"
                 style={{ width: `${level.progress}%` }}
               />
             </div>
             <div className="text-sm opacity-80">
-              {level.next_min_xp - total_xp} XP para el siguiente nivel
+              {level.next_min_xp - total_xp} {tr.xpToNext}
             </div>
           </div>
         )}
@@ -139,20 +134,20 @@ export default function AchievementsPanel() {
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 text-center border border-slate-200 dark:border-slate-700">
           <Flame className="w-6 h-6 mx-auto mb-2 text-orange-500" />
           <div className="text-2xl font-bold">{current_streak}</div>
-          <div className="text-xs text-slate-500">Días seguidos</div>
+          <div className="text-xs text-slate-500">{tr.streakDays}</div>
           {longest_streak > 0 && (
-            <div className="text-xs text-slate-400 mt-1">Récord: {longest_streak}</div>
+            <div className="text-xs text-slate-400 mt-1">{tr.record}: {longest_streak}</div>
           )}
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 text-center border border-slate-200 dark:border-slate-700">
           <Trophy className="w-6 h-6 mx-auto mb-2 text-amber-500" />
           <div className="text-2xl font-bold">{achievements_unlocked}</div>
-          <div className="text-xs text-slate-500">Logros</div>
+          <div className="text-xs text-slate-500">{tr.achievements}</div>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 text-center border border-slate-200 dark:border-slate-700">
           <TrendingUp className="w-6 h-6 mx-auto mb-2 text-green-500" />
           <div className="text-2xl font-bold">{completionPercent}%</div>
-          <div className="text-xs text-slate-500">Completado</div>
+          <div className="text-xs text-slate-500">{tr.completed}</div>
         </div>
       </div>
 
@@ -166,7 +161,7 @@ export default function AchievementsPanel() {
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >
-          Desbloqueados ({unlocked.length})
+          {tr.unlocked} ({unlocked.length})
         </button>
         <button
           onClick={() => setActiveTab('locked')}
@@ -176,7 +171,7 @@ export default function AchievementsPanel() {
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >
-          Por desbloquear ({locked.length})
+          {tr.toUnlock} ({locked.length})
         </button>
         <button
           onClick={() => setActiveTab('activity')}
@@ -186,7 +181,7 @@ export default function AchievementsPanel() {
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >
-          Actividad
+          {tr.activity}
         </button>
       </div>
 
@@ -195,12 +190,12 @@ export default function AchievementsPanel() {
           {unlocked.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <Trophy className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Aún no has desbloqueado logros</p>
-              <p className="text-sm">¡Publica tu primer anuncio para empezar!</p>
+              <p>{tr.noUnlocked}</p>
+              <p className="text-sm">{tr.noUnlockedHint}</p>
             </div>
           ) : (
             unlocked.map(achievement => (
-              <AchievementCard key={achievement.id} achievement={achievement} unlocked />
+              <AchievementCard key={achievement.id} achievement={achievement} unlocked tr={tr} />
             ))
           )}
         </div>
@@ -209,7 +204,7 @@ export default function AchievementsPanel() {
       {activeTab === 'locked' && (
         <div className="space-y-3">
           {locked.map(achievement => (
-            <AchievementCard key={achievement.id} achievement={achievement} />
+            <AchievementCard key={achievement.id} achievement={achievement} tr={tr} />
           ))}
         </div>
       )}
@@ -219,7 +214,7 @@ export default function AchievementsPanel() {
           {recent_xp.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <Zap className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Sin actividad reciente</p>
+              <p>{tr.noActivity}</p>
             </div>
           ) : (
             recent_xp.map((tx, i) => (
@@ -247,7 +242,9 @@ export default function AchievementsPanel() {
   );
 }
 
-function AchievementCard({ achievement, unlocked = false }) {
+const RARITY_LABEL_KEYS = { common: 'rarityCommon', rare: 'rarityRare', epic: 'rarityEpic', legendary: 'rarityLegendary' };
+
+function AchievementCard({ achievement, unlocked = false, tr }) {
   const progress = achievement.requirement_value > 0 ? Math.round((achievement.progress / achievement.requirement_value) * 100) : 0;
   
   return (
@@ -271,7 +268,7 @@ function AchievementCard({ achievement, unlocked = false }) {
           
           <div className="flex items-center gap-3 text-xs">
             <span className={`px-2 py-1 rounded-full bg-gradient-to-r ${RARITY_COLORS[achievement.rarity]} text-white font-medium`}>
-              {RARITY_LABELS[achievement.rarity]}
+              {tr[RARITY_LABEL_KEYS[achievement.rarity]]}
             </span>
             <span className="flex items-center gap-1 text-amber-600 font-medium">
               <Star className="w-3 h-3" />
