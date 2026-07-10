@@ -1,4 +1,6 @@
 export default {
+  unlimited_balance_label: "∞ אומבאַגרענעצט",
+
   pm_tab_plans: "חודשליכע פּלענער",
   pm_tab_promos: "איין-מאָליקע פּראָמאָוציעס",
   pm_plan_free: "פֿרײ",

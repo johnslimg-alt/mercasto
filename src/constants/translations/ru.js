@@ -1,4 +1,6 @@
 export default {
+  unlimited_balance_label: "∞ Безлимит",
+
   pm_tab_plans: "Ежемесячные тарифы",
   pm_tab_promos: "Разовые продвижения",
   pm_plan_free: "Бесплатно",

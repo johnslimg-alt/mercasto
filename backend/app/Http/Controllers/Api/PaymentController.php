@@ -716,14 +716,16 @@ class PaymentController extends Controller
         $result = DB::transaction(function () use ($user, $amount, $description, $productCode, $request) {
             $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            if ((float) $creditUser->balance < $amount) {
+            if (!$creditUser->unlimited_balance && (float) $creditUser->balance < $amount) {
                 return ['response' => response()->json([
                     'message' => "Saldo insuficiente. Necesitas {$amount} créditos y tienes " . (float) $creditUser->balance . '.',
                 ], 400)];
             }
 
-            $creditUser->balance = (float) $creditUser->balance - $amount;
-            $creditUser->save();
+            if (!$creditUser->unlimited_balance) {
+                $creditUser->balance = (float) $creditUser->balance - $amount;
+                $creditUser->save();
+            }
 
             $paymentId = DB::table('payments')->insertGetId([
                 'user_id' => $user->id,

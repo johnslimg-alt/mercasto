@@ -1,4 +1,6 @@
 export default {
+  unlimited_balance_label: "∞ Illimitato",
+
   pm_tab_plans: "Piani mensili",
   pm_tab_promos: "Promozioni una tantum",
   pm_plan_free: "Gratis",

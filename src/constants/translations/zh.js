@@ -1,4 +1,6 @@
 export default {
+  unlimited_balance_label: "∞ 无限",
+
   pm_tab_plans: "月度套餐",
   pm_tab_promos: "一次性推广",
   pm_plan_free: "免费",

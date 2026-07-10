@@ -2937,8 +2937,9 @@ function App() {
     // Cualquier tarifa (excepto recargas de créditos) puede pagarse con el saldo de la cuenta.
     const isCreditsTopUp = typeof productCode === 'string' && productCode.startsWith('credits_');
     const balance = parseFloat(user?.balance || 0);
-    if (!isCreditsTopUp && balance >= amount && amount > 0) {
-      const useBalance = window.confirm(`¿Pagar $${amount} con tu saldo? (Saldo actual: $${balance.toLocaleString('es-MX')})\n\nCancelar para pagar con tarjeta/OXXO en su lugar.`);
+    if (!isCreditsTopUp && (user?.unlimited_balance || balance >= amount) && amount > 0) {
+      const balanceLabel = user?.unlimited_balance ? '∞ (saldo ilimitado)' : `$${balance.toLocaleString('es-MX')}`;
+      const useBalance = window.confirm(`¿Pagar $${amount} con tu saldo? (Saldo actual: ${balanceLabel})\n\nCancelar para pagar con tarjeta/OXXO en su lugar.`);
       if (useBalance) {
         try {
           const token = localStorage.getItem('auth_token');
@@ -3047,9 +3048,10 @@ function App() {
   // --- ПРОДВИЖЕНИЕ ОБЪЯВЛЕНИЯ (Выбор: Кредиты или Карта) ---
   const handlePromoteAd = async (ad, type = 'highlight') => {
     const balance = parseFloat(user?.balance || 0);
-    if (balance >= 50) {
+    if (user?.unlimited_balance || balance >= 50) {
       const typeLabel = type === 'boost' ? 'Subir' : type === 'top' ? 'Destacar arriba' : 'Resaltar';
-      if (window.confirm(`¿Deseas usar 50 créditos de tu saldo para "${typeLabel}" este anuncio? (Saldo actual: ${balance} Créditos)`)) {
+      const balanceLabel = user?.unlimited_balance ? '∞ (ilimitado)' : `${balance} Créditos`;
+      if (window.confirm(`¿Deseas usar 50 créditos de tu saldo para "${typeLabel}" este anuncio? (Saldo actual: ${balanceLabel})`)) {
         try {
           const token = localStorage.getItem('auth_token');
           const res = await fetch(`${API_URL}/ads/${ad.id}/promote/credits`, {

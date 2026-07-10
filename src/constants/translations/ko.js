@@ -1,4 +1,6 @@
 export default {
+  unlimited_balance_label: "∞ 무제한",
+
   pm_tab_plans: "월간 요금제",
   pm_tab_promos: "1회성 프로모션",
   pm_plan_free: "무료",

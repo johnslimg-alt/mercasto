@@ -1,4 +1,6 @@
 export default {
+  unlimited_balance_label: "∞ ללא הגבלה",
+
   pm_tab_plans: "מסלולים חודשיים",
   pm_tab_promos: "קידומים חד-פעמיים",
   pm_plan_free: "חינם",

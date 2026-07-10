@@ -1,4 +1,6 @@
 export default {
+  unlimited_balance_label: "∞ غير محدود",
+
   pm_tab_plans: "الباقات الشهرية",
   pm_tab_promos: "عروض ترويجية لمرة واحدة",
   pm_plan_free: "مجاني",

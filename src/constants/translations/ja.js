@@ -1,4 +1,6 @@
 export default {
+  unlimited_balance_label: "∞ 無制限",
+
   pm_tab_plans: "月額プラン",
   pm_tab_promos: "単発プロモーション",
   pm_plan_free: "無料",

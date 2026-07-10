@@ -478,7 +478,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
           <div className="flex flex-col sm:flex-row gap-3 md:ml-auto items-center">
             <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 text-amber-800 dark:text-amber-200 px-4 py-3 rounded-xl flex items-center gap-2 font-bold text-sm shadow-sm relative group border border-amber-200 dark:border-amber-800/30">
               <Zap size={18} className="text-amber-500 fill-amber-500"/>
-              {parseFloat(user?.balance || 0).toFixed(0)} {t.credits_unit || 'Créditos'}
+              {user?.unlimited_balance ? (t.unlimited_balance_label || '∞ Ilimitado') : `${parseFloat(user?.balance || 0).toFixed(0)} ${t.credits_unit || 'Créditos'}`}
               <button 
                 onClick={() => handleClipPayment(100, `100 ${t.credits_unit || 'Créditos'} Mercasto`, null, 'credits_100')} 
                 className="ml-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white w-7 h-7 rounded-lg flex items-center justify-center hover:from-amber-600 hover:to-orange-600 transition-all shadow-md" 

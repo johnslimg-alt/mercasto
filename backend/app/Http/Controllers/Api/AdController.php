@@ -1020,7 +1020,9 @@ class AdController extends Controller
             $cost = 50; // Стоимость продвижения в créditos pagados
             $usedReferralCredit = false;
 
-            if ((int) $creditUser->referral_credits > 0) {
+            if ($creditUser->unlimited_balance) {
+                // VIP account — no deduction needed.
+            } elseif ((int) $creditUser->referral_credits > 0) {
                 $creditUser->referral_credits = (int) $creditUser->referral_credits - 1;
                 $usedReferralCredit = true;
             } elseif ((float) $creditUser->balance >= $cost) {
@@ -1109,15 +1111,17 @@ class AdController extends Controller
             $remainingAdsToCharge = $eligibleAds->count() - $creditsToUseFromReferral;
             $balanceCost = $remainingAdsToCharge * $costPerAd;
 
-            if ((float) $creditUser->balance < $balanceCost) {
+            if (!$creditUser->unlimited_balance && (float) $creditUser->balance < $balanceCost) {
                 return ['response' => response()->json([
                     'message' => "No tienes suficientes créditos. Necesitas {$balanceCost} créditos de saldo (más " . $creditsToUseFromReferral . " de referidos) para promocionar " . $eligibleAds->count() . ' anuncio(s).',
                 ], 400)];
             }
 
-            $creditUser->referral_credits = $referralCredits - $creditsToUseFromReferral;
-            $creditUser->balance = (float) $creditUser->balance - $balanceCost;
-            $creditUser->save();
+            if (!$creditUser->unlimited_balance) {
+                $creditUser->referral_credits = $referralCredits - $creditsToUseFromReferral;
+                $creditUser->balance = (float) $creditUser->balance - $balanceCost;
+                $creditUser->save();
+            }
 
             $now = now();
             $promotedIds = [];
