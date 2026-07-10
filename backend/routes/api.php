@@ -198,6 +198,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/business-profile', [BusinessProfileController::class, 'update']);
     Route::post('/user/business-profile/logo', [BusinessProfileController::class, 'uploadLogo']);
     Route::post('/user/business-profile/banner', [BusinessProfileController::class, 'uploadBanner']);
+    Route::middleware('throttle:5,1')->post('/user/business-profile/csf', [BusinessProfileController::class, 'uploadCsf']);
+    Route::get('/admin/business-verifications', [BusinessProfileController::class, 'adminPendingVerifications']);
+    Route::get('/admin/business-verifications/{userId}/csf', [BusinessProfileController::class, 'adminDownloadCsf'])->whereNumber('userId');
+    Route::post('/admin/business-verifications/{userId}/review', [BusinessProfileController::class, 'adminReviewVerification'])->whereNumber('userId');
     Route::put('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля (PUT)
     Route::put('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений (PUT)
     Route::post('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля

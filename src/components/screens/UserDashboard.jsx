@@ -4,6 +4,7 @@ import PushNotificationManager from '../ui/PushNotificationManager';
 import AchievementsModal from '../gamification/AchievementsModal';
 
 import MyAdsScreen from './MyAdsScreen';
+import CompanyRfcScreen from '../profile/CompanyRfcScreen';
 import SellerStatsScreen from './SellerStatsScreen';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import { mockAds, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiveDeals, recentlyViewed } from '../../constants/mockData';
@@ -768,8 +769,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               </div>
             ) : dashboardTab === 'company' ? (
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">{t.company_profile_section || 'Perfil de empresa'}</h2>
-                <p className="text-slate-500 dark:text-slate-400">{t.company_settings_soon || 'Configuración de empresa próximamente...'}</p>
+                <CompanyRfcScreen lang={lang} token={token} />
               </div>
             ) : dashboardTab === 'stats' ? (
               <div className="space-y-6">

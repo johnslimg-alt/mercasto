@@ -21,6 +21,7 @@
         "predis/predis": "^3.4",
         "resend/resend-laravel": "^1.4",
         "sentry/sentry-laravel": "^4.25",
+        "smalot/pdfparser": "^2.12",
         "twilio/sdk": "^8.11"
     },
     "require-dev": {

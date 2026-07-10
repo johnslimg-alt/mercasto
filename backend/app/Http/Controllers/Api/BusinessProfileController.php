@@ -59,6 +59,9 @@ class BusinessProfileController extends Controller
             $nextRfc = $data['business_rfc'] ? strtoupper(trim($data['business_rfc'])) : null;
             if ($nextRfc !== $user->business_rfc) {
                 $user->business_rfc_verified_at = null;
+                $user->business_rfc_status = 'pending';
+                $user->business_rfc_ai_notes = null;
+                $user->business_rfc_checked_at = null;
             }
             $data['business_rfc'] = $nextRfc;
         }
@@ -163,9 +166,141 @@ class BusinessProfileController extends Controller
         if ($includePrivate) {
             $payload['business_rfc'] = $user->business_rfc;
             $payload['business_rfc_verified_at'] = $user->business_rfc_verified_at?->toISOString();
+            $payload['business_csf_url'] = $user->business_csf_url;
+            $payload['business_rfc_status'] = $user->business_rfc_status ?: 'pending';
+            $payload['business_rfc_ai_notes'] = $user->business_rfc_ai_notes;
+            $payload['business_rfc_checked_at'] = $user->business_rfc_checked_at?->toISOString();
         }
 
         return $payload;
+    }
+
+    /**
+     * Sube la Constancia de Situación Fiscal (CSF) del SAT y la coteja con el RFC
+     * capturado usando IA. No existe una API pública del SAT para validar RFC+CSF
+     * en tiempo real, así que este chequeo es un pre-filtro: solo aprueba
+     * automáticamente cuando la IA está segura de una coincidencia exacta;
+     * cualquier duda queda pendiente de revisión manual por un administrador.
+     */
+    public function uploadCsf(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'csf' => ['required', 'file', 'mimes:pdf', 'max:5120'],
+        ]);
+
+        if (empty($user->business_rfc)) {
+            return response()->json(['message' => 'Captura tu RFC antes de subir la Constancia de Situación Fiscal.'], 400);
+        }
+
+        $geminiKey = config('services.gemini.api_key');
+        if (empty($geminiKey)) {
+            \Illuminate\Support\Facades\Log::error('Gemini API key not configured — CSF verification rejected');
+            return response()->json(['message' => 'La verificación automática no está disponible temporalmente. Inténtalo más tarde.'], 503);
+        }
+
+        if ($user->business_csf_url && ! str_starts_with($user->business_csf_url, 'http')) {
+            Storage::disk('local')->delete($user->business_csf_url);
+        }
+
+        $path = 'business-csf/' . $user->id . '/' . \Illuminate\Support\Str::uuid() . '.pdf';
+        Storage::disk('local')->put($path, file_get_contents($request->file('csf')->getRealPath()));
+
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $pdf = $parser->parseFile($request->file('csf')->getRealPath());
+            $text = trim($pdf->getText());
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('CSF PDF parse failed', ['error' => $e->getMessage()]);
+            $text = '';
+        }
+
+        if (mb_strlen($text) < 40) {
+            $user->business_csf_url = $path;
+            $user->business_rfc_status = 'ai_flagged';
+            $user->business_rfc_ai_notes = 'No se pudo leer el contenido del PDF (posible escaneo de imagen). Revisión manual requerida.';
+            $user->business_rfc_checked_at = now();
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'status' => 'ai_flagged',
+                'notes' => $user->business_rfc_ai_notes,
+            ]);
+        }
+
+        $aiResult = $this->crossCheckCsfWithAi($text, $user->business_rfc, $user->business_name ?: $user->name, $geminiKey);
+
+        $user->business_csf_url = $path;
+        $user->business_rfc_ai_notes = $aiResult['notes'];
+        $user->business_rfc_checked_at = now();
+
+        if ($aiResult['verdict'] === 'match') {
+            $user->business_rfc_status = 'ai_verified';
+            $user->business_rfc_verified_at = now();
+        } elseif ($aiResult['verdict'] === 'mismatch') {
+            $user->business_rfc_status = 'rejected';
+        } else {
+            $user->business_rfc_status = 'ai_flagged';
+        }
+
+        $user->save();
+        $this->clearProfileCaches($user->id);
+
+        return response()->json([
+            'success' => true,
+            'status' => $user->business_rfc_status,
+            'notes' => $user->business_rfc_ai_notes,
+            'sat_verify_url' => 'https://www.sat.gob.mx/aplicacion/operacion/17419/verifica-tu-rfc',
+        ]);
+    }
+
+    /**
+     * Pide a Gemini que compare el texto extraído de la CSF contra el RFC y
+     * nombre capturados. Devuelve ['verdict' => match|mismatch|uncertain, 'notes' => string].
+     */
+    private function crossCheckCsfWithAi(string $csfText, string $rfc, string $businessName, string $geminiKey): array
+    {
+        $prompt = "Eres un verificador de documentos fiscales mexicanos (SAT). "
+            . "Se te da el texto extraído de una Constancia de Situación Fiscal (CSF) y los datos que un usuario capturó en un formulario. "
+            . "Responde EXCLUSIVAMENTE con un JSON de la forma {\"verdict\": \"match\"|\"mismatch\"|\"uncertain\", \"notes\": \"...\"}. "
+            . "\"match\" solo si el RFC del documento coincide EXACTAMENTE con el capturado y el documento aparenta ser una CSF real y vigente. "
+            . "\"mismatch\" si el RFC no coincide o el nombre/razón social es claramente distinto. "
+            . "\"uncertain\" si el texto es ambiguo, incompleto, o no puedes confirmar con seguridad.\n\n"
+            . "RFC capturado: {$rfc}\n"
+            . "Nombre/razón social capturado: {$businessName}\n\n"
+            . "Texto extraído de la CSF:\n" . mb_substr($csfText, 0, 6000);
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(20)->post(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$geminiKey}",
+                [
+                    'contents' => [['parts' => [['text' => $prompt]]]],
+                    'generationConfig' => ['temperature' => 0, 'responseMimeType' => 'application/json'],
+                ]
+            );
+
+            if (! $response->successful()) {
+                \Illuminate\Support\Facades\Log::error('Gemini CSF check failed', ['status' => $response->status()]);
+                return ['verdict' => 'uncertain', 'notes' => 'No se pudo completar la verificación automática. Pendiente de revisión manual.'];
+            }
+
+            $raw = $response->json('candidates.0.content.parts.0.text', '');
+            $decoded = json_decode(trim($raw), true);
+
+            if (! is_array($decoded) || ! in_array($decoded['verdict'] ?? null, ['match', 'mismatch', 'uncertain'], true)) {
+                return ['verdict' => 'uncertain', 'notes' => 'Respuesta de IA no interpretable. Pendiente de revisión manual.'];
+            }
+
+            return [
+                'verdict' => $decoded['verdict'],
+                'notes' => (string) ($decoded['notes'] ?? ''),
+            ];
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gemini CSF check exception', ['error' => $e->getMessage()]);
+            return ['verdict' => 'uncertain', 'notes' => 'Error al contactar el servicio de verificación. Pendiente de revisión manual.'];
+        }
     }
 
     public function directory(Request $request)
@@ -222,6 +357,64 @@ class BusinessProfileController extends Controller
         });
 
         return response()->json($stores);
+    }
+
+    /**
+     * Lista de registros de empresa que quedaron marcados por la IA como
+     * "ai_flagged" o "rejected" y requieren revisión manual de un administrador.
+     */
+    public function adminPendingVerifications(Request $request)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Acceso denegado'], 403);
+        }
+
+        $users = User::whereIn('business_rfc_status', ['ai_flagged', 'rejected'])
+            ->whereNotNull('business_csf_url')
+            ->orderByDesc('business_rfc_checked_at')
+            ->get(['id', 'name', 'email', 'business_name', 'business_rfc', 'business_rfc_status', 'business_rfc_ai_notes', 'business_rfc_checked_at', 'business_csf_url']);
+
+        return response()->json($users);
+    }
+
+    public function adminDownloadCsf(Request $request, int $userId)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Acceso denegado'], 403);
+        }
+
+        $user = User::findOrFail($userId);
+        if (! $user->business_csf_url || ! Storage::disk('local')->exists($user->business_csf_url)) {
+            return response()->json(['message' => 'Documento no encontrado'], 404);
+        }
+
+        return Storage::disk('local')->download($user->business_csf_url, "CSF-{$user->business_rfc}.pdf");
+    }
+
+    public function adminReviewVerification(Request $request, int $userId)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Acceso denegado'], 403);
+        }
+
+        $data = $request->validate([
+            'decision' => ['required', 'string', 'in:approve,reject'],
+        ]);
+
+        $user = User::findOrFail($userId);
+
+        if ($data['decision'] === 'approve') {
+            $user->business_rfc_status = 'admin_verified';
+            $user->business_rfc_verified_at = now();
+        } else {
+            $user->business_rfc_status = 'rejected';
+            $user->business_rfc_verified_at = null;
+        }
+
+        $user->save();
+        $this->clearProfileCaches($user->id);
+
+        return response()->json(['success' => true, 'status' => $user->business_rfc_status]);
     }
 
     private function clearProfileCaches(int $userId): void
