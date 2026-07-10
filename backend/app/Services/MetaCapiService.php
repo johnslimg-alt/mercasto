@@ -14,11 +14,12 @@ class MetaCapiService
         ?object $user = null,
         array $customData = [],
         ?string $eventId = null,
-        ?string $eventSourceUrl = null
+        ?string $eventSourceUrl = null,
+        array $userDataOverrides = []
     ): array {
         $pixelId = config('services.facebook.pixel_id', env('FACEBOOK_PIXEL_ID'));
         $token = config('services.facebook.access_token', env('FACEBOOK_ACCESS_TOKEN'));
-        $version = config('services.facebook.graph_version', env('FACEBOOK_GRAPH_VERSION', 'v20.0'));
+        $version = config('services.facebook.graph_version', env('FACEBOOK_GRAPH_VERSION', 'v25.0'));
 
         if (!$pixelId || !$token) {
             Log::warning('Meta CAPI skipped: missing pixel id or access token', [
@@ -44,7 +45,7 @@ class MetaCapiService
                 'event_id' => $eventId,
                 'action_source' => 'website',
                 'event_source_url' => $eventSourceUrl ?: $request->headers->get('referer') ?: url('/'),
-                'user_data' => $this->userData($request, $user),
+                'user_data' => $this->userData($request, $user, $userDataOverrides),
                 'custom_data' => $customData,
             ]],
         ];
@@ -88,18 +89,18 @@ class MetaCapiService
         }
     }
 
-    private function userData(Request $request, ?object $user = null): array
+    private function userData(Request $request, ?object $user = null, array $overrides = []): array
     {
         $data = [
-            'client_ip_address' => $request->ip(),
-            'client_user_agent' => $request->userAgent(),
+            'client_ip_address' => $overrides['client_ip_address'] ?? $request->ip(),
+            'client_user_agent' => $overrides['client_user_agent'] ?? $request->userAgent(),
         ];
 
-        if ($fbp = $request->cookie('_fbp')) {
+        if ($fbp = ($overrides['fbp'] ?? $request->cookie('_fbp'))) {
             $data['fbp'] = $fbp;
         }
 
-        if ($fbc = $request->cookie('_fbc')) {
+        if ($fbc = ($overrides['fbc'] ?? $request->cookie('_fbc'))) {
             $data['fbc'] = $fbc;
         }
 
