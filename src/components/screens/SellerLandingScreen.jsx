@@ -22,6 +22,9 @@ const TRANSLATIONS = {
     seo_title: 'Publica Anuncios Gratis en México | Mercasto',
     badge: 'Clasificados 100% Gratis en México',
     hero_title: 'Vende más rápido y sin pagar comisiones',
+    hero_title_before: "Vende más rápido y ",
+    hero_title_highlight: "sin pagar comisiones",
+    hero_title_after: "",
     hero_desc: 'Publica tus autos, casas, servicios o productos gratis. Los compradores te contactan directamente por WhatsApp o Telegram sin intermediarios.',
     cta_btn: 'Publicar Anuncio Gratis',
     mockup_caption: 'Vista previa del panel de control de vendedor: administra tus anuncios y visualiza estadísticas en tiempo real.',
@@ -69,6 +72,9 @@ const TRANSLATIONS = {
     seo_title: 'Publish Free Classified Ads in Mexico | Mercasto',
     badge: '100% Free Classifieds in Mexico',
     hero_title: 'Sell faster and without paying commissions',
+    hero_title_before: "Sell faster and ",
+    hero_title_highlight: "without paying commissions",
+    hero_title_after: "",
     hero_desc: 'Publish your cars, houses, services, or products for free. Buyers contact you directly via WhatsApp or Telegram without intermediaries.',
     cta_btn: 'Publish Free Ad',
     mockup_caption: 'Seller control panel preview: manage your ads and view real-time statistics.',
@@ -116,6 +122,9 @@ const TRANSLATIONS = {
     seo_title: 'Publique anúncios classificados gratuitos no México | Mercasto',
     badge: 'Classificados 100% Gratuitos no México',
     hero_title: 'Venda mais rápido e sem pagar comissões',
+    hero_title_before: "Venda mais rápido e ",
+    hero_title_highlight: "sem pagar comissões",
+    hero_title_after: "",
     hero_desc: 'Publique seus carros, casas, serviços ou produtos gratuitamente. Os compradores entram em contato diretamente via WhatsApp ou Telegram, sem intermediários.',
     cta_btn: 'Publicar Anúncio Grátis',
     mockup_caption: 'Prévia do painel de controle do vendedor: gerencie seus anúncios e visualize estatísticas em tempo real.',
@@ -163,6 +172,9 @@ const TRANSLATIONS = {
     seo_title: 'Publiez des petites annonces gratuites au Mexique | Mercasto',
     badge: 'Petites annonces 100% gratuites au Mexique',
     hero_title: 'Vendez plus vite et sans payer de commissions',
+    hero_title_before: "Vendez plus vite et ",
+    hero_title_highlight: "sans payer de commissions",
+    hero_title_after: "",
     hero_desc: 'Publiez gratuitement vos voitures, maisons, services ou produits. Les acheteurs vous contactent directement par WhatsApp ou Telegram sans intermédiaire.',
     cta_btn: 'Publier une annonce gratuite',
     mockup_caption: 'Aperçu du panneau de contrôle du vendeur : gérez vos annonces et visualisez les statistiques en temps réel.',
@@ -210,6 +222,9 @@ const TRANSLATIONS = {
     seo_title: 'Kostenlose Kleinanzeigen in Mexiko veröffentlichen | Mercasto',
     badge: '100% kostenlose Kleinanzeigen in Mexiko',
     hero_title: 'Schneller verkaufen und ohne Provisionen zu zahlen',
+    hero_title_before: "Schneller verkaufen und ",
+    hero_title_highlight: "ohne Provisionen zu zahlen",
+    hero_title_after: "",
     hero_desc: 'Veröffentlichen Sie Ihre Autos, Häuser, Dienstleistungen oder Produkte kostenlos. Käufer kontaktieren Sie direkt über WhatsApp oder Telegram ohne Zwischenhändler.',
     cta_btn: 'Kostenlose Anzeige aufgeben',
     mockup_caption: 'Vorschau des Verkäufer-Dashboards: Verwalten Sie Ihre Anzeigen und sehen Sie Statistiken in Echtzeit.',
@@ -257,6 +272,9 @@ const TRANSLATIONS = {
     seo_title: 'Pubblica annunci gratuiti in Messico | Mercasto',
     badge: 'Annunci classificati gratuiti al 100% in Messico',
     hero_title: 'Vendi più velocemente e senza pagare commissioni',
+    hero_title_before: "Vendi più velocemente e ",
+    hero_title_highlight: "senza pagare commissioni",
+    hero_title_after: "",
     hero_desc: 'Pubblica gratis auto, case, servizi o prodotti. Gli acquirenti ti contattano direttamente tramite WhatsApp o Telegram senza intermediari.',
     cta_btn: 'Pubblica annuncio gratuito',
     mockup_caption: 'Anteprima del pannello di controllo del venditore: gestisci i tuoi annunci e visualizza le statistiche in tempo reale.',
@@ -304,6 +322,9 @@ const TRANSLATIONS = {
     seo_title: 'Подать бесплатные объявления в Мексике | Mercasto',
     badge: '100% бесплатные объявления в Мексике',
     hero_title: 'Продавайте быстрее и без комиссии',
+    hero_title_before: "Продавайте быстрее и ",
+    hero_title_highlight: "без комиссии",
+    hero_title_after: "",
     hero_desc: 'Публикуйте объявления об авто, недвижимости, услугах или товарах бесплатно. Покупатели свяжутся с вами напрямую через WhatsApp или Telegram без посредников.',
     cta_btn: 'Подать объявление бесплатно',
     mockup_caption: 'Предварительный просмотр панели продавца: управляйте своими объявлениями и просматривайте статистику в реальном времени.',
@@ -351,6 +372,9 @@ const TRANSLATIONS = {
     seo_title: '在墨西哥发布免费分类广告 | Mercasto',
     badge: '墨西哥 100% 免费分类广告',
     hero_title: '销售更快且无需支付佣金',
+    hero_title_before: "销售更快且",
+    hero_title_highlight: "无需支付佣金",
+    hero_title_after: "",
     hero_desc: '免费发布您的汽车、房屋、服务或产品。买家直接通过 WhatsApp 或 Telegram 与您联系，无需中介。',
     cta_btn: '免费发布广告',
     mockup_caption: '卖家控制面板预览：管理您的广告并实时查看统计数据。',
@@ -398,6 +422,9 @@ const TRANSLATIONS = {
     seo_title: 'メキシコで無料広告を掲載 | Mercasto',
     badge: 'メキシコで100%無料のクラシファイド広告',
     hero_title: '手数料なしでより速く売却',
+    hero_title_before: "",
+    hero_title_highlight: "手数料なしで",
+    hero_title_after: "より速く売却",
     hero_desc: '車、不動産、サービス、製品を無料で掲載。仲介者なしで、購入者からWhatsAppやTelegramを通じて直接連絡が届きます。',
     cta_btn: '無料で広告を掲載する',
     mockup_caption: '出品者管理画面プレビュー：掲載中の広告管理や統計データのリアルタイム確認が可能です。',
@@ -445,6 +472,9 @@ const TRANSLATIONS = {
     seo_title: '멕시코 무료 분류 광고 등록 | Mercasto',
     badge: '멕시코 100% 무료 분류 광고',
     hero_title: '수수료 없이 더 빠르게 판매하세요',
+    hero_title_before: "",
+    hero_title_highlight: "수수료 없이",
+    hero_title_after: " 더 빠르게 판매하세요",
     hero_desc: '자동차, 부동산, 서비스 또는 상품을 무료로 등록하세요. 중개인 없이 구매자가 WhatsApp이나 Telegram으로 직접 연락합니다.',
     cta_btn: '무료 광고 등록하기',
     mockup_caption: '판매자 대시보드 미리보기: 등록한 광고를 관리하고 실시간 방문 통계를 확인하세요.',
@@ -492,6 +522,9 @@ const TRANSLATIONS = {
     seo_title: 'انشر إعلانات مبوبة مجانية في المكسيك | Mercasto',
     badge: 'إعلانات مبوبة مجانية 100% في المكسيك',
     hero_title: 'بع أسرع وبدون دفع أي عمولات',
+    hero_title_before: "بع أسرع و",
+    hero_title_highlight: "بدون دفع أي عمولات",
+    hero_title_after: "",
     hero_desc: 'انشر إعلانات سياراتك، عقاراتك، خدماتك أو منتجاتك مجاناً. يتواصل معك المشترون مباشرة عبر واتساب أو تليجرام بدون وسطاء.',
     cta_btn: 'انشر إعلانك مجاناً',
     mockup_caption: 'معاينة لوحة تحكم البائع: إدارة إعلاناتك واستعراض إحصائيات المشاهدة في الوقت الفعلي.',
@@ -539,6 +572,9 @@ const TRANSLATIONS = {
     seo_title: 'פרסם מודעות לוח בחינם במקסיקו | Mercasto',
     badge: 'לוח מודעות 100% חינם במקסיקו',
     hero_title: 'למכור מהר יותר וללא תשלום עמלות',
+    hero_title_before: "למכור מהר יותר ו",
+    hero_title_highlight: "ללא תשלום עמלות",
+    hero_title_after: "",
     hero_desc: 'פרסם את הרכבים, הבתים, השירותים או המוצרים שלך בחינם. הקונים יוצרים איתך קשר ישירות בוואטסאפ או בטלגרם ללא מתווכים.',
     cta_btn: 'פרסם מודעה בחינם',
     mockup_caption: 'תצוגה מקדימה של לוח הבקרה של המוכר: נהל את המודעות שלך וצפה בסטטיסטיקות בזמן אמת.',
@@ -586,6 +622,9 @@ const TRANSLATIONS = {
     seo_title: 'פרסם פרייע קלאסיפייד מודעות אין מעקסיקא | Mercasto',
     badge: '100% פרייע קלאסיפיידס אין מעקסיקא',
     hero_title: 'פאַרקויפֿן פאַסטער און אָן צאָלן קאָמיסיעס',
+    hero_title_before: "פאַרקויפֿן פאַסטער און ",
+    hero_title_highlight: "אָן צאָלן קאָמיסיעס",
+    hero_title_after: "",
     hero_desc: 'פרסם דיין קאַרס, הייזער, באַדינונגען אָדער פּראָדוקטן פֿאַר פֿרייַ. קויפערס קאָנטאַקט איר גלייך דורך WhatsApp אָדער Telegram אָן אינמיטלערס.',
     cta_btn: 'פרסם פרייע מודעה',
     mockup_caption: 'פֿאַרקויפער קאָנטראָל טאַפליע פאָרויסזאָגן: פירן דיין מודעות און זען פאַקטיש-צייט סטאַטיסטיק.',
@@ -703,13 +742,9 @@ export default function SellerLandingScreen({ lang = 'es' }) {
         </div>
 
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 leading-[1.1] max-w-4xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-200 dark:to-slate-300 bg-clip-text text-transparent">
-          {t.hero_title.split('sin pagar comisiones')[0]}
-          <span className="text-[#84CC16] drop-shadow-sm">
-            {t.hero_title.includes('sin pagar comisiones') || t.hero_title.includes('without paying commissions') || t.hero_title.includes('sem pagar comissões') || t.hero_title.includes('sans payer de commissions') || t.hero_title.includes('ohne Provisionen zu zahlen') || t.hero_title.includes('senza pagare commissioni') || t.hero_title.includes('без комиссии') || t.hero_title.includes('无需支付佣金') || t.hero_title.includes('手数料なし') || t.hero_title.includes('수수료 없이') || t.hero_title.includes('بدون دفع أي عمولات') || t.hero_title.includes('ללא תשלום עמלות') || t.hero_title.includes('אָן צאָלן קאָמיסיעס') 
-              ? (lang === 'en' ? 'without paying commissions' : lang === 'pt' ? 'sem pagar comissões' : lang === 'fr' ? 'sans payer de commissions' : lang === 'de' ? 'ohne Provisionen zu zahlen' : lang === 'it' ? 'senza pagare commissioni' : lang === 'ru' ? 'без комиссии' : lang === 'zh' ? '无需支付佣金' : lang === 'ja' ? '手数料なしで' : lang === 'ko' ? '수수료 없이' : lang === 'ar' ? 'بدون دفع أي عمولات' : lang === 'he' ? 'ללא תשלום עמלות' : lang === 'yi' ? 'אָן צאָלן קאָמיסיעס' : 'sin pagar comisiones') 
-              : ''}
-          </span>
-          {t.hero_title.split('sin pagar comisiones')[1] || t.hero_title.split('without paying commissions')[1] || t.hero_title.split('sem pagar comissões')[1] || t.hero_title.split('sans payer de commissions')[1] || t.hero_title.split('ohne Provisionen zu zahlen')[1] || t.hero_title.split('senza pagare commissioni')[1] || t.hero_title.split('без комиссии')[1] || t.hero_title.split('无需支付佣金')[1] || t.hero_title.split('手数料なし')[1] || t.hero_title.split('수수료 없이')[1] || t.hero_title.split('بدون دفع أي عمولات')[1] || t.hero_title.split('ללא תשלום עמלות')[1] || t.hero_title.split('אָן צאָלן קאָמיסיעס')[1] || ''}
+          {t.hero_title_before}
+          <span className="text-[#84CC16] drop-shadow-sm">{t.hero_title_highlight}</span>
+          {t.hero_title_after}
         </h1>
 
         <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mb-8 leading-relaxed font-medium">
