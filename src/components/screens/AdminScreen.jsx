@@ -3,6 +3,7 @@ import { mockAds, spotlightRealEstate, jobsBoard, servicesMarketplace, automotiv
 import React from 'react';
 import { Shield, Pencil, PlusCircle, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, Users, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, CreditCard, Megaphone, MousePointerClick } from "lucide-react";
 import { IconMap } from '../../constants/iconMap';
+import { localizedText } from '../../utils/localize';
 export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons, adminLoading, adminPendingAds, adminReportTab, adminReports, adminTab, adminUserReports, adminUserSearch, adminUsers, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments }) {
     if (userRole !== 'admin') return <div className="p-10 text-center font-bold text-red-500">{t.access_denied || 'Access denied'}</div>;
     React.useEffect(() => {
@@ -114,7 +115,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                              <div className="w-20 h-20 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200"><Camera className="text-slate-400"/></div>
                           )}
                           <div className="flex-1">
-                             <h4 className="font-semibold text-slate-900 text-[15px] line-clamp-1">{ad.title}</h4>
+                             <h4 className="font-semibold text-slate-900 text-[15px] line-clamp-1">{localizedText(ad.title, lang)}</h4>
                              <p className="text-[14px] font-bold text-[#65A30D] mt-1">${Number(ad.price).toLocaleString()}</p>
                              <p className="text-[12px] text-slate-500 mt-1">Por: {ad.user?.name} ({ad.user?.email})</p>
                           </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { localizedText } from '../../utils/localize';
 
 const RecommendationsWidget = memo(({ 
   userId, 
@@ -172,7 +173,7 @@ const RecommendationsWidget = memo(({
               {ad.images && ad.images.length > 0 ? (
                 <img
                   src={ad.images[0]}
-                  alt={ad.title}
+                  alt={localizedText(ad.title)}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   loading="lazy"
                 />
@@ -206,7 +207,7 @@ const RecommendationsWidget = memo(({
             {/* Content */}
             <div className="p-4">
               <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors">
-                {ad.title}
+                {localizedText(ad.title)}
               </h3>
               
               <div className="flex items-center justify-between">

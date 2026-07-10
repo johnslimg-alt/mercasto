@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Eye, Heart, CreditCard, BarChart3, ArrowUp, ArrowDown, Minus, Loader2, MousePointerClick, Megaphone } from 'lucide-react';
 import { useUI } from '../../contexts/UIContext';
 import { getTranslations } from '../../utils/translations';
+import { localizedText } from '../../utils/localize';
 
 const API = (window.VITE_API_URL || import.meta.env?.VITE_API_URL || 'https://mercasto.com/api');
 
@@ -187,7 +188,7 @@ export default function SellerStatsScreen({ token }) {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {data.top_ads.map(ad => (
                   <tr key={ad.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
-                    <td className="px-5 py-3 text-slate-800 dark:text-slate-100 font-medium max-w-[180px] truncate">{ad.title}</td>
+                    <td className="px-5 py-3 text-slate-800 dark:text-slate-100 font-medium max-w-[180px] truncate">{localizedText(ad.title)}</td>
                     <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300 font-semibold">{fmt(ad.impressions)}</td>
                     <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{fmt(ad.clicks)}</td>
                     <td className="px-4 py-3 text-right text-lime-600 dark:text-lime-300 font-bold">{ad.ctr || 0}%</td>

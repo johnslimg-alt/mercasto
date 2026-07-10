@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MapPin, Globe, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { localizedText } from '../../utils/localize';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -225,7 +226,7 @@ export default function SellerProfileScreen({ currentUser }) {
                         {imageSrc ? (
                           <img
                             src={imageSrc}
-                            alt={ad.title}
+                            alt={localizedText(ad.title)}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"
                           />
@@ -236,7 +237,7 @@ export default function SellerProfileScreen({ currentUser }) {
                         )}
                       </div>
                       <div className="p-2.5">
-                        <p className="text-xs font-semibold text-slate-900 line-clamp-1">{ad.title}</p>
+                        <p className="text-xs font-semibold text-slate-900 line-clamp-1">{localizedText(ad.title)}</p>
                         <p className="text-xs text-lime-600 font-bold mt-0.5">
                           {ad.price ? `$${Number(ad.price).toLocaleString('es-MX')}` : 'Precio a tratar'}
                         </p>

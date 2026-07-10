@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
+import { localizedText } from '../../utils/localize';
 
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
 
@@ -83,7 +84,7 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
               <div className="relative h-44 bg-slate-100 overflow-hidden">
                 <img
                   src={getImg(ad.images || ad.image_url || ad.image)}
-                  alt={ad.title}
+                  alt={localizedText(ad.title)}
                   loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   onError={e => { if (!e.currentTarget.src.endsWith('placeholder-ad.svg')) e.currentTarget.src = '/placeholder-ad.svg'; }}
@@ -95,7 +96,7 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
                 )}
               </div>
               <div className="p-3">
-                <h3 className="font-semibold text-[13px] text-slate-800 line-clamp-2 leading-snug mb-1">{ad.title}</h3>
+                <h3 className="font-semibold text-[13px] text-slate-800 line-clamp-2 leading-snug mb-1">{localizedText(ad.title)}</h3>
                 {ad.location && (
                   <p className="text-[11px] text-slate-400 flex items-center gap-1">
                     <MapPin size={10} />{ad.location}

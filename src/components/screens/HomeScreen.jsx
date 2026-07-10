@@ -1019,12 +1019,12 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                         : '/placeholder-ad.svg';
                       const locationStr = ad.state || ad.location?.split(',')[0] || 'México';
                       return (
-                        <div key={ad.id} onClick={() => { runSearch(ad.title); }} className="shrink-0 w-[160px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md dark:hover:shadow-black/50 transition-shadow cursor-pointer group">
+                        <div key={ad.id} onClick={() => { runSearch(localizedText(ad.title)); }} className="shrink-0 w-[160px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md dark:hover:shadow-black/50 transition-shadow cursor-pointer group">
                           <div className="w-full h-[100px] bg-slate-100 dark:bg-slate-850 overflow-hidden">
-                            <img src={imgSrc} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { if (!e.currentTarget.src.endsWith('/placeholder-ad.svg')) e.currentTarget.src='/placeholder-ad.svg'; }} alt={ad.title}/>
+                            <img src={imgSrc} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { if (!e.currentTarget.src.endsWith('/placeholder-ad.svg')) e.currentTarget.src='/placeholder-ad.svg'; }} alt={localizedText(ad.title)}/>
                           </div>
                           <div className="p-2">
-                            <div className="text-[13px] font-bold text-[#0F172A] dark:text-white leading-tight line-clamp-1">{ad.title}</div>
+                            <div className="text-[13px] font-bold text-[#0F172A] dark:text-white leading-tight line-clamp-1">{localizedText(ad.title)}</div>
                             <div className="text-[13px] font-semibold text-[#65A30D] dark:text-[#BEF264] mt-0.5">${Number(ad.price || 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">MXN</span></div>
                             <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{locationStr}</div>
                           </div>

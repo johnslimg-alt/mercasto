@@ -2920,8 +2920,9 @@ function App() {
 
   // --- ПОДЕЛИТЬСЯ ОБЪЯВЛЕНИЕМ ---
   const handleShareAd = (ad) => {
+    const adTitle = localizedText(ad.title, lang);
     if (navigator.share) {
-      navigator.share({ title: ad.title, text: `Mira este anuncio en Mercasto: ${ad.title}`, url: window.location.href }).catch(console.error);
+      navigator.share({ title: adTitle, text: `Mira este anuncio en Mercasto: ${adTitle}`, url: window.location.href }).catch(console.error);
     } else {
       navigator.clipboard.writeText(window.location.href);
       showToast('¡Enlace copiado al portapapeles!');
@@ -3436,7 +3437,7 @@ function App() {
                     >
                       <option value="">Selecciona un anuncio activo...</option>
                       {promotableAds.map(ad => (
-                        <option key={ad.id} value={ad.id}>{ad.title}</option>
+                        <option key={ad.id} value={ad.id}>{localizedText(ad.title, lang)}</option>
                       ))}
                     </select>
                   </div>

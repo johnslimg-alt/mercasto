@@ -381,7 +381,7 @@ export default function AdDetailScreen({
   // Escribir por Telegram
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
   const whatsappNumber = getSafeWhatsAppNumber(ad);
-  const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${ad.title}" en Mercasto`);
+  const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${localizedText(ad.title)}" en Mercasto`);
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/#ad-${ad.id}` : '';
   const shareText = `${t.check_this_ad || 'Mira este anuncio en Mercasto'}: ${ad.title || ''}`;
@@ -835,7 +835,7 @@ export default function AdDetailScreen({
               <X size={22} />
             </button>
             <h2 className="text-[15px] font-bold text-slate-900 dark:text-white text-center leading-snug">
-              {ad.title}
+              {localizedText(ad.title)}
             </h2>
             {qrDataUrl && (
               <img

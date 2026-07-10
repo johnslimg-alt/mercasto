@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { localizedText } from '../../utils/localize';
 import PushNotificationManager from '../ui/PushNotificationManager';
 import AchievementsModal from '../gamification/AchievementsModal';
 
@@ -704,7 +705,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                 {ad.images?.[0] ? (
                                   <img 
                                     src={getImageUrl(ad.images[0])} 
-                                    alt={ad.title}
+                                    alt={localizedText(ad.title)}
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
@@ -718,7 +719,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                   <h3 className="font-semibold text-slate-900 dark:text-white truncate">
-                                    {ad.title}
+                                    {localizedText(ad.title)}
                                   </h3>
                                   <span className={`text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0 ${
                                     ad.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
@@ -930,7 +931,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                               )}
                             </div>
                             <div>
-                              <h4 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">{item.title}</h4>
+                              <h4 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">{localizedText(item.title)}</h4>
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Contactado vía <span className="font-semibold text-lime-600 dark:text-lime-400 capitalize">{item.channel}</span> · {new Date(item.contactedAt).toLocaleDateString()}
                               </p>
@@ -1103,7 +1104,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
                               {/* Info + Rating */}
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1 mb-0.5">{item.title}</h4>
+                                <h4 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1 mb-0.5">{localizedText(item.title)}</h4>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                                   {t.contacted_on || 'Contactado el'} {new Date(item.contactedAt).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : lang === 'ru' ? 'ru-RU' : 'en-US')}
                                 </p>

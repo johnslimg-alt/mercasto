@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart3, CheckSquare, ExternalLink, Loader2, Pencil, PlusCircle, Square, Trash2, TrendingUp, X, Zap } from 'lucide-react';
+import { localizedText } from '../../utils/localize';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -162,7 +163,7 @@ export default function MyAdsScreen({
                 <img src={getImageUrl(ad.image_url, ad.image)} loading="lazy" className="w-24 h-24 sm:w-20 sm:h-20 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0" alt="" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold text-slate-900 dark:text-white text-[15px] line-clamp-1">{ad.title}</h4>
+                    <h4 className="font-semibold text-slate-900 dark:text-white text-[15px] line-clamp-1">{localizedText(ad.title)}</h4>
                     {ad.status !== 'active' && (
                       <span className="badge bg-slate-200 text-slate-600">
                         {ad.status === 'paused' ? (t.paused_status || 'Pausado') : 
