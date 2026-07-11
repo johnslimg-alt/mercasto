@@ -20,8 +20,9 @@ COPY . .
 RUN npm run build
 
 # Fail the image build if the production bundle silently loses Meta Pixel again.
-RUN grep -R --fixed-strings "4595315270748335" /app/dist/assets >/dev/null \
-    && grep -R --fixed-strings "connect.facebook.net/en_US/fbevents.js" /app/dist/assets >/dev/null
+# Use BusyBox-compatible short grep flags because the build image is Alpine.
+RUN grep -R -F "4595315270748335" /app/dist/assets >/dev/null \
+    && grep -R -F "connect.facebook.net/en_US/fbevents.js" /app/dist/assets >/dev/null
 
 # --- Этап раздачи (Serve Stage) ---
 FROM nginx:stable-alpine
