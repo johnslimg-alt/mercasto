@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   deploy:
     runs-on: self-hosted # ← главное изменение
@@ -107,6 +111,7 @@ jobs:
           curl -fsS --max-time 10 https://mercasto.com/api/auth/providers >/dev/null
 
       - name: Verify deployed Meta Pixel
+        id: verify_meta_pixel
         env:
           DEPLOY_SHA: ${{ github.sha }}
         run: |
@@ -124,6 +129,33 @@ jobs:
           printf '%s' "$STATUS_JSON" | grep -F '"pixel_id":"4595315270748335"' >/dev/null
           printf '%s' "$STATUS_JSON" | grep -F '"bundle_verified":true' >/dev/null
           printf '%s' "$STATUS_JSON" | grep -F "\"commit\":\"${DEPLOY_SHA}\"" >/dev/null
+
+      - name: Publish Meta Pixel deploy status
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERIFY_OUTCOME: ${{ steps.verify_meta_pixel.outcome }}
+        run: |
+          set -euo pipefail
+
+          if [ "$VERIFY_OUTCOME" = "success" ]; then
+            STATE="success"
+            DESCRIPTION="Meta Pixel verified in running production frontend"
+          else
+            STATE="failure"
+            DESCRIPTION="Meta Pixel production verification failed"
+          fi
+
+          PAYLOAD="$(printf '{"state":"%s","context":"production/meta-pixel","description":"%s","target_url":"https://github.com/%s/actions/runs/%s"}' \
+            "$STATE" "$DESCRIPTION" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+
+          curl -fsS --retry 3 --retry-all-errors \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$PAYLOAD"
 
       - name: Production smoke
         run: |
