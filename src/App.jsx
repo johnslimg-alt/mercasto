@@ -395,6 +395,7 @@ const VerificarEmailScreen = React.lazy(() => import('./components/screens/Verif
 const AcercaDeScreen = React.lazy(() => import('./components/screens/AcercaDeScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const StoresScreen = React.lazy(() => import('./components/screens/StoresScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el directorio de tiendas.</div> })));
 const NotificationsScreen = React.lazy(() => import('./components/screens/NotificationsScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar las notificaciones.</div> })));
+const MessagesScreen = React.lazy(() => import('./components/screens/MessagesScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar los mensajes.</div> })));
 const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ReferralScreen = React.lazy(() => import('./components/screens/ReferralScreen').catch(() => ({ default: () => <div className='flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500'>No pudimos cargar esta página.</div> })));
@@ -638,6 +639,7 @@ function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showTabBarMenu, setShowTabBarMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [sliderAutoplay, setSliderAutoplay] = useState(() => localStorage.getItem('sliderAutoplay') !== 'false');
   const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, push_notifications: true, marketing: false });
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -1454,6 +1456,7 @@ function App() {
     if (!user?.id) return;
     let cancelled = false;
     let channel = null;
+    let chatChannel = null;
     // Lazy-load Echo + Pusher only for authenticated users — keeps 73 KB off the critical path
     getEcho().then((echo) => {
       if (cancelled || !echo) return;
@@ -1466,15 +1469,24 @@ function App() {
           // The actual notification data is inside e.notification
           setNotifications(prev => [e.notification, ...prev]);
       });
+      // Mensajes internos entrantes (MessagesScreen escucha el mismo canal para el hilo abierto)
+      chatChannel = echo.private(`chat.${user.id}`);
+      chatChannel.listen('.message.sent', () => {
+          setUnreadMessagesCount(prev => prev + 1);
+      });
     });
     return () => {
       cancelled = true;
       if (channel) {
         channel.stopListening('.NewNotification');
       }
-      // leave the private channel; echo may not be resolved yet — safe to ignore
+      if (chatChannel) {
+        chatChannel.stopListening('.message.sent');
+      }
+      // leave the private channels; echo may not be resolved yet — safe to ignore
       if (_echoInstance) {
         _echoInstance.leave(`private-App.Models.User.${user.id}`);
+        _echoInstance.leave(`private-chat.${user.id}`);
       }
     };
 // Защита от DDoS WebSockets (Connection Thrashing): привязываем зависимость ТОЛЬКО к ID,
@@ -1608,6 +1620,32 @@ function App() {
 
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60000);
+
+    return () => { clearInterval(interval); };
+  }, [user]);
+
+  // No hay endpoint dedicado de conteo — /conversations ya trae unread_count por hilo, se suma aquí.
+  useEffect(() => {
+    if (!user) {
+      setUnreadMessagesCount(0);
+      return undefined;
+    }
+
+    const fetchUnreadMessages = () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      fetch(`${API_URL}/conversations`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (Array.isArray(data)) {
+            setUnreadMessagesCount(data.reduce((sum, c) => sum + (c.unread_count || 0), 0));
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchUnreadMessages();
+    const interval = setInterval(fetchUnreadMessages, 60000);
 
     return () => { clearInterval(interval); };
   }, [user]);
@@ -3768,6 +3806,14 @@ function App() {
           <div className="space-y-1.5">
             {user && (
               <>
+                <button onClick={() => { navigate('/mensajes'); setShowTabBarMenu(false); }} className="profile-menu-item relative flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                  <MessageCircle size={16} className="text-[#84CC16]" /> Mensajes
+                  {unreadMessagesCount > 0 && (
+                    <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                      {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                    </span>
+                  )}
+                </button>
                 <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                   <User size={16} className="text-[#84CC16]" /> Mi cuenta
                 </button>
@@ -4024,6 +4070,14 @@ function App() {
                   </div>
                 )}
               </div>
+            <button type="button" onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label="Mensajes" title="Mensajes">
+                <MessageCircle className="w-[22px] h-[22px]" />
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white leading-none">
+                    {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                  </span>
+                )}
+              </button>
             <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title="Directorio de Tiendas">
                 <Store className="w-[22px] h-[22px]" />
                 <span className="text-[13px] font-bold hidden md:block">{navLabels[5]}</span>
@@ -4148,6 +4202,8 @@ function App() {
               <Route path="/publicar-gratis" element={<Navigate to="/vendedores" replace />} />
               <Route path="/post" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderPostScreen()}</RequireAuth>} />
               <Route path="/notificaciones" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotificationsScreen user={user} /></React.Suspense></RequireAuth>} />
+              <Route path="/mensajes" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><MessagesScreen user={user} /></React.Suspense></RequireAuth>} />
+              <Route path="/mensajes/:userId" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><MessagesScreen user={user} /></React.Suspense></RequireAuth>} />
               <Route path="/profile" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderUserDashboard()}</RequireAuth>} />
               <Route path="/admin" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} admin>{renderAdminScreen()}</RequireAuth>} />
               <Route path="/terms" element={<StaticPages currentTab="terms" />} />
