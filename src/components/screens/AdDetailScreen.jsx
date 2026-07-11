@@ -722,15 +722,16 @@ export default function AdDetailScreen({
                   </div>
                 )}
 
-                {/* Mobile Bottom Sheet via BottomSheet component */}
+                {/* Mobile Bottom Sheet via BottomSheet component — only mounted on mobile widths,
+                    otherwise it rendered an empty sheet (header only) alongside the desktop dropdown. */}
                 <BottomSheet
-                  isOpen={showShareMenu}
+                  isOpen={showShareMenu && typeof window !== 'undefined' && window.innerWidth < 768}
                   onClose={() => setShowShareMenu(false)}
                   title="Compartir anuncio"
                   maxHeight="75vh"
                   zIndex={1001}
                 >
-                  <div className="p-6 md:hidden">
+                  <div className="p-6">
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       {shareOptions.map(option => {
                         const colors = {

@@ -3771,7 +3771,7 @@ function App() {
                 <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                   <User size={16} className="text-[#84CC16]" /> Mi cuenta
                 </button>
-                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowTabBarMenu(false); navigate('/profile'); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                   <Heart size={16} className="text-[#84CC16]" /> Favoritos
                 </button>
                 <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
@@ -3906,7 +3906,7 @@ function App() {
                   {showProfileMenu && user && (
                     <div className="header-popover profile-menu-popover absolute top-full right-0 mt-2 w-48 rounded-2xl shadow-xl border p-2 z-50">
                       <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
-                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
+                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); navigate('/profile'); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
                       <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
                       <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
                     </div>
@@ -4028,7 +4028,7 @@ function App() {
                 <Store className="w-[22px] h-[22px]" />
                 <span className="text-[13px] font-bold hidden md:block">{navLabels[5]}</span>
             </button>
-            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label={t.favorites || 'Favoritos'}>
+            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label={t.favorites || 'Favoritos'}>
                 <Heart className="w-[22px] h-[22px]" />
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
