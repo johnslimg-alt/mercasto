@@ -1,17 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, MessageCircle, Mail, Phone, Shield, AlertTriangle, Copy, Check } from 'lucide-react';
+import { X, MessageCircle, Shield, AlertTriangle } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
 export default function ContactButton({ ad, user, className = '' }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [showEmailForm, setShowEmailForm] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
-  const [formSent, setFormSent] = useState(false);
-  const [formError, setFormError] = useState(null);
   const modalRef = useRef(null);
 
   // Извлечение контактов
@@ -34,27 +28,14 @@ export default function ContactButton({ ad, user, className = '' }) {
     return digits.length === 10 ? `52${digits}` : digits;
   };
 
-  // El email del vendedor nunca llega al cliente; el contacto por correo
-  // se hace vía backend (/ads/{id}/contact-seller).
-
-  const getSafePhone = (ad) => {
-    const raw = ad?.user?.phone || ad?.phone || '';
-    if (!raw) return null;
-    const cleaned = String(raw).replace(/\D/g, '');
-    return cleaned.length >= 8 ? cleaned : null;
-  };
-
   const telegramUsername = getSafeTelegramUsername(ad);
   const whatsappNumber = getSafeWhatsAppNumber(ad);
-  const phone = getSafePhone(ad);
-  
+
   const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${localizedText(ad?.title)}" en Mercasto`);
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
-  const phoneUrl = phone ? `tel:+${phone}` : null;
 
-  // Email-канал siempre disponible vía backend relay
-  const hasContacts = true;
+  const hasContacts = Boolean(whatsappUrl || telegramUrl);
 
   // Логирование клика
   const logContact = async (channel) => {
@@ -73,31 +54,6 @@ export default function ContactButton({ ad, user, className = '' }) {
     }
   };
 
-  // Отправка сообщения продавцу через backend (email продавца не раскрывается клиенту)
-  const handleEmailSubmit = async (e) => {
-    e.preventDefault();
-    if (sending) return;
-    setSending(true);
-    setFormError(null);
-    try {
-      const res = await fetch(`${API_URL}/ads/${ad.id}/contact-seller`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.message || 'No se pudo enviar el mensaje.');
-      }
-      logContact('email');
-      setFormSent(true);
-    } catch (err) {
-      setFormError(err.message || 'No se pudo enviar el mensaje.');
-    } finally {
-      setSending(false);
-    }
-  };
-
   const handleWhatsAppClick = () => {
     logContact('whatsapp');
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -106,17 +62,6 @@ export default function ContactButton({ ad, user, className = '' }) {
   const handleTelegramClick = () => {
     logContact('telegram');
     window.open(telegramUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const handlePhoneClick = () => {
-    logContact('phone');
-    window.location.href = phoneUrl;
-  };
-
-  const handleCopyPhone = () => {
-    navigator.clipboard.writeText(`+${phone}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   // Закрытие при клике вне модалки
@@ -273,107 +218,6 @@ export default function ContactButton({ ad, user, className = '' }) {
                 </button>
               )}
 
-              {phoneUrl && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handlePhoneClick}
-                    className="flex-1 flex items-center gap-4 p-4 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 border border-purple-200 dark:border-purple-800/50 rounded-xl transition-all group"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                      <Phone className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="font-semibold text-gray-900 dark:text-white">Llamar</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">+{phone}</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={handleCopyPhone}
-                    className="px-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
-                    title="Copiar número"
-                  >
-                    {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} className="text-gray-500" />}
-                  </button>
-                </div>
-              )}
-
-              {!showEmailForm ? (
-                <button
-                  onClick={() => setShowEmailForm(true)}
-                  className="w-full flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl transition-all group"
-                >
-                  <div className="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <Mail className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="font-semibold text-gray-900 dark:text-white">Mensaje</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Enviar mensaje al vendedor</div>
-                  </div>
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ) : formSent ? (
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl flex items-center gap-3">
-                  <Check size={20} className="text-green-600 flex-shrink-0" />
-                  <p className="text-sm text-green-800 dark:text-green-300">
-                    Mensaje enviado. El vendedor te responderá a tu correo.
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleEmailSubmit} className="p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl space-y-3">
-                  <input
-                    type="text"
-                    required
-                    maxLength={100}
-                    placeholder="Tu nombre"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
-                  />
-                  <input
-                    type="email"
-                    required
-                    maxLength={190}
-                    placeholder="Tu correo electrónico"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
-                  />
-                  <textarea
-                    required
-                    minLength={10}
-                    maxLength={2000}
-                    rows={3}
-                    placeholder={`Hola, me interesa "${ad?.title || 'tu anuncio'}"...`}
-                    value={form.message}
-                    onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white resize-none"
-                  />
-                  {formError && (
-                    <p className="text-xs text-red-600 dark:text-red-400">{formError}</p>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={sending}
-                      className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      {sending ? 'Enviando…' : 'Enviar mensaje'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowEmailForm(false)}
-                      className="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm text-gray-600 dark:text-gray-300 rounded-lg transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-gray-400">
-                    Tu mensaje se envía por Mercasto. El correo del vendedor no se comparte.
-                  </p>
-                </form>
-              )}
                 </div>
               )}
             </div>
