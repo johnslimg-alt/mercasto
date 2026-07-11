@@ -4,10 +4,35 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import es from './locales/es.json';
 
+const normalizePathname = (pathname = '') => {
+  const trimmed = String(pathname).replace(/^\/+|\/+$/g, '');
+  return trimmed ? `/${trimmed}` : '/';
+};
+
+const SPANISH_CAMPAIGN_PATHS = new Set(['/vendedores', '/publicar-gratis']);
+const forceSpanishCampaignLanding =
+  typeof window !== 'undefined' &&
+  SPANISH_CAMPAIGN_PATHS.has(normalizePathname(window.location.pathname));
+
+// Paid traffic to the seller landing must always start in Spanish, regardless
+// of a previously saved language or the browser/device language.
+if (forceSpanishCampaignLanding) {
+  try {
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+  } catch {}
+
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = 'es';
+    document.documentElement.dir = 'ltr';
+  }
+}
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
+    ...(forceSpanishCampaignLanding ? { lng: 'es' } : {}),
     resources: {
       es: { translation: es }
     },
