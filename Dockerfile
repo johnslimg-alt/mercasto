@@ -4,6 +4,13 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
+# Public analytics identifiers must exist while Vite builds the frontend bundle.
+# They can still be overridden with Docker build args when needed.
+ARG VITE_ANALYTICS_ENABLED=true
+ARG VITE_META_PIXEL_ID=4595315270748335
+ENV VITE_ANALYTICS_ENABLED=${VITE_ANALYTICS_ENABLED}
+ENV VITE_META_PIXEL_ID=${VITE_META_PIXEL_ID}
+
 # Копируем package.json/package-lock.json и устанавливаем зависимости воспроизводимо.
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
@@ -11,6 +18,10 @@ RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 # Копируем остальные файлы и собираем production-версию
 COPY . .
 RUN npm run build
+
+# Fail the image build if the production bundle silently loses Meta Pixel again.
+RUN grep -R --fixed-strings "4595315270748335" /app/dist/assets >/dev/null \
+    && grep -R --fixed-strings "connect.facebook.net/en_US/fbevents.js" /app/dist/assets >/dev/null
 
 # --- Этап раздачи (Serve Stage) ---
 FROM nginx:stable-alpine
