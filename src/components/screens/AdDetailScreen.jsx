@@ -665,12 +665,12 @@ export default function AdDetailScreen({
                 </button>
               </div>
             ) : (
-              <ContactButton ad={ad} user={currentUser} className="w-full mb-3" />
+              <ContactButton ad={ad} user={currentUser} t={t} className="w-full mb-3" />
             )}
 
             <div className="flex gap-3 mt-4">
               <button onClick={(e) => handleToggleFavorite(e, ad.id)} className={`btn-md flex-1 flex items-center justify-center gap-2 border transition-colors ${isFav ? 'bg-red-50 border-red-100 text-red-600' : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}>
-                <Heart size={18} className={isFav ? "fill-red-500" : ""} /> {isFav ? 'Guardado' : 'Favorito'}
+                <Heart size={18} className={isFav ? "fill-red-500" : ""} /> {isFav ? (t.ad_saved || 'Guardado') : (t.ad_favorite || 'Favorito')}
               </button>
               <div className="relative flex-1">
                 <button
@@ -678,7 +678,7 @@ export default function AdDetailScreen({
                   className="btn-md w-full bg-white dark:bg-slate-700 border border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50 flex items-center justify-center gap-2"
                   aria-expanded={showShareMenu}
                 >
-                  <Share2 size={18} /> Compartir
+                  <Share2 size={18} /> {t.share || 'Compartir'}
                 </button>
 
                 {/* Desktop Dropdown */}
@@ -690,7 +690,7 @@ export default function AdDetailScreen({
                         onClick={() => { handleShareAd(ad); handleWhatsAppClick(ad, 'share'); setShowShareMenu(false); }}
                         className="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
-                        Compartir desde el dispositivo
+                        {t.share_from_device || 'Compartir desde el dispositivo'}
                       </button>
                     )}
                     {shareOptions.map(option => (
@@ -710,14 +710,14 @@ export default function AdDetailScreen({
                       onClick={handleShowQR}
                       className="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
-                      Código QR
+                      {t.qr_code || 'Código QR'}
                     </button>
                     <button
                       type="button"
                       onClick={copyShareLink}
                       className="block w-full border-t border-slate-100 px-4 py-3 text-left text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
-                      Copiar enlace
+                      {t.copy_link || 'Copiar enlace'}
                     </button>
                   </div>
                 )}
@@ -727,7 +727,7 @@ export default function AdDetailScreen({
                 <BottomSheet
                   isOpen={showShareMenu && typeof window !== 'undefined' && window.innerWidth < 768}
                   onClose={() => setShowShareMenu(false)}
-                  title="Compartir anuncio"
+                  title={t.share_ad_title || 'Compartir anuncio'}
                   maxHeight="75vh"
                   zIndex={1001}
                 >
@@ -763,14 +763,14 @@ export default function AdDetailScreen({
                       onClick={handleShowQR}
                       className="w-full py-3 text-center text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors mb-3"
                     >
-                      Código QR
+                      {t.qr_code || 'Código QR'}
                     </button>
                     <button
                       type="button"
                       onClick={copyShareLink}
                       className="w-full py-3 text-center text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
                     >
-                      Copiar enlace
+                      {t.copy_link || 'Copiar enlace'}
                     </button>
                   </div>
                 </BottomSheet>
@@ -787,7 +787,7 @@ export default function AdDetailScreen({
                 }`}
               >
                 <span className="text-base">{alertEnabled ? '🔔' : '🔕'}</span>
-                {alertEnabled ? 'Alerta de precio activa' : 'Activar alerta de precio'}
+                {alertEnabled ? (t.price_alert_active || 'Alerta de precio activa') : (t.price_alert_activate || 'Activar alerta de precio')}
               </button>
             )}
           </div>
@@ -831,7 +831,7 @@ export default function AdDetailScreen({
             <button
               onClick={() => setShowQR(false)}
               className="self-end -mt-4 -mr-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-              aria-label="Cerrar"
+              aria-label={t.close || 'Cerrar'}
             >
               <X size={22} />
             </button>
@@ -841,7 +841,7 @@ export default function AdDetailScreen({
             {qrDataUrl && (
               <img
                 src={qrDataUrl}
-                alt="Código QR del anuncio"
+                alt={t.qr_code_alt || 'Código QR del anuncio'}
                 width={240}
                 height={240}
                 className="rounded-xl border border-slate-200 dark:border-slate-700"
@@ -852,7 +852,7 @@ export default function AdDetailScreen({
               download={`mercasto-qr-${ad.id}.png`}
               className="w-full py-3 text-center text-sm font-semibold rounded-2xl bg-[#65A30D] hover:bg-[#4d7a09] text-white transition-colors"
             >
-              Descargar PNG
+              {t.download_png || 'Descargar PNG'}
             </a>
           </div>
         </div>

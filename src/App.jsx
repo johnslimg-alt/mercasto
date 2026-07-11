@@ -3656,11 +3656,11 @@ function App() {
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95">
           <button onClick={() => setShowCouponModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
           <div className="flex justify-center mb-4"><Ticket className="text-[#84CC16] w-12 h-12" /></div>
-          <h2 className="text-[20px] font-bold tracking-tight mb-2 text-center text-slate-900 dark:text-white">Canjear Cupón</h2>
-          <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] mb-6">Introduce tu código promocional para recibir créditos gratis.</p>
+          <h2 className="text-[20px] font-bold tracking-tight mb-2 text-center text-slate-900 dark:text-white">{t.redeem_coupon_title || 'Canjear Cupón'}</h2>
+          <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] mb-6">{t.redeem_coupon_desc || 'Introduce tu código promocional para recibir créditos gratis.'}</p>
           <form onSubmit={handleRedeemCoupon} className="space-y-4">
-            <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} required placeholder="CÓDIGO" className="w-full px-3.5 py-3 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 uppercase text-center font-bold tracking-widest bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
-            <button type="submit" className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D]">Canjear</button>
+            <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} required placeholder={t.coupon_code_placeholder || 'CÓDIGO'} className="w-full px-3.5 py-3 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 uppercase text-center font-bold tracking-widest bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
+            <button type="submit" className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D]">{t.redeem || 'Canjear'}</button>
           </form>
         </div>
       </div>
@@ -3674,7 +3674,7 @@ function App() {
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
           <button onClick={() => setShowProfileModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">Editar Perfil</h2>
+          <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">{t.edit_profile_title || 'Editar Perfil'}</h2>
 
           <form onSubmit={handleProfileSubmit} className="space-y-5">
             <div className="flex flex-col items-center mb-6">
@@ -3692,16 +3692,16 @@ function App() {
                   }}/>
                 </label>
               </div>
-              <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">Cambiar Foto</span>
+              <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">{t.change_photo || 'Cambiar Foto'}</span>
             </div>
 
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">Nombre</label>
+              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.name_label || 'Nombre'}</label>
               <input value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
             </div>
 
             <button type="submit" disabled={profileLoading} className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] flex justify-center mt-2">
-              {profileLoading ? <Loader2 className="animate-spin" size={20}/> : 'Guardar Cambios'}
+              {profileLoading ? <Loader2 className="animate-spin" size={20}/> : (t.save_changes || 'Guardar Cambios')}
             </button>
           </form>
         </div>
@@ -3715,22 +3715,22 @@ function App() {
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (
     <div className="mobile-tabbar md:hidden fixed bottom-0 w-full border-t pb-safe pt-2 px-6 flex justify-between items-center z-40 h-[84px] shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-      <button aria-label="Inicio" onClick={() => { setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className={`flex flex-col items-center p-1 ${currentTab === 'home' && !viewedAd ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button aria-label={t.home || 'Inicio'} onClick={() => { setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className={`flex flex-col items-center p-1 ${currentTab === 'home' && !viewedAd ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
-      <button aria-label="Buscar" onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
+      <button aria-label={t.search || 'Buscar'} onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
-      <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-6 hover:scale-105 transition-transform" aria-label="Publicar anuncio">
+      <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-6 hover:scale-105 transition-transform" aria-label={t.post_ad || 'Publicar anuncio'}>
         <div className="mobile-tabbar-post flex h-14 w-14 items-center justify-center rounded-full border-[4px] border-white bg-[#84CC16] text-[#0F172A] shadow-lg dark:border-slate-900 shadow-[#84CC16]/30">
           <Plus className="w-7 h-7 stroke-[3]" />
         </div>
       </button>
-      <button aria-label="Notificaciones" onClick={() => { user ? (setCurrentTab('profile'), setDashboardTab('notifications')) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'profile' && dashboardTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button aria-label={t.notifications || 'Notificaciones'} onClick={() => { user ? (setCurrentTab('profile'), setDashboardTab('notifications'), navigate('/profile')) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'profile' && dashboardTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Bell className="w-6 h-6 mb-1" />
         {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
       </button>
-      <button onClick={() => setShowTabBarMenu(v => !v)} className={`flex flex-col items-center p-1 ${showTabBarMenu ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showTabBarMenu} aria-label="Menú global">
+      <button onClick={() => setShowTabBarMenu(v => !v)} className={`flex flex-col items-center p-1 ${showTabBarMenu ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showTabBarMenu} aria-label={t.global_menu || 'Menú global'}>
         <Menu className="w-6 h-6 mb-1" />
       </button>
       {showTabBarMenu && (

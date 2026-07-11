@@ -727,7 +727,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                 <a
                                   href={`/#ad-${ad.id}`}
                                   onClick={() => setCurrentTab('home')}
-                                  title="Ver anuncio"
+                                  title={t.view_ad || 'Ver anuncio'}
                                   className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 flex items-center justify-center"
                                 >
                                   <Eye className="w-4 h-4" />
@@ -912,17 +912,17 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                     {t.privacy_settings || 'Privacidad y Seguridad'}
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Administra tus datos y preferencias de privacidad en la plataforma.
+                    {t.privacy_settings_desc || 'Administra tus datos y preferencias de privacidad en la plataforma.'}
                   </p>
                 </div>
-                
+
                 <div className="divide-y divide-slate-100 dark:divide-slate-700 space-y-4">
                   {/* Switch 1: Profile Visibility */}
                   <div className="flex items-center justify-between pt-4">
                     <div className="pr-4">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">Perfil público visible</h4>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">{t.profile_visible_title || 'Perfil público visible'}</h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Permite que otros usuarios vean tus anuncios activos y valoraciones en tu perfil público de vendedor.
+                        {t.profile_visible_desc || 'Permite que otros usuarios vean tus anuncios activos y valoraciones en tu perfil público de vendedor.'}
                       </p>
                     </div>
                     <button 
@@ -940,9 +940,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   {/* Switch 2: GDPR / Anonymous Analytics opt-in */}
                   <div className="flex items-center justify-between pt-4">
                     <div className="pr-4">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">Análisis y estadísticas anónimas (GDPR)</h4>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">{t.gdpr_analytics_title || 'Análisis y estadísticas anónimas (GDPR)'}</h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Tu dirección IP se cifra (hash SHA-256) antes de procesar cualquier métrica para proteger tu privacidad. Desactiva para excluirte del seguimiento analítico.
+                        {t.gdpr_analytics_desc || 'Tu dirección IP se cifra (hash SHA-256) antes de procesar cualquier métrica para proteger tu privacidad. Desactiva para excluirte del seguimiento analítico.'}
                       </p>
                     </div>
                     <button 
@@ -960,17 +960,17 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   {/* Clear Local Cache */}
                   <div className="flex items-center justify-between pt-4">
                     <div>
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">Limpiar datos locales</h4>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">{t.clear_local_data_title || 'Limpiar datos locales'}</h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Elimina los anuncios vistos recientemente y el historial de contactos guardado en este dispositivo.
+                        {t.clear_local_data_desc || 'Elimina los anuncios vistos recientemente y el historial de contactos guardado en este dispositivo.'}
                       </p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => {
                         if (window.confirm(t.clear_history_confirm || 'Delete search and contacted-listing history from this device?')) {
                           localStorage.removeItem('mercasto_contact_history');
                           localStorage.removeItem('mercasto_recently_viewed');
-                          showDashToast('Historial y datos locales eliminados', 'success');
+                          showDashToast(t.local_data_cleared || 'Historial y datos locales eliminados', 'success');
                         }
                       }}
                       className="btn-sm bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 whitespace-nowrap text-xs font-semibold"

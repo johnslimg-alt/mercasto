@@ -4,7 +4,7 @@ import { localizedText } from '../../utils/localize';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
-export default function ContactButton({ ad, user, className = '' }) {
+export default function ContactButton({ ad, user, t = {}, className = '' }) {
   const [isOpen, setIsOpen] = useState(false);
   const modalRef = useRef(null);
 
@@ -97,7 +97,7 @@ export default function ContactButton({ ad, user, className = '' }) {
         className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all ${className}`}
       >
         <MessageCircle size={20} />
-        <span>Contactar</span>
+        <span>{t.ct_contact_btn || 'Contactar'}</span>
       </button>
 
       {isOpen && (
@@ -111,7 +111,7 @@ export default function ContactButton({ ad, user, className = '' }) {
               <button
                 onClick={() => setIsOpen(false)}
                 className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label="Cerrar"
+                aria-label={t.close || 'Cerrar'}
               >
                 <X size={20} className="text-gray-500" />
               </button>
@@ -127,12 +127,12 @@ export default function ContactButton({ ad, user, className = '' }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">
-                      {ad?.user?.name || 'Vendedor'}
+                      {ad?.user?.name || t.ct_seller_fallback || 'Vendedor'}
                     </h3>
                     {isVerified && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full">
                         <Shield size={12} />
-                        Verificado
+                        {t.verified || 'Verificado'}
                       </span>
                     )}
                   </div>
@@ -148,7 +148,7 @@ export default function ContactButton({ ad, user, className = '' }) {
               <div className="flex items-start gap-2">
                 <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                  <strong>Seguridad:</strong> No pagues anticipos sin verificar el producto o vendedor. Reúnete en lugares públicos.
+                  <strong>{t.ct_safety_title || 'Seguridad:'}</strong> {t.ct_safety_text || 'No pagues anticipos sin verificar el producto o vendedor. Reúnete en lugares públicos.'}
                 </p>
               </div>
             </div>
@@ -161,10 +161,10 @@ export default function ContactButton({ ad, user, className = '' }) {
                     <Shield className="w-6 h-6" />
                   </div>
                   <h4 className="font-bold text-[16px] text-gray-900 dark:text-white leading-tight">
-                    Acceso Restringido
+                    {t.ct_restricted_title || 'Acceso Restringido'}
                   </h4>
                   <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-normal">
-                    Зарегистрируйтесь для того, чтобы увидеть контакты продавца.
+                    {t.ct_restricted_text || 'Regístrate para ver los contactos del vendedor.'}
                   </p>
                   <button
                     onClick={() => {
@@ -173,7 +173,7 @@ export default function ContactButton({ ad, user, className = '' }) {
                     }}
                     className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
                   >
-                    Iniciar sesión / Registrarse
+                    {t.login_register || 'Iniciar sesión / Registrarse'}
                   </button>
                 </div>
               ) : (
@@ -190,7 +190,7 @@ export default function ContactButton({ ad, user, className = '' }) {
                   </div>
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-gray-900 dark:text-white">WhatsApp</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Responder rápida</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{t.ct_whatsapp_sub || 'Responder rápida'}</div>
                   </div>
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -225,7 +225,7 @@ export default function ContactButton({ ad, user, className = '' }) {
             {/* Footer */}
             <div className="px-6 pb-6 pt-2">
               <p className="text-xs text-center text-gray-400 dark:text-gray-500">
-                Mercasto no participa en la transacción. Verifica siempre al vendedor.
+                {t.ct_footer_note || 'Mercasto no participa en la transacción. Verifica siempre al vendedor.'}
               </p>
             </div>
           </div>
