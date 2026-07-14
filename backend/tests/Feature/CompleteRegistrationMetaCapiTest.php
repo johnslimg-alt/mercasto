@@ -34,10 +34,7 @@ class CompleteRegistrationMetaCapiTest extends TestCase
             ->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])
             ->withHeader('User-Agent', 'MercastoMetaTest/1.0')
             ->withHeader('Referer', 'https://mercasto.com/registro')
-            ->withUnencryptedCookies([
-                '_fbp' => $fbp,
-                '_fbc' => $fbc,
-            ])
+            ->withHeader('Cookie', "_fbp={$fbp}; _fbc={$fbc}")
             ->postJson('/api/register', [
                 'name' => 'Meta Registration Test',
                 'email' => $email,
