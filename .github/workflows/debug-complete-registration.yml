@@ -46,7 +46,7 @@ jobs:
 
       - name: Capture CompleteRegistration PHPUnit
         working-directory: backend
-        run: php artisan test --filter=CompleteRegistrationMetaCapiTest > ../phpunit-meta.log 2>&1 || true
+        run: ./vendor/bin/phpunit --filter CompleteRegistrationMetaCapiTest > ../phpunit-meta.log 2>&1 || true
 
       - name: Upload diagnostic logs
         uses: actions/upload-artifact@v4
