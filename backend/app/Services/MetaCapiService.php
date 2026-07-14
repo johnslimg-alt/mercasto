@@ -96,11 +96,11 @@ class MetaCapiService
             'client_user_agent' => $overrides['client_user_agent'] ?? $request->userAgent(),
         ];
 
-        if ($fbp = ($overrides['fbp'] ?? $request->cookie('_fbp'))) {
+        if ($fbp = $this->metaCookie($request, $overrides, 'fbp', '_fbp')) {
             $data['fbp'] = $fbp;
         }
 
-        if ($fbc = ($overrides['fbc'] ?? $request->cookie('_fbc'))) {
+        if ($fbc = $this->metaCookie($request, $overrides, 'fbc', '_fbc')) {
             $data['fbc'] = $fbc;
         }
 
@@ -123,6 +123,46 @@ class MetaCapiService
         }
 
         return array_filter($data, fn ($value) => !empty($value));
+    }
+
+    private function metaCookie(Request $request, array $overrides, string $overrideKey, string $cookieName): ?string
+    {
+        if (array_key_exists($overrideKey, $overrides)) {
+            return $this->cleanCookieValue($overrides[$overrideKey]);
+        }
+
+        $value = $this->cleanCookieValue($request->cookie($cookieName));
+        if ($value !== null) {
+            return $value;
+        }
+
+        // Meta cookies are created by JavaScript, not Laravel. Reading the raw Cookie
+        // header is a safe fallback when middleware does not hydrate third-party cookies.
+        $cookieHeader = (string) $request->headers->get('cookie', '');
+        foreach (explode(';', $cookieHeader) as $pair) {
+            [$name, $rawValue] = array_pad(explode('=', trim($pair), 2), 2, null);
+            if ($rawValue === null || rawurldecode(trim((string) $name)) !== $cookieName) {
+                continue;
+            }
+
+            return $this->cleanCookieValue(rawurldecode($rawValue));
+        }
+
+        return null;
+    }
+
+    private function cleanCookieValue(mixed $value): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $clean = trim((string) $value, " \t\n\r\0\x0B\"");
+        if ($clean === '') {
+            return null;
+        }
+
+        return substr($clean, 0, 512);
     }
 
     private function hashEmail(string $email): string

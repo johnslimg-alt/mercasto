@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Lang;
 use App\Models\Ad;
+use App\Models\User;
 use App\Observers\AdObserver;
+use App\Observers\UserMetaRegistrationObserver;
 use App\Support\MailLocale;
 use App\Support\MailTranslations;
 
@@ -71,7 +73,8 @@ class AppServiceProvider extends ServiceProvider
             return $user && $user->role === "admin";
         });
 
-        // Register Ad Observer for IndexNow integration
+        // Register model observers.
         Ad::observe(AdObserver::class);
+        User::observe(UserMetaRegistrationObserver::class);
     }
 }
