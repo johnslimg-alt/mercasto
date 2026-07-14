@@ -1,0 +1,65 @@
+name: Fix translation duplicates
+
+on:
+  pull_request:
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.head_ref == 'fix/complete-registration-capi-dedup'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Remove only the first duplicate translation definitions
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+
+          const dir = path.join(process.cwd(), 'src/constants/translations');
+          const files = fs.readdirSync(dir).filter((name) => name.endsWith('.js')).sort();
+          const keys = ['change_photo', 'save_changes'];
+
+          for (const name of files) {
+            const file = path.join(dir, name);
+            const lines = fs.readFileSync(file, 'utf8').split('\n');
+            const removals = new Set();
+
+            for (const key of keys) {
+              const matcher = new RegExp(`^\\s*(?:"${key}"|'${key}'|${key})\\s*:`);
+              const matches = [];
+              lines.forEach((line, index) => {
+                if (matcher.test(line)) matches.push(index);
+              });
+
+              if (matches.length !== 2) {
+                throw new Error(`${name}: expected exactly two ${key} definitions, found ${matches.length}`);
+              }
+
+              removals.add(matches[0]);
+            }
+
+            const next = lines.filter((_, index) => !removals.has(index)).join('\n');
+            fs.writeFileSync(file, next);
+          }
+          NODE
+
+      - name: Commit translation lint fix
+        run: |
+          if git diff --quiet; then
+            echo "No duplicate translation keys remain."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/constants/translations
+          git commit -m "fix: remove duplicate translation keys"
+          git push origin HEAD:${{ github.head_ref }}
