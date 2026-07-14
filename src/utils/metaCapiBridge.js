@@ -11,7 +11,9 @@ const EVENT_MAP = {
   phone_click: { endpoint: 'contact', metaName: 'Contact', method: 'phone' },
   email_click: { endpoint: 'contact', metaName: 'Contact', method: 'email' },
   message_started: { endpoint: 'contact', metaName: 'Contact', method: 'message' },
-  sign_up: { endpoint: 'register', metaName: 'CompleteRegistration' },
+  // CompleteRegistration CAPI is sent inside Laravel's user-created flow.
+  // The bridge only sends the browser Pixel copy with the same event_id.
+  sign_up: { metaName: 'CompleteRegistration', server: false },
 };
 
 function isBrowser() {
@@ -55,7 +57,7 @@ function buildPayload(dataLayerItem = {}) {
     category: clean(dataLayerItem.category || dataLayerItem.content_category || ''),
     city: clean(dataLayerItem.city || dataLayerItem.location_city || ''),
     url: clean(dataLayerItem.page_location || window.location.href),
-    user_id: clean(dataLayerItem.user_id || ''),
+    event_id: clean(dataLayerItem.event_id || dataLayerItem.meta_event_id || ''),
   };
 }
 
@@ -117,17 +119,21 @@ function sendMappedEvent(metaConfig, item = {}) {
   const isPostAd = metaConfig.metaName === 'PostAd';
   
   if (!isReg && !isPostAd && !payload.listing_id) return;
+  if (isReg && !payload.event_id) return;
 
-  const id = eventId(metaConfig.endpoint, payload.listing_id || 'user');
+  const id = payload.event_id || eventId(metaConfig.endpoint || metaConfig.metaName.toLowerCase(), payload.listing_id || 'user');
   const method = clean(item.method || item.contact_method || metaConfig.method || '');
   const serverPayload = {
-    event_id: id,
     ...payload,
+    event_id: id,
     ...(method ? { method } : {}),
   };
 
   sendBrowserEvent(metaConfig, serverPayload, id);
-  void sendServerEvent(metaConfig.endpoint, serverPayload);
+
+  if (metaConfig.server !== false && metaConfig.endpoint) {
+    void sendServerEvent(metaConfig.endpoint, serverPayload);
+  }
 }
 
 function handleDataLayerItem(item = {}) {
