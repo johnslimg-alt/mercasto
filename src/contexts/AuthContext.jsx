@@ -4,6 +4,13 @@ import { events } from '../utils/analytics';
 
 const AuthContext = createContext(null);
 
+function createMetaRegistrationEventId() {
+  const randomPart = globalThis.crypto?.randomUUID?.()
+    || `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+  return `register_user_${randomPart}`.slice(0, 120);
+}
+
 export function AuthProvider({ children }) {
   // === ПОЛЬЗОВАТЕЛЬ ===
   const [user, setUser] = useState(null);
@@ -80,7 +87,14 @@ export function AuthProvider({ children }) {
 
   // === РЕГИСТРАЦИЯ ===
   const register = useCallback((name, email, password, password_confirmation, referral_code = null) => {
-    const payload = { name, email, password, password_confirmation };
+    const metaEventId = createMetaRegistrationEventId();
+    const payload = {
+      name,
+      email,
+      password,
+      password_confirmation,
+      meta_event_id: metaEventId,
+    };
     if (referral_code) payload.referral_code = referral_code;
     
     return fetch('/api/register', {
@@ -96,7 +110,7 @@ export function AuthProvider({ children }) {
         setUser(data.user);
         setShowAuthModal(false);
         localStorage.setItem('just_registered', '1');
-        events.registered({ user_id: data.user?.id });
+        events.registered({ event_id: metaEventId });
         return { success: true };
       }
       
