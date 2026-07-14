@@ -1,0 +1,60 @@
+name: Debug CompleteRegistration PR
+
+on:
+  push:
+    branches:
+      - fix/complete-registration-capi-dedup
+
+permissions:
+  contents: read
+
+jobs:
+  capture-logs:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      LOG_CHANNEL: stderr
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Capture frontend lint
+        run: npm run lint:ci > frontend-lint.log 2>&1 || true
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite
+          coverage: none
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Capture CompleteRegistration PHPUnit
+        working-directory: backend
+        run: php artisan test --filter=CompleteRegistrationMetaCapiTest > ../phpunit-meta.log 2>&1 || true
+
+      - name: Upload diagnostic logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: complete-registration-debug-logs
+          path: |
+            frontend-lint.log
+            phpunit-meta.log
+          if-no-files-found: error
+          retention-days: 1
