@@ -1,4 +1,4 @@
-name: Fix translation duplicates
+name: Fix branch cleanup
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Remove only the first duplicate translation definitions
+      - name: Remove duplicate translation definitions if present
         run: |
           node <<'NODE'
           const fs = require('fs');
@@ -39,11 +39,11 @@ jobs:
                 if (matcher.test(line)) matches.push(index);
               });
 
-              if (matches.length !== 2) {
-                throw new Error(`${name}: expected exactly two ${key} definitions, found ${matches.length}`);
+              if (matches.length === 2) {
+                removals.add(matches[0]);
+              } else if (matches.length !== 1) {
+                throw new Error(`${name}: expected one or two ${key} definitions, found ${matches.length}`);
               }
-
-              removals.add(matches[0]);
             }
 
             const next = lines.filter((_, index) => !removals.has(index)).join('\n');
@@ -51,15 +51,19 @@ jobs:
           }
           NODE
 
-      - name: Commit translation lint fix
+      - name: Remove retired public registration CAPI route
+        run: |
+          sed -i "/Route::post('\/meta\/events\/register', \[MetaEventController::class, 'register'\]);/d" backend/routes/api.php
+
+      - name: Commit cleanup
         run: |
           if git diff --quiet; then
-            echo "No duplicate translation keys remain."
+            echo "Branch cleanup is already applied."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/constants/translations
-          git commit -m "fix: remove duplicate translation keys"
+          git add src/constants/translations backend/routes/api.php
+          git commit -m "fix: retire public registration CAPI route"
           git push origin HEAD:${{ github.head_ref }}
