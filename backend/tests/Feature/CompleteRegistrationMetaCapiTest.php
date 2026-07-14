@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -50,25 +49,27 @@ class CompleteRegistrationMetaCapiTest extends TestCase
 
         $response->assertCreated();
         $userId = (string) $response->json('user.id');
+        $recorded = Http::recorded();
 
-        Http::assertSent(function (ClientRequest $request) use ($eventId, $email, $phone, $userId, $fbp, $fbc): bool {
-            $payload = $request->data();
-            $event = $payload['data'][0] ?? [];
-            $userData = $event['user_data'] ?? [];
+        $this->assertCount(1, $recorded);
 
-            return str_contains($request->url(), '/4595315270748335/events')
-                && ($event['event_name'] ?? null) === 'CompleteRegistration'
-                && ($event['event_id'] ?? null) === $eventId
-                && ($event['action_source'] ?? null) === 'website'
-                && ($event['event_source_url'] ?? null) === 'https://mercasto.com/registro'
-                && ($userData['em'][0] ?? null) === hash('sha256', strtolower(trim($email)))
-                && ($userData['ph'][0] ?? null) === hash('sha256', preg_replace('/\D+/', '', $phone))
-                && ($userData['external_id'][0] ?? null) === hash('sha256', $userId)
-                && ! empty($userData['client_ip_address'] ?? null)
-                && ($userData['client_user_agent'] ?? null) === 'MercastoMetaTest/1.0'
-                && ($userData['fbp'] ?? null) === $fbp
-                && ($userData['fbc'] ?? null) === $fbc;
-        });
+        [$request] = $recorded[0];
+        $payload = $request->data();
+        $event = $payload['data'][0] ?? [];
+        $userData = $event['user_data'] ?? [];
+
+        $this->assertStringContainsString('/4595315270748335/events', $request->url());
+        $this->assertSame('CompleteRegistration', $event['event_name'] ?? null);
+        $this->assertSame($eventId, $event['event_id'] ?? null);
+        $this->assertSame('website', $event['action_source'] ?? null);
+        $this->assertSame('https://mercasto.com/registro', $event['event_source_url'] ?? null);
+        $this->assertSame(hash('sha256', strtolower(trim($email))), $userData['em'][0] ?? null);
+        $this->assertSame(hash('sha256', preg_replace('/\D+/', '', $phone)), $userData['ph'][0] ?? null);
+        $this->assertSame(hash('sha256', $userId), $userData['external_id'][0] ?? null);
+        $this->assertNotEmpty($userData['client_ip_address'] ?? null);
+        $this->assertSame('MercastoMetaTest/1.0', $userData['client_user_agent'] ?? null);
+        $this->assertSame($fbp, $userData['fbp'] ?? null);
+        $this->assertSame($fbc, $userData['fbc'] ?? null);
     }
 
     public function test_registration_without_meta_event_id_does_not_send_complete_registration(): void
