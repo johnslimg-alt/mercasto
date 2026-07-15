@@ -82,6 +82,7 @@ class GoogleAnalyticsServiceTest extends TestCase
             1784098800,
             GoogleAnalyticsService::sessionIdFromCookie('GS2.1.s1784098800$o3$g1$t1784099900$j0$l0$h0'),
         );
+        $this->assertNull(GoogleAnalyticsService::sessionIdFromCookie('invalid-cookie'));
         $this->assertSame('_ga_VX87HQC817', GoogleAnalyticsService::sessionCookieName('G-VX87HQC817'));
     }
 
