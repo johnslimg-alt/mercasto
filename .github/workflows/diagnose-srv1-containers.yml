@@ -1,4 +1,4 @@
-name: Repair srv1 Ollama
+name: Verify srv1 Ollama
 
 on:
   push:
@@ -10,11 +10,11 @@ permissions:
   issues: write
 
 jobs:
-  repair:
+  verify:
     runs-on: self-hosted
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
-      - name: Start and verify Ollama fallback
+      - name: Verify current container state
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -22,50 +22,21 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          REPORT="/tmp/srv1-ollama-repair.txt"
-
+          REPORT="/tmp/srv1-ollama-final.txt"
           {
             echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "Starting Ollama from production Compose..."
-            docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml up -d ollama
-
-            for attempt in $(seq 1 60); do
-              state=$(docker inspect --format '{{.State.Status}}' mercasto_ollama 2>/dev/null || true)
-              health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' mercasto_ollama 2>/dev/null || true)
-              echo "attempt=$attempt state=${state:-missing} health=${health:-unknown}"
-              if [ "$state" = "running" ] && { [ "$health" = "healthy" ] || [ "$health" = "none" ]; }; then
-                break
-              fi
-              sleep 3
-            done
-
-            test "$(docker inspect --format '{{.State.Running}}' mercasto_ollama)" = "true"
-
-            echo
-            echo "== Models before verification =="
-            docker exec mercasto_ollama ollama list || true
-
-            if ! docker exec mercasto_ollama ollama list | awk 'NR>1 {print $1}' | grep -Eq '^qwen2\.5:1\.5b($|-)'; then
-              echo "Model qwen2.5:1.5b is missing; pulling it..."
-              docker exec mercasto_ollama ollama pull qwen2.5:1.5b
-            fi
-
-            echo
-            echo "== Models after verification =="
+            docker inspect --format 'ollama status={{.State.Status}} running={{.State.Running}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}' mercasto_ollama
+            echo "models:"
             docker exec mercasto_ollama ollama list
-            docker exec mercasto_ollama ollama list | awk 'NR>1 {print $1}' | grep -Eq '^qwen2\.5:1\.5b($|-)'
-
-            echo
-            echo "== Final container status =="
-            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
             echo "running_count=$(docker ps -q | wc -l | tr -d ' ')"
             echo "configured_service_count=$(docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml config --services | wc -l | tr -d ' ')"
+            echo "unhealthy_count=$(docker ps --filter health=unhealthy -q | wc -l | tr -d ' ')"
           } > "$REPORT" 2>&1
 
           python3 - "$REPORT" > /tmp/issue-comment.json <<'PY'
           import json, pathlib, sys
           text = pathlib.Path(sys.argv[1]).read_text(errors="replace")
-          print(json.dumps({"body": "Ollama repair result:\n```text\n" + text[:60000] + "\n```"}))
+          print(json.dumps({"body": "Final verification:\n```text\n" + text + "\n```"}))
           PY
 
           curl -fsS \
