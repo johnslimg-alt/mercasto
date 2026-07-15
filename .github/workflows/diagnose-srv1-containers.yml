@@ -1,0 +1,68 @@
+name: Diagnose srv1 containers
+
+on:
+  push:
+    branches:
+      - ops/diagnose-srv1-containers
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Collect read-only Docker diagnostics
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: "333"
+        run: |
+          set -u
+          REPORT="/tmp/srv1-container-diagnostics.txt"
+          cd /var/www/mercasto
+
+          {
+            echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "hostname=$(hostname)"
+            echo
+            echo "== All Docker containers =="
+            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+            echo
+            echo "running_count=$(docker ps -q | wc -l | tr -d ' ')"
+            echo "total_count=$(docker ps -aq | wc -l | tr -d ' ')"
+            echo
+            echo "== Mercasto configured services =="
+            docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml config --services
+            echo
+            echo "configured_service_count=$(docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml config --services | wc -l | tr -d ' ')"
+            echo
+            echo "== Mercasto compose status =="
+            docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml ps -a
+            echo
+            echo "== Per-service state =="
+            for service in $(docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml config --services); do
+              cid=$(docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml ps -aq "$service" 2>/dev/null | head -n1)
+              if [ -z "$cid" ]; then
+                echo "$service: MISSING"
+                continue
+              fi
+              docker inspect --format "$service: name={{.Name}} status={{.State.Status}} running={{.State.Running}} exit={{.State.ExitCode}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}" "$cid"
+            done
+          } > "$REPORT" 2>&1
+
+          python3 - "$REPORT" > /tmp/issue-comment.json <<'PY'
+          import json, pathlib, sys
+          text = pathlib.Path(sys.argv[1]).read_text(errors="replace")
+          print(json.dumps({"body": "```text\n" + text[:60000] + "\n```"}))
+          PY
+
+          curl -fsS \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${REPOSITORY}/issues/${ISSUE_NUMBER}/comments" \
+            --data-binary @/tmp/issue-comment.json
