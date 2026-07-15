@@ -108,6 +108,12 @@ return [
         'from'  => env('TWILIO_FROM', '+15005550006'),
     ],
 
+    'google_analytics' => [
+        'measurement_id' => env('GOOGLE_ANALYTICS_MEASUREMENT_ID', 'G-VX87HQC817'),
+        'api_secret' => env('GOOGLE_ANALYTICS_API_SECRET'),
+        'endpoint' => env('GOOGLE_ANALYTICS_ENDPOINT', 'https://www.google-analytics.com/mp/collect'),
+    ],
+
     'facebook' => [
         'pixel_id' => env('FACEBOOK_PIXEL_ID'),
         'access_token' => env('FACEBOOK_ACCESS_TOKEN'),
