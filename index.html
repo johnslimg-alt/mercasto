@@ -128,7 +128,9 @@
           s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
           document.head.appendChild(s);
           gtag('js', new Date());
-          gtag('config', GA_ID);
+          // Mercasto sends SPA page_view events from src/utils/analytics.js.
+          // Disabling the config pageview prevents the initial page from being counted twice.
+          gtag('config', GA_ID, { send_page_view: false });
         }
         // Load GA on the first real user interaction so it never competes with
         // the critical render path. Real visitors interact within moments;
