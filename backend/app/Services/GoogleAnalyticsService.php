@@ -137,7 +137,7 @@ class GoogleAnalyticsService
         }
 
         // Current GS2 cookie format: GS2.1.s<session_id>$o...$g...$t...
-        if (preg_match('/(?:^|\$)s(\d+)(?:\$|$)/', $cookie, $matches)) {
+        if (preg_match('/(?:^|[.$])s(\d+)(?:\$|$)/', $cookie, $matches)) {
             return (int) $matches[1];
         }
 
