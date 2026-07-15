@@ -1,4 +1,4 @@
-name: Diagnose srv1 containers
+name: Repair srv1 Ollama
 
 on:
   push:
@@ -10,71 +10,62 @@ permissions:
   issues: write
 
 jobs:
-  diagnose:
+  repair:
     runs-on: self-hosted
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
-      - name: Collect read-only Docker diagnostics
+      - name: Start and verify Ollama fallback
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: "333"
         run: |
-          set -u
-          REPORT="/tmp/srv1-container-diagnostics.txt"
+          set -euo pipefail
           cd /var/www/mercasto
+          REPORT="/tmp/srv1-ollama-repair.txt"
 
           {
             echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "hostname=$(hostname)"
-            echo
-            echo "== Host resources =="
-            free -h || true
-            df -h / /var/lib/docker 2>/dev/null || true
-            docker system df || true
-            echo
-            echo "== All Docker containers =="
-            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
-            echo
-            echo "running_count=$(docker ps -q | wc -l | tr -d ' ')"
-            echo "total_count=$(docker ps -aq | wc -l | tr -d ' ')"
-            echo
-            echo "== Mercasto configured services =="
-            docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml config --services
-            echo
-            echo "configured_service_count=$(docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml config --services | wc -l | tr -d ' ')"
-            echo
-            echo "== Mercasto compose status =="
-            docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml ps -a
-            echo
-            echo "== Per-service state =="
-            for service in $(docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml config --services); do
-              cid=$(docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml ps -aq "$service" 2>/dev/null | head -n1)
-              if [ -z "$cid" ]; then
-                echo "$service: MISSING"
-                continue
+            echo "Starting Ollama from production Compose..."
+            docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml up -d ollama
+
+            for attempt in $(seq 1 60); do
+              state=$(docker inspect --format '{{.State.Status}}' mercasto_ollama 2>/dev/null || true)
+              health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' mercasto_ollama 2>/dev/null || true)
+              echo "attempt=$attempt state=${state:-missing} health=${health:-unknown}"
+              if [ "$state" = "running" ] && { [ "$health" = "healthy" ] || [ "$health" = "none" ]; }; then
+                break
               fi
-              docker inspect --format "$service: name={{.Name}} status={{.State.Status}} running={{.State.Running}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{json .State.Error}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}} started={{.State.StartedAt}} finished={{.State.FinishedAt}}" "$cid"
+              sleep 3
             done
+
+            test "$(docker inspect --format '{{.State.Running}}' mercasto_ollama)" = "true"
+
             echo
-            echo "== Ollama availability =="
-            docker image ls --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}' ollama/ollama || true
-            docker volume ls --format '{{.Name}}' | grep -E '(^|_)ollama_data$' || true
+            echo "== Models before verification =="
+            docker exec mercasto_ollama ollama list || true
+
+            if ! docker exec mercasto_ollama ollama list | awk 'NR>1 {print $1}' | grep -Eq '^qwen2\.5:1\.5b($|-)'; then
+              echo "Model qwen2.5:1.5b is missing; pulling it..."
+              docker exec mercasto_ollama ollama pull qwen2.5:1.5b
+            fi
+
             echo
-            echo "== Worker recent failure signals =="
-            docker logs --since 24h mercasto_worker_container 2>&1 | grep -Ei 'error|exception|killed|sig(term|kill)|timeout|memory|failed|exit' | tail -n 120 || true
+            echo "== Models after verification =="
+            docker exec mercasto_ollama ollama list
+            docker exec mercasto_ollama ollama list | awk 'NR>1 {print $1}' | grep -Eq '^qwen2\.5:1\.5b($|-)'
+
             echo
-            echo "== Worker Docker events =="
-            docker events --since 24h --until "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --filter container=mercasto_worker_container --filter event=die --filter event=restart --format '{{.Time}} {{.Action}} exit={{index .Actor.Attributes "exitCode"}}' 2>/dev/null | tail -n 100 || true
-            echo
-            echo "== Kernel OOM signals =="
-            (dmesg -T 2>/dev/null || true) | grep -Ei 'out of memory|oom-killer|killed process' | tail -n 100 || true
+            echo "== Final container status =="
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+            echo "running_count=$(docker ps -q | wc -l | tr -d ' ')"
+            echo "configured_service_count=$(docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.override.yml config --services | wc -l | tr -d ' ')"
           } > "$REPORT" 2>&1
 
           python3 - "$REPORT" > /tmp/issue-comment.json <<'PY'
           import json, pathlib, sys
           text = pathlib.Path(sys.argv[1]).read_text(errors="replace")
-          print(json.dumps({"body": "```text\n" + text[:60000] + "\n```"}))
+          print(json.dumps({"body": "Ollama repair result:\n```text\n" + text[:60000] + "\n```"}))
           PY
 
           curl -fsS \
