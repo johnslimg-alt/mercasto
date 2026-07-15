@@ -28,6 +28,11 @@ jobs:
             echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "hostname=$(hostname)"
             echo
+            echo "== Host resources =="
+            free -h || true
+            df -h / /var/lib/docker 2>/dev/null || true
+            docker system df || true
+            echo
             echo "== All Docker containers =="
             docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
             echo
@@ -49,8 +54,21 @@ jobs:
                 echo "$service: MISSING"
                 continue
               fi
-              docker inspect --format "$service: name={{.Name}} status={{.State.Status}} running={{.State.Running}} exit={{.State.ExitCode}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}" "$cid"
+              docker inspect --format "$service: name={{.Name}} status={{.State.Status}} running={{.State.Running}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{json .State.Error}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}} started={{.State.StartedAt}} finished={{.State.FinishedAt}}" "$cid"
             done
+            echo
+            echo "== Ollama availability =="
+            docker image ls --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}' ollama/ollama || true
+            docker volume ls --format '{{.Name}}' | grep -E '(^|_)ollama_data$' || true
+            echo
+            echo "== Worker recent failure signals =="
+            docker logs --since 24h mercasto_worker_container 2>&1 | grep -Ei 'error|exception|killed|sig(term|kill)|timeout|memory|failed|exit' | tail -n 120 || true
+            echo
+            echo "== Worker Docker events =="
+            docker events --since 24h --until "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --filter container=mercasto_worker_container --filter event=die --filter event=restart --format '{{.Time}} {{.Action}} exit={{index .Actor.Attributes "exitCode"}}' 2>/dev/null | tail -n 100 || true
+            echo
+            echo "== Kernel OOM signals =="
+            (dmesg -T 2>/dev/null || true) | grep -Ei 'out of memory|oom-killer|killed process' | tail -n 100 || true
           } > "$REPORT" 2>&1
 
           python3 - "$REPORT" > /tmp/issue-comment.json <<'PY'
