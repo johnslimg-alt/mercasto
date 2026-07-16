@@ -25,8 +25,27 @@ class TrackTikTokEvents
             return $response;
         }
 
-        if ($this->isClipCheckout($request)) {
-            $this->rememberCheckoutContext($request);
+        if ($this->isCheckoutRequest($request)) {
+            $payment = $this->findRecentCheckoutPayment($request);
+
+            if ($payment) {
+                $context = $this->requestContext($request);
+
+                if ($this->isClipCheckout($request)) {
+                    $this->rememberCheckoutContext($payment, $context);
+                }
+
+                $includePurchase = $this->isBalanceCheckout($request)
+                    && $payment->status === 'paid';
+
+                defer(fn () => $this->sendCheckoutFunnel(
+                    $request,
+                    $payment,
+                    $request->user(),
+                    $context,
+                    $includePurchase,
+                ))->always();
+            }
         }
 
         if ($this->isClipWebhook($request)) {
@@ -37,9 +56,19 @@ class TrackTikTokEvents
         return $response;
     }
 
+    private function isCheckoutRequest(Request $request): bool
+    {
+        return $this->isClipCheckout($request) || $this->isBalanceCheckout($request);
+    }
+
     private function isClipCheckout(Request $request): bool
     {
         return $request->is('api/payment/clip', 'payment/clip') && $request->isMethod('post');
+    }
+
+    private function isBalanceCheckout(Request $request): bool
+    {
+        return $request->is('api/payment/balance', 'payment/balance') && $request->isMethod('post');
     }
 
     private function isClipWebhook(Request $request): bool
@@ -52,18 +81,25 @@ class TrackTikTokEvents
         ) && $request->isMethod('post');
     }
 
-    private function rememberCheckoutContext(Request $request): void
+    private function findRecentCheckoutPayment(Request $request): ?object
     {
         try {
             $user = $request->user();
             if (! $user) {
-                return;
+                return null;
             }
 
             $query = DB::table('payments')
                 ->where('user_id', $user->id)
-                ->where('status', 'pending')
                 ->where('updated_at', '>=', now()->subMinutes(3));
+
+            if ($this->isClipCheckout($request)) {
+                $query->where('status', 'pending');
+            } else {
+                $query
+                    ->where('status', 'paid')
+                    ->where('clip_checkout_id', 'like', 'balance_%');
+            }
 
             if ($request->filled('product_code')) {
                 $query->where('product_code', (string) $request->input('product_code'));
@@ -75,34 +111,190 @@ class TrackTikTokEvents
                 $query->whereNull('ad_id');
             }
 
-            $payment = $query
+            return $query
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
                 ->first();
+        } catch (\Throwable $e) {
+            Log::warning('Unable to resolve TikTok checkout payment', [
+                'user_id' => $request->user()?->id,
+                'error' => $e->getMessage(),
+            ]);
 
-            if (! $payment) {
-                return;
-            }
+            return null;
+        }
+    }
 
+    private function requestContext(Request $request): array
+    {
+        return array_filter([
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'ttp' => $this->requestCookie($request, '_ttp'),
+            'ttclid' => $request->input('ttclid')
+                ?: $request->query('ttclid')
+                ?: $this->ttclidFromUrl((string) $request->headers->get('referer', '')),
+            'referrer' => $request->headers->get('referer'),
+        ], fn ($value) => $value !== null && $value !== '');
+    }
+
+    private function rememberCheckoutContext(object $payment, array $context): void
+    {
+        try {
             Cache::put(
                 $this->contextKey((int) $payment->id),
-                array_filter([
-                    'ip' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'ttp' => $this->requestCookie($request, '_ttp'),
-                    'ttclid' => $request->input('ttclid')
-                        ?: $request->query('ttclid')
-                        ?: $this->ttclidFromUrl((string) $request->headers->get('referer', '')),
-                    'referrer' => $request->headers->get('referer'),
-                ], fn ($value) => $value !== null && $value !== ''),
+                $context,
                 now()->addDay(),
             );
         } catch (\Throwable $e) {
             Log::warning('Unable to cache TikTok purchase context', [
-                'user_id' => $request->user()?->id,
+                'payment_id' => $payment->id,
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function sendCheckoutFunnel(
+        Request $request,
+        object $payment,
+        ?object $user,
+        array $context,
+        bool $includePurchase,
+    ): void {
+        try {
+            $productId = $payment->product_code
+                ?: ($payment->ad_id ? 'ad_promotion_' . $payment->ad_id : 'payment_' . $payment->id);
+            $checkoutId = $payment->clip_checkout_id ?: (string) $payment->id;
+            $sourceUrl = $context['referrer']
+                ?? config('app.frontend_url', 'https://mercasto.com');
+            $properties = [
+                'currency' => 'MXN',
+                'value' => (float) $payment->amount,
+                'content_ids' => [(string) $productId],
+                'contents' => [[
+                    'content_id' => (string) $productId,
+                    'content_type' => 'product',
+                    'content_name' => (string) $payment->description,
+                    'price' => (float) $payment->amount,
+                    'quantity' => 1,
+                ]],
+                'content_type' => 'product',
+                'content_name' => (string) $payment->description,
+                'quantity' => 1,
+            ];
+
+            $this->sendOnce(
+                'AddToCart',
+                'add_to_cart_checkout_' . $checkoutId,
+                $request,
+                $user,
+                [...$properties, 'status' => 'added'],
+                $sourceUrl,
+                $context,
+            );
+
+            $this->sendOnce(
+                'InitiateCheckout',
+                'initiate_checkout_' . $checkoutId,
+                $request,
+                $user,
+                [
+                    ...$properties,
+                    'order_id' => (string) $checkoutId,
+                    'status' => 'checkout_created',
+                ],
+                $sourceUrl,
+                $context,
+            );
+
+            if ($includePurchase) {
+                $this->sendOnce(
+                    'Purchase',
+                    'purchase_balance_' . $payment->id,
+                    $request,
+                    $user,
+                    [
+                        ...$properties,
+                        'order_id' => (string) $checkoutId,
+                        'status' => 'paid',
+                    ],
+                    config('app.frontend_url', 'https://mercasto.com') . '/?payment=success',
+                    $context,
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Unable to send TikTok checkout funnel', [
+                'payment_id' => $payment->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendOnce(
+        string $eventName,
+        string $eventId,
+        Request $request,
+        ?object $user,
+        array $properties,
+        string $eventSourceUrl,
+        array $context,
+    ): void {
+        $cacheKey = 'tiktok_event_sent:' . hash('sha256', $eventName . '|' . $eventId);
+        $reserved = false;
+
+        try {
+            if (! Cache::add($cacheKey, 'sending', now()->addDays(35))) {
+                return;
+            }
+            $reserved = true;
+        } catch (\Throwable $e) {
+            Log::warning('TikTok funnel deduplication cache unavailable', [
+                'event_name' => $eventName,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $result = $this->tiktok->send(
+            $eventName,
+            $request,
+            $user,
+            $properties,
+            $eventId,
+            $eventSourceUrl,
+            $context,
+        );
+
+        if ($result['ok'] ?? false) {
+            if ($reserved) {
+                try {
+                    Cache::put($cacheKey, 'sent', now()->addDays(35));
+                } catch (\Throwable $e) {
+                    Log::warning('Unable to finalize TikTok funnel cache state', [
+                        'event_name' => $eventName,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return;
+        }
+
+        if ($reserved) {
+            try {
+                Cache::forget($cacheKey);
+            } catch (\Throwable) {
+                // A later checkout retry can try again with the same stable event ID.
+            }
+        }
+
+        Log::warning('TikTok funnel event was not accepted', [
+            'event_name' => $eventName,
+            'event_id' => $result['event_id'] ?? null,
+            'reason' => $result['reason'] ?? null,
+            'status' => $result['status'] ?? null,
+            'code' => $result['code'] ?? null,
+            'skipped' => (bool) ($result['skipped'] ?? false),
+        ]);
     }
 
     private function sendVerifiedPurchase(array $payload): void
