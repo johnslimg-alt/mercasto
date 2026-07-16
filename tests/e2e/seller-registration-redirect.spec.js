@@ -5,12 +5,12 @@ const registeredUser = {
   name: 'Seller Redirect Test',
   email: 'seller-redirect@example.com',
   role: 'individual',
-  phone_verified: true,
+  phone_verified: false,
   email_verified_at: '2026-07-15T00:00:00Z',
 };
 
 test.describe('seller campaign registration return', () => {
-  test('opens the publication form after successful registration', async ({ page }) => {
+  test('opens the publication form without generic onboarding after registration', async ({ page }) => {
     await page.route('**/api/register', async (route) => {
       await route.fulfill({
         status: 201,
@@ -38,8 +38,11 @@ test.describe('seller campaign registration return', () => {
     await registrationForm.locator('button[type="submit"]').click();
 
     await expect(page).toHaveURL(/\/post$/);
-    await expect.poll(() => page.evaluate(() => (
-      sessionStorage.getItem('mercasto.protected_route_intent.v1')
-    ))).toBeNull();
+    await page.waitForTimeout(700);
+    await expect(page.getByRole('heading', { name: /¡Bienvenido/ })).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => ({
+      intent: sessionStorage.getItem('mercasto.protected_route_intent.v1'),
+      justRegistered: localStorage.getItem('just_registered'),
+    }))).toEqual({ intent: null, justRegistered: null });
   });
 });
