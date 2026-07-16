@@ -1,6 +1,8 @@
 const INTENT_STORAGE_KEY = 'mercasto.protected_route_intent.v1';
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_STORAGE_KEY = 'user';
+const REGISTRATION_FLAG_KEY = 'just_registered';
+const STORAGE_PATCH_MARKER = '__mercastoProtectedPostReturn';
 const INTENT_TTL_MS = 30 * 60 * 1000;
 const AUTH_SETTLE_MS = 150;
 const POLL_INTERVAL_MS = 50;
@@ -93,6 +95,36 @@ function readIntent() {
   }
 }
 
+function installRegistrationOnboardingBypass() {
+  if (typeof Storage === 'undefined') return;
+
+  const currentSetItem = Storage.prototype.setItem;
+  if (currentSetItem?.[STORAGE_PATCH_MARKER]) return;
+
+  function protectedRouteSetItem(key, value) {
+    let isLocalStorage = false;
+    try {
+      isLocalStorage = this === window.localStorage;
+    } catch {
+      // Fall through to the native implementation.
+    }
+
+    // The generic onboarding is useful for organic registrations, but it
+    // blocks the paid seller flow after the visitor has explicitly chosen to
+    // publish. Suppress only that one flag while a valid /post intent exists.
+    if (isLocalStorage && key === REGISTRATION_FLAG_KEY && readIntent()) {
+      return undefined;
+    }
+
+    return currentSetItem.call(this, key, value);
+  }
+
+  Object.defineProperty(protectedRouteSetItem, STORAGE_PATCH_MARKER, {
+    value: true,
+  });
+  Storage.prototype.setItem = protectedRouteSetItem;
+}
+
 function stopAuthWatcher() {
   if (pollTimer !== null) {
     window.clearInterval(pollTimer);
@@ -179,6 +211,7 @@ export function installProtectedRouteReturn() {
 
   originalPushState = window.history.pushState;
   originalReplaceState = window.history.replaceState;
+  installRegistrationOnboardingBypass();
 
   window.history.pushState = function pushState(state, title, url) {
     const result = originalPushState.call(this, state, title, url);
