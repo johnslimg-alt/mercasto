@@ -17,7 +17,7 @@ class VerifyTikTokEventsApi extends Command
         $eventId = (string) ($this->option('event-id') ?: 'deploy_verify_' . now()->timestamp);
         $url = config('app.frontend_url', 'https://mercasto.com') . '/tiktok-events-api-health';
         $request = Request::create($url, 'GET', [], [], [], [
-            'REMOTE_ADDR' => '127.0.0.1',
+            'REMOTE_ADDR' => '192.0.2.1',
             'HTTP_USER_AGENT' => 'Mercasto TikTok Events API verification',
             'HTTP_REFERER' => config('app.frontend_url', 'https://mercasto.com'),
         ]);
