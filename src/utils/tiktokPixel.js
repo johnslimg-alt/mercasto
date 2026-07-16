@@ -4,8 +4,21 @@ const TIKTOK_EVENT_MAP = {
   ad_viewed: 'ViewContent',
   view_item: 'ViewContent',
   select_content: 'ViewContent',
+
   search: 'Search',
   view_search_results: 'Search',
+
+  favorite_added: 'AddToWishlist',
+  add_to_wishlist: 'AddToWishlist',
+
+  begin_checkout: 'InitiateCheckout',
+  initiate_checkout: 'InitiateCheckout',
+  checkout_started: 'InitiateCheckout',
+
+  find_location: 'FindLocation',
+  location_search: 'FindLocation',
+  location_selected: 'FindLocation',
+
   ui_click: 'ClickButton',
   link_click: 'ClickButton',
   form_submit_click: 'ClickButton',
@@ -17,14 +30,41 @@ const TIKTOK_EVENT_MAP = {
   phone_click: 'ClickButton',
   email_click: 'ClickButton',
   message_started: 'ClickButton',
-  favorite_added: 'ClickButton',
-  add_to_wishlist: 'ClickButton',
+
+  add_payment_info: 'AddPaymentInfo',
+  payment_info_added: 'AddPaymentInfo',
+
+  download: 'Download',
+  file_download: 'Download',
+
+  purchase: 'Purchase',
+
   lead: 'Lead',
   offer_made: 'Lead',
   ad_posted: 'Lead',
   listing_published: 'Lead',
-  sign_up: 'Lead',
   phone_verified: 'Lead',
+
+  application_approval: 'ApplicationApproval',
+  application_approved: 'ApplicationApproval',
+
+  sign_up: 'CompleteRegistration',
+  complete_registration: 'CompleteRegistration',
+
+  customize_product: 'CustomizeProduct',
+  product_customized: 'CustomizeProduct',
+
+  subscribe: 'Subscribe',
+  subscription_started: 'Subscribe',
+
+  submit_application: 'SubmitApplication',
+  application_submitted: 'SubmitApplication',
+
+  start_trial: 'StartTrial',
+  trial_started: 'StartTrial',
+
+  place_an_order: 'PlaceAnOrder',
+  order_placed: 'PlaceAnOrder',
 };
 
 const AUTH_ENDPOINTS = new Set([
@@ -108,26 +148,56 @@ export async function identifyTikTokUser(user = {}) {
   window.ttq.identify(identity);
 }
 
-function buildContents(eventName, data) {
+function normalizeContent(eventName, data, source = {}) {
   const contentId = cleanString(
-    data.content_id || data.ad_id || data.store_id || data.element_id || data.page_path,
+    source.content_id
+      || source.item_id
+      || data.content_id
+      || data.ad_id
+      || data.store_id
+      || data.element_id
+      || data.page_path,
     180,
   );
   const contentName = cleanString(
-    data.content_name || data.item_name || data.element_text || data.page_title,
+    source.content_name
+      || source.item_name
+      || data.content_name
+      || data.item_name
+      || data.element_text
+      || data.page_title,
     200,
   );
   const contentCategory = cleanString(
-    data.content_category || data.category || data.route_group,
+    source.content_category
+      || source.item_category
+      || data.content_category
+      || data.category
+      || data.item_category
+      || data.route_group,
     120,
   );
-  const price = positiveNumber(data.price ?? data.item_price ?? data.unit_price);
-  const numItems = positiveNumber(data.num_items ?? data.quantity);
-  const brand = cleanString(data.brand, 120);
+  const price = positiveNumber(
+    source.price
+      ?? source.item_price
+      ?? source.unit_price
+      ?? data.price
+      ?? data.item_price
+      ?? data.unit_price,
+  );
+  const numItems = positiveNumber(
+    source.num_items
+      ?? source.quantity
+      ?? data.num_items
+      ?? data.quantity,
+  );
+  const brand = cleanString(source.brand || source.item_brand || data.brand || data.item_brand, 120);
 
-  const content = compactObject({
+  return compactObject({
     content_id: contentId,
-    content_type: data.content_type === 'product_group' || eventName === 'Search'
+    content_type: source.content_type === 'product_group'
+      || data.content_type === 'product_group'
+      || eventName === 'Search'
       ? 'product_group'
       : 'product',
     content_name: contentName,
@@ -136,8 +206,21 @@ function buildContents(eventName, data) {
     num_items: numItems,
     brand,
   });
+}
 
-  return Object.keys(content).length > 1 ? [content] : undefined;
+function buildContents(eventName, data) {
+  const suppliedContents = Array.isArray(data.contents) && data.contents.length
+    ? data.contents
+    : Array.isArray(data.items) && data.items.length
+      ? data.items
+      : [data];
+
+  const contents = suppliedContents
+    .slice(0, 10)
+    .map((source) => normalizeContent(eventName, data, source))
+    .filter((content) => Object.keys(content).length > 1);
+
+  return contents.length ? contents : undefined;
 }
 
 async function createEventId(data) {
