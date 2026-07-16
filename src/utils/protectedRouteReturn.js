@@ -116,16 +116,20 @@ function restoreIntentWhenReady() {
     return;
   }
 
-  const current = destinationFrom(null);
-  if (current?.path === intent.path) {
-    clearIntent();
-    stopAuthWatcher();
-    return;
-  }
-
   const hasAuthenticatedSession = Boolean(
     localStorage.getItem(AUTH_TOKEN_KEY) && localStorage.getItem(USER_STORAGE_KEY),
   );
+  const current = destinationFrom(null);
+
+  // A newly requested protected route is briefly current before RequireAuth
+  // replaces it with /. Keep the intent until authentication actually exists.
+  if (current?.path === intent.path) {
+    if (hasAuthenticatedSession) {
+      clearIntent();
+      stopAuthWatcher();
+    }
+    return;
+  }
 
   if (!hasAuthenticatedSession) {
     authenticatedAt = 0;
