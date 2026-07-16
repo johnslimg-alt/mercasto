@@ -46,18 +46,19 @@ class VerifyTikTokEventsApi extends Command
                 ?? $result['reason']
                 ?? $result['error']
                 ?? 'unknown';
-
-            $this->error(sprintf(
+            $message = sprintf(
                 'TikTok Events API rejected verification (HTTP %s, code %s, message %s).',
                 $result['status'] ?? 'n/a',
                 $result['code'] ?? 'n/a',
-                mb_substr((string) $detail, 0, 300)
-            ));
+                preg_replace('/\s+/', ' ', mb_substr((string) $detail, 0, 300))
+            );
+
+            fwrite(STDERR, $message . PHP_EOL);
 
             return self::FAILURE;
         }
 
-        $this->info('TikTok Events API accepted the verification event.');
+        fwrite(STDOUT, 'TikTok Events API accepted the verification event.' . PHP_EOL);
 
         return self::SUCCESS;
     }
