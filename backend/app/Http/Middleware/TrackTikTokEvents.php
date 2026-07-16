@@ -175,7 +175,7 @@ class TrackTikTokEvents
                 [],
                 [],
                 [
-                    'REMOTE_ADDR' => $context['ip'] ?? '127.0.0.1',
+                    'REMOTE_ADDR' => $context['ip'] ?? '192.0.2.1',
                     'HTTP_USER_AGENT' => $context['user_agent'] ?? 'Mercasto TikTok Events API',
                 ]
             );
