@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -96,6 +97,32 @@ class TikTokEventsApiService
                 'message' => is_array($body) ? ($body['message'] ?? null) : null,
                 'event_id' => $normalizedEventId,
                 'body' => $body,
+            ];
+        } catch (RequestException $e) {
+            $response = $e->response;
+            $body = $response->json();
+            $code = is_array($body) ? ($body['code'] ?? null) : null;
+            $message = is_array($body)
+                ? ($body['message'] ?? $body['msg'] ?? null)
+                : null;
+
+            Log::warning('TikTok Events API rejected request', [
+                'event_name' => $eventName,
+                'event_id' => $normalizedEventId,
+                'status' => $response->status(),
+                'code' => $code,
+                'message' => $message,
+                'request_id' => is_array($body) ? ($body['request_id'] ?? data_get($body, 'data.request_id')) : null,
+            ]);
+
+            return [
+                'ok' => false,
+                'status' => $response->status(),
+                'code' => $code,
+                'message' => $message,
+                'event_id' => $normalizedEventId,
+                'body' => $body,
+                'error' => $e->getMessage(),
             ];
         } catch (\Throwable $e) {
             Log::error('TikTok Events API failed', [
