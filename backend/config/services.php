@@ -120,6 +120,16 @@ return [
         'graph_version' => env('FACEBOOK_GRAPH_VERSION', 'v25.0'),
     ],
 
+    'tiktok' => [
+        'pixel_code' => env('TIKTOK_PIXEL_CODE', 'D9C3HKBC77UBS5FSD7C0'),
+        'access_token' => env('TIKTOK_ACCESS_TOKEN'),
+        'events_api_endpoint' => env(
+            'TIKTOK_EVENTS_API_ENDPOINT',
+            'https://business-api.tiktok.com/open_api/v1.3/event/track/'
+        ),
+        'test_event_code' => env('TIKTOK_TEST_EVENT_CODE'),
+    ],
+
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY'),
     ],
