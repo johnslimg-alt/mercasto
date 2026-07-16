@@ -122,6 +122,27 @@ jobs:
 
           curl -fsS --max-time 10 https://mercasto.com/api/auth/providers >/dev/null
 
+      - name: Verify TikTok Events API
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+
+          CHANGED_FILES=""
+          if [ -n "${BEFORE_SHA:-}" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            CHANGED_FILES="$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA")"
+          fi
+
+          if ! printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/app/(Services/TikTokEventsApiService|Http/Middleware/TrackTikTokEvents|Console/Commands/VerifyTikTokEventsApi)\.php|backend/config/services\.php|backend/bootstrap/app\.php|backend/app/Observers/UserMetaRegistrationObserver\.php|backend/app/Http/Controllers/Api/MetaEventController\.php|src/utils/(tiktokPixel|metaCapiBridge)\.js)$'; then
+            echo "TikTok Events API integration unchanged; verification event skipped."
+            exit 0
+          fi
+
+          docker exec -e DEPLOY_SHA="$CURRENT_SHA" mercasto_backend_container \
+            php artisan tiktok:events:verify --event-id="deploy_verify_${CURRENT_SHA}"
+
       - name: Verify deployed Meta Pixel
         id: verify_meta_pixel
         env:

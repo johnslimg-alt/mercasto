@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\User;
 use App\Services\MetaCapiService;
+use App\Services\TikTokEventsApiService;
 use Illuminate\Support\Facades\Log;
 
 class UserMetaRegistrationObserver
@@ -25,11 +26,13 @@ class UserMetaRegistrationObserver
         }
 
         if (! preg_match('/^[A-Za-z0-9._:-]{1,120}$/', $eventId)) {
-            Log::warning('Meta CompleteRegistration skipped: invalid event id', [
+            Log::warning('Registration conversion skipped: invalid event id', [
                 'event_id_length' => strlen($eventId),
             ]);
             return;
         }
+
+        $eventSourceUrl = $request->headers->get('referer');
 
         app(MetaCapiService::class)->send(
             'CompleteRegistration',
@@ -37,7 +40,26 @@ class UserMetaRegistrationObserver
             $user,
             [],
             $eventId,
-            $request->headers->get('referer')
+            $eventSourceUrl
+        );
+
+        app(TikTokEventsApiService::class)->send(
+            'CompleteRegistration',
+            $request,
+            $user,
+            [
+                'content_type' => 'product',
+                'content_ids' => ['mercasto_account'],
+                'contents' => [[
+                    'content_id' => 'mercasto_account',
+                    'content_type' => 'product',
+                    'content_name' => 'Mercasto account registration',
+                    'quantity' => 1,
+                ]],
+                'status' => 'completed',
+            ],
+            $eventId,
+            $eventSourceUrl
         );
     }
 }

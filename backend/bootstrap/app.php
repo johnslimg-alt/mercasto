@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastActive::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\TrackGoogleAnalyticsPurchase::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\TrackTikTokEvents::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {

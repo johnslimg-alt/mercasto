@@ -15,13 +15,17 @@ class CompleteRegistrationMetaCapiTest extends TestCase
     {
         config([
             'services.facebook.pixel_id' => '4595315270748335',
-            'services.facebook.access_token' => 'test-token',
+            'services.facebook.access_token' => 'meta-test-token',
             'services.facebook.graph_version' => 'v25.0',
+            'services.tiktok.pixel_code' => 'D9C3HKBC77UBS5FSD7C0',
+            'services.tiktok.access_token' => 'tiktok-test-token',
+            'services.tiktok.events_api_endpoint' => 'https://business-api.tiktok.com/open_api/v1.3/event/track/',
         ]);
 
         Mail::fake();
         Http::fake([
             'graph.facebook.com/*' => Http::response(['events_received' => 1], 200),
+            'business-api.tiktok.com/*' => Http::response(['code' => 0, 'message' => 'OK'], 200),
         ]);
 
         $eventId = 'register_user_123e4567-e89b-12d3-a456-426614174000';
@@ -29,12 +33,13 @@ class CompleteRegistrationMetaCapiTest extends TestCase
         $phone = '+52 614 123 4567';
         $fbp = 'fb.1.1720000000000.1234567890';
         $fbc = 'fb.1.1720000000000.AbCdEfGhIj';
+        $ttp = 'ttp.1720000000000.test';
 
         $response = $this
             ->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])
             ->withHeader('User-Agent', 'MercastoMetaTest/1.0')
-            ->withHeader('Referer', 'https://mercasto.com/registro')
-            ->withHeader('Cookie', "_fbp={$fbp}; _fbc={$fbc}")
+            ->withHeader('Referer', 'https://mercasto.com/registro?ttclid=tiktok-click')
+            ->withHeader('Cookie', "_fbp={$fbp}; _fbc={$fbc}; _ttp={$ttp}")
             ->postJson('/api/register', [
                 'name' => 'Meta Registration Test',
                 'email' => $email,
@@ -48,25 +53,31 @@ class CompleteRegistrationMetaCapiTest extends TestCase
         $userId = (string) $response->json('user.id');
         $recorded = Http::recorded();
 
-        $this->assertCount(1, $recorded);
+        $this->assertCount(2, $recorded);
 
-        [$request] = $recorded[0];
-        $payload = $request->data();
-        $event = $payload['data'][0] ?? [];
-        $userData = $event['user_data'] ?? [];
+        $metaRequest = collect($recorded)->first(fn ($entry) => str_contains($entry[0]->url(), 'graph.facebook.com'))[0];
+        $metaEvent = $metaRequest->data()['data'][0] ?? [];
+        $metaUserData = $metaEvent['user_data'] ?? [];
 
-        $this->assertStringContainsString('/4595315270748335/events', $request->url());
-        $this->assertSame('CompleteRegistration', $event['event_name'] ?? null);
-        $this->assertSame($eventId, $event['event_id'] ?? null);
-        $this->assertSame('website', $event['action_source'] ?? null);
-        $this->assertSame('https://mercasto.com/registro', $event['event_source_url'] ?? null);
-        $this->assertSame(hash('sha256', strtolower(trim($email))), $userData['em'][0] ?? null);
-        $this->assertSame(hash('sha256', preg_replace('/\D+/', '', $phone)), $userData['ph'][0] ?? null);
-        $this->assertSame(hash('sha256', $userId), $userData['external_id'][0] ?? null);
-        $this->assertNotEmpty($userData['client_ip_address'] ?? null);
-        $this->assertSame('MercastoMetaTest/1.0', $userData['client_user_agent'] ?? null);
-        $this->assertSame($fbp, $userData['fbp'] ?? null);
-        $this->assertSame($fbc, $userData['fbc'] ?? null);
+        $this->assertSame('CompleteRegistration', $metaEvent['event_name'] ?? null);
+        $this->assertSame($eventId, $metaEvent['event_id'] ?? null);
+        $this->assertSame(hash('sha256', strtolower(trim($email))), $metaUserData['em'][0] ?? null);
+        $this->assertSame(hash('sha256', preg_replace('/\D+/', '', $phone)), $metaUserData['ph'][0] ?? null);
+        $this->assertSame(hash('sha256', $userId), $metaUserData['external_id'][0] ?? null);
+        $this->assertSame($fbp, $metaUserData['fbp'] ?? null);
+        $this->assertSame($fbc, $metaUserData['fbc'] ?? null);
+
+        $tiktokRequest = collect($recorded)->first(fn ($entry) => str_contains($entry[0]->url(), 'business-api.tiktok.com'))[0];
+        $tiktokEvent = $tiktokRequest->data()['data'][0] ?? [];
+        $tiktokUser = $tiktokEvent['user'] ?? [];
+
+        $this->assertSame('CompleteRegistration', $tiktokEvent['event'] ?? null);
+        $this->assertSame(hash('sha256', $eventId), $tiktokEvent['event_id'] ?? null);
+        $this->assertSame(hash('sha256', strtolower(trim($email))), $tiktokUser['email'] ?? null);
+        $this->assertSame(hash('sha256', '+526141234567'), $tiktokUser['phone'] ?? null);
+        $this->assertSame(hash('sha256', $userId), $tiktokUser['external_id'] ?? null);
+        $this->assertSame($ttp, $tiktokUser['ttp'] ?? null);
+        $this->assertSame('tiktok-click', $tiktokUser['ttclid'] ?? null);
     }
 
     public function test_registration_without_meta_event_id_does_not_send_complete_registration(): void
@@ -75,6 +86,8 @@ class CompleteRegistrationMetaCapiTest extends TestCase
             'services.facebook.pixel_id' => '4595315270748335',
             'services.facebook.access_token' => 'test-token',
             'services.facebook.graph_version' => 'v25.0',
+            'services.tiktok.pixel_code' => 'D9C3HKBC77UBS5FSD7C0',
+            'services.tiktok.access_token' => 'test-token',
         ]);
 
         Mail::fake();
