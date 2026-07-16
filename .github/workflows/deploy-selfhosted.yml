@@ -25,6 +25,12 @@ jobs:
           sudo -n git clean -fd
           sudo -n rm -f backend/bootstrap/cache/*.php
 
+          # backend/.env may be root-only. Copy it through the already-running
+          # backend container into a runner-private temporary file without
+          # weakening the persistent secret file permissions.
+          umask 077
+          docker exec mercasto_backend_container cat /var/www/.env > "$RUNNER_TEMP/mercasto-backend.env"
+
       - name: Миграции
         run: |
           cd /var/www/mercasto
@@ -37,6 +43,9 @@ jobs:
           CURRENT_SHA: ${{ github.sha }}
         run: |
           cd /var/www/mercasto
+          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          test -s "$COMPOSE_ENV_FILE"
+
           CHANGED_FILES=""
           if [ -n "${BEFORE_SHA:-}" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
             CHANGED_FILES="$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA")"
@@ -68,13 +77,13 @@ jobs:
           fi
 
           if [ -n "$BUILD_SERVICES" ]; then
-            docker compose --env-file backend/.env build --parallel $BUILD_SERVICES
+            docker compose --env-file "$COMPOSE_ENV_FILE" build --parallel $BUILD_SERVICES
           else
             echo "No Docker rebuild required for changed files."
           fi
 
           if [ -n "$UP_SERVICES" ]; then
-            docker compose --env-file backend/.env up -d --no-build --no-deps $UP_SERVICES
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps $UP_SERVICES
             # Recreating mercasto-backend gives it a new container IP; nginx caches the
             # old fastcgi upstream IP until reloaded, causing 502s (incl. Clip webhooks)
             # until the later "Кэш и очереди" step restarts the frontend. Reload now to
@@ -89,6 +98,9 @@ jobs:
       - name: Кэш и очереди
         run: |
           cd /var/www/mercasto
+          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          test -s "$COMPOSE_ENV_FILE"
+
           docker exec mercasto_backend_container php artisan optimize:clear
           docker exec mercasto_backend_container php artisan optimize
           docker exec mercasto_backend_container php artisan queue:restart
@@ -99,7 +111,7 @@ jobs:
             docker network disconnect mercasto_default mercasto_reverb_container 2>/dev/null || true
             docker network connect --alias mercasto-reverb --alias mercasto_reverb_container mercasto_default mercasto_reverb_container || true
           }
-          docker compose --env-file backend/.env restart mercasto-frontend
+          docker compose --env-file "$COMPOSE_ENV_FILE" restart mercasto-frontend
 
           for attempt in $(seq 1 30); do
             if curl -fsS --max-time 5 https://mercasto.com/api/auth/providers >/dev/null; then
@@ -117,8 +129,10 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
+          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          test -s "$COMPOSE_ENV_FILE"
 
-          docker compose --env-file backend/.env exec -T -e DEPLOY_SHA="$DEPLOY_SHA" mercasto-frontend sh -lc '
+          docker compose --env-file "$COMPOSE_ENV_FILE" exec -T -e DEPLOY_SHA="$DEPLOY_SHA" mercasto-frontend sh -lc '
             grep -R -F "4595315270748335" /usr/share/nginx/html/assets >/dev/null
             grep -R -F "connect.facebook.net/en_US/fbevents.js" /usr/share/nginx/html/assets >/dev/null
             printf '\''{"pixel_id":"4595315270748335","bundle_verified":true,"commit":"%s"}\n'\'' "$DEPLOY_SHA" > /usr/share/nginx/html/meta-pixel-status.json
@@ -177,4 +191,7 @@ jobs:
           docker start mercasto_backend_container mercasto_reverb_container mercasto_frontend_container mercasto_worker_container mercasto_scheduler_container || true
 
       - name: Очистка
-        run: docker image prune -f
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/mercasto-backend.env"
+          docker image prune -f
