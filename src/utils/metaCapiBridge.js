@@ -129,6 +129,15 @@ function sendMappedEvent(metaConfig, item = {}) {
     ...(method ? { method } : {}),
   };
 
+  // TikTok wraps this dataLayer bridge after Meta. Mutating the current item here
+  // gives both browser pixels and both server APIs the same source event id.
+  try {
+    item.event_id = id;
+    item.meta_event_id = id;
+  } catch {
+    // Analytics must never block the user action when a frozen object is supplied.
+  }
+
   sendBrowserEvent(metaConfig, serverPayload, id);
 
   if (metaConfig.server !== false && metaConfig.endpoint) {
