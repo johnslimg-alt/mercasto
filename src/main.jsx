@@ -8,11 +8,13 @@ import { ToastProvider } from './components/ui/Toast.jsx'
 import { initBehaviorAnalytics } from './utils/analytics'
 import { installMetaCapiBridge } from './utils/metaCapiBridge'
 import { initTikTokPixel } from './utils/tiktokPixel'
+import { installProtectedRouteReturn } from './utils/protectedRouteReturn'
 // Leaflet CSS is loaded lazily alongside the map bundle (see MapV3 loadLeaflet)
 // so it no longer bloats the render-blocking critical stylesheet.
 import './index.css'
 import './i18n'; // Multi-language support
 
+installProtectedRouteReturn();
 installMetaCapiBridge();
 initTikTokPixel();
 initBehaviorAnalytics();
