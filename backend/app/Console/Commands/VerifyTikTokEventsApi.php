@@ -42,11 +42,16 @@ class VerifyTikTokEventsApi extends Command
         );
 
         if (! ($result['ok'] ?? false)) {
+            $detail = $result['message']
+                ?? $result['reason']
+                ?? $result['error']
+                ?? 'unknown';
+
             $this->error(sprintf(
                 'TikTok Events API rejected verification (HTTP %s, code %s, message %s).',
                 $result['status'] ?? 'n/a',
                 $result['code'] ?? 'n/a',
-                $result['message'] ?? $result['reason'] ?? 'unknown'
+                mb_substr((string) $detail, 0, 300)
             ));
 
             return self::FAILURE;
