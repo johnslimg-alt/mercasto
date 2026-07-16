@@ -19,7 +19,7 @@ jobs:
         run: |
           cd /var/www/mercasto
           docker exec mercasto_backend_container php artisan up || true
-          # sudo: el checkout de producción pertenece a root; el runner es github-runner
+          # sudo: el checkout de producción pertenece a root; el runner is github-runner
           sudo -n git fetch origin
           sudo -n git reset --hard origin/main
           sudo -n git clean -fd
@@ -123,6 +123,8 @@ jobs:
           curl -fsS --max-time 10 https://mercasto.com/api/auth/providers >/dev/null
 
       - name: Verify TikTok Events API
+        id: verify_tiktok_events_api
+        continue-on-error: true
         env:
           BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
@@ -135,13 +137,62 @@ jobs:
             CHANGED_FILES="$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA")"
           fi
 
-          if ! printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/app/(Services/TikTokEventsApiService|Http/Middleware/TrackTikTokEvents|Console/Commands/VerifyTikTokEventsApi)\.php|backend/config/services\.php|backend/bootstrap/app\.php|backend/app/Observers/UserMetaRegistrationObserver\.php|backend/app/Http/Controllers/Api/MetaEventController\.php|src/utils/(tiktokPixel|metaCapiBridge)\.js)$'; then
+          if ! printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(\.github/workflows/deploy-selfhosted\.yml|backend/app/(Services/TikTokEventsApiService|Http/Middleware/TrackTikTokEvents|Console/Commands/VerifyTikTokEventsApi)\.php|backend/config/services\.php|backend/bootstrap/app\.php|backend/app/Observers/UserMetaRegistrationObserver\.php|backend/app/Http/Controllers/Api/MetaEventController\.php|src/utils/(tiktokPixel|metaCapiBridge)\.js)$'; then
             echo "TikTok Events API integration unchanged; verification event skipped."
+            echo "summary=TikTok Events API integration unchanged" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          OUTPUT_FILE="$RUNNER_TEMP/tiktok-events-api-verify.out"
+          set +e
           docker exec -e DEPLOY_SHA="$CURRENT_SHA" mercasto_backend_container \
-            php artisan tiktok:events:verify --event-id="deploy_verify_${CURRENT_SHA}"
+            php artisan tiktok:events:verify --event-id="deploy_verify_${CURRENT_SHA}" \
+            >"$OUTPUT_FILE" 2>&1
+          EXIT_CODE=$?
+          set -e
+
+          cat "$OUTPUT_FILE"
+          SUMMARY="$(tail -n 1 "$OUTPUT_FILE" | tr -cd '[:alnum:] .,:_()/-' | cut -c1-125)"
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY="TikTok Events API verification failed without a message"
+          fi
+          echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
+          exit "$EXIT_CODE"
+
+      - name: Publish TikTok Events API deploy status
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERIFY_OUTCOME: ${{ steps.verify_tiktok_events_api.outcome }}
+          VERIFY_SUMMARY: ${{ steps.verify_tiktok_events_api.outputs.summary }}
+        run: |
+          set -euo pipefail
+
+          if [ "$VERIFY_OUTCOME" = "success" ]; then
+            STATE="success"
+            DESCRIPTION="TikTok Events API accepted production verification"
+          else
+            STATE="failure"
+            DESCRIPTION="${VERIFY_SUMMARY:-TikTok Events API verification failed}"
+          fi
+          DESCRIPTION="$(printf '%s' "$DESCRIPTION" | tr -cd '[:alnum:] .,:_()/-' | cut -c1-140)"
+
+          PAYLOAD="$(printf '{"state":"%s","context":"production/tiktok-events-api","description":"%s","target_url":"https://github.com/%s/actions/runs/%s"}' \
+            "$STATE" "$DESCRIPTION" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+
+          curl -fsS --retry 3 --retry-all-errors \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$PAYLOAD"
+
+      - name: Require TikTok Events API verification
+        if: always() && steps.verify_tiktok_events_api.outcome != 'success'
+        run: |
+          echo "TikTok Events API production verification failed." >&2
+          exit 1
 
       - name: Verify deployed Meta Pixel
         id: verify_meta_pixel
@@ -217,5 +268,5 @@ jobs:
       - name: Очистка
         if: always()
         run: |
-          rm -f "$RUNNER_TEMP/mercasto-backend.env"
+          rm -f "$RUNNER_TEMP/mercasto-backend.env" "$RUNNER_TEMP/tiktok-events-api-verify.out"
           docker image prune -f
