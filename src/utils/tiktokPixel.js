@@ -24,12 +24,13 @@ const TIKTOK_EVENT_MAP = {
   form_submit_click: 'ClickButton',
   form_submit: 'ClickButton',
   ad_card_click: 'ClickButton',
-  contact_click: 'ClickButton',
-  whatsapp_click: 'ClickButton',
-  telegram_click: 'ClickButton',
-  phone_click: 'ClickButton',
-  email_click: 'ClickButton',
-  message_started: 'ClickButton',
+
+  contact_click: 'Contact',
+  whatsapp_click: 'Contact',
+  telegram_click: 'Contact',
+  phone_click: 'Contact',
+  email_click: 'Contact',
+  message_started: 'Contact',
 
   add_payment_info: 'AddPaymentInfo',
   payment_info_added: 'AddPaymentInfo',
@@ -37,7 +38,8 @@ const TIKTOK_EVENT_MAP = {
   download: 'Download',
   file_download: 'Download',
 
-  purchase: 'Purchase',
+  // Purchase is server-only after Clip confirms the payment. This prevents an
+  // optimistic browser event from counting an abandoned or failed checkout.
 
   lead: 'Lead',
   offer_made: 'Lead',
