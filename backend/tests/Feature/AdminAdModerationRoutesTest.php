@@ -24,31 +24,35 @@ class AdminAdModerationRoutesTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $seller = User::factory()->create();
-
-        $newer = Ad::query()->create([
+        $base = [
             'user_id' => $seller->id,
-            'title' => 'Nuevo',
-            'description' => 'Anuncio reciente',
+            'description' => 'Descripción de prueba',
             'price' => 100,
-            'location' => 'Veracruz',
+            'location' => 'Veracruz, Veracruz',
+            'state' => 'Veracruz',
+            'city' => 'Veracruz',
+            'latitude' => 19.1738,
+            'longitude' => -96.1342,
             'category' => 'general',
+            'subcategory' => 'general',
+            'condition' => 'usado',
+            'attributes' => ['subcategory' => 'general'],
             'status' => 'pending',
-            'moderation_submitted_at' => now()->subHour(),
-        ]);
-        $older = Ad::query()->create([
-            'user_id' => $seller->id,
-            'title' => 'Antiguo',
-            'description' => 'Anuncio antiguo',
-            'price' => 100,
-            'location' => 'Veracruz',
-            'category' => 'general',
-            'status' => 'pending',
-            'moderation_submitted_at' => now()->subDays(2),
-        ]);
+            'ai_moderation_status' => 'manual_review',
+        ];
 
-        // Observers claim new records for AI. Restore deterministic queue states for this API test.
-        $newer->forceFill(['status' => 'pending', 'ai_moderation_status' => 'manual_review'])->saveQuietly();
-        $older->forceFill(['status' => 'pending', 'ai_moderation_status' => 'manual_review'])->saveQuietly();
+        [$newer, $older] = Ad::withoutEvents(function () use ($base) {
+            $newer = Ad::query()->create($base + [
+                'title' => 'Nuevo',
+                'moderation_submitted_at' => now()->subHour(),
+            ]);
+            $older = Ad::query()->create($base + [
+                'title' => 'Antiguo',
+                'moderation_submitted_at' => now()->subDays(2),
+            ]);
+
+            return [$newer, $older];
+        });
 
         $this->actingAs($admin)
             ->getJson('/api/admin/moderation/ads')
