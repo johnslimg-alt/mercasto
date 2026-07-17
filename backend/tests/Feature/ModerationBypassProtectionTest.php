@@ -34,8 +34,14 @@ class ModerationBypassProtectionTest extends TestCase
         ]));
 
         $this->actingAs($seller);
-        $this->expectException(AuthorizationException::class);
 
-        $ad->update(['status' => 'active']);
+        try {
+            $ad->update(['status' => 'active']);
+            $this->fail('The owner was able to bypass moderation.');
+        } catch (AuthorizationException $error) {
+            $this->assertSame('Este anuncio todavía está en revisión.', $error->getMessage());
+        }
+
+        $this->assertSame('archived', $ad->fresh()->status);
     }
 }
