@@ -35,9 +35,16 @@ class ModeratePendingAds extends Command
                     });
             })
             ->orWhere(function ($query) {
-                $query->where('status', 'ai_review')
-                    ->whereNull('ai_moderated_at')
-                    ->where('updated_at', '<=', now()->subMinutes(15));
+                $query->where('status', 'archived')
+                    ->where(function ($hidden) {
+                        $hidden->where(function ($stuck) {
+                            $stuck->whereIn('ai_moderation_status', ['queued', 'processing'])
+                                ->where('updated_at', '<=', now()->subMinutes(15));
+                        })->orWhere(function ($failed) {
+                            $failed->where('ai_moderation_status', 'failed')
+                                ->where('updated_at', '<=', now()->subHour());
+                        });
+                    });
             })
             ->orderByRaw('COALESCE(moderation_submitted_at, created_at) ASC')
             ->limit($limit)
@@ -45,7 +52,7 @@ class ModeratePendingAds extends Command
 
         foreach ($ads as $ad) {
             $ad->forceFill([
-                'status' => 'ai_review',
+                'status' => 'archived',
                 'moderation_submitted_at' => $ad->moderation_submitted_at ?: $ad->created_at ?: now(),
                 'ai_moderation_status' => 'queued',
             ])->saveQuietly();
