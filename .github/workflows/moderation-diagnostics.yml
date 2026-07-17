@@ -48,7 +48,7 @@ jobs:
             tests/Feature/ModerateAdWithAITest.php
           do
             echo "===== $test =====" | tee -a moderation-phpunit.log
-            php artisan test "$test" --testdox 2>&1 | tee -a moderation-phpunit.log
+            vendor/bin/phpunit "$test" --testdox 2>&1 | tee -a moderation-phpunit.log
             code=${PIPESTATUS[0]}
             if [ "$code" -ne 0 ]; then status=$code; fi
           done
