@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\IndexNowController;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Services\AdIllustrativeCoverService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -18,6 +19,19 @@ class AdObserver
 
         if ($ad->status === 'pending') {
             $this->queueForModeration($ad);
+        }
+    }
+
+    public function updating(Ad $ad): void
+    {
+        $isOwnerBypass = $ad->isDirty('status')
+            && $ad->status === 'active'
+            && $ad->getOriginal('status') === 'archived'
+            && filled($ad->getOriginal('ai_moderation_status'))
+            && auth()->user()?->role !== 'admin';
+
+        if ($isOwnerBypass) {
+            throw new AuthorizationException('Este anuncio todavía está en revisión.');
         }
     }
 
@@ -42,8 +56,10 @@ class AdObserver
             'video_url',
         ]);
         $submittedAgain = $ad->wasChanged('status') && $ad->status === 'pending';
+        $isModerationItem = $ad->status === 'pending'
+            || ($ad->status === 'archived' && filled($ad->ai_moderation_status));
 
-        if ($ad->status === 'pending' && ($contentChanged || $submittedAgain)) {
+        if ($submittedAgain || ($contentChanged && $isModerationItem)) {
             $this->queueForModeration($ad);
         }
     }
