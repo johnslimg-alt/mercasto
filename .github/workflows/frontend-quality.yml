@@ -16,6 +16,7 @@ on:
       - 'vite.config.*'
       - 'tailwind.config.*'
       - '.github/workflows/frontend-quality.yml'
+      - 'scripts/i18n-audit.mjs'
       - 'scripts/check-recovery-guards.mjs'
       - 'scripts/public-copy-scan.sh'
       - 'scripts/fix-public-copy-fallbacks.sh'
@@ -32,6 +33,7 @@ on:
       - 'vite.config.*'
       - 'tailwind.config.*'
       - '.github/workflows/frontend-quality.yml'
+      - 'scripts/i18n-audit.mjs'
       - 'scripts/check-recovery-guards.mjs'
       - 'scripts/public-copy-scan.sh'
       - 'scripts/fix-public-copy-fallbacks.sh'
@@ -62,6 +64,8 @@ jobs:
         run: npm ci
       - name: Run recovery guards
         run: npm run check:recovery
+      - name: Audit translations
+        run: npm run i18n:audit
       - name: Run frontend lint gate
         run: npm run lint:ci
       - name: Run public copy scan
