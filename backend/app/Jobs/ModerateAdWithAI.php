@@ -44,7 +44,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
     public function handle(AdIllustrativeCoverService $covers): void
     {
         $ad = Ad::query()->with('user:id,name,email')->find($this->adId);
-        if (! $ad || ! in_array($ad->status, ['pending', 'ai_review'], true)) {
+        if (! $ad || ! in_array($ad->status, ['pending', 'archived'], true)) {
             return;
         }
 
@@ -52,7 +52,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         $ad->refresh();
 
         $ad->forceFill([
-            'status' => 'ai_review',
+            'status' => 'archived',
             'moderation_submitted_at' => $ad->moderation_submitted_at ?: $ad->created_at ?: now(),
             'ai_moderation_status' => 'processing',
             'ai_moderation_reason' => null,
@@ -114,7 +114,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $newStatus = match ($decision) {
                 'approved' => 'active',
                 'rejected' => 'rejected',
-                default => 'pending',
+                default => 'archived',
             };
 
             $previousStatus = $ad->status;
@@ -238,7 +238,7 @@ PROMPT;
     private function leaveForManualReview(Ad $ad, string $reason, string $aiStatus): void
     {
         $ad->forceFill([
-            'status' => 'pending',
+            'status' => 'archived',
             'ai_moderation_status' => $aiStatus,
             'ai_moderation_reason' => $reason,
             'ai_moderation_confidence' => null,
