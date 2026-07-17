@@ -18,6 +18,14 @@ use Throwable;
 
 class AdminAdModerationController extends Controller
 {
+    private const UNFINISHED_MODERATION_STATUSES = [
+        'queued',
+        'processing',
+        'manual_review',
+        'failed',
+        'admin_manual_review',
+    ];
+
     public function index(Request $request, AdIllustrativeCoverService $covers): JsonResponse
     {
         $this->authorizeAdmin($request);
@@ -32,7 +40,7 @@ class AdminAdModerationController extends Controller
                 $query->where('status', 'pending')
                     ->orWhere(function ($hidden) {
                         $hidden->where('status', 'archived')
-                            ->whereNotNull('ai_moderation_status');
+                            ->whereIn('ai_moderation_status', self::UNFINISHED_MODERATION_STATUSES);
                     });
             })
             ->orderByRaw('COALESCE(moderation_submitted_at, created_at) ASC')
