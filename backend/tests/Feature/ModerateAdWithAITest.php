@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\User;
+use App\Services\AdIllustrativeCoverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +20,7 @@ class ModerateAdWithAITest extends TestCase
         Storage::fake('public');
         config()->set('services.gemini.api_key', 'test-key');
         Http::fake([
-            '*:generateContent*' => Http::response([
+            '*' => Http::response([
                 'candidates' => [[
                     'content' => ['parts' => [['text' => json_encode([
                         'decision' => 'approved',
@@ -50,7 +51,7 @@ class ModerateAdWithAITest extends TestCase
             'ai_moderation_status' => 'queued',
         ]);
 
-        (new ModerateAdWithAI($ad->id))->handle(app(\App\Services\AdIllustrativeCoverService::class));
+        (new ModerateAdWithAI($ad->id))->handle(app(AdIllustrativeCoverService::class));
 
         $ad->refresh();
         $this->assertSame('pending', $ad->status);
