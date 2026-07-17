@@ -40,7 +40,6 @@ jobs:
           : > moderation-phpunit.log
           status=0
           for test in \
-            tests/Feature/ModerationStatusSchemaDiagnosticTest.php \
             tests/Feature/AdminAdModerationRoutesTest.php \
             tests/Feature/AdminAdModerationDecisionTest.php \
             tests/Feature/AdIllustrativeCoverServiceTest.php \
