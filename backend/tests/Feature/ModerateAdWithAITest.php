@@ -22,12 +22,16 @@ class ModerateAdWithAITest extends TestCase
         Http::fake([
             '*' => Http::response([
                 'candidates' => [[
-                    'content' => ['parts' => [['text' => json_encode([
-                        'decision' => 'approved',
-                        'reason' => 'Contenido permitido, pero faltan datos.',
-                        'confidence' => 0.60,
-                        'flags' => ['insufficient_detail'],
-                    ])]],
+                    'content' => [
+                        'parts' => [[
+                            'text' => json_encode([
+                                'decision' => 'approved',
+                                'reason' => 'Contenido permitido, pero faltan datos.',
+                                'confidence' => 0.60,
+                                'flags' => ['insufficient_detail'],
+                            ]),
+                        ]],
+                    ],
                 ]],
             ]),
         ]);
@@ -46,7 +50,7 @@ class ModerateAdWithAITest extends TestCase
             'category' => 'general',
             'condition' => 'usado',
             'attributes' => ['subcategory' => 'general'],
-            'status' => 'ai_review',
+            'status' => 'pending',
             'moderation_submitted_at' => now(),
             'ai_moderation_status' => 'queued',
         ]);
