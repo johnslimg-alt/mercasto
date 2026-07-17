@@ -29,9 +29,9 @@ Schedule::call(function () {
                 'boost_expires_at' => null,
                 'updated_at' => now(),
             ]);
-            
+
         DB::table('ad_promotions')->whereIn('ad_id', $expiredPromotions)->delete();
-        
+
         // Сбрасываем кэши, чтобы снять бейджи "Top seller" на фронтенде
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
@@ -39,6 +39,14 @@ Schedule::call(function () {
         \Illuminate\Support\Facades\Log::info("Revoked VIP status for " . $expiredPromotions->count() . " ads.");
     }
 })->hourly();
+
+// Process the oldest moderation submissions first. The command only dispatches jobs,
+// so the scheduler stays responsive even when image analysis is slow.
+Schedule::command('ads:moderate-pending --limit=100')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // Expire ads that passed their expires_at date, notify owners
 Schedule::command('ads:expire')->daily();
 Schedule::command('ads:process-expiry')->dailyAt('08:00')->timezone('America/Mexico_City')->withoutOverlapping();
