@@ -12,6 +12,14 @@ use Illuminate\Support\Facades\Schema;
 
 class AdObserver
 {
+    private const UNFINISHED_MODERATION_STATUSES = [
+        'queued',
+        'processing',
+        'manual_review',
+        'failed',
+        'admin_manual_review',
+    ];
+
     public function created(Ad $ad): void
     {
         Log::info('Ad created, notifying IndexNow', ['ad_id' => $ad->id]);
@@ -27,7 +35,11 @@ class AdObserver
         $isOwnerBypass = $ad->isDirty('status')
             && $ad->status === 'active'
             && $ad->getOriginal('status') === 'archived'
-            && filled($ad->getOriginal('ai_moderation_status'))
+            && in_array(
+                (string) $ad->getOriginal('ai_moderation_status'),
+                self::UNFINISHED_MODERATION_STATUSES,
+                true
+            )
             && auth()->user()?->role !== 'admin';
 
         if ($isOwnerBypass) {
@@ -57,7 +69,10 @@ class AdObserver
         ]);
         $submittedAgain = $ad->wasChanged('status') && $ad->status === 'pending';
         $isModerationItem = $ad->status === 'pending'
-            || ($ad->status === 'archived' && filled($ad->ai_moderation_status));
+            || (
+                $ad->status === 'archived'
+                && in_array((string) $ad->ai_moderation_status, self::UNFINISHED_MODERATION_STATUSES, true)
+            );
 
         if ($submittedAgain || ($contentChanged && $isModerationItem)) {
             $this->queueForModeration($ad);
