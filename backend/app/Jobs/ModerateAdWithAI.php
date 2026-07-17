@@ -29,7 +29,6 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
     public function __construct(public int $adId)
     {
-        $this->onQueue('moderation');
     }
 
     public function uniqueId(): string
