@@ -27,15 +27,17 @@ class ModeratePendingAds extends Command
                 $query->where('status', 'pending')
                     ->where(function ($pending) {
                         $pending->whereNull('ai_moderation_status')
-                            ->orWhereIn('ai_moderation_status', ['queued', 'failed']);
+                            ->orWhere('ai_moderation_status', 'queued')
+                            ->orWhere(function ($failed) {
+                                $failed->where('ai_moderation_status', 'failed')
+                                    ->where('updated_at', '<=', now()->subHour());
+                            });
                     });
             })
             ->orWhere(function ($query) {
                 $query->where('status', 'ai_review')
-                    ->where(function ($stuck) {
-                        $stuck->whereNull('ai_moderated_at')
-                            ->where('updated_at', '<=', now()->subMinutes(15));
-                    });
+                    ->whereNull('ai_moderated_at')
+                    ->where('updated_at', '<=', now()->subMinutes(15));
             })
             ->orderByRaw('COALESCE(moderation_submitted_at, created_at) ASC')
             ->limit($limit)
