@@ -10,6 +10,18 @@
 - Ads without seller photos receive a branded SVG cover marked `Imagen ilustrativa`.
 - When a seller later uploads a real photo, the illustrative cover is removed automatically.
 
+## Hidden review lifecycle
+
+The database already permits `archived` as a hidden, non-public ad status. Intelligent moderation uses it only while `ai_moderation_status` is unfinished (`queued`, `processing`, `manual_review`, `failed`, or `admin_manual_review`). This prevents the older inline moderator from racing the audited job without changing the database status constraint.
+
+Completed outcomes are:
+
+- `active` + `approved` for published ads;
+- `rejected` + `rejected` for prohibited ads;
+- `archived` + `manual_review` for ads that still require an administrator.
+
+A seller cannot activate an unfinished moderation item. A normally archived ad whose previous moderation was already approved is not added back to the moderation queue.
+
 ## Runtime
 
 The scheduler dispatches up to 100 pending ads every five minutes:
