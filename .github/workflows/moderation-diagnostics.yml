@@ -45,6 +45,7 @@ jobs:
             tests/Feature/AdIllustrativeCoverServiceTest.php \
             tests/Feature/ModerationPlaceholderReplacementTest.php \
             tests/Feature/ModerationQueueCommandTest.php \
+            tests/Feature/ModerationBypassProtectionTest.php \
             tests/Feature/ModerateAdWithAITest.php
           do
             echo "===== $test =====" | tee -a moderation-phpunit.log
