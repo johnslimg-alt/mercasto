@@ -28,6 +28,7 @@ if (rootElement) {
         <ToastProvider>
           <BrowserRouter>
             <AppWrapper />
+            {/* Keep moderation inside the shared router/provider tree so it reuses the authenticated admin session. */}
             <AdminModerationCenter />
           </BrowserRouter>
         </ToastProvider>

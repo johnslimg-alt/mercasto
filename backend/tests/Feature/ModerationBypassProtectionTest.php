@@ -42,6 +42,8 @@ class ModerationBypassProtectionTest extends TestCase
             $this->assertSame('Este anuncio todavía está en revisión.', $error->getMessage());
         }
 
-        $this->assertSame('archived', $ad->fresh()->status);
+        $fresh = $ad->fresh();
+        $this->assertSame('archived', $fresh->status);
+        $this->assertSame('manual_review', $fresh->ai_moderation_status);
     }
 }
