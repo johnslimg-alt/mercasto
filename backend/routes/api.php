@@ -234,7 +234,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/user/search-alerts/{searchAlert}', [SearchAlertController::class, 'update'])->whereNumber('searchAlert');
     Route::delete('/user/search-alerts/{searchAlert}', [SearchAlertController::class, 'destroy'])->whereNumber('searchAlert');
     Route::post('/user/push-subscribe', [ProfileController::class, 'pushSubscribe']); // Подписка на Web Push
-    Route::post('/user/push-unsubscribe', [ProfileController::class, 'pushUnsubscribe']); // Отписка от Web Push
+    Route::post('/user/push-unsubscribe', [ProfileController::class, 'pushUnsubscribe']);
+    Route::post('/user/mobile-push/register', [MobilePushController::class, 'register']);
+    Route::post('/user/mobile-push/unregister', [MobilePushController::class, 'unregister']); // Отписка от Web Push
     Route::delete('/user', [AccountDeletionController::class, 'delete']); // User self-deletion with financial/audit retention
     Route::post('/users/{id}/verify', [ProfileController::class, 'verifyUser'])->whereNumber('id');
     Route::post('/user/kyc', [ProfileController::class, 'submitKyc']); // Загрузка документов KYC
