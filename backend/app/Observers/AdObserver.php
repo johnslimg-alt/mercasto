@@ -2,62 +2,90 @@
 
 namespace App\Observers;
 
-use App\Models\Ad;
 use App\Http\Controllers\Api\IndexNowController;
+use App\Jobs\ModerateAdWithAI;
+use App\Models\Ad;
+use App\Services\AdIllustrativeCoverService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class AdObserver
 {
-    /**
-     * Handle the Ad "created" event.
-     */
     public function created(Ad $ad): void
     {
         Log::info('Ad created, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'create');
-    }
 
-    /**
-     * Handle the Ad "updated" event.
-     */
-    public function updated(Ad $ad): void
-    {
-        // Only notify if important fields changed
-        $importantFields = ['title', 'description', 'price', 'status', 'images'];
-        
-        if ($ad->wasChanged($importantFields)) {
-            Log::info('Ad updated, notifying IndexNow', [
-                'ad_id' => $ad->id,
-                'changed_fields' => $ad->getChanges()
-            ]);
-            IndexNowController::notifyAdChange($ad, 'update');
+        if ($ad->status === 'pending') {
+            $this->queueForModeration($ad);
         }
     }
 
-    /**
-     * Handle the Ad "deleted" event.
-     */
+    public function updated(Ad $ad): void
+    {
+        $importantFields = ['title', 'description', 'price', 'status', 'image_url'];
+
+        if ($ad->wasChanged($importantFields)) {
+            Log::info('Ad updated, notifying IndexNow', [
+                'ad_id' => $ad->id,
+                'changed_fields' => $ad->getChanges(),
+            ]);
+            IndexNowController::notifyAdChange($ad, 'update');
+        }
+
+        $contentChanged = $ad->wasChanged([
+            'title',
+            'description',
+            'category',
+            'subcategory',
+            'image_url',
+            'video_url',
+        ]);
+        $submittedAgain = $ad->wasChanged('status') && $ad->status === 'pending';
+
+        if ($ad->status === 'pending' && ($contentChanged || $submittedAgain)) {
+            $this->queueForModeration($ad);
+        }
+    }
+
     public function deleted(Ad $ad): void
     {
         Log::info('Ad deleted, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'delete');
     }
 
-    /**
-     * Handle the Ad "restored" event.
-     */
     public function restored(Ad $ad): void
     {
         Log::info('Ad restored, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'update');
     }
 
-    /**
-     * Handle the Ad "force deleted" event.
-     */
     public function forceDeleted(Ad $ad): void
     {
         Log::info('Ad force deleted, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'delete');
+    }
+
+    private function queueForModeration(Ad $ad): void
+    {
+        if (! Schema::hasColumn('ads', 'moderation_submitted_at')) {
+            return;
+        }
+
+        app(AdIllustrativeCoverService::class)->ensureCover($ad);
+        $ad->refresh();
+
+        $ad->forceFill([
+            // This intermediate state prevents the legacy inline Gemini block in AdController
+            // from racing the auditable queued moderator introduced here.
+            'status' => 'ai_review',
+            'moderation_submitted_at' => now(),
+            'ai_moderation_status' => 'queued',
+            'ai_moderation_reason' => null,
+            'ai_moderation_confidence' => null,
+            'ai_moderated_at' => null,
+        ])->saveQuietly();
+
+        ModerateAdWithAI::dispatch($ad->id)->afterCommit();
     }
 }
