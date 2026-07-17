@@ -84,9 +84,9 @@ class AdObserver
         $ad->refresh();
 
         $ad->forceFill([
-            // This intermediate state prevents the legacy inline Gemini block in AdController
-            // from racing the auditable queued moderator introduced here.
-            'status' => 'ai_review',
+            // `archived` is an existing hidden status allowed by the database. It keeps the
+            // legacy inline moderator from racing this auditable queue without exposing the ad.
+            'status' => 'archived',
             'moderation_submitted_at' => now(),
             'ai_moderation_status' => 'queued',
             'ai_moderation_reason' => null,
