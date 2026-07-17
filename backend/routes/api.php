@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\AdminAnalyticsController;
 use App\Http\Controllers\Api\TwoFactorAuthenticationController;
+use App\Http\Controllers\Api\MobilePushController;
 use App\Http\Controllers\Api\PhoneVerificationController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\SearchAlertController;
