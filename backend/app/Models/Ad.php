@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ad extends Model
 {
@@ -27,6 +28,12 @@ class Ad extends Model
         'video_url',
         'video_processing_status',
         'status',
+        'moderation_submitted_at',
+        'ai_moderation_status',
+        'ai_moderation_reason',
+        'ai_moderation_confidence',
+        'ai_moderated_at',
+        'generated_cover',
         'promoted',
         'views',
         'expires_at',
@@ -52,6 +59,10 @@ class Ad extends Model
             'republished_at' => 'datetime',
             'price_dropped_at' => 'datetime',
             'boost_expires_at' => 'datetime',
+            'moderation_submitted_at' => 'datetime',
+            'ai_moderated_at' => 'datetime',
+            'ai_moderation_confidence' => 'decimal:4',
+            'generated_cover' => 'boolean',
         ];
     }
 
@@ -60,7 +71,12 @@ class Ad extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function contactClicks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function moderationDecisions(): HasMany
+    {
+        return $this->hasMany(AdModerationDecision::class)->latest();
+    }
+
+    public function contactClicks(): HasMany
     {
         return $this->hasMany(ContactClick::class);
     }
