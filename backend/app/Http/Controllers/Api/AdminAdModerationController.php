@@ -28,7 +28,13 @@ class AdminAdModerationController extends Controller
                 'user:id,name,email,is_verified',
                 'moderationDecisions',
             ])
-            ->whereIn('status', ['pending', 'ai_review'])
+            ->where(function ($query) {
+                $query->where('status', 'pending')
+                    ->orWhere(function ($hidden) {
+                        $hidden->where('status', 'archived')
+                            ->whereNotNull('ai_moderation_status');
+                    });
+            })
             ->orderByRaw('COALESCE(moderation_submitted_at, created_at) ASC')
             ->paginate($perPage);
 
@@ -60,7 +66,7 @@ class AdminAdModerationController extends Controller
         }
 
         $ad->forceFill([
-            'status' => 'ai_review',
+            'status' => 'archived',
             'moderation_submitted_at' => $ad->moderation_submitted_at ?: $ad->created_at ?: now(),
             'ai_moderation_status' => 'queued',
             'ai_moderation_reason' => null,
@@ -105,7 +111,7 @@ class AdminAdModerationController extends Controller
         $newStatus = match ($decision) {
             'approved' => 'active',
             'rejected' => 'rejected',
-            default => 'pending',
+            default => 'archived',
         };
 
         DB::transaction(function () use ($ad, $request, $decision, $reason, $newStatus, $previousStatus) {
