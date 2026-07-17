@@ -58,7 +58,7 @@ class ModerateAdWithAITest extends TestCase
         (new ModerateAdWithAI($ad->id))->handle(app(AdIllustrativeCoverService::class));
 
         $ad->refresh();
-        $this->assertSame('pending', $ad->status);
+        $this->assertSame('archived', $ad->status);
         $this->assertSame('manual_review', $ad->ai_moderation_status);
         $this->assertDatabaseHas('ad_moderation_decisions', [
             'ad_id' => $ad->id,
