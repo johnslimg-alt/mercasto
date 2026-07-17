@@ -11,8 +11,36 @@ class AdIllustrativeCoverService
     public function ensureCover(Ad $ad): ?string
     {
         $images = $this->images($ad->image_url);
-        if ($images !== []) {
+        $originals = array_values(array_filter(
+            $images,
+            fn (string $image) => ! str_starts_with($image, 'ads/placeholders/')
+        ));
+        $placeholders = array_values(array_filter(
+            $images,
+            fn (string $image) => str_starts_with($image, 'ads/placeholders/')
+        ));
+
+        // A real seller photo always wins. Remove the generated cover so it can never
+        // remain as the first image after the seller updates the listing.
+        if ($originals !== []) {
+            if ($placeholders !== [] || $ad->generated_cover) {
+                if ($placeholders !== []) {
+                    Storage::disk('public')->delete($placeholders);
+                }
+                $ad->forceFill([
+                    'image_url' => json_encode($originals, JSON_UNESCAPED_SLASHES),
+                    'generated_cover' => false,
+                ])->saveQuietly();
+            }
+
             return null;
+        }
+
+        if ($placeholders !== []) {
+            if (! $ad->generated_cover) {
+                $ad->forceFill(['generated_cover' => true])->saveQuietly();
+            }
+            return $placeholders[0];
         }
 
         $path = 'ads/placeholders/' . Str::uuid() . '.svg';
