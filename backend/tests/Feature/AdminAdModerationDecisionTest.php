@@ -28,7 +28,7 @@ class AdminAdModerationDecisionTest extends TestCase
             'category' => 'general',
             'condition' => 'usado',
             'attributes' => ['subcategory' => 'general'],
-            'status' => 'ai_review',
+            'status' => 'archived',
             'moderation_submitted_at' => now(),
             'ai_moderation_status' => 'manual_review',
         ]);
