@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          php artisan test tests/Feature/PaidAdRenewalTest.php --stop-on-failure > paid-renewal-test.log 2>&1
+          ./vendor/bin/phpunit tests/Feature/PaidAdRenewalTest.php --stop-on-failure > paid-renewal-test.log 2>&1
           status=$?
           cat paid-renewal-test.log
           exit $status
