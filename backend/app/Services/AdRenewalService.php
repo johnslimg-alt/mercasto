@@ -31,38 +31,19 @@ class AdRenewalService
         $description = "Renovación de anuncio por {$days} días (Anuncio #{$ad->id})";
         $checkoutId = 'clip_' . Str::uuid();
 
-        $existing = DB::table('payments')
-            ->where('user_id', $ad->user_id)
-            ->where('ad_id', $ad->id)
-            ->where('product_code', $productCode)
-            ->where('status', 'pending')
-            ->latest('id')
-            ->first();
-
-        if ($existing) {
-            DB::table('payments')->where('id', $existing->id)->update([
-                'clip_checkout_id' => $checkoutId,
-                'clip_payment_request_id' => null,
-                'clip_payment_request_url' => null,
-                'clip_checkout_response' => null,
-                'amount' => $amount,
-                'description' => $description,
-                'updated_at' => now(),
-            ]);
-            $paymentId = $existing->id;
-        } else {
-            $paymentId = DB::table('payments')->insertGetId([
-                'user_id' => $ad->user_id,
-                'ad_id' => $ad->id,
-                'clip_checkout_id' => $checkoutId,
-                'amount' => $amount,
-                'description' => $description,
-                'product_code' => $productCode,
-                'status' => 'pending',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        // Never overwrite a previous checkout: an older Clip link may still be open
+        // in the seller's browser and must remain fulfillable if it is paid.
+        $paymentId = DB::table('payments')->insertGetId([
+            'user_id' => $ad->user_id,
+            'ad_id' => $ad->id,
+            'clip_checkout_id' => $checkoutId,
+            'amount' => $amount,
+            'description' => $description,
+            'product_code' => $productCode,
+            'status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $clipToken = 'Basic ' . base64_encode(
             config('services.clip.api_key') . ':' . config('services.clip.api_secret')
@@ -93,6 +74,11 @@ class AdRenewalService
                     ],
                 ]);
         } catch (\Throwable $error) {
+            DB::table('payments')->where('id', $paymentId)->update([
+                'status' => 'failed',
+                'updated_at' => now(),
+            ]);
+
             Log::error('Clip ad renewal checkout request failed', [
                 'ad_id' => $ad->id,
                 'payment_id' => $paymentId,
@@ -106,6 +92,12 @@ class AdRenewalService
         }
 
         if (! $response->successful()) {
+            DB::table('payments')->where('id', $paymentId)->update([
+                'status' => 'failed',
+                'clip_checkout_response' => json_encode($response->json()),
+                'updated_at' => now(),
+            ]);
+
             Log::warning('Clip rejected ad renewal checkout', [
                 'ad_id' => $ad->id,
                 'payment_id' => $paymentId,
@@ -124,6 +116,12 @@ class AdRenewalService
             ?: $response->json('payment_request.id');
 
         if (! $paymentUrl) {
+            DB::table('payments')->where('id', $paymentId)->update([
+                'status' => 'failed',
+                'clip_checkout_response' => json_encode($response->json()),
+                'updated_at' => now(),
+            ]);
+
             Log::error('Clip ad renewal checkout response missing payment URL', [
                 'ad_id' => $ad->id,
                 'payment_id' => $paymentId,
@@ -149,15 +147,17 @@ class AdRenewalService
             'amount' => $amount,
             'currency' => 'MXN',
             'days' => $days,
-            'message' => "La publicación gratuita dura 7 días. Paga {$amount} MXN para renovarla por {$days} días más o elimínala sin costo.",
+            'message' => "La publicación gratuita dura 7 días. Paga $" . number_format($amount, 0) . " MXN para renovarla por {$days} días más o elimínala sin costo.",
         ], 402);
     }
 
     public function fulfill(object $payment): ?Carbon
     {
         $notification = null;
+        $days = (int) config('marketplace.ad_renewal_days', 7);
+        $amount = (float) config('marketplace.ad_renewal_price_mxn', 49);
 
-        $expiresAt = DB::transaction(function () use ($payment, &$notification) {
+        $expiresAt = DB::transaction(function () use ($payment, &$notification, $days, $amount) {
             $lockedPayment = DB::table('payments')->where('id', $payment->id)->lockForUpdate()->first();
             if (! $lockedPayment || $lockedPayment->status === 'paid') {
                 return null;
@@ -172,7 +172,7 @@ class AdRenewalService
             $base = $ad->expires_at && Carbon::parse($ad->expires_at)->isFuture()
                 ? Carbon::parse($ad->expires_at)
                 : now();
-            $newExpiry = $base->copy()->addDays((int) config('marketplace.ad_renewal_days', 7));
+            $newExpiry = $base->copy()->addDays($days);
 
             DB::table('ads')->where('id', $ad->id)->update([
                 'status' => 'active',
@@ -191,7 +191,7 @@ class AdRenewalService
             $notification = [
                 'user_id' => $ad->user_id,
                 'title' => '¡Anuncio renovado!',
-                'message' => 'Tu anuncio fue renovado por 7 días después de confirmar el pago de $49 MXN.',
+                'message' => "Tu anuncio fue renovado por {$days} días después de confirmar el pago de $" . number_format($amount, 0) . ' MXN.',
                 'is_read' => false,
                 'created_at' => now(),
                 'updated_at' => now(),
