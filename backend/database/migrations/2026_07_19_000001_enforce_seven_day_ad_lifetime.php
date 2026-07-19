@@ -11,6 +11,8 @@ return new class extends Migration
     {
         $driver = DB::getDriverName();
 
+        $this->allowExpiredStatus($driver);
+
         if ($driver === 'pgsql') {
             DB::statement(<<<'SQL'
                 UPDATE ads
@@ -61,6 +63,39 @@ return new class extends Migration
 
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('ALTER TABLE ads ALTER COLUMN expires_at DROP DEFAULT');
+        }
+    }
+
+    private function allowExpiredStatus(string $driver): void
+    {
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE ads DROP CONSTRAINT IF EXISTS ads_status_check');
+            DB::statement(<<<'SQL'
+                ALTER TABLE ads
+                ADD CONSTRAINT ads_status_check
+                CHECK (status IN ('active','inactive','archived','pending','rejected','draft','paused','expired'))
+            SQL);
+
+            return;
+        }
+
+        if ($driver === 'mysql') {
+            DB::statement(<<<'SQL'
+                ALTER TABLE ads
+                MODIFY status ENUM('active','inactive','archived','pending','rejected','draft','paused','expired')
+                NOT NULL DEFAULT 'active'
+            SQL);
+
+            return;
+        }
+
+        if ($driver === 'sqlite') {
+            // Laravel represents enum columns as TEXT plus a CHECK constraint on SQLite.
+            // Converting it to a string preserves every existing status and removes the
+            // stale four-value CHECK constraint from the initial migration.
+            Schema::table('ads', function (Blueprint $table) {
+                $table->string('status')->default('active')->change();
+            });
         }
     }
 };
