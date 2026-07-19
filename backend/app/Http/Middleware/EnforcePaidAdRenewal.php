@@ -44,7 +44,7 @@ class EnforcePaidAdRenewal
                     return response()->json(['message' => 'No tienes permisos para renovar este anuncio.'], 403);
                 }
 
-                if ($action === 'activate' && $this->hasTimeRemaining($ad)) {
+                if ($action === 'activate' && $ad->status !== 'expired' && $this->hasTimeRemaining($ad)) {
                     return $next($request);
                 }
 
@@ -72,13 +72,18 @@ class EnforcePaidAdRenewal
                 ->where('user_id', $user->id)
                 ->whereIn('id', $ids)
                 ->where(function ($query) {
-                    $query->whereNull('expires_at')->orWhere('expires_at', '<=', now());
+                    $query->where('status', 'expired')
+                        ->orWhereNull('expires_at')
+                        ->orWhere('expires_at', '<=', now());
                 })
                 ->pluck('id');
 
             if ($expiredIds->isNotEmpty()) {
+                $amount = number_format((float) config('marketplace.ad_renewal_price_mxn', 49), 0);
+                $days = (int) config('marketplace.ad_renewal_days', 7);
+
                 return response()->json([
-                    'message' => 'Los anuncios vencidos deben renovarse individualmente por $49 MXN cada 7 días.',
+                    'message' => "Los anuncios vencidos deben renovarse individualmente por \${$amount} MXN cada {$days} días.",
                     'expired_ad_ids' => $expiredIds,
                 ], 422);
             }
@@ -88,7 +93,9 @@ class EnforcePaidAdRenewal
             && $request->isMethod('PATCH')
             && $request->input('status') === 'active') {
             $ad = DB::table('ads')->where('id', (int) $matches[1])->first();
-            if ($ad && (int) $ad->user_id === (int) $user->id && ! $this->hasTimeRemaining($ad)) {
+            if ($ad
+                && (int) $ad->user_id === (int) $user->id
+                && ($ad->status === 'expired' || ! $this->hasTimeRemaining($ad))) {
                 return $this->renewals->createCheckout($request, $ad);
             }
         }
@@ -107,13 +114,50 @@ class EnforcePaidAdRenewal
             return;
         }
 
-        DB::table('ads')
+        $expiredAds = DB::table('ads')
             ->where('status', 'active')
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
-            ->update([
-                'status' => 'expired',
-                'updated_at' => now(),
-            ]);
+            ->get(['id', 'user_id', 'title']);
+
+        if ($expiredAds->isEmpty()) {
+            return;
+        }
+
+        $ids = $expiredAds->pluck('id');
+        $amount = number_format((float) config('marketplace.ad_renewal_price_mxn', 49), 0);
+        $days = (int) config('marketplace.ad_renewal_days', 7);
+        $timestamp = now();
+
+        DB::transaction(function () use ($expiredAds, $ids, $amount, $days, $timestamp) {
+            DB::table('ads')
+                ->whereIn('id', $ids)
+                ->where('status', 'active')
+                ->update([
+                    'status' => 'expired',
+                    'updated_at' => $timestamp,
+                ]);
+
+            DB::table('user_notifications')->insert(
+                $expiredAds->map(fn ($ad) => [
+                    'user_id' => $ad->user_id,
+                    'title' => 'Tu anuncio expiró',
+                    'message' => "Tu anuncio \"{$ad->title}\" expiró. Renuévalo por {$days} días por \${$amount} MXN o elimínalo sin costo.",
+                    'is_read' => false,
+                    'created_at' => $timestamp,
+                    'updated_at' => $timestamp,
+                ])->all()
+            );
+        });
+
+        Cache::forget('sitemap_xml');
+        Cache::forget('google_merchant_xml');
+        Cache::forget('ads_featured_block');
+        for ($page = 1; $page <= 10; $page++) {
+            Cache::forget("ads_index_page_{$page}");
+        }
+        foreach ($ids as $id) {
+            Cache::forget("ad_{$id}");
+        }
     }
 }
