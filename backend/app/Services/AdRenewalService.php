@@ -169,6 +169,31 @@ class AdRenewalService
                 return null;
             }
 
+            if (! in_array($ad->status, ['active', 'expired', 'paused', 'inactive'], true)) {
+                DB::table('payments')->where('id', $lockedPayment->id)->update([
+                    'status' => 'paid',
+                    'updated_at' => now(),
+                ]);
+
+                $notification = [
+                    'user_id' => $ad->user_id,
+                    'title' => 'Pago recibido: renovación en revisión',
+                    'message' => 'Recibimos tu pago de renovación, pero el anuncio no puede activarse mientras está en moderación o rechazado. Soporte revisará el caso.',
+                    'is_read' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                $notification['id'] = DB::table('user_notifications')->insertGetId($notification);
+
+                Log::warning('Paid ad renewal held because ad is not activatable', [
+                    'payment_id' => $lockedPayment->id,
+                    'ad_id' => $ad->id,
+                    'ad_status' => $ad->status,
+                ]);
+
+                return null;
+            }
+
             $base = $ad->expires_at && Carbon::parse($ad->expires_at)->isFuture()
                 ? Carbon::parse($ad->expires_at)
                 : now();
@@ -201,10 +226,18 @@ class AdRenewalService
             return $newExpiry;
         });
 
-        if ($expiresAt) {
-            if ($notification) {
+        if ($notification) {
+            try {
                 broadcast(new NewNotification((int) $notification['user_id'], $notification))->toOthers();
+            } catch (\Throwable $error) {
+                Log::warning('Could not broadcast ad renewal notification', [
+                    'payment_id' => $payment->id,
+                    'error' => $error->getMessage(),
+                ]);
             }
+        }
+
+        if ($expiresAt) {
             $this->forgetAdCaches((int) $payment->ad_id);
         }
 
