@@ -1,0 +1,59 @@
+name: Live Ad Renewal Smoke PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm production is current main
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          sudo -n git fetch origin main --quiet
+          PROD_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          echo "production_sha=$PROD_SHA"
+          echo "main_sha=$MAIN_SHA"
+          test "$PROD_SHA" = "$MAIN_SHA"
+
+      - name: Verify routes and public webhook probe
+        run: |
+          set -euo pipefail
+          docker exec mercasto_backend_container php artisan route:list --path=ads --no-ansi | grep -E '/ads/\{.*\}/(renew|republish|activate)'
+          docker exec mercasto_backend_container php artisan route:list --path=webhooks/clip/ad-renewal --no-ansi | grep 'webhooks/clip/ad-renewal'
+          RESPONSE_FILE="$RUNNER_TEMP/ad-renewal-webhook.json"
+          HTTP_CODE="$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' \
+            -X POST https://mercasto.com/api/webhooks/clip/ad-renewal \
+            -H 'Content-Type: application/json' \
+            --data '{}')"
+          cat "$RESPONSE_FILE"
+          echo
+          test "$HTTP_CODE" = "200"
+          grep -q 'test_ok' "$RESPONSE_FILE"
+
+      - name: Run rollback-only production renewal smoke
+        run: |
+          set -euo pipefail
+          docker exec -i mercasto_backend_container php < scripts/live-ad-renewal-smoke.php
+
+      - name: Verify deployed countdown bundle
+        run: |
+          set -euo pipefail
+          INDEX_FILE="$RUNNER_TEMP/mercasto-index.html"
+          BUNDLE_FILE="$RUNNER_TEMP/mercasto-entry.js"
+          curl -fsS --max-time 30 https://mercasto.com/ -o "$INDEX_FILE"
+          ENTRY="$(grep -oE '/assets/[^"'"']+\.js' "$INDEX_FILE" | head -1)"
+          test -n "$ENTRY"
+          curl -fsS --max-time 30 "https://mercasto.com$ENTRY" -o "$BUNDLE_FILE"
+          grep -q 'mercasto-ad-expiry-countdown' "$BUNDLE_FILE"
+          echo "Countdown module found in deployed entry bundle: $ENTRY"
