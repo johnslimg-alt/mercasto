@@ -1,0 +1,93 @@
+name: Verify Catalog Fillers Production
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm production is current main
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          sudo -n git fetch origin main --quiet
+          PROD_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          echo "production_sha=$PROD_SHA"
+          echo "main_sha=$MAIN_SHA"
+          test "$PROD_SHA" = "$MAIN_SHA"
+
+      - name: Verify catalog filler migration and data
+        run: |
+          set -euo pipefail
+          docker exec -i mercasto_backend_container php <<'PHP'
+          <?php
+          use Illuminate\Support\Facades\DB;
+          use Illuminate\Support\Facades\Schema;
+
+          require '/var/www/vendor/autoload.php';
+          $app = require '/var/www/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $expectedEmails = [
+              'tienda_demo@mercasto.com',
+              'seller@example.com',
+              'johnnybroom@telegram.local',
+              'ivanagente452@gmail.com',
+              'reefmotorscom@gmail.com',
+          ];
+
+          $failures = [];
+          $check = function (bool $condition, string $message) use (&$failures): void {
+              echo ($condition ? 'PASS ' : 'FAIL ') . $message . PHP_EOL;
+              if (! $condition) {
+                  $failures[] = $message;
+              }
+          };
+
+          $check(Schema::hasColumn('ads', 'is_catalog_filler'), 'catalog filler column exists');
+          $check(
+              DB::table('migrations')->where('migration', '2026_07_20_160000_add_catalog_filler_lifetime_exemption')->exists(),
+              'catalog filler migration is applied'
+          );
+
+          $ownerIds = DB::table('users')->whereIn('email', $expectedEmails)->pluck('id');
+          $flagged = DB::table('ads')->whereIn('user_id', $ownerIds)->where('is_catalog_filler', true)->count();
+          $active = DB::table('ads')->whereIn('user_id', $ownerIds)->where('is_catalog_filler', true)->where('status', 'active')->count();
+          $withExpiry = DB::table('ads')->whereIn('user_id', $ownerIds)->where('is_catalog_filler', true)->whereNotNull('expires_at')->count();
+          $unflaggedExpected = DB::table('ads')->whereIn('user_id', $ownerIds)->where('is_catalog_filler', false)->count();
+          $e2eFlagged = DB::table('ads as a')
+              ->join('users as u', 'u.id', '=', 'a.user_id')
+              ->where('u.email', 'seller_e2e@mercasto.com')
+              ->where('a.is_catalog_filler', true)
+              ->count();
+
+          echo json_encode([
+              'expected_owner_ids' => $ownerIds,
+              'flagged_catalog_ads' => $flagged,
+              'active_catalog_ads' => $active,
+              'catalog_ads_with_expiry' => $withExpiry,
+              'expected_owner_ads_not_flagged' => $unflaggedExpected,
+              'e2e_ads_flagged' => $e2eFlagged,
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), PHP_EOL;
+
+          $check($ownerIds->count() === 5, 'all five catalog owners were found');
+          $check($flagged === 5677, 'all 5,677 catalog ads are flagged');
+          $check($active === 5677, 'all 5,677 catalog ads are active');
+          $check($withExpiry === 0, 'catalog ads have no expiry date');
+          $check($unflaggedExpected === 0, 'no selected catalog ad was missed');
+          $check($e2eFlagged === 0, 'automated E2E ads remain excluded');
+
+          if ($failures) {
+              fwrite(STDERR, 'Failures: ' . implode('; ', $failures) . PHP_EOL);
+              exit(1);
+          }
+          PHP
