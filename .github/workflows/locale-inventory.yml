@@ -1,0 +1,25 @@
+name: Locale Inventory
+
+on:
+  push:
+    branches:
+      - feat/localize-ad-expiry-countdown
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: List locale files
+        run: |
+          echo '=== LOCALE_FILES ==='
+          find src/locales -maxdepth 1 -type f -name '*.json' -printf '%f\n' | sort
+          echo '=== END_LOCALE_FILES ==='
+      - name: Show countdown source references
+        run: |
+          echo '=== COUNTDOWN_REFERENCES ==='
+          grep -RIn --exclude='*.map' -E 'Termina en|Finalizado|expires_at|expiry countdown' src | head -200 || true
+          echo '=== END_COUNTDOWN_REFERENCES ==='
