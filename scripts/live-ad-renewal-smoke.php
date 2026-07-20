@@ -3,6 +3,7 @@
 use App\Services\AdRenewalService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 require '/var/www/vendor/autoload.php';
@@ -42,8 +43,23 @@ $check(
 );
 
 $routes = collect(Route::getRoutes()->getRoutes());
-$check($routes->contains(fn ($route) => $route->uri() === 'api/ads/{ad}/renew'), 'renew endpoint is registered');
+$check(
+    $routes->contains(fn ($route) => preg_match('#^api/ads/\{[^}]+\}/renew$#', $route->uri()) === 1),
+    'renew endpoint is registered'
+);
 $check($routes->contains(fn ($route) => $route->uri() === 'api/webhooks/clip/ad-renewal'), 'Clip renewal webhook is registered');
+
+try {
+    $clipProbe = Http::timeout(10)
+        ->withBasicAuth((string) config('services.clip.api_key'), (string) config('services.clip.api_secret'))
+        ->acceptJson()
+        ->get('https://api.payclip.com/v2/checkout/mercasto-live-smoke-does-not-exist');
+    echo json_encode(['clip_read_only_probe_status' => $clipProbe->status()]) . PHP_EOL;
+    $check(! in_array($clipProbe->status(), [401, 403], true) && $clipProbe->status() < 500, 'Clip accepted authenticated read-only API probe');
+} catch (Throwable $error) {
+    echo 'Clip probe error: ' . $error->getMessage() . PHP_EOL;
+    $check(false, 'Clip authenticated read-only API probe completed');
+}
 
 $candidate = DB::table('ads')
     ->whereNotNull('user_id')
