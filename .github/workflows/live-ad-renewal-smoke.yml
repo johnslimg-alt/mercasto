@@ -1,0 +1,180 @@
+name: Live Ad Renewal Smoke
+
+on:
+  push:
+    branches:
+      - chore/live-renewal-smoke
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: Confirm production is current main
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          sudo -n git fetch origin main --quiet
+          PROD_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          echo "production_sha=$PROD_SHA"
+          echo "main_sha=$MAIN_SHA"
+          test "$PROD_SHA" = "$MAIN_SHA"
+
+      - name: Verify live routes and public webhook probe
+        run: |
+          set -euo pipefail
+          docker exec mercasto_backend_container php artisan route:list --path=ads --no-ansi | grep -E '/ads/\{.*\}/(renew|republish|activate)'
+          docker exec mercasto_backend_container php artisan route:list --path=webhooks/clip/ad-renewal --no-ansi | grep 'webhooks/clip/ad-renewal'
+
+          RESPONSE_FILE="$RUNNER_TEMP/ad-renewal-webhook.json"
+          HTTP_CODE="$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' \
+            -X POST https://mercasto.com/api/webhooks/clip/ad-renewal \
+            -H 'Content-Type: application/json' \
+            --data '{}')"
+          cat "$RESPONSE_FILE"
+          echo
+          test "$HTTP_CODE" = "200"
+          grep -q 'test_ok' "$RESPONSE_FILE"
+
+      - name: Verify production configuration and rollback renewal
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ad-renewal-live-smoke.php" <<'PHP'
+          <?php
+          require '/var/www/vendor/autoload.php';
+          $app = require '/var/www/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          use App\Services\AdRenewalService;
+          use Carbon\Carbon;
+          use Illuminate\Support\Facades\DB;
+          use Illuminate\Support\Facades\Route;
+
+          $failures = [];
+          $check = function (bool $condition, string $message) use (&$failures): void {
+              echo ($condition ? 'PASS ' : 'FAIL ') . $message . PHP_EOL;
+              if (! $condition) $failures[] = $message;
+          };
+
+          $price = (float) config('marketplace.ad_renewal_price_mxn');
+          $days = (int) config('marketplace.ad_renewal_days');
+          $product = (string) config('marketplace.ad_renewal_product_code');
+
+          echo json_encode([
+              'environment' => app()->environment(),
+              'price_mxn' => $price,
+              'days' => $days,
+              'product_code' => $product,
+              'clip_api_key_present' => ! empty(config('services.clip.api_key')),
+              'clip_api_secret_present' => ! empty(config('services.clip.api_secret')),
+              'clip_webhook_secret_present' => ! empty(config('services.clip.webhook_secret')),
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+
+          $check($price === 49.0, 'renewal price is exactly 49 MXN');
+          $check($days === 7, 'renewal duration is exactly 7 days');
+          $check($product === 'ad_renewal_7_days', 'renewal product code is correct');
+          $check(! empty(config('services.clip.api_key')), 'Clip API key is configured');
+          $check(! empty(config('services.clip.api_secret')), 'Clip API secret is configured');
+          $check(
+              DB::table('migrations')->where('migration', '2026_07_19_000001_enforce_seven_day_ad_lifetime')->exists(),
+              'seven-day lifetime migration is applied'
+          );
+
+          $routes = collect(Route::getRoutes()->getRoutes());
+          $check($routes->contains(fn ($route) => $route->uri() === 'api/ads/{ad}/renew'), 'renew endpoint is registered');
+          $check($routes->contains(fn ($route) => $route->uri() === 'api/webhooks/clip/ad-renewal'), 'Clip renewal webhook is registered');
+
+          $candidate = DB::table('ads')
+              ->whereNotNull('user_id')
+              ->whereIn('status', ['active', 'expired', 'paused', 'inactive'])
+              ->orderByDesc('id')
+              ->first();
+          $check((bool) $candidate, 'a production ad is available for rollback-only service smoke');
+
+          if ($candidate) {
+              $original = [
+                  'status' => $candidate->status,
+                  'expires_at' => $candidate->expires_at,
+                  'republish_count' => $candidate->republish_count ?? null,
+                  'republished_at' => $candidate->republished_at ?? null,
+              ];
+              $marker = 'live_smoke_' . bin2hex(random_bytes(8));
+              config(['broadcasting.default' => 'null']);
+
+              DB::beginTransaction();
+              try {
+                  DB::table('ads')->where('id', $candidate->id)->update([
+                      'status' => 'expired',
+                      'expires_at' => now()->subDay(),
+                      'updated_at' => now(),
+                  ]);
+
+                  $paymentId = DB::table('payments')->insertGetId([
+                      'user_id' => $candidate->user_id,
+                      'ad_id' => $candidate->id,
+                      'clip_checkout_id' => $marker,
+                      'clip_payment_request_id' => $marker,
+                      'amount' => 49,
+                      'description' => 'Rollback-only live renewal smoke',
+                      'product_code' => 'ad_renewal_7_days',
+                      'status' => 'pending',
+                      'created_at' => now(),
+                      'updated_at' => now(),
+                  ]);
+
+                  $payment = DB::table('payments')->where('id', $paymentId)->first();
+                  $expiresAt = app(AdRenewalService::class)->fulfill($payment);
+                  $updatedAd = DB::table('ads')->where('id', $candidate->id)->first();
+                  $updatedPayment = DB::table('payments')->where('id', $paymentId)->first();
+
+                  $remainingHours = $expiresAt ? now()->diffInHours(Carbon::parse($expiresAt), false) : -1;
+                  $check($expiresAt !== null, 'renewal service returned a new expiry');
+                  $check($updatedAd->status === 'active', 'expired ad becomes active after fulfillment');
+                  $check($remainingHours >= 167 && $remainingHours <= 169, 'new expiry is seven days from now');
+                  $check($updatedPayment->status === 'paid', 'payment becomes paid after fulfillment');
+              } finally {
+                  DB::rollBack();
+              }
+
+              $restored = DB::table('ads')->where('id', $candidate->id)->first();
+              $check($restored->status === $original['status'], 'ad status was restored by rollback');
+              $check((string) $restored->expires_at === (string) $original['expires_at'], 'ad expiry was restored by rollback');
+              $check(! DB::table('payments')->where('clip_checkout_id', $marker)->exists(), 'temporary payment was removed by rollback');
+          }
+
+          $activeCount = DB::table('ads')->where('status', 'active')->count();
+          $expiredDueCount = DB::table('ads')
+              ->where('status', 'active')
+              ->whereNotNull('expires_at')
+              ->where('expires_at', '<=', now())
+              ->count();
+          echo json_encode([
+              'active_ads' => $activeCount,
+              'active_ads_already_due' => $expiredDueCount,
+              'pending_renewal_payments' => DB::table('payments')->where('product_code', 'ad_renewal_7_days')->where('status', 'pending')->count(),
+              'paid_renewal_payments' => DB::table('payments')->where('product_code', 'ad_renewal_7_days')->where('status', 'paid')->count(),
+          ], JSON_PRETTY_PRINT) . PHP_EOL;
+
+          if ($failures) {
+              fwrite(STDERR, 'Failures: ' . implode('; ', $failures) . PHP_EOL);
+              exit(1);
+          }
+          PHP
+
+          docker exec -i mercasto_backend_container php < "$RUNNER_TEMP/ad-renewal-live-smoke.php"
+
+      - name: Verify deployed countdown bundle
+        run: |
+          set -euo pipefail
+          INDEX_FILE="$RUNNER_TEMP/mercasto-index.html"
+          BUNDLE_FILE="$RUNNER_TEMP/mercasto-entry.js"
+          curl -fsS --max-time 30 https://mercasto.com/ -o "$INDEX_FILE"
+          ENTRY="$(grep -oE '/assets/[^"'"']+\.js' "$INDEX_FILE" | head -1)"
+          test -n "$ENTRY"
+          curl -fsS --max-time 30 "https://mercasto.com$ENTRY" -o "$BUNDLE_FILE"
+          grep -q 'mercasto-ad-expiry-countdown' "$BUNDLE_FILE"
+          echo "Countdown module found in deployed entry bundle: $ENTRY"
