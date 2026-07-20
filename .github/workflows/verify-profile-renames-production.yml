@@ -1,0 +1,96 @@
+name: Verify Profile Renames Production
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm production is current main
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          sudo -n git fetch origin main --quiet
+          PROD_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          echo "production_sha=$PROD_SHA"
+          echo "main_sha=$MAIN_SHA"
+          test "$PROD_SHA" = "$MAIN_SHA"
+
+      - name: Verify production profile names
+        run: |
+          set -euo pipefail
+          docker exec -i mercasto_backend_container php <<'PHP'
+          <?php
+          use Illuminate\Support\Facades\DB;
+
+          require '/var/www/vendor/autoload.php';
+          $app = require '/var/www/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $expected = [
+              'seller@example.com' => 'Mercasto Selección',
+              'admin@mercasto.com' => 'Equipo Mercasto',
+              'seller_e2e@mercasto.com' => 'Mercasto Control',
+              'admin_e2e@mercasto.com' => 'Equipo Técnico Mercasto',
+          ];
+
+          $failures = [];
+          $check = function (bool $condition, string $message) use (&$failures): void {
+              echo ($condition ? 'PASS ' : 'FAIL ') . $message . PHP_EOL;
+              if (! $condition) {
+                  $failures[] = $message;
+              }
+          };
+
+          $check(
+              DB::table('migrations')->where('migration', '2026_07_20_163700_sanitize_demo_profile_names')->exists(),
+              'profile rename migration is applied'
+          );
+
+          foreach ($expected as $email => $name) {
+              $actual = DB::table('users')->where('email', $email)->value('name');
+              echo json_encode(['email' => $email, 'expected' => $name, 'actual' => $actual], JSON_UNESCAPED_UNICODE) . PHP_EOL;
+              $check($actual === $name, "{$email} has the expected public name");
+          }
+
+          $activeBadOwners = DB::table('users as u')
+              ->join('ads as a', 'a.user_id', '=', 'u.id')
+              ->where('a.status', 'active')
+              ->where(function ($query) {
+                  $query->whereRaw("LOWER(COALESCE(u.name, '')) LIKE '%demo%'")
+                      ->orWhereRaw("LOWER(COALESCE(u.name, '')) LIKE '%e2e%'");
+              })
+              ->distinct()
+              ->get(['u.id', 'u.name', 'u.email']);
+
+          $catalog = DB::table('ads')
+              ->where('is_catalog_filler', true)
+              ->selectRaw('COUNT(*) AS total')
+              ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active")
+              ->selectRaw("SUM(CASE WHEN expires_at IS NOT NULL THEN 1 ELSE 0 END) AS with_expiry")
+              ->first();
+
+          echo json_encode([
+              'active_bad_owners' => $activeBadOwners,
+              'catalog_fillers' => $catalog,
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
+
+          $check($activeBadOwners->isEmpty(), 'no active ad owner displays Demo or E2E');
+          $check((int) $catalog->total === 5677, 'all 5,677 catalog fillers remain present');
+          $check((int) $catalog->active === 5677, 'all 5,677 catalog fillers remain active');
+          $check((int) $catalog->with_expiry === 0, 'catalog fillers remain unlimited');
+
+          if ($failures) {
+              fwrite(STDERR, 'Failures: ' . implode('; ', $failures) . PHP_EOL);
+              exit(1);
+          }
+          PHP
