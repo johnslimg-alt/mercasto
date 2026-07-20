@@ -41,10 +41,34 @@ jobs:
               ->limit(30)
               ->get();
 
+          $auditUserIds = [1, 32, 36, 37, 54, 70];
+          $statusBreakdown = DB::table('users as u')
+              ->join('ads as a', 'a.user_id', '=', 'u.id')
+              ->whereIn('u.id', $auditUserIds)
+              ->selectRaw('u.id AS user_id, u.name, u.email, a.status, COUNT(*) AS ads')
+              ->groupBy('u.id', 'u.name', 'u.email', 'a.status')
+              ->orderBy('u.id')
+              ->orderByDesc('ads')
+              ->get();
+
+          $samples = [];
+          foreach ($auditUserIds as $userId) {
+              $samples[$userId] = DB::table('ads')
+                  ->where('user_id', $userId)
+                  ->orderByDesc('id')
+                  ->limit(8)
+                  ->get(['id', 'title', 'status', 'category', 'created_at']);
+          }
+
           $knownPatterns = DB::table('users as u')
               ->join('ads as a', 'a.user_id', '=', 'u.id')
               ->where(function ($query) {
-                  $query->where('u.email', 'tienda_demo@mercasto.com')
+                  $query->whereIn('u.email', [
+                          'tienda_demo@mercasto.com',
+                          'seller_e2e@mercasto.com',
+                          'seller@example.com',
+                          'johnnybroom@telegram.local',
+                      ])
                       ->orWhere('u.email', 'like', 'e2e_%@mailinator.com')
                       ->orWhere('u.email', 'like', '%@mailinator.com')
                       ->orWhere('a.description', 'like', 'Excelente oportunidad en la categoría de %')
@@ -52,6 +76,7 @@ jobs:
               })
               ->selectRaw('u.id, u.name, u.email, u.role, COUNT(*) AS matching_ads')
               ->selectRaw("SUM(CASE WHEN a.status = 'active' THEN 1 ELSE 0 END) AS active_ads")
+              ->selectRaw("SUM(CASE WHEN a.status = 'expired' THEN 1 ELSE 0 END) AS expired_ads")
               ->selectRaw('MIN(a.id) AS first_ad_id, MAX(a.id) AS last_ad_id')
               ->groupBy('u.id', 'u.name', 'u.email', 'u.role')
               ->orderByDesc('matching_ads')
@@ -61,6 +86,8 @@ jobs:
               'generated_at' => now()->toIso8601String(),
               'owners' => $owners,
               'known_pattern_matches' => $knownPatterns,
+              'status_breakdown' => $statusBreakdown,
+              'samples' => $samples,
           ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
           PHP
           cat "$OUTPUT_FILE"
