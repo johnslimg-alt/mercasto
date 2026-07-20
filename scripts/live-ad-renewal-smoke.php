@@ -1,13 +1,13 @@
 <?php
 
-require '/var/www/vendor/autoload.php';
-$app = require '/var/www/bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-
 use App\Services\AdRenewalService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+
+require '/var/www/vendor/autoload.php';
+$app = require '/var/www/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 $failures = [];
 $check = function (bool $condition, string $message) use (&$failures): void {
