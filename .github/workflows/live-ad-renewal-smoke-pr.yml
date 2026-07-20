@@ -42,9 +42,23 @@ jobs:
           grep -q 'test_ok' "$RESPONSE_FILE"
 
       - name: Run rollback-only production renewal smoke
+        id: renewal_smoke
         run: |
-          set -euo pipefail
-          docker exec -i mercasto_backend_container php < scripts/live-ad-renewal-smoke.php
+          set +e
+          OUTPUT_FILE="$RUNNER_TEMP/live-ad-renewal-smoke.txt"
+          docker exec -i mercasto_backend_container php < scripts/live-ad-renewal-smoke.php >"$OUTPUT_FILE" 2>&1
+          EXIT_CODE=$?
+          set -e
+          cat "$OUTPUT_FILE"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload renewal smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-ad-renewal-smoke
+          path: ${{ runner.temp }}/live-ad-renewal-smoke.txt
+          retention-days: 1
 
       - name: Verify deployed countdown bundle
         run: |
@@ -57,3 +71,6 @@ jobs:
           curl -fsS --max-time 30 "https://mercasto.com$ENTRY" -o "$BUNDLE_FILE"
           grep -q 'mercasto-ad-expiry-countdown' "$BUNDLE_FILE"
           echo "Countdown module found in deployed entry bundle: $ENTRY"
+
+      - name: Require renewal smoke success
+        run: test "${{ steps.renewal_smoke.outputs.exit_code }}" = "0"
