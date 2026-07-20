@@ -63,14 +63,12 @@ jobs:
       - name: Verify deployed countdown bundle
         run: |
           set -euo pipefail
-          INDEX_FILE="$RUNNER_TEMP/mercasto-index.html"
-          BUNDLE_FILE="$RUNNER_TEMP/mercasto-entry.js"
-          curl -fsS --max-time 30 https://mercasto.com/ -o "$INDEX_FILE"
-          ENTRY="$(grep -oE '/assets/[^"'"']+\.js' "$INDEX_FILE" | head -1)"
-          test -n "$ENTRY"
-          curl -fsS --max-time 30 "https://mercasto.com$ENTRY" -o "$BUNDLE_FILE"
-          grep -q 'mercasto-ad-expiry-countdown' "$BUNDLE_FILE"
-          echo "Countdown module found in deployed entry bundle: $ENTRY"
+          cd /var/www/mercasto
+          FRONTEND_CID="$(docker compose ps -q mercasto-frontend)"
+          test -n "$FRONTEND_CID"
+          MATCHES="$(docker exec "$FRONTEND_CID" sh -lc "grep -Rsl 'mercasto-ad-expiry-countdown' /usr/share/nginx/html/assets 2>/dev/null | head -5")"
+          test -n "$MATCHES"
+          echo "$MATCHES"
 
       - name: Require renewal smoke success
         run: test "${{ steps.renewal_smoke.outputs.exit_code }}" = "0"
