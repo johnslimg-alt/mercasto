@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class E2eTestSeeder extends Seeder
 {
@@ -14,31 +14,29 @@ class E2eTestSeeder extends Seeder
     {
         $sellerEmail = env('E2E_SELLER_EMAIL', 'seller_e2e@mercasto.com');
         $sellerPassword = env('E2E_SELLER_PASSWORD', 'E2eTestPass99!');
-        
+
         $adminEmail = env('E2E_ADMIN_EMAIL', 'admin_e2e@mercasto.com');
         $adminPassword = env('E2E_ADMIN_PASSWORD', 'E2eTestPass99!');
 
-        // Seed E2E Seller
         User::updateOrCreate(
             ['email' => $sellerEmail],
             [
-                'name' => 'E2E Seller',
+                'name' => 'Mercasto Control',
                 'password' => bcrypt($sellerPassword),
                 'role' => 'individual',
                 'is_verified' => true,
-                'ip_address' => '127.0.0.1'
+                'ip_address' => '127.0.0.1',
             ]
         );
 
-        // Seed E2E Admin
         User::updateOrCreate(
             ['email' => $adminEmail],
             [
-                'name' => 'E2E Admin',
+                'name' => 'Equipo Técnico Mercasto',
                 'password' => bcrypt($adminPassword),
                 'role' => 'admin',
                 'is_verified' => true,
-                'ip_address' => '127.0.0.1'
+                'ip_address' => '127.0.0.1',
             ]
         );
     }
