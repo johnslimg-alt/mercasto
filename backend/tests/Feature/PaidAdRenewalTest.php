@@ -27,6 +27,34 @@ class PaidAdRenewalTest extends TestCase
         $this->assertTrue($ad->expires_at->gte(now()->addDays(7)->subMinute()));
     }
 
+    public function test_catalog_filler_ad_stays_active_without_expiry_or_payment(): void
+    {
+        $seller = User::factory()->create();
+        $ad = $this->createAd($seller, [
+            'status' => 'active',
+            'is_catalog_filler' => true,
+            'expires_at' => now()->subDay(),
+        ]);
+
+        $this->assertTrue($ad->is_catalog_filler);
+        $this->assertNull($ad->expires_at);
+
+        $this->artisan('ads:expire')->assertSuccessful();
+
+        $ad->refresh();
+        $this->assertSame('active', $ad->status);
+        $this->assertNull($ad->expires_at);
+
+        Sanctum::actingAs($seller);
+        $response = $this->putJson("/api/ads/{$ad->id}/renew");
+
+        $this->assertNotSame(402, $response->status());
+        $this->assertDatabaseMissing('payments', [
+            'ad_id' => $ad->id,
+            'product_code' => 'ad_renewal_7_days',
+        ]);
+    }
+
     public function test_expired_ad_requires_fixed_49_mxn_clip_checkout(): void
     {
         config([
