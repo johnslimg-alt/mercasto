@@ -69,7 +69,16 @@
     "pending": "대기 중",
     "sold": "판매 완료",
     "featured": "추천",
-    "verified": "인증됨"
+    "verified": "인증됨",
+    "expiryCountdown": {
+      "endsIn": "종료까지 {{time}}",
+      "expired": "종료됨",
+      "expiresAt": "{{date}}에 종료",
+      "dayShort": "일",
+      "hourShort": "시간",
+      "minuteShort": "분",
+      "secondShort": "초"
+    }
   },
   "map": {
     "viewMap": "지도 보기",

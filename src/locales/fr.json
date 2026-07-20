@@ -69,7 +69,16 @@
     "pending": "En attente",
     "sold": "Vendu",
     "featured": "En vedette",
-    "verified": "Vérifié"
+    "verified": "Vérifié",
+    "expiryCountdown": {
+      "endsIn": "Se termine dans {{time}}",
+      "expired": "Terminé",
+      "expiresAt": "Se termine le {{date}}",
+      "dayShort": "j",
+      "hourShort": "h",
+      "minuteShort": "min",
+      "secondShort": "s"
+    }
   },
   "map": {
     "viewMap": "Voir la carte",

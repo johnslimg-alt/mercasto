@@ -69,7 +69,16 @@
     "pending": "معلق",
     "sold": "مباع",
     "featured": "مميز",
-    "verified": "موثق"
+    "verified": "موثق",
+    "expiryCountdown": {
+      "endsIn": "ينتهي خلال {{time}}",
+      "expired": "انتهى",
+      "expiresAt": "ينتهي في {{date}}",
+      "dayShort": "ي",
+      "hourShort": "س",
+      "minuteShort": "د",
+      "secondShort": "ث"
+    }
   },
   "map": {
     "viewMap": "عرض الخريطة",

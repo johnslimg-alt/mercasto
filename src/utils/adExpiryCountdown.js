@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 const STYLE_ID = 'mercasto-ad-expiry-countdown-styles';
 const BADGE_ATTRIBUTE = 'data-mercasto-ad-expiry-countdown';
 const API_HINT = /\/api\/(?:ads|search|home|feed|categories|favorites|profile)/i;
@@ -6,6 +8,62 @@ const AD_PATH = /\/(?:ads?|products?|publications?|anuncios?)\/(\d+)(?:\/|$|\?|#
 const expiryByAdId = new Map();
 let refreshTimer = null;
 let scanQueued = false;
+let translationCache = null;
+
+function getActiveLocale() {
+  return String(
+    i18n.resolvedLanguage
+      || i18n.language
+      || document.documentElement.lang
+      || navigator.language
+      || 'es-MX',
+  ).replace('_', '-');
+}
+
+function getCountdownCopy() {
+  const locale = getActiveLocale();
+  if (translationCache?.locale === locale) return translationCache.copy;
+
+  const baseLanguage = locale.toLowerCase().split('-')[0];
+  const candidates = [...new Set([locale, baseLanguage, 'es'])];
+  const defaults = {
+    endsIn: 'Termina en {{time}}',
+    expired: 'Finalizado',
+    expiresAt: 'Finaliza el {{date}}',
+    dayShort: 'd',
+    hourShort: 'h',
+    minuteShort: 'min',
+    secondShort: 's',
+  };
+
+  const read = (key) => {
+    for (const language of candidates) {
+      const value = i18n.getResource(language, 'translation', `ads.expiryCountdown.${key}`);
+      if (typeof value === 'string' && value.trim()) return value;
+    }
+    return defaults[key];
+  };
+
+  const copy = Object.fromEntries(Object.keys(defaults).map((key) => [key, read(key)]));
+  translationCache = { locale, copy };
+  return copy;
+}
+
+function applyTemplate(template, values) {
+  return String(template).replace(/{{\s*(\w+)\s*}}/g, (_, key) => values[key] ?? '');
+}
+
+function formatExpiryDate(timestamp) {
+  const date = new Date(timestamp);
+  try {
+    return date.toLocaleString(getActiveLocale(), {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return date.toLocaleString();
+  }
+}
 
 function normalizeExpiry(value) {
   if (!value) return null;
@@ -51,8 +109,10 @@ function parseAdIdFromHref(href) {
 }
 
 function formatRemaining(milliseconds) {
+  const copy = getCountdownCopy();
+
   if (milliseconds <= 0) {
-    return { text: 'Finalizado', state: 'expired' };
+    return { text: copy.expired, state: 'expired' };
   }
 
   const totalSeconds = Math.floor(milliseconds / 1000);
@@ -62,21 +122,24 @@ function formatRemaining(milliseconds) {
   const seconds = totalSeconds % 60;
 
   if (days > 0) {
+    const time = `${days}${copy.dayShort} ${hours}${copy.hourShort}`;
     return {
-      text: `Termina en ${days}d ${hours}h`,
+      text: applyTemplate(copy.endsIn, { time }),
       state: days < 3 ? 'warning' : 'normal',
     };
   }
 
   if (hours > 0) {
+    const time = `${hours}${copy.hourShort} ${minutes}${copy.minuteShort}`;
     return {
-      text: `Termina en ${hours}h ${minutes}min`,
+      text: applyTemplate(copy.endsIn, { time }),
       state: 'urgent',
     };
   }
 
+  const time = `${minutes}${copy.minuteShort} ${seconds}${copy.secondShort}`;
   return {
-    text: `Termina en ${minutes}min ${seconds}s`,
+    text: applyTemplate(copy.endsIn, { time }),
     state: 'urgent',
   };
 }
@@ -88,6 +151,7 @@ function createBadge(adId, variant = 'card') {
   badge.className = `mercasto-ad-expiry-countdown mercasto-ad-expiry-countdown--${variant}`;
   badge.setAttribute('role', 'status');
   badge.setAttribute('aria-live', 'off');
+  badge.setAttribute('dir', 'auto');
   badge.innerHTML = '<span aria-hidden="true">⏱</span><span data-countdown-text></span>';
   return badge;
 }
@@ -101,11 +165,14 @@ function updateBadge(badge) {
   const text = badge.querySelector('[data-countdown-text]');
   if (text) text.textContent = remaining.text;
 
+  const locale = getActiveLocale();
+  const copy = getCountdownCopy();
+  const formattedDate = formatExpiryDate(expiry);
+
   badge.dataset.state = remaining.state;
-  badge.title = new Date(expiry).toLocaleString('es-MX', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  badge.lang = locale;
+  badge.setAttribute('aria-label', remaining.text);
+  badge.title = applyTemplate(copy.expiresAt, { date: formattedDate });
 }
 
 function attachCardBadges() {
@@ -289,6 +356,11 @@ function installStyles() {
   document.head.appendChild(style);
 }
 
+function handleLanguageChange() {
+  translationCache = null;
+  queueScan();
+}
+
 export function installAdExpiryCountdown() {
   if (typeof window === 'undefined' || window.__mercastoAdExpiryCountdownInstalled) return;
 
@@ -296,6 +368,7 @@ export function installAdExpiryCountdown() {
   installStyles();
   installFetchInterceptor();
   installXhrInterceptor();
+  i18n.on('languageChanged', handleLanguageChange);
 
   const observer = new MutationObserver(queueScan);
   const start = () => {
@@ -312,6 +385,7 @@ export function installAdExpiryCountdown() {
 
   window.addEventListener('pagehide', () => {
     if (refreshTimer) window.clearInterval(refreshTimer);
+    i18n.off('languageChanged', handleLanguageChange);
     observer.disconnect();
   }, { once: true });
 }

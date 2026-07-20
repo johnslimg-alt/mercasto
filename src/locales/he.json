@@ -69,7 +69,16 @@
     "pending": "ממתין לאישור",
     "sold": "נמכר",
     "featured": "מקודם",
-    "verified": "מאומת"
+    "verified": "מאומת",
+    "expiryCountdown": {
+      "endsIn": "מסתיים בעוד {{time}}",
+      "expired": "הסתיים",
+      "expiresAt": "מסתיים ב־{{date}}",
+      "dayShort": "י",
+      "hourShort": "ש",
+      "minuteShort": "דק׳",
+      "secondShort": "שנ׳"
+    }
   },
   "map": {
     "viewMap": "הצג מפה",

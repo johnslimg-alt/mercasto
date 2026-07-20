@@ -69,7 +69,16 @@
     "pending": "审核中",
     "sold": "已售",
     "featured": "精选",
-    "verified": "已验证"
+    "verified": "已验证",
+    "expiryCountdown": {
+      "endsIn": "剩余 {{time}}",
+      "expired": "已结束",
+      "expiresAt": "结束时间：{{date}}",
+      "dayShort": "天",
+      "hourShort": "小时",
+      "minuteShort": "分",
+      "secondShort": "秒"
+    }
   },
   "map": {
     "viewMap": "查看地图",
