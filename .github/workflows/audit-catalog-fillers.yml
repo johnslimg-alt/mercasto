@@ -1,0 +1,73 @@
+name: Audit Catalog Fillers
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Audit production filler ownership
+        run: |
+          set -euo pipefail
+          OUTPUT_FILE="$RUNNER_TEMP/catalog-filler-audit.json"
+          docker exec -i mercasto_backend_container php >"$OUTPUT_FILE" <<'PHP'
+          <?php
+          use Illuminate\Support\Facades\DB;
+
+          require '/var/www/vendor/autoload.php';
+          $app = require '/var/www/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $owners = DB::table('users as u')
+              ->join('ads as a', 'a.user_id', '=', 'u.id')
+              ->selectRaw("u.id, u.name, u.email, u.role, COUNT(*) AS total_ads")
+              ->selectRaw("SUM(CASE WHEN a.status = 'active' THEN 1 ELSE 0 END) AS active_ads")
+              ->selectRaw("SUM(CASE WHEN a.status = 'expired' THEN 1 ELSE 0 END) AS expired_ads")
+              ->selectRaw("SUM(CASE WHEN a.title ~ ' - [0-9]{3}$' THEN 1 ELSE 0 END) AS generated_title_ads")
+              ->selectRaw("SUM(CASE WHEN a.description LIKE 'Excelente oportunidad en la categoría de %' THEN 1 ELSE 0 END) AS generated_description_ads")
+              ->selectRaw("SUM(CASE WHEN CAST(a.image_url AS TEXT) LIKE '%images.unsplash.com%' THEN 1 ELSE 0 END) AS unsplash_ads")
+              ->selectRaw('MIN(a.id) AS first_ad_id, MAX(a.id) AS last_ad_id, MIN(a.created_at) AS first_created_at, MAX(a.created_at) AS last_created_at')
+              ->groupBy('u.id', 'u.name', 'u.email', 'u.role')
+              ->havingRaw('COUNT(*) >= 3')
+              ->orderByDesc('total_ads')
+              ->limit(30)
+              ->get();
+
+          $knownPatterns = DB::table('users as u')
+              ->join('ads as a', 'a.user_id', '=', 'u.id')
+              ->where(function ($query) {
+                  $query->where('u.email', 'tienda_demo@mercasto.com')
+                      ->orWhere('u.email', 'like', 'e2e_%@mailinator.com')
+                      ->orWhere('u.email', 'like', '%@mailinator.com')
+                      ->orWhere('a.description', 'like', 'Excelente oportunidad en la categoría de %')
+                      ->orWhereRaw("a.title ~ ' - [0-9]{3}$'");
+              })
+              ->selectRaw('u.id, u.name, u.email, u.role, COUNT(*) AS matching_ads')
+              ->selectRaw("SUM(CASE WHEN a.status = 'active' THEN 1 ELSE 0 END) AS active_ads")
+              ->selectRaw('MIN(a.id) AS first_ad_id, MAX(a.id) AS last_ad_id')
+              ->groupBy('u.id', 'u.name', 'u.email', 'u.role')
+              ->orderByDesc('matching_ads')
+              ->get();
+
+          echo json_encode([
+              'generated_at' => now()->toIso8601String(),
+              'owners' => $owners,
+              'known_pattern_matches' => $knownPatterns,
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
+          PHP
+          cat "$OUTPUT_FILE"
+
+      - name: Upload audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-filler-audit
+          path: ${{ runner.temp }}/catalog-filler-audit.json
+          retention-days: 1
