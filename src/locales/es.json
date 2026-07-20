@@ -69,7 +69,16 @@
     "pending": "Pendiente",
     "sold": "Vendido",
     "featured": "Destacado",
-    "verified": "Verificado"
+    "verified": "Verificado",
+    "expiryCountdown": {
+      "endsIn": "Termina en {{time}}",
+      "expired": "Finalizado",
+      "expiresAt": "Finaliza el {{date}}",
+      "dayShort": "d",
+      "hourShort": "h",
+      "minuteShort": "min",
+      "secondShort": "s"
+    }
   },
   "map": {
     "viewMap": "Ver mapa",

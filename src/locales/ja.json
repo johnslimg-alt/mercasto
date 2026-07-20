@@ -69,7 +69,16 @@
     "pending": "保留中",
     "sold": "売り切れ",
     "featured": "おすすめ",
-    "verified": "認証済み"
+    "verified": "認証済み",
+    "expiryCountdown": {
+      "endsIn": "残り{{time}}",
+      "expired": "終了",
+      "expiresAt": "{{date}}に終了",
+      "dayShort": "日",
+      "hourShort": "時間",
+      "minuteShort": "分",
+      "secondShort": "秒"
+    }
   },
   "map": {
     "viewMap": "地図で見る",

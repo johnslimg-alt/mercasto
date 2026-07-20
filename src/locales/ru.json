@@ -69,7 +69,16 @@
     "pending": "На модерации",
     "sold": "Продано",
     "featured": "Рекомендуемые",
-    "verified": "Проверено"
+    "verified": "Проверено",
+    "expiryCountdown": {
+      "endsIn": "Осталось {{time}}",
+      "expired": "Завершено",
+      "expiresAt": "Завершится {{date}}",
+      "dayShort": "д",
+      "hourShort": "ч",
+      "minuteShort": "мин",
+      "secondShort": "с"
+    }
   },
   "map": {
     "viewMap": "Показать карту",

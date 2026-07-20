@@ -69,7 +69,16 @@
     "pending": "ווארטן",
     "sold": "פארקויפט",
     "featured": "ספעציעלע",
-    "verified": "באשטעטיקט"
+    "verified": "באשטעטיקט",
+    "expiryCountdown": {
+      "endsIn": "ענדיקט זיך אין {{time}}",
+      "expired": "געענדיקט",
+      "expiresAt": "ענדיקט זיך דעם {{date}}",
+      "dayShort": "ט",
+      "hourShort": "ש",
+      "minuteShort": "מינ",
+      "secondShort": "סעק"
+    }
   },
   "map": {
     "viewMap": "זען маפּע",
