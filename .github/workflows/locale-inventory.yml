@@ -16,13 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: List locale files
+      - name: Build locale inventory
         run: |
-          echo '=== LOCALE_FILES ==='
-          find src/locales -maxdepth 1 -type f -name '*.json' -printf '%f\n' | sort
-          echo '=== END_LOCALE_FILES ==='
-      - name: Show countdown source references
-        run: |
-          echo '=== COUNTDOWN_REFERENCES ==='
-          grep -RIn --exclude='*.map' -E 'Termina en|Finalizado|expires_at|expiry countdown' src | head -200 || true
-          echo '=== END_COUNTDOWN_REFERENCES ==='
+          mkdir -p locale-inventory
+          cp src/i18n.js locale-inventory/i18n.js
+          cp src/utils/adExpiryCountdown.js locale-inventory/adExpiryCountdown.js
+          cp src/main.jsx locale-inventory/main.jsx
+          cp -R src/locales locale-inventory/locales
+          find src/locales -maxdepth 1 -type f -name '*.json' -printf '%f\n' | sort > locale-inventory/locale-files.txt
+          grep -RIn --exclude='*.map' -E 'Termina en|Finalizado|expires_at|expiry countdown' src > locale-inventory/countdown-references.txt || true
+      - name: Upload locale inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: locale-inventory
+          path: locale-inventory
+          retention-days: 1
