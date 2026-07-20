@@ -1,0 +1,61 @@
+name: Audit Demo Profile Names
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Audit public-facing demo names
+        run: |
+          set -euo pipefail
+          OUTPUT_FILE="$RUNNER_TEMP/demo-profile-name-audit.json"
+          docker exec -i mercasto_backend_container php >"$OUTPUT_FILE" <<'PHP'
+          <?php
+          use Illuminate\Support\Facades\DB;
+
+          require '/var/www/vendor/autoload.php';
+          $app = require '/var/www/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $rows = DB::table('users as u')
+              ->leftJoin('ads as a', 'a.user_id', '=', 'u.id')
+              ->where(function ($query) {
+                  $query->whereRaw("LOWER(COALESCE(u.name, '')) LIKE '%demo%'")
+                      ->orWhereRaw("LOWER(COALESCE(u.business_name, '')) LIKE '%demo%'")
+                      ->orWhereRaw("LOWER(COALESCE(u.bio, '')) LIKE '%demo%'")
+                      ->orWhereRaw("LOWER(COALESCE(u.email, '')) LIKE '%demo%'")
+                      ->orWhereRaw("LOWER(COALESCE(u.name, '')) LIKE '%test%'")
+                      ->orWhereRaw("LOWER(COALESCE(u.business_name, '')) LIKE '%test%'")
+                      ->orWhereRaw("LOWER(COALESCE(u.name, '')) LIKE '%e2e%'")
+                      ->orWhereRaw("LOWER(COALESCE(u.business_name, '')) LIKE '%e2e%'");
+              })
+              ->selectRaw('u.id, u.name, u.email, u.role, u.business_name, u.bio, u.business_profile_enabled')
+              ->selectRaw('COUNT(a.id) AS total_ads')
+              ->selectRaw("SUM(CASE WHEN a.status = 'active' THEN 1 ELSE 0 END) AS active_ads")
+              ->selectRaw("SUM(CASE WHEN COALESCE(a.is_catalog_filler, false) = true THEN 1 ELSE 0 END) AS catalog_filler_ads")
+              ->groupBy('u.id', 'u.name', 'u.email', 'u.role', 'u.business_name', 'u.bio', 'u.business_profile_enabled')
+              ->orderByDesc('total_ads')
+              ->get();
+
+          echo json_encode([
+              'generated_at' => now()->toIso8601String(),
+              'matches' => $rows,
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
+          PHP
+          cat "$OUTPUT_FILE"
+
+      - name: Upload audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-profile-name-audit
+          path: ${{ runner.temp }}/demo-profile-name-audit.json
+          retention-days: 1
