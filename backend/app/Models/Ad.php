@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -64,6 +65,21 @@ class Ad extends Model
             'ai_moderation_confidence' => 'decimal:4',
             'generated_cover' => 'boolean',
         ];
+    }
+
+    public function setExpiresAtAttribute(mixed $value): void
+    {
+        if ($value === null || $value === '') {
+            $this->attributes['expires_at'] = null;
+            return;
+        }
+
+        $expiresAt = Carbon::parse($value);
+        $maximumFreeExpiry = now()->addDays((int) config('marketplace.ad_lifetime_days', 7));
+
+        $this->attributes['expires_at'] = $expiresAt->greaterThan($maximumFreeExpiry)
+            ? $maximumFreeExpiry
+            : $expiresAt;
     }
 
     public function user()
