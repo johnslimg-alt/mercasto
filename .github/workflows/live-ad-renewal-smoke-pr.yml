@@ -65,13 +65,10 @@ jobs:
         run: |
           set +e
           OUTPUT_FILE="$RUNNER_TEMP/countdown-bundle-smoke.txt"
-          cd /var/www/mercasto
           {
-            echo '=== docker compose ps ==='
-            docker compose ps
             echo '=== docker ps ==='
             docker ps --format '{{.ID}} {{.Names}} {{.Image}}'
-            FRONTEND_CID="$(docker compose ps -q mercasto-frontend 2>/dev/null)"
+            FRONTEND_CID="$(docker ps -q --filter 'name=^/mercasto_frontend_container$' | head -1)"
             echo "frontend_cid=$FRONTEND_CID"
             if [ -z "$FRONTEND_CID" ]; then
               exit 2
