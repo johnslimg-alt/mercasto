@@ -22,21 +22,6 @@ return new class extends Migration
                     'updated_at' => now(),
                 ]);
         }
-
-        DB::table('users')
-            ->whereRaw("LOWER(COALESCE(name, '')) LIKE '%demo%'")
-            ->whereNotIn('email', array_keys($renames))
-            ->update([
-                'name' => 'Usuario Mercasto',
-                'updated_at' => now(),
-            ]);
-
-        DB::table('users')
-            ->whereRaw("LOWER(COALESCE(business_name, '')) LIKE '%demo%'")
-            ->update([
-                'business_name' => 'Mercasto Selección',
-                'updated_at' => now(),
-            ]);
     }
 
     public function down(): void
