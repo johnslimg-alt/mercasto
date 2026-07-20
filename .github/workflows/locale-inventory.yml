@@ -1,33 +1,33 @@
-name: Locale Inventory
+name: Apply Countdown Localizations
 
 on:
   push:
     branches:
       - feat/localize-ad-expiry-countdown
-  pull_request:
-    branches:
-      - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inventory:
+  localize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build locale inventory
-        run: |
-          mkdir -p locale-inventory
-          cp src/i18n.js locale-inventory/i18n.js
-          cp src/utils/adExpiryCountdown.js locale-inventory/adExpiryCountdown.js
-          cp src/main.jsx locale-inventory/main.jsx
-          cp -R src/locales locale-inventory/locales
-          find src/locales -maxdepth 1 -type f -name '*.json' -printf '%f\n' | sort > locale-inventory/locale-files.txt
-          grep -RIn --exclude='*.map' -E 'Termina en|Finalizado|expires_at|expiry countdown' src > locale-inventory/countdown-references.txt || true
-      - name: Upload locale inventory
-        uses: actions/upload-artifact@v4
         with:
-          name: locale-inventory
-          path: locale-inventory
-          retention-days: 1
+          ref: feat/localize-ad-expiry-countdown
+      - name: Apply all countdown translations
+        run: |
+          python3 scripts/localize_ad_expiry.py
+          node --check src/utils/adExpiryCountdown.js
+          git diff --check
+      - name: Commit generated localization changes
+        run: |
+          if git diff --quiet; then
+            echo 'Localization files are already up to date.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/locales src/utils/adExpiryCountdown.js
+          git commit -m 'feat: localize ad expiry countdown in all languages'
+          git push origin HEAD:feat/localize-ad-expiry-countdown
