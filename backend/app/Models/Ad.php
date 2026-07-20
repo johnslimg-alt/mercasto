@@ -29,6 +29,7 @@ class Ad extends Model
         'video_url',
         'video_processing_status',
         'status',
+        'is_catalog_filler',
         'moderation_submitted_at',
         'ai_moderation_status',
         'ai_moderation_reason',
@@ -55,6 +56,7 @@ class Ad extends Model
             'longitude' => 'decimal:7',
             'views' => 'integer',
             'republish_count' => 'integer',
+            'is_catalog_filler' => 'boolean',
             'expires_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
             'republished_at' => 'datetime',
@@ -67,8 +69,23 @@ class Ad extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (Ad $ad): void {
+            if ($ad->is_catalog_filler) {
+                $ad->attributes['expires_at'] = null;
+                $ad->attributes['reminder_sent_at'] = null;
+            }
+        });
+    }
+
     public function setExpiresAtAttribute(mixed $value): void
     {
+        if ((bool) ($this->attributes['is_catalog_filler'] ?? false)) {
+            $this->attributes['expires_at'] = null;
+            return;
+        }
+
         if ($value === null || $value === '') {
             $this->attributes['expires_at'] = null;
             return;

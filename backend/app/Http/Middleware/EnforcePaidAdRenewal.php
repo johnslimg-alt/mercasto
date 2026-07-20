@@ -44,6 +44,10 @@ class EnforcePaidAdRenewal
                     return response()->json(['message' => 'No tienes permisos para renovar este anuncio.'], 403);
                 }
 
+                if ((bool) ($ad->is_catalog_filler ?? false)) {
+                    return $next($request);
+                }
+
                 if ($action === 'activate' && $ad->status !== 'expired' && $this->hasTimeRemaining($ad)) {
                     return $next($request);
                 }
@@ -71,6 +75,7 @@ class EnforcePaidAdRenewal
             $expiredIds = DB::table('ads')
                 ->where('user_id', $user->id)
                 ->whereIn('id', $ids)
+                ->where('is_catalog_filler', false)
                 ->where(function ($query) {
                     $query->where('status', 'expired')
                         ->orWhereNull('expires_at')
@@ -95,6 +100,11 @@ class EnforcePaidAdRenewal
             $ad = DB::table('ads')->where('id', (int) $matches[1])->first();
             if ($ad
                 && (int) $ad->user_id === (int) $user->id
+                && (bool) ($ad->is_catalog_filler ?? false)) {
+                return $next($request);
+            }
+            if ($ad
+                && (int) $ad->user_id === (int) $user->id
                 && ($ad->status === 'expired' || ! $this->hasTimeRemaining($ad))) {
                 return $this->renewals->createCheckout($request, $ad);
             }
@@ -105,6 +115,10 @@ class EnforcePaidAdRenewal
 
     private function hasTimeRemaining(object $ad): bool
     {
+        if ((bool) ($ad->is_catalog_filler ?? false)) {
+            return true;
+        }
+
         return $ad->expires_at !== null && now()->lt($ad->expires_at);
     }
 
@@ -116,6 +130,7 @@ class EnforcePaidAdRenewal
 
         $expiredAds = DB::table('ads')
             ->where('status', 'active')
+            ->where('is_catalog_filler', false)
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
             ->get(['id', 'user_id', 'title']);
@@ -133,6 +148,7 @@ class EnforcePaidAdRenewal
             DB::table('ads')
                 ->whereIn('id', $ids)
                 ->where('status', 'active')
+                ->where('is_catalog_filler', false)
                 ->update([
                     'status' => 'expired',
                     'updated_at' => $timestamp,

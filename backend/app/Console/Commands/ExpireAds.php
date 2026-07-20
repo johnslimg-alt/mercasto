@@ -17,6 +17,7 @@ class ExpireAds extends Command
     {
         $expiredAds = Ad::with('user:id,name,email')
             ->where('status', 'active')
+            ->where('is_catalog_filler', false)
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
             ->get();
