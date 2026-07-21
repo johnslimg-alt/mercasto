@@ -118,7 +118,7 @@ function inspectRenderedErrorBoundary() {
 }
 
 function reportSuccessfulRecovery() {
-  let recovered = null;
+  let recovered;
   try {
     recovered = JSON.parse(sessionStorage.getItem(RECOVERY_EVENT_KEY) || 'null');
   } catch {
