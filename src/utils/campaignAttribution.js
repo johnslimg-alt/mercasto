@@ -85,7 +85,7 @@ function inferReferrer() {
   }
 }
 
-function attributionFromUrl(rawUrl = window.location.href) {
+function attributionFromUrl(rawUrl = window.location.href, allowReferrer = false) {
   let url;
   try {
     url = new URL(String(rawUrl), window.location.href);
@@ -104,7 +104,7 @@ function attributionFromUrl(rawUrl = window.location.href) {
   const term = clean(params.get(PARAMS.term));
   const clickPlatform = clean(paid?.clickPlatform);
   const hasExplicitCampaign = Boolean(source || medium || campaign || content || term || clickPlatform);
-  const referral = hasExplicitCampaign ? null : inferReferrer();
+  const referral = allowReferrer && !hasExplicitCampaign ? inferReferrer() : null;
 
   if (!hasExplicitCampaign && !referral) return null;
 
@@ -154,14 +154,18 @@ export function getCampaignAttribution() {
   };
 }
 
+function isGtagArguments(item) {
+  return Boolean(item && typeof item === 'object' && item[0] === 'event');
+}
+
 function enrichPlainEvent(item) {
-  if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+  if (!item || typeof item !== 'object' || Array.isArray(item) || isGtagArguments(item)) return item;
   Object.assign(item, getCampaignAttribution());
   return item;
 }
 
 function enrichGtagArguments(item) {
-  if (!item || typeof item !== 'object' || item[0] !== 'event') return item;
+  if (!isGtagArguments(item)) return item;
   if (!item[2] || typeof item[2] !== 'object') item[2] = {};
   Object.assign(item[2], getCampaignAttribution());
   return item;
@@ -188,8 +192,8 @@ function patchDataLayer() {
   });
 }
 
-function capture(rawUrl) {
-  const attribution = attributionFromUrl(rawUrl);
+function capture(rawUrl, allowReferrer = false) {
+  const attribution = attributionFromUrl(rawUrl, allowReferrer);
   if (attribution) persistAttribution(attribution);
 }
 
@@ -199,13 +203,13 @@ function patchHistory() {
 
   window.history.pushState = function attributedPushState(state, title, url) {
     const result = originalPushState.call(this, state, title, url);
-    capture(url ?? window.location.href);
+    capture(url ?? window.location.href, false);
     return result;
   };
 
   window.history.replaceState = function attributedReplaceState(state, title, url) {
     const result = originalReplaceState.call(this, state, title, url);
-    capture(url ?? window.location.href);
+    capture(url ?? window.location.href, false);
     return result;
   };
 }
@@ -214,9 +218,9 @@ export function installCampaignAttribution() {
   if (!isBrowser() || window.__mercastoCampaignAttributionInstalled) return;
   window.__mercastoCampaignAttributionInstalled = true;
 
-  capture(window.location.href);
+  capture(window.location.href, true);
   patchDataLayer();
   patchHistory();
-  window.addEventListener('popstate', () => capture(window.location.href));
+  window.addEventListener('popstate', () => capture(window.location.href, false));
   window.__mercastoCampaignAttribution = getCampaignAttribution;
 }
