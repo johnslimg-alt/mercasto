@@ -1,0 +1,137 @@
+name: Repair Production Ad Images
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/repair-production-ad-images.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm production is current main
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          sudo -n git fetch origin main --quiet
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - name: Replace unusable images with branded illustrative covers
+        run: |
+          set -euo pipefail
+          docker exec -i mercasto_backend_container php <<'PHP'
+          <?php
+
+          use App\Models\Ad;
+          use App\Services\AdIllustrativeCoverService;
+          use Illuminate\Support\Facades\Storage;
+
+          require '/var/www/vendor/autoload.php';
+          $app = require '/var/www/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $ids = [
+              655, 658, 668, 688, 854, 859, 865, 871, 893, 1154, 1160,
+              6291, 6294, 6296, 6304, 6307, 6309, 6319, 6320, 6323, 6324,
+              6383, 6396,
+          ];
+
+          /** @var AdIllustrativeCoverService $covers */
+          $covers = app(AdIllustrativeCoverService::class);
+          $result = ['requested' => count($ids), 'repaired' => [], 'missing_ads' => []];
+
+          foreach ($ids as $id) {
+              $ad = Ad::query()->find($id);
+              if (! $ad) {
+                  $result['missing_ads'][] = $id;
+                  continue;
+              }
+
+              $current = [];
+              if (is_array($ad->image_url)) {
+                  $current = $ad->image_url;
+              } elseif (is_string($ad->image_url) && trim($ad->image_url) !== '') {
+                  $decoded = json_decode($ad->image_url, true);
+                  $current = is_array($decoded) ? $decoded : [$ad->image_url];
+              }
+
+              foreach ($current as $image) {
+                  if (is_string($image) && str_starts_with($image, 'ads/placeholders/')) {
+                      Storage::disk('public')->delete($image);
+                  }
+              }
+
+              $ad->forceFill([
+                  'image_url' => null,
+                  'generated_cover' => false,
+              ])->saveQuietly();
+
+              $path = $covers->ensureCover($ad->fresh());
+              if (! is_string($path)
+                  || ! Storage::disk('public')->exists($path)
+                  || Storage::disk('public')->size($path) <= 0) {
+                  throw new RuntimeException("Failed to create a usable cover for ad {$id}");
+              }
+
+              $fresh = $ad->fresh();
+              $result['repaired'][] = [
+                  'id' => $id,
+                  'status' => $fresh->status,
+                  'is_catalog_filler' => (bool) $fresh->is_catalog_filler,
+                  'generated_cover' => (bool) $fresh->generated_cover,
+                  'image_url' => $fresh->image_url,
+                  'path' => $path,
+                  'bytes' => Storage::disk('public')->size($path),
+              ];
+          }
+
+          if ($result['missing_ads'] !== [] || count($result['repaired']) !== count($ids)) {
+              throw new RuntimeException('Not every audited listing was repaired: ' . json_encode($result));
+          }
+
+          echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
+          PHP
+
+      - name: Verify repaired image files from production
+        run: |
+          set -euo pipefail
+          docker exec -i mercasto_backend_container php <<'PHP'
+          <?php
+
+          use App\Models\Ad;
+          use Illuminate\Support\Facades\Storage;
+
+          require '/var/www/vendor/autoload.php';
+          $app = require '/var/www/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $ids = [655,658,668,688,854,859,865,871,893,1154,1160,6291,6294,6296,6304,6307,6309,6319,6320,6323,6324,6383,6396];
+          $verified = 0;
+
+          foreach (Ad::query()->whereIn('id', $ids)->get() as $ad) {
+              $decoded = json_decode((string) $ad->image_url, true);
+              $images = is_array($decoded) ? $decoded : [];
+              $path = $images[0] ?? null;
+              if (! is_string($path)
+                  || ! str_starts_with($path, 'ads/placeholders/')
+                  || ! $ad->generated_cover
+                  || ! Storage::disk('public')->exists($path)
+                  || Storage::disk('public')->size($path) <= 0) {
+                  throw new RuntimeException("Ad {$ad->id} still has no usable image");
+              }
+              $verified++;
+          }
+
+          if ($verified !== count($ids)) {
+              throw new RuntimeException("Expected " . count($ids) . " repaired ads, verified {$verified}");
+          }
+
+          echo "Verified {$verified} repaired listings with usable image files.\n";
+          PHP
