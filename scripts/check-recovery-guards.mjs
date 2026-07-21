@@ -113,6 +113,24 @@ assertContains(
 );
 
 assertNotContains(
+  'src/App.jsx',
+  '4 + (((Number(ad.id) || 1) % 10) / 10)',
+  'ad ratings must never be synthesized from an ad id'
+);
+
+assertNotContains(
+  'src/App.jsx',
+  '((Number(ad.id) || 1) % 7) + 1',
+  'review counts must never be synthesized from an ad id'
+);
+
+assertContains(
+  'src/App.jsx',
+  'if (!hasReviews) return null;',
+  'rating social proof renders only when real review data exists'
+);
+
+assertNotContains(
   '.github/workflows/emergency-container-frontend-patch.yml',
   "paths:\n      - 'public/deploy-trigger.txt'",
   'container patch workflow must stay manual-only during stabilization'
