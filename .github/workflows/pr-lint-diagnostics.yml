@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   lint:
@@ -26,11 +27,43 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci --no-audit --no-fund >/dev/null
-      - name: Print lint diagnostics
+      - name: Run lint and publish diagnostics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set +e
           npm run lint:ci > /tmp/mercasto-lint.log 2>&1
           code=$?
-          echo '=== ESLINT DIAGNOSTICS ==='
-          tail -200 /tmp/mercasto-lint.log
+          set -e
+
+          cat /tmp/mercasto-lint.log
+
+          if [ "$code" -eq 0 ]; then
+            state=success
+            summary='ESLint passed'
+          else
+            state=failure
+            summary="$(awk '
+              /^\// { file=$0; sub(/^.*\/mercasto\//, "", file); next }
+              / error / { line=$0; gsub(/^[[:space:]]+/, "", line); print file " " line; exit }
+            ' /tmp/mercasto-lint.log)"
+            if [ -z "$summary" ]; then
+              summary="$(tail -n 1 /tmp/mercasto-lint.log)"
+            fi
+          fi
+
+          summary="$(printf '%s' "$summary" | tr -cd '[:alnum:] .,:_()/@-/' | cut -c1-125)"
+          detail="$(printf '%s' "$summary" | base64 | tr -d '\n=' | tr '+/' '-_')"
+          target="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}?lint_result=${detail}"
+          payload="$(printf '{"state":"%s","context":"diagnostics/eslint","description":"%s","target_url":"%s"}' "$state" "$summary" "$target")"
+
+          curl -fsS --retry 3 --retry-all-errors \
+            -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -d "$payload"
+
           exit "$code"
