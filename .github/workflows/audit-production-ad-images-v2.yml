@@ -1,0 +1,57 @@
+name: Audit Production Ad Images V2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/scripts/audit-production-ad-images.php'
+      - '.github/workflows/audit-production-ad-images-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm production is current main
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          sudo -n git fetch origin main --quiet
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - name: Run complete image audit
+        run: |
+          set -euo pipefail
+          OUTPUT="$GITHUB_WORKSPACE/production-ad-image-audit-v2.json"
+          docker cp "$GITHUB_WORKSPACE/backend/scripts/audit-production-ad-images.php" \
+            mercasto_backend_container:/tmp/audit-production-ad-images.php
+          docker exec mercasto_backend_container \
+            php -d display_errors=stderr /tmp/audit-production-ad-images.php > "$OUTPUT"
+          docker exec mercasto_backend_container rm -f /tmp/audit-production-ad-images.php
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('production-ad-image-audit-v2.json')
+          data = json.loads(path.read_text(encoding='utf-8-sig'))
+          print(json.dumps({
+              'summary': data['summary'],
+              'entry_stats': data['entry_stats'],
+              'by_status': data['by_status'],
+          }, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload full audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-ad-image-audit-v2
+          path: production-ad-image-audit-v2.json
+          if-no-files-found: error
+          retention-days: 3
