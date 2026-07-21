@@ -1,3 +1,5 @@
+import { trackEvent } from './analytics';
+
 const INTENT_STORAGE_KEY = 'mercasto.protected_route_intent.v1';
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_STORAGE_KEY = 'user';
@@ -6,12 +8,15 @@ const STORAGE_PATCH_MARKER = '__mercastoProtectedPostReturn';
 const INTENT_TTL_MS = 30 * 60 * 1000;
 const AUTH_SETTLE_MS = 150;
 const POLL_INTERVAL_MS = 50;
+const FUNNEL_DEDUPE_MS = 1500;
 
 let installed = false;
 let pollTimer = null;
 let authenticatedAt = 0;
 let originalPushState = null;
 let originalReplaceState = null;
+let lastFunnelSignature = '';
+let lastFunnelTrackedAt = 0;
 
 function destinationFrom(url) {
   try {
@@ -32,6 +37,16 @@ function destinationFrom(url) {
 
 function isProtectedPostRoute(pathname) {
   return /^\/post\/?$/.test(pathname || '');
+}
+
+function trackSellerFunnel(eventName, params = {}) {
+  const signature = `${eventName}:${params.intent_path || ''}:${params.destination_path || ''}`;
+  const now = Date.now();
+  if (signature === lastFunnelSignature && now - lastFunnelTrackedAt < FUNNEL_DEDUPE_MS) return;
+
+  lastFunnelSignature = signature;
+  lastFunnelTrackedAt = now;
+  trackEvent(eventName, params);
 }
 
 function clearIntent() {
@@ -63,6 +78,14 @@ function writeIntent(destination, state) {
       return;
     }
   }
+
+  const authenticated = Boolean(
+    localStorage.getItem(AUTH_TOKEN_KEY) && localStorage.getItem(USER_STORAGE_KEY),
+  );
+  trackSellerFunnel('seller_post_intent', {
+    intent_path: destination.path,
+    authentication_state: authenticated ? 'authenticated' : 'anonymous',
+  });
 
   startAuthWatcher();
 }
@@ -176,6 +199,11 @@ function restoreIntentWhenReady() {
   if (Date.now() - authenticatedAt < AUTH_SETTLE_MS) return;
 
   originalReplaceState.call(window.history, intent.state ?? {}, '', intent.path);
+  trackSellerFunnel('seller_post_returned_after_auth', {
+    intent_path: intent.path,
+    intent_age_ms: Math.max(0, Date.now() - intent.capturedAt),
+    registration_flag_present: Boolean(localStorage.getItem(REGISTRATION_FLAG_KEY)),
+  });
   clearIntent();
   stopAuthWatcher();
   dispatchRouteChange(intent.state ?? null);
@@ -185,6 +213,19 @@ function startAuthWatcher() {
   if (pollTimer !== null) return;
   pollTimer = window.setInterval(restoreIntentWhenReady, POLL_INTERVAL_MS);
   restoreIntentWhenReady();
+}
+
+function abandonIntent(destinationPath) {
+  const intent = readIntent();
+  if (!intent) return;
+
+  trackSellerFunnel('seller_post_intent_abandoned', {
+    intent_path: intent.path,
+    destination_path: destinationPath,
+    intent_age_ms: Math.max(0, Date.now() - intent.capturedAt),
+  });
+  clearIntent();
+  stopAuthWatcher();
 }
 
 function handleNavigation(url, state) {
@@ -200,8 +241,7 @@ function handleNavigation(url, state) {
   // authentication modal is open. Keep the intent for that one transition,
   // but discard it once the visitor deliberately navigates elsewhere.
   if (destination.path !== '/' && readIntent()) {
-    clearIntent();
-    stopAuthWatcher();
+    abandonIntent(destination.path);
   }
 }
 
@@ -232,8 +272,7 @@ export function installProtectedRouteReturn() {
     if (isProtectedPostRoute(destination.pathname)) {
       writeIntent(destination, window.history.state);
     } else if (destination.path !== '/' && readIntent()) {
-      clearIntent();
-      stopAuthWatcher();
+      abandonIntent(destination.path);
     }
   });
 
