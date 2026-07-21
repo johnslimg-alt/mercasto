@@ -252,9 +252,11 @@ jobs:
             DESCRIPTION="${VERIFY_SUMMARY:-Production frontend asset verification failed}"
           fi
           DESCRIPTION="$(printf '%s' "$DESCRIPTION" | tr -cd '[:alnum:] .,:_()/-' | cut -c1-140)"
+          DETAIL="$(printf '%s' "$DESCRIPTION" | base64 | tr -d '\n=' | tr '+/' '-_')"
+          TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}?frontend_result=${DETAIL}"
 
-          PAYLOAD="$(printf '{"state":"%s","context":"production/frontend-assets","description":"%s","target_url":"https://github.com/%s/actions/runs/%s"}' \
-            "$STATE" "$DESCRIPTION" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          PAYLOAD="$(printf '{"state":"%s","context":"production/frontend-assets","description":"%s","target_url":"%s"}' \
+            "$STATE" "$DESCRIPTION" "$TARGET_URL")"
 
           curl -fsS --retry 3 --retry-all-errors \
             -X POST \
@@ -263,12 +265,6 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$PAYLOAD"
-
-      - name: Require frontend asset verification
-        if: always() && steps.verify_frontend_bundle.outcome != 'success'
-        run: |
-          echo "Production frontend asset verification failed." >&2
-          exit 1
 
       - name: Verify TikTok Events API
         id: verify_tiktok_events_api
@@ -338,14 +334,9 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$PAYLOAD"
 
-      - name: Require TikTok Events API verification
-        if: always() && steps.verify_tiktok_events_api.outcome != 'success'
-        run: |
-          echo "TikTok Events API production verification failed." >&2
-          exit 1
-
       - name: Verify deployed Meta Pixel
         id: verify_meta_pixel
+        continue-on-error: true
         env:
           DEPLOY_SHA: ${{ github.sha }}
         run: |
@@ -382,8 +373,10 @@ jobs:
             DESCRIPTION="Meta Pixel production verification failed"
           fi
 
-          PAYLOAD="$(printf '{"state":"%s","context":"production/meta-pixel","description":"%s","target_url":"https://github.com/%s/actions/runs/%s"}' \
-            "$STATE" "$DESCRIPTION" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          DETAIL="$(printf '%s' "$DESCRIPTION" | base64 | tr -d '\n=' | tr '+/' '-_')"
+          TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}?meta_result=${DETAIL}"
+          PAYLOAD="$(printf '{"state":"%s","context":"production/meta-pixel","description":"%s","target_url":"%s"}' \
+            "$STATE" "$DESCRIPTION" "$TARGET_URL")"
 
           curl -fsS --retry 3 --retry-all-errors \
             -X POST \
@@ -394,6 +387,8 @@ jobs:
             -d "$PAYLOAD"
 
       - name: Production smoke
+        id: production_smoke
+        continue-on-error: true
         run: |
           set -euo pipefail
           cd /var/www/mercasto
@@ -408,6 +403,32 @@ jobs:
             sleep 20
           done
           COMPOSE_ENV_FILE="$COMPOSE_ENV_FILE" SMOKE_HTTP_ATTEMPTS=12 SMOKE_HTTP_RETRY_DELAY=5 bash scripts/production-smoke.sh
+
+      - name: Require production verifications
+        if: always()
+        env:
+          FRONTEND_OUTCOME: ${{ steps.verify_frontend_bundle.outcome }}
+          TIKTOK_OUTCOME: ${{ steps.verify_tiktok_events_api.outcome }}
+          META_OUTCOME: ${{ steps.verify_meta_pixel.outcome }}
+          SMOKE_OUTCOME: ${{ steps.production_smoke.outcome }}
+        run: |
+          set -euo pipefail
+          failed=0
+
+          check_outcome() {
+            label="$1"
+            outcome="$2"
+            if [ "$outcome" != "success" ]; then
+              echo "$label failed with outcome: ${outcome:-missing}" >&2
+              failed=1
+            fi
+          }
+
+          check_outcome "Frontend asset verification" "$FRONTEND_OUTCOME"
+          check_outcome "TikTok Events API verification" "$TIKTOK_OUTCOME"
+          check_outcome "Meta Pixel verification" "$META_OUTCOME"
+          check_outcome "Production smoke" "$SMOKE_OUTCOME"
+          exit "$failed"
 
       - name: Recovery on failure
         if: failure()
