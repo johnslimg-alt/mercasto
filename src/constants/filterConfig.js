@@ -18,6 +18,8 @@ const autoBrands = [
   'Segway-Ninebot', 'InMotion', 'KingSong', 'Zacua', 'Kandi',
   // Karts de golf
   'Club Car', 'E-Z-GO', 'Garia',
+  // Embarcaciones (lanchas, yates, motos de agua)
+  'Sea-Doo', 'Bayliner', 'Sea Ray', 'Bertram', 'Azimut', 'Beneteau', 'Boston Whaler', 'Chaparral', 'Four Winns',
   'Otra'
 ];
 
@@ -103,6 +105,49 @@ export const autoModelsByBrand = {
   'Club Car': ['Tempo', 'Onward', 'Precedent'],
   'E-Z-GO': ['RXV', 'TXT', 'Express'],
   'Garia': ['Golf Car', 'Utility'],
+};
+
+const fashionBrands = [
+  // Ropa / moda rápida
+  'Zara', 'H&M', 'Bershka', 'Pull&Bear', 'Stradivarius', 'Mango', 'Massimo Dutti', 'Old Navy', 'Forever 21', 'Shein', 'C&A', 'Suburbia',
+  // Denim / casual
+  'Levi\'s', 'Wrangler', 'Lee', 'Tommy Hilfiger', 'Calvin Klein', 'Guess', 'Ralph Lauren', 'Carhartt',
+  // Deportivo / calzado
+  'Nike', 'Adidas', 'Puma', 'Under Armour', 'Reebok', 'New Balance', 'Skechers', 'Vans', 'Converse', 'Fila', 'Crocs',
+  // Calzado formal / marcas mexicanas
+  'Cklass', 'Andrea', 'Flexi',
+  // Bolsos y accesorios
+  'Michael Kors', 'Coach', 'Kate Spade', 'Louis Vuitton', 'Gucci', 'Prada',
+  // Relojes
+  'Casio', 'Fossil', 'Citizen', 'Seiko', 'Swatch', 'Invicta', 'Rolex',
+  // Joyería
+  'Pandora', 'Swarovski', 'Tous',
+  'Otra'
+];
+
+// Modelos/líneas reales más conocidas por marca, solo para marcas de calzado
+// y relojería donde el "modelo" es un producto identificable (ej. Nike Air Force 1,
+// Casio G-Shock). Marcas de ropa, bolsos o joyería no tienen catálogo de modelos
+// y usan el campo de texto libre.
+export const fashionModelsByBrand = {
+  'Nike': ['Air Force 1', 'Air Max 90', 'Air Max 97', 'Dunk Low', 'Jordan 1', 'Cortez', 'Blazer'],
+  'Adidas': ['Superstar', 'Stan Smith', 'Samba', 'Gazelle', 'Ultraboost', 'Campus'],
+  'Puma': ['Suede Classic', 'RS-X', 'Cali'],
+  'Under Armour': ['Charged Assert', 'HOVR Phantom', 'Curry'],
+  'Reebok': ['Classic Leather', 'Club C 85', 'Nano'],
+  'New Balance': ['550', '990', '574', '327'],
+  'Skechers': ['D\'Lites', 'Go Walk', 'Max Cushioning'],
+  'Vans': ['Old Skool', 'Sk8-Hi', 'Authentic', 'Era'],
+  'Converse': ['Chuck Taylor All Star', 'Chuck 70', 'One Star'],
+  'Fila': ['Disruptor', 'Ray'],
+  'Crocs': ['Classic Clog', 'Bayaband', 'Literide'],
+  'Casio': ['G-Shock', 'Casio Vintage', 'Edifice', 'Baby-G', 'Pro Trek'],
+  'Fossil': ['Grant', 'Neutra', 'Gen 6 Smartwatch', 'Machine'],
+  'Citizen': ['Eco-Drive', 'Promaster'],
+  'Seiko': ['Seiko 5', 'Prospex', 'Presage'],
+  'Swatch': ['Originals', 'Bioceramic'],
+  'Invicta': ['Pro Diver', 'Bolt', 'Specialty'],
+  'Rolex': ['Submariner', 'Datejust', 'GMT-Master II', 'Daytona'],
 };
 
 const electronicsBrands = [
@@ -191,9 +236,28 @@ const serviceFilters = [
   { id: 'facturacion', label: 'Formalidad', type: 'checkbox', options: ['Factura', 'Contrato', 'Garantía por escrito', 'Seguro', 'Equipo propio'] },
 ];
 
+const homeBrands = [
+  // Muebles
+  'IKEA',
+  // Electrodomésticos
+  'Whirlpool', 'Mabe', 'LG', 'Samsung', 'GE', 'Frigidaire', 'Winia', 'Hisense', 'Midea', 'Daewoo', 'Acros', 'Koblenz', 'Oster', 'Black+Decker', 'Hamilton Beach', 'Philips', 'Panasonic', 'Rowenta',
+  // Cocina / menaje
+  'Vasconia', 'Tramontina', 'Cinsa', 'T-fal',
+  // Herramientas
+  'Truper', 'Pretul', 'Urrea', 'Bosch', 'DeWalt', 'Makita', 'Milwaukee', 'Stanley', 'Total',
+  // Jardín
+  'Husqvarna', 'Stihl', 'Toro', 'Craftsman',
+  // Iluminación
+  'Sylvania',
+  // Seguridad
+  'Steren', 'Hikvision', 'TP-Link', 'Yale', 'Kwikset', 'Ring', 'Dahua',
+  'Otra'
+];
+
 const homeFilters = [
   { id: 'tipo', label: 'Categoría', type: 'select', options: ['Muebles', 'Electrodomésticos', 'Decoración', 'Herramientas', 'Jardín', 'Iluminación', 'Cocina', 'Seguridad'] },
   { id: 'condicion', label: 'Condición', type: 'checkbox', options: ['Nuevo', 'Usado', 'Como nuevo', 'Restaurado'] },
+  { id: 'marca_hogar', label: 'Marca', type: 'select', options: homeBrands },
   { id: 'material', label: 'Material', type: 'checkbox', options: ['Madera', 'Metal', 'Vidrio', 'Tela', 'Piel', 'Plástico', 'MDF'] },
   { id: 'entrega', label: 'Entrega', type: 'checkbox', options: ['Entrega a domicilio', 'Recoger en domicilio', 'Envío disponible', 'Instalación incluida'] },
   { id: 'medidas', label: 'Medidas', type: 'text', placeholder: 'Ej. 180x90 cm' },
@@ -203,7 +267,8 @@ const homeFilters = [
 const fashionFilters = [
   { id: 'tipo', label: 'Tipo de prenda', type: 'select', options: ['Ropa mujer', 'Ropa hombre', 'Calzado', 'Bolsos', 'Accesorios', 'Joyería', 'Relojes'] },
   { id: 'talla', label: 'Talla', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '24', '26', '28', '30', '32', '34'] },
-  { id: 'marca_moda', label: 'Marca', type: 'text', placeholder: 'Ej. Zara, Nike, Levi’s' },
+  { id: 'marca_moda', label: 'Marca', type: 'select', options: fashionBrands },
+  { id: 'modelo_moda', label: 'Modelo / línea', type: 'text', placeholder: 'Ej. Air Force 1, G-Shock, Superstar' },
   { id: 'genero', label: 'Género', type: 'checkbox', options: ['Mujer', 'Hombre', 'Unisex', 'Niñas', 'Niños'] },
   { id: 'estado_moda', label: 'Estado', type: 'checkbox', options: ['Nuevo con etiqueta', 'Nuevo sin etiqueta', 'Usado excelente', 'Vintage', 'Original verificado'] },
   { id: 'color_moda', label: 'Color', type: 'select', options: ['Negro', 'Blanco', 'Beige', 'Azul', 'Rojo', 'Verde', 'Rosa', 'Multicolor'] },
@@ -223,9 +288,69 @@ const ticketFilters = [
   { id: 'zona', label: 'Zona', type: 'text', placeholder: 'Ej. General, VIP, Preferente' },
 ];
 
+const sportsBrands = [
+  // Fútbol
+  'Nike', 'Adidas', 'Puma', 'Under Armour', 'Umbro', 'Charly', 'Kappa',
+  // Ciclismo — bicicletas y componentes/accesorios
+  'Trek', 'Giant', 'Specialized', 'Cannondale', 'Scott', 'Merida', 'Bianchi', 'GT', 'Raleigh', 'Schwinn', 'Mercurio', 'Benotto', 'Turbo',
+  'Shimano', 'Giro',
+  // Gimnasio
+  'TRX', 'Everlast', 'Reebok',
+  // Running
+  'Asics', 'Brooks', 'Saucony', 'New Balance', 'Hoka',
+  // Camping
+  'Coleman', 'The North Face', 'Columbia', 'Eureka', 'Ozark Trail',
+  // Pesca
+  'Daiwa', 'Rapala', 'Pflueger',
+  // Surf
+  'Quiksilver', 'Billabong', 'Rip Curl', 'O\'Neill',
+  // Náutica — botes inflables, kayaks y motores fuera de borda (embarcaciones
+  // completas/yates van en Vehículos)
+  'Zodiac', 'Bestway', 'Sevylor', 'Mercury', 'Evinrude', 'Suzuki Marine',
+  // Electrónica deportiva
+  'Garmin', 'Fitbit',
+  'Otra'
+];
+
+const kidsBrands = [
+  // Juguetes
+  'Lego', 'Fisher-Price', 'Mattel', 'Hasbro', 'Hot Wheels', 'Barbie', 'Nerf', 'VTech', 'Playskool',
+  // Ropa infantil
+  'Carter\'s', 'OshKosh B\'gosh', 'Gerber',
+  // Escolar
+  'Norma', 'Scribe', 'BIC', 'Pelikan',
+  // Seguridad / carriolas / autoasientos
+  'Chicco', 'Graco', 'Britax', 'Evenflo', 'Peg Pérego', 'Bugaboo', 'Cybex', 'Safety 1st',
+  'Otra'
+];
+
+const ocioBrands = [
+  // Videojuegos
+  'Sony', 'Microsoft', 'Nintendo', 'Sega',
+  // Fotografía
+  'Canon', 'Nikon', 'Fujifilm', 'GoPro', 'Polaroid', 'Panasonic',
+  // Instrumentos musicales
+  'Yamaha', 'Fender', 'Gibson', 'Casio', 'Roland', 'Ibanez', 'Pearl',
+  // Coleccionismo
+  'Funko', 'Lego',
+  // Camping
+  'Coleman', 'The North Face',
+  // Bicicletas (subcategoría real de Ocio)
+  'Trek', 'Giant', 'Specialized', 'Mercurio', 'Benotto',
+  // Gym
+  'TRX', 'Everlast', 'Reebok',
+  // Running
+  'Asics', 'Brooks', 'New Balance',
+  // Pesca
+  'Daiwa', 'Rapala', 'Pflueger', 'Shimano',
+  // Surf / Kayak
+  'Quiksilver', 'Billabong', 'Rip Curl',
+  'Otra'
+];
+
 const sportsFilters = [
   { id: 'tipo_deporte', label: 'Deporte / actividad', type: 'select', options: ['Fútbol', 'Ciclismo', 'Gimnasio', 'Running', 'Camping', 'Pesca', 'Surf', 'Náutica', 'Otro'] },
-  { id: 'marca', label: 'Marca', type: 'text', placeholder: 'Ej. Shimano, Nike, Garmin' },
+  { id: 'marca', label: 'Marca', type: 'select', options: sportsBrands },
   { id: 'talla', label: 'Talla / medida', type: 'text', placeholder: 'Ej. M, 27.5, 10 ft' },
   { id: 'condicion', label: 'Condición', type: 'select', options: ['Nuevo', 'Como nuevo', 'Usado', 'Restaurado'] },
   { id: 'disciplina', label: 'Disciplina', type: 'checkbox', options: ['Recreativo', 'Entrenamiento', 'Competencia', 'Profesional'] },
@@ -235,7 +360,7 @@ const kidsFilters = [
   { id: 'tipo', label: 'Tipo', type: 'select', options: ['Juguetes', 'Ropa infantil', 'Escolar', 'Muebles', 'Seguridad', 'Carriolas', 'Autoasientos'] },
   { id: 'edad', label: 'Edad recomendada', type: 'select', options: ['0-6 meses', '6-12 meses', '1-2 años', '3-5 años', '6-9 años', '10+ años'] },
   { id: 'condicion', label: 'Condición', type: 'select', options: ['Nuevo', 'Como nuevo', 'Usado'] },
-  { id: 'marca', label: 'Marca', type: 'text', placeholder: 'Ej. Chicco, Lego, Fisher-Price' },
+  { id: 'marca', label: 'Marca', type: 'select', options: kidsBrands },
   { id: 'seguridad', label: 'Seguridad', type: 'checkbox', options: ['Certificado', 'Sin piezas pequeñas', 'Funda lavable', 'Manual incluido'] },
 ];
 
@@ -324,12 +449,12 @@ const rentaQuadsFilters = [
 
 const rentaCampersFilters = [
   { id: 'tipo_casa_rodante', label: 'Tipo de casa rodante', type: 'select', options: ['Autocaravana Clase A/B/C', 'Camper Van (Furgoneta)', 'Remolque / Caravana / Trailer'] },
-  { id: 'capacidad_dormir', label: 'Спальных мест / Plazas', type: 'checkbox', options: ['2 personas', '3 - 4 personas', '5 - 6 personas', '6+ personas'] },
+  { id: 'capacidad_dormir', label: 'Plazas para dormir', type: 'checkbox', options: ['2 personas', '3 - 4 personas', '5 - 6 personas', '6+ personas'] },
   { id: 'equipamiento_camper', label: 'Equipamiento', type: 'checkbox', options: ['Cocina con estufa', 'Refrigerador', 'Baño con ducha', 'Aire acondicionado', 'Paneles solares', 'Toldo exterior'] }
 ];
 
 const rentalVehiclesFilters = [
-  { id: 'tipo_vehiculo', label: 'Tipo de transporte', type: 'select', options: ['Auto / Camioneta', 'Yate / Lancha', 'Кемперы / RVs', 'Motos y Quads', 'Bicicletas / Patines'] },
+  { id: 'tipo_vehiculo', label: 'Tipo de transporte', type: 'select', options: ['Auto / Camioneta', 'Yate / Lancha', 'Campers / RVs', 'Motos y Quads', 'Bicicletas / Patines'] },
   { id: 'esquema_renta', label: 'Esquema de renta', type: 'checkbox', options: ['Por hora', 'Por día / Por jornada', 'Semanal', 'Mensual'] },
   { id: 'capacidad_pasajeros', label: 'Capacidad de pasajeros', type: 'select', options: ['1-2 personas', '3-5 personas', '6-10 personas', 'Más de 10 personas'] },
   { id: 'tripulacion', label: 'Tripulación / Chofer', type: 'checkbox', options: ['Sin chofer / Bareboat', 'Con chofer / Capitán', 'Servicio todo incluido'] },
@@ -474,6 +599,7 @@ export const filterConfig = {
 
   ocio: [
     { id: 'tipo', label: 'Categoría', type: 'select', options: ['Deportes', 'Videojuegos', 'Libros/Música', 'Coleccionismo', 'Fotografía', 'Instrumentos', 'Camping', 'Viajes'] },
+    { id: 'marca_ocio', label: 'Marca', type: 'select', options: ocioBrands },
     { id: 'formato', label: 'Formato', type: 'checkbox', options: ['Digital', 'Físico'] },
   ],
 

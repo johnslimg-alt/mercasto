@@ -8,7 +8,7 @@ import {
   Phone, MessageCircle, Send, Locate, Compass,
 } from 'lucide-react';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
-import { filterConfig, autoModelsByBrand } from '../../constants/filterConfig';
+import { filterConfig, autoModelsByBrand, fashionModelsByBrand } from '../../constants/filterConfig';
 import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
 import MapV3 from '../common/MapV3';
 import SortablePhotoGrid from '../SortablePhotoGrid';
@@ -356,6 +356,35 @@ export default function PostScreen({
                 type="text"
                 value={form.attributes?.modelo_otro || ''}
                 onChange={e => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), modelo_otro: e.target.value, modelo: e.target.value } }))}
+                placeholder="Especifica el modelo"
+                className={baseClass + ' mt-2'}
+              />
+            )}
+            {hasErr && <p className="text-xs text-red-500">{errors[errKey]}</p>}
+          </div>
+        );
+      }
+    }
+
+    if (key === 'modelo_moda') {
+      const selectedBrand = form.attributes?.marca_moda || '';
+      const models = fashionModelsByBrand[selectedBrand];
+      if (models?.length > 0) {
+        return (
+          <div key={key} className="space-y-2">
+            <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+              {field.label || key}{field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <select value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
+              <option value="">Seleccionar...</option>
+              {models.map(m => <option key={m} value={m}>{m}</option>)}
+              <option value="Otro">Otro modelo</option>
+            </select>
+            {val === 'Otro' && (
+              <input
+                type="text"
+                value={form.attributes?.modelo_moda_otro || ''}
+                onChange={e => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), modelo_moda_otro: e.target.value, modelo_moda: e.target.value } }))}
                 placeholder="Especifica el modelo"
                 className={baseClass + ' mt-2'}
               />

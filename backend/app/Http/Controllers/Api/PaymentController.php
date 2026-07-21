@@ -136,6 +136,12 @@ class PaymentController extends Controller
                     'locale' => 'es-MX',
                     'merchant_info' => ['show_contact_info' => false],
                 ],
+                // Sin esto, Clip usa su propio default y el pago en efectivo en OXXO
+                // (prometido en la UI, ver App.jsx "Paga con tarjeta o efectivo en OXXO")
+                // no queda garantizado. 'cash' es el valor documentado por Clip para habilitar OXXO.
+                'custom_payment_options' => [
+                    'payment_method_types' => ['debit', 'credit', 'cash'],
+                ],
             ]);
         } catch (\Throwable $e) {
             Log::error('Clip checkout request failed', [

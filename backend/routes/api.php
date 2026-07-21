@@ -151,7 +151,7 @@ Route::middleware(['web'])->group(function () {
     Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider']);
     Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback']);
 });
-Route::post('/auth/telegram/callback', [AuthController::class, 'handleTelegramWidget']);
+Route::middleware('throttle:auth')->post('/auth/telegram/callback', [AuthController::class, 'handleTelegramWidget']);
 
 // Защита метрик и просмотров от ботов и накруток (максимум 60 запросов в минуту с 1 IP)
 Route::middleware('throttle:60,1')->group(function () {
