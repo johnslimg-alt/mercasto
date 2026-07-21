@@ -1,4 +1,6 @@
-const route = `${location.pathname}${location.search}${location.hash}`;
+const routeUrl = new URL(location.href);
+routeUrl.searchParams.delete('__mercasto_refresh');
+const route = `${routeUrl.pathname}${routeUrl.search}${routeUrl.hash}`;
 const guardKey = 'mercasto.stale_module_fallback.v2';
 const now = Date.now();
 let recentlyRetried = false;
