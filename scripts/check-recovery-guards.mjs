@@ -162,6 +162,24 @@ assertContains(
 );
 
 assertContains(
+  'src/components/screens/AdDetailScreen.jsx',
+  'data-catalog-reference',
+  'catalog disclosure remains machine-testable'
+);
+
+assertContains(
+  'src/components/screens/AdDetailScreen.jsx',
+  'ratingStats.hasReviews && !isCatalogFiller',
+  'catalog references cannot inherit rating social proof'
+);
+
+assertContains(
+  'src/components/screens/AdDetailScreen.jsx',
+  '¿Vendes este producto o uno parecido?',
+  'catalog references convert owners into genuine sellers instead of exposing a placeholder contact'
+);
+
+assertContains(
   'backend/app/Http/Controllers/Api/AdController.php',
   "orderBy('ads.is_catalog_filler', 'asc')",
   'real user listings rank ahead of catalog references'
