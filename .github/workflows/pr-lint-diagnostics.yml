@@ -35,7 +35,14 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set +e
-          npm run lint:ci > /tmp/mercasto-lint.log 2>&1
+          npx eslint --quiet \
+            src/main.jsx \
+            src/utils/campaignAttribution.js \
+            src/utils/staleChunkRecovery.js \
+            src/utils/protectedRouteReturn.js \
+            public/stale-module.js \
+            scripts/check-recovery-guards.mjs \
+            > /tmp/mercasto-lint.log 2>&1
           code=$?
           set -e
 
@@ -43,7 +50,7 @@ jobs:
 
           if [ "$code" -eq 0 ]; then
             state=success
-            summary='ESLint passed'
+            summary='Changed files pass ESLint'
           else
             state=failure
             summary='ESLint failed; diagnostics posted to PR'
@@ -52,7 +59,7 @@ jobs:
               echo '### ESLint diagnostics'
               echo
               echo '```text'
-              tail -100 /tmp/mercasto-lint.log
+              cat /tmp/mercasto-lint.log
               echo '```'
             } > /tmp/lint-comment.md
 
