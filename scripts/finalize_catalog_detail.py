@@ -29,24 +29,21 @@ content, count = re.subn(pattern, lambda _: replacement, content, count=1, flags
 if count != 1:
     raise RuntimeError('rating function anchor not found')
 
-# 2. Catalog flag.
-old = block("""
-  const isOwner = currentUser && currentUser.id === ad.user_id;
-  const isFav = favoriteIds.includes(ad.id);
-""")
-new = block("""
-  const isOwner = currentUser && currentUser.id === ad.user_id;
-  const isCatalogFiller = Boolean(ad.is_catalog_filler);
-  const isFav = favoriteIds.includes(ad.id);
-""")
-if old not in content:
+# 2. Catalog flag, tolerant of indentation changes.
+pattern = r'(?m)^(\s*)const isOwner = currentUser && currentUser\.id === ad\.user_id;\n\s*const isFav = favoriteIds\.includes\(ad\.id\);'
+replacement = (
+    r'\1const isOwner = currentUser && currentUser.id === ad.user_id;\n'
+    r'\1const isCatalogFiller = Boolean(ad.is_catalog_filler);\n'
+    r'\1const isFav = favoriteIds.includes(ad.id);'
+)
+content, count = re.subn(pattern, replacement, content, count=1)
+if count != 1:
     raise RuntimeError('catalog flag anchor not found')
-content = content.replace(old, new, 1)
 
 # 3. Remove canned comment data.
 content, count = re.subn(
-    r"  const ratingStats = getAdRatingStats\(ad\);\n  const commentPreview = \[.*?\n  \]\.slice\(0, Math\.min\(2, ratingStats\.count\)\);",
-    '  const ratingStats = getAdRatingStats(ad);',
+    r"\s*const ratingStats = getAdRatingStats\(ad\);\n\s*const commentPreview = \[.*?\n\s*\]\.slice\(0, Math\.min\(2, ratingStats\.count\)\);",
+    '\n  const ratingStats = getAdRatingStats(ad);',
     content,
     count=1,
     flags=re.S,
