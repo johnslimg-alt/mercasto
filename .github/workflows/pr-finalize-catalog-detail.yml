@@ -1,0 +1,55 @@
+name: Finalize Catalog Detail
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/finalize_catalog_detail.py'
+      - '.github/workflows/pr-finalize-catalog-detail.yml'
+
+concurrency:
+  group: finalize-catalog-detail-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Apply final isolated patch
+        run: python3 scripts/finalize_catalog_detail.py
+
+      - name: Verify exact catalog protections
+        run: |
+          set -euo pipefail
+          ! grep -F '4 + (((Number(ad.id) || 1) % 10) / 10)' src/components/screens/AdDetailScreen.jsx
+          ! grep -F 'Comprador verificado' src/components/screens/AdDetailScreen.jsx
+          ! grep -F 'Usuario Mercasto' src/components/screens/AdDetailScreen.jsx
+          grep -F 'const isCatalogFiller = Boolean(ad.is_catalog_filler);' src/components/screens/AdDetailScreen.jsx
+          grep -F 'data-catalog-reference' src/components/screens/AdDetailScreen.jsx
+          grep -F 'ratingStats.hasReviews && !isCatalogFiller' src/components/screens/AdDetailScreen.jsx
+          grep -F '¿Vendes este producto o uno parecido?' src/components/screens/AdDetailScreen.jsx
+          npm ci --no-audit --no-fund
+          npm run check:recovery
+          npm run lint:ci
+          npm run build
+
+      - name: Commit only the corrected detail page
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/screens/AdDetailScreen.jsx
+          git diff --cached --check
+          git commit -m 'Finalize honest catalog detail presentation'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
