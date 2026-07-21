@@ -14,6 +14,7 @@ on:
 permissions:
   contents: read
   statuses: write
+  pull-requests: write
 
 jobs:
   lint:
@@ -31,6 +32,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set +e
           npm run lint:ci > /tmp/mercasto-lint.log 2>&1
@@ -44,16 +46,31 @@ jobs:
             summary='ESLint passed'
           else
             state=failure
-            summary="$(awk '
-              /^\// { file=$0; sub(/^.*\/mercasto\//, "", file); next }
-              / error / { line=$0; gsub(/^[[:space:]]+/, "", line); print file " " line; exit }
-            ' /tmp/mercasto-lint.log)"
-            if [ -z "$summary" ]; then
-              summary="$(tail -n 1 /tmp/mercasto-lint.log)"
-            fi
+            summary='ESLint failed; diagnostics posted to PR'
+
+            {
+              echo '### ESLint diagnostics'
+              echo
+              echo '```text'
+              tail -100 /tmp/mercasto-lint.log
+              echo '```'
+            } > /tmp/lint-comment.md
+
+            python3 - <<'PY' > /tmp/lint-comment.json
+          import json
+          from pathlib import Path
+          print(json.dumps({'body': Path('/tmp/lint-comment.md').read_text()}))
+          PY
+
+            curl -fsS --retry 3 --retry-all-errors \
+              -X POST \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              --data-binary @/tmp/lint-comment.json
           fi
 
-          summary="$(printf '%s' "$summary" | tr -cd '[:alnum:] .,:_()/@-/' | cut -c1-125)"
           detail="$(printf '%s' "$summary" | base64 | tr -d '\n=' | tr '+/' '-_')"
           target="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}?lint_result=${detail}"
           payload="$(printf '{"state":"%s","context":"diagnostics/eslint","description":"%s","target_url":"%s"}' "$state" "$summary" "$target")"
