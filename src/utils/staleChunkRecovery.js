@@ -2,6 +2,7 @@ const STALE_ERROR_PATTERN = /failed to fetch dynamically imported module|error l
 const RECOVERY_GUARD_KEY = 'mercasto.stale_chunk_recovery.v2';
 const RECOVERY_EVENT_KEY = 'mercasto.stale_chunk_recovered.v1';
 const RECOVERY_WINDOW_MS = 2 * 60 * 1000;
+const SUCCESS_CONFIRMATION_DELAY_MS = 4000;
 
 function isBrowser() {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
@@ -20,7 +21,9 @@ export function isStaleChunkError(reason) {
 }
 
 function currentRouteKey() {
-  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const url = new URL(window.location.href);
+  url.searchParams.delete('__mercasto_refresh');
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 function readGuard() {
@@ -118,13 +121,19 @@ function reportSuccessfulRecovery() {
   let recovered = null;
   try {
     recovered = JSON.parse(sessionStorage.getItem(RECOVERY_EVENT_KEY) || 'null');
-    sessionStorage.removeItem(RECOVERY_EVENT_KEY);
-    sessionStorage.removeItem(RECOVERY_GUARD_KEY);
   } catch {
     return;
   }
 
   if (!recovered) return;
+  if (isStaleChunkError(document.body?.innerText || '')) return;
+
+  try {
+    sessionStorage.removeItem(RECOVERY_EVENT_KEY);
+    sessionStorage.removeItem(RECOVERY_GUARD_KEY);
+  } catch {
+    // The page is already healthy; analytics cleanup is best-effort.
+  }
 
   const url = new URL(window.location.href);
   if (url.searchParams.has('__mercasto_refresh')) {
@@ -140,9 +149,14 @@ function reportSuccessfulRecovery() {
   });
 }
 
+function scheduleRecoveryConfirmation() {
+  window.setTimeout(reportSuccessfulRecovery, SUCCESS_CONFIRMATION_DELAY_MS);
+}
+
 export function installStaleChunkRecovery() {
   if (!isBrowser() || window.__mercastoStaleChunkRecoveryInstalled) return;
   window.__mercastoStaleChunkRecoveryInstalled = true;
+  window.__mercastoRecoverFromStaleChunk = recoverFromStaleChunk;
 
   window.addEventListener('error', (event) => {
     const reason = event.error || event.message;
@@ -157,8 +171,8 @@ export function installStaleChunkRecovery() {
   observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
 
   if (document.readyState === 'loading') {
-    window.addEventListener('DOMContentLoaded', reportSuccessfulRecovery, { once: true });
+    window.addEventListener('DOMContentLoaded', scheduleRecoveryConfirmation, { once: true });
   } else {
-    reportSuccessfulRecovery();
+    scheduleRecoveryConfirmation();
   }
 }
