@@ -1,16 +1,34 @@
-name: Deploy Mercasto Frontend Hotfix
+name: Deploy Mercasto Frontend
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - 'Dockerfile'
+      - 'default.conf'
+      - 'security_headers.conf'
+      - 'scripts/verify-vite-dist.mjs'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 concurrency:
   group: production-frontend-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: self-hosted
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Find project directory
@@ -57,21 +75,128 @@ jobs:
           git reset --hard origin/main
           git clean -fd
 
-      - name: Build frontend
+      - name: Build frontend image
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR"
           DOCKER_BUILDKIT=1 docker compose build --no-cache mercasto-frontend
 
-      - name: Restart frontend
+      - name: Verify built Vite bundle
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR"
-          docker compose up -d --no-deps mercasto-frontend
-          docker compose ps
 
-      - name: Smoke check
+          image_id=$(docker compose images -q mercasto-frontend)
+          if [ -z "$image_id" ]; then
+            echo "Built frontend image was not found."
+            exit 1
+          fi
+
+          dist_dir="${RUNNER_TEMP:-/tmp}/mercasto-dist-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          rm -rf "$dist_dir"
+          mkdir -p "$dist_dir"
+
+          container_id=$(docker create "$image_id")
+          cleanup_container() {
+            docker rm -f "$container_id" >/dev/null 2>&1 || true
+          }
+          trap cleanup_container EXIT
+
+          docker cp "$container_id:/usr/share/nginx/html/." "$dist_dir/"
+          cleanup_container
+          trap - EXIT
+
+          docker run --rm \
+            -v "$PROJECT_DIR/scripts/verify-vite-dist.mjs:/verify-vite-dist.mjs:ro" \
+            -v "$dist_dir:/dist:ro" \
+            node:22-alpine \
+            node /verify-vite-dist.mjs /dist
+
+          echo "DIST_DIR=$dist_dir" >> "$GITHUB_ENV"
+
+      - name: Restart frontend atomically
         run: |
           set -euo pipefail
-          curl -I --max-time 30 https://mercasto.com/
-          curl -sS --max-time 30 https://mercasto.com/api/categories | head -c 300
+          cd "$PROJECT_DIR"
+
+          docker compose up -d --no-deps --force-recreate mercasto-frontend
+
+          for attempt in $(seq 1 30); do
+            status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' mercasto_frontend_container 2>/dev/null || true)
+            echo "Frontend status: ${status:-unknown}"
+            if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+              break
+            fi
+            if [ "$status" = "unhealthy" ] || [ "$status" = "exited" ] || [ "$status" = "dead" ]; then
+              docker logs --tail 200 mercasto_frontend_container || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          final_status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' mercasto_frontend_container)
+          if [ "$final_status" != "healthy" ] && [ "$final_status" != "running" ]; then
+            docker logs --tail 200 mercasto_frontend_container || true
+            echo "Frontend did not become ready."
+            exit 1
+          fi
+
+          docker compose ps
+
+      - name: Verify production HTML and every Vite asset
+        run: |
+          set -euo pipefail
+
+          live_dir="${RUNNER_TEMP:-/tmp}/mercasto-live-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          rm -rf "$live_dir"
+          mkdir -p "$live_dir"
+
+          cleanup_live() {
+            rm -rf "$live_dir" "$DIST_DIR"
+          }
+          trap cleanup_live EXIT
+
+          curl_args=(
+            --fail
+            --silent
+            --show-error
+            --location
+            --retry 5
+            --retry-delay 2
+            --retry-all-errors
+            --max-time 30
+            -H 'Cache-Control: no-cache'
+            -H 'Accept-Encoding: identity'
+          )
+
+          curl "${curl_args[@]}" "https://mercasto.com/?deploy=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -o "$live_dir/index.html"
+          if ! cmp -s "$DIST_DIR/index.html" "$live_dir/index.html"; then
+            echo "Production index.html does not match the image that was just deployed."
+            diff -u "$DIST_DIR/index.html" "$live_dir/index.html" | head -200 || true
+            exit 1
+          fi
+
+          checked=0
+          while IFS= read -r relative_path; do
+            target="$live_dir/$relative_path"
+            mkdir -p "$(dirname "$target")"
+            curl "${curl_args[@]}" "https://mercasto.com/${relative_path}?deploy=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -o "$target"
+
+            if ! cmp -s "$DIST_DIR/$relative_path" "$target"; then
+              echo "Production asset differs from the deployed image: $relative_path"
+              exit 1
+            fi
+            checked=$((checked + 1))
+          done < <(cd "$DIST_DIR" && find assets -type f -print | sort)
+
+          if [ "$checked" -eq 0 ]; then
+            echo "No production assets were checked."
+            exit 1
+          fi
+
+          echo "Production bundle verified: index.html and $checked assets match the deployed image."
+
+      - name: API smoke check
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 5 --retry-all-errors --max-time 30 https://mercasto.com/api/categories | head -c 300
