@@ -3185,6 +3185,7 @@ function App() {
     const isUrgente = ad.promoted === 'urgente';
     const isHighlighted = ad.promoted === 'highlight';
     const isPro = ad.user?.role === 'business';
+    const isCatalogFiller = Boolean(ad.is_catalog_filler);
     const isFav = favoriteIds.includes(ad.id);
     const safeImage = sizedImage(options.displayImageUrl || getImageUrl(ad.image_url, ad.image), 520);
 
@@ -3201,10 +3202,11 @@ function App() {
           <button type="button" aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'} aria-pressed={isFav} onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
             <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
           </button>
-          {isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}
-          {!isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
-          {!isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">Resaltado</span>}
-          {!isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
+          {isCatalogFiller && <span className="badge absolute top-2.5 left-2.5 bg-slate-900/90 text-white z-10">Catálogo Mercasto</span>}
+          {!isCatalogFiller && isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}
+          {!isCatalogFiller && !isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
+          {!isCatalogFiller && !isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">Resaltado</span>}
+          {!isCatalogFiller && !isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
         </div>
         <div className="ad-result-body p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-10 text-[#0F172A] dark:text-white">
 	          <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>
@@ -3215,9 +3217,19 @@ function App() {
 	          <div className="flex items-center justify-between mt-auto pt-2 text-[12px] text-slate-500 dark:text-slate-400">
             <span className="truncate pr-2">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || 'México')}</span>
           </div>
-        {ad.user?.role !== 'business' && (
-            <button className="w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
-          )}
+        {isCatalogFiller ? (
+          <button
+            className="w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(user ? '/post' : '/vendedores', { state: { category: ad.category } });
+            }}
+          >
+            Vende uno similar
+          </button>
+        ) : ad.user?.role !== 'business' && (
+          <button className="w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
+        )}
         </div>
       </article>
     );

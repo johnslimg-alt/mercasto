@@ -365,6 +365,12 @@ class AdController extends Controller
             }
         }
 
+        // Настоящие пользовательские объявления всегда выше витринных ссылок каталога.
+        // Для витрины конкретного продавца сохраняем его собственную сортировку без вмешательства.
+        if (! $request->filled('user_id')) {
+            $query->orderBy('ads.is_catalog_filler', 'asc');
+        }
+
         // Сортировка (Спецификация: по дате, цене, популярности)
         $sort = $request->query('sort', 'latest');
         if ($sort === 'price_asc') { $query->orderBy('price', 'asc'); }

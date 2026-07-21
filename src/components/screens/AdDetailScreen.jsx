@@ -265,10 +265,12 @@ function PriceSparkline({ history, label = 'Price history' }) {
 
 const getAdRatingStats = (ad = {}) => {
   const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
-  const rating = rawRating > 0 ? rawRating : 4 + (((Number(ad.id) || 1) % 10) / 10);
   const rawCount = Number(ad.reviews_count ?? ad.comments_count ?? ad.review_count ?? 0);
-  const count = rawCount > 0 ? rawCount : ((Number(ad.id) || 1) % 7) + 1;
-  return { rating: Math.min(5, Math.max(1, rating)), count };
+  const count = Number.isFinite(rawCount) && rawCount > 0 ? Math.floor(rawCount) : 0;
+  const rating = count > 0 && Number.isFinite(rawRating) && rawRating > 0
+    ? Math.min(5, Math.max(1, rawRating))
+    : 0;
+  return { rating, count, hasReviews: rating > 0 && count > 0 };
 };
 
 function RatingStars({ rating }) {
@@ -367,6 +369,9 @@ export default function AdDetailScreen({
   if (!ad) return null;
 
   const isOwner = currentUser && currentUser.id === ad.user_id;
+
+  const isCatalogFiller = Boolean(ad.is_catalog_filler);
+
   const isFav = favoriteIds.includes(ad.id);
   const images = getImageUrls(ad.image_url, ad.image).map(url => ({ type: 'image', url }));
   if (ad.video_url) images.unshift({ type: 'video', url: getImageUrl(ad.video_url) });
@@ -395,10 +400,6 @@ export default function AdDetailScreen({
     { label: 'Email', href: `mailto:?subject=${encodeURIComponent(localizedText(ad.title, lang) || 'Mercasto')}&body=${encodedShareText}%0A${encodedShareUrl}` },
   ];
   const ratingStats = getAdRatingStats(ad);
-  const commentPreview = [
-    { author: 'Comprador verificado', text: 'Buena comunicación y publicación clara.' },
-    { author: 'Usuario Mercasto', text: 'La información coincide con las fotos del anuncio.' },
-  ].slice(0, Math.min(2, ratingStats.count));
 
   const handleShowQR = () => {
     QRCode.toDataURL(shareUrl, { width: 300, margin: 2 })
@@ -437,22 +438,24 @@ export default function AdDetailScreen({
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
       {/* JSON-LD Structured Data for SEO/AEO */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Product",
-        "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
-        "description": localizedText(ad.description, lang) || "Anuncio clasificado en Mercasto",
-        "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
-        "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
-        "offers": {
-          "@type": "Offer",
-          "url": `https://mercasto.com/ads/${ad.id}`,
-          "priceCurrency": "MXN",
-          "price": ad.price || "0",
-          "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-          "itemCondition": ad.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
-        }
-      })}} />
+      {!isCatalogFiller && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
+          "description": localizedText(ad.description, lang) || "Anuncio clasificado en Mercasto",
+          "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
+          "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
+          "offers": {
+            "@type": "Offer",
+            "url": `https://mercasto.com/ads/${ad.id}`,
+            "priceCurrency": "MXN",
+            "price": ad.price || "0",
+            "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            "itemCondition": ad.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
+          }
+        })}} />
+      )}
 
       <div className="flex items-center justify-between mb-6">
         <button onClick={() => (onBack ? onBack() : setViewedAd(null))} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium transition-colors">
@@ -507,12 +510,29 @@ export default function AdDetailScreen({
           {/* AD DETAILS */}
           <div className="mt-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 md:p-8 shadow-sm">
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
+{isCatalogFiller && (
+  <div className="mb-5 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-slate-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-slate-100" data-catalog-reference>
+    <div className="text-[14px] font-black">Referencia de catálogo Mercasto</div>
+    <p className="mt-1 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+      Este producto se muestra como referencia. La disponibilidad, el precio y el vendedor deben confirmarse en una publicación real.
+    </p>
+    <button
+      type="button"
+      onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
+      className="mt-3 inline-flex items-center rounded-xl bg-[#84CC16] px-4 py-2 text-[13px] font-bold text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+    >
+      Publicar uno similar
+    </button>
+  </div>
+)}
             <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>
-            <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
-              <RatingStars rating={ratingStats.rating} />
-              <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
-              <span className="text-slate-400">({ratingStats.count} comentarios)</span>
-            </div>
+{ratingStats.hasReviews && !isCatalogFiller && (
+  <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+    <RatingStars rating={ratingStats.rating} />
+    <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
+    <span className="text-slate-400">({ratingStats.count} comentarios)</span>
+  </div>
+)}
             {ad.old_price && ad.price_dropped_at && Number(ad.old_price) > Number(ad.price) && (
               <div className="inline-flex flex-wrap items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-xl px-3 py-1.5 mb-5 text-[13px] font-semibold dark:bg-green-950/30 dark:border-green-500/30 dark:text-green-200">
                 <span>Bajó de precio</span>
@@ -526,8 +546,8 @@ export default function AdDetailScreen({
 
             <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 dark:text-slate-300 font-medium">
               <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
-              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>
-              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>
+              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>}
+              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>}
               <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>
             </div>
 
@@ -576,58 +596,6 @@ export default function AdDetailScreen({
               {localizedText(ad.description, lang)}
             </div>
 
-            <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/40">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-[18px] font-bold text-slate-900 dark:text-white">{t.comments || 'Reviews and ratings'}</h3>
-                  <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Opiniones visibles para ayudar a comprar con confianza.</p>
-                </div>
-                <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm dark:bg-slate-800">
-                  <div className="text-[18px] font-black text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</div>
-                  <RatingStars rating={ratingStats.rating} />
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                {commentPreview.map((comment, idx) => (
-                  <div key={idx} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13px] font-bold text-slate-900 dark:text-white">{comment.author}</span>
-                      <RatingStars rating={ratingStats.rating} />
-                    </div>
-                    <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">{comment.text}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Comment form / login gate */}
-              <div className="mt-4">
-                {currentUser && currentUser.id ? (
-                  <form onSubmit={(e) => { e.preventDefault(); }} className="flex flex-col gap-3">
-                    <textarea
-                      rows={3}
-                      placeholder={t.write_comment || 'Escribe una reseña...'}
-                      className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-[14px] text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-[#84CC16]/40 resize-none"
-                    />
-                    <button type="submit" className="self-end px-5 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 font-semibold rounded-xl text-sm transition-colors">
-                      {t.submit_comment || 'Publicar'}
-                    </button>
-                  </form>
-                ) : (
-                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3">
-                    <span className="text-[13px] text-slate-500 dark:text-slate-400 flex-1">
-                      {t.login_to_comment || 'Inicia sesión o regístrate para dejar un comentario.'}
-                    </span>
-                    <button
-                      onClick={() => navigate('/profile')}
-                      className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
-                    >
-                      {t.login_register || 'Entrar'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-            
             <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">
               <button onClick={() => { setReportingAd(ad); setShowReportModal(true); }} className="text-slate-400 hover:text-red-500 text-[13px] font-medium flex items-center gap-1.5 transition-colors"><AlertTriangle size={16}/> {t.report_ad || 'Report listing'}</button>
             </div>
@@ -637,36 +605,54 @@ export default function AdDetailScreen({
         {/* SIDEBAR: SELLER CONTACT */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[90px]">
-            <div className="flex items-center gap-4 mb-6 cursor-pointer group" onClick={() => handleViewCompany(ad.user)}>
-              {ad.user?.avatar_url ? (
-                <img src={getImageUrl(ad.user.avatar_url)} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 group-hover:border-[#84CC16] transition-colors" alt=""/>
-              ) : (
-                <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-200 group-hover:border-[#84CC16] transition-colors"><User size={24} className="text-slate-400" /></div>
-              )}
-              <div>
-                <h3 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
-                  {ad.user?.name || 'Usuario'}
-                  {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title="Vendedor Verificado" />}
-                </h3>
-                <p className="text-[13px] text-slate-500 mt-0.5">En Mercasto desde {new Date(ad.user?.created_at || ad.created_at).getFullYear()}</p>
-              </div>
-            </div>
+{isCatalogFiller ? (
+  <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
+    <h3 className="text-[16px] font-black text-slate-900 dark:text-white">¿Vendes este producto o uno parecido?</h3>
+    <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+      Publica tus propias fotos, precio, ubicación y datos de contacto para recibir compradores reales.
+    </p>
+    <button
+      type="button"
+      onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
+      className="mt-4 w-full rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+    >
+      Publicar gratis
+    </button>
+  </div>
+) : (
+  <>
+    <div className="flex items-center gap-4 mb-6 cursor-pointer group" onClick={() => handleViewCompany(ad.user)}>
+      {ad.user?.avatar_url ? (
+        <img src={getImageUrl(ad.user.avatar_url)} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 group-hover:border-[#84CC16] transition-colors" alt=""/>
+      ) : (
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-200 group-hover:border-[#84CC16] transition-colors"><User size={24} className="text-slate-400" /></div>
+      )}
+      <div>
+        <h3 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
+          {ad.user?.name || 'Usuario'}
+          {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title="Vendedor Verificado" />}
+        </h3>
+        <p className="text-[13px] text-slate-500 mt-0.5">En Mercasto desde {new Date(ad.user?.created_at || ad.created_at).getFullYear()}</p>
+      </div>
+    </div>
 
-            {(!currentUser || !currentUser.id) ? (
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
-                <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
-                  {t.register_to_contact || 'Regístrate para ver los datos de contacto del vendedor.'}
-                </p>
-                <button
-                  onClick={() => navigate('/profile')}
-                  className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
-                >
-                  {t.login_register || 'Iniciar sesión / Registrarse'}
-                </button>
-              </div>
-            ) : (
-              <ContactButton ad={ad} user={currentUser} t={t} className="w-full mb-3" />
-            )}
+    {(!currentUser || !currentUser.id) ? (
+      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
+        <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
+          {t.register_to_contact || 'Regístrate para ver los datos de contacto del vendedor.'}
+        </p>
+        <button
+          onClick={() => navigate('/profile')}
+          className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
+        >
+          {t.login_register || 'Iniciar sesión / Registrarse'}
+        </button>
+      </div>
+    ) : (
+      <ContactButton ad={ad} user={currentUser} t={t} className="w-full mb-3" />
+    )}
+  </>
+)}
 
             <div className="flex gap-3 mt-4">
               <button onClick={(e) => handleToggleFavorite(e, ad.id)} className={`btn-md flex-1 flex items-center justify-center gap-2 border transition-colors ${isFav ? 'bg-red-50 border-red-100 text-red-600' : 'bg-white dark:bg-slate-700 border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50'}`}>
