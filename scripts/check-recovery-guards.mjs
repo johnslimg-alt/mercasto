@@ -130,6 +130,7 @@ assertContains(
   'rating social proof renders only when real review data exists'
 );
 
+// Catalog-reference integrity: keep the marketplace full without fabricating seller activity.
 assertNotContains(
   'src/components/screens/AdDetailScreen.jsx',
   '4 + (((Number(ad.id) || 1) % 10) / 10)',
@@ -164,7 +165,9 @@ assertContains(
   'backend/app/Http/Controllers/Api/AdController.php',
   "orderBy('ads.is_catalog_filler', 'asc')",
   'real user listings rank ahead of catalog references'
-);assertNotContains(
+);
+
+assertNotContains(
   '.github/workflows/emergency-container-frontend-patch.yml',
   "paths:\n      - 'public/deploy-trigger.txt'",
   'container patch workflow must stay manual-only during stabilization'
