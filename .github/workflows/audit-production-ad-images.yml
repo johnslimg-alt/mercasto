@@ -30,9 +30,10 @@ jobs:
       - name: Audit every production listing image
         run: |
           set -euo pipefail
-          OUTPUT_FILE="$RUNNER_TEMP/production-ad-image-audit.json"
+          OUTPUT_FILE="$GITHUB_WORKSPACE/production-ad-image-audit.json"
+          ERROR_FILE="$RUNNER_TEMP/production-ad-image-audit.stderr"
 
-          docker exec -i mercasto_backend_container php >"$OUTPUT_FILE" <<'PHP'
+          docker exec -i mercasto_backend_container php -d display_errors=stderr >"$OUTPUT_FILE" 2>"$ERROR_FILE" <<'PHP'
           <?php
 
           use Illuminate\Support\Facades\DB;
@@ -138,9 +139,8 @@ jobs:
                       $http = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
                       $contentType = strtolower((string) curl_getinfo($handle, CURLINFO_CONTENT_TYPE));
                       $error = curl_error($handle);
-                      $ok = $http >= 200 && $http < 400;
                       $results[$url] = [
-                          'ok' => $ok,
+                          'ok' => $http >= 200 && $http < 400,
                           'http' => $http,
                           'content_type' => $contentType,
                           'error' => $error,
@@ -305,26 +305,42 @@ jobs:
 
           echo json_encode([
               'generated_at' => now()->toIso8601String(),
-              'production_commit' => trim((string) shell_exec('cd /var/www && git rev-parse HEAD 2>/dev/null')),
               'summary' => $summary,
               'entry_stats' => $entryStats,
               'by_status' => $byStatus,
               'issues' => $issues,
               'remote_failures' => array_filter($remoteResults, fn ($result) => ! $result['ok']),
-          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), PHP_EOL;
           PHP
 
-          cat "$OUTPUT_FILE"
-          cp "$OUTPUT_FILE" "$GITHUB_WORKSPACE/production-ad-image-audit.json"
+          if [ -s "$ERROR_FILE" ]; then
+            echo 'PHP audit diagnostics:'
+            cat "$ERROR_FILE"
+          fi
 
-      - name: Print audit summary
-        run: |
-          set -euo pipefail
-          jq '{summary, entry_stats, by_status}' production-ad-image-audit.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('production-ad-image-audit.json')
+          text = path.read_text(encoding='utf-8-sig')
+          start = text.find('{')
+          if start < 0:
+              raise SystemExit('Audit output does not contain JSON')
+          data = json.loads(text[start:])
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps({
+              'summary': data['summary'],
+              'entry_stats': data['entry_stats'],
+              'by_status': data['by_status'],
+          }, ensure_ascii=False, indent=2))
+          PY
 
       - name: Upload full image audit
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: production-ad-image-audit
           path: production-ad-image-audit.json
+          if-no-files-found: error
           retention-days: 3
