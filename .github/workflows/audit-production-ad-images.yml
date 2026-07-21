@@ -1,0 +1,330 @@
+name: Audit Production Ad Images
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/audit-production-ad-images.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm production is current main
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          sudo -n git fetch origin main --quiet
+          PROD_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          echo "production_sha=$PROD_SHA"
+          echo "main_sha=$MAIN_SHA"
+          test "$PROD_SHA" = "$MAIN_SHA"
+
+      - name: Audit every production listing image
+        run: |
+          set -euo pipefail
+          OUTPUT_FILE="$RUNNER_TEMP/production-ad-image-audit.json"
+
+          docker exec -i mercasto_backend_container php >"$OUTPUT_FILE" <<'PHP'
+          <?php
+
+          use Illuminate\Support\Facades\DB;
+          use Illuminate\Support\Facades\Storage;
+
+          require '/var/www/vendor/autoload.php';
+          $app = require '/var/www/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          function imageEntries(mixed $value): array
+          {
+              if (is_array($value)) {
+                  $entries = [];
+                  array_walk_recursive($value, function ($item) use (&$entries): void {
+                      if (is_string($item) && trim($item) !== '') {
+                          $entries[] = trim($item);
+                      }
+                  });
+                  return array_values(array_unique($entries));
+              }
+
+              if (! is_string($value) || trim($value) === '') {
+                  return [];
+              }
+
+              $value = trim($value);
+              $decoded = json_decode($value, true);
+              if (json_last_error() === JSON_ERROR_NONE && $decoded !== $value) {
+                  return imageEntries($decoded);
+              }
+
+              return [$value];
+          }
+
+          function classifyImage(string $entry): array
+          {
+              $entry = trim($entry);
+              if ($entry === '') {
+                  return ['type' => 'invalid', 'value' => $entry];
+              }
+
+              if (preg_match('#^data:image/#i', $entry)) {
+                  return ['type' => 'inline', 'value' => $entry];
+              }
+
+              if (preg_match('#^https?://#i', $entry)) {
+                  $parts = parse_url($entry);
+                  $host = strtolower((string) ($parts['host'] ?? ''));
+                  $path = rawurldecode((string) ($parts['path'] ?? ''));
+                  if (in_array($host, ['mercasto.com', 'www.mercasto.com'], true)
+                      && str_starts_with($path, '/storage/')) {
+                      return ['type' => 'storage', 'value' => ltrim(substr($path, strlen('/storage/')), '/')];
+                  }
+                  return ['type' => 'remote', 'value' => $entry];
+              }
+
+              $path = preg_replace('#[?#].*$#', '', $entry) ?? $entry;
+              $path = rawurldecode($path);
+              if (str_starts_with($path, '/storage/')) {
+                  return ['type' => 'storage', 'value' => ltrim(substr($path, strlen('/storage/')), '/')];
+              }
+              if (str_starts_with($path, 'storage/')) {
+                  return ['type' => 'storage', 'value' => ltrim(substr($path, strlen('storage/')), '/')];
+              }
+              if (str_starts_with($path, '/')) {
+                  return ['type' => 'public', 'value' => ltrim($path, '/')];
+              }
+
+              return ['type' => 'storage', 'value' => ltrim($path, '/')];
+          }
+
+          function checkRemoteBatch(array $urls): array
+          {
+              $results = [];
+              foreach (array_chunk($urls, 60) as $chunk) {
+                  $multi = curl_multi_init();
+                  $handles = [];
+
+                  foreach ($chunk as $url) {
+                      $handle = curl_init($url);
+                      curl_setopt_array($handle, [
+                          CURLOPT_NOBODY => true,
+                          CURLOPT_FOLLOWLOCATION => true,
+                          CURLOPT_MAXREDIRS => 5,
+                          CURLOPT_CONNECTTIMEOUT => 5,
+                          CURLOPT_TIMEOUT => 10,
+                          CURLOPT_USERAGENT => 'MercastoImageAudit/1.0',
+                          CURLOPT_SSL_VERIFYPEER => true,
+                          CURLOPT_RETURNTRANSFER => true,
+                      ]);
+                      curl_multi_add_handle($multi, $handle);
+                      $handles[(int) $handle] = [$handle, $url];
+                  }
+
+                  do {
+                      $status = curl_multi_exec($multi, $active);
+                      if ($active) {
+                          curl_multi_select($multi, 1.0);
+                      }
+                  } while ($active && $status === CURLM_OK);
+
+                  foreach ($handles as [$handle, $url]) {
+                      $http = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+                      $contentType = strtolower((string) curl_getinfo($handle, CURLINFO_CONTENT_TYPE));
+                      $error = curl_error($handle);
+                      $ok = $http >= 200 && $http < 400;
+                      $results[$url] = [
+                          'ok' => $ok,
+                          'http' => $http,
+                          'content_type' => $contentType,
+                          'error' => $error,
+                      ];
+                      curl_multi_remove_handle($multi, $handle);
+                      curl_close($handle);
+                  }
+
+                  curl_multi_close($multi);
+              }
+
+              return $results;
+          }
+
+          $ads = DB::table('ads')
+              ->select(['id', 'title', 'status', 'is_catalog_filler', 'generated_cover', 'image_url', 'user_id'])
+              ->orderBy('id')
+              ->get();
+
+          $records = [];
+          $remoteReferences = [];
+          $entryStats = [
+              'storage_ok' => 0,
+              'storage_missing' => 0,
+              'public_ok' => 0,
+              'public_missing' => 0,
+              'remote' => 0,
+              'inline' => 0,
+              'invalid' => 0,
+          ];
+
+          foreach ($ads as $ad) {
+              $entries = imageEntries($ad->image_url);
+              $classified = [];
+
+              foreach ($entries as $entry) {
+                  $item = classifyImage($entry);
+                  $item['original'] = $entry;
+
+                  if ($item['type'] === 'storage') {
+                      try {
+                          $item['ok'] = Storage::disk('public')->exists($item['value'])
+                              && Storage::disk('public')->size($item['value']) > 0;
+                      } catch (Throwable $error) {
+                          $item['ok'] = false;
+                          $item['error'] = $error->getMessage();
+                      }
+                      $entryStats[$item['ok'] ? 'storage_ok' : 'storage_missing']++;
+                  } elseif ($item['type'] === 'public') {
+                      $fullPath = public_path($item['value']);
+                      $item['ok'] = is_file($fullPath) && filesize($fullPath) > 0;
+                      $entryStats[$item['ok'] ? 'public_ok' : 'public_missing']++;
+                  } elseif ($item['type'] === 'inline') {
+                      $item['ok'] = strlen($item['value']) > 64;
+                      $entryStats['inline']++;
+                  } elseif ($item['type'] === 'remote') {
+                      $item['ok'] = null;
+                      $remoteReferences[$item['value']][] = (int) $ad->id;
+                      $entryStats['remote']++;
+                  } else {
+                      $item['ok'] = false;
+                      $entryStats['invalid']++;
+                  }
+
+                  $classified[] = $item;
+              }
+
+              $records[(int) $ad->id] = [
+                  'id' => (int) $ad->id,
+                  'title' => $ad->title,
+                  'status' => $ad->status,
+                  'user_id' => (int) $ad->user_id,
+                  'is_catalog_filler' => (bool) $ad->is_catalog_filler,
+                  'generated_cover' => (bool) $ad->generated_cover,
+                  'entries' => $classified,
+              ];
+          }
+
+          $remoteResults = checkRemoteBatch(array_keys($remoteReferences));
+          foreach ($records as &$record) {
+              foreach ($record['entries'] as &$entry) {
+                  if ($entry['type'] === 'remote') {
+                      $probe = $remoteResults[$entry['value']] ?? ['ok' => false, 'http' => 0, 'error' => 'not_checked'];
+                      $entry['ok'] = (bool) $probe['ok'];
+                      $entry['http'] = $probe['http'];
+                      if (! empty($probe['error'])) {
+                          $entry['error'] = $probe['error'];
+                      }
+                  }
+              }
+              unset($entry);
+          }
+          unset($record);
+
+          $summary = [
+              'total_ads' => count($records),
+              'active_ads' => 0,
+              'catalog_ads' => 0,
+              'ads_with_usable_image' => 0,
+              'ads_without_entries' => 0,
+              'ads_all_images_broken' => 0,
+              'ads_with_partially_broken_images' => 0,
+              'active_without_usable_image' => 0,
+              'catalog_without_usable_image' => 0,
+              'generated_covers' => 0,
+              'unique_remote_urls' => count($remoteResults),
+              'remote_urls_ok' => count(array_filter($remoteResults, fn ($result) => $result['ok'])),
+              'remote_urls_failed' => count(array_filter($remoteResults, fn ($result) => ! $result['ok'])),
+          ];
+          $byStatus = [];
+          $issues = [];
+
+          foreach ($records as $record) {
+              $status = (string) $record['status'];
+              $byStatus[$status] ??= ['total' => 0, 'without_usable_image' => 0, 'without_entries' => 0];
+              $byStatus[$status]['total']++;
+
+              if ($status === 'active') {
+                  $summary['active_ads']++;
+              }
+              if ($record['is_catalog_filler']) {
+                  $summary['catalog_ads']++;
+              }
+              if ($record['generated_cover']) {
+                  $summary['generated_covers']++;
+              }
+
+              $usable = count(array_filter($record['entries'], fn ($entry) => ($entry['ok'] ?? false) === true));
+              $broken = count(array_filter($record['entries'], fn ($entry) => ($entry['ok'] ?? false) === false));
+              $entryCount = count($record['entries']);
+
+              if ($usable > 0) {
+                  $summary['ads_with_usable_image']++;
+                  if ($broken > 0) {
+                      $summary['ads_with_partially_broken_images']++;
+                      $issues[] = $record + ['issue' => 'partially_broken', 'usable_count' => $usable, 'broken_count' => $broken];
+                  }
+                  continue;
+              }
+
+              $byStatus[$status]['without_usable_image']++;
+              if ($entryCount === 0) {
+                  $summary['ads_without_entries']++;
+                  $byStatus[$status]['without_entries']++;
+                  $issue = 'no_image_entries';
+              } else {
+                  $summary['ads_all_images_broken']++;
+                  $issue = 'all_images_broken';
+              }
+
+              if ($status === 'active') {
+                  $summary['active_without_usable_image']++;
+              }
+              if ($record['is_catalog_filler']) {
+                  $summary['catalog_without_usable_image']++;
+              }
+
+              $issues[] = $record + ['issue' => $issue, 'usable_count' => 0, 'broken_count' => $broken];
+          }
+
+          ksort($byStatus);
+
+          echo json_encode([
+              'generated_at' => now()->toIso8601String(),
+              'production_commit' => trim((string) shell_exec('cd /var/www && git rev-parse HEAD 2>/dev/null')),
+              'summary' => $summary,
+              'entry_stats' => $entryStats,
+              'by_status' => $byStatus,
+              'issues' => $issues,
+              'remote_failures' => array_filter($remoteResults, fn ($result) => ! $result['ok']),
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
+          PHP
+
+          cat "$OUTPUT_FILE"
+          cp "$OUTPUT_FILE" "$GITHUB_WORKSPACE/production-ad-image-audit.json"
+
+      - name: Print audit summary
+        run: |
+          set -euo pipefail
+          jq '{summary, entry_stats, by_status}' production-ad-image-audit.json
+
+      - name: Upload full image audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-ad-image-audit
+          path: production-ad-image-audit.json
+          retention-days: 3
