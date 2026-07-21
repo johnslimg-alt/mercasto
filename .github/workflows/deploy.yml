@@ -1,25 +1,10 @@
 name: Deploy Mercasto Frontend
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'index.html'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'vite.config.*'
-      - 'Dockerfile'
-      - 'default.conf'
-      - 'security_headers.conf'
-      - 'scripts/verify-vite-dist.mjs'
-      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 concurrency:
-  group: production-frontend-deploy
+  group: production-deploy
   cancel-in-progress: false
 
 permissions:

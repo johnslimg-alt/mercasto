@@ -5,18 +5,23 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 permissions:
   contents: read
   statuses: write
 
 jobs:
   deploy:
-    runs-on: self-hosted # ← главное изменение
+    runs-on: self-hosted
     timeout-minutes: 60
 
     steps:
       - name: Обновить код
         run: |
+          set -euo pipefail
           cd /var/www/mercasto
           docker exec mercasto_backend_container php artisan up || true
           # sudo: el checkout de producción pertenece a root; el runner is github-runner
@@ -33,15 +38,17 @@ jobs:
 
       - name: Миграции
         run: |
+          set -euo pipefail
           cd /var/www/mercasto
           sudo -n rm -f backend/bootstrap/cache/*.php
           docker exec mercasto_backend_container php artisan migrate --force
 
-      - name: Собрать и поднять
+      - name: Собрать, проверить и поднять
         env:
           BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
           cd /var/www/mercasto
           COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
           test -s "$COMPOSE_ENV_FILE"
@@ -66,7 +73,7 @@ jobs:
             UP_SERVICES="mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
           else
             echo "$CHANGED_FILES"
-            if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(Dockerfile|src/|public/|index.html|package\.json|package-lock\.json|vite\.config|tailwind\.config|postcss\.config|default\.conf|\.github/workflows/deploy-selfhosted\.yml$)'; then
+            if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(Dockerfile|src/|public/|index.html|package\.json|package-lock\.json|vite\.config|tailwind\.config|postcss\.config|default\.conf|security_headers\.conf|scripts/verify-vite-dist\.mjs|\.github/workflows/(deploy|deploy-selfhosted)\.yml$)'; then
               add_service mercasto-frontend
               UP_SERVICES="$UP_SERVICES mercasto-frontend"
             fi
@@ -82,21 +89,66 @@ jobs:
             echo "No Docker rebuild required for changed files."
           fi
 
-          if [ -n "$UP_SERVICES" ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps $UP_SERVICES
-            # Recreating mercasto-backend gives it a new container IP; nginx caches the
-            # old fastcgi upstream IP until reloaded, causing 502s (incl. Clip webhooks)
-            # until the later "Кэш и очереди" step restarts the frontend. Reload now to
-            # close that window immediately.
-            case " $UP_SERVICES " in
-              *" mercasto-backend "*) docker compose exec -T mercasto-frontend nginx -s reload || true ;;
-            esac
-          else
+          case " $BUILD_SERVICES " in
+            *" mercasto-frontend "*)
+              image_id=$(docker compose --env-file "$COMPOSE_ENV_FILE" images -q mercasto-frontend)
+              if [ -z "$image_id" ]; then
+                echo "Built frontend image was not found."
+                exit 1
+              fi
+
+              dist_dir="$RUNNER_TEMP/mercasto-dist-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+              rm -rf "$dist_dir"
+              mkdir -p "$dist_dir"
+
+              container_id=$(docker create "$image_id")
+              cleanup_container() {
+                docker rm -f "$container_id" >/dev/null 2>&1 || true
+              }
+              trap cleanup_container EXIT
+              docker cp "$container_id:/usr/share/nginx/html/." "$dist_dir/"
+              cleanup_container
+              trap - EXIT
+
+              docker run --rm \
+                -v "/var/www/mercasto/scripts/verify-vite-dist.mjs:/verify-vite-dist.mjs:ro" \
+                -v "$dist_dir:/dist:ro" \
+                node:22-alpine \
+                node /verify-vite-dist.mjs /dist
+
+              echo "FRONTEND_DIST_DIR=$dist_dir" >> "$GITHUB_ENV"
+              ;;
+          esac
+
+          FRONTEND_UP=0
+          OTHER_UP_SERVICES=""
+          for service in $UP_SERVICES; do
+            if [ "$service" = "mercasto-frontend" ]; then
+              FRONTEND_UP=1
+            else
+              OTHER_UP_SERVICES="$OTHER_UP_SERVICES $service"
+            fi
+          done
+
+          if [ -n "$OTHER_UP_SERVICES" ]; then
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps $OTHER_UP_SERVICES
+          fi
+
+          if [ "$FRONTEND_UP" -eq 1 ]; then
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --force-recreate mercasto-frontend
+          fi
+
+          if [ -z "$OTHER_UP_SERVICES" ] && [ "$FRONTEND_UP" -eq 0 ]; then
             echo "No service restart required for changed files."
           fi
 
+          case " $UP_SERVICES " in
+            *" mercasto-backend "*) docker compose --env-file "$COMPOSE_ENV_FILE" exec -T mercasto-frontend nginx -s reload || true ;;
+          esac
+
       - name: Кэш и очереди
         run: |
+          set -euo pipefail
           cd /var/www/mercasto
           COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
           test -s "$COMPOSE_ENV_FILE"
@@ -121,6 +173,102 @@ jobs:
           done
 
           curl -fsS --max-time 10 https://mercasto.com/api/auth/providers >/dev/null
+
+      - name: Verify production frontend bundle
+        id: verify_frontend_bundle
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [ -z "${FRONTEND_DIST_DIR:-}" ]; then
+            echo "Frontend bundle unchanged; production asset verification skipped."
+            echo "summary=Frontend bundle unchanged" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          live_dir="$RUNNER_TEMP/mercasto-live-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          rm -rf "$live_dir"
+          mkdir -p "$live_dir"
+          echo "FRONTEND_LIVE_DIR=$live_dir" >> "$GITHUB_ENV"
+
+          curl_args=(
+            --fail
+            --silent
+            --show-error
+            --location
+            --retry 5
+            --retry-delay 2
+            --retry-all-errors
+            --max-time 30
+            -H 'Cache-Control: no-cache'
+            -H 'Accept-Encoding: identity'
+          )
+
+          curl "${curl_args[@]}" "https://mercasto.com/?deploy=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -o "$live_dir/index.html"
+          if ! cmp -s "$FRONTEND_DIST_DIR/index.html" "$live_dir/index.html"; then
+            echo "Production index.html does not match the deployed frontend image."
+            diff -u "$FRONTEND_DIST_DIR/index.html" "$live_dir/index.html" | head -200 || true
+            echo "summary=Production index.html does not match deployed image" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          checked=0
+          while IFS= read -r relative_path; do
+            target="$live_dir/$relative_path"
+            mkdir -p "$(dirname "$target")"
+            curl "${curl_args[@]}" "https://mercasto.com/${relative_path}?deploy=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -o "$target"
+
+            if ! cmp -s "$FRONTEND_DIST_DIR/$relative_path" "$target"; then
+              echo "Production asset differs from deployed image: $relative_path"
+              echo "summary=Production asset mismatch: $relative_path" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+            checked=$((checked + 1))
+          done < <(cd "$FRONTEND_DIST_DIR" && find assets -type f -print | sort)
+
+          if [ "$checked" -eq 0 ]; then
+            echo "No production Vite assets were checked."
+            echo "summary=No production Vite assets were checked" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          echo "Production bundle verified: index.html and $checked assets match the deployed image."
+          echo "summary=Production frontend verified: $checked assets" >> "$GITHUB_OUTPUT"
+
+      - name: Publish frontend asset deploy status
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERIFY_OUTCOME: ${{ steps.verify_frontend_bundle.outcome }}
+          VERIFY_SUMMARY: ${{ steps.verify_frontend_bundle.outputs.summary }}
+        run: |
+          set -euo pipefail
+
+          if [ "$VERIFY_OUTCOME" = "success" ]; then
+            STATE="success"
+            DESCRIPTION="${VERIFY_SUMMARY:-Production frontend assets verified}"
+          else
+            STATE="failure"
+            DESCRIPTION="${VERIFY_SUMMARY:-Production frontend asset verification failed}"
+          fi
+          DESCRIPTION="$(printf '%s' "$DESCRIPTION" | tr -cd '[:alnum:] .,:_()/-' | cut -c1-140)"
+
+          PAYLOAD="$(printf '{"state":"%s","context":"production/frontend-assets","description":"%s","target_url":"https://github.com/%s/actions/runs/%s"}' \
+            "$STATE" "$DESCRIPTION" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+
+          curl -fsS --retry 3 --retry-all-errors \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$PAYLOAD"
+
+      - name: Require frontend asset verification
+        if: always() && steps.verify_frontend_bundle.outcome != 'success'
+        run: |
+          echo "Production frontend asset verification failed." >&2
+          exit 1
 
       - name: Verify TikTok Events API
         id: verify_tiktok_events_api
@@ -247,6 +395,7 @@ jobs:
 
       - name: Production smoke
         run: |
+          set -euo pipefail
           cd /var/www/mercasto
           COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
           test -s "$COMPOSE_ENV_FILE"
@@ -271,4 +420,5 @@ jobs:
         if: always()
         run: |
           rm -f "$RUNNER_TEMP/mercasto-backend.env" "$RUNNER_TEMP/tiktok-events-api-verify.out"
+          rm -rf "${FRONTEND_DIST_DIR:-}" "${FRONTEND_LIVE_DIR:-}"
           docker image prune -f
