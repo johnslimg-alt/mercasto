@@ -1,0 +1,105 @@
+name: Finish Catalog Card Integrity
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/App.jsx'
+      - 'backend/app/Http/Controllers/Api/AdController.php'
+      - 'scripts/check-recovery-guards.mjs'
+      - '.github/workflows/pr-catalog-card-finish.yml'
+
+concurrency:
+  group: catalog-card-finish-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Patch card and API ordering
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app_path = Path('src/App.jsx')
+          lines = app_path.read_text().splitlines()
+
+          if not any('const isCatalogFiller = Boolean(ad.is_catalog_filler);' in line for line in lines):
+              index = next(i for i, line in enumerate(lines) if line.strip() == "const isPro = ad.user?.role === 'business';")
+              indent = lines[index][:len(lines[index]) - len(lines[index].lstrip())]
+              lines.insert(index + 1, indent + 'const isCatalogFiller = Boolean(ad.is_catalog_filler);')
+
+          if not any('Catálogo Mercasto' in line for line in lines):
+              start = next(i for i, line in enumerate(lines) if 'isDestacado &&' in line and 'Top seller' in line)
+              end = next(i for i in range(start, len(lines)) if '!isDestacado && !isUrgente && !isHighlighted && isPro' in lines[i])
+              indent = lines[start][:len(lines[start]) - len(lines[start].lstrip())]
+              lines[start:end + 1] = [
+                  indent + '{isCatalogFiller && <span className="badge absolute top-2.5 left-2.5 bg-slate-900/90 text-white z-10">Catálogo Mercasto</span>}',
+                  indent + '{!isCatalogFiller && isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}',
+                  indent + '{!isCatalogFiller && !isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}',
+                  indent + '{!isCatalogFiller && !isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">Resaltado</span>}',
+                  indent + '{!isCatalogFiller && !isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}',
+              ]
+
+          if not any('Vende uno similar' in line for line in lines):
+              start = next(i for i, line in enumerate(lines) if line.strip() == "{ad.user?.role !== 'business' && (")
+              end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == ')}')
+              indent = lines[start][:len(lines[start]) - len(lines[start].lstrip())]
+              lines[start:end + 1] = [
+                  indent + '{isCatalogFiller ? (',
+                  indent + '  <button',
+                  indent + '    className="w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white"',
+                  indent + '    onClick={(e) => {',
+                  indent + '      e.stopPropagation();',
+                  indent + "      navigate(user ? '/post' : '/vendedores', { state: { category: ad.category } });",
+                  indent + '    }}',
+                  indent + '  >',
+                  indent + '    Vende uno similar',
+                  indent + '  </button>',
+                  indent + ") : ad.user?.role !== 'business' && (",
+                  indent + '  <button className="w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>',
+                  indent + ')}',
+              ]
+
+          app_path.write_text('\n'.join(lines) + '\n')
+
+          controller_path = Path('backend/app/Http/Controllers/Api/AdController.php')
+          controller = controller_path.read_text()
+          marker = "orderBy('ads.is_catalog_filler', 'asc')"
+          if marker not in controller:
+              anchor = '        // Сортировка (Спецификация: по дате, цене, популярности)'
+              if anchor not in controller:
+                  raise SystemExit('AdController sort anchor not found')
+              insertion = """        // Настоящие пользовательские объявления всегда выше витринных ссылок каталога.\n        // Для витрины конкретного продавца сохраняем его собственную сортировку без вмешательства.\n        if (! $request->filled('user_id')) {\n            $query->orderBy('ads.is_catalog_filler', 'asc');\n        }\n\n"""
+              controller = controller.replace(anchor, insertion + anchor, 1)
+              controller_path.write_text(controller)
+          PY
+
+      - name: Verify final catalog behavior
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check:recovery
+          npm run lint:ci
+          npm run build
+          php -l backend/app/Http/Controllers/Api/AdController.php
+
+      - name: Commit and remove temporary workflow
+        run: |
+          rm -f .github/workflows/pr-catalog-card-finish.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Label catalog cards and prioritize real listings'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
