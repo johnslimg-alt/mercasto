@@ -22,6 +22,16 @@ function assertNotContains(path, needle, reason) {
   checks.push(`${path}: ${reason}`);
 }
 
+function assertOrder(path, firstNeedle, secondNeedle, reason) {
+  const content = read(path);
+  const first = content.indexOf(firstNeedle);
+  const second = content.indexOf(secondNeedle);
+  if (first < 0 || second < 0 || first >= second) {
+    throw new Error(`${path} must place ${JSON.stringify(firstNeedle)} before ${JSON.stringify(secondNeedle)}: ${reason}`);
+  }
+  checks.push(`${path}: ${reason}`);
+}
+
 assertContains(
   'index.html',
   "typeof window.Notification === 'undefined'",
@@ -38,6 +48,86 @@ assertContains(
   'src/lib/notificationPolyfill.js',
   'fallbackNotification.requestPermission',
   'Notification fallback exposes requestPermission safely'
+);
+
+assertContains(
+  'src/main.jsx',
+  'installStaleChunkRecovery();',
+  'stale Vite chunks are recovered before React renders the paid landing route'
+);
+
+assertContains(
+  'src/utils/staleChunkRecovery.js',
+  "url.searchParams.delete('__mercasto_refresh')",
+  'stale recovery loop guard compares the original route without its cache-buster'
+);
+
+assertContains(
+  'src/utils/staleChunkRecovery.js',
+  'window.location.replace(recoveryUrl())',
+  'stale recovery reloads the same route instead of sending traffic to the homepage'
+);
+
+assertContains(
+  'public/stale-module.js',
+  "routeUrl.searchParams.delete('__mercasto_refresh')",
+  'nginx stale-module fallback uses the same normalized route guard'
+);
+
+assertNotContains(
+  'public/stale-module.js',
+  "location.replace('/')",
+  'stale asset recovery must never discard the paid landing page'
+);
+
+assertContains(
+  'src/main.jsx',
+  'installCampaignAttribution();',
+  'campaign attribution is captured before analytics bridges initialize'
+);
+
+assertOrder(
+  'src/main.jsx',
+  'installCampaignAttribution();',
+  'installMetaCapiBridge();',
+  'Meta receives the campaign-enriched data layer'
+);
+
+assertOrder(
+  'src/main.jsx',
+  'installCampaignAttribution();',
+  'initTikTokPixel();',
+  'TikTok receives the campaign-enriched data layer'
+);
+
+assertContains(
+  'src/utils/protectedRouteReturn.js',
+  "trackSellerFunnel('seller_post_returned_after_auth'",
+  'seller registration return is measured as a funnel step'
+);
+
+assertContains(
+  'src/utils/protectedRouteReturn.js',
+  "trackSellerFunnel('seller_post_intent_abandoned'",
+  'seller intent drop-off is measurable for marketing optimization'
+);
+
+assertNotContains(
+  'src/App.jsx',
+  '4 + (((Number(ad.id) || 1) % 10) / 10)',
+  'ad ratings must never be synthesized from an ad id'
+);
+
+assertNotContains(
+  'src/App.jsx',
+  '((Number(ad.id) || 1) % 7) + 1',
+  'review counts must never be synthesized from an ad id'
+);
+
+assertContains(
+  'src/App.jsx',
+  'if (!hasReviews) return null;',
+  'rating social proof renders only when real review data exists'
 );
 
 assertNotContains(

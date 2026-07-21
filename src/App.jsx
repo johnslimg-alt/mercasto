@@ -124,17 +124,22 @@ class ErrorBoundary extends React.Component {
 
 const getAdRatingStats = (ad = {}) => {
   const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
-  const rating = rawRating > 0 ? rawRating : 4 + (((Number(ad.id) || 1) % 10) / 10);
   const rawCount = Number(ad.reviews_count ?? ad.comments_count ?? ad.review_count ?? 0);
-  const count = rawCount > 0 ? rawCount : ((Number(ad.id) || 1) % 7) + 1;
+  const count = Number.isFinite(rawCount) && rawCount > 0 ? Math.floor(rawCount) : 0;
+  const rating = count > 0 && Number.isFinite(rawRating) && rawRating > 0
+    ? Math.min(5, Math.max(1, rawRating))
+    : 0;
   return {
-    rating: Math.min(5, Math.max(1, rating)),
+    rating,
     count,
+    hasReviews: rating > 0 && count > 0,
   };
 };
 
 const AdRatingStars = ({ ad, compact = false }) => {
-  const { rating, count } = getAdRatingStats(ad);
+  const { rating, count, hasReviews } = getAdRatingStats(ad);
+  if (!hasReviews) return null;
+
   const filled = Math.round(rating);
   return (
     <div className={`flex items-center gap-1 ${compact ? 'text-[11px]' : 'text-[13px]'}`}>
