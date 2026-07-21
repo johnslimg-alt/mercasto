@@ -29,339 +29,326 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          from textwrap import dedent, indent
           import re
 
-          def replace_once(path, old, new, label):
+          def block(value):
+              return dedent(value).strip('\n')
+
+          def replace_exact(path, old, new, label, marker=None):
               file = Path(path)
               content = file.read_text()
-              if old in content:
-                  file.write_text(content.replace(old, new, 1))
+              if marker and marker in content:
                   return
-              if new in content:
+              if old not in content:
+                  raise SystemExit(f'{label}: expected block not found in {path}')
+              file.write_text(content.replace(old, new, 1))
+
+          def replace_regex(path, pattern, replacement, label, marker=None):
+              file = Path(path)
+              content = file.read_text()
+              if marker and marker in content:
                   return
-              raise SystemExit(f'{label}: expected block not found in {path}')
+              updated, count = re.subn(pattern, lambda _: replacement, content, count=1, flags=re.S | re.M)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected pattern not found in {path}')
+              file.write_text(updated)
 
           app_path = 'src/App.jsx'
-          replace_once(
+          replace_exact(
               app_path,
-              """    const isPro = ad.user?.role === 'business';
-              const isFav = favoriteIds.includes(ad.id);""",
-              """    const isPro = ad.user?.role === 'business';
-              const isCatalogFiller = Boolean(ad.is_catalog_filler);
-              const isFav = favoriteIds.includes(ad.id);""",
+              block("""
+                const isPro = ad.user?.role === 'business';
+                const isFav = favoriteIds.includes(ad.id);
+              """),
+              block("""
+                const isPro = ad.user?.role === 'business';
+                const isCatalogFiller = Boolean(ad.is_catalog_filler);
+                const isFav = favoriteIds.includes(ad.id);
+              """),
               'catalog flag on cards',
+              'const isCatalogFiller = Boolean(ad.is_catalog_filler);',
           )
 
-          replace_once(
+          replace_regex(
               app_path,
-              """          {isDestacado && <span className=\"badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10\">Top seller</span>}
-              {!isDestacado && isUrgente && <span className=\"badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10\">Urgent</span>}
-              {!isDestacado && !isUrgente && isHighlighted && <span className=\"badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10\">Resaltado</span>}
-              {!isDestacado && !isUrgente && !isHighlighted && isPro && <span className=\"badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10\">PRO</span>}""",
-              """          {isCatalogFiller && <span className=\"badge absolute top-2.5 left-2.5 bg-slate-900/90 text-white z-10\">Catálogo Mercasto</span>}
-              {!isCatalogFiller && isDestacado && <span className=\"badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10\">Top seller</span>}
-              {!isCatalogFiller && !isDestacado && isUrgente && <span className=\"badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10\">Urgent</span>}
-              {!isCatalogFiller && !isDestacado && !isUrgente && isHighlighted && <span className=\"badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10\">Resaltado</span>}
-              {!isCatalogFiller && !isDestacado && !isUrgente && !isHighlighted && isPro && <span className=\"badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10\">PRO</span>}""",
+              r'^          \{isDestacado && .*?Top seller</span>\}\n'
+              r'^          \{!isDestacado && isUrgente.*?Urgent</span>\}\n'
+              r'^          \{!isDestacado && !isUrgente && isHighlighted.*?Resaltado</span>\}\n'
+              r'^          \{!isDestacado && !isUrgente && !isHighlighted && isPro.*?PRO</span>\}$',
+              block("""
+                        {isCatalogFiller && <span className="badge absolute top-2.5 left-2.5 bg-slate-900/90 text-white z-10">Catálogo Mercasto</span>}
+                        {!isCatalogFiller && isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">Top seller</span>}
+                        {!isCatalogFiller && !isDestacado && isUrgente && <span className="badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10">Urgent</span>}
+                        {!isCatalogFiller && !isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">Resaltado</span>}
+                        {!isCatalogFiller && !isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
+              """),
               'catalog badge on cards',
+              'Catálogo Mercasto',
           )
 
-          replace_once(
+          replace_regex(
               app_path,
-              """        {ad.user?.role !== 'business' && (
-                  <button className=\"w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700\" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
-                )}""",
-              """        {isCatalogFiller ? (
-                  <button
-                    className=\"w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white\"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(user ? '/post' : '/vendedores', { state: { category: ad.category } });
-                    }}
-                  >
-                    Vende uno similar
-                  </button>
-                ) : ad.user?.role !== 'business' && (
-                  <button className=\"w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700\" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
-                )}""",
+              r"^        \{ad\.user\?\.role !== 'business' && \(\n.*?^          \)\}",
+              block("""
+                      {isCatalogFiller ? (
+                        <button
+                          className="w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(user ? '/post' : '/vendedores', { state: { category: ad.category } });
+                          }}
+                        >
+                          Vende uno similar
+                        </button>
+                      ) : ad.user?.role !== 'business' && (
+                        <button className="w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
+                      )}
+              """),
               'catalog conversion button',
+              'Vende uno similar',
           )
 
           detail_path = Path('src/components/screens/AdDetailScreen.jsx')
           detail = detail_path.read_text()
 
-          old_rating = """const getAdRatingStats = (ad = {}) => {
-            const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
-            const rating = rawRating > 0 ? rawRating : 4 + (((Number(ad.id) || 1) % 10) / 10);
-            const rawCount = Number(ad.reviews_count ?? ad.comments_count ?? ad.review_count ?? 0);
-            const count = rawCount > 0 ? rawCount : ((Number(ad.id) || 1) % 7) + 1;
-            return { rating: Math.min(5, Math.max(1, rating)), count };
-          };"""
-          new_rating = """const getAdRatingStats = (ad = {}) => {
-            const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
-            const rawCount = Number(ad.reviews_count ?? ad.comments_count ?? ad.review_count ?? 0);
-            const count = Number.isFinite(rawCount) && rawCount > 0 ? Math.floor(rawCount) : 0;
-            const rating = count > 0 && Number.isFinite(rawRating) && rawRating > 0
-              ? Math.min(5, Math.max(1, rawRating))
-              : 0;
-            return { rating, count, hasReviews: rating > 0 && count > 0 };
-          };"""
-          if old_rating in detail:
-              detail = detail.replace(old_rating, new_rating, 1)
-          elif new_rating not in detail:
-              raise SystemExit('real-only detail ratings: expected block not found')
+          if 'hasReviews: rating > 0 && count > 0' not in detail:
+              detail, count = re.subn(
+                  r'const getAdRatingStats = \(ad = \{\}\) => \{.*?\n\};\n\nfunction RatingStars',
+                  block("""
+                    const getAdRatingStats = (ad = {}) => {
+                      const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
+                      const rawCount = Number(ad.reviews_count ?? ad.comments_count ?? ad.review_count ?? 0);
+                      const count = Number.isFinite(rawCount) && rawCount > 0 ? Math.floor(rawCount) : 0;
+                      const rating = count > 0 && Number.isFinite(rawRating) && rawRating > 0
+                        ? Math.min(5, Math.max(1, rawRating))
+                        : 0;
+                      return { rating, count, hasReviews: rating > 0 && count > 0 };
+                    };
 
-          old_flags = """  const isOwner = currentUser && currentUser.id === ad.user_id;
-            const isFav = favoriteIds.includes(ad.id);"""
-          new_flags = """  const isOwner = currentUser && currentUser.id === ad.user_id;
-            const isCatalogFiller = Boolean(ad.is_catalog_filler);
-            const isFav = favoriteIds.includes(ad.id);"""
-          if old_flags in detail:
-              detail = detail.replace(old_flags, new_flags, 1)
-          elif new_flags not in detail:
-              raise SystemExit('detail catalog flag: expected block not found')
+                    function RatingStars
+                  """),
+                  detail,
+                  count=1,
+                  flags=re.S,
+              )
+              if count != 1:
+                  raise SystemExit('real-only detail ratings: expected block not found')
 
-          old_preview = """  const ratingStats = getAdRatingStats(ad);
-            const commentPreview = [
-              { author: 'Comprador verificado', text: 'Buena comunicación y publicación clara.' },
-              { author: 'Usuario Mercasto', text: 'La información coincide con las fotos del anuncio.' },
-            ].slice(0, Math.min(2, ratingStats.count));"""
-          new_preview = """  const ratingStats = getAdRatingStats(ad);"""
-          if old_preview in detail:
-              detail = detail.replace(old_preview, new_preview, 1)
-          elif new_preview not in detail:
-              raise SystemExit('canned review removal: expected block not found')
+          if 'const isCatalogFiller = Boolean(ad.is_catalog_filler);' not in detail:
+              old = block("""
+                  const isOwner = currentUser && currentUser.id === ad.user_id;
+                  const isFav = favoriteIds.includes(ad.id);
+              """)
+              new = block("""
+                  const isOwner = currentUser && currentUser.id === ad.user_id;
+                  const isCatalogFiller = Boolean(ad.is_catalog_filler);
+                  const isFav = favoriteIds.includes(ad.id);
+              """)
+              if old not in detail:
+                  raise SystemExit('detail catalog flag: expected block not found')
+              detail = detail.replace(old, new, 1)
 
-          old_schema = '''      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "Product",
-                  "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
-                  "description": localizedText(ad.description, lang) || "Anuncio clasificado en Mercasto",
-                  "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
-                  "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
-                  "offers": {
-                    "@type": "Offer",
-                    "url": `https://mercasto.com/ads/${ad.id}`,
-                    "priceCurrency": "MXN",
-                    "price": ad.price || "0",
-                    "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-                    "itemCondition": ad.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
-                  }
-                })}} />'''
-          new_schema = '''      {!isCatalogFiller && (
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "Product",
-                  "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
-                  "description": localizedText(ad.description, lang) || "Anuncio clasificado en Mercasto",
-                  "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
-                  "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
-                  "offers": {
-                    "@type": "Offer",
-                    "url": `https://mercasto.com/ads/${ad.id}`,
-                    "priceCurrency": "MXN",
-                    "price": ad.price || "0",
-                    "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-                    "itemCondition": ad.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
-                  }
-                })}} />
-              )}'''
-          if old_schema in detail:
-              detail = detail.replace(old_schema, new_schema, 1)
-          elif new_schema not in detail:
-              raise SystemExit('catalog structured data guard: expected block not found')
-
-          old_heading = '''            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
-                    <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>'''
-          new_heading = '''            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
-                    {isCatalogFiller && (
-                      <div className="mb-5 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-slate-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-slate-100" data-catalog-reference>
-                        <div className="text-[14px] font-black">Referencia de catálogo Mercasto</div>
-                        <p className="mt-1 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
-                          Este producto se muestra como referencia. La disponibilidad, el precio y el vendedor deben confirmarse en una publicación real.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
-                          className="mt-3 inline-flex items-center rounded-xl bg-[#84CC16] px-4 py-2 text-[13px] font-bold text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
-                        >
-                          Publicar uno similar
-                        </button>
-                      </div>
-                    )}
-                    <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>'''
-          if old_heading in detail:
-              detail = detail.replace(old_heading, new_heading, 1)
-          elif new_heading not in detail:
-              raise SystemExit('catalog detail disclosure: expected block not found')
-
-          old_rating_row = '''            <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
-                      <RatingStars rating={ratingStats.rating} />
-                      <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
-                      <span className="text-slate-400">({ratingStats.count} comentarios)</span>
-                    </div>'''
-          new_rating_row = '''            {ratingStats.hasReviews && !isCatalogFiller && (
-                      <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
-                        <RatingStars rating={ratingStats.rating} />
-                        <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
-                        <span className="text-slate-400">({ratingStats.count} comentarios)</span>
-                      </div>
-                    )}'''
-          if old_rating_row in detail:
-              detail = detail.replace(old_rating_row, new_rating_row, 1)
-          elif new_rating_row not in detail:
-              raise SystemExit('conditional detail rating row: expected block not found')
-
-          old_meta = '''              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
-                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>
-                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>
-                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>'''
-          new_meta = '''              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
-                      {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>}
-                      {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>}
-                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>'''
-          if old_meta in detail:
-              detail = detail.replace(old_meta, new_meta, 1)
-          elif new_meta not in detail:
-              raise SystemExit('catalog metadata privacy: expected block not found')
-
-          reviews_pattern = re.compile(
-              r'\n\s*<div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/40">.*?\n\s*<div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">',
-              re.S,
+          detail, _ = re.subn(
+              r"  const ratingStats = getAdRatingStats\(ad\);\n  const commentPreview = \[.*?\n  \]\.slice\(0, Math\.min\(2, ratingStats\.count\)\);",
+              '  const ratingStats = getAdRatingStats(ad);',
+              detail,
+              count=1,
+              flags=re.S,
           )
-          reviews_replacement = '\n            <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">'
-          if reviews_pattern.search(detail):
-              detail = reviews_pattern.sub(reviews_replacement, detail, count=1)
-          elif 'Comprador verificado' in detail or 'Usuario Mercasto' in detail:
-              raise SystemExit('fake review section could not be removed')
 
-          seller_pattern = re.compile(
-              r'            <div className="flex items-center gap-4 mb-6 cursor-pointer group".*?            <div className="flex gap-3 mt-4">',
-              re.S,
-          )
-          seller_replacement = '''            {isCatalogFiller ? (
-              <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
-                <h3 className="text-[16px] font-black text-slate-900 dark:text-white">¿Vendes este producto o uno parecido?</h3>
-                <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
-                  Publica tus propias fotos, precio, ubicación y datos de contacto para recibir compradores reales.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
-                  className="mt-4 w-full rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
-                >
-                  Publicar gratis
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-4 mb-6 cursor-pointer group" onClick={() => handleViewCompany(ad.user)}>
-                  {ad.user?.avatar_url ? (
-                    <img src={getImageUrl(ad.user.avatar_url)} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 group-hover:border-[#84CC16] transition-colors" alt=""/>
-                  ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-200 group-hover:border-[#84CC16] transition-colors"><User size={24} className="text-slate-400" /></div>
-                  )}
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
-                      {ad.user?.name || 'Usuario'}
-                      {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title="Vendedor Verificado" />}
-                    </h3>
-                    <p className="text-[13px] text-slate-500 mt-0.5">En Mercasto desde {new Date(ad.user?.created_at || ad.created_at).getFullYear()}</p>
-                  </div>
-                </div>
+          if '{!isCatalogFiller && (' not in detail:
+              schema_start = detail.find('      <script type="application/ld+json"')
+              schema_end = detail.find('      <div className="flex items-center justify-between mb-6">', schema_start)
+              if schema_start < 0 or schema_end < 0:
+                  raise SystemExit('catalog structured data guard: expected block not found')
+              schema = detail[schema_start:schema_end].strip('\n')
+              wrapped = '      {!isCatalogFiller && (\n' + indent(schema, '  ') + '\n      )}\n\n'
+              detail = detail[:schema_start] + wrapped + detail[schema_end:]
 
-                {(!currentUser || !currentUser.id) ? (
-                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
-                    <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
-                      {t.register_to_contact || 'Regístrate para ver los datos de contacto del vendedor.'}
-                    </p>
-                    <button
-                      onClick={() => navigate('/profile')}
-                      className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
-                    >
-                      {t.login_register || 'Iniciar sesión / Registrarse'}
-                    </button>
-                  </div>
-                ) : (
-                  <ContactButton ad={ad} user={currentUser} t={t} className="w-full mb-3" />
-                )}
-              </>
-            )}
+          if 'data-catalog-reference' not in detail:
+              title_line = '            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>'
+              if title_line not in detail:
+                  raise SystemExit('catalog detail disclosure: title line not found')
+              disclosure = block("""
+                            {isCatalogFiller && (
+                              <div className="mb-5 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-slate-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-slate-100" data-catalog-reference>
+                                <div className="text-[14px] font-black">Referencia de catálogo Mercasto</div>
+                                <p className="mt-1 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+                                  Este producto se muestra como referencia. La disponibilidad, el precio y el vendedor deben confirmarse en una publicación real.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
+                                  className="mt-3 inline-flex items-center rounded-xl bg-[#84CC16] px-4 py-2 text-[13px] font-bold text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+                                >
+                                  Publicar uno similar
+                                </button>
+                              </div>
+                            )}
+              """)
+              detail = detail.replace(title_line, title_line + '\n' + disclosure, 1)
 
-            <div className="flex gap-3 mt-4">'''
-          if seller_pattern.search(detail):
-              detail = seller_pattern.sub(seller_replacement, detail, count=1)
-          elif '¿Vendes este producto o uno parecido?' not in detail:
-              raise SystemExit('catalog seller replacement: expected block not found')
+          if 'ratingStats.hasReviews && !isCatalogFiller' not in detail:
+              pattern = (
+                  r'^            <div className="mb-5 flex flex-wrap items-center gap-2 text-\[13px\] font-semibold text-slate-600 dark:text-slate-300">\n'
+                  r'.*?^            </div>'
+              )
+              replacement = block("""
+                            {ratingStats.hasReviews && !isCatalogFiller && (
+                              <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+                                <RatingStars rating={ratingStats.rating} />
+                                <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
+                                <span className="text-slate-400">({ratingStats.count} comentarios)</span>
+                              </div>
+                            )}
+              """)
+              detail, count = re.subn(pattern, replacement, detail, count=1, flags=re.S | re.M)
+              if count != 1:
+                  raise SystemExit('conditional detail rating row: expected block not found')
+
+          calendar_line = '              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>'
+          if '{!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar' not in detail:
+              if calendar_line not in detail:
+                  raise SystemExit('catalog date metadata: expected line not found')
+              detail = detail.replace(calendar_line, '              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>}', 1)
+
+          views_line = '              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>'
+          if '{!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3' not in detail:
+              if views_line not in detail:
+                  raise SystemExit('catalog view metadata: expected line not found')
+              detail = detail.replace(views_line, '              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>}', 1)
+
+          if 'Comprador verificado' in detail or 'Usuario Mercasto' in detail:
+              reviews_start = detail.find('            <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/40">')
+              reviews_end = detail.find('            <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">', reviews_start)
+              if reviews_start < 0 or reviews_end < 0:
+                  raise SystemExit('fake review section: expected boundaries not found')
+              detail = detail[:reviews_start] + detail[reviews_end:]
+
+          if '¿Vendes este producto o uno parecido?' not in detail:
+              seller_start = detail.find('            <div className="flex items-center gap-4 mb-6 cursor-pointer group"')
+              seller_end = detail.find('            <div className="flex gap-3 mt-4">', seller_start)
+              if seller_start < 0 or seller_end < 0:
+                  raise SystemExit('catalog seller replacement: expected boundaries not found')
+              seller = block("""
+                            {isCatalogFiller ? (
+                              <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
+                                <h3 className="text-[16px] font-black text-slate-900 dark:text-white">¿Vendes este producto o uno parecido?</h3>
+                                <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+                                  Publica tus propias fotos, precio, ubicación y datos de contacto para recibir compradores reales.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
+                                  className="mt-4 w-full rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+                                >
+                                  Publicar gratis
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center gap-4 mb-6 cursor-pointer group" onClick={() => handleViewCompany(ad.user)}>
+                                  {ad.user?.avatar_url ? (
+                                    <img src={getImageUrl(ad.user.avatar_url)} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 group-hover:border-[#84CC16] transition-colors" alt=""/>
+                                  ) : (
+                                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-200 group-hover:border-[#84CC16] transition-colors"><User size={24} className="text-slate-400" /></div>
+                                  )}
+                                  <div>
+                                    <h3 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
+                                      {ad.user?.name || 'Usuario'}
+                                      {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title="Vendedor Verificado" />}
+                                    </h3>
+                                    <p className="text-[13px] text-slate-500 mt-0.5">En Mercasto desde {new Date(ad.user?.created_at || ad.created_at).getFullYear()}</p>
+                                  </div>
+                                </div>
+
+                                {(!currentUser || !currentUser.id) ? (
+                                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
+                                    <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
+                                      {t.register_to_contact || 'Regístrate para ver los datos de contacto del vendedor.'}
+                                    </p>
+                                    <button
+                                      onClick={() => navigate('/profile')}
+                                      className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                                    >
+                                      {t.login_register || 'Iniciar sesión / Registrarse'}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <ContactButton ad={ad} user={currentUser} t={t} className="w-full mb-3" />
+                                )}
+                              </>
+                            )}
+
+              """)
+              detail = detail[:seller_start] + seller + '\n\n' + detail[seller_end:]
 
           detail_path.write_text(detail)
 
-          controller_path = 'backend/app/Http/Controllers/Api/AdController.php'
-          replace_once(
-              controller_path,
-              """        // Сортировка (Спецификация: по дате, цене, популярности)
-                  $sort = $request->query('sort', 'latest');""",
-              """        // Настоящие пользовательские объявления всегда выше витринных ссылок каталога.
-                  // Для витрины конкретного продавца сохраняем его собственную сортировку без вмешательства.
-                  if (! $request->filled('user_id')) {
-                      $query->orderBy('ads.is_catalog_filler', 'asc');
-                  }
+          controller_path = Path('backend/app/Http/Controllers/Api/AdController.php')
+          controller = controller_path.read_text()
+          priority_marker = "orderBy('ads.is_catalog_filler', 'asc')"
+          if priority_marker not in controller:
+              sort_anchor = '        // Сортировка (Спецификация: по дате, цене, популярности)'
+              if sort_anchor not in controller:
+                  raise SystemExit('real listings priority: sort anchor not found')
+              priority = block("""
+                        // Настоящие пользовательские объявления всегда выше витринных ссылок каталога.
+                        // Для витрины конкретного продавца сохраняем его собственную сортировку без вмешательства.
+                        if (! $request->filled('user_id')) {
+                            $query->orderBy('ads.is_catalog_filler', 'asc');
+                        }
 
-                  // Сортировка (Спецификация: по дате, цене, популярности)
-                  $sort = $request->query('sort', 'latest');""",
-              'real listings priority',
-          )
+              """)
+              controller = controller.replace(sort_anchor, priority + sort_anchor, 1)
+              controller_path.write_text(controller)
 
           guard_path = Path('scripts/check-recovery-guards.mjs')
           guard = guard_path.read_text()
-          anchor = """assertNotContains(
+          if 'detail pages must never synthesize ratings from an ad id' not in guard:
+              anchor = """assertNotContains(
             '.github/workflows/emergency-container-frontend-patch.yml',"""
-          assertions = """assertNotContains(
-            'src/components/screens/AdDetailScreen.jsx',
-            '4 + (((Number(ad.id) || 1) % 10) / 10)',
-            'detail pages must never synthesize ratings from an ad id'
-          );
-
-          assertNotContains(
-            'src/components/screens/AdDetailScreen.jsx',
-            'Comprador verificado',
-            'detail pages must never display canned buyer testimonials'
-          );
-
-          assertNotContains(
-            'src/components/screens/AdDetailScreen.jsx',
-            'Usuario Mercasto',
-            'detail pages must never display canned user testimonials'
-          );
-
-          assertContains(
-            'src/App.jsx',
-            'Catálogo Mercasto',
-            'catalog references are visibly distinguished on result cards'
-          );
-
-          assertContains(
-            'src/components/screens/AdDetailScreen.jsx',
-            'Referencia de catálogo Mercasto',
-            'catalog detail pages disclose that availability and seller must be confirmed'
-          );
-
-          assertContains(
-            'src/components/screens/AdDetailScreen.jsx',
-            '!isCatalogFiller && (',
-            'catalog references do not publish false Product offer structured data'
-          );
-
-          assertContains(
-            'backend/app/Http/Controllers/Api/AdController.php',
-            "orderBy('ads.is_catalog_filler', 'asc')",
-            'real user listings rank ahead of catalog references'
-          );
-
-          """
-          if assertions.strip() not in guard:
               if anchor not in guard:
-                  raise SystemExit('guard insertion anchor not found')
+                  raise SystemExit('catalog regression guard: insertion anchor not found')
+              assertions = block("""
+                assertNotContains(
+                  'src/components/screens/AdDetailScreen.jsx',
+                  '4 + (((Number(ad.id) || 1) % 10) / 10)',
+                  'detail pages must never synthesize ratings from an ad id'
+                );
+
+                assertNotContains(
+                  'src/components/screens/AdDetailScreen.jsx',
+                  'Comprador verificado',
+                  'detail pages must never display canned buyer testimonials'
+                );
+
+                assertNotContains(
+                  'src/components/screens/AdDetailScreen.jsx',
+                  'Usuario Mercasto',
+                  'detail pages must never display canned user testimonials'
+                );
+
+                assertContains(
+                  'src/App.jsx',
+                  'Catálogo Mercasto',
+                  'catalog references are visibly distinguished on result cards'
+                );
+
+                assertContains(
+                  'src/components/screens/AdDetailScreen.jsx',
+                  'Referencia de catálogo Mercasto',
+                  'catalog detail pages disclose that availability and seller must be confirmed'
+                );
+
+                assertContains(
+                  'backend/app/Http/Controllers/Api/AdController.php',
+                  "orderBy('ads.is_catalog_filler', 'asc')",
+                  'real user listings rank ahead of catalog references'
+                );
+
+              """)
               guard = guard.replace(anchor, assertions + anchor, 1)
               guard_path.write_text(guard)
           PY
