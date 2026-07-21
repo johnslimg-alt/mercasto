@@ -1,0 +1,36 @@
+name: PR Lint Diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'scripts/**'
+      - '.github/workflows/pr-lint-diagnostics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund >/dev/null
+      - name: Print lint diagnostics
+        run: |
+          set +e
+          npm run lint:ci > /tmp/mercasto-lint.log 2>&1
+          code=$?
+          echo '=== ESLINT DIAGNOSTICS ==='
+          tail -200 /tmp/mercasto-lint.log
+          exit "$code"
