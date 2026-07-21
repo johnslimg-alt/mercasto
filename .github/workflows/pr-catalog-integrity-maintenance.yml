@@ -1,0 +1,388 @@
+name: Catalog Integrity Maintenance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/App.jsx'
+      - 'src/components/screens/AdDetailScreen.jsx'
+      - 'backend/app/Http/Controllers/Api/AdController.php'
+      - 'scripts/check-recovery-guards.mjs'
+      - '.github/workflows/pr-catalog-integrity-maintenance.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Apply honest catalog presentation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path, old, new, label):
+              file = Path(path)
+              content = file.read_text()
+              if old in content:
+                  file.write_text(content.replace(old, new, 1))
+                  return
+              if new in content:
+                  return
+              raise SystemExit(f'{label}: expected block not found in {path}')
+
+          app_path = 'src/App.jsx'
+          replace_once(
+              app_path,
+              """    const isPro = ad.user?.role === 'business';
+              const isFav = favoriteIds.includes(ad.id);""",
+              """    const isPro = ad.user?.role === 'business';
+              const isCatalogFiller = Boolean(ad.is_catalog_filler);
+              const isFav = favoriteIds.includes(ad.id);""",
+              'catalog flag on cards',
+          )
+
+          replace_once(
+              app_path,
+              """          {isDestacado && <span className=\"badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10\">Top seller</span>}
+              {!isDestacado && isUrgente && <span className=\"badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10\">Urgent</span>}
+              {!isDestacado && !isUrgente && isHighlighted && <span className=\"badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10\">Resaltado</span>}
+              {!isDestacado && !isUrgente && !isHighlighted && isPro && <span className=\"badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10\">PRO</span>}""",
+              """          {isCatalogFiller && <span className=\"badge absolute top-2.5 left-2.5 bg-slate-900/90 text-white z-10\">Catálogo Mercasto</span>}
+              {!isCatalogFiller && isDestacado && <span className=\"badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10\">Top seller</span>}
+              {!isCatalogFiller && !isDestacado && isUrgente && <span className=\"badge absolute top-2.5 left-2.5 bg-amber-500 text-white z-10\">Urgent</span>}
+              {!isCatalogFiller && !isDestacado && !isUrgente && isHighlighted && <span className=\"badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10\">Resaltado</span>}
+              {!isCatalogFiller && !isDestacado && !isUrgente && !isHighlighted && isPro && <span className=\"badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10\">PRO</span>}""",
+              'catalog badge on cards',
+          )
+
+          replace_once(
+              app_path,
+              """        {ad.user?.role !== 'business' && (
+                  <button className=\"w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700\" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
+                )}""",
+              """        {isCatalogFiller ? (
+                  <button
+                    className=\"w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white\"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(user ? '/post' : '/vendedores', { state: { category: ad.category } });
+                    }}
+                  >
+                    Vende uno similar
+                  </button>
+                ) : ad.user?.role !== 'business' && (
+                  <button className=\"w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700\" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
+                )}""",
+              'catalog conversion button',
+          )
+
+          detail_path = Path('src/components/screens/AdDetailScreen.jsx')
+          detail = detail_path.read_text()
+
+          old_rating = """const getAdRatingStats = (ad = {}) => {
+            const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
+            const rating = rawRating > 0 ? rawRating : 4 + (((Number(ad.id) || 1) % 10) / 10);
+            const rawCount = Number(ad.reviews_count ?? ad.comments_count ?? ad.review_count ?? 0);
+            const count = rawCount > 0 ? rawCount : ((Number(ad.id) || 1) % 7) + 1;
+            return { rating: Math.min(5, Math.max(1, rating)), count };
+          };"""
+          new_rating = """const getAdRatingStats = (ad = {}) => {
+            const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
+            const rawCount = Number(ad.reviews_count ?? ad.comments_count ?? ad.review_count ?? 0);
+            const count = Number.isFinite(rawCount) && rawCount > 0 ? Math.floor(rawCount) : 0;
+            const rating = count > 0 && Number.isFinite(rawRating) && rawRating > 0
+              ? Math.min(5, Math.max(1, rawRating))
+              : 0;
+            return { rating, count, hasReviews: rating > 0 && count > 0 };
+          };"""
+          if old_rating in detail:
+              detail = detail.replace(old_rating, new_rating, 1)
+          elif new_rating not in detail:
+              raise SystemExit('real-only detail ratings: expected block not found')
+
+          old_flags = """  const isOwner = currentUser && currentUser.id === ad.user_id;
+            const isFav = favoriteIds.includes(ad.id);"""
+          new_flags = """  const isOwner = currentUser && currentUser.id === ad.user_id;
+            const isCatalogFiller = Boolean(ad.is_catalog_filler);
+            const isFav = favoriteIds.includes(ad.id);"""
+          if old_flags in detail:
+              detail = detail.replace(old_flags, new_flags, 1)
+          elif new_flags not in detail:
+              raise SystemExit('detail catalog flag: expected block not found')
+
+          old_preview = """  const ratingStats = getAdRatingStats(ad);
+            const commentPreview = [
+              { author: 'Comprador verificado', text: 'Buena comunicación y publicación clara.' },
+              { author: 'Usuario Mercasto', text: 'La información coincide con las fotos del anuncio.' },
+            ].slice(0, Math.min(2, ratingStats.count));"""
+          new_preview = """  const ratingStats = getAdRatingStats(ad);"""
+          if old_preview in detail:
+              detail = detail.replace(old_preview, new_preview, 1)
+          elif new_preview not in detail:
+              raise SystemExit('canned review removal: expected block not found')
+
+          old_schema = '''      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "Product",
+                  "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
+                  "description": localizedText(ad.description, lang) || "Anuncio clasificado en Mercasto",
+                  "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
+                  "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
+                  "offers": {
+                    "@type": "Offer",
+                    "url": `https://mercasto.com/ads/${ad.id}`,
+                    "priceCurrency": "MXN",
+                    "price": ad.price || "0",
+                    "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                    "itemCondition": ad.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
+                  }
+                })}} />'''
+          new_schema = '''      {!isCatalogFiller && (
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "Product",
+                  "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
+                  "description": localizedText(ad.description, lang) || "Anuncio clasificado en Mercasto",
+                  "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
+                  "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
+                  "offers": {
+                    "@type": "Offer",
+                    "url": `https://mercasto.com/ads/${ad.id}`,
+                    "priceCurrency": "MXN",
+                    "price": ad.price || "0",
+                    "availability": ad.status === "active" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                    "itemCondition": ad.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
+                  }
+                })}} />
+              )}'''
+          if old_schema in detail:
+              detail = detail.replace(old_schema, new_schema, 1)
+          elif new_schema not in detail:
+              raise SystemExit('catalog structured data guard: expected block not found')
+
+          old_heading = '''            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
+                    <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>'''
+          new_heading = '''            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
+                    {isCatalogFiller && (
+                      <div className="mb-5 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-slate-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-slate-100" data-catalog-reference>
+                        <div className="text-[14px] font-black">Referencia de catálogo Mercasto</div>
+                        <p className="mt-1 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+                          Este producto se muestra como referencia. La disponibilidad, el precio y el vendedor deben confirmarse en una publicación real.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
+                          className="mt-3 inline-flex items-center rounded-xl bg-[#84CC16] px-4 py-2 text-[13px] font-bold text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+                        >
+                          Publicar uno similar
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>'''
+          if old_heading in detail:
+              detail = detail.replace(old_heading, new_heading, 1)
+          elif new_heading not in detail:
+              raise SystemExit('catalog detail disclosure: expected block not found')
+
+          old_rating_row = '''            <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+                      <RatingStars rating={ratingStats.rating} />
+                      <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
+                      <span className="text-slate-400">({ratingStats.count} comentarios)</span>
+                    </div>'''
+          new_rating_row = '''            {ratingStats.hasReviews && !isCatalogFiller && (
+                      <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+                        <RatingStars rating={ratingStats.rating} />
+                        <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
+                        <span className="text-slate-400">({ratingStats.count} comentarios)</span>
+                      </div>
+                    )}'''
+          if old_rating_row in detail:
+              detail = detail.replace(old_rating_row, new_rating_row, 1)
+          elif new_rating_row not in detail:
+              raise SystemExit('conditional detail rating row: expected block not found')
+
+          old_meta = '''              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
+                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>
+                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>'''
+          new_meta = '''              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
+                      {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>}
+                      {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>}
+                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>'''
+          if old_meta in detail:
+              detail = detail.replace(old_meta, new_meta, 1)
+          elif new_meta not in detail:
+              raise SystemExit('catalog metadata privacy: expected block not found')
+
+          reviews_pattern = re.compile(
+              r'\n\s*<div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/40">.*?\n\s*<div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">',
+              re.S,
+          )
+          reviews_replacement = '\n            <div className="flex items-center gap-4 mt-8 pt-6 border-t border-slate-100">'
+          if reviews_pattern.search(detail):
+              detail = reviews_pattern.sub(reviews_replacement, detail, count=1)
+          elif 'Comprador verificado' in detail or 'Usuario Mercasto' in detail:
+              raise SystemExit('fake review section could not be removed')
+
+          seller_pattern = re.compile(
+              r'            <div className="flex items-center gap-4 mb-6 cursor-pointer group".*?            <div className="flex gap-3 mt-4">',
+              re.S,
+          )
+          seller_replacement = '''            {isCatalogFiller ? (
+              <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
+                <h3 className="text-[16px] font-black text-slate-900 dark:text-white">¿Vendes este producto o uno parecido?</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+                  Publica tus propias fotos, precio, ubicación y datos de contacto para recibir compradores reales.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
+                  className="mt-4 w-full rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+                >
+                  Publicar gratis
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-4 mb-6 cursor-pointer group" onClick={() => handleViewCompany(ad.user)}>
+                  {ad.user?.avatar_url ? (
+                    <img src={getImageUrl(ad.user.avatar_url)} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 group-hover:border-[#84CC16] transition-colors" alt=""/>
+                  ) : (
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-200 group-hover:border-[#84CC16] transition-colors"><User size={24} className="text-slate-400" /></div>
+                  )}
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
+                      {ad.user?.name || 'Usuario'}
+                      {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title="Vendedor Verificado" />}
+                    </h3>
+                    <p className="text-[13px] text-slate-500 mt-0.5">En Mercasto desde {new Date(ad.user?.created_at || ad.created_at).getFullYear()}</p>
+                  </div>
+                </div>
+
+                {(!currentUser || !currentUser.id) ? (
+                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
+                    <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
+                      {t.register_to_contact || 'Regístrate para ver los datos de contacto del vendedor.'}
+                    </p>
+                    <button
+                      onClick={() => navigate('/profile')}
+                      className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                    >
+                      {t.login_register || 'Iniciar sesión / Registrarse'}
+                    </button>
+                  </div>
+                ) : (
+                  <ContactButton ad={ad} user={currentUser} t={t} className="w-full mb-3" />
+                )}
+              </>
+            )}
+
+            <div className="flex gap-3 mt-4">'''
+          if seller_pattern.search(detail):
+              detail = seller_pattern.sub(seller_replacement, detail, count=1)
+          elif '¿Vendes este producto o uno parecido?' not in detail:
+              raise SystemExit('catalog seller replacement: expected block not found')
+
+          detail_path.write_text(detail)
+
+          controller_path = 'backend/app/Http/Controllers/Api/AdController.php'
+          replace_once(
+              controller_path,
+              """        // Сортировка (Спецификация: по дате, цене, популярности)
+                  $sort = $request->query('sort', 'latest');""",
+              """        // Настоящие пользовательские объявления всегда выше витринных ссылок каталога.
+                  // Для витрины конкретного продавца сохраняем его собственную сортировку без вмешательства.
+                  if (! $request->filled('user_id')) {
+                      $query->orderBy('ads.is_catalog_filler', 'asc');
+                  }
+
+                  // Сортировка (Спецификация: по дате, цене, популярности)
+                  $sort = $request->query('sort', 'latest');""",
+              'real listings priority',
+          )
+
+          guard_path = Path('scripts/check-recovery-guards.mjs')
+          guard = guard_path.read_text()
+          anchor = """assertNotContains(
+            '.github/workflows/emergency-container-frontend-patch.yml',"""
+          assertions = """assertNotContains(
+            'src/components/screens/AdDetailScreen.jsx',
+            '4 + (((Number(ad.id) || 1) % 10) / 10)',
+            'detail pages must never synthesize ratings from an ad id'
+          );
+
+          assertNotContains(
+            'src/components/screens/AdDetailScreen.jsx',
+            'Comprador verificado',
+            'detail pages must never display canned buyer testimonials'
+          );
+
+          assertNotContains(
+            'src/components/screens/AdDetailScreen.jsx',
+            'Usuario Mercasto',
+            'detail pages must never display canned user testimonials'
+          );
+
+          assertContains(
+            'src/App.jsx',
+            'Catálogo Mercasto',
+            'catalog references are visibly distinguished on result cards'
+          );
+
+          assertContains(
+            'src/components/screens/AdDetailScreen.jsx',
+            'Referencia de catálogo Mercasto',
+            'catalog detail pages disclose that availability and seller must be confirmed'
+          );
+
+          assertContains(
+            'src/components/screens/AdDetailScreen.jsx',
+            '!isCatalogFiller && (',
+            'catalog references do not publish false Product offer structured data'
+          );
+
+          assertContains(
+            'backend/app/Http/Controllers/Api/AdController.php',
+            "orderBy('ads.is_catalog_filler', 'asc')",
+            'real user listings rank ahead of catalog references'
+          );
+
+          """
+          if assertions.strip() not in guard:
+              if anchor not in guard:
+                  raise SystemExit('guard insertion anchor not found')
+              guard = guard.replace(anchor, assertions + anchor, 1)
+              guard_path.write_text(guard)
+          PY
+
+      - name: Verify catalog integrity changes
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check:recovery
+          npm run lint:ci
+          npm run build
+          php -l backend/app/Http/Controllers/Api/AdController.php
+
+      - name: Commit application changes and remove temporary workflow
+        run: |
+          rm -f .github/workflows/pr-catalog-integrity-maintenance.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/App.jsx src/components/screens/AdDetailScreen.jsx backend/app/Http/Controllers/Api/AdController.php scripts/check-recovery-guards.mjs .github/workflows/pr-catalog-integrity-maintenance.yml
+          if git diff --cached --quiet; then
+            echo 'Catalog integrity changes already applied.'
+            exit 0
+          fi
+          git commit -m 'Present catalog references honestly and prioritize real ads'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
