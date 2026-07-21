@@ -7,8 +7,8 @@ import process from 'node:process';
 const distRoot = path.resolve(process.argv[2] ?? 'dist');
 const textExtensions = new Set(['.html', '.js', '.css', '.json', '.webmanifest', '.svg']);
 const assetExtensions = 'js|css|map|json|wasm|woff2?|ttf|otf|eot|svg|png|jpe?g|webp|avif|gif|ico';
-const absoluteAssetPattern = new RegExp(`(?:/)?assets/[A-Za-z0-9_@./-]+\\.(?:${assetExtensions})(?:[?#][^\\s"'\\`)]+)?`, 'g');
-const relativeAssetPattern = new RegExp(`\\./[A-Za-z0-9_@./-]+\\.(?:${assetExtensions})(?:[?#][^\\s"'\\`)]+)?`, 'g');
+const absoluteAssetPattern = new RegExp(`(?:/)?assets/[A-Za-z0-9_@./-]+\\.(?:${assetExtensions})(?:[?#][^\\s"'()\\x60]+)?`, 'g');
+const relativeAssetPattern = new RegExp(`\\./[A-Za-z0-9_@./-]+\\.(?:${assetExtensions})(?:[?#][^\\s"'()\\x60]+)?`, 'g');
 
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
