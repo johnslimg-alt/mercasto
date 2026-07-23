@@ -112,6 +112,50 @@ assertContains(
   'seller intent drop-off is measurable for marketing optimization'
 );
 
+assertContains(
+  'src/utils/metaCapiBridge.js',
+  "const REGISTRATION_EVENT_PREFIX = 'register_user_';",
+  'Meta registration ids satisfy the backend observer allowlist'
+);
+
+assertContains(
+  'src/utils/metaCapiBridge.js',
+  'meta_event_id: sharedEventId',
+  'the registration request carries the server-side CompleteRegistration event id'
+);
+
+assertContains(
+  'src/utils/metaCapiBridge.js',
+  'if (response.ok) {',
+  'browser CompleteRegistration waits for successful account creation'
+);
+
+assertContains(
+  'src/utils/metaCapiBridge.js',
+  'event_id: patched.sharedEventId',
+  'browser and server CompleteRegistration copies share one deduplication id'
+);
+
+assertOrder(
+  'src/utils/metaCapiBridge.js',
+  'meta_event_id: sharedEventId',
+  'const response = await currentFetch.call(this, input, patched.init);',
+  'the event id is attached before Laravel creates the user'
+);
+
+assertOrder(
+  'src/utils/metaCapiBridge.js',
+  'const response = await currentFetch.call(this, input, patched.init);',
+  'sendMappedEvent(EVENT_MAP.sign_up',
+  'the browser conversion is emitted only after the registration response succeeds'
+);
+
+assertContains(
+  'src/utils/metaCapiBridge.js',
+  'patchRegistrationFetch();',
+  'the registration handoff is installed with the existing Meta bridge'
+);
+
 assertNotContains(
   'src/App.jsx',
   '4 + (((Number(ad.id) || 1) % 10) / 10)',
