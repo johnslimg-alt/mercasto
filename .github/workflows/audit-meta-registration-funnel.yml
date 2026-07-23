@@ -1,6 +1,11 @@
 name: Audit Meta Registration Funnel
 
 on:
+  push:
+    branches:
+      - fix/meta-registration-funnel
+    paths:
+      - '.github/workflows/audit-meta-registration-funnel.yml'
   pull_request:
     branches: [main]
     paths:
@@ -11,13 +16,13 @@ permissions:
 
 jobs:
   audit-and-fix:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: fix/meta-registration-funnel
           fetch-depth: 0
 
       - name: Apply shared CompleteRegistration event id
@@ -149,4 +154,4 @@ assertOrder(
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add src/App.jsx src/utils/registrationMetaEvent.js scripts/check-recovery-guards.mjs
           git commit -m 'Fix Meta CompleteRegistration event handoff'
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:fix/meta-registration-funnel
