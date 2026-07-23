@@ -16,28 +16,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Locate exact funnel handlers
+      - name: Build concise funnel report
         run: |
           set -euo pipefail
-          echo '=== MATCHING FILES ==='
-          grep -RIlE "sign_up|CompleteRegistration|just_registered|auth/register|meta_event_id" src backend/app backend/routes backend/tests backend/config | sort
-          echo '=== APP REGISTRATION HANDLERS ==='
-          grep -nE -B18 -A40 "sign_up|just_registered|/register|auth/register|registerData|handleRegister|registration" src/App.jsx | head -420 || true
-          echo '=== BACKEND COMPLETE REGISTRATION ==='
-          grep -RInE -B18 -A45 "CompleteRegistration|complete.?registration|event_id|fbc|fbp" backend/app backend/routes backend/tests backend/config | head -520 || true
-          echo '=== META BRIDGE REGISTRATION ==='
-          grep -nE -B12 -A30 "sign_up|CompleteRegistration|event_id" src/utils/metaCapiBridge.js | head -220 || true
-          echo '=== PROTECTED RETURN ==='
-          grep -nE -B12 -A35 "writeIntent|restoreIntentWhenReady|seller_post_returned_after_auth|just_registered" src/utils/protectedRouteReturn.js | head -300 || true
+          REPORT="$GITHUB_WORKSPACE/meta-registration-funnel-audit.txt"
+          {
+            echo '=== MATCHING FILES ==='
+            grep -RIlE "sign_up|CompleteRegistration|just_registered|auth/register|meta_event_id" src backend/app backend/routes backend/tests backend/config | sort
+            echo '=== APP REGISTRATION HANDLERS ==='
+            grep -nE -B18 -A40 "sign_up|just_registered|/register|auth/register|registerData|handleRegister|registration" src/App.jsx | head -420 || true
+            echo '=== BACKEND COMPLETE REGISTRATION ==='
+            grep -RInE -B18 -A45 "CompleteRegistration|complete.?registration|event_id|fbc|fbp" backend/app backend/routes backend/tests backend/config | head -520 || true
+            echo '=== META BRIDGE REGISTRATION ==='
+            grep -nE -B12 -A30 "sign_up|CompleteRegistration|event_id" src/utils/metaCapiBridge.js | head -220 || true
+            echo '=== PROTECTED RETURN ==='
+            grep -nE -B12 -A35 "writeIntent|restoreIntentWhenReady|seller_post_returned_after_auth|just_registered" src/utils/protectedRouteReturn.js | head -300 || true
+          } > "$REPORT"
 
-      - name: Audit production registration counts and Meta configuration
+      - name: Append production evidence
         run: |
           set -euo pipefail
           cd /var/www/mercasto
           sudo -n git fetch origin main --quiet
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
 
-          docker exec -i mercasto_backend_container php <<'PHP'
+          docker exec -i mercasto_backend_container php >> "$GITHUB_WORKSPACE/meta-registration-funnel-audit.txt" <<'PHP'
           <?php
 
           use Illuminate\Support\Facades\DB;
@@ -62,16 +65,11 @@ jobs:
               ->orderBy('day')
               ->get();
 
-          $tables = collect(DB::select("select tablename from pg_tables where schemaname = 'public'"))
-              ->pluck('tablename')
-              ->filter(fn ($name) => str_contains(strtolower($name), 'meta') || str_contains(strtolower($name), 'event') || str_contains(strtolower($name), 'analytic'))
-              ->values();
-
+          echo "\n=== PRODUCTION EVIDENCE ===\n";
           echo json_encode([
               'generated_at' => $now->toIso8601String(),
               'registrations' => $registrations,
               'daily_registrations' => $daily,
-              'candidate_event_tables' => $tables,
               'meta_config' => [
                   'pixel_id_present' => filled(config('services.meta.pixel_id')) || filled(env('META_PIXEL_ID')),
                   'access_token_present' => filled(config('services.meta.access_token')) || filled(env('META_ACCESS_TOKEN')),
@@ -79,3 +77,10 @@ jobs:
               ],
           ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
           PHP
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-registration-funnel-audit
+          path: meta-registration-funnel-audit.txt
+          retention-days: 3
