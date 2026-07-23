@@ -7,80 +7,146 @@ on:
       - '.github/workflows/audit-meta-registration-funnel.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  audit:
-    runs-on: self-hosted
+  audit-and-fix:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
-      - name: Build concise funnel report
-        run: |
-          set -euo pipefail
-          REPORT="$GITHUB_WORKSPACE/meta-registration-funnel-audit.txt"
-          {
-            echo '=== MATCHING FILES ==='
-            grep -RIlE "sign_up|CompleteRegistration|just_registered|auth/register|meta_event_id" src backend/app backend/routes backend/tests backend/config | sort
-            echo '=== APP REGISTRATION HANDLERS ==='
-            grep -nE -B18 -A40 "sign_up|just_registered|/register|auth/register|registerData|handleRegister|registration" src/App.jsx | head -420 || true
-            echo '=== BACKEND COMPLETE REGISTRATION ==='
-            grep -RInE -B18 -A45 "CompleteRegistration|complete.?registration|event_id|fbc|fbp" backend/app backend/routes backend/tests backend/config | head -520 || true
-            echo '=== META BRIDGE REGISTRATION ==='
-            grep -nE -B12 -A30 "sign_up|CompleteRegistration|event_id" src/utils/metaCapiBridge.js | head -220 || true
-            echo '=== PROTECTED RETURN ==='
-            grep -nE -B12 -A35 "writeIntent|restoreIntentWhenReady|seller_post_returned_after_auth|just_registered" src/utils/protectedRouteReturn.js | head -300 || true
-          } > "$REPORT"
-
-      - name: Append production evidence
-        run: |
-          set -euo pipefail
-          cd /var/www/mercasto
-          sudo -n git fetch origin main --quiet
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-
-          docker exec -i mercasto_backend_container php >> "$GITHUB_WORKSPACE/meta-registration-funnel-audit.txt" <<'PHP'
-          <?php
-
-          use Illuminate\Support\Facades\DB;
-
-          require '/var/www/vendor/autoload.php';
-          $app = require '/var/www/bootstrap/app.php';
-          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-
-          $now = now();
-          $windows = [1, 3, 7, 14, 30];
-          $registrations = [];
-          foreach ($windows as $days) {
-              $registrations[$days . '_days'] = DB::table('users')
-                  ->where('created_at', '>=', $now->copy()->subDays($days))
-                  ->count();
-          }
-
-          $daily = DB::table('users')
-              ->where('created_at', '>=', $now->copy()->subDays(30))
-              ->selectRaw("DATE(created_at) AS day, COUNT(*) AS registrations")
-              ->groupByRaw('DATE(created_at)')
-              ->orderBy('day')
-              ->get();
-
-          echo "\n=== PRODUCTION EVIDENCE ===\n";
-          echo json_encode([
-              'generated_at' => $now->toIso8601String(),
-              'registrations' => $registrations,
-              'daily_registrations' => $daily,
-              'meta_config' => [
-                  'pixel_id_present' => filled(config('services.meta.pixel_id')) || filled(env('META_PIXEL_ID')),
-                  'access_token_present' => filled(config('services.meta.access_token')) || filled(env('META_ACCESS_TOKEN')),
-                  'test_event_code_present' => filled(config('services.meta.test_event_code')) || filled(env('META_TEST_EVENT_CODE')),
-              ],
-          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), PHP_EOL;
-          PHP
-
-      - name: Upload report
-        uses: actions/upload-artifact@v4
         with:
-          name: meta-registration-funnel-audit
-          path: meta-registration-funnel-audit.txt
-          retention-days: 3
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Apply shared CompleteRegistration event id
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app = Path('src/App.jsx')
+          text = app.read_text()
+          import_anchor = "import { trackPageView, events } from './utils/analytics';\n"
+          import_line = "import { createRegistrationMetaEventId } from './utils/registrationMetaEvent';\n"
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit('Analytics import anchor not found')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          old_setup = """    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      let endpoint = '';
+      if (authMode === 'register') {
+        endpoint = '/register';
+        const pendingReferral = localStorage.getItem('pendingReferral');
+        if (pendingReferral) data.referral_code = pendingReferral;
+      }
+"""
+          new_setup = """    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    const registrationMetaEventId = authMode === 'register'
+      ? createRegistrationMetaEventId()
+      : '';
+
+    try {
+      let endpoint = '';
+      if (authMode === 'register') {
+        endpoint = '/register';
+        data.meta_event_id = registrationMetaEventId;
+        const pendingReferral = localStorage.getItem('pendingReferral');
+        if (pendingReferral) data.referral_code = pendingReferral;
+      }
+"""
+          if new_setup not in text:
+              if old_setup not in text:
+                  raise SystemExit('Registration setup block not found')
+              text = text.replace(old_setup, new_setup, 1)
+
+          old_track = """          if (authMode === 'register') {
+            localStorage.setItem('just_registered', '1');
+            events.registered();
+          }
+"""
+          new_track = """          if (authMode === 'register') {
+            localStorage.setItem('just_registered', '1');
+            events.registered({
+              event_id: registrationMetaEventId,
+              meta_event_id: registrationMetaEventId,
+            });
+          }
+"""
+          if new_track not in text:
+              if old_track not in text:
+                  raise SystemExit('Registration analytics block not found')
+              text = text.replace(old_track, new_track, 1)
+          app.write_text(text)
+
+          guards = Path('scripts/check-recovery-guards.mjs')
+          guard_text = guards.read_text()
+          marker = """assertContains(
+  'src/utils/protectedRouteReturn.js',
+  \"trackSellerFunnel('seller_post_intent_abandoned'\",
+  'seller intent drop-off is measurable for marketing optimization'
+);
+"""
+          additions = marker + """
+
+assertContains(
+  'src/App.jsx',
+  'data.meta_event_id = registrationMetaEventId;',
+  'registration sends the shared Meta event id to Laravel before user creation'
+);
+
+assertContains(
+  'src/App.jsx',
+  'event_id: registrationMetaEventId,',
+  'browser CompleteRegistration reuses the server event id for Meta deduplication'
+);
+
+assertContains(
+  'src/utils/registrationMetaEvent.js',
+  \"const REGISTRATION_EVENT_PREFIX = 'register_user_';\",
+  'registration event ids remain valid for the Laravel observer allowlist'
+);
+
+assertOrder(
+  'src/App.jsx',
+  'data.meta_event_id = registrationMetaEventId;',
+  'body: JSON.stringify(data)',
+  'the Meta registration event id is attached before the registration request is sent'
+);
+
+assertOrder(
+  'src/App.jsx',
+  \"localStorage.setItem('auth_token', result.access_token);\",
+  'events.registered({',
+  'CompleteRegistration is emitted only after authentication succeeds'
+);
+"""
+          if "data.meta_event_id = registrationMetaEventId;" not in guard_text:
+              if marker not in guard_text:
+                  raise SystemExit('Recovery guard insertion marker not found')
+              guard_text = guard_text.replace(marker, additions, 1)
+          guards.write_text(guard_text)
+          PY
+
+          npm run check:recovery
+          npm run lint:ci
+          npm run build
+
+      - name: Commit application fix
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- src/App.jsx scripts/check-recovery-guards.mjs; then
+            echo 'Application fix already present.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/App.jsx src/utils/registrationMetaEvent.js scripts/check-recovery-guards.mjs
+          git commit -m 'Fix Meta CompleteRegistration event handoff'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
