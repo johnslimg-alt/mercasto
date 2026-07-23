@@ -16,17 +16,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Locate frontend and backend funnel code
+      - name: Locate exact funnel handlers
         run: |
           set -euo pipefail
-          echo '=== FRONTEND REGISTRATION REFERENCES ==='
-          grep -RInE "sign_up|CompleteRegistration|just_registered|register|registration|auth/register|meta_event_id|event_id" src --exclude='*.map' | head -500 || true
-          echo '=== BACKEND REGISTRATION / META REFERENCES ==='
-          grep -RInE "CompleteRegistration|Meta.*Registration|user.created|User::created|Registered|event_id|fbc|fbp|register" backend/app backend/routes backend/tests backend/config | head -700 || true
-          echo '=== ROUTE RETURN REFERENCES ==='
-          grep -RInE "protected_route_intent|seller_post_intent|seller_post_returned_after_auth|Navigate to=\"/\"|navigate\('/post|navigate\('/vendedores" src | head -500 || true
+          echo '=== MATCHING FILES ==='
+          grep -RIlE "sign_up|CompleteRegistration|just_registered|auth/register|meta_event_id" src backend/app backend/routes backend/tests backend/config | sort
+          echo '=== APP REGISTRATION HANDLERS ==='
+          grep -nE -B18 -A40 "sign_up|just_registered|/register|auth/register|registerData|handleRegister|registration" src/App.jsx | head -420 || true
+          echo '=== BACKEND COMPLETE REGISTRATION ==='
+          grep -RInE -B18 -A45 "CompleteRegistration|complete.?registration|event_id|fbc|fbp" backend/app backend/routes backend/tests backend/config | head -520 || true
+          echo '=== META BRIDGE REGISTRATION ==='
+          grep -nE -B12 -A30 "sign_up|CompleteRegistration|event_id" src/utils/metaCapiBridge.js | head -220 || true
+          echo '=== PROTECTED RETURN ==='
+          grep -nE -B12 -A35 "writeIntent|restoreIntentWhenReady|seller_post_returned_after_auth|just_registered" src/utils/protectedRouteReturn.js | head -300 || true
 
-      - name: Audit production registration and Meta event evidence
+      - name: Audit production registration counts and Meta configuration
         run: |
           set -euo pipefail
           cd /var/www/mercasto
@@ -37,7 +41,6 @@ jobs:
           <?php
 
           use Illuminate\Support\Facades\DB;
-          use Illuminate\Support\Facades\Schema;
 
           require '/var/www/vendor/autoload.php';
           $app = require '/var/www/bootstrap/app.php';
@@ -52,21 +55,23 @@ jobs:
                   ->count();
           }
 
+          $daily = DB::table('users')
+              ->where('created_at', '>=', $now->copy()->subDays(30))
+              ->selectRaw("DATE(created_at) AS day, COUNT(*) AS registrations")
+              ->groupByRaw('DATE(created_at)')
+              ->orderBy('day')
+              ->get();
+
           $tables = collect(DB::select("select tablename from pg_tables where schemaname = 'public'"))
               ->pluck('tablename')
               ->filter(fn ($name) => str_contains(strtolower($name), 'meta') || str_contains(strtolower($name), 'event') || str_contains(strtolower($name), 'analytic'))
               ->values();
 
-          $recentUsers = DB::table('users')
-              ->orderByDesc('created_at')
-              ->limit(20)
-              ->get(['id', 'created_at', 'role', 'is_verified']);
-
           echo json_encode([
               'generated_at' => $now->toIso8601String(),
               'registrations' => $registrations,
+              'daily_registrations' => $daily,
               'candidate_event_tables' => $tables,
-              'recent_users' => $recentUsers,
               'meta_config' => [
                   'pixel_id_present' => filled(config('services.meta.pixel_id')) || filled(env('META_PIXEL_ID')),
                   'access_token_present' => filled(config('services.meta.access_token')) || filled(env('META_ACCESS_TOKEN')),
