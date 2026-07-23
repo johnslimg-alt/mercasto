@@ -3,6 +3,7 @@ name: Apply Meta Registration Fix
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened]
     paths:
       - '.github/workflows/apply-meta-registration-fix.yml'
 
