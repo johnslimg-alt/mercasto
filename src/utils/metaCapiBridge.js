@@ -1,4 +1,6 @@
 const META_API_BASE = '/api/meta/events';
+const REGISTRATION_EVENT_PREFIX = 'register_user_';
+const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
 
 const EVENT_MAP = {
   ad_posted: { endpoint: 'post-ad', metaName: 'PostAd', custom: true },
@@ -27,6 +29,10 @@ function randomId() {
 
 function eventId(prefix, listingId = '') {
   return `${prefix}_${listingId || 'event'}_${randomId()}`;
+}
+
+function registrationEventId() {
+  return `${REGISTRATION_EVENT_PREFIX}${randomId()}`.slice(0, 120);
 }
 
 function clean(value) {
@@ -117,7 +123,7 @@ function sendMappedEvent(metaConfig, item = {}) {
   const payload = buildPayload(item);
   const isReg = metaConfig.metaName === 'CompleteRegistration';
   const isPostAd = metaConfig.metaName === 'PostAd';
-  
+
   if (!isReg && !isPostAd && !payload.listing_id) return;
   if (isReg && !payload.event_id) return;
 
@@ -151,6 +157,68 @@ function handleDataLayerItem(item = {}) {
   const metaConfig = EVENT_MAP[normalizedEvent];
   if (!metaConfig) return;
   sendMappedEvent(metaConfig, item);
+}
+
+function isRegistrationRequest(input, init = {}) {
+  const method = String(init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+  if (method !== 'POST') return false;
+
+  try {
+    const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
+    return url.origin === window.location.origin && /^\/api\/register\/?$/.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function registrationRequestWithEventId(input, init = {}) {
+  if (input instanceof Request) return null;
+
+  try {
+    const payload = JSON.parse(String(init?.body || '{}'));
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+
+    const sharedEventId = clean(payload.meta_event_id) || registrationEventId();
+    return {
+      sharedEventId,
+      init: {
+        ...init,
+        body: JSON.stringify({
+          ...payload,
+          meta_event_id: sharedEventId,
+        }),
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+function patchRegistrationFetch() {
+  const currentFetch = window.fetch;
+  if (typeof currentFetch !== 'function' || currentFetch[FETCH_PATCH_MARKER]) return;
+
+  async function metaRegistrationFetch(input, init = {}) {
+    if (!isRegistrationRequest(input, init)) {
+      return currentFetch.call(this, input, init);
+    }
+
+    const patched = registrationRequestWithEventId(input, init);
+    if (!patched) return currentFetch.call(this, input, init);
+
+    const response = await currentFetch.call(this, input, patched.init);
+    if (response.ok) {
+      sendMappedEvent(EVENT_MAP.sign_up, {
+        event_id: patched.sharedEventId,
+        meta_event_id: patched.sharedEventId,
+        page_location: window.location.href,
+      });
+    }
+    return response;
+  }
+
+  Object.defineProperty(metaRegistrationFetch, FETCH_PATCH_MARKER, { value: true });
+  window.fetch = metaRegistrationFetch;
 }
 
 function isTelegramTarget(el) {
@@ -201,6 +269,8 @@ function markTelegramClickForSharedAnalytics(event) {
 export function installMetaCapiBridge() {
   if (!isBrowser() || window.__mercastoMetaCapiBridgeInstalled) return;
   window.__mercastoMetaCapiBridgeInstalled = true;
+
+  patchRegistrationFetch();
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.forEach(handleDataLayerItem);
