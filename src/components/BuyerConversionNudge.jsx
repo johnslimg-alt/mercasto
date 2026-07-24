@@ -38,8 +38,8 @@ export default function BuyerConversionNudge() {
     try {
       sessionStorage.setItem('mercasto.buyer_registration_intent', location.pathname + location.search);
     } catch {}
-    window.dispatchEvent(new CustomEvent('mercasto:open-auth', { detail: { mode: 'register' } }));
-    navigate(location.pathname, { replace: true });
+    setVisible(false);
+    navigate('/post', { state: { authMode: 'register', buyerIntent: true } });
   };
 
   return (
