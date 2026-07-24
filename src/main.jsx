@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import AppWrapper from './App.jsx'
 import AdminModerationCenter from './components/admin/AdminModerationCenter.jsx'
+import BuyerConversionNudge from './components/BuyerConversionNudge.jsx'
 import { UIProvider } from './contexts/UIContext.jsx'
 import { ToastProvider } from './components/ui/Toast.jsx'
 import { initBehaviorAnalytics } from './utils/analytics'
@@ -38,6 +39,7 @@ if (rootElement) {
         <ToastProvider>
           <BrowserRouter>
             <AppWrapper />
+            <BuyerConversionNudge />
             {/* Keep moderation inside the shared router/provider tree so it reuses the authenticated admin session. */}
             <AdminModerationCenter />
           </BrowserRouter>
