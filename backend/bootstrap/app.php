@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             Route::middleware(['api', 'auth:sanctum'])->delete('/api/user', [AccountDeletionController::class, 'delete']);
+            require base_path('routes/marketing.php');
         },
     )
     ->withMiddleware(function (Middleware $middleware) use ($trustedProxies) {
