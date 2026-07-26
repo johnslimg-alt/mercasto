@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
@@ -53,9 +53,10 @@ const statusClass = {
 export default function AdvertisingHub() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isAdmin = useMemo(readAdmin, [location.pathname]);
+  const [isAdmin] = useState(readAdmin);
   const visible = isAdmin && location.pathname.startsWith('/admin/marketing');
   const activeSection = new URLSearchParams(location.search).get('section') || 'dashboard';
+  const activeSectionInfo = sections.find((item) => item.id === activeSection) || sections[0];
 
   if (!visible) return null;
 
@@ -127,8 +128,8 @@ export default function AdvertisingHub() {
             </section>
 
             <section className="rounded-3xl border border-dashed border-slate-300 bg-white/60 p-8 text-center dark:border-slate-700 dark:bg-slate-900/60">
-              <h2 className="text-xl font-black text-slate-900 dark:text-white">{sections.find((item) => item.id === activeSection)?.label || 'Dashboard'}</h2>
-              <p className="mx-auto mt-2 max-w-xl text-sm text-slate-500">{sections.find((item) => item.id === activeSection)?.description}. This foundation is ready for API-backed modules without coupling platform-specific logic to the interface.</p>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">{activeSectionInfo.label}</h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm text-slate-500">{activeSectionInfo.description} This foundation is ready for API-backed modules without coupling platform-specific logic to the interface.</p>
             </section>
           </main>
         </div>
