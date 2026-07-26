@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class ModeratePendingAds extends Command
@@ -20,6 +21,17 @@ class ModeratePendingAds extends Command
             return self::FAILURE;
         }
 
+        $providerError = Cache::get('ai_moderation:provider_unavailable');
+        if ($providerError) {
+            $this->warn('AI moderation provider is temporarily unavailable: ' . $providerError);
+            return self::SUCCESS;
+        }
+
+        if ((string) config('services.gemini.api_key') === '') {
+            $this->warn('AI moderation skipped because GEMINI_API_KEY is not configured.');
+            return self::SUCCESS;
+        }
+
         $limit = max(1, min(500, (int) $this->option('limit')));
 
         $ads = Ad::query()
@@ -27,23 +39,14 @@ class ModeratePendingAds extends Command
                 $query->where('status', 'pending')
                     ->where(function ($pending) {
                         $pending->whereNull('ai_moderation_status')
-                            ->orWhere('ai_moderation_status', 'queued')
-                            ->orWhere(function ($failed) {
-                                $failed->where('ai_moderation_status', 'failed')
-                                    ->where('updated_at', '<=', now()->subHour());
-                            });
+                            ->orWhere('ai_moderation_status', 'queued');
                     });
             })
             ->orWhere(function ($query) {
                 $query->where('status', 'archived')
-                    ->where(function ($hidden) {
-                        $hidden->where(function ($stuck) {
-                            $stuck->whereIn('ai_moderation_status', ['queued', 'processing'])
-                                ->where('updated_at', '<=', now()->subMinutes(15));
-                        })->orWhere(function ($failed) {
-                            $failed->where('ai_moderation_status', 'failed')
-                                ->where('updated_at', '<=', now()->subHour());
-                        });
+                    ->where(function ($stuck) {
+                        $stuck->where('ai_moderation_status', 'queued')
+                            ->where('updated_at', '<=', now()->subMinutes(15));
                     });
             })
             ->orderByRaw('COALESCE(moderation_submitted_at, created_at) ASC')
