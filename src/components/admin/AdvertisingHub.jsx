@@ -68,29 +68,35 @@ export default function AdvertisingHub() {
   const [campaigns, setCampaigns] = useState([]);
   const [period, setPeriod] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [savingCampaignId, setSavingCampaignId] = useState('');
+  const [budgetDrafts, setBudgetDrafts] = useState({});
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const visible = isAdmin && location.pathname.startsWith('/admin/marketing');
   const activeSection = new URLSearchParams(location.search).get('section') || 'dashboard';
   const activeSectionInfo = sections.find((item) => item.id === activeSection) || sections[0];
 
-  const loadMeta = useCallback(async () => {
+  const authHeaders = useCallback(() => {
     const token = localStorage.getItem('auth_token');
-    if (!token) {
-      setError('No hay una sesión administrativa activa.');
-      return;
-    }
+    if (!token) throw new Error('No hay una sesión administrativa activa.');
 
+    return {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    };
+  }, []);
+
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
 
     try {
-      const headers = { Accept: 'application/json', Authorization: `Bearer ${token}` };
+      const headers = authHeaders();
       const statusResponse = await fetch(`${API_URL}/admin/marketing/meta/status`, { headers });
       const statusPayload = await statusResponse.json();
 
-      if (!statusResponse.ok) {
-        throw new Error(statusPayload.message || statusPayload.error || 'No se pudo comprobar Meta Ads.');
-      }
+      if (!statusResponse.ok) throw new Error(statusPayload.message || statusPayload.error || 'No se pudo comprobar Meta Ads.');
 
       setMetaStatus(statusPayload);
 
@@ -103,22 +109,69 @@ export default function AdvertisingHub() {
       const campaignsResponse = await fetch(`${API_URL}/admin/marketing/meta/campaigns?days=7&limit=50`, { headers });
       const campaignsPayload = await campaignsResponse.json();
 
-      if (!campaignsResponse.ok) {
-        throw new Error(campaignsPayload.message || campaignsPayload.error || 'No se pudieron cargar las campañas de Meta.');
-      }
+      if (!campaignsResponse.ok) throw new Error(campaignsPayload.message || campaignsPayload.error || 'No se pudieron cargar las campañas de Meta.');
 
-      setCampaigns(campaignsPayload.data || []);
+      const data = campaignsPayload.data || [];
+      setCampaigns(data);
       setPeriod(campaignsPayload.period || null);
+      setBudgetDrafts(Object.fromEntries(data.map((campaign) => [campaign.id, campaign.daily_budget ?? ''])));
     } catch (requestError) {
       setError(requestError.message || 'Error al cargar Meta Ads.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authHeaders]);
 
   useEffect(() => {
     if (visible) loadMeta();
   }, [loadMeta, visible]);
+
+  const mutateCampaign = async (campaignId, endpoint, payload, successMessage) => {
+    setSavingCampaignId(campaignId);
+    setError('');
+    setNotice('');
+
+    try {
+      const response = await fetch(`${API_URL}/admin/marketing/meta/campaigns/${campaignId}/${endpoint}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.message || result.error || 'Meta rechazó la operación.');
+
+      setNotice(successMessage);
+      await loadMeta();
+    } catch (requestError) {
+      setError(requestError.message || 'No se pudo actualizar la campaña.');
+    } finally {
+      setSavingCampaignId('');
+    }
+  };
+
+  const toggleCampaign = (campaign) => {
+    const currentStatus = campaign.status || campaign.effective_status;
+    const nextStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    const action = nextStatus === 'ACTIVE' ? 'activar' : 'pausar';
+
+    if (!window.confirm(`¿Confirmas ${action} la campaña “${campaign.name}”?`)) return;
+
+    mutateCampaign(campaign.id, 'status', { status: nextStatus }, `Campaña ${nextStatus === 'ACTIVE' ? 'activada' : 'pausada'}.`);
+  };
+
+  const saveBudget = (campaign) => {
+    const value = Number(budgetDrafts[campaign.id]);
+
+    if (!Number.isFinite(value) || value < 1) {
+      setError('El presupuesto diario debe ser de al menos 1 MXN.');
+      return;
+    }
+
+    if (!window.confirm(`¿Cambiar el presupuesto diario de “${campaign.name}” a ${money(value)}?`)) return;
+
+    mutateCampaign(campaign.id, 'budget', { daily_budget: value }, `Presupuesto actualizado a ${money(value)}.`);
+  };
 
   const totals = useMemo(() => campaigns.reduce((accumulator, campaign) => {
     const metrics = campaign.metrics || {};
@@ -174,6 +227,7 @@ export default function AdvertisingHub() {
 
           <main className="space-y-5">
             {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
+            {notice && <div className="rounded-2xl border border-lime-200 bg-lime-50 px-4 py-3 text-sm font-semibold text-lime-800">{notice}</div>}
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
@@ -214,28 +268,45 @@ export default function AdvertisingHub() {
               <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
                 <div className="border-b border-slate-200 p-5 dark:border-slate-800">
                   <h2 className="text-xl font-black text-slate-950 dark:text-white">Meta campaigns</h2>
-                  <p className="text-sm text-slate-500">Resultados normalizados de los últimos 7 días.</p>
+                  <p className="text-sm text-slate-500">Resultados y control de campañas. Los cambios requieren confirmación.</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-950">
                       <tr>
-                        <th className="px-5 py-3">Campaign</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Spend</th><th className="px-5 py-3">Clicks</th><th className="px-5 py-3">CTR</th><th className="px-5 py-3">CPC</th><th className="px-5 py-3">Registrations</th>
+                        <th className="px-5 py-3">Campaign</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Daily budget</th><th className="px-5 py-3">Spend</th><th className="px-5 py-3">Clicks</th><th className="px-5 py-3">CTR</th><th className="px-5 py-3">Registrations</th><th className="px-5 py-3">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                      {!loading && campaigns.map((campaign) => (
-                        <tr key={campaign.id}>
-                          <td className="px-5 py-4"><p className="font-bold text-slate-900 dark:text-white">{campaign.name}</p><p className="text-xs text-slate-500">{campaign.objective || campaign.id}</p></td>
-                          <td className="px-5 py-4 text-xs font-bold">{campaign.effective_status || campaign.status || '—'}</td>
-                          <td className="px-5 py-4 font-semibold">{money(campaign.metrics?.spend, campaign.currency || 'MXN')}</td>
-                          <td className="px-5 py-4">{number(campaign.metrics?.clicks)}</td>
-                          <td className="px-5 py-4">{Number(campaign.metrics?.ctr || 0).toFixed(2)}%</td>
-                          <td className="px-5 py-4">{money(campaign.metrics?.cpc, campaign.currency || 'MXN')}</td>
-                          <td className="px-5 py-4">{number(campaign.metrics?.registrations)}</td>
-                        </tr>
-                      ))}
-                      {!loading && campaigns.length === 0 && <tr><td colSpan="7" className="px-5 py-10 text-center text-slate-500">No hay campañas disponibles o Meta todavía no está configurado.</td></tr>}
+                      {!loading && campaigns.map((campaign) => {
+                        const busy = savingCampaignId === campaign.id;
+                        const active = (campaign.status || campaign.effective_status) === 'ACTIVE';
+
+                        return (
+                          <tr key={campaign.id}>
+                            <td className="px-5 py-4"><p className="font-bold text-slate-900 dark:text-white">{campaign.name}</p><p className="text-xs text-slate-500">{campaign.objective || campaign.id}</p></td>
+                            <td className="px-5 py-4 text-xs font-bold">{campaign.effective_status || campaign.status || '—'}</td>
+                            <td className="px-5 py-4">
+                              {campaign.daily_budget == null ? <span className="text-xs text-slate-500">Ad set budget</span> : (
+                                <div className="flex min-w-[180px] items-center gap-2">
+                                  <input type="number" min="1" step="1" value={budgetDrafts[campaign.id] ?? ''} onChange={(event) => setBudgetDrafts((current) => ({ ...current, [campaign.id]: event.target.value }))} className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-950" />
+                                  <button type="button" disabled={busy} onClick={() => saveBudget(campaign)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">Guardar</button>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-5 py-4 font-semibold">{money(campaign.metrics?.spend, campaign.currency || 'MXN')}</td>
+                            <td className="px-5 py-4">{number(campaign.metrics?.clicks)}</td>
+                            <td className="px-5 py-4">{Number(campaign.metrics?.ctr || 0).toFixed(2)}%</td>
+                            <td className="px-5 py-4">{number(campaign.metrics?.registrations)}</td>
+                            <td className="px-5 py-4">
+                              <button type="button" disabled={busy} onClick={() => toggleCampaign(campaign)} className={`rounded-lg px-3 py-2 text-xs font-black text-white disabled:opacity-50 ${active ? 'bg-amber-600' : 'bg-lime-700'}`}>
+                                {busy ? 'Guardando…' : active ? 'Pausar' : 'Activar'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {!loading && campaigns.length === 0 && <tr><td colSpan="8" className="px-5 py-10 text-center text-slate-500">No hay campañas disponibles o Meta todavía no está configurado.</td></tr>}
                     </tbody>
                   </table>
                 </div>
