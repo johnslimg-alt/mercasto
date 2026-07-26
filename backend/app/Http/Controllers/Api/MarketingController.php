@@ -26,11 +26,44 @@ class MarketingController extends Controller
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
+        return $this->runMetaAction(fn () => [
+            'provider' => 'meta',
+            ...$meta->campaigns((int) ($validated['days'] ?? 7), (int) ($validated['limit'] ?? 50)),
+        ]);
+    }
+
+    public function updateMetaCampaignStatus(Request $request, MetaMarketingService $meta, string $campaignId): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $validated = $request->validate([
+            'status' => ['required', 'string', 'in:ACTIVE,PAUSED'],
+        ]);
+
+        return $this->runMetaAction(fn () => [
+            'provider' => 'meta',
+            'campaign' => $meta->updateCampaignStatus($campaignId, $validated['status']),
+        ]);
+    }
+
+    public function updateMetaCampaignBudget(Request $request, MetaMarketingService $meta, string $campaignId): JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $validated = $request->validate([
+            'daily_budget' => ['required', 'numeric', 'min:1', 'max:1000000'],
+        ]);
+
+        return $this->runMetaAction(fn () => [
+            'provider' => 'meta',
+            'campaign' => $meta->updateCampaignBudget($campaignId, (float) $validated['daily_budget']),
+        ]);
+    }
+
+    private function runMetaAction(callable $action): JsonResponse
+    {
         try {
-            return response()->json([
-                'provider' => 'meta',
-                ...$meta->campaigns((int) ($validated['days'] ?? 7), (int) ($validated['limit'] ?? 50)),
-            ]);
+            return response()->json($action());
         } catch (RuntimeException $exception) {
             report($exception);
 
