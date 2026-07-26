@@ -53,7 +53,10 @@ class AdTest extends TestCase
     {
         Storage::fake('public');
 
-        Category::create(['slug' => 'hogar', 'name' => ['es' => 'Hogar', 'en' => 'Home'], 'icon' => 'Home']);
+        Category::firstOrCreate(
+            ['slug' => 'hogar'],
+            ['name' => ['es' => 'Hogar', 'en' => 'Home'], 'icon' => 'Home'],
+        );
         $user = User::factory()->create();
         $images = collect(range(1, 6))
             ->map(fn (int $index) => UploadedFile::fake()->image("mueble-{$index}.jpg", 1200, 900))
