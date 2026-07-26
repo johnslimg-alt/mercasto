@@ -48,6 +48,16 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             return;
         }
 
+        $providerError = Cache::get('ai_moderation:provider_unavailable');
+        if ($providerError) {
+            $this->leaveForManualReview(
+                $ad,
+                'La moderación automática está temporalmente desactivada por un problema de configuración del proveedor.',
+                'provider_error'
+            );
+            return;
+        }
+
         $covers->ensureCover($ad);
         $ad->refresh();
 
@@ -60,7 +70,12 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
         $apiKey = (string) config('services.gemini.api_key');
         if ($apiKey === '') {
-            $this->leaveForManualReview($ad, 'La moderación automática no está configurada: falta GEMINI_API_KEY.', 'failed');
+            Cache::put('ai_moderation:provider_unavailable', 'GEMINI_API_KEY is not configured.', now()->addHour());
+            $this->leaveForManualReview(
+                $ad,
+                'La moderación automática no está configurada. El anuncio requiere revisión manual.',
+                'provider_error'
+            );
             return;
         }
 
@@ -102,7 +117,33 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 ]);
 
             if (! $response->successful()) {
-                throw new \RuntimeException('Gemini HTTP ' . $response->status());
+                $providerMessage = trim((string) $response->json('error.message', ''));
+                $isInvalidKey = $response->status() === 400
+                    && str_contains(strtolower($providerMessage), 'api key not valid');
+
+                if ($isInvalidKey) {
+                    Cache::put(
+                        'ai_moderation:provider_unavailable',
+                        'Gemini API key is invalid.',
+                        now()->addHour()
+                    );
+
+                    Log::critical('AI moderation disabled because Gemini API key is invalid', [
+                        'ad_id' => $ad->id,
+                        'status' => $response->status(),
+                    ]);
+
+                    $this->leaveForManualReview(
+                        $ad,
+                        'La moderación automática está temporalmente desactivada por un problema de configuración. El anuncio requiere revisión manual.',
+                        'provider_error'
+                    );
+                    return;
+                }
+
+                throw new \RuntimeException(
+                    'Gemini HTTP ' . $response->status() . ($providerMessage !== '' ? ': ' . $providerMessage : '')
+                );
             }
 
             $rawText = (string) $response->json('candidates.0.content.parts.0.text', '');
