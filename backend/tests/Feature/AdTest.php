@@ -6,6 +6,7 @@ use App\Models\Ad;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -46,6 +47,42 @@ class AdTest extends TestCase
             'title' => 'iPhone 15 Pro',
             'user_id' => $user->id,
         ]);
+    }
+
+    public function test_authenticated_user_can_create_ad_with_six_images()
+    {
+        Storage::fake('public');
+
+        Category::create(['slug' => 'hogar', 'name' => ['es' => 'Hogar', 'en' => 'Home'], 'icon' => 'Home']);
+        $user = User::factory()->create();
+        $images = collect(range(1, 6))
+            ->map(fn (int $index) => UploadedFile::fake()->image("mueble-{$index}.jpg", 1200, 900))
+            ->all();
+
+        $response = $this->actingAs($user, 'sanctum')->post('/api/ads', [
+            'title' => 'Mueble para baño',
+            'price' => 650,
+            'description' => 'Mueble en madera MDF laqueado.',
+            'location' => 'Iztapalapa, Ciudad de México',
+            'city' => 'Iztapalapa',
+            'state' => 'Ciudad de México',
+            'latitude' => 19.3573,
+            'longitude' => -99.0280,
+            'category' => 'hogar',
+            'subcategory' => 'Muebles',
+            'condition' => 'nuevo',
+            'attributes' => [
+                'tipo' => 'Muebles',
+                'subcategory' => 'Muebles',
+            ],
+            'images' => $images,
+        ]);
+
+        $response->assertCreated();
+
+        $storedImages = json_decode(Ad::query()->latest('id')->value('image_url'), true);
+        $this->assertCount(6, $storedImages);
+        $this->assertGreaterThan(255, strlen(json_encode($storedImages)));
     }
 
     public function test_public_ad_responses_do_not_expose_seller_email()
