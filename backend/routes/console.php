@@ -40,6 +40,12 @@ Schedule::call(function () {
     }
 })->hourly();
 
+// Close abandoned Clip payment attempts after 24 hours. A webhook payload always
+// wins, so confirmed or provider-processed payments are never expired here.
+Schedule::command('payments:expire-pending --hours=24 --limit=500')
+    ->hourly()
+    ->withoutOverlapping(10);
+
 // Process the oldest moderation submissions first. The command only dispatches jobs,
 // so the scheduler stays responsive even when image analysis is slow.
 Schedule::command('ads:moderate-pending --limit=100')
