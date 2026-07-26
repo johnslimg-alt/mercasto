@@ -12,6 +12,7 @@ import { installCampaignAttribution } from './utils/campaignAttribution'
 import { installMetaCapiBridge } from './utils/metaCapiBridge'
 import { initTikTokPixel } from './utils/tiktokPixel'
 import { installProtectedRouteReturn } from './utils/protectedRouteReturn'
+import { installPublishLocationAutofill } from './utils/publishLocationAutofill'
 import { installPaidAdRenewalBridge } from './utils/paidAdRenewalBridge'
 import { installAdExpiryCountdown } from './utils/adExpiryCountdown'
 import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
@@ -35,6 +36,7 @@ if (['/vendedores', '/publicar-gratis'].includes(window.location.pathname)) {
 installCampaignAttribution();
 installStaleChunkRecovery();
 installProtectedRouteReturn();
+installPublishLocationAutofill();
 installPaidAdRenewalBridge();
 installAdExpiryCountdown();
 installMetaCapiBridge();
