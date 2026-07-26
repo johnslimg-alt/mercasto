@@ -14,9 +14,9 @@ class MetaMarketingService
 
     public function __construct()
     {
-        $this->graphVersion = (string) config('services.facebook.graph_version', 'v25.0');
-        $this->accessToken = config('services.facebook.marketing_access_token') ?: config('services.facebook.access_token');
-        $this->adAccountId = config('services.facebook.ad_account_id');
+        $this->graphVersion = (string) config('marketing.meta.graph_version', 'v25.0');
+        $this->accessToken = config('marketing.meta.access_token');
+        $this->adAccountId = config('marketing.meta.ad_account_id');
     }
 
     public function status(): array
