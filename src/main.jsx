@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import AppWrapper from './App.jsx'
 import AdminModerationCenter from './components/admin/AdminModerationCenter.jsx'
+import AdvertisingHub from './components/admin/AdvertisingHub.jsx'
 import { UIProvider } from './contexts/UIContext.jsx'
 import { ToastProvider } from './components/ui/Toast.jsx'
 import { initBehaviorAnalytics } from './utils/analytics'
@@ -48,8 +49,9 @@ if (rootElement) {
         <ToastProvider>
           <BrowserRouter>
             <AppWrapper />
-            {/* Keep moderation inside the shared router/provider tree so it reuses the authenticated admin session. */}
+            {/* Keep admin overlays inside the shared router/provider tree so they reuse the authenticated admin session. */}
             <AdminModerationCenter />
+            <AdvertisingHub />
           </BrowserRouter>
         </ToastProvider>
       </UIProvider>
