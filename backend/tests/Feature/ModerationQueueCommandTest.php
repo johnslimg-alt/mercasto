@@ -16,6 +16,8 @@ class ModerationQueueCommandTest extends TestCase
     public function test_command_dispatches_oldest_pending_ads_first(): void
     {
         Bus::fake();
+        config(['services.gemini.api_key' => 'test-gemini-key']);
+
         $seller = User::factory()->create();
         $base = [
             'user_id' => $seller->id,
