@@ -8,4 +8,6 @@ Route::middleware(['api', 'auth:sanctum', 'throttle:api'])
     ->group(function () {
         Route::get('/meta/status', [MarketingController::class, 'metaStatus']);
         Route::get('/meta/campaigns', [MarketingController::class, 'metaCampaigns']);
+        Route::patch('/meta/campaigns/{campaignId}/status', [MarketingController::class, 'updateMetaCampaignStatus']);
+        Route::patch('/meta/campaigns/{campaignId}/budget', [MarketingController::class, 'updateMetaCampaignBudget']);
     });
