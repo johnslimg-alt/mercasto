@@ -28,7 +28,7 @@ jobs:
     if: github.event_name != 'push'
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Public smoke
         shell: bash
