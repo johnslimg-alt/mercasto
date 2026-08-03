@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellOff, Trash2, Search, Filter, MapPin, Tag, DollarSign } from 'lucide-react';
+import { Bell, BellOff, Trash2, Search } from 'lucide-react';
 import { useUI } from '../../contexts/UIContext';
 
 const localTranslations = {
@@ -252,9 +252,21 @@ const localTranslations = {
   }
 };
 
-const SavedSearchesPanel = ({ token: propToken, onSearchClick }) => {
+const SEARCH_ALERT_SAVED_EVENT = 'mercasto:search-alert-saved';
+
+const normalizeAlertFilters = (alert = {}) => ({
+  ...(alert.filters && typeof alert.filters === 'object' ? alert.filters : {}),
+  query: alert.query || '',
+  category: alert.category_slug || alert.category?.slug || '',
+  state: alert.state || '',
+  city: alert.city || '',
+  min_price: alert.min_price ?? '',
+  max_price: alert.max_price ?? '',
+});
+
+const SavedSearchesPanel = ({ token: propToken, onSearchClick, onSearchSelect }) => {
   const { lang } = useUI();
-  const t = localTranslations[lang] || localTranslations['es'];
+  const t = localTranslations[lang] || localTranslations.es;
 
   const [searches, setSearches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -262,29 +274,29 @@ const SavedSearchesPanel = ({ token: propToken, onSearchClick }) => {
 
   const API_BASE = import.meta.env.VITE_API_URL || 'https://mercasto.com/api';
   const token = propToken || localStorage.getItem('auth_token') || localStorage.getItem('token');
-
-  useEffect(() => {
-    fetchSavedSearches();
-  }, [token]);
+  const runSavedSearch = onSearchSelect || onSearchClick;
 
   const fetchSavedSearches = async () => {
     if (!token) {
+      setSearches([]);
       setLoading(false);
       return;
     }
+
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/user/saved-searches`, {
+      setError(null);
+      const response = await fetch(`${API_BASE}/user/search-alerts`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
       });
 
       if (!response.ok) throw new Error(t.load_failed);
 
       const data = await response.json();
-      setSearches(data.data || []);
+      setSearches(Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -292,24 +304,46 @@ const SavedSearchesPanel = ({ token: propToken, onSearchClick }) => {
     }
   };
 
-  const toggleAlerts = async (searchId, currentStatus) => {
+  useEffect(() => {
+    fetchSavedSearches();
+  }, [token]);
+
+  useEffect(() => {
+    const handleSaved = (event) => {
+      const created = event.detail;
+      if (!created?.id) return;
+      setSearches((previous) => [created, ...previous.filter((item) => item.id !== created.id)]);
+      setError(null);
+    };
+
+    window.addEventListener(SEARCH_ALERT_SAVED_EVENT, handleSaved);
+    return () => window.removeEventListener(SEARCH_ALERT_SAVED_EVENT, handleSaved);
+  }, []);
+
+  const toggleAlerts = async (search) => {
+    const nextActive = !search.is_active;
+    setSearches((previous) => previous.map((item) => (
+      item.id === search.id ? { ...item, is_active: nextActive } : item
+    )));
+
     try {
-      const response = await fetch(`${API_BASE}/user/saved-searches/${searchId}`, {
+      const response = await fetch(`${API_BASE}/user/search-alerts/${search.id}`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'application/json',
         },
-        body: JSON.stringify({ alerts_enabled: !currentStatus })
+        body: JSON.stringify({ is_active: nextActive }),
       });
 
       if (!response.ok) throw new Error(t.update_alerts_failed);
 
-      const data = await response.json();
-      setSearches(prev => prev.map(s => s.id === searchId ? data.data : s));
+      const updated = await response.json();
+      setSearches((previous) => previous.map((item) => item.id === search.id ? updated : item));
     } catch (err) {
       console.error('Error toggling alerts:', err);
+      setSearches((previous) => previous.map((item) => item.id === search.id ? search : item));
       alert(t.update_alerts_failed);
     }
   };
@@ -317,61 +351,41 @@ const SavedSearchesPanel = ({ token: propToken, onSearchClick }) => {
   const deleteSearch = async (searchId) => {
     if (!confirm(t.delete_confirm)) return;
 
+    const previous = searches;
+    setSearches((items) => items.filter((item) => item.id !== searchId));
+
     try {
-      const response = await fetch(`${API_BASE}/user/saved-searches/${searchId}`, {
+      const response = await fetch(`${API_BASE}/user/search-alerts/${searchId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
       });
 
       if (!response.ok) throw new Error(t.delete_failed);
-
-      setSearches(prev => prev.filter(s => s.id !== searchId));
     } catch (err) {
       console.error('Error deleting search:', err);
+      setSearches(previous);
       alert(t.delete_failed);
     }
   };
 
-  const resetCount = async (searchId) => {
-    try {
-      const response = await fetch(`${API_BASE}/user/saved-searches/${searchId}/reset`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) throw new Error(t.reset_count_failed || 'Error resetting count');
-
-      const data = await response.json();
-      setSearches(prev => prev.map(s => s.id === searchId ? data.data : s));
-    } catch (err) {
-      console.error('Error resetting count:', err);
-    }
-  };
-
-  const formatFilters = (filters) => {
+  const formatFilters = (alert) => {
+    const filters = normalizeAlertFilters(alert);
     const parts = [];
     if (filters.query) parts.push(`"${filters.query}"`);
     if (filters.category) parts.push(filters.category);
     if (filters.state) parts.push(filters.state);
-    if (filters.city) parts.push(filters.city);
+    if (filters.city && filters.city !== filters.state) parts.push(filters.city);
     if (filters.min_price || filters.max_price) {
-      const priceRange = `$${filters.min_price || '0'} - $${filters.max_price || '∞'}`;
-      parts.push(priceRange);
+      parts.push(`$${filters.min_price || '0'} - $${filters.max_price || '∞'}`);
     }
     return parts.join(' • ') || t.no_filters;
   };
 
   const handleSearchClick = (search) => {
-    if (onSearchClick) {
-      onSearchClick(search.filters);
-    }
-    resetCount(search.id);
+    runSavedSearch?.(normalizeAlertFilters(search));
   };
 
   if (loading) {
@@ -387,10 +401,7 @@ const SavedSearchesPanel = ({ token: propToken, onSearchClick }) => {
     return (
       <div className="p-6 text-center">
         <p className="text-red-500">{error}</p>
-        <button
-          onClick={fetchSavedSearches}
-          className="mt-2 text-blue-500 hover:text-blue-600"
-        >
+        <button onClick={fetchSavedSearches} className="mt-2 text-blue-500 hover:text-blue-600">
           {t.retry}
         </button>
       </div>
@@ -407,9 +418,7 @@ const SavedSearchesPanel = ({ token: propToken, onSearchClick }) => {
         <p className="text-gray-500 dark:text-gray-400 mb-4">
           {t.no_saved_searches_desc}
         </p>
-        <div className="text-sm text-gray-400 dark:text-gray-500">
-          {t.tip}
-        </div>
+        <div className="text-sm text-gray-400 dark:text-gray-500">{t.tip}</div>
       </div>
     );
   }
@@ -429,60 +438,44 @@ const SavedSearchesPanel = ({ token: propToken, onSearchClick }) => {
             className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 cursor-pointer" onClick={() => handleSearchClick(search)}>
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-gray-800 dark:text-gray-200">
-                    {search.name}
-                  </h3>
-                  {search.new_results_count > 0 && (
-                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-full">
-                      +{search.new_results_count} {t.new_results}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  {formatFilters(search.filters)}
+              <button
+                type="button"
+                className="flex-1 min-w-0 text-left"
+                onClick={() => handleSearchClick(search)}
+              >
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200 break-words">
+                  {search.name}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 break-words">
+                  {formatFilters(search)}
                 </p>
-                {search.last_checked_at && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                    {t.last_checked} {new Date(search.last_checked_at).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : lang === 'ru' ? 'ru-RU' : 'en-US')}
-                  </p>
-                )}
-              </div>
+              </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
-                  onClick={() => toggleAlerts(search.id, search.alerts_enabled)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    search.alerts_enabled
+                  type="button"
+                  onClick={() => toggleAlerts(search)}
+                  className={`min-w-11 min-h-11 p-2 rounded-lg transition-colors ${
+                    search.is_active
                       ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
                       : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
-                  title={search.alerts_enabled ? t.deactivate_alerts : t.activate_alerts}
+                  title={search.is_active ? t.deactivate_alerts : t.activate_alerts}
+                  aria-pressed={Boolean(search.is_active)}
                 >
-                  {search.alerts_enabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+                  {search.is_active ? <Bell className="w-5 h-5 mx-auto" /> : <BellOff className="w-5 h-5 mx-auto" />}
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => deleteSearch(search.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  className="min-w-11 min-h-11 p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   title={t.delete_search}
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-5 h-5 mx-auto" />
                 </button>
               </div>
             </div>
-
-            {search.new_results_count > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={() => handleSearchClick(search)}
-                  className="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
-                >
-                  {t.view_new.replace('{count}', search.new_results_count)}
-                </button>
-              </div>
-            )}
           </div>
         ))}
       </div>

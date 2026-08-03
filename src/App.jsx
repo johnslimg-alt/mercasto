@@ -1889,6 +1889,7 @@ function App() {
       if (!res.ok) throw new Error('save-search-alert-failed');
       const created = await res.json();
       setSearchAlerts(prev => [created, ...prev.filter(item => item.id !== created.id)]);
+      window.dispatchEvent(new CustomEvent('mercasto:search-alert-saved', { detail: created }));
       showToast('Búsqueda guardada. Te avisaremos de nuevos anuncios.', 'success');
     } catch (err) {
       console.error('Error saving search alert', err);
