@@ -401,6 +401,22 @@ export default function AdDetailScreen({
   ];
   const ratingStats = getAdRatingStats(ad);
 
+  const handleInternalMessage = () => {
+    const sellerId = Number(ad.user_id || ad.user?.id || 0);
+    if (!sellerId) return;
+    events.messageStarted({
+      ad_id: ad.id,
+      seller_id: sellerId,
+      channel: 'internal',
+    });
+    const params = new URLSearchParams({
+      ad_id: String(ad.id),
+      seller_id: String(sellerId),
+      title: localizedText(ad.title, lang) || '',
+    });
+    navigate(`/mensajes?ad_id=${params.get('ad_id')}&seller_id=${params.get('seller_id')}&title=${encodeURIComponent(params.get('title') || '')}`);
+  };
+
   const handleShowQR = () => {
     QRCode.toDataURL(shareUrl, { width: 300, margin: 2 })
       .then(url => { setQrDataUrl(url); setShowQR(true); })
@@ -649,7 +665,19 @@ export default function AdDetailScreen({
         </button>
       </div>
     ) : (
-      <ContactButton ad={ad} user={currentUser} t={t} className="w-full mb-3" />
+      <div className="space-y-3">
+        {!isOwner && (
+          <button
+            type="button"
+            onClick={handleInternalMessage}
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+          >
+            <MessageCircle size={19} />
+            {t.sendMessage || 'Enviar mensaje'}
+          </button>
+        )}
+        <ContactButton ad={ad} user={currentUser} t={t} className="w-full" />
+      </div>
     )}
   </>
 )}
