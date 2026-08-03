@@ -43,64 +43,75 @@ class ChatController extends Controller {
         return response()->json($conversations);
     }
 
-    public function getMessages(Request $request, $otherUserId) {
-        $userId = $request->user()->id;
-        if ($this->usesConversationSchema()) {
-            $conversations = Conversation::with('ad:id,title,price,image_url')
-                ->where(function ($query) use ($userId, $otherUserId) {
-                    $query->where('buyer_id', $userId)->where('seller_id', $otherUserId);
-                })
-                ->orWhere(function ($query) use ($userId, $otherUserId) {
-                    $query->where('buyer_id', $otherUserId)->where('seller_id', $userId);
-                })
-                ->get();
+    public function getConversationMessages(Request $request, Conversation $conversation)
+    {
+        $userId = (int) $request->user()->id;
+        $this->authorizeConversation($conversation, $userId);
 
-            $conversationIds = $conversations->pluck('id');
-            if ($conversationIds->isEmpty()) {
-                return response()->json([]);
-            }
+        Message::where('conversation_id', $conversation->id)
+            ->where('sender_id', '!=', $userId)
+            ->whereNull('read_at')
+            ->update([
+                'read_at' => now(),
+                'is_read' => true,
+            ]);
 
-            Message::whereIn('conversation_id', $conversationIds)
-                ->where('sender_id', '!=', $userId)
-                ->whereNull('read_at')
-                ->update(['read_at' => now()]);
+        $conversation->forceFill($conversation->buyer_id === $userId
+            ? ['buyer_unread_count' => 0]
+            : ['seller_unread_count' => 0]
+        )->save();
 
-            foreach ($conversations as $conversation) {
-                $conversation->forceFill($conversation->buyer_id === $userId
-                    ? ['buyer_unread_count' => 0]
-                    : ['seller_unread_count' => 0]
-                )->save();
-            }
+        $messages = Message::with(['sender:id,name,avatar_url', 'conversation.ad:id,title,price,image_url'])
+            ->where('conversation_id', $conversation->id)
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (Message $message) => $this->formatMessage($message, $userId));
 
-            $messages = Message::with(['sender:id,name,avatar_url', 'conversation.ad:id,title,price,image_url'])
-                ->whereIn('conversation_id', $conversationIds)
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(fn (Message $message) => $this->formatMessage($message, $userId));
-
-            return response()->json($messages);
-        }
-
-        Message::where('sender_id', $otherUserId)->where('receiver_id', $userId)->where('is_read', false)->update(['is_read' => true]);
-        $messages = Message::with('ad:id,title,price,image_url')
-            ->where(function($q) use ($userId, $otherUserId) { $q->where('sender_id', $userId)->where('receiver_id', $otherUserId); })
-            ->orWhere(function($q) use ($userId, $otherUserId) { $q->where('sender_id', $otherUserId)->where('receiver_id', $userId); })
-            ->orderBy('created_at', 'asc')->get();
-        return response()->json($messages);
+        return response()->json([
+            'conversation' => $this->formatConversation(
+                $conversation->fresh(['ad:id,title,price,image_url', 'buyer:id,name,avatar_url', 'seller:id,name,avatar_url', 'latestMessage']),
+                $userId,
+            ),
+            'messages' => $messages,
+        ]);
     }
 
     public function sendMessage(Request $request) {
-        $request->validate(['receiver_id' => 'required|exists:users,id', 'content' => 'required|string|max:1000', 'ad_id' => 'nullable|exists:ads,id']);
-        if ($request->user()->id == $request->receiver_id) return response()->json(['error' => 'Cannot send to self'], 400);
+        $data = $request->validate([
+            'receiver_id' => 'required|integer|exists:users,id',
+            'content' => 'required|string|max:1000',
+            'ad_id' => 'required|integer|exists:ads,id',
+        ]);
+        $userId = (int) $request->user()->id;
+        $receiverId = (int) $data['receiver_id'];
+        if ($userId === $receiverId) {
+            return response()->json(['error' => 'Cannot send to self'], 422);
+        }
 
         if ($this->usesConversationSchema()) {
-            $userId = $request->user()->id;
-            $receiverId = (int) $request->receiver_id;
-            $adId = $request->filled('ad_id') ? (int) $request->ad_id : null;
-            $ad = $adId ? Ad::select('id', 'user_id', 'title')->find($adId) : null;
+            $adId = (int) $data['ad_id'];
+            $ad = Ad::select('id', 'user_id', 'title')->findOrFail($adId);
+            $sellerId = (int) $ad->user_id;
 
-            $sellerId = $ad?->user_id ?: $receiverId;
+            if ($userId !== $sellerId && $receiverId !== $sellerId) {
+                return response()->json([
+                    'error' => 'El destinatario debe ser el vendedor del anuncio.',
+                ], 422);
+            }
+
             $buyerId = $userId === $sellerId ? $receiverId : $userId;
+            if ($userId === $sellerId) {
+                $existingConversation = Conversation::query()
+                    ->where('ad_id', $adId)
+                    ->where('buyer_id', $buyerId)
+                    ->where('seller_id', $sellerId)
+                    ->first();
+                if ($existingConversation === null) {
+                    return response()->json([
+                        'error' => 'No existe una conversación para responder.',
+                    ], 403);
+                }
+            }
 
             $conversation = Conversation::firstOrCreate(
                 [
@@ -117,8 +128,12 @@ class ChatController extends Controller {
             $message = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id' => $userId,
-                'body' => $request->content,
+                'receiver_id' => $receiverId,
+                'ad_id' => $adId,
+                'content' => $data['content'],
+                'body' => $data['content'],
                 'type' => 'text',
+                'is_read' => false,
             ]);
 
             $unreadColumn = $receiverId === $conversation->buyer_id ? 'buyer_unread_count' : 'seller_unread_count';
@@ -131,25 +146,34 @@ class ChatController extends Controller {
                 $receiverId,
                 $userId,
                 $request->user()->name,
-                $request->content,
-                $ad?->title
+                $data['content'],
+                $ad->title
             );
 
             return response()->json($this->formatMessage($message->load('sender:id,name,avatar_url', 'conversation.ad:id,title,price,image_url'), $userId));
         }
 
-        $message = Message::create(['sender_id' => $request->user()->id, 'receiver_id' => $request->receiver_id, 'content' => $request->content, 'ad_id' => $request->ad_id]);
+        $message = Message::create(['sender_id' => $request->user()->id, 'receiver_id' => $request->receiver_id, 'content' => $data['content'], 'ad_id' => $data['ad_id']]);
         broadcast(new MessageSent($message))->toOthers();
 
         SendTelegramMessageNotification::dispatch(
             (int) $request->receiver_id,
             $request->user()->id,
             $request->user()->name,
-            $request->content,
-            $request->ad_id ? Ad::find($request->ad_id)?->title : null
+            $data['content'],
+            Ad::find($data['ad_id'])?->title
         );
 
         return response()->json($message->load('sender:id,name,avatar_url'));
+    }
+
+    private function authorizeConversation(Conversation $conversation, int $userId): void
+    {
+        abort_unless(
+            $conversation->buyer_id === $userId || $conversation->seller_id === $userId,
+            403,
+            'No autorizado.',
+        );
     }
 
     private function usesConversationSchema(): bool
