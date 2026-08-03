@@ -72,8 +72,8 @@ grep -qF "form.state" "$POST_SCREEN"
 grep -qF "buildPublicLocationLabel" "$DETAIL_SCREEN"
 grep -qF "MapV3" "$DETAIL_SCREEN"
 
-# Guardrail: no Puerto Vallarta-only product logic outside the Mexico-wide source file.
-if grep -RIn --exclude='*.bak' --exclude='location-search-gate.sh' --exclude-dir='storage' --exclude-dir='vendor' --exclude-dir='node_modules' "Puerto Vallarta" src backend scripts | grep -Ev "src/App.jsx|src/utils/mexicoStates.js|src/components/verticals/VerticalHero.jsx"; then
+# Guardrail: no Puerto Vallarta-only product logic outside the Mexico-wide source files.
+if grep -RIn --exclude='*.bak' --exclude='location-search-gate.sh' --exclude-dir='storage' --exclude-dir='vendor' --exclude-dir='node_modules' "Puerto Vallarta" src backend scripts | grep -Ev "src/App.jsx|src/constants/locationsAndCategories.js|src/utils/mexicoStates.js|src/components/verticals/VerticalHero.jsx"; then
   echo "Puerto Vallarta must not appear outside the Mexico-wide city dataset." >&2
   exit 1
 fi
