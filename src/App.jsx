@@ -4,6 +4,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 're
 import { getTranslations, loadLanguage } from './utils/translations';
 import { localizedText } from './utils/localize';
 import { sizedImage } from './utils/imageHelpers';
+import { createRegistrationConsentPayload } from './utils/registrationConsent';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
 
 // Subcategory data is either an array of Spanish labels (canonical value == display label)
@@ -2191,6 +2192,15 @@ function App() {
       let endpoint = '';
       if (authMode === 'register') {
         endpoint = '/register';
+        if (formData.get('age_confirmed') !== 'on') {
+          showToast(
+            t.registration_legal_required ||
+              'Confirma tu edad y aceptación para continuar.',
+            'error',
+          );
+          return;
+        }
+        Object.assign(data, createRegistrationConsentPayload('web'));
         const pendingReferral = localStorage.getItem('pendingReferral');
         if (pendingReferral) data.referral_code = pendingReferral;
       }
@@ -4323,6 +4333,29 @@ function App() {
                     {authMode === 'register' && <input name="name" required placeholder={t.name} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
                     {authMode !== 'reset_password' && <input name="email" type="email" required placeholder={t.email} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
                     {(authMode === 'login' || authMode === 'register') && <input name="password" type="password" required placeholder={t.password} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
+                    {authMode === 'register' && (
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/60 px-3.5 py-3">
+                        <label className="flex items-start gap-3 text-[12px] leading-relaxed text-slate-600 dark:text-slate-300 cursor-pointer">
+                          <input
+                            name="age_confirmed"
+                            type="checkbox"
+                            required
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-[#84CC16]"
+                          />
+                          <span>
+                            {t.registration_legal_consent || 'Confirmo que tengo al menos 18 años y acepto los términos y el aviso de privacidad.'}
+                          </span>
+                        </label>
+                        <div className="mt-2 ml-7 flex flex-wrap gap-x-3 gap-y-1 text-[12px] font-semibold">
+                          <a href="/terms" target="_blank" rel="noreferrer" className="text-[#65A30D] hover:underline">
+                            {t.terms_of_use || 'Términos de uso'}
+                          </a>
+                          <a href="/privacy" target="_blank" rel="noreferrer" className="text-[#65A30D] hover:underline">
+                            {t.privacy_policy || 'Aviso de Privacidad'}
+                          </a>
+                        </div>
+                      </div>
+                    )}
                     {authMode === 'reset_password' && <input name="password" type="password" required placeholder={t.new_password} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
                     <div className="pt-2">
                       <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">

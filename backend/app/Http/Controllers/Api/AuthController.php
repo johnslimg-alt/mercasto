@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserConsent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,7 @@ use App\Mail\EmailVerifyMail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -30,7 +32,24 @@ class AuthController extends Controller
             'phone_number' => 'nullable|string|max:20|unique:users',
             'avatar_url' => 'nullable|string|url',
             'referral_code' => 'nullable|string|max:10',
+            'age_confirmed' => 'sometimes|accepted',
+            'terms_version' => 'required_if:age_confirmed,true|nullable|string|max:64',
+            'privacy_version' => 'required_if:age_confirmed,true|nullable|string|max:64',
+            'consent_accepted_at' => 'required_if:age_confirmed,true|nullable|date',
+            'consent_source' => 'required_if:age_confirmed,true|nullable|string|in:web,mobile,api',
         ]);
+
+        $consentFieldsPresent = $request->hasAny([
+            'terms_version',
+            'privacy_version',
+            'consent_accepted_at',
+            'consent_source',
+        ]);
+        if ($consentFieldsPresent && !$request->boolean('age_confirmed')) {
+            throw ValidationException::withMessages([
+                'age_confirmed' => ['Confirma que tienes al menos 18 años para registrar el consentimiento.'],
+            ]);
+        }
 
         // GDPR/LFPDPPP Compliance: Хешируем IP-адрес (PII) перед сохранением/поиском в БД
         // Ограничиваем до 45 символов для соответствия varchar(45) в таблице users
@@ -50,36 +69,41 @@ class AuthController extends Controller
             ]);
         }
 
-        $user = new User();
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->password = Hash::make($request->password);
-        $user->phone_number = $request->phone_number;
-        $user->avatar_url = $request->avatar_url;
-        $user->role = $role;
-        $user->ip_address = $ip;
-        $user->save();
+        $user = DB::transaction(function () use ($request, $ip, $role) {
+            $user = new User();
+            $user->name = $request->name;
+            $user->email = $request->email;
+            $user->password = Hash::make($request->password);
+            $user->phone_number = $request->phone_number;
+            $user->avatar_url = $request->avatar_url;
+            $user->role = $role;
+            $user->ip_address = $ip;
+            $user->save();
 
-        $this->ensureReferralCode($user);
+            $this->ensureReferralCode($user);
 
-        $incomingReferralCode = strtoupper(trim((string) $request->input('referral_code', '')));
-        if ($incomingReferralCode !== '') {
-            $referrer = User::where('referral_code', $incomingReferralCode)
-                ->where('id', '!=', $user->id)
-                ->first();
+            $incomingReferralCode = strtoupper(trim((string) $request->input('referral_code', '')));
+            if ($incomingReferralCode !== '') {
+                $referrer = User::where('referral_code', $incomingReferralCode)
+                    ->where('id', '!=', $user->id)
+                    ->first();
 
-            if ($referrer) {
-                $user->referred_by = $referrer->id;
-                $user->save();
+                if ($referrer) {
+                    $user->referred_by = $referrer->id;
+                    $user->save();
 
-                // Create referrals log row for first-ad reward tracking
-                \Illuminate\Support\Facades\DB::table('referrals')->insertOrIgnore([
-                    'referrer_id' => $referrer->id,
-                    'referred_id' => $user->id,
-                    'created_at'  => now(),
-                ]);
+                    DB::table('referrals')->insertOrIgnore([
+                        'referrer_id' => $referrer->id,
+                        'referred_id' => $user->id,
+                        'created_at' => now(),
+                    ]);
+                }
             }
-        }
+
+            $this->recordRegistrationConsents($user, $request);
+
+            return $user;
+        });
 
         // Enviar email de verificación
         try {
@@ -106,6 +130,55 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])
         ], 201);
+    }
+
+    private function recordRegistrationConsents(User $user, Request $request): void
+    {
+        if (!$request->boolean('age_confirmed')) {
+            return;
+        }
+
+        $acceptedAt = now();
+        $clientAcceptedAt = Carbon::parse((string) $request->input('consent_accepted_at'));
+        $source = (string) $request->input('consent_source', 'api');
+        $ipHash = hash('sha256', (string) $request->ip());
+        $userAgent = trim((string) $request->userAgent());
+        $userAgentHash = $userAgent === '' ? null : hash('sha256', $userAgent);
+
+        $common = [
+            'accepted_at' => $acceptedAt,
+            'client_accepted_at' => $clientAcceptedAt,
+            'source' => $source,
+            'ip_hash' => $ipHash,
+            'user_agent_hash' => $userAgentHash,
+        ];
+
+        UserConsent::insert([
+            [
+                'user_id' => $user->id,
+                'consent_type' => 'age_confirmation',
+                'document_version' => '18-plus-v1',
+                ...$common,
+                'created_at' => $acceptedAt,
+                'updated_at' => $acceptedAt,
+            ],
+            [
+                'user_id' => $user->id,
+                'consent_type' => 'terms',
+                'document_version' => (string) $request->input('terms_version'),
+                ...$common,
+                'created_at' => $acceptedAt,
+                'updated_at' => $acceptedAt,
+            ],
+            [
+                'user_id' => $user->id,
+                'consent_type' => 'privacy',
+                'document_version' => (string) $request->input('privacy_version'),
+                ...$common,
+                'created_at' => $acceptedAt,
+                'updated_at' => $acceptedAt,
+            ],
+        ]);
     }
 
     /**
