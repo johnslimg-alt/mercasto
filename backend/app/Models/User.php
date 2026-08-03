@@ -128,6 +128,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Ad::class);
     }
 
+    public function consents(): HasMany
+    {
+        return $this->hasMany(UserConsent::class);
+    }
+
     public function getAccountVerifiedAttribute(): bool
     {
         return (bool) (

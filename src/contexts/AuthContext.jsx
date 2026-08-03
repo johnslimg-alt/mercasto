@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { events } from '../utils/analytics';
+import { authTokenFromResponse, createRegistrationConsentPayload } from '../utils/registrationConsent';
 
 const AuthContext = createContext(null);
 
@@ -74,8 +75,12 @@ export function AuthProvider({ children }) {
           return { success: false, requires2FA: true };
         }
         
-        setToken(data.token);
-        localStorage.setItem('auth_token', data.token);
+        const authToken = authTokenFromResponse(data);
+        if (!authToken) {
+          return { success: false, error: 'invalid_auth_response' };
+        }
+        setToken(authToken);
+        localStorage.setItem('auth_token', authToken);
         setUser(data.user);
         setShowAuthModal(false);
         return { success: true };
@@ -86,7 +91,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   // === РЕГИСТРАЦИЯ ===
-  const register = useCallback((name, email, password, password_confirmation, referral_code = null) => {
+  const register = useCallback((name, email, password, password_confirmation, referral_code = null, acceptedLegal = false) => {
+    if (!acceptedLegal) {
+      return Promise.resolve({ success: false, error: 'legal_consent_required' });
+    }
     const metaEventId = createMetaRegistrationEventId();
     const payload = {
       name,
@@ -94,6 +102,7 @@ export function AuthProvider({ children }) {
       password,
       password_confirmation,
       meta_event_id: metaEventId,
+      ...createRegistrationConsentPayload('web'),
     };
     if (referral_code) payload.referral_code = referral_code;
     
@@ -105,8 +114,12 @@ export function AuthProvider({ children }) {
       const data = await response.json();
       
       if (response.ok) {
-        setToken(data.token);
-        localStorage.setItem('auth_token', data.token);
+        const authToken = authTokenFromResponse(data);
+        if (!authToken) {
+          return { success: false, error: 'invalid_auth_response' };
+        }
+        setToken(authToken);
+        localStorage.setItem('auth_token', authToken);
         setUser(data.user);
         setShowAuthModal(false);
         localStorage.setItem('just_registered', '1');
@@ -178,8 +191,12 @@ export function AuthProvider({ children }) {
       const data = await response.json();
       
       if (response.ok) {
-        setToken(data.token);
-        localStorage.setItem('auth_token', data.token);
+        const authToken = authTokenFromResponse(data);
+        if (!authToken) {
+          return { success: false, error: 'invalid_auth_response' };
+        }
+        setToken(authToken);
+        localStorage.setItem('auth_token', authToken);
         setUser(data.user);
         setPending2FA(null);
         setShowAuthModal(false);
