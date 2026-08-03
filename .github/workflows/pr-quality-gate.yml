@@ -17,6 +17,7 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -euo pipefail
 
@@ -27,20 +28,26 @@ jobs:
             exit 1
           fi
 
-          if printf '%s' "${PR_BODY}" | grep -Eqi 'BEGIN (OPENSSH|RSA|DSA|EC|PRIVATE) KEY'; then
+          if grep -Eqi 'BEGIN (OPENSSH|RSA|DSA|EC|PRIVATE) KEY' <<< "${PR_BODY}"; then
             echo "Possible private key detected in PR body. Remove it and rotate the credential."
             exit 1
           fi
 
-          if printf '%s' "${PR_BODY}" | grep -Eqi '(password|secret|token|api[_-]?key)[[:space:]]*[:=][[:space:]]*[^[:space:]]+'; then
+          if grep -Eqi '(password|secret|token|api[_-]?key)[[:space:]]*[:=][[:space:]]*[^[:space:]]+' <<< "${PR_BODY}"; then
             echo "Possible secret-like value detected in PR body. Remove it and use a secret manager."
             exit 1
+          fi
+
+          if [ "${PR_AUTHOR}" = "dependabot[bot]" ]; then
+            echo "Dependabot PR detected; generated release notes replace the human PR template."
+            echo "PR quality gate passed."
+            exit 0
           fi
 
           required_sections=("Summary" "Risk" "Smoke" "Rollback")
           missing=0
           for section in "${required_sections[@]}"; do
-            if ! printf '%s' "${PR_BODY}" | grep -Eiq "${section}"; then
+            if ! grep -Eiq "${section}" <<< "${PR_BODY}"; then
               echo "Missing PR section keyword: ${section}"
               missing=1
             fi
