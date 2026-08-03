@@ -12,6 +12,7 @@ bash scripts/session-config-scan.sh
 bash scripts/payment-retention-scan.sh
 bash scripts/payment-webhook-idempotency-scan.sh
 bash scripts/media-upload-validation-scan.sh
+bash scripts/xml-upload-security-gate.sh
 bash scripts/listing-lifecycle-gate.sh
 bash scripts/location-search-gate.sh
 bash scripts/auth-account-gate.sh
