@@ -157,6 +157,7 @@ run_verify_quick() {
   bash scripts/public-manifest-smoke.sh
   bash scripts/security-probes.sh
   bash scripts/production-error-mode-smoke.sh
+  bash scripts/production-session-security-smoke.sh
   bash scripts/listing-route-smoke.sh
   bash scripts/production-route-audit.sh
   seo_aeo_probe

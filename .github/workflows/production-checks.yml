@@ -107,6 +107,17 @@ jobs:
       - name: Verify production runtime and safe public errors
         run: bash scripts/production-error-mode-smoke.sh
 
+  production-session-security:
+    name: Production bearer and session security smoke
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify bearer-only auth, hardened cookies, and CORS
+        run: bash scripts/production-session-security-smoke.sh
+
   frontend-docker-build:
     name: Build frontend Docker image
     runs-on: ubuntu-latest
@@ -142,6 +153,7 @@ jobs:
       - compose-config
       - seo-aeo-smoke
       - production-error-mode
+      - production-session-security
     timeout-minutes: 20
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
