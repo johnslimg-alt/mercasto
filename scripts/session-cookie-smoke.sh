@@ -3,7 +3,9 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 COOKIE_NAME="${COOKIE_NAME:-mercasto_session}"
-TMP_HEADERS="${TMPDIR:-/tmp}/mercasto-cookie-headers.txt"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mercasto-session-cookie.XXXXXX")"
+trap 'rm -rf "$TMP_DIR"' EXIT
+TMP_HEADERS="$TMP_DIR/cookie-headers.txt"
 
 command -v curl >/dev/null 2>&1 || {
   echo "curl is required" >&2

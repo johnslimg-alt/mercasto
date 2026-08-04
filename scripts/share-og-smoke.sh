@@ -3,7 +3,9 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 AD_ID="${AD_ID:-1}"
-TMP_FILE="${TMPDIR:-/tmp}/mercasto-share-og-smoke.html"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mercasto-share-og.XXXXXX")"
+trap 'rm -rf "$TMP_DIR"' EXIT
+TMP_FILE="$TMP_DIR/share.html"
 
 url="${BASE_URL%/}/share/ads/${AD_ID}"
 code="$(curl -k -sS -L --max-time 20 -o "$TMP_FILE" -w '%{http_code}' "$url" || true)"

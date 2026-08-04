@@ -6,9 +6,11 @@ COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
 COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 USER_ID="${BUSINESS_PROFILE_USER_ID:-1}"
-TMP_FILE="${TMPDIR:-/tmp}/mercasto-business-profile-smoke.json"
-ROUTES_FILE="${TMPDIR:-/tmp}/mercasto-business-profile-routes.out"
-MIGRATE_PRETEND_FILE="${TMPDIR:-/tmp}/mercasto-business-profile-migrate-pretend.out"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mercasto-business-profile.XXXXXX")"
+trap 'rm -rf "$TMP_DIR"' EXIT
+TMP_FILE="$TMP_DIR/response.json"
+ROUTES_FILE="$TMP_DIR/routes.out"
+MIGRATE_PRETEND_FILE="$TMP_DIR/migrate-pretend.out"
 
 if [[ ! -f docker-compose.yml ]]; then
   echo "run this script from the Mercasto repository root" >&2
