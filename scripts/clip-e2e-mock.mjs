@@ -1,6 +1,8 @@
 import http from 'node:http';
 
 const port = Number(process.env.CLIP_E2E_MOCK_PORT || 18001);
+const host = process.env.CLIP_E2E_MOCK_HOST || '127.0.0.1';
+const publicBaseUrl = (process.env.CLIP_E2E_PUBLIC_BASE_URL || `http://127.0.0.1:${port}`).replace(/\/$/, '');
 const checkouts = new Map();
 
 const server = http.createServer((request, response) => {
@@ -33,7 +35,7 @@ const server = http.createServer((request, response) => {
       response.writeHead(200, { 'Content-Type': 'application/json' });
       response.end(JSON.stringify({
         payment_request_id: id,
-        payment_request_url: `http://127.0.0.1:${port}/checkout/${id}`,
+        payment_request_url: `${publicBaseUrl}/checkout/${id}`,
       }));
     });
     return;
@@ -79,8 +81,8 @@ const server = http.createServer((request, response) => {
   response.end('not found');
 });
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`Clip E2E mock listening on ${port}`);
+server.listen(port, host, () => {
+  console.log(`Clip E2E mock listening on ${host}:${port}`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

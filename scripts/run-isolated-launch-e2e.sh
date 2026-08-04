@@ -7,6 +7,7 @@ cd "$ROOT_DIR"
 NETWORK="${E2E_NETWORK:-mercasto-launch-e2e-net}"
 POSTGRES_CONTAINER="${E2E_POSTGRES_CONTAINER:-mercasto-launch-e2e-pg}"
 API_CONTAINER="${E2E_API_CONTAINER:-mercasto-launch-e2e-api}"
+CLIP_CONTAINER="${E2E_CLIP_CONTAINER:-mercasto-launch-e2e-clip}"
 BACKEND_IMAGE="${E2E_BACKEND_IMAGE:-mercasto-launch-e2e-api:local}"
 DB_NAME="${E2E_DB_NAME:-mercasto_launch_e2e}"
 DB_PASSWORD="${E2E_DB_PASSWORD:-launch-e2e-pass}"
@@ -22,18 +23,13 @@ ADMIN_PASSWORD="${E2E_ADMIN_PASSWORD:-E2eTestPass99!}"
 WEBHOOK_SECRET="${CLIP_WEBHOOK_SECRET:-test-webhook-secret}"
 E2E_SUITES="${E2E_SUITES:-auth,ads,payments}"
 FRONTEND_PID=""
-CLIP_PID=""
 
 cleanup() {
   if [[ -n "$FRONTEND_PID" ]]; then
     pkill -TERM -P "$FRONTEND_PID" >/dev/null 2>&1 || true
     kill "$FRONTEND_PID" >/dev/null 2>&1 || true
   fi
-  if [[ -n "$CLIP_PID" ]]; then
-    pkill -TERM -P "$CLIP_PID" >/dev/null 2>&1 || true
-    kill "$CLIP_PID" >/dev/null 2>&1 || true
-  fi
-  docker rm -f "$API_CONTAINER" "$POSTGRES_CONTAINER" >/dev/null 2>&1 || true
+  docker rm -f "$API_CONTAINER" "$POSTGRES_CONTAINER" "$CLIP_CONTAINER" >/dev/null 2>&1 || true
   docker network rm "$NETWORK" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT INT TERM
@@ -71,7 +67,7 @@ docker run -d --name "$POSTGRES_CONTAINER" --network "$NETWORK" \
   pgvector/pgvector:pg18 >/dev/null
 postgres_ready=0
 for _ in $(seq 1 120); do
-  if docker exec "$POSTGRES_CONTAINER" pg_isready -U postgres -d "$DB_NAME" >/dev/null 2>&1; then
+  if docker exec "$POSTGRES_CONTAINER" psql -U postgres -d "$DB_NAME" -tAc "SELECT 1" 2>/dev/null | grep -qx 1; then
     postgres_ready=1
     break
   fi
@@ -86,10 +82,15 @@ fi
 docker exec "$POSTGRES_CONTAINER" psql -U postgres -d "$DB_NAME" -c 'CREATE EXTENSION IF NOT EXISTS vector;' >/dev/null
 
 echo "== Start provider-safe Clip mock =="
-CLIP_E2E_MOCK_PORT="$CLIP_PORT" node scripts/clip-e2e-mock.mjs > /tmp/mercasto-clip-e2e.log 2>&1 &
-CLIP_PID=$!
+docker run -d --name "$CLIP_CONTAINER" --network "$NETWORK" \
+  -p "$CLIP_PORT:$CLIP_PORT" \
+  -e CLIP_E2E_MOCK_HOST=0.0.0.0 \
+  -e CLIP_E2E_MOCK_PORT="$CLIP_PORT" \
+  -e CLIP_E2E_PUBLIC_BASE_URL="http://127.0.0.1:$CLIP_PORT" \
+  -v "$ROOT_DIR/scripts/clip-e2e-mock.mjs:/app/clip-e2e-mock.mjs:ro" \
+  node:22-alpine node /app/clip-e2e-mock.mjs >/dev/null
 if ! wait_for_url "http://127.0.0.1:$CLIP_PORT/health" "Clip mock"; then
-  cat /tmp/mercasto-clip-e2e.log >&2 || true
+  docker logs "$CLIP_CONTAINER" >&2 || true
   exit 1
 fi
 
@@ -121,8 +122,8 @@ common_env=(
   -e CLIP_WEBHOOK_SECRET="$WEBHOOK_SECRET"
   -e CLIP_API_KEY=test-api-key
   -e CLIP_API_SECRET=test-api-secret
-  -e CLIP_CHECKOUT_URL="http://host.docker.internal:$CLIP_PORT/v2/checkout"
-  -e CLIP_VERIFICATION_URL="http://host.docker.internal:$CLIP_PORT/v2/checkout"
+  -e CLIP_CHECKOUT_URL="http://$CLIP_CONTAINER:$CLIP_PORT/v2/checkout"
+  -e CLIP_VERIFICATION_URL="http://$CLIP_CONTAINER:$CLIP_PORT/v2/checkout"
 )
 
 echo "== Migrate and seed isolated database =="
@@ -132,12 +133,17 @@ docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php art
 docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=E2eTestSeeder --force
 
 echo "== Start isolated API =="
-docker run -d --name "$API_CONTAINER" --network "$NETWORK" --add-host=host.docker.internal:host-gateway \
+docker run -d --name "$API_CONTAINER" --network "$NETWORK" \
   -p "$API_PORT:8000" "${common_env[@]}" "$BACKEND_IMAGE" \
   sh -lc 'php artisan storage:link >/dev/null 2>&1 || true; exec php artisan serve --host=0.0.0.0 --port=8000' >/dev/null
 if ! wait_for_url "http://127.0.0.1:$API_PORT/up" "Laravel API"; then
   docker ps -a --filter "name=$API_CONTAINER" >&2 || true
   docker logs "$API_CONTAINER" >&2 || true
+  exit 1
+fi
+if ! docker exec "$API_CONTAINER" curl -fsS --max-time 5 "http://$CLIP_CONTAINER:$CLIP_PORT/health" >/dev/null; then
+  docker logs "$CLIP_CONTAINER" >&2 || true
+  echo "Clip mock is unreachable from the isolated API container." >&2
   exit 1
 fi
 
