@@ -670,7 +670,7 @@ export default function AdDetailScreen({
           <button
             type="button"
             onClick={handleInternalMessage}
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+            className="mc-primary-action flex w-full items-center justify-center gap-2 px-4 py-3 text-sm"
           >
             <MessageCircle size={19} />
             {t.sendMessage || 'Enviar mensaje'}
