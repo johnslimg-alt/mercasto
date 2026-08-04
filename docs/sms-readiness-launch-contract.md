@@ -1,11 +1,12 @@
 # SMS launch readiness contract
 
-Mercasto `verify:quick` may pass while SMS remains intentionally not ready. Final public launch must use `verify:launch`, which runs the same smoke chain with `REQUIRE_SMS_READY=1`.
+Mercasto supports two explicit launch modes for SMS: `enabled` or `disabled`. The current public-launch decision is **disabled/deferred** until a production provider and real Mexico-number delivery evidence are available. Phone authentication and phone verification controls must stay hidden while the public provider endpoint reports `sms: false`.
 
 ## Current status
 
 - `verify:quick`: production health and runtime smoke gate.
-- `verify:launch`: strict launch gate. Fails when SMS OTP provider is not configured.
+- `verify:launch`: strict launch gate. Requires the committed SMS launch-mode contract.
+- `scripts/sms-launch-mode-smoke.sh`: proves that enabled mode has a ready provider, or disabled mode has a disabled public provider plus hidden UI and fail-closed endpoints.
 - `scripts/sms-readiness-smoke.sh`: checks provider configuration presence from Laravel runtime config without printing secrets.
 
 ## Default provider candidate
@@ -38,27 +39,23 @@ Preferred future contract for Twilio Verify:
 
 ## Launch gate behavior
 
-Expected before final launch:
+Expected for the current deferred launch:
 
 ```bash
 cd /var/www/mercasto || exit 1
-REQUIRE_SMS_READY=1 npm run smoke:sms-readiness
+SMS_LAUNCH_MODE=disabled npm run smoke:sms-launch-mode
 npm run verify:launch
 ```
 
 Expected pass condition:
 
 ```text
-sms_provider=ready
-sms readiness smoke OK
+sms_launch_mode=disabled
+public_sms_provider_enabled=false
+SMS launch mode smoke OK
 ```
 
-Expected block condition:
-
-```text
-sms_provider=not_ready
-SMS OTP provider is not configured.
-```
+Enabling SMS later requires changing the committed mode, setting production secrets, proving `sms: true`, running the strict provider readiness smoke and completing real-device delivery tests before exposing the controls.
 
 ## Security requirements
 
@@ -80,10 +77,11 @@ Twilio Verify basic workflow:
 
 No business effect should rely only on frontend success state.
 
-## Open launch blockers
+## Deferred follow-up before enabling SMS
 
 - Select final provider and commercial plan for Mexico.
 - Set production secrets in the server environment.
 - Confirm Laravel config mapping names.
-- Add endpoint-level rate limits for OTP send/check.
-- Run `verify:launch` and keep the output in the launch record.
+- Keep endpoint-level rate limits, cooldowns and max-attempt controls.
+- Test delivery and verification on a real Mexico phone number.
+- Change the committed launch mode to `enabled` only after those checks pass.

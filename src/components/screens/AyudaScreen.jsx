@@ -61,7 +61,7 @@ const SECTIONS = [
     faqs: [
       {
         q: '¿Cómo verifico mi número de teléfono?',
-        a: 'Ve a tu Perfil → sección "Teléfono". Ingresa tu número mexicano y recibirás un código SMS de verificación. Los perfiles verificados generan más confianza en los compradores y aparecen con una insignia especial.',
+        a: 'La verificación por SMS se encuentra temporalmente deshabilitada. Puedes usar email, Google o Telegram para acceder a tu cuenta; Mercasto mostrará la opción telefónica cuando el proveedor esté disponible.',
       },
       {
         q: '¿Cómo cambio mi contraseña?',

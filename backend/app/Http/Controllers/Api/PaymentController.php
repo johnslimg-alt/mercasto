@@ -117,7 +117,7 @@ class PaymentController extends Controller
         try {
             $response = Http::timeout(15)
             ->withHeaders(['Authorization' => $clipToken])
-            ->post('https://api.payclip.com/v2/checkout', [
+            ->post((string) config('services.clip.checkout_url'), [
                 'amount' => $amount,
                 'currency' => 'MXN',
                 'purchase_description' => $description,
@@ -392,7 +392,7 @@ class PaymentController extends Controller
                     'Authorization' => 'Basic ' . base64_encode($apiKey . ':' . $apiSecret),
                     'Accept' => 'application/json',
                 ])
-                ->get('https://api.payclip.com/v2/checkout/' . rawurlencode($paymentRequestId));
+                ->get(rtrim((string) config('services.clip.verification_url'), '/') . '/' . rawurlencode($paymentRequestId));
         } catch (\Throwable $e) {
             Log::warning('Clip checkout verification request failed', [
                 'payment_id' => $payment->id,

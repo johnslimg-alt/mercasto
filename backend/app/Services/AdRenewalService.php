@@ -52,7 +52,7 @@ class AdRenewalService
         try {
             $response = Http::timeout(15)
                 ->withHeaders(['Authorization' => $clipToken])
-                ->post('https://api.payclip.com/v2/checkout', [
+                ->post((string) config('services.clip.checkout_url'), [
                     'amount' => $amount,
                     'currency' => 'MXN',
                     'purchase_description' => $description,

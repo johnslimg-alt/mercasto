@@ -7,6 +7,11 @@ cd "$ROOT_DIR"
 echo "== Mercasto static safety scans =="
 
 bash scripts/repository-sensitive-artifact-scan.sh
+bash scripts/e2e-fixture-safety-gate.sh
+bash scripts/isolated-launch-e2e-gate.sh
+bash scripts/publish-taxonomy-gate.sh
+bash scripts/edit-ad-contract-gate.sh
+bash scripts/paid-renewal-contract-gate.sh
 bash scripts/cache-policy-scan.sh
 bash scripts/session-config-scan.sh
 bash scripts/payment-retention-scan.sh

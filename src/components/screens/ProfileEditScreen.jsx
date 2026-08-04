@@ -35,7 +35,7 @@ function Toggle({ value, onChange, label }) {
   );
 }
 
-export default function ProfileEditScreen() {
+export default function ProfileEditScreen({ smsEnabled = false }) {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const { lang } = useUI();
@@ -307,21 +307,23 @@ export default function ProfileEditScreen() {
 
         <BusinessProfileEditor showToast={showToast} />
 
-        <div className={`${cardClass} space-y-4`}>
-          <h2 className={headingClass}><Phone size={16} className="text-lime-500" /> {t.phone_verification || 'Verificación de teléfono'}</h2>
-          {profile?.phone_verified ? (
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-xl px-4 py-3"><CheckCircle size={18} /><span className="text-sm font-medium">{profile.phone_number} — {t.verified || 'Verificado ✓'}</span></div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-xs text-slate-500">{t.phone_verify_desc || 'Verifica tu teléfono para ganar confianza con los compradores. Recibirás un código SMS.'}</p>
-              {!otpSent ? (
-                <div className="flex gap-2"><input type="tel" placeholder="+52 55 1234 5678" value={phoneInput} onChange={event => setPhoneInput(event.target.value)} className={`${inputClass} flex-1`} /><button type="button" onClick={handleSendOtp} disabled={phoneVerifying} className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap">{t.send_code || 'Enviar código'}</button></div>
-              ) : (
-                <div className="space-y-3"><input inputMode="numeric" maxLength={6} placeholder="123456" value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\D/g, ''))} className={`${inputClass} text-center text-2xl tracking-widest font-mono`} /><button type="button" onClick={handleVerifyOtp} disabled={phoneVerifying || otpInput.length !== 6} className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">{t.verify || 'Verificar'}</button></div>
-              )}
-            </div>
-          )}
-        </div>
+        {smsEnabled && (
+          <div className={`${cardClass} space-y-4`}>
+            <h2 className={headingClass}><Phone size={16} className="text-lime-500" /> {t.phone_verification || 'Verificación de teléfono'}</h2>
+            {profile?.phone_verified ? (
+              <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-xl px-4 py-3"><CheckCircle size={18} /><span className="text-sm font-medium">{profile.phone_number} — {t.verified || 'Verificado ✓'}</span></div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{t.phone_verify_desc || 'Verifica tu teléfono para ganar confianza con los compradores. Recibirás un código SMS.'}</p>
+                {!otpSent ? (
+                  <div className="flex gap-2"><input type="tel" placeholder="+52 55 1234 5678" value={phoneInput} onChange={event => setPhoneInput(event.target.value)} className={`${inputClass} flex-1`} /><button type="button" onClick={handleSendOtp} disabled={phoneVerifying} className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap">{t.send_code || 'Enviar código'}</button></div>
+                ) : (
+                  <div className="space-y-3"><input inputMode="numeric" maxLength={6} placeholder="123456" value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\D/g, ''))} className={`${inputClass} text-center text-2xl tracking-widest font-mono`} /><button type="button" onClick={handleVerifyOtp} disabled={phoneVerifying || otpInput.length !== 6} className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">{t.verify || 'Verificar'}</button></div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {!isOAuth && (
           <form onSubmit={handleSavePassword} className={`${cardClass} space-y-4`}>

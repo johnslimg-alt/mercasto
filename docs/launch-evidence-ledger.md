@@ -20,10 +20,10 @@ Public launch requires:
 | Production health | Green last verified | Ops | issue #262 or latest server output |
 | Direct 80/443 ownership | Guarded | Ops | issue #261, `smoke:port-ownership` |
 | Env readiness | Open | Ops | `smoke:env-readiness` output |
-| SMS readiness | Blocked | Ops/Product | issue #260 |
-| Auth/account E2E | Blocked | QA/Product | issue #263 |
-| Ads lifecycle E2E | Blocked | QA/Product | issue #264 |
-| Payments/webhooks | Blocked | Ops/Payments | issue #265 |
+| SMS readiness | Deferred safely | Ops/Product | issue #260, `smoke:sms-launch-mode` |
+| Auth/account E2E | Green locally | QA/Product | isolated launch E2E: 16/16 |
+| Ads lifecycle E2E | Green locally | QA/Product | isolated launch E2E: 12/12 |
+| Payments/webhooks | Green locally | Ops/Payments | isolated launch E2E: 8/8; backend PHPUnit coverage |
 | Category seed/fresh DB | Blocked | Backend/Data | issue #266 |
 | Restore/rollback/alerts | Blocked | Ops | issue #267 |
 | Security pass | Blocked | Security/Ops | issue #268 |
@@ -82,3 +82,19 @@ Public launch must stop if any of these are true:
 - security pass evidence is missing;
 - secrets or stack traces are found in public output;
 - frontend loses ownership of ports `80/443` under the current non-Traefik topology.
+
+## Fresh closure evidence — 2026-08-04
+
+- Current production candidate: `32c42051d621bbaffb940537638ea012f16f56a6`.
+- Production checks run `30872925522`: success.
+- Live server `verify_quick` job `91878442546`: success.
+- Strict legal readiness smoke: success.
+- Public security probes: success; sensitive paths denied and internal service ports closed.
+- Playwright public launch smoke: 40/40 passed across Desktop Chrome and Pixel 7.
+- Self-contained isolated launch E2E: 36/36 passed in one clean run (`auth` 16/16, `ads` 12/12, `payments` 8/8).
+- Backend PHPUnit suite: 59 tests / 306 assertions passed against disposable PostgreSQL/pgvector.
+- Frontend lint and production build: passed.
+- Static safety and local launch-contract gates: passed.
+- SMS launch mode: provider unavailable in production, user-facing SMS controls deferred, endpoints fail closed.
+
+Still required before GO: remaining security/edge evidence, operational legal owners/human review, strict production `verify:launch`, and 48-hour soft-launch monitoring.
