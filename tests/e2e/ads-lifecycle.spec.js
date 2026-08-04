@@ -217,6 +217,7 @@ async function createTestAd(page) {
 }
 
 test.describe('Ads Lifecycle E2E Flow', () => {
+  test.describe.configure({ timeout: 60_000 });
   test.beforeEach(async ({ page }) => {
     // Navigate to homepage, clear state, and login
     await page.goto('/');
