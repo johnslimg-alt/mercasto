@@ -90,7 +90,8 @@ async function fixtureAd(page, request, title) {
 }
 
 // Helper to create a test ad via the UI
-async function createTestAd(page) {
+async function createTestAd(page, options = {}) {
+  const { withVideo = false, useAiDescription = false } = options;
   const adTitle = uniqueAdTitle();
   // Navigate to the post screen (the route in SPA is /post)
   await page.goto('/post');
@@ -133,7 +134,10 @@ async function createTestAd(page) {
   await expect(titleInput).toBeVisible({ timeout: 5000 });
   await titleInput.fill(adTitle);
 
-  await formContainer.locator('textarea').first().fill('Vendo mi Toyota Corolla 2022 en excelente estado. Único dueño, todos los servicios de agencia.');
+  const descriptionInput = formContainer.locator('textarea').first();
+  if (!useAiDescription) {
+    await descriptionInput.fill('Vendo mi Toyota Corolla 2022 en excelente estado. Único dueño, todos los servicios de agencia.');
+  }
   await formContainer.locator('input[type="number"]').first().fill('320000');
 
   // Fill dynamic attributes (Brand, Model, Year, Kilometers, Fuel) using robust locators matching either English or Spanish labels
@@ -159,8 +163,24 @@ async function createTestAd(page) {
   const fuelSelect = formContainer.locator('div:has(> label:has-text("Combustible")), div:has(> label:has-text("Fuel"))').locator('select').first();
   await fuelSelect.selectOption({ label: 'Gasolina' });
 
-  // Upload mock photo file
+  if (useAiDescription) {
+    const aiResponsePromise = page.waitForResponse((response) => (
+      response.url().endsWith('/api/ads/generate-description') && response.request().method() === 'POST'
+    ));
+    await formContainer.getByRole('button', { name: /Generar con IA|Generate with AI/i }).click();
+    const aiResponse = await aiResponsePromise;
+    expect(aiResponse.status()).toBe(200);
+    await expect(descriptionInput).toHaveValue(/fallback local E2E/i, { timeout: 10000 });
+  }
+
+  // Upload deterministic media fixtures.
   await formContainer.locator('input[type="file"]').first().setInputFiles(path.join(process.cwd(), 'public/icon-192x192.png'));
+  if (withVideo) {
+    await formContainer.locator('input[type="file"][accept*="video"]').setInputFiles(
+      path.join(process.cwd(), 'tests/fixtures/e2e-sample.mp4')
+    );
+    await expect(formContainer).toContainText('e2e-sample.mp4');
+  }
 
   // Go to step 3
   const nextBtn2 = page.locator('button').filter({ hasText: /Siguiente/i }).filter({ visible: true }).first();
@@ -325,6 +345,38 @@ test.describe('Ads Lifecycle E2E Flow', () => {
     await page.getByTestId(`republish-ad-${expiredAd.id}`).click();
     await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:18001\/checkout\/local-checkout-/, { timeout: 15000 });
     await expect(page.getByRole('heading', { name: 'Clip local checkout' })).toBeVisible();
+  });
+
+  test('should upload and process an MP4 listing video', async ({ page, request }) => {
+    const { adId } = await createTestAd(page, { withVideo: true });
+    await expect.poll(async () => {
+      const ad = (await authenticatedAds(page, request)).find((item) => item.id === adId);
+      return ad ? { video_url: ad.video_url, status: ad.video_processing_status } : null;
+    }, { timeout: 15000 }).toMatchObject({
+      video_url: expect.stringMatching(/^videos\//),
+      status: 'completed',
+    });
+  });
+
+  test('should generate the description through the isolated Ollama fallback', async ({ page, request }) => {
+    const { adId } = await createTestAd(page, { useAiDescription: true });
+    await expect.poll(async () => {
+      const ad = (await authenticatedAds(page, request)).find((item) => item.id === adId);
+      return ad?.description || '';
+    }).toMatch(/fallback local E2E/i);
+  });
+
+  test('should render a public listing detail without debug or secret text', async ({ page, request }) => {
+    const response = await request.get(`${API_BASE_URL}/ads?search=${encodeURIComponent('Mercasto E2E Active Listing')}`);
+    expect(response.ok()).toBeTruthy();
+    const payload = await response.json();
+    const activeAd = (payload.data || []).find((item) => item.title === 'Mercasto E2E Active Listing');
+    expect(activeAd).toBeTruthy();
+
+    await page.goto(`/?ad=${activeAd.id}`);
+    await expect(page.getByRole('heading', { name: activeAd.title }).first()).toBeVisible({ timeout: 10000 });
+    const body = await page.locator('body').textContent();
+    expect(body).not.toMatch(/Whoops|Stack trace|SQLSTATE|APP_KEY|DB_PASSWORD|Exception|Traceback/i);
   });
 
   test('should perform full ad deletion sequence', async ({ page, request }) => {

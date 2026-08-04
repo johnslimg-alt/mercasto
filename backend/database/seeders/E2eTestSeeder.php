@@ -6,6 +6,7 @@ use App\Models\Ad;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class E2eTestSeeder extends Seeder
 {
@@ -23,6 +24,45 @@ class E2eTestSeeder extends Seeder
 
         $adminEmail = env('E2E_ADMIN_EMAIL', 'admin_e2e@mercasto.com');
         $adminPassword = env('E2E_ADMIN_PASSWORD', 'E2eTestPass99!');
+
+        $resetFixtures = [
+            ['email' => env('E2E_RESET_EMAIL_DESKTOP', 'reset_desktop_e2e@mercasto.com'), 'token' => env('E2E_RESET_TOKEN_DESKTOP', 'reset-token-desktop-e2e')],
+            ['email' => env('E2E_RESET_EMAIL_MOBILE', 'reset_mobile_e2e@mercasto.com'), 'token' => env('E2E_RESET_TOKEN_MOBILE', 'reset-token-mobile-e2e')],
+        ];
+
+        foreach ($resetFixtures as $fixture) {
+            $resetUser = User::updateOrCreate(
+                ['email' => $fixture['email']],
+                ['name' => 'Mercasto Reset E2E', 'password' => bcrypt('E2eOldPass99!'), 'role' => 'individual', 'is_verified' => true, 'ip_address' => '127.0.0.1']
+            );
+            $resetUser->tokens()->delete();
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $fixture['email']],
+                ['token' => Hash::make($fixture['token']), 'created_at' => now()]
+            );
+        }
+
+        $twoFactorFixtures = [
+            ['email' => env('E2E_2FA_EMAIL_DESKTOP', 'twofactor_desktop_e2e@mercasto.com'), 'password' => env('E2E_2FA_PASSWORD_DESKTOP', 'E2eTestPass99!'), 'recovery_code' => env('E2E_2FA_RECOVERY_DESKTOP', 'desktop-recovery-e2e')],
+            ['email' => env('E2E_2FA_EMAIL_MOBILE', 'twofactor_mobile_e2e@mercasto.com'), 'password' => env('E2E_2FA_PASSWORD_MOBILE', 'E2eTestPass99!'), 'recovery_code' => env('E2E_2FA_RECOVERY_MOBILE', 'mobile-recovery-e2e')],
+        ];
+
+        foreach ($twoFactorFixtures as $fixture) {
+            $twoFactorUser = User::updateOrCreate(
+                ['email' => $fixture['email']],
+                [
+                    'name' => 'Mercasto 2FA E2E',
+                    'password' => bcrypt($fixture['password']),
+                    'role' => 'individual',
+                    'is_verified' => true,
+                    'ip_address' => '127.0.0.1',
+                    'two_factor_secret' => 'JBSWY3DPEHPK3PXP',
+                    'two_factor_recovery_codes' => json_encode([$fixture['recovery_code']]),
+                    'two_factor_confirmed_at' => now(),
+                ]
+            );
+            $twoFactorUser->tokens()->delete();
+        }
 
         $seller = User::updateOrCreate(
             ['email' => $sellerEmail],
