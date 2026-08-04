@@ -401,6 +401,7 @@ const VerificarEmailScreen = React.lazy(() => import('./components/screens/Verif
 const AcercaDeScreen = React.lazy(() => import('./components/screens/AcercaDeScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const StoresScreen = React.lazy(() => import('./components/screens/StoresScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el directorio de tiendas.</div> })));
 const NotificationsScreen = React.lazy(() => import('./components/screens/NotificationsScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar las notificaciones.</div> })));
+const ChatScreen = React.lazy(() => import('./components/screens/ChatScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar los mensajes.</div> })));
 const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const ReferralScreen = React.lazy(() => import('./components/screens/ReferralScreen').catch(() => ({ default: () => <div className='flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500'>No pudimos cargar esta página.</div> })));
@@ -3802,6 +3803,9 @@ function App() {
                 <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowTabBarMenu(false); navigate('/profile'); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                   <Heart size={16} className="text-[#84CC16]" /> Favoritos
                 </button>
+                <button onClick={() => { setShowTabBarMenu(false); navigate('/mensajes'); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
+                  <MessageCircle size={16} className="text-[#84CC16]" /> {t.messages || 'Mensajes'}
+                </button>
                 <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                   <Settings size={16} className="text-[#84CC16]" /> Ajustes de Perfil
                 </button>
@@ -3935,6 +3939,7 @@ function App() {
                     <div className="header-popover profile-menu-popover absolute top-full right-0 mt-2 w-48 rounded-2xl shadow-xl border p-2 z-50">
                       <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
                       <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); navigate('/profile'); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
+                      <button onClick={() => { setShowProfileMenu(false); navigate('/mensajes'); }} className="profile-menu-item"><MessageCircle size={15} /> {t.messages || 'Mensajes'}</button>
                       <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
                       <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
                     </div>
@@ -3982,6 +3987,9 @@ function App() {
                 </select>
               </div>
               <div className="relative hidden sm:block">
+              <button type="button" onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl" aria-label={t.messages || 'Mensajes'}>
+                <MessageCircle className="w-[22px] h-[22px]" />
+              </button>
               <button type="button" onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications || 'Notificaciones'}>
 
                   <Bell className="w-[22px] h-[22px]" />
@@ -4073,6 +4081,7 @@ function App() {
                 <div className="header-popover profile-menu-popover absolute top-full right-0 mt-2 w-52 rounded-2xl shadow-xl border p-2 z-50">
                   <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
                   <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/mensajes'); }} className="profile-menu-item"><MessageCircle size={15} /> {t.messages || 'Mensajes'}</button>
                   <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
                   <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
                 </div>
@@ -4176,6 +4185,7 @@ function App() {
               <Route path="/publicar-gratis" element={<Navigate to="/vendedores" replace />} />
               <Route path="/post" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderPostScreen()}</RequireAuth>} />
               <Route path="/notificaciones" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotificationsScreen user={user} /></React.Suspense></RequireAuth>} />
+              <Route path="/mensajes" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ChatScreen user={user} lang={lang} t={t} /></React.Suspense></RequireAuth>} />
               <Route path="/profile" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderUserDashboard()}</RequireAuth>} />
               <Route path="/admin" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} admin>{renderAdminScreen()}</RequireAuth>} />
               <Route path="/terms" element={<StaticPages currentTab="terms" />} />

@@ -15,6 +15,7 @@ bash scripts/media-upload-validation-scan.sh
 bash scripts/xml-upload-security-gate.sh
 bash scripts/search-alert-flow-gate.sh
 bash scripts/chat-api-security-gate.sh
+bash scripts/chat-ui-flow-gate.sh
 bash scripts/listing-lifecycle-gate.sh
 bash scripts/location-search-gate.sh
 bash scripts/auth-account-gate.sh
