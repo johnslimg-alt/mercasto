@@ -93,4 +93,6 @@ if [[ "$(uname)" != "Darwin" && "$(sysctl -n vm.overcommit_memory 2>/dev/null ||
   exit 1
 fi
 
+bash scripts/origin-edge-security-smoke.sh
+
 echo "production smoke OK"

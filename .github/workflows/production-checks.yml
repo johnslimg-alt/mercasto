@@ -30,6 +30,9 @@ jobs:
       - name: Check shell scripts
         run: npm run check:scripts
 
+      - name: Check static safety contracts
+        run: npm run check:static-safety
+
       - name: Check payment retention policy
         run: npm run check:payment-retention
 

@@ -57,7 +57,9 @@
     "smoke:sms-launch-mode": "SMS_LAUNCH_MODE=disabled bash scripts/sms-launch-mode-smoke.sh",
     "e2e:launch:isolated": "bash scripts/run-isolated-launch-e2e.sh",
     "check:csrf-session": "bash scripts/csrf-session-contract-gate.sh",
-    "smoke:session-security": "bash scripts/production-session-security-smoke.sh"
+    "smoke:session-security": "bash scripts/production-session-security-smoke.sh",
+    "check:origin-edge": "bash scripts/origin-edge-security-gate.sh",
+    "smoke:origin-edge": "bash scripts/origin-edge-security-smoke.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
