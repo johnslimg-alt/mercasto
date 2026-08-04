@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\AdRenewalService;
+use App\Support\PaymentPayloadSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,7 +84,7 @@ class AdRenewalWebhookController extends Controller
 
         DB::table('payments')->where('id', $payment->id)->update([
             'clip_payment_request_id' => $verificationId,
-            'webhook_payload' => json_encode($payload),
+            'webhook_payload' => json_encode(PaymentPayloadSanitizer::webhook($payload, 'verified_ad_renewal')),
             'updated_at' => now(),
         ]);
 
@@ -119,7 +120,7 @@ class AdRenewalWebhookController extends Controller
         } catch (\Throwable $error) {
             Log::warning('Clip renewal verification request failed', [
                 'payment_id' => $payment->id,
-                'error' => $error->getMessage(),
+                'exception' => $error::class,
             ]);
 
             return ['ok' => false, 'reason' => 'verification_unavailable', 'http_status' => 503];

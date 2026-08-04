@@ -68,6 +68,12 @@ class PaidAdRenewalTest extends TestCase
             'https://api.payclip.com/v2/checkout' => Http::response([
                 'payment_request_id' => 'renewal-request-1',
                 'payment_request_url' => 'https://pay.example.test/renewal-request-1',
+                'status' => 'ACTIVE',
+                'object_type' => 'payment_link',
+                'payer' => ['email' => 'private@example.test'],
+                'metadata' => ['user_id' => 'private-user'],
+                'last4' => '4242',
+                'transaction_id' => 'private-transaction',
             ]),
         ]);
 
@@ -93,6 +99,18 @@ class PaidAdRenewalTest extends TestCase
             'product_code' => 'ad_renewal_7_days',
             'status' => 'pending',
         ]);
+
+        $storedAudit = json_decode((string) DB::table('payments')
+            ->where('ad_id', $ad->id)
+            ->where('product_code', 'ad_renewal_7_days')
+            ->value('clip_checkout_response'), true);
+        $this->assertSame([
+            'schema_version', 'provider', 'event', 'http_status',
+            'provider_status', 'object_type', 'recorded_at',
+        ], array_keys($storedAudit));
+        $this->assertStringNotContainsString('private@example.test', json_encode($storedAudit));
+        $this->assertStringNotContainsString('4242', json_encode($storedAudit));
+        $this->assertStringNotContainsString('private-transaction', json_encode($storedAudit));
 
         Http::assertSent(function ($request) use ($ad) {
             return $request->url() === 'https://api.payclip.com/v2/checkout'
