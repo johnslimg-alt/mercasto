@@ -18,7 +18,9 @@ Production health:
 Strict launch gates:
   REQUIRE_ENV_READY=1 npm run smoke:env-readiness
   REQUIRE_CATEGORY_DATA_READY=1 npm run smoke:category-data
-  REQUIRE_SMS_READY=1 npm run smoke:sms-readiness
+  npm run smoke:sms-launch-mode
+  REQUIRE_LEGAL_READY=1 npm run smoke:legal-readiness
+  npm run smoke:backup-freshness
   npm run verify:launch
 
 Browser smoke:
@@ -36,7 +38,6 @@ EOF
 
 echo "\n== Launch blocker map =="
 cat <<'EOF'
-#260 SMS readiness
 #261 direct nginx 80/443 architecture decision
 #262 production sync after autonomous commits
 #263 auth/account E2E
@@ -51,19 +52,25 @@ cat <<'EOF'
 #272 master launch go/no-go tracker
 EOF
 
+echo \"\n== Deferred product features ==\"
+cat <<'EOF'
+- SMS/phone OTP is not planned. Public phone/SMS UI must remain disabled.
+EOF
+
 echo "\n== Stop conditions =="
 cat <<'EOF'
 - UP is not 200.
 - VERIFY_EXIT is not 0.
 - verify:launch fails.
-- SMS readiness is not ready.
+- Public phone/SMS functionality becomes enabled; SMS/OTP is an intentionally excluded product feature.
 - Payment webhook evidence is missing.
 - Auth/account E2E evidence is missing.
 - Backup restore/rollback evidence is missing.
-- Security pass evidence is missing.
+- Security evidence issue #287 is not completed.
 - Legal/business readiness is missing.
 - Secrets or stack traces are found in public output.
 - Frontend loses ownership of ports 80/443 under current non-Traefik topology.
+- Broad paid traffic starts before the managed CDN/WAF decision is implemented.
 EOF
 
 echo "\nlaunch status summary OK"

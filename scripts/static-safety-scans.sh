@@ -8,6 +8,7 @@ echo "== Mercasto static safety scans =="
 
 bash scripts/repository-sensitive-artifact-scan.sh
 bash scripts/security-audit-gate.sh
+bash scripts/launch-readiness-contract-gate.sh
 bash scripts/e2e-fixture-safety-gate.sh
 bash scripts/isolated-launch-e2e-gate.sh
 bash scripts/publish-taxonomy-gate.sh

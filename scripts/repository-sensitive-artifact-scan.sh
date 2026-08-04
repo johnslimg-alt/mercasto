@@ -9,14 +9,17 @@ fail=0
 tracked_backups="$(git ls-files | grep -E '\.(dump|sql|bak|old|orig|backup|save|swp|pem|key|p12|pfx)$|~$' || true)"
 workspace_backups="$(find . \
   -path './.git' -prune -o \
+  -path './.claude' -prune -o \
   -path './node_modules' -prune -o \
   -path './backend/vendor' -prune -o \
   -path './backend/storage' -prune -o \
+  -path './postgres-data' -prune -o \
+  -path './postgres-backups' -prune -o \
   -type f \
   \( -name '*.dump' -o -name '*.sql' -o -name '*.bak' -o -name '*.old' \
      -o -name '*.orig' -o -name '*.backup' -o -name '*.save' -o -name '*.swp' \
      -o -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' -o -name '*~' \) \
-  -print | sed 's#^./##' || true)"
+  -print | sed 's#^./##')"
 blocked_artifacts="$(printf '%s\n%s\n' "$tracked_backups" "$workspace_backups" | sed '/^$/d' | sort -u)"
 
 if [[ -n "$blocked_artifacts" ]]; then
