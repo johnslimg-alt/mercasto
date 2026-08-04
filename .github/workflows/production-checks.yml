@@ -70,7 +70,10 @@ jobs:
 
   seo-aeo-smoke:
     name: SEO/AEO production smoke
-    runs-on: ubuntu-latest
+    # Required content verification runs on the production runner because hosted
+    # Azure runners intermittently time out before their requests reach the VPS.
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 10
     steps:
       - name: Check public search signals
         run: |
