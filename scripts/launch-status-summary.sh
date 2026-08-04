@@ -38,7 +38,7 @@ EOF
 
 echo "\n== Launch blocker map =="
 cat <<'EOF'
-#260 SMS readiness
+#260 SMS provider readiness before enabling phone OTP
 #261 direct nginx 80/443 architecture decision
 #262 production sync after autonomous commits
 #263 auth/account E2E
@@ -46,10 +46,10 @@ cat <<'EOF'
 #265 payments and webhook recovery
 #266 category attributes seed and fresh DB proof
 #267 ops restore rollback and alerts
-#268 explicit SMS launch mode and phone UI
+#268 security pass evidence
 #269 legal and business readiness
-#270 event-driven SEO and AEO pipeline
-#271 marketing identity and calendar
+#270 SEO and AEO readiness
+#271 Lighthouse and performance baseline
 #272 master launch go/no-go tracker
 EOF
 

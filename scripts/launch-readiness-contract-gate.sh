@@ -23,6 +23,10 @@ fi
 grep -qF 'REQUIRE_LEGAL_READY=1 npm run smoke:legal-readiness' "$STATUS"
 grep -qF 'npm run smoke:backup-freshness' "$STATUS"
 grep -qF 'Broad paid traffic starts before the managed CDN/WAF decision is implemented.' "$STATUS"
+grep -qF '#260 SMS provider readiness before enabling phone OTP' "$STATUS"
+grep -qF '#268 security pass evidence' "$STATUS"
+grep -qF '#270 SEO and AEO readiness' "$STATUS"
+grep -qF '#271 Lighthouse and performance baseline' "$STATUS"
 
 grep -qF 'bash scripts/public-e2e-ci.sh' "$PACKAGE"
 grep -qF 'npm ci --no-audit --no-fund' "$E2E"
