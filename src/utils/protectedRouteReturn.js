@@ -1,4 +1,5 @@
 import { trackEvent } from './analytics';
+import { protectedIntentKind } from './protectedIntent';
 
 const INTENT_STORAGE_KEY = 'mercasto.protected_route_intent.v1';
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -28,6 +29,7 @@ function destinationFrom(url) {
 
     return {
       pathname: destination.pathname,
+      search: destination.search,
       path: `${destination.pathname}${destination.search}${destination.hash}`,
     };
   } catch {
@@ -35,8 +37,10 @@ function destinationFrom(url) {
   }
 }
 
-function isProtectedPostRoute(pathname) {
-  return /^\/post\/?$/.test(pathname || '');
+function protectedIntentFor(destination) {
+  if (!destination) return null;
+  const kind = protectedIntentKind(destination.pathname, destination.search);
+  return kind ? { ...destination, kind } : null;
 }
 
 function trackSellerFunnel(eventName, params = {}) {
@@ -49,6 +53,53 @@ function trackSellerFunnel(eventName, params = {}) {
   trackEvent(eventName, params);
 }
 
+function trackIntentCaptured(intent, authenticated) {
+  const params = {
+    intent_path: intent.path,
+    intent_type: intent.kind,
+    authentication_state: authenticated ? 'authenticated' : 'anonymous',
+  };
+  if (intent.kind === 'seller_post') {
+    trackSellerFunnel('seller_post_intent', params);
+  } else if (intent.kind === 'contact_message') {
+    trackSellerFunnel('contact_auth_intent', params);
+  } else {
+    trackSellerFunnel('messages_auth_intent', params);
+  }
+}
+
+function trackIntentReturned(intent) {
+  const params = {
+    intent_path: intent.path,
+    intent_type: intent.kind,
+    intent_age_ms: Math.max(0, Date.now() - intent.capturedAt),
+    registration_flag_present: Boolean(localStorage.getItem(REGISTRATION_FLAG_KEY)),
+  };
+  if (intent.kind === 'seller_post') {
+    trackSellerFunnel('seller_post_returned_after_auth', params);
+  } else if (intent.kind === 'contact_message') {
+    trackSellerFunnel('contact_returned_after_auth', params);
+  } else {
+    trackSellerFunnel('messages_returned_after_auth', params);
+  }
+}
+
+function trackIntentAbandoned(intent, destinationPath) {
+  const params = {
+    intent_path: intent.path,
+    intent_type: intent.kind,
+    destination_path: destinationPath,
+    intent_age_ms: Math.max(0, Date.now() - intent.capturedAt),
+  };
+  if (intent.kind === 'seller_post') {
+    trackSellerFunnel('seller_post_intent_abandoned', params);
+  } else if (intent.kind === 'contact_message') {
+    trackSellerFunnel('contact_auth_intent_abandoned', params);
+  } else {
+    trackSellerFunnel('messages_auth_intent_abandoned', params);
+  }
+}
+
 function clearIntent() {
   try {
     sessionStorage.removeItem(INTENT_STORAGE_KEY);
@@ -58,10 +109,12 @@ function clearIntent() {
 }
 
 function writeIntent(destination, state) {
-  if (!destination || !isProtectedPostRoute(destination.pathname)) return;
+  const protectedDestination = protectedIntentFor(destination);
+  if (!protectedDestination) return;
 
   const intent = {
-    path: destination.path,
+    kind: protectedDestination.kind,
+    path: protectedDestination.path,
     state: state ?? null,
     capturedAt: Date.now(),
   };
@@ -82,11 +135,7 @@ function writeIntent(destination, state) {
   const authenticated = Boolean(
     localStorage.getItem(AUTH_TOKEN_KEY) && localStorage.getItem(USER_STORAGE_KEY),
   );
-  trackSellerFunnel('seller_post_intent', {
-    intent_path: destination.path,
-    authentication_state: authenticated ? 'authenticated' : 'anonymous',
-  });
-
+  trackIntentCaptured(intent, authenticated);
   startAuthWatcher();
 }
 
@@ -97,7 +146,8 @@ function readIntent() {
 
     const intent = JSON.parse(raw);
     const destination = destinationFrom(intent?.path);
-    if (!destination || !isProtectedPostRoute(destination.pathname)) {
+    const protectedDestination = protectedIntentFor(destination);
+    if (!protectedDestination) {
       clearIntent();
       return null;
     }
@@ -108,7 +158,8 @@ function readIntent() {
     }
 
     return {
-      path: destination.path,
+      kind: protectedDestination.kind,
+      path: protectedDestination.path,
       state: intent.state ?? null,
       capturedAt: intent.capturedAt,
     };
@@ -132,9 +183,9 @@ function installRegistrationOnboardingBypass() {
       // Fall through to the native implementation.
     }
 
-    // The generic onboarding is useful for organic registrations, but it
-    // blocks the paid seller flow after the visitor has explicitly chosen to
-    // publish. Suppress only that one flag while a valid /post intent exists.
+    // Generic onboarding is useful for organic registrations, but it blocks
+    // an explicit publish or contact conversion. Suppress only while a valid
+    // protected journey intent is waiting to be restored.
     if (isLocalStorage && key === REGISTRATION_FLAG_KEY && readIntent()) {
       return undefined;
     }
@@ -164,6 +215,12 @@ function dispatchRouteChange(state) {
   }
 }
 
+function finishIntent(intent) {
+  trackIntentReturned(intent);
+  clearIntent();
+  stopAuthWatcher();
+}
+
 function restoreIntentWhenReady() {
   const intent = readIntent();
   if (!intent) {
@@ -179,10 +236,7 @@ function restoreIntentWhenReady() {
   // A newly requested protected route is briefly current before RequireAuth
   // replaces it with /. Keep the intent until authentication actually exists.
   if (current?.path === intent.path) {
-    if (hasAuthenticatedSession) {
-      clearIntent();
-      stopAuthWatcher();
-    }
+    if (hasAuthenticatedSession) finishIntent(intent);
     return;
   }
 
@@ -199,13 +253,7 @@ function restoreIntentWhenReady() {
   if (Date.now() - authenticatedAt < AUTH_SETTLE_MS) return;
 
   originalReplaceState.call(window.history, intent.state ?? {}, '', intent.path);
-  trackSellerFunnel('seller_post_returned_after_auth', {
-    intent_path: intent.path,
-    intent_age_ms: Math.max(0, Date.now() - intent.capturedAt),
-    registration_flag_present: Boolean(localStorage.getItem(REGISTRATION_FLAG_KEY)),
-  });
-  clearIntent();
-  stopAuthWatcher();
+  finishIntent(intent);
   dispatchRouteChange(intent.state ?? null);
 }
 
@@ -219,11 +267,7 @@ function abandonIntent(destinationPath) {
   const intent = readIntent();
   if (!intent) return;
 
-  trackSellerFunnel('seller_post_intent_abandoned', {
-    intent_path: intent.path,
-    destination_path: destinationPath,
-    intent_age_ms: Math.max(0, Date.now() - intent.capturedAt),
-  });
+  trackIntentAbandoned(intent, destinationPath);
   clearIntent();
   stopAuthWatcher();
 }
@@ -232,12 +276,12 @@ function handleNavigation(url, state) {
   const destination = destinationFrom(url);
   if (!destination) return;
 
-  if (isProtectedPostRoute(destination.pathname)) {
+  if (protectedIntentFor(destination)) {
     writeIntent(destination, state);
     return;
   }
 
-  // RequireAuth currently replaces /post with the plain home route while the
+  // RequireAuth replaces protected routes with the plain home route while the
   // authentication modal is open. Keep the intent for that one transition,
   // but discard it once the visitor deliberately navigates elsewhere.
   if (destination.path !== '/' && readIntent()) {
@@ -269,7 +313,7 @@ export function installProtectedRouteReturn() {
     const destination = destinationFrom(null);
     if (!destination) return;
 
-    if (isProtectedPostRoute(destination.pathname)) {
+    if (protectedIntentFor(destination)) {
       writeIntent(destination, window.history.state);
     } else if (destination.path !== '/' && readIntent()) {
       abandonIntent(destination.path);
@@ -277,7 +321,7 @@ export function installProtectedRouteReturn() {
   });
 
   const current = destinationFrom(null);
-  if (current && isProtectedPostRoute(current.pathname)) {
+  if (protectedIntentFor(current)) {
     writeIntent(current, window.history.state);
   } else if (readIntent()) {
     startAuthWatcher();

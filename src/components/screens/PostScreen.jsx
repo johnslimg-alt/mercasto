@@ -12,6 +12,8 @@ import { filterConfig, autoModelsByBrand } from '../../constants/filterConfig';
 import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
 import MapV3 from '../common/MapV3';
 import SortablePhotoGrid from '../SortablePhotoGrid';
+import { events } from '../../utils/analytics';
+import { isPublishFormEmpty, readPublishDraft, writePublishDraft } from '../../utils/publishDraft';
 
 // Mirrors App.jsx's getSubcategoryOptions: some categories (currently only "turismo") store a
 // stable slug as the subcategory value (matching real listing data + the search filter dropdown),
@@ -127,15 +129,23 @@ export default function PostScreen({
   user,
   setUser,
 }) {
-  const [step, setStep] = useState(1);
   const location = useLocation();
+  const preselectedCategory = location.state?.preselectedCategory || '';
+  const [recoveredDraft] = useState(() => (
+    !editingAd && !preselectedCategory ? readPublishDraft() : null
+  ));
+  const initialDraftForm = recoveredDraft?.form || form;
+  const initialDraftContact = recoveredDraft?.contact || {};
+  const [step, setStep] = useState(() => recoveredDraft?.step || 1);
+  const [draftHydrated, setDraftHydrated] = useState(() => !recoveredDraft);
+  const [draftRecovered, setDraftRecovered] = useState(false);
 
   useEffect(() => {
-    const preselected = location.state?.preselectedCategory;
+    const preselected = preselectedCategory;
     if (preselected) {
       handleParentCategorySelect(preselected);
     }
-  }, [location.state]);
+  }, [preselectedCategory]);
 
   const [apiAttributes, setApiAttributes] = useState(null);
   const [attributesLoading, setAttributesLoading] = useState(false);
@@ -154,7 +164,7 @@ export default function PostScreen({
       mascotas: 'productos',
       formacion: 'productos',
     };
-    return parentMap[form.category] || '';
+    return parentMap[initialDraftForm.category] || '';
   });
 
   const handleParentCategorySelect = (slug) => {
@@ -173,16 +183,58 @@ export default function PostScreen({
 
   /* ---------- contact step state ---------- */
   const [contactMethods, setContactMethods] = useState(() => {
+    if (initialDraftContact.contactMethods?.length) return initialDraftContact.contactMethods;
     const methods = [];
     if (user?.phone_number) methods.push('phone');
     if (user?.whatsapp) methods.push('whatsapp');
     if (user?.telegram_username) methods.push('telegram');
     return methods.length ? methods : ['whatsapp'];
   });
-  const [waMode, setWaMode] = useState('phone');
-  const [phoneValue, setPhoneValue] = useState(user?.phone_number || user?.whatsapp || '');
-  const [waUsername, setWaUsername] = useState('');
-  const [telegramValue, setTelegramValue] = useState(user?.telegram_username || '');
+  const [waMode, setWaMode] = useState(initialDraftContact.waMode || 'phone');
+  const [phoneValue, setPhoneValue] = useState(
+    initialDraftContact.phoneValue || user?.phone_number || user?.whatsapp || '',
+  );
+  const [waUsername, setWaUsername] = useState(initialDraftContact.waUsername || '');
+  const [telegramValue, setTelegramValue] = useState(
+    initialDraftContact.telegramValue || user?.telegram_username || '',
+  );
+
+  useEffect(() => {
+    if (editingAd || !recoveredDraft) return;
+    setForm((current) => (isPublishFormEmpty(current) ? {
+      ...current,
+      ...recoveredDraft.form,
+      attributes: { ...(recoveredDraft.form.attributes || {}) },
+    } : current));
+    setDraftRecovered(true);
+    setDraftHydrated(true);
+    events.publishStep('draft_restored', recoveredDraft.form.category || '', {
+      source: 'session_draft',
+      draft_age_ms: Math.max(0, Date.now() - recoveredDraft.savedAt),
+    });
+  }, [editingAd, recoveredDraft, setForm]);
+
+  useEffect(() => {
+    if (editingAd || !draftHydrated) return undefined;
+    const timer = window.setTimeout(() => {
+      writePublishDraft({
+        step,
+        form,
+        contact: { contactMethods, waMode, phoneValue, waUsername, telegramValue },
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [
+    contactMethods,
+    draftHydrated,
+    editingAd,
+    form,
+    phoneValue,
+    step,
+    telegramValue,
+    waMode,
+    waUsername,
+  ]);
 
   // Reset city mode when state changes
   useEffect(() => {
@@ -255,6 +307,7 @@ export default function PostScreen({
       if (!form.category) { alert('Selecciona una categoría.'); return; }
       const subs = getPostSubcategoryOptions(form.category);
       if (subs.length > 0 && !form.subcategory) { alert('Selecciona una subcategoría.'); return; }
+      events.publishStep('details', form.category || '', { source: 'publish_flow' });
       setStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (step === 2) {
@@ -278,6 +331,7 @@ export default function PostScreen({
       });
       if (Object.keys(errs).length > 0) { setErrors(errs); return; }
       setErrors({});
+      events.publishStep('contact', form.category || '', { source: 'publish_flow' });
       setStep(3);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -288,7 +342,9 @@ export default function PostScreen({
   const mapQuery = form.location || form.state || 'México';
 
   const phoneDigitsOk = (phoneValue || '').replace(/\D/g, '').length === 10;
-  const step3Valid = !!form.state && !!form.location && contactMethods.length > 0
+  const hasCoordinates = form.latitude !== '' && form.longitude !== ''
+    && Number.isFinite(Number(form.latitude)) && Number.isFinite(Number(form.longitude));
+  const step3Valid = !!form.state && !!form.location && hasCoordinates && contactMethods.length > 0
     && (!contactMethods.includes('phone') || phoneDigitsOk)
     && (!contactMethods.includes('whatsapp') || (waMode === 'username' ? !!waUsername.trim() : phoneDigitsOk))
     && (!contactMethods.includes('telegram') || !!telegramValue.trim());
@@ -416,6 +472,15 @@ export default function PostScreen({
         </h2>
 
         <Stepper step={step} />
+
+        {draftRecovered && (
+          <div
+            className="mb-5 rounded-xl border border-lime-300 bg-lime-50 px-4 py-3 text-[13px] font-semibold text-lime-900 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-lime-200"
+            data-testid="publish-draft-restored"
+          >
+            Recuperamos tu borrador. Las fotos y el video deben seleccionarse de nuevo.
+          </div>
+        )}
 
         {/* KEY FIX: noValidate disables browser HTML5 validation */}
         <form onSubmit={handleFinalSubmit} noValidate className="space-y-6">
@@ -795,6 +860,11 @@ export default function PostScreen({
                   </div>
 
                   <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-2">{t.tap_map_hint || 'Toca el mapa para marcar la ubicación exacta de tu anuncio.'}</p>
+                  {!hasCoordinates && (
+                    <p className="mb-2 text-[12px] font-semibold text-amber-700 dark:text-amber-300" data-testid="publish-location-required">
+                      Marca un punto en el mapa o usa tu GPS para habilitar la publicación.
+                    </p>
+                  )}
                   <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
                     {isMapUpdating && <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/50"><Loader2 className="w-8 h-8 text-[#84CC16] animate-spin" /></div>}
                     <MapV3

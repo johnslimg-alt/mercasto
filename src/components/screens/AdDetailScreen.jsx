@@ -401,20 +401,37 @@ export default function AdDetailScreen({
   ];
   const ratingStats = getAdRatingStats(ad);
 
-  const handleInternalMessage = () => {
+  const internalMessagePath = () => {
     const sellerId = Number(ad.user_id || ad.user?.id || 0);
-    if (!sellerId) return;
-    events.messageStarted({
-      ad_id: ad.id,
-      seller_id: sellerId,
-      channel: 'internal',
-    });
+    if (!sellerId) return null;
     const params = new URLSearchParams({
       ad_id: String(ad.id),
       seller_id: String(sellerId),
       title: localizedText(ad.title, lang) || '',
     });
-    navigate(`/mensajes?ad_id=${params.get('ad_id')}&seller_id=${params.get('seller_id')}&title=${encodeURIComponent(params.get('title') || '')}`);
+    return `/mensajes?${params.toString()}`;
+  };
+
+  const handleInternalMessage = () => {
+    const sellerId = Number(ad.user_id || ad.user?.id || 0);
+    const messagePath = internalMessagePath();
+    if (!sellerId || !messagePath) return;
+
+    if (!currentUser?.id) {
+      events.contactOpened('internal', ad.id, ad.category, {
+        source: 'listing_contact_auth',
+        authentication_state: 'anonymous',
+      });
+      navigate(messagePath);
+      return;
+    }
+
+    events.messageStarted({
+      ad_id: ad.id,
+      seller_id: sellerId,
+      channel: 'internal',
+    });
+    navigate(messagePath);
   };
 
   const handleShowQR = () => {
@@ -655,13 +672,16 @@ export default function AdDetailScreen({
     {(!currentUser || !currentUser.id) ? (
       <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
         <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
-          {t.register_to_contact || 'Regístrate para ver los datos de contacto del vendedor.'}
+          {t.login_to_message_hint || 'Inicia sesión para escribir al vendedor sin perder este anuncio.'}
         </p>
         <button
-          onClick={() => navigate('/profile')}
-          className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
+          type="button"
+          onClick={handleInternalMessage}
+          className="mc-primary-action mt-3 w-full px-4 py-3 text-sm"
+          data-testid="guest-contact-auth"
         >
-          {t.login_register || 'Iniciar sesión / Registrarse'}
+          <MessageCircle size={18} />
+          {t.login_to_message || 'Iniciar sesión para enviar mensaje'}
         </button>
       </div>
     ) : (

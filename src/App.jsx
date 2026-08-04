@@ -5,6 +5,7 @@ import { getTranslations, loadLanguage } from './utils/translations';
 import { localizedText } from './utils/localize';
 import { sizedImage } from './utils/imageHelpers';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
+import { clearPublishDraft } from './utils/publishDraft';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
 
 // Subcategory data is either an array of Spanish labels (canonical value == display label)
@@ -740,22 +741,49 @@ function App() {
   }, [activeCat, activeSub, conditionFilter, debouncedLocInput, debouncedSearch, locCity, locState, maxPrice, minPrice, selectedState]);
 
   // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
-  const executeSearch = useCallback((overrideSearch = null, overrideLoc = null, overrideCategory = undefined) => {
+  const executeSearch = useCallback((
+    overrideSearch = null,
+    overrideLoc = null,
+    overrideCategory = undefined,
+    overrideFilters = {},
+  ) => {
+    const filters = overrideFilters && typeof overrideFilters === 'object' ? overrideFilters : {};
     const nextSearch = typeof overrideSearch === 'string' ? overrideSearch : searchQuery;
     const nextLoc = typeof overrideLoc === 'string' ? overrideLoc : searchLocationInput;
     const nextCategory = typeof overrideCategory === 'string' ? overrideCategory : activeCat;
+    const nextMinPrice = filters.minPrice ?? minPrice;
+    const nextMaxPrice = filters.maxPrice ?? maxPrice;
+    const nextCondition = filters.condition ?? conditionFilter;
     setDebouncedSearch(nextSearch);
     setDebouncedLocInput(nextLoc);
     if (typeof overrideCategory === 'string') setActiveCat(overrideCategory);
     setCurrentTab('home');
     setViewedAd(null);
     setViewedCompany(null);
-    navigate(buildHomeFilterPath({ search: nextSearch, location: nextLoc, category: nextCategory }));
-    // GA4 search event
+    navigate(buildHomeFilterPath({
+      search: nextSearch,
+      location: nextLoc,
+      category: nextCategory,
+      minPrice: nextMinPrice,
+      maxPrice: nextMaxPrice,
+      condition: nextCondition,
+    }));
     if (nextSearch && nextSearch.trim()) {
-      events.searchPerformed(nextSearch.trim(), nextCategory || '', { source: 'header_search' });
+      events.searchPerformed(nextSearch.trim(), nextCategory || '', {
+        source: filters.source || 'header_search',
+      });
     }
-  }, [activeCat, buildHomeFilterPath, navigate, searchQuery, searchLocationInput, setCurrentTab]);
+  }, [
+    activeCat,
+    buildHomeFilterPath,
+    conditionFilter,
+    maxPrice,
+    minPrice,
+    navigate,
+    searchLocationInput,
+    searchQuery,
+    setCurrentTab,
+  ]);
 
   const applyHeaderLocation = useCallback((mobile = false) => {
     const locationLabel = locCity ? `${locCity}, ${locState}` : locState;
@@ -2742,6 +2770,7 @@ function App() {
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
+        if (!isUpdating) clearPublishDraft();
         setCurrentTab('profile');
         navigate('/profile');
         // GA4 + Meta Pixel/CAPI ad posted event

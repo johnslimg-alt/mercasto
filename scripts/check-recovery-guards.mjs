@@ -113,6 +113,18 @@ assertContains(
 );
 
 assertContains(
+  'src/utils/protectedRouteReturn.js',
+  "trackSellerFunnel('contact_returned_after_auth'",
+  'listing contact returns to the exact seller conversation after authentication'
+);
+
+assertContains(
+  'src/components/screens/AdDetailScreen.jsx',
+  'data-testid="guest-contact-auth"',
+  'guest contact CTA preserves the listing and seller context'
+);
+
+assertContains(
   'src/utils/metaCapiBridge.js',
   'registrationEventId()',
   'Meta registration ids use the shared funnel event-id generator'
