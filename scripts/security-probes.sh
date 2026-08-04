@@ -3,6 +3,10 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 PUBLIC_IP="${PUBLIC_IP:-72.62.173.145}"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mercasto-security-probes.XXXXXX")"
+trap 'rm -rf "$TMP_DIR"' EXIT
+PROBE_OUT="$TMP_DIR/probe.out"
+PROBE_ERR="$TMP_DIR/probe.err"
 
 check_denied() {
   local url="$1"
@@ -18,9 +22,9 @@ check_denied() {
 check_closed() {
   local url="$1"
   echo "checking $url"
-  if curl -m 5 -sS "$url" >/tmp/mercasto_probe.out 2>/tmp/mercasto_probe.err; then
+  if curl -m 5 -sS "$url" >"$PROBE_OUT" 2>"$PROBE_ERR"; then
     echo "unexpectedly reachable: $url" >&2
-    cat /tmp/mercasto_probe.out >&2 || true
+    cat "$PROBE_OUT" >&2 || true
     exit 1
   fi
   echo "$url -> closed or unreachable"

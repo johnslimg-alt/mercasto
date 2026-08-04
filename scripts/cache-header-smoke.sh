@@ -2,7 +2,9 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
-TMP_HEADERS="${TMPDIR:-/tmp}/mercasto-homepage-headers.txt"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mercasto-cache-headers.XXXXXX")"
+trap 'rm -rf "$TMP_DIR"' EXIT
+TMP_HEADERS="$TMP_DIR/homepage-headers.txt"
 
 command -v curl >/dev/null 2>&1 || {
   echo "curl is required" >&2

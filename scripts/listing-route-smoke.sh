@@ -2,6 +2,9 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mercasto-listing-routes.XXXXXX")"
+trap 'rm -rf "$TMP_DIR"' EXIT
+ROUTE_BODY_FILE="$TMP_DIR/route-body.out"
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -12,7 +15,7 @@ require_cmd() {
 
 http_status() {
   local url="$1"
-  curl -k -sS -o /tmp/mercasto_listing_route_body.out -w '%{http_code}' "$url"
+  curl -k -sS -o "$ROUTE_BODY_FILE" -w '%{http_code}' "$url"
 }
 
 check_not_5xx() {
@@ -37,8 +40,7 @@ fi
 echo "== Discover first ad id from API =="
 # JSON via temp file: passing it through the environment hits the exec arg
 # limit ("Argument list too long") once the API page grows past ~128KB.
-ADS_JSON_FILE="$(mktemp)"
-trap 'rm -f "${ADS_JSON_FILE}"' EXIT
+ADS_JSON_FILE="$TMP_DIR/ads.json"
 curl -k -sS "${BASE_URL}/api/ads?page=1" -o "${ADS_JSON_FILE}"
 FIRST_ID="$(ADS_JSON_FILE="$ADS_JSON_FILE" python3 - <<'PY'
 import json, os

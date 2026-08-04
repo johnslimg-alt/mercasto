@@ -3,12 +3,20 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 URL="${BASE_URL}/api/auth/providers"
-BODY_FILE="${TMPDIR:-/tmp}/mercasto-auth-providers.json"
+TMP_BASE="${TMPDIR:-/tmp}"
 
 command -v curl >/dev/null 2>&1 || {
   echo "curl is required" >&2
   exit 1
 }
+
+command -v mktemp >/dev/null 2>&1 || {
+  echo "mktemp is required" >&2
+  exit 1
+}
+
+BODY_FILE="$(mktemp "${TMP_BASE%/}/mercasto-auth-providers.XXXXXX.json")"
+trap 'rm -f "$BODY_FILE"' EXIT
 
 command -v tr >/dev/null 2>&1 || {
   echo "tr is required" >&2
