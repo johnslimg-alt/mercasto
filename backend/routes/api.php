@@ -185,18 +185,20 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::post('/categories', [CategoryController::class, 'store']); // Создание категории (только для админов)
     Route::put('/categories/{id}', [CategoryController::class, 'update']); // Редактирование категории
-    Route::post('/ads/bulk-upload', [AdController::class, 'bulkUpload']); // Массовая загрузка CSV
+    Route::middleware('throttle:uploads')->post('/ads/bulk-upload', [AdController::class, 'bulkUpload']); // Массовая загрузка CSV
     Route::middleware('throttle:10,1')->post('/ads/bulk-action', [AdController::class, 'bulkAction']); // Массовые действия с объявлениями
-    Route::post('/ads/{ad}', [AdController::class, 'update'])->whereNumber('ad'); // Для обработки FormData с изображениями
-    Route::patch('/ads/{id}/status', [AdController::class, 'updateStatus'])->whereNumber('id'); // Изменение статуса (пауза/активация)
-    Route::get('/ads/{id}/edit', [AdController::class, 'editForm'])->whereNumber('id'); // Full ad data for editing (owner only)
-    Route::put('/ads/{id}/pause', [AdController::class, 'pause'])->whereNumber('id'); // Pause active ad
-    Route::put('/ads/{id}/activate', [AdController::class, 'activate'])->whereNumber('id'); // Reactivate paused ad
-    Route::post('/ads/{id}/republish', [AdController::class, 'republish'])->whereNumber('id'); // Republish expired ad
-    Route::put('/ads/{id}/renew', [AdController::class, 'renew'])->whereNumber('id'); // Renew active or expired ad
-    Route::post('/ads/{id}/promote/credits', [AdController::class, 'promoteWithCredits'])->whereNumber('id'); // Продвижение за кредиты
-    Route::post('/ads/promote/credits/bulk', [AdController::class, 'promoteWithCreditsBulk']); // Пакетное продвижение за кредиты
-    Route::delete('/ads/{id}', [AdController::class, 'destroy'])->whereNumber('id');
+    Route::middleware('throttle:api')->get('/ads/{id}/edit', [AdController::class, 'editForm'])->whereNumber('id'); // Full ad data for editing (owner only)
+    Route::middleware('throttle:ad-mutations')->group(function () {
+        Route::post('/ads/{ad}', [AdController::class, 'update'])->whereNumber('ad'); // Для обработки FormData с изображениями
+        Route::patch('/ads/{id}/status', [AdController::class, 'updateStatus'])->whereNumber('id'); // Изменение статуса (пауза/активация)
+        Route::put('/ads/{id}/pause', [AdController::class, 'pause'])->whereNumber('id'); // Pause active ad
+        Route::put('/ads/{id}/activate', [AdController::class, 'activate'])->whereNumber('id'); // Reactivate paused ad
+        Route::post('/ads/{id}/republish', [AdController::class, 'republish'])->whereNumber('id'); // Republish expired ad
+        Route::put('/ads/{id}/renew', [AdController::class, 'renew'])->whereNumber('id'); // Renew active or expired ad
+        Route::post('/ads/{id}/promote/credits', [AdController::class, 'promoteWithCredits'])->whereNumber('id'); // Продвижение за кредиты
+        Route::post('/ads/promote/credits/bulk', [AdController::class, 'promoteWithCreditsBulk']); // Пакетное продвижение за кредиты
+        Route::delete('/ads/{id}', [AdController::class, 'destroy'])->whereNumber('id');
+    });
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [ProfileController::class, 'show']);
     Route::post('/user/profile', [ProfileController::class, 'update']);
