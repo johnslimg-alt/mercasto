@@ -1,6 +1,24 @@
 import { expect, test } from '@playwright/test';
 
 const API_BASE_URL = process.env.API_BASE_URL || `${process.env.BASE_URL || 'https://mercasto.com'}/api`;
+const ISOLATED_STACK = process.env.E2E_ISOLATED_STACK === '1';
+const RESET_NEW_PASSWORD = process.env.E2E_RESET_NEW_PASSWORD || 'E2eNewPass99!';
+
+function projectFixture(projectName, kind) {
+  const mobile = projectName.includes('mobile');
+  const suffix = mobile ? 'MOBILE' : 'DESKTOP';
+  if (kind === 'reset') {
+    return {
+      email: process.env[`E2E_RESET_EMAIL_${suffix}`],
+      token: process.env[`E2E_RESET_TOKEN_${suffix}`],
+    };
+  }
+  return {
+    email: process.env[`E2E_2FA_EMAIL_${suffix}`],
+    password: process.env[`E2E_2FA_PASSWORD_${suffix}`],
+    recoveryCode: process.env[`E2E_2FA_RECOVERY_${suffix}`],
+  };
+}
 
 const randomEmail = () => `e2e_${Date.now()}_${Math.floor(Math.random() * 9999)}@mailinator.com`;
 
@@ -58,7 +76,7 @@ async function registerUser(page, email, name = 'E2E Test User', password = 'E2e
 
 test.describe('Authentication E2E Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'load' });
     await page.evaluate(() => localStorage.clear());
     await page.evaluate(() => sessionStorage.clear());
     await dismissCookies(page);
@@ -125,6 +143,77 @@ test.describe('Authentication E2E Flow', () => {
     const body = await page.locator('body').textContent();
     expect(body).not.toMatch(/Exception|Stack trace|Traceback|at Object\.|at Function\./i);
     expect(body).not.toMatch(/APP_KEY|DB_PASSWORD|SECRET/i);
+  });
+
+  test('completes password reset and logs in with the new password', async ({ page }, testInfo) => {
+    test.skip(!ISOLATED_STACK, 'Password reset completion uses isolated reset-token fixtures.');
+    const fixture = projectFixture(testInfo.project.name, 'reset');
+    expect(fixture.email).toBeTruthy();
+    expect(fixture.token).toBeTruthy();
+
+    await page.goto(`/?reset_token=${encodeURIComponent(fixture.token)}&email=${encodeURIComponent(fixture.email)}`);
+    const modal = page.locator('.fixed.inset-0').filter({ has: page.locator('input[name="password_confirmation"]') }).first();
+    await expect(modal).toBeVisible({ timeout: 8000 });
+    await expect(modal.locator('input[name="password_confirmation"]')).toBeVisible();
+    await modal.locator('input[name="password"]').fill(RESET_NEW_PASSWORD);
+    await modal.locator('input[name="password_confirmation"]').fill(RESET_NEW_PASSWORD);
+    await modal.locator('button[type="submit"]').click();
+
+    const loginModal = getModal(page);
+    await expect(loginModal.locator('input[name="email"]')).toBeVisible({ timeout: 8000 });
+    await loginModal.locator('input[name="email"]').fill(fixture.email);
+    await loginModal.locator('input[name="password"]').fill(RESET_NEW_PASSWORD);
+    await loginModal.locator('input[name="password"]').press('Enter');
+    await page.waitForFunction(() => localStorage.getItem('auth_token') !== null, { timeout: 10000 });
+  });
+
+  test('completes the 2FA challenge with a one-time recovery code', async ({ page }, testInfo) => {
+    test.skip(!ISOLATED_STACK, '2FA verification uses isolated recovery-code fixtures.');
+    const fixture = projectFixture(testInfo.project.name, 'two-factor');
+    expect(fixture.email).toBeTruthy();
+    expect(fixture.password).toBeTruthy();
+    expect(fixture.recoveryCode).toBeTruthy();
+
+    const modal = await openAuthModal(page);
+    await modal.locator('input[name="email"]').fill(fixture.email);
+    await modal.locator('input[name="password"]').fill(fixture.password);
+    await modal.locator('input[name="password"]').press('Enter');
+
+    await expect(modal.getByRole('heading', { name: /Verificación de dos pasos/i })).toBeVisible({ timeout: 8000 });
+    const codeInput = modal.locator('input[name="code"]');
+    await expect(codeInput).toHaveAttribute('maxlength', '32');
+    await codeInput.fill(fixture.recoveryCode);
+    await modal.getByRole('button', { name: /Verificar e Iniciar Sesión/i }).click();
+    await page.waitForFunction(() => localStorage.getItem('auth_token') !== null, { timeout: 10000 });
+  });
+
+  test('deletes a newly registered account through the browser UI', async ({ page, request }) => {
+    test.skip(!ISOLATED_STACK, 'Account deletion must never mutate a production account.');
+    const email = randomEmail();
+    const password = 'E2eDeletePass99!';
+    await registerUser(page, email, 'E2E Delete User', password);
+    await page.goto('/profile');
+
+    await page.getByRole('button', { name: /Ajustes|Configuración|Settings/i }).first().click();
+    const deleteButton = page.getByRole('button', { name: /Eliminar Cuenta|Delete Account/i }).first();
+    await expect(deleteButton).toBeVisible({ timeout: 8000 });
+
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toMatch(/eliminar tu cuenta|delete your account/i);
+      await dialog.accept();
+    });
+    const deletionResponse = page.waitForResponse((response) => (
+      response.url().endsWith('/api/user') && response.request().method() === 'DELETE'
+    ));
+    await deleteButton.click();
+    expect((await deletionResponse).status()).toBe(200);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBeNull();
+
+    const loginResponse = await request.post(`${API_BASE_URL}/login`, {
+      data: { email, password },
+      headers: { Accept: 'application/json' },
+    });
+    expect(loginResponse.status()).toBe(422);
   });
 
   test('registered user can log out and log back in', async ({ page }) => {

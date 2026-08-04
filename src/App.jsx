@@ -1280,11 +1280,9 @@ function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (oauthChallenge) {
       setTwoFactorChallengeToken(oauthChallenge);
-      try {
-        setTwoFactorEmail(window.atob(oauthChallenge));
-      } catch {
-        setTwoFactorEmail('');
-      }
+      // OAuth 2FA uses the same opaque server-side challenge as password login.
+      // The account identity is resolved only from the short-lived challenge cache.
+      setTwoFactorEmail('');
       setRequiresTwoFactor(true);
       setAuthMode('login');
       setShowAuthModal(true);
@@ -4388,7 +4386,7 @@ function App() {
               <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">Verificación de dos pasos</h2>
               <p className="text-center text-slate-500 dark:text-slate-400 text-sm -mt-4 mb-6">Ingresa el código de tu app de autenticación.</p>
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
-                <input name="code" required autoFocus placeholder="Código de 6 dígitos" maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                <input name="code" required autoFocus placeholder="Código de autenticación o recuperación" maxLength="32" className="w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                 <div className="pt-2">
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">
                     {authLoading ? <Loader2 className="animate-spin" size={20}/> : 'Verificar e Iniciar Sesión'}
@@ -4458,7 +4456,12 @@ function App() {
                         </div>
                       </div>
                     )}
-                    {authMode === 'reset_password' && <input name="password" type="password" required placeholder={t.new_password} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>}
+                    {authMode === 'reset_password' && (
+                      <>
+                        <input name="password" type="password" required minLength="8" placeholder={t.new_password} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                        <input name="password_confirmation" type="password" required minLength="8" placeholder={t.conf_password || 'Confirmar nueva contraseña'} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                      </>
+                    )}
                     <div className="pt-2">
                       <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">
                           {authLoading ? <Loader2 className="animate-spin" size={20}/> : (authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.send_link : t.reset_password)}

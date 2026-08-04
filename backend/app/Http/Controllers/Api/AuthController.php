@@ -267,7 +267,9 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        // Validate the first factor without creating a Laravel session. Authentication
+        // is completed only after the bearer token is issued (and after 2FA when enabled).
+        if (!Auth::validate($request->only('email', 'password'))) {
             throw ValidationException::withMessages([
                 'email' => ['Las credenciales proporcionadas son incorrectas.'],
             ]);
@@ -275,11 +277,13 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->firstOrFail();
 
-        // Проверка, включена ли 2FA
+        // A valid password is the first factor. Issue a short-lived opaque challenge
+        // so the 2FA endpoint cannot be used as a standalone login method.
         if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
             return response()->json([
                 'two_factor' => true,
                 'email' => $user->email,
+                'challenge_token' => $this->issueTwoFactorLoginChallenge($user),
             ]);
         }
 
@@ -299,36 +303,36 @@ class AuthController extends Controller
     public function loginTwoFactor(Request $request)
     {
         $request->validate([
-            'email' => 'required|string|email',
-            'code' => 'required|string',
+            'challenge_token' => 'required|string|size:64',
+            'code' => 'required|string|max:64',
         ]);
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $challengeKey = $this->twoFactorLoginChallengeKey($request->string('challenge_token')->toString());
+        $userId = Cache::get($challengeKey);
+        $user = $userId ? User::find($userId) : null;
 
-        $google2fa = new \PragmaRX\Google2FA\Google2FA();
-
-        // Проверка TOTP кода
-        if ($google2fa->verifyKey($user->two_factor_secret, $request->code)) {
-            $token = $user->createToken('auth_token')->plainTextToken;
-            return response()->json([
-                'message' => 'Inicio de sesión exitoso',
-                'access_token' => $token,
-                'token_type' => 'Bearer',
-                'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])
-            ]);
+        if (!$user || !$user->two_factor_secret || !$user->two_factor_confirmed_at) {
+            Cache::forget($challengeKey);
+            return response()->json(['message' => 'El desafío de autenticación es inválido o ha expirado.'], 422);
         }
 
-        // Проверка кодов восстановления
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+        $code = $request->string('code')->toString();
+
+        if ($google2fa->verifyKey($user->two_factor_secret, $code)) {
+            Cache::forget($challengeKey);
+            return $this->twoFactorLoginSuccessResponse($user);
+        }
+
         $recoveryCodes = json_decode($user->two_factor_recovery_codes, true) ?? [];
         foreach ($recoveryCodes as $index => $recoveryCode) {
-            if (hash_equals($recoveryCode, $request->code)) {
-                // Безопасность: Удаляем использованный код восстановления, чтобы он не стал многоразовым
+            if (is_string($recoveryCode) && hash_equals($recoveryCode, $code)) {
                 unset($recoveryCodes[$index]);
                 $user->two_factor_recovery_codes = json_encode(array_values($recoveryCodes));
                 $user->save();
+                Cache::forget($challengeKey);
 
-                $token = $user->createToken('auth_token')->plainTextToken;
-                return response()->json(['access_token' => $token, 'token_type' => 'Bearer', 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])]);
+                return $this->twoFactorLoginSuccessResponse($user);
             }
         }
 
@@ -510,6 +514,40 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Sesión cerrada exitosamente.'
+        ]);
+    }
+
+    private function issueTwoFactorLoginChallenge(User $user): string
+    {
+        $challengeToken = Str::random(64);
+        Cache::put(
+            $this->twoFactorLoginChallengeKey($challengeToken),
+            $user->id,
+            now()->addMinutes(5),
+        );
+
+        return $challengeToken;
+    }
+
+    private function twoFactorLoginChallengeKey(string $challengeToken): string
+    {
+        return 'two_factor_login:' . hash('sha256', $challengeToken);
+    }
+
+    private function twoFactorLoginSuccessResponse(User $user)
+    {
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Inicio de sesión exitoso',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user->makeHidden([
+                'two_factor_secret',
+                'two_factor_recovery_codes',
+                'email_verification_token',
+                'password',
+            ]),
         ]);
     }
 
@@ -744,8 +782,11 @@ class AuthController extends Controller
             if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
                 // Если включена 2FA, мы не можем выдать токен напрямую.
                 // Перенаправляем на фронтенд со специальным флагом для запроса кода
-                $tempToken = base64_encode($user->email);
-                return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?oauth_2fa=' . $tempToken);
+                $challengeToken = $this->issueTwoFactorLoginChallenge($user);
+                return redirect()->away(
+                    config('app.frontend_url', 'https://mercasto.com')
+                    . '/?oauth_2fa=' . urlencode($challengeToken)
+                );
             }
 
             $exchangeCode = Str::random(64);

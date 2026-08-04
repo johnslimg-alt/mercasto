@@ -52,7 +52,22 @@ grep -qF "createToken('auth_token')->plainTextToken" "$AUTH"
 grep -qF "makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])" "$AUTH"
 
 # 2FA login and OAuth bypass protection.
+grep -qF "Auth::validate" "$AUTH"
+if grep -qF "Auth::attempt" "$AUTH"; then
+  echo "Password validation must not authenticate a session before 2FA completes." >&2
+  exit 1
+fi
 grep -qF "public function loginTwoFactor" "$AUTH"
+grep -qF "'challenge_token' => 'required|string|size:64'" "$AUTH"
+grep -qF "issueTwoFactorLoginChallenge" "$AUTH"
+grep -qF "twoFactorLoginChallengeKey" "$AUTH"
+grep -qF 'Cache::forget($challengeKey)' "$AUTH"
+grep -qF 'name="password_confirmation"' "$APP"
+grep -qF 'maxLength="32"' "$APP"
+if grep -qF 'base64_encode($user->email)' "$AUTH"; then
+  echo "OAuth 2FA must use an opaque one-time challenge, not a reversible email token." >&2
+  exit 1
+fi
 grep -qF "verifyKey" "$AUTH"
 grep -qF "hash_equals" "$AUTH"
 grep -qF "unset(" "$AUTH"
