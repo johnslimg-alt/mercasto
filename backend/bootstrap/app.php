@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'last-active' => \App\Http\Middleware\UpdateLastActive::class,
         ]);
+        $middleware->prependToGroup('api', \App\Http\Middleware\SecurityAuditMiddleware::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\RejectUnsafeXmlUpload::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastActive::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\TrackGoogleAnalyticsPurchase::class);

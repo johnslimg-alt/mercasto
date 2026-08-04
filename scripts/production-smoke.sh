@@ -95,4 +95,6 @@ fi
 
 bash scripts/origin-edge-security-smoke.sh
 
+bash scripts/security-audit-smoke.sh
+
 echo "production smoke OK"
