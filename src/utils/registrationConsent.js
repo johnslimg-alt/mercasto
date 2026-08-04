@@ -29,3 +29,21 @@ export function authTokenFromResponse(data) {
   const token = data?.access_token ?? data?.token;
   return typeof token === 'string' && token.trim() ? token : null;
 }
+
+export function createOAuthRegistrationUrl(
+  apiBaseUrl,
+  provider,
+  registration = false,
+  acceptedAt = new Date(),
+) {
+  const base = String(apiBaseUrl || '').replace(/\/$/, '');
+  const url = new URL(`${base}/auth/${encodeURIComponent(provider)}/redirect`);
+  if (registration) {
+    const consent = createRegistrationConsentPayload('web', acceptedAt);
+    url.searchParams.set('registration', '1');
+    Object.entries(consent).forEach(([key, value]) => {
+      url.searchParams.set(key, String(value));
+    });
+  }
+  return url.toString();
+}

@@ -14,6 +14,7 @@ use App\Mail\EmailVerifyMail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -28,28 +29,12 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8', // Можно добавить |confirmed, если на фронтенде есть поле password_confirmation
+            'password' => 'required|string|min:8',
             'phone_number' => 'nullable|string|max:20|unique:users',
             'avatar_url' => 'nullable|string|url',
             'referral_code' => 'nullable|string|max:10',
-            'age_confirmed' => 'sometimes|accepted',
-            'terms_version' => 'required_if:age_confirmed,true|nullable|string|max:64',
-            'privacy_version' => 'required_if:age_confirmed,true|nullable|string|max:64',
-            'consent_accepted_at' => 'required_if:age_confirmed,true|nullable|date',
-            'consent_source' => 'required_if:age_confirmed,true|nullable|string|in:web,mobile,api',
         ]);
-
-        $consentFieldsPresent = $request->hasAny([
-            'terms_version',
-            'privacy_version',
-            'consent_accepted_at',
-            'consent_source',
-        ]);
-        if ($consentFieldsPresent && !$request->boolean('age_confirmed')) {
-            throw ValidationException::withMessages([
-                'age_confirmed' => ['Confirma que tienes al menos 18 años para registrar el consentimiento.'],
-            ]);
-        }
+        $registrationConsent = $this->validateRegistrationConsent($request);
 
         // GDPR/LFPDPPP Compliance: Хешируем IP-адрес (PII) перед сохранением/поиском в БД
         // Ограничиваем до 45 символов для соответствия varchar(45) в таблице users
@@ -69,7 +54,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $user = DB::transaction(function () use ($request, $ip, $role) {
+        $user = DB::transaction(function () use ($request, $ip, $role, $registrationConsent) {
             $user = new User();
             $user->name = $request->name;
             $user->email = $request->email;
@@ -100,7 +85,7 @@ class AuthController extends Controller
                 }
             }
 
-            $this->recordRegistrationConsents($user, $request);
+            $this->recordRegistrationConsents($user, $request, $registrationConsent);
 
             return $user;
         });
@@ -132,23 +117,110 @@ class AuthController extends Controller
         ], 201);
     }
 
-    private function recordRegistrationConsents(User $user, Request $request): void
+    /**
+     * @return array{
+     *     age_confirmation_version: string,
+     *     terms_version: string,
+     *     privacy_version: string,
+     *     client_accepted_at: Carbon,
+     *     source: string
+     * }
+     */
+    private function validateRegistrationConsent(Request $request): array
     {
-        if (!$request->boolean('age_confirmed')) {
-            return;
+        $validated = $request->validate([
+            'age_confirmed' => ['required', 'accepted'],
+            'terms_version' => [
+                'required',
+                'string',
+                Rule::in([(string) config('legal.registration_consent.terms_version')]),
+            ],
+            'privacy_version' => [
+                'required',
+                'string',
+                Rule::in([(string) config('legal.registration_consent.privacy_version')]),
+            ],
+            'consent_accepted_at' => ['required', 'date'],
+            'consent_source' => ['required', 'string', Rule::in(['web', 'mobile', 'api'])],
+        ]);
+
+        $clientAcceptedAt = Carbon::parse((string) $validated['consent_accepted_at']);
+        $maxFutureSkewMinutes = max(
+            0,
+            (int) config('legal.registration_consent.max_future_skew_minutes', 10),
+        );
+        if ($clientAcceptedAt->greaterThan(now()->addMinutes($maxFutureSkewMinutes))) {
+            throw ValidationException::withMessages([
+                'consent_accepted_at' => ['La fecha de aceptación no puede estar en el futuro.'],
+            ]);
         }
 
+        return [
+            'age_confirmation_version' => (string) config(
+                'legal.registration_consent.age_confirmation_version',
+                '18-plus-v1',
+            ),
+            'terms_version' => (string) config('legal.registration_consent.terms_version'),
+            'privacy_version' => (string) config('legal.registration_consent.privacy_version'),
+            'client_accepted_at' => $clientAcceptedAt,
+            'source' => (string) $validated['consent_source'],
+        ];
+    }
+
+    private function cacheOAuthRegistrationConsent(string $provider, array $consent): string
+    {
+        $token = Str::random(64);
+        Cache::put(
+            "oauth_registration_consent:{$provider}:{$token}",
+            [
+                ...$consent,
+                'client_accepted_at' => $consent['client_accepted_at']->toIso8601String(),
+            ],
+            now()->addMinutes(10),
+        );
+
+        return $token;
+    }
+
+    private function pullOAuthRegistrationConsent(Request $request, string $provider): ?array
+    {
+        $token = (string) ($request->query('state') ?: $request->query('registration_consent_token', ''));
+        if ($token === '') {
+            return null;
+        }
+
+        $consent = Cache::pull("oauth_registration_consent:{$provider}:{$token}");
+        if (!is_array($consent) || empty($consent['client_accepted_at'])) {
+            return null;
+        }
+        $consent['client_accepted_at'] = Carbon::parse((string) $consent['client_accepted_at']);
+
+        return $consent;
+    }
+
+    /**
+     * @param array{
+     *     age_confirmation_version: string,
+     *     terms_version: string,
+     *     privacy_version: string,
+     *     client_accepted_at: Carbon,
+     *     source: string
+     * } $consent
+     */
+    private function recordRegistrationConsents(
+        User $user,
+        Request $request,
+        array $consent,
+    ): void {
         $acceptedAt = now();
-        $clientAcceptedAt = Carbon::parse((string) $request->input('consent_accepted_at'));
-        $source = (string) $request->input('consent_source', 'api');
         $ipHash = hash('sha256', (string) $request->ip());
         $userAgent = trim((string) $request->userAgent());
         $userAgentHash = $userAgent === '' ? null : hash('sha256', $userAgent);
 
         $common = [
             'accepted_at' => $acceptedAt,
-            'client_accepted_at' => $clientAcceptedAt,
-            'source' => $source,
+            'client_accepted_at' => $consent['client_accepted_at'],
+            'source' => $consent['source'],
             'ip_hash' => $ipHash,
             'user_agent_hash' => $userAgentHash,
         ];
@@ -157,7 +229,7 @@ class AuthController extends Controller
             [
                 'user_id' => $user->id,
                 'consent_type' => 'age_confirmation',
-                'document_version' => '18-plus-v1',
+                'document_version' => $consent['age_confirmation_version'],
                 ...$common,
                 'created_at' => $acceptedAt,
                 'updated_at' => $acceptedAt,
@@ -165,7 +237,7 @@ class AuthController extends Controller
             [
                 'user_id' => $user->id,
                 'consent_type' => 'terms',
-                'document_version' => (string) $request->input('terms_version'),
+                'document_version' => $consent['terms_version'],
                 ...$common,
                 'created_at' => $acceptedAt,
                 'updated_at' => $acceptedAt,
@@ -173,7 +245,7 @@ class AuthController extends Controller
             [
                 'user_id' => $user->id,
                 'consent_type' => 'privacy',
-                'document_version' => (string) $request->input('privacy_version'),
+                'document_version' => $consent['privacy_version'],
                 ...$common,
                 'created_at' => $acceptedAt,
                 'updated_at' => $acceptedAt,
@@ -312,19 +384,25 @@ class AuthController extends Controller
         if (!$cachedCode || $cachedCode != $request->code) {
             throw ValidationException::withMessages(['code' => ['Código SMS inválido o expirado.']]);
         }
-        Cache::forget('phone_auth_' . $phoneNumber);
-
         $user = User::where('phone_number', $phoneNumber)->first();
         if (!$user) {
-            $user = new User();
-            $user->phone_number = $phoneNumber;
-            $user->name = 'Usuario ' . substr($phoneNumber, -4);
-            $user->email = $phoneNumber . '@mercasto.local';
-            $user->password = Hash::make(Str::random(16));
-            $user->role = 'individual';
-            $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
-            $user->save();
+            $registrationConsent = $this->validateRegistrationConsent($request);
+            $user = DB::transaction(function () use ($phoneNumber, $request, $registrationConsent) {
+                $user = new User();
+                $user->phone_number = $phoneNumber;
+                $user->name = 'Usuario ' . substr($phoneNumber, -4);
+                $user->email = $phoneNumber . '@mercasto.local';
+                $user->password = Hash::make(Str::random(16));
+                $user->role = 'individual';
+                $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                $user->save();
+                $this->recordRegistrationConsents($user, $request, $registrationConsent);
+
+                return $user;
+            });
         }
+
+        Cache::forget('phone_auth_' . $phoneNumber);
 
         return response()->json(['message' => 'Inicio de sesión exitoso', 'access_token' => $user->createToken('auth_token')->plainTextToken, 'token_type' => 'Bearer', 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])]);
     }
@@ -501,20 +579,39 @@ class AuthController extends Controller
             return response()->json(['error' => 'Proveedor no soportado'], 400);
         }
         
+        $registrationConsentToken = null;
+        if ($request->boolean('registration')) {
+            $registrationConsentToken = $this->cacheOAuthRegistrationConsent(
+                $provider,
+                $this->validateRegistrationConsent($request),
+            );
+        }
+
         if ($provider === 'telegram') {
             $botToken = config('services.telegram.client_secret');
             $botId = explode(':', $botToken)[0];
             $origin = $request->getSchemeAndHttpHost();
             $redirectUrl = config('services.telegram.redirect') ?: $origin . '/api/auth/telegram/callback';
-            
+            if ($registrationConsentToken) {
+                $separator = str_contains($redirectUrl, '?') ? '&' : '?';
+                $redirectUrl .= $separator . http_build_query([
+                    'registration_consent_token' => $registrationConsentToken,
+                ]);
+            }
+
             return redirect()->away("https://oauth.telegram.org/auth?bot_id={$botId}&origin=" . urlencode($origin) . "&embed=1&return_to=" . urlencode($redirectUrl));
         }
 
         $driver = $provider === 'twitter' ? 'twitter-oauth2' : $provider;
-        if ($provider === 'twitter') {
-            return Socialite::driver($driver)->redirect();
+        $socialite = Socialite::driver($driver);
+        if ($provider !== 'twitter') {
+            $socialite = $socialite->stateless();
         }
-        return Socialite::driver($driver)->stateless()->redirect();
+        if ($registrationConsentToken) {
+            $socialite = $socialite->with(['state' => $registrationConsentToken]);
+        }
+
+        return $socialite->redirect();
     }
 
     /**
@@ -533,6 +630,7 @@ class AuthController extends Controller
                 if (empty($authData['hash'])) {
                     $authData = $request->query();
                 }
+                unset($authData['registration_consent_token'], $authData['state']);
 
                 if (empty($authData['hash'])) {
                     return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=telegram_auth_failed');
@@ -589,17 +687,31 @@ class AuthController extends Controller
                 $user = $existingUser;
             }
             
+            $registrationConsent = $this->pullOAuthRegistrationConsent($request, $provider);
+
             if (!$user) {
-                $user = new User();
-                // У некоторых провайдеров (например Telegram) может не быть Email, генерируем заглушку
-                $user->name = $socialUser->name ?? "{$provider}_user_" . rand(1000, 9999);
-                $user->email = $socialUser->email ?? "{$socialUser->id}@{$provider}.local";
-                $user->{"{$provider}_id"} = $socialUser->id;
-                $user->avatar_url = $socialUser->avatar;
-                $user->role = 'individual';
-                $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
-                $user->email_verified_at = now(); // Automatically verify email for social registrations
-                $user->save();
+                if (!$registrationConsent) {
+                    return redirect()->away(
+                        config('app.frontend_url', 'https://mercasto.com')
+                        . '/?error=registration_consent_required'
+                    );
+                }
+
+                $user = DB::transaction(function () use ($provider, $socialUser, $request, $registrationConsent) {
+                    $user = new User();
+                    // У некоторых провайдеров (например Telegram) может не быть Email, генерируем заглушку
+                    $user->name = $socialUser->name ?? "{$provider}_user_" . rand(1000, 9999);
+                    $user->email = $socialUser->email ?? "{$socialUser->id}@{$provider}.local";
+                    $user->{"{$provider}_id"} = $socialUser->id;
+                    $user->avatar_url = $socialUser->avatar;
+                    $user->role = 'individual';
+                    $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                    $user->email_verified_at = now(); // Automatically verify email for social registrations
+                    $user->save();
+                    $this->recordRegistrationConsents($user, $request, $registrationConsent);
+
+                    return $user;
+                });
             } elseif (!$user->{"{$provider}_id"}) {
                 $user->{"{$provider}_id"} = $socialUser->id;
                 if (!$user->email_verified_at) {
@@ -702,15 +814,21 @@ class AuthController extends Controller
             }
 
             if (!$user) {
-                $user = new User();
-                $user->name = $socialUser->name ?: 'telegram_user_' . rand(1000, 9999);
-                $user->email = $socialUser->email;
-                $user->telegram_id = $socialUser->id;
-                $user->avatar_url = $socialUser->avatar;
-                $user->role = 'individual';
-                $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
-                $user->email_verified_at = now(); // Automatically verify email for Telegram
-                $user->save();
+                $registrationConsent = $this->validateRegistrationConsent($request);
+                $user = DB::transaction(function () use ($socialUser, $request, $registrationConsent) {
+                    $user = new User();
+                    $user->name = $socialUser->name ?: 'telegram_user_' . rand(1000, 9999);
+                    $user->email = $socialUser->email;
+                    $user->telegram_id = $socialUser->id;
+                    $user->avatar_url = $socialUser->avatar;
+                    $user->role = 'individual';
+                    $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                    $user->email_verified_at = now(); // Automatically verify email for Telegram
+                    $user->save();
+                    $this->recordRegistrationConsents($user, $request, $registrationConsent);
+
+                    return $user;
+                });
             } elseif (!$user->telegram_id) {
                 $user->telegram_id = $socialUser->id;
                 if (!$user->email_verified_at) {
@@ -735,6 +853,8 @@ class AuthController extends Controller
                 'token' => $token,
                 'user'  => $user->makeHidden(['password', 'remember_token']),
             ]);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Telegram Widget Error: ' . $e->getMessage());
             return response()->json(['error' => 'Error de autenticación de Telegram'], 500);

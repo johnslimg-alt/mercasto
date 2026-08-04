@@ -47,6 +47,7 @@ class CompleteRegistrationMetaCapiTest extends TestCase
                 'password_confirmation' => 'Password123!',
                 'phone_number' => $phone,
                 'meta_event_id' => $eventId,
+                ...$this->registrationConsent(),
             ]);
 
         $response->assertCreated();
@@ -98,8 +99,21 @@ class CompleteRegistrationMetaCapiTest extends TestCase
             'email' => 'e2e_without_meta_event@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            ...$this->registrationConsent(),
         ])->assertCreated();
 
         Http::assertNothingSent();
+    }
+
+    /** @return array<string, mixed> */
+    private function registrationConsent(): array
+    {
+        return [
+            'age_confirmed' => true,
+            'terms_version' => config('legal.registration_consent.terms_version'),
+            'privacy_version' => config('legal.registration_consent.privacy_version'),
+            'consent_accepted_at' => now()->toIso8601String(),
+            'consent_source' => 'web',
+        ];
     }
 }

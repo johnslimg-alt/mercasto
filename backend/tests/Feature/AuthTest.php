@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
@@ -21,11 +22,12 @@ class AuthTest extends TestCase
             'email' => 'test@mercasto.com',
             'password' => 'secret_password',
             'role' => 'individual',
+            ...$this->registrationConsent(),
         ]);
 
         // Проверяем, что сервер вернул статус 201 (Created) и правильную структуру
         $response->assertStatus(201)
-                 ->assertJsonStructure(['message', 'access_token', 'user' => ['id', 'name', 'email', 'role']]);
+            ->assertJsonStructure(['message', 'access_token', 'user' => ['id', 'name', 'email', 'role']]);
 
         // Проверяем, что запись действительно появилась в базе данных
         $this->assertDatabaseHas('users', [
@@ -38,7 +40,7 @@ class AuthTest extends TestCase
      */
     public function test_user_can_login()
     {
-        $user = \App\Models\User::factory()->create([
+        $user = User::factory()->create([
             'password' => bcrypt('secret_password'),
         ]);
 
@@ -48,7 +50,7 @@ class AuthTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure(['message', 'access_token', 'token_type', 'user']);
+            ->assertJsonStructure(['message', 'access_token', 'token_type', 'user']);
     }
 
     public function test_provider_endpoint_reflects_configured_oauth_services()
@@ -73,5 +75,17 @@ class AuthTest extends TestCase
             'telegram_bot_id' => '123456',
             'sms' => false,
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function registrationConsent(): array
+    {
+        return [
+            'age_confirmed' => true,
+            'terms_version' => config('legal.registration_consent.terms_version'),
+            'privacy_version' => config('legal.registration_consent.privacy_version'),
+            'consent_accepted_at' => now()->toIso8601String(),
+            'consent_source' => 'api',
+        ];
     }
 }
