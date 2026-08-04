@@ -21,6 +21,7 @@ const SplitViewContainer = React.lazy(() => import('../common/SplitViewContainer
 
 import { sizedImage } from '../../utils/imageHelpers';
 import { localizedText } from '../../utils/localize';
+import { normalizeSavedSearchSelection } from '../../utils/savedSearchSelection';
 import SkeletonCard from '../common/SkeletonCard';
 const SavedSearchesPanel = React.lazy(() => import('../common/SavedSearchesPanel'));
 const RecommendationsWidget = React.lazy(() => import('../common/RecommendationsWidget'));
@@ -202,6 +203,32 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       setSearchQuery(term);
       executeSearch?.(term, null, category ?? undefined);
     }, [executeSearch, setActiveCat, setSearchQuery]);
+    const applySavedSearch = React.useCallback((filters, closeFilters = false) => {
+      const { query, category, state, minPrice: nextMinPrice, maxPrice: nextMaxPrice } =
+        normalizeSavedSearchSelection(filters);
+      setSearchQuery(query);
+      setActiveCat(category);
+      setSelectedState(state);
+      setSearchLocation?.(null);
+      setSearchLocationInput?.(state);
+      setMinPrice(nextMinPrice);
+      setMaxPrice(nextMaxPrice);
+      executeSearch?.(query, state, category, {
+        minPrice: nextMinPrice,
+        maxPrice: nextMaxPrice,
+        source: 'saved_search',
+      });
+      if (closeFilters) setShowMobileFilters(false);
+    }, [
+      executeSearch,
+      setActiveCat,
+      setMaxPrice,
+      setMinPrice,
+      setSearchLocation,
+      setSearchLocationInput,
+      setSearchQuery,
+      setSelectedState,
+    ]);
     const showHomeToast = React.useCallback((message) => {
       window.clearTimeout(homeToastTimerRef.current);
       setHomeToast(message);
@@ -226,7 +253,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
             {/* Динамическая боковая панель (Адаптивная: липкая на desktop, drawer/bottom-sheet на mobile/tablet) */}
             <aside className="hidden lg:block lg:w-1/4 shrink-0">
                <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
-               {user && <SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); }} />}
+               {user && <SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => applySavedSearch(filters)} />}
             </aside>
 
             {/* Mobile Bottom Sheet (< md) */}
@@ -239,7 +266,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
             >
               <div className="block md:hidden p-6">
                 <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
-                {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); setShowMobileFilters(false); }} /></div>}
+                {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => applySavedSearch(filters, true)} /></div>}
               </div>
             </BottomSheet>
 
@@ -253,7 +280,7 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
                     <button onClick={() => setShowMobileFilters(false)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">✕</button>
                   </div>
                   <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
-                  {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => { setSearchQuery(filters.query || ""); setActiveCat(filters.category || ""); setSelectedState(filters.state || ""); setMinPrice(filters.min_price || ""); setMaxPrice(filters.max_price || ""); executeSearch(); setShowMobileFilters(false); }} /></div>}
+                  {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => applySavedSearch(filters, true)} /></div>}
                 </div>
               </div>
             )}

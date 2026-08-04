@@ -11,19 +11,38 @@ const registeredUser = {
 
 test.describe('seller campaign registration return', () => {
   test('opens the publication form without generic onboarding after registration', async ({ page }) => {
-    await page.route('**/api/register', async (route) => {
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          user: registeredUser,
-          access_token: 'e2e-registration-token',
-        }),
-      });
+    await page.addInitScript(() => {
+      localStorage.setItem('cookiesAccepted', 'true');
     });
 
-    await page.goto('/vendedores', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Publicar Anuncio Gratis' }).first().click();
+    await page.route('**/api/**', async (route) => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname;
+
+      if (path === '/api/register' && request.method() === 'POST') {
+        return route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            user: registeredUser,
+            access_token: 'e2e-registration-token',
+          }),
+        });
+      }
+      if (path === '/api/categories') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      }
+      if (path === '/api/ads' || path.startsWith('/api/ads/')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [], total: 0, current_page: 1, per_page: 16 }),
+        });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+
+    await page.goto('/post', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('button', { name: '¿No tienes cuenta? Únete' })).toBeVisible();
     await page.getByRole('button', { name: '¿No tienes cuenta? Únete' }).click();
@@ -35,10 +54,11 @@ test.describe('seller campaign registration return', () => {
     await registrationForm.locator('input[name="name"]').fill(registeredUser.name);
     await registrationForm.locator('input[name="email"]').fill(registeredUser.email);
     await registrationForm.locator('input[name="password"]').fill('SecurePass123!');
+    await registrationForm.locator('input[type="checkbox"]').check();
     await registrationForm.locator('button[type="submit"]').click();
 
     await expect(page).toHaveURL(/\/post$/);
-    await page.waitForTimeout(700);
+    await expect(page.getByRole('heading', { name: 'Pon tu anuncio' })).toBeVisible();
     await expect(page.getByRole('heading', { name: /¡Bienvenido/ })).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => ({
       intent: sessionStorage.getItem('mercasto.protected_route_intent.v1'),
