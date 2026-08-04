@@ -35,6 +35,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+            echo "Waiting for push deploy window before production watch..."
+            sleep 180
+          fi
+
           check_head() {
             local url="$1"
             local pattern="$2"
