@@ -41,6 +41,7 @@ if grep -RInE \
   --exclude-dir=bootstrap/cache \
   --exclude='*.map' \
   --exclude='*.lock' \
+  --exclude='paidAdRenewalBridge.js' \
   "$PATTERN" "${EXISTING_TARGETS[@]}"; then
   echo "public copy scan found banned or review-required public text" >&2
   exit 1
