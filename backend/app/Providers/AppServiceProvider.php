@@ -90,6 +90,36 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Profile image uploads share a user budget across avatar, logo, banner, and profile updates.
+        RateLimiter::for("profile-uploads", function ($request) {
+            $user = $request->user();
+            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+                return Limit::none();
+            }
+
+            $key = $user ? "user:{$user->id}" : "ip:{$request->ip()}";
+
+            return [
+                Limit::perMinute(10)->by($key),
+                Limit::perDay(100)->by($key),
+            ];
+        });
+
+        // Identity documents are sensitive and expensive to parse/review, so use a tighter budget.
+        RateLimiter::for("identity-uploads", function ($request) {
+            $user = $request->user();
+            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+                return Limit::none();
+            }
+
+            $key = $user ? "user:{$user->id}" : "ip:{$request->ip()}";
+
+            return [
+                Limit::perHour(3)->by($key),
+                Limit::perDay(10)->by($key),
+            ];
+        });
+
         // Allow normal navigation across category landings without false 429s (unlimited for E2E)
         RateLimiter::for("search", function ($request) {
             $user = $request->user();
