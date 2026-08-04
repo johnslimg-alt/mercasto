@@ -17,6 +17,7 @@ bash scripts/session-config-scan.sh
 bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh
 bash scripts/payment-retention-scan.sh
+bash scripts/payment-payload-privacy-gate.sh
 bash scripts/payment-webhook-idempotency-scan.sh
 bash scripts/media-upload-validation-scan.sh
 bash scripts/xml-upload-security-gate.sh

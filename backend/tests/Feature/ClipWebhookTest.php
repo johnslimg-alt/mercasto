@@ -58,6 +58,21 @@ class ClipWebhookTest extends TestCase
             'title' => '¡Pago exitoso!',
         ]);
         $this->assertDatabaseCount('user_notifications', 1);
+
+        $storedAudit = json_decode((string) DB::table('payments')
+            ->where('clip_payment_request_id', self::PAYMENT_REQUEST_ID)
+            ->value('webhook_payload'), true);
+        $this->assertSame([
+            'schema_version', 'provider', 'event', 'resource',
+            'provider_status', 'recorded_at',
+        ], array_keys($storedAudit));
+        $this->assertSame('verified_checkout', $storedAudit['event']);
+        $this->assertStringNotContainsString('4242', json_encode($storedAudit));
+        $this->assertStringNotContainsString('private-bank', json_encode($storedAudit));
+        $this->assertNull(DB::table('payments')
+            ->where('clip_payment_request_id', self::PAYMENT_REQUEST_ID)
+            ->value('clip_payment_request_url'));
+
         Http::assertSent(function (ClientRequest $request): bool {
             return $request->method() === 'GET'
                 && $request->url() === $this->clipStatusUrl()
@@ -161,6 +176,12 @@ class ClipWebhookTest extends TestCase
             'attempts' => 1,
             'completed_at' => now()->toIso8601String(),
             'me_reference_id' => self::CHECKOUT_ID,
+            'transaction_id' => 'private-transaction-id',
+            'issuer' => 'private-bank',
+            'last4' => '4242',
+            'latitude' => 19.4326,
+            'longitude' => -99.1332,
+            'payer' => ['email' => 'private@example.test'],
         ], $overrides);
     }
 

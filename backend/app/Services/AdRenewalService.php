@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\NewNotification;
+use App\Support\PaymentPayloadSanitizer;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,13 +77,14 @@ class AdRenewalService
         } catch (\Throwable $error) {
             DB::table('payments')->where('id', $paymentId)->update([
                 'status' => 'failed',
+                'clip_payment_request_url' => null,
                 'updated_at' => now(),
             ]);
 
             Log::error('Clip ad renewal checkout request failed', [
                 'ad_id' => $ad->id,
                 'payment_id' => $paymentId,
-                'error' => $error->getMessage(),
+                'exception' => $error::class,
             ]);
 
             return response()->json([
@@ -94,7 +96,12 @@ class AdRenewalService
         if (! $response->successful()) {
             DB::table('payments')->where('id', $paymentId)->update([
                 'status' => 'failed',
-                'clip_checkout_response' => json_encode($response->json()),
+                'clip_payment_request_url' => null,
+                'clip_checkout_response' => json_encode(PaymentPayloadSanitizer::checkout(
+                    $response->json() ?? [],
+                    $response->status(),
+                    'checkout_rejected',
+                )),
                 'updated_at' => now(),
             ]);
 
@@ -118,7 +125,12 @@ class AdRenewalService
         if (! $paymentUrl) {
             DB::table('payments')->where('id', $paymentId)->update([
                 'status' => 'failed',
-                'clip_checkout_response' => json_encode($response->json()),
+                'clip_payment_request_url' => null,
+                'clip_checkout_response' => json_encode(PaymentPayloadSanitizer::checkout(
+                    $response->json() ?? [],
+                    $response->status(),
+                    'checkout_missing_url',
+                )),
                 'updated_at' => now(),
             ]);
 
@@ -136,7 +148,10 @@ class AdRenewalService
         DB::table('payments')->where('id', $paymentId)->update([
             'clip_payment_request_id' => $paymentRequestId,
             'clip_payment_request_url' => $paymentUrl,
-            'clip_checkout_response' => json_encode($response->json()),
+            'clip_checkout_response' => json_encode(PaymentPayloadSanitizer::checkout(
+                $response->json() ?? [],
+                $response->status(),
+            )),
             'updated_at' => now(),
         ]);
 
@@ -172,6 +187,7 @@ class AdRenewalService
             if (! in_array($ad->status, ['active', 'expired', 'paused', 'inactive'], true)) {
                 DB::table('payments')->where('id', $lockedPayment->id)->update([
                     'status' => 'paid',
+                    'clip_payment_request_url' => null,
                     'updated_at' => now(),
                 ]);
 
@@ -210,6 +226,7 @@ class AdRenewalService
 
             DB::table('payments')->where('id', $lockedPayment->id)->update([
                 'status' => 'paid',
+                'clip_payment_request_url' => null,
                 'updated_at' => now(),
             ]);
 
@@ -232,7 +249,7 @@ class AdRenewalService
             } catch (\Throwable $error) {
                 Log::warning('Could not broadcast ad renewal notification', [
                     'payment_id' => $payment->id,
-                    'error' => $error->getMessage(),
+                    'exception' => $error::class,
                 ]);
             }
         }

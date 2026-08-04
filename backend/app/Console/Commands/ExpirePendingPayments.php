@@ -38,6 +38,7 @@ class ExpirePendingPayments extends Command
             ->whereNull('webhook_payload')
             ->update([
                 'status' => 'expired',
+                'clip_payment_request_url' => null,
                 'updated_at' => now(),
             ]);
 

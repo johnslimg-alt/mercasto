@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\MetaCapiService;
+use App\Support\PaymentPayloadSanitizer;
 use Illuminate\Http\Request;
 use App\Events\NewNotification;
 use Illuminate\Support\Facades\Http;
@@ -100,6 +101,10 @@ class PaymentController extends Controller
                 'clip_checkout_id' => $checkoutId,
                 'product_code' => $productCode,
                 'amount' => $amount,
+                'clip_payment_request_id' => null,
+                'clip_payment_request_url' => null,
+                'clip_checkout_response' => null,
+                'webhook_payload' => null,
                 'updated_at' => now(),
             ]);
         } else {
@@ -138,8 +143,14 @@ class PaymentController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
+            DB::table('payments')->where('clip_checkout_id', $checkoutId)->update([
+                'status' => 'failed',
+                'clip_payment_request_url' => null,
+                'updated_at' => now(),
+            ]);
+
             Log::error('Clip checkout request failed', [
-                'message' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             return response()->json([
@@ -155,9 +166,20 @@ class PaymentController extends Controller
                 ?: $response->json('payment_request.id');
 
             if (! $paymentUrl) {
+                DB::table('payments')->where('clip_checkout_id', $checkoutId)->update([
+                    'status' => 'failed',
+                    'clip_payment_request_url' => null,
+                    'clip_checkout_response' => json_encode(PaymentPayloadSanitizer::checkout(
+                        $response->json() ?? [],
+                        $response->status(),
+                        'checkout_missing_url',
+                    )),
+                    'updated_at' => now(),
+                ]);
+
                 Log::error('Clip checkout response missing payment URL', [
                     'status' => $response->status(),
-                    'body' => $response->json(),
+                    'provider_status' => data_get($response->json(), 'status'),
                 ]);
 
                 return response()->json([
@@ -169,7 +191,10 @@ class PaymentController extends Controller
             DB::table('payments')->where('clip_checkout_id', $checkoutId)->update([
                 'clip_payment_request_id' => $paymentRequestId,
                 'clip_payment_request_url' => $paymentUrl,
-                'clip_checkout_response' => json_encode($response->json()),
+                'clip_checkout_response' => json_encode(PaymentPayloadSanitizer::checkout(
+                    $response->json() ?? [],
+                    $response->status(),
+                )),
                 'updated_at' => now(),
             ]);
 
@@ -180,10 +205,20 @@ class PaymentController extends Controller
             ]);
         }
 
+        DB::table('payments')->where('clip_checkout_id', $checkoutId)->update([
+            'status' => 'failed',
+            'clip_payment_request_url' => null,
+            'clip_checkout_response' => json_encode(PaymentPayloadSanitizer::checkout(
+                $response->json() ?? [],
+                $response->status(),
+                'checkout_rejected',
+            )),
+            'updated_at' => now(),
+        ]);
+
         return response()->json([
             'success' => false,
             'message' => 'Error al generar el pago',
-            'error' => $response->json()
         ], 400);
     }
 
@@ -312,7 +347,8 @@ class PaymentController extends Controller
             ->update([
                 'status' => 'paid',
                 'clip_payment_request_id' => $verificationId,
-                'webhook_payload' => json_encode($payload),
+                'webhook_payload' => json_encode(PaymentPayloadSanitizer::webhook($payload)),
+                'clip_payment_request_url' => null,
                 'updated_at' => now(),
             ]);
 
@@ -396,7 +432,7 @@ class PaymentController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Clip checkout verification request failed', [
                 'payment_id' => $payment->id,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             return ['ok' => false, 'reason' => 'verification_unavailable', 'http_status' => 503];
@@ -490,7 +526,7 @@ class PaymentController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Unable to cache Meta purchase context', [
                 'checkout_id' => $checkoutId,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
         }
     }
@@ -510,7 +546,7 @@ class PaymentController extends Controller
             $userData = [];
             Log::warning('Unable to read cached Meta purchase context', [
                 'payment_id' => $payment->id,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
         }
 
@@ -547,7 +583,7 @@ class PaymentController extends Controller
             } catch (\Throwable $e) {
                 Log::warning('Unable to clear Meta purchase context', [
                     'payment_id' => $payment->id,
-                    'error' => $e->getMessage(),
+                    'exception' => $e::class,
                 ]);
             }
 
@@ -735,7 +771,7 @@ class PaymentController extends Controller
                 'description' => $description,
                 'product_code' => $productCode,
                 'status' => 'paid',
-                'webhook_payload' => json_encode(['method' => 'account_balance', 'paid_at' => now()->toIso8601String()]),
+                'webhook_payload' => json_encode(PaymentPayloadSanitizer::internal('account_balance')),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
