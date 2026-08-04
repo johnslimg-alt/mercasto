@@ -447,13 +447,13 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
                     rows={1}
                     maxLength={1000}
                     placeholder={t.write_message || 'Escribe un mensaje'}
-                    className="min-h-12 max-h-32 flex-1 resize-y rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    className="mc-control max-h-32 flex-1 resize-y border px-4 py-3 text-sm outline-none focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
                     aria-label={t.write_message || 'Escribe un mensaje'}
                   />
                   <button
                     type="submit"
                     disabled={!draft.trim() || sending}
-                    className="flex min-h-12 min-w-12 items-center justify-center rounded-2xl bg-lime-500 text-slate-950 transition-colors hover:bg-lime-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mc-primary-action mc-icon-button"
                     aria-label={t.sendMessage || 'Enviar mensaje'}
                   >
                     {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
