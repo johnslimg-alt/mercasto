@@ -34,7 +34,7 @@
     "smoke:port-ownership": "bash scripts/port-ownership-smoke.sh",
     "e2e:install": "npx playwright install --with-deps chromium",
     "e2e:public": "npx playwright test tests/e2e/public-smoke.spec.js",
-    "e2e:public:ci": "CI=1 npx playwright test tests/e2e/public-smoke.spec.js",
+    "e2e:public:ci": "bash scripts/public-e2e-ci.sh",
     "check:session-config": "bash scripts/session-config-scan.sh",
     "check:payment-webhook-idempotency": "bash scripts/payment-webhook-idempotency-scan.sh",
     "check:media-upload-validation": "bash scripts/media-upload-validation-scan.sh",
@@ -62,7 +62,8 @@
     "smoke:origin-edge": "bash scripts/origin-edge-security-smoke.sh",
     "check:payment-payload-privacy": "bash scripts/payment-payload-privacy-gate.sh",
     "check:security-audit": "bash scripts/security-audit-gate.sh",
-    "smoke:security-audit": "bash scripts/security-audit-smoke.sh"
+    "smoke:security-audit": "bash scripts/security-audit-smoke.sh",
+    "check:launch-readiness-contract": "bash scripts/launch-readiness-contract-gate.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
