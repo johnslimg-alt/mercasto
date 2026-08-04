@@ -114,8 +114,14 @@ assertContains(
 
 assertContains(
   'src/utils/metaCapiBridge.js',
-  "const REGISTRATION_EVENT_PREFIX = 'register_user_';",
-  'Meta registration ids satisfy the backend observer allowlist'
+  'registrationEventId()',
+  'Meta registration ids use the shared funnel event-id generator'
+);
+
+assertContains(
+  'src/utils/funnelAnalytics.js',
+  "return createAnalyticsEventId('register_user');",
+  'shared registration ids satisfy the backend observer allowlist'
 );
 
 assertContains(
@@ -146,7 +152,7 @@ assertOrder(
 assertOrder(
   'src/utils/metaCapiBridge.js',
   'const response = await currentFetch.call(this, input, patched.init);',
-  'sendMappedEvent(EVENT_MAP.sign_up',
+  'trackEvent(FUNNEL_EVENTS.SIGN_UP',
   'the browser conversion is emitted only after the registration response succeeds'
 );
 

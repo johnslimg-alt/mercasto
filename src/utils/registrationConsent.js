@@ -1,3 +1,5 @@
+import { registrationEventId } from './funnelAnalytics.js';
+
 export const LEGAL_DOCUMENT_VERSIONS = Object.freeze({
   terms: '2026-08-03',
   privacy: '2026-08-03',
@@ -8,6 +10,7 @@ const CONSENT_SOURCES = new Set(['web', 'mobile', 'api']);
 export function createRegistrationConsentPayload(
   source = 'web',
   acceptedAt = new Date(),
+  { includeEventId = false, eventId = '' } = {},
 ) {
   const normalizedSource = CONSENT_SOURCES.has(source) ? source : 'web';
   const instant = acceptedAt instanceof Date ? acceptedAt : new Date(acceptedAt);
@@ -16,12 +19,14 @@ export function createRegistrationConsentPayload(
     throw new TypeError('acceptedAt must be a valid date');
   }
 
+  const resolvedEventId = eventId || (includeEventId ? registrationEventId() : '');
   return {
     age_confirmed: true,
     terms_version: LEGAL_DOCUMENT_VERSIONS.terms,
     privacy_version: LEGAL_DOCUMENT_VERSIONS.privacy,
     consent_accepted_at: instant.toISOString(),
     consent_source: normalizedSource,
+    ...(resolvedEventId ? { meta_event_id: resolvedEventId } : {}),
   };
 }
 
@@ -33,15 +38,13 @@ export function authTokenFromResponse(data) {
 export function createOAuthRegistrationUrl(
   apiBaseUrl,
   provider,
-  registration = false,
-  acceptedAt = new Date(),
+  registrationPayload = null,
 ) {
   const base = String(apiBaseUrl || '').replace(/\/$/, '');
   const url = new URL(`${base}/auth/${encodeURIComponent(provider)}/redirect`);
-  if (registration) {
-    const consent = createRegistrationConsentPayload('web', acceptedAt);
+  if (registrationPayload) {
     url.searchParams.set('registration', '1');
-    Object.entries(consent).forEach(([key, value]) => {
+    Object.entries(registrationPayload).forEach(([key, value]) => {
       url.searchParams.set(key, String(value));
     });
   }

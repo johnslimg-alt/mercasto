@@ -753,7 +753,7 @@ function App() {
     navigate(buildHomeFilterPath({ search: nextSearch, location: nextLoc, category: nextCategory }));
     // GA4 search event
     if (nextSearch && nextSearch.trim()) {
-      events.searchPerformed(nextSearch.trim(), nextCategory || "");
+      events.searchPerformed(nextSearch.trim(), nextCategory || '', { source: 'header_search' });
     }
   }, [activeCat, buildHomeFilterPath, navigate, searchQuery, searchLocationInput, setCurrentTab]);
 
@@ -1186,6 +1186,9 @@ function App() {
     const paymentStatus = params.get('payment');
     const oauthChallenge = params.get('oauth_challenge') || params.get('oauth_2fa');
     const oauthCode = params.get('oauth_code');
+    const oauthNewUser = params.get('new_user') === '1';
+    const oauthRegistrationEventId = params.get('registration_event_id');
+    const oauthRegistrationMethod = params.get('registration_method') || 'oauth';
 
     // Обработка возврата с платежного шлюза
     if (paymentStatus === 'success') {
@@ -1275,6 +1278,14 @@ function App() {
           setUser(data.user);
           setUserRole(data.user.role || 'individual');
           localStorage.setItem('user', JSON.stringify(data.user));
+          if (oauthNewUser && oauthRegistrationEventId) {
+            localStorage.setItem('just_registered', '1');
+            events.registered({
+              event_id: oauthRegistrationEventId,
+              meta_event_id: oauthRegistrationEventId,
+              method: oauthRegistrationMethod,
+            });
+          }
           if (!data.user.referred_by) applyPendingReferral(data.access_token);
         })
         .catch(err => {
@@ -2206,16 +2217,21 @@ function App() {
       );
       return null;
     }
-    return createRegistrationConsentPayload('web');
+    return createRegistrationConsentPayload('web', new Date(), {
+      includeEventId: true,
+    });
   };
 
   const handleOAuthStart = (provider) => {
     const isRegistration = authMode === 'register';
-    if (isRegistration && !registrationConsentForAction()) return;
+    const registrationPayload = isRegistration
+      ? registrationConsentForAction()
+      : null;
+    if (isRegistration && !registrationPayload) return;
     window.location.href = createOAuthRegistrationUrl(
       API_URL,
       provider,
-      isRegistration,
+      registrationPayload,
     );
   };
 
@@ -2283,7 +2299,6 @@ function App() {
           // Mark new registrations for onboarding
           if (authMode === 'register') {
             localStorage.setItem('just_registered', '1');
-            events.registered();
           }
           setShowAuthModal(false);
         }
@@ -2371,6 +2386,14 @@ function App() {
         setUser(result.user); setUserRole(result.user.role || 'individual');
         localStorage.setItem('user', JSON.stringify(result.user));
         if (result.access_token) localStorage.setItem('auth_token', result.access_token);
+        if (result.is_new_user && result.registration_event_id) {
+          localStorage.setItem('just_registered', '1');
+          events.registered({
+            event_id: result.registration_event_id,
+            meta_event_id: result.registration_event_id,
+            method: result.registration_method || 'phone',
+          });
+        }
         setPendingPhoneRegistrationConsent(null);
         setShowAuthModal(false);
       } else showToast(result.message || 'Código SMS inválido', 'error');
@@ -2722,7 +2745,7 @@ function App() {
         setCurrentTab('profile');
         navigate('/profile');
         // GA4 + Meta Pixel/CAPI ad posted event
-        if (!editingAd && savedAd?.id) events.adPosted(savedAd.id, form.category || "general");
+        if (!editingAd && savedAd?.id) events.listingPublished(savedAd.id, form.category || "general");
         loadAds(1); // Reload after create/update
         loadUserAds(); // Обновляем список моих объявлений
       } else {
@@ -2795,19 +2818,9 @@ function App() {
       body: JSON.stringify({ channel })
     }).catch(() => {});
 
-    // GTM Event push para conversiones
-    if (typeof window !== 'undefined') {
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({
-        event: `${channel}_click`,
-        ad_id: ad.id,
-        ad_title: ad.title,
-        ad_category: ad.category
-      });
-    }
-
-    // Meta Pixel: Contact event with channel method
-    events.messageStarted(channel);
+    events.contactOpened(channel, ad.id, ad.category, {
+      source: 'listing_contact',
+    });
   };
 
   const handleReviewSubmit = async (e) => {
@@ -4480,6 +4493,14 @@ function App() {
                               setUser(data.user);
                               setUserRole(data.user.role || 'individual');
                               localStorage.setItem('user', JSON.stringify(data.user));
+                              if (data.is_new_user && data.registration_event_id) {
+                                localStorage.setItem('just_registered', '1');
+                                events.registered({
+                                  event_id: data.registration_event_id,
+                                  meta_event_id: data.registration_event_id,
+                                  method: data.registration_method || 'telegram',
+                                });
+                              }
                               setShowAuthModal(false);
                               showToast('¡Bienvenido!');
                             } else if (data.requires_2fa) {

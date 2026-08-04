@@ -1,5 +1,7 @@
+import { trackEvent } from './analytics';
+import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
+
 const META_API_BASE = '/api/meta/events';
-const REGISTRATION_EVENT_PREFIX = 'register_user_';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
 
 const EVENT_MAP = {
@@ -7,6 +9,7 @@ const EVENT_MAP = {
   listing_published: { endpoint: 'post-ad', metaName: 'PostAd', custom: true },
   favorite_added: { endpoint: 'wishlist', metaName: 'AddToWishlist' },
   add_to_wishlist: { endpoint: 'wishlist', metaName: 'AddToWishlist' },
+  contact_opened: { endpoint: 'contact', metaName: 'Contact' },
   contact_click: { endpoint: 'contact', metaName: 'Contact' },
   whatsapp_click: { endpoint: 'contact', metaName: 'Contact', method: 'whatsapp' },
   telegram_click: { endpoint: 'contact', metaName: 'Contact', method: 'telegram' },
@@ -22,17 +25,8 @@ function isBrowser() {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
 
-function randomId() {
-  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
-  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
 function eventId(prefix, listingId = '') {
-  return `${prefix}_${listingId || 'event'}_${randomId()}`;
-}
-
-function registrationEventId() {
-  return `${REGISTRATION_EVENT_PREFIX}${randomId()}`.slice(0, 120);
+  return createAnalyticsEventId(`${prefix}_${listingId || 'event'}`);
 }
 
 function clean(value) {
@@ -208,10 +202,11 @@ function patchRegistrationFetch() {
 
     const response = await currentFetch.call(this, input, patched.init);
     if (response.ok) {
-      sendMappedEvent(EVENT_MAP.sign_up, {
+      trackEvent(FUNNEL_EVENTS.SIGN_UP, {
         event_id: patched.sharedEventId,
         meta_event_id: patched.sharedEventId,
-        page_location: window.location.href,
+        method: 'email',
+        source: 'registration_fetch',
       });
     }
     return response;

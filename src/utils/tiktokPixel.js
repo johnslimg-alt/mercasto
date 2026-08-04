@@ -1,6 +1,7 @@
 const TIKTOK_PIXEL_ID = 'D9C3HKBC77UBS5FSD7C0';
 
 const TIKTOK_EVENT_MAP = {
+  listing_viewed: 'ViewContent',
   ad_viewed: 'ViewContent',
   view_item: 'ViewContent',
   select_content: 'ViewContent',
@@ -25,6 +26,7 @@ const TIKTOK_EVENT_MAP = {
   form_submit: 'ClickButton',
   ad_card_click: 'ClickButton',
 
+  contact_opened: 'Contact',
   contact_click: 'Contact',
   whatsapp_click: 'Contact',
   telegram_click: 'Contact',

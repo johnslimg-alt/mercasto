@@ -22,6 +22,16 @@ test('registration consent payload is versioned and UTC stamped', () => {
   });
 });
 
+
+test('registration payload can carry a shared deduplication event id', () => {
+  const payload = createRegistrationConsentPayload(
+    'web',
+    new Date('2026-08-03T21:30:00Z'),
+    { eventId: 'register_user_shared_123' },
+  );
+  assert.equal(payload.meta_event_id, 'register_user_shared_123');
+});
+
 test('auth token normalization accepts Laravel and legacy responses', () => {
   assert.equal(authTokenFromResponse({ access_token: 'laravel' }), 'laravel');
   assert.equal(authTokenFromResponse({ token: 'legacy' }), 'legacy');
@@ -29,11 +39,15 @@ test('auth token normalization accepts Laravel and legacy responses', () => {
 });
 
 test('OAuth registration URL carries the same versioned consent contract', () => {
+  const consent = createRegistrationConsentPayload(
+    'web',
+    new Date('2026-08-03T21:30:00Z'),
+    { eventId: 'register_user_oauth_test' },
+  );
   const url = new URL(createOAuthRegistrationUrl(
     'https://mercasto.com/api/',
     'google',
-    true,
-    new Date('2026-08-03T21:30:00Z'),
+    consent,
   ));
 
   assert.equal(url.pathname, '/api/auth/google/redirect');
@@ -43,13 +57,14 @@ test('OAuth registration URL carries the same versioned consent contract', () =>
   assert.equal(url.searchParams.get('privacy_version'), LEGAL_DOCUMENT_VERSIONS.privacy);
   assert.equal(url.searchParams.get('consent_source'), 'web');
   assert.equal(url.searchParams.get('consent_accepted_at'), '2026-08-03T21:30:00.000Z');
+  assert.equal(url.searchParams.get('meta_event_id'), 'register_user_oauth_test');
 });
 
 test('OAuth login URL does not attach registration consent', () => {
   const url = new URL(createOAuthRegistrationUrl(
     'https://mercasto.com/api',
     'google',
-    false,
+    null,
   ));
   assert.equal(url.search, '');
 });

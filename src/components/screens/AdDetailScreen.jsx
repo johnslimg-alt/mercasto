@@ -333,7 +333,7 @@ export default function AdDetailScreen({
   React.useEffect(() => {
     if (ad) {
       addRecentlyViewed(ad);
-      events.adViewed(ad.id, ad.category);
+      events.listingViewed(ad.id, ad.category, { source: 'listing_detail' });
     }
   }, [ad?.id]);
 
