@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -81,6 +82,46 @@ class CompleteRegistrationMetaCapiTest extends TestCase
         $this->assertSame('tiktok-click', $tiktokUser['ttclid'] ?? null);
     }
 
+    public function test_phone_registration_uses_the_same_event_id_for_response_meta_and_tiktok(): void
+    {
+        config([
+            'services.facebook.pixel_id' => '4595315270748335',
+            'services.facebook.access_token' => 'meta-test-token',
+            'services.facebook.graph_version' => 'v25.0',
+            'services.tiktok.pixel_code' => 'D9C3HKBC77UBS5FSD7C0',
+            'services.tiktok.access_token' => 'tiktok-test-token',
+            'services.tiktok.events_api_endpoint' => 'https://business-api.tiktok.com/open_api/v1.3/event/track/',
+        ]);
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['events_received' => 1], 200),
+            'business-api.tiktok.com/*' => Http::response(['code' => 0, 'message' => 'OK'], 200),
+        ]);
+
+        $phone = '+525512345690';
+        $eventId = 'register_user_phone_shared_event';
+        Cache::put('phone_auth_'.$phone, 123456, now()->addMinutes(10));
+
+        $response = $this->postJson('/api/auth/phone/verify', [
+            'phone_number' => $phone,
+            'code' => '123456',
+            'meta_event_id' => $eventId,
+            ...$this->registrationConsent('mobile'),
+        ])->assertOk()
+            ->assertJsonPath('is_new_user', true)
+            ->assertJsonPath('registration_event_id', $eventId)
+            ->assertJsonPath('registration_method', 'phone');
+
+        $recorded = Http::recorded();
+        $this->assertCount(2, $recorded);
+        $metaRequest = collect($recorded)->first(fn ($entry) => str_contains($entry[0]->url(), 'graph.facebook.com'))[0];
+        $metaEvent = $metaRequest->data()['data'][0] ?? [];
+        $this->assertSame($eventId, $metaEvent['event_id'] ?? null);
+        $tiktokRequest = collect($recorded)->first(fn ($entry) => str_contains($entry[0]->url(), 'business-api.tiktok.com'))[0];
+        $tiktokEvent = $tiktokRequest->data()['data'][0] ?? [];
+        $this->assertSame(hash('sha256', $eventId), $tiktokEvent['event_id'] ?? null);
+        $this->assertNotNull($response->json('user.id'));
+    }
+
     public function test_registration_without_meta_event_id_does_not_send_complete_registration(): void
     {
         config([
@@ -106,14 +147,14 @@ class CompleteRegistrationMetaCapiTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private function registrationConsent(): array
+    private function registrationConsent(string $source = 'web'): array
     {
         return [
             'age_confirmed' => true,
             'terms_version' => config('legal.registration_consent.terms_version'),
             'privacy_version' => config('legal.registration_consent.privacy_version'),
             'consent_accepted_at' => now()->toIso8601String(),
-            'consent_source' => 'web',
+            'consent_source' => $source,
         ];
     }
 }

@@ -142,6 +142,7 @@ class AuthController extends Controller
             ],
             'consent_accepted_at' => ['required', 'date'],
             'consent_source' => ['required', 'string', Rule::in(['web', 'mobile', 'api'])],
+            'meta_event_id' => ['nullable', 'string', 'max:120', 'regex:/^[A-Za-z0-9._:-]+$/'],
         ]);
 
         $clientAcceptedAt = Carbon::parse((string) $validated['consent_accepted_at']);
@@ -164,6 +165,9 @@ class AuthController extends Controller
             'privacy_version' => (string) config('legal.registration_consent.privacy_version'),
             'client_accepted_at' => $clientAcceptedAt,
             'source' => (string) $validated['consent_source'],
+            'meta_event_id' => isset($validated['meta_event_id'])
+                ? (string) $validated['meta_event_id']
+                : null,
         ];
     }
 
@@ -385,6 +389,7 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['code' => ['Código SMS inválido o expirado.']]);
         }
         $user = User::where('phone_number', $phoneNumber)->first();
+        $isNewUser = $user === null;
         if (!$user) {
             $registrationConsent = $this->validateRegistrationConsent($request);
             $user = DB::transaction(function () use ($phoneNumber, $request, $registrationConsent) {
@@ -404,7 +409,15 @@ class AuthController extends Controller
 
         Cache::forget('phone_auth_' . $phoneNumber);
 
-        return response()->json(['message' => 'Inicio de sesión exitoso', 'access_token' => $user->createToken('auth_token')->plainTextToken, 'token_type' => 'Bearer', 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])]);
+        return response()->json([
+            'message' => 'Inicio de sesión exitoso',
+            'access_token' => $user->createToken('auth_token')->plainTextToken,
+            'token_type' => 'Bearer',
+            'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password']),
+            'is_new_user' => $isNewUser,
+            'registration_event_id' => $isNewUser ? $request->input('meta_event_id') : null,
+            'registration_method' => $isNewUser ? 'phone' : null,
+        ]);
     }
 
     /**
@@ -688,6 +701,7 @@ class AuthController extends Controller
             }
             
             $registrationConsent = $this->pullOAuthRegistrationConsent($request, $provider);
+            $isNewUser = $user === null;
 
             if (!$user) {
                 if (!$registrationConsent) {
@@ -695,6 +709,10 @@ class AuthController extends Controller
                         config('app.frontend_url', 'https://mercasto.com')
                         . '/?error=registration_consent_required'
                     );
+                }
+
+                if (!empty($registrationConsent['meta_event_id'])) {
+                    $request->merge(['meta_event_id' => $registrationConsent['meta_event_id']]);
                 }
 
                 $user = DB::transaction(function () use ($provider, $socialUser, $request, $registrationConsent) {
@@ -733,7 +751,18 @@ class AuthController extends Controller
             $exchangeCode = Str::random(64);
             Cache::put('oauth_exchange:' . $exchangeCode, $user->id, now()->addMinutes(5));
 
-            return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?oauth_code=' . $exchangeCode);
+            $query = array_filter([
+                'oauth_code' => $exchangeCode,
+                'new_user' => $isNewUser ? '1' : null,
+                'registration_event_id' => $isNewUser
+                    ? ($registrationConsent['meta_event_id'] ?? null)
+                    : null,
+                'registration_method' => $isNewUser ? $provider : null,
+            ], fn ($value) => $value !== null && $value !== '');
+
+            return redirect()->away(
+                config('app.frontend_url', 'https://mercasto.com') . '/?' . http_build_query($query)
+            );
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error(ucfirst($provider) . ' OAuth Error: ' . $e->getMessage());
             return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=oauth_failed');
@@ -813,8 +842,12 @@ class AuthController extends Controller
                 $user = $existingUser;
             }
 
+            $isNewUser = $user === null;
             if (!$user) {
                 $registrationConsent = $this->validateRegistrationConsent($request);
+                if (!empty($registrationConsent['meta_event_id'])) {
+                    $request->merge(['meta_event_id' => $registrationConsent['meta_event_id']]);
+                }
                 $user = DB::transaction(function () use ($socialUser, $request, $registrationConsent) {
                     $user = new User();
                     $user->name = $socialUser->name ?: 'telegram_user_' . rand(1000, 9999);
@@ -851,7 +884,10 @@ class AuthController extends Controller
 
             return response()->json([
                 'token' => $token,
-                'user'  => $user->makeHidden(['password', 'remember_token']),
+                'user' => $user->makeHidden(['password', 'remember_token']),
+                'is_new_user' => $isNewUser,
+                'registration_event_id' => $isNewUser ? $request->input('meta_event_id') : null,
+                'registration_method' => $isNewUser ? 'telegram' : null,
             ]);
         } catch (ValidationException $e) {
             throw $e;

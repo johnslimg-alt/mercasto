@@ -1,16 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { events } from '../utils/analytics';
 import { authTokenFromResponse, createRegistrationConsentPayload } from '../utils/registrationConsent';
+import { registrationEventId } from '../utils/funnelAnalytics.js';
 
 const AuthContext = createContext(null);
-
-function createMetaRegistrationEventId() {
-  const randomPart = globalThis.crypto?.randomUUID?.()
-    || `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-
-  return `register_user_${randomPart}`.slice(0, 120);
-}
 
 export function AuthProvider({ children }) {
   // === ПОЛЬЗОВАТЕЛЬ ===
@@ -95,7 +88,7 @@ export function AuthProvider({ children }) {
     if (!acceptedLegal) {
       return Promise.resolve({ success: false, error: 'legal_consent_required' });
     }
-    const metaEventId = createMetaRegistrationEventId();
+    const metaEventId = registrationEventId();
     const payload = {
       name,
       email,
@@ -123,7 +116,6 @@ export function AuthProvider({ children }) {
         setUser(data.user);
         setShowAuthModal(false);
         localStorage.setItem('just_registered', '1');
-        events.registered({ event_id: metaEventId });
         return { success: true };
       }
       

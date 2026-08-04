@@ -38,11 +38,15 @@ class RegistrationConsentChannelsTest extends TestCase
         $phone = '+525512345679';
         Cache::put('phone_auth_'.$phone, 654321, now()->addMinutes(10));
 
+        $eventId = 'register_user_phone_channel_test';
         $created = $this->postJson('/api/auth/phone/verify', [
             'phone_number' => $phone,
             'code' => '654321',
-            ...$this->registrationConsent('mobile'),
-        ])->assertOk();
+            ...$this->registrationConsent('mobile', $eventId),
+        ])->assertOk()
+            ->assertJsonPath('is_new_user', true)
+            ->assertJsonPath('registration_event_id', $eventId)
+            ->assertJsonPath('registration_method', 'phone');
 
         $userId = $created->json('user.id');
         $this->assertDatabaseCount('user_consents', 3);
@@ -56,7 +60,10 @@ class RegistrationConsentChannelsTest extends TestCase
         $this->postJson('/api/auth/phone/verify', [
             'phone_number' => $phone,
             'code' => '111222',
-        ])->assertOk()->assertJsonPath('user.id', $userId);
+        ])->assertOk()
+            ->assertJsonPath('user.id', $userId)
+            ->assertJsonPath('is_new_user', false)
+            ->assertJsonPath('registration_event_id', null);
 
         $this->assertDatabaseCount('user_consents', 3);
     }
@@ -77,17 +84,23 @@ class RegistrationConsentChannelsTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('age_confirmed');
 
+        $eventId = 'register_user_telegram_channel_test';
         $created = $this->postJson('/api/auth/telegram/callback', [
             ...$signed,
-            ...$this->registrationConsent('web'),
-        ])->assertOk();
+            ...$this->registrationConsent('web', $eventId),
+        ])->assertOk()
+            ->assertJsonPath('is_new_user', true)
+            ->assertJsonPath('registration_event_id', $eventId)
+            ->assertJsonPath('registration_method', 'telegram');
 
         $userId = $created->json('user.id');
         $this->assertDatabaseCount('user_consents', 3);
 
         $this->postJson('/api/auth/telegram/callback', $signed)
             ->assertOk()
-            ->assertJsonPath('user.id', $userId);
+            ->assertJsonPath('user.id', $userId)
+            ->assertJsonPath('is_new_user', false)
+            ->assertJsonPath('registration_event_id', null);
         $this->assertDatabaseCount('user_consents', 3);
     }
 
@@ -111,7 +124,7 @@ class RegistrationConsentChannelsTest extends TestCase
 
         $response = $this->get('/api/auth/google/redirect?'.http_build_query([
             'registration' => '1',
-            ...$this->registrationConsent('web'),
+            ...$this->registrationConsent('web', 'register_user_oauth_redirect_test'),
         ]));
 
         $response->assertRedirect('https://accounts.example.test/oauth');
@@ -120,6 +133,7 @@ class RegistrationConsentChannelsTest extends TestCase
         $this->assertIsArray($cached);
         $this->assertSame(config('legal.registration_consent.terms_version'), $cached['terms_version']);
         $this->assertSame('web', $cached['source']);
+        $this->assertSame('register_user_oauth_redirect_test', $cached['meta_event_id']);
     }
 
     public function test_new_oauth_account_requires_one_time_consent_state(): void
@@ -143,6 +157,7 @@ class RegistrationConsentChannelsTest extends TestCase
                 'privacy_version' => config('legal.registration_consent.privacy_version'),
                 'client_accepted_at' => now()->toIso8601String(),
                 'source' => 'web',
+                'meta_event_id' => 'register_user_oauth_callback_test',
             ],
             now()->addMinutes(10),
         );
@@ -150,7 +165,10 @@ class RegistrationConsentChannelsTest extends TestCase
 
         $created = $this->get("/api/auth/google/callback?code=provider-code&state={$state}");
 
-        $created->assertRedirectContains('oauth_code=');
+        $created->assertRedirectContains('oauth_code=')
+            ->assertRedirectContains('new_user=1')
+            ->assertRedirectContains('registration_event_id=register_user_oauth_callback_test')
+            ->assertRedirectContains('registration_method=google');
         $user = User::where('email', 'oauth-consent@example.com')->firstOrFail();
         $this->assertSame('google-new-2', $user->google_id);
         $this->assertDatabaseCount('user_consents', 3);
@@ -164,7 +182,7 @@ class RegistrationConsentChannelsTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private function registrationConsent(string $source): array
+    private function registrationConsent(string $source, ?string $eventId = null): array
     {
         return [
             'age_confirmed' => true,
@@ -172,6 +190,7 @@ class RegistrationConsentChannelsTest extends TestCase
             'privacy_version' => config('legal.registration_consent.privacy_version'),
             'consent_accepted_at' => now()->toIso8601String(),
             'consent_source' => $source,
+            ...($eventId ? ['meta_event_id' => $eventId] : []),
         ];
     }
 

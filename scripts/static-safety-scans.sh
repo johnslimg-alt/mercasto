@@ -19,6 +19,7 @@ bash scripts/chat-ui-flow-gate.sh
 bash scripts/listing-lifecycle-gate.sh
 bash scripts/location-search-gate.sh
 bash scripts/registration-consent-contract-gate.sh
+bash scripts/funnel-analytics-contract-gate.sh
 bash scripts/auth-account-gate.sh
 bash scripts/attribute-flow-gate.sh
 bash scripts/otp-abuse-control-gate.sh

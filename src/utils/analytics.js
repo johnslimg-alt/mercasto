@@ -1,3 +1,5 @@
+import { FUNNEL_ANALYTICS_VERSION, FUNNEL_EVENTS, listingAnalyticsParams } from './funnelAnalytics.js';
+
 // Cross-platform analytics layer for GA4, Meta Pixel, Microsoft/Bing UET and Clarity.
 // It intentionally does not capture raw email, phone, password, message or textarea values.
 
@@ -28,11 +30,13 @@ const META_STANDARD_EVENT_MAP = {
   page_view: 'PageView',
   search: 'Search',
   view_search_results: 'Search',
+  listing_viewed: 'ViewContent',
   ad_viewed: 'ViewContent',
   view_item: 'ViewContent',
   select_content: 'ViewContent',
   favorite_added: 'AddToWishlist',
   add_to_wishlist: 'AddToWishlist',
+  contact_opened: 'Contact',
   contact_click: 'Contact',
   whatsapp_click: 'Contact',
   phone_click: 'Contact',
@@ -261,7 +265,8 @@ function initAnalyticsVendors() {
 
 function buildMetaParams(eventName, params) {
   const out = { ...params };
-  if (params.ad_id && !out.content_ids) out.content_ids = [`ad_${params.ad_id}`];
+  const listingId = params.listing_id || params.ad_id;
+  if (listingId && !out.content_ids) out.content_ids = [`ad_${listingId}`];
   if (params.content_id && !out.content_ids) out.content_ids = [params.content_id];
   if (params.category && !out.content_category) out.content_category = params.category;
   if (params.item_name && !out.content_name) out.content_name = params.item_name;
@@ -280,6 +285,7 @@ function sendToMeta(eventName, params) {
     'listing_published',
     'favorite_added',
     'add_to_wishlist',
+    'contact_opened',
     'contact_click',
     'whatsapp_click',
     'telegram_click',
@@ -328,6 +334,8 @@ export function trackEvent(eventName, params = {}) {
   const payload = sanitizeParams({
     ...getPageContext(),
     ...params,
+    platform: 'web',
+    analytics_contract_version: FUNNEL_ANALYTICS_VERSION,
     session_id: getSessionId(),
   });
 
@@ -774,46 +782,63 @@ export function initBehaviorAnalytics() {
   beginPage('init');
 }
 
-// Key business events
+// Key business events. Legacy ad* method names remain as callable aliases,
+// but every emitted event follows the canonical cross-platform contract.
+const listingViewed = (listingId, category, params = {}) =>
+  trackEvent(FUNNEL_EVENTS.LISTING_VIEWED, listingAnalyticsParams(listingId, category, params));
+const listingPublished = (listingId, category, params = {}) =>
+  trackEvent(FUNNEL_EVENTS.LISTING_PUBLISHED, listingAnalyticsParams(listingId, category, params));
+const listingUpdated = (listingId, category, params = {}) =>
+  trackEvent(FUNNEL_EVENTS.LISTING_UPDATED, listingAnalyticsParams(listingId, category, params));
+const contactOpened = (channel, listingId, category, params = {}) =>
+  trackEvent(FUNNEL_EVENTS.CONTACT_OPENED, listingAnalyticsParams(listingId, category, {
+    channel,
+    contact_method: channel,
+    ...params,
+  }));
+
 export const events = {
-  adViewed: (adId, category, params = {}) =>
-    trackEvent('ad_viewed', { content_type: 'ad', content_id: `ad_${adId}`, ad_id: adId, category, ...params }),
+  listingViewed,
+  adViewed: listingViewed,
 
-  adImpression: (adId, category, placement = 'feed') =>
-    trackEvent('ad_impression', { content_type: 'ad', content_id: `ad_${adId}`, ad_id: adId, category, placement }),
+  adImpression: (listingId, category, placement = 'feed') =>
+    trackEvent('ad_impression', listingAnalyticsParams(listingId, category, { placement })),
 
-  adPosted: (adId, category, params = {}) =>
-    trackEvent('ad_posted', { content_type: 'ad', content_id: `ad_${adId}`, ad_id: adId, category, ...params }),
+  listingPublished,
+  adPosted: listingPublished,
 
-  adUpdated: (adId, category, params = {}) =>
-    trackEvent('ad_updated', { content_type: 'ad', content_id: `ad_${adId}`, ad_id: adId, category, ...params }),
+  listingUpdated,
+  adUpdated: listingUpdated,
 
   publishStep: (step, category, params = {}) =>
-    trackEvent('publish_step', { step, category, ...params }),
+    trackEvent('listing_publish_step', { step, step_name: step, category, ...params }),
 
   messageStarted: (params = {}) =>
-    trackEvent('message_started', params),
+    trackEvent(FUNNEL_EVENTS.MESSAGE_STARTED, params),
 
-  contactClick: (channel, adId, category, params = {}) =>
-    trackEvent('contact_click', { channel, ad_id: adId, category, ...params }),
+  messageSent: (params = {}) =>
+    trackEvent(FUNNEL_EVENTS.MESSAGE_SENT, params),
+
+  contactOpened,
+  contactClick: contactOpened,
 
   offerMade: (amount, params = {}) =>
     trackEvent('offer_made', { value: amount, currency: 'MXN', ...params }),
 
   favoriteAdded: (params = {}) =>
-    trackEvent('favorite_added', params),
+    trackEvent(FUNNEL_EVENTS.FAVORITE_ADDED, params),
 
   phoneVerified: (params = {}) =>
     trackEvent('phone_verified', params),
 
   searchPerformed: (query, category, params = {}) =>
-    trackEvent('search', { search_term: query, category, ...params }),
+    trackEvent(FUNNEL_EVENTS.SEARCH, { search_term: query, category, ...params }),
 
   promotionViewed: (plan, params = {}) =>
     trackEvent('view_item', { item_name: plan, item_category: 'promotion', ...params }),
 
   purchasePromotion: (plan, amount, params = {}) =>
-    trackEvent('purchase', {
+    trackEvent(FUNNEL_EVENTS.PURCHASE, {
       transaction_id: Date.now().toString(),
       value: amount,
       currency: 'MXN',
@@ -822,5 +847,5 @@ export const events = {
     }),
 
   registered: (params = {}) =>
-    trackEvent('sign_up', params),
+    trackEvent(FUNNEL_EVENTS.SIGN_UP, params),
 };
