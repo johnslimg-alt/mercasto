@@ -60,6 +60,36 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perDay(20)->by(optional($user)->id ?: $request->ip());
         });
 
+        // Authenticated listing writes: cap bursty clients without affecting normal editing.
+        RateLimiter::for("ad-mutations", function ($request) {
+            $user = $request->user();
+            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+                return Limit::none();
+            }
+
+            $key = $user ? "user:{$user->id}" : "ip:{$request->ip()}";
+
+            return [
+                Limit::perMinute(30)->by($key),
+                Limit::perHour(300)->by($key),
+            ];
+        });
+
+        // Heavy import endpoints get a separate burst and daily budget.
+        RateLimiter::for("uploads", function ($request) {
+            $user = $request->user();
+            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+                return Limit::none();
+            }
+
+            $key = $user ? "user:{$user->id}" : "ip:{$request->ip()}";
+
+            return [
+                Limit::perMinute(5)->by($key),
+                Limit::perDay(50)->by($key),
+            ];
+        });
+
         // Allow normal navigation across category landings without false 429s (unlimited for E2E)
         RateLimiter::for("search", function ($request) {
             $user = $request->user();

@@ -18,7 +18,9 @@ test -f "$DETAIL_SCREEN"
 
 # Route coverage: create, edit data, update, delete, status, report, moderation, owner dashboard.
 grep -qF "Route::middleware('throttle:ads')->post('/ads', [AdController::class, 'store'])" "$ROUTES"
-grep -qF "Route::get('/ads/{id}/edit', [AdController::class, 'editForm'])->whereNumber('id')" "$ROUTES"
+grep -qF "Route::middleware('throttle:api')->get('/ads/{id}/edit', [AdController::class, 'editForm'])->whereNumber('id')" "$ROUTES"
+grep -qF "Route::middleware('throttle:ad-mutations')->group(function () {" "$ROUTES"
+grep -qF "Route::middleware('throttle:uploads')->post('/ads/bulk-upload'" "$ROUTES"
 grep -qF "Route::post('/ads/{ad}', [AdController::class, 'update'])->whereNumber('ad')" "$ROUTES"
 grep -qF "Route::delete('/ads/{id}', [AdController::class, 'destroy'])->whereNumber('id')" "$ROUTES"
 grep -qF "Route::patch('/ads/{id}/status', [AdController::class, 'updateStatus'])->whereNumber('id')" "$ROUTES"
