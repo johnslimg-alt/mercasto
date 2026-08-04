@@ -3,6 +3,10 @@ import path from 'path';
 
 const E2E_SELLER_EMAIL = process.env.E2E_SELLER_EMAIL;
 const E2E_SELLER_PASSWORD = process.env.E2E_SELLER_PASSWORD;
+const E2E_BUYER_EMAIL = process.env.E2E_BUYER_EMAIL || 'buyer_e2e@mercasto.com';
+const E2E_BUYER_PASSWORD = process.env.E2E_BUYER_PASSWORD || 'E2eTestPass99!';
+const API_BASE_URL = process.env.API_BASE_URL || `${process.env.BASE_URL || 'https://mercasto.com'}/api`;
+const uniqueAdTitle = () => `Toyota Corolla E2E ${Date.now()} ${Math.floor(Math.random() * 10000)}`;
 
 test.skip(!E2E_SELLER_EMAIL || !E2E_SELLER_PASSWORD, 'Set E2E_SELLER_EMAIL and E2E_SELLER_PASSWORD to run seller lifecycle tests.');
 
@@ -56,8 +60,38 @@ async function loginUser(page, email, password) {
   }
 }
 
+
+async function logoutUser(page) {
+  const accountButton = page.locator('.header-user-button, .mobile-account-button').filter({ visible: true }).first();
+  await expect(accountButton).toBeVisible({ timeout: 10000 });
+  await accountButton.click();
+  const logoutButton = page.getByRole('button', { name: /Salir|Logout/i }).filter({ visible: true }).first();
+  await expect(logoutButton).toBeVisible({ timeout: 5000 });
+  await logoutButton.click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBeNull();
+}
+
+async function authenticatedAds(page, request) {
+  const token = await page.evaluate(() => localStorage.getItem('auth_token'));
+  expect(token).toBeTruthy();
+  const response = await request.get(`${API_BASE_URL}/user/ads`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  expect(response.ok()).toBeTruthy();
+  const payload = await response.json();
+  return Array.isArray(payload) ? payload : (payload.data || []);
+}
+
+async function fixtureAd(page, request, title) {
+  const ads = await authenticatedAds(page, request);
+  const ad = ads.find((item) => item.title === title);
+  expect(ad, `Missing E2E fixture: ${title}`).toBeTruthy();
+  return ad;
+}
+
 // Helper to create a test ad via the UI
 async function createTestAd(page) {
+  const adTitle = uniqueAdTitle();
   // Navigate to the post screen (the route in SPA is /post)
   await page.goto('/post');
 
@@ -97,7 +131,7 @@ async function createTestAd(page) {
   // Basic Fields
   const titleInput = formContainer.locator('input[placeholder*="Ej:"]').first();
   await expect(titleInput).toBeVisible({ timeout: 5000 });
-  await titleInput.fill('Toyota Corolla 2022 Excelente Estado');
+  await titleInput.fill(adTitle);
 
   await formContainer.locator('textarea').first().fill('Vendo mi Toyota Corolla 2022 en excelente estado. Único dueño, todos los servicios de agencia.');
   await formContainer.locator('input[type="number"]').first().fill('320000');
@@ -171,11 +205,15 @@ async function createTestAd(page) {
   // Verification: should redirect to /profile (my_ads tab) and show the new ad
   await page.waitForURL('**/profile', { timeout: 15000 });
 
-  // Switch to the "Revisión" (In Review) tab to make the pending ad visible
-  const revisionTab = page.locator('button').filter({ hasText: /Revisión|Review|Pending/i }).first();
-  await expect(revisionTab).toBeVisible({ timeout: 5000 });
-  await revisionTab.click();
-  await page.waitForTimeout(500);
+  // The dashboard opens on "Todos" and must already show the newly-created pending listing.
+  const titleHeading = page.getByRole('heading', { name: adTitle }).first();
+  await expect(titleHeading).toBeVisible({ timeout: 10000 });
+  const card = titleHeading.locator('xpath=ancestor::div[starts-with(@data-testid, "dashboard-ad-")][1]');
+  const cardTestId = await card.getAttribute('data-testid');
+  const adId = Number(cardTestId?.replace('dashboard-ad-', ''));
+  expect(adId).toBeGreaterThan(0);
+  await expect(card.getByText(/Pendiente|Pending/i).first()).toBeVisible();
+  return { adTitle, adId };
 }
 
 test.describe('Ads Lifecycle E2E Flow', () => {
@@ -196,108 +234,111 @@ test.describe('Ads Lifecycle E2E Flow', () => {
   });
 
   test('should create a new ad with media and category-specific attributes', async ({ page }) => {
-    await createTestAd(page);
-    await expect(page.locator('body')).toContainText(/Toyota Corolla 2022/i);
+    const { adTitle } = await createTestAd(page);
+    await expect(page.getByRole('heading', { name: adTitle }).first()).toBeVisible();
   });
 
-  test('should edit and update ad details successfully', async ({ page }) => {
-    // 1. Create an ad first to ensure one exists for editing
-    await createTestAd(page);
+  test('should edit and update ad details successfully', async ({ page, request }) => {
+    const { adId, adTitle } = await createTestAd(page);
+    const updatedTitle = `${adTitle} Precio Reducido`;
 
-    // 2. Navigate to dashboard
-    await page.goto('/profile');
+    await page.getByTestId(`edit-ad-${adId}`).click();
+    await expect(page).toHaveURL(new RegExp(`/anuncio/${adId}/editar$`));
 
-    // Switch to the "Revisión" (In Review) tab to see the pending ad
-    const revisionTab = page.locator('button').filter({ hasText: /Revisión|Review|Pending/i }).first();
-    await expect(revisionTab).toBeVisible({ timeout: 5000 });
-    await revisionTab.click();
-    await page.waitForTimeout(500);
-
-    // Click edit on the first active/pending ad
-    const editButton = page.locator('a[title*="Editar"], button[title*="Editar"], a:has-text("Editar"), button:has(.lucide-pencil)').first();
-    await expect(editButton).toBeVisible();
-    await editButton.click();
-
-    // Wait for the edit ad screen to load (we switch to the post tab in SPA)
-    const titleInput = page.locator('main form').first().locator('input[placeholder*="Ej:"]').first();
-    
-    // Go past Step 1
-    const nextBtn1 = page.locator('button').filter({ hasText: /Siguiente/i }).filter({ visible: true }).first();
-    await expect(nextBtn1).toBeVisible({ timeout: 5000 });
-    await nextBtn1.click({ force: true });
-
-    // Modify fields on Step 2
-    await expect(titleInput).toBeVisible({ timeout: 5000 });
-    const priceInput = page.locator('main form').first().locator('input[type="number"]').first();
+    const editForm = page.locator('main form, form').filter({ has: page.getByTestId('edit-ad-title') }).first();
+    const titleInput = page.getByTestId('edit-ad-title');
+    const priceInput = page.getByTestId('edit-ad-price');
+    await expect(titleInput).toHaveValue(adTitle, { timeout: 10000 });
+    await titleInput.fill(updatedTitle);
+    await expect(titleInput).toHaveValue(updatedTitle);
     await priceInput.fill('310000');
-    await titleInput.fill('Toyota Corolla 2022 Excelente Estado - Precio Reducido');
+    await expect(priceInput).toHaveValue('310000');
+    await expect(titleInput).toHaveValue(updatedTitle);
 
-    // Go past Step 2
-    const nextBtn2 = page.locator('button').filter({ hasText: /Siguiente/i }).filter({ visible: true }).first();
-    await nextBtn2.click({ force: true });
+    const updateRequestPromise = page.waitForRequest((updateRequest) => (
+      updateRequest.url().endsWith(`/api/ads/${adId}`) && updateRequest.method() === 'POST'
+    ));
+    const updateResponsePromise = page.waitForResponse((response) => (
+      response.url().endsWith(`/api/ads/${adId}`) && response.request().method() === 'POST'
+    ));
+    await editForm.getByRole('button', { name: /Guardar cambios|Save changes/i }).click();
+    const [updateRequest, updateResponse] = await Promise.all([updateRequestPromise, updateResponsePromise]);
+    expect(updateRequest.postData() || '').toContain(updatedTitle);
+    expect(updateResponse.status()).toBe(200);
+    await expect(page).toHaveURL(new RegExp(`/#ad-${adId}$`), { timeout: 15000 });
 
-    // Submit on Step 3
-    const saveButton = page.locator('main button').filter({ hasText: /Guardar|Save/i }).filter({ visible: true }).first();
-    await expect(saveButton).toBeVisible({ timeout: 5000 });
-    await saveButton.click({ force: true });
+    await expect.poll(async () => {
+      const ads = await authenticatedAds(page, request);
+      return ads.find((item) => item.id === adId)?.title;
+    }).toBe(updatedTitle);
 
-    // Verification: should redirect back to profile and show updated title
-    await page.waitForURL('**/profile', { timeout: 15000 });
-
-    // Switch to the "Revisión" (In Review) tab to see the updated pending ad
-    const revisionTabAfter = page.locator('button').filter({ hasText: /Revisión|Review|Pending/i }).first();
-    await expect(revisionTabAfter).toBeVisible({ timeout: 5000 });
-    await revisionTabAfter.click();
-    await expect(page.locator('body')).toContainText(/Precio Reducido/i);
+    await page.goto('/profile');
+    await expect(page.getByTestId(`dashboard-ad-${adId}`)).toContainText(updatedTitle);
+    await expect(page.getByTestId(`dashboard-ad-${adId}`)).toContainText('$310,000');
   });
 
-  test('should allow users to report inappropriate ads', async ({ page }) => {
-    // 1. Create an ad first to ensure one exists on the home page for reporting
-    await createTestAd(page);
+  test('should allow a buyer to report an active listing', async ({ page, request }) => {
+    const response = await request.get(`${API_BASE_URL}/ads?search=${encodeURIComponent('Mercasto E2E Active Listing')}`);
+    expect(response.ok()).toBeTruthy();
+    const payload = await response.json();
+    const activeAd = (payload.data || []).find((item) => item.title === 'Mercasto E2E Active Listing');
+    expect(activeAd).toBeTruthy();
 
-    // 2. We are already on /profile. Click the "Ver" button of our newly created ad
-    const verButton = page.locator('a[title*="Ver"], button[title*="Ver"], a:has-text("Ver"), a:has(.lucide-eye)').first();
-    await expect(verButton).toBeVisible();
-    await verButton.click();
+    await logoutUser(page);
+    await loginUser(page, E2E_BUYER_EMAIL, E2E_BUYER_PASSWORD);
+    await page.goto(`/?ad=${activeAd.id}`);
+    await expect(page.getByRole('heading', { name: 'Mercasto E2E Active Listing' }).first()).toBeVisible({ timeout: 10000 });
 
-    // Click report button on the details page
-    const reportButton = page.locator('button').filter({ hasText: /Reportar|Report/i }).filter({ visible: true }).first();
-    await expect(reportButton).toBeVisible();
-    await reportButton.click();
-
-    // Fill report modal form
-    const reportModal = page.locator('.fixed.inset-0').filter({ hasText: /Reportar/i }).first();
+    await page.getByRole('button', { name: /Report listing|Reportar (?:este )?anuncio/i }).click();
+    const reportModal = page.locator('.fixed.inset-0').filter({ hasText: /Reportar Anuncio/i }).first();
     await expect(reportModal).toBeVisible();
-    await reportModal.locator('select').selectOption({ index: 1 });
-    await reportModal.locator('textarea').fill('Este anuncio contains spam y enlaces inapropiados.');
-    await reportModal.locator('button').filter({ hasText: /Enviar|Reportar/i }).click();
+    await reportModal.locator('select').selectOption('Contenido inapropiado');
+    await reportModal.locator('textarea').fill('Fixture E2E: contenido inapropiado para validar el flujo de reporte.');
 
-    // Verify success toast/alert or modal close
+    const reportResponsePromise = page.waitForResponse((result) => (
+      result.url().endsWith(`/api/ads/${activeAd.id}/report`) && result.request().method() === 'POST'
+    ));
+    await reportModal.getByRole('button', { name: /Enviar Reporte/i }).click();
+    const reportResponse = await reportResponsePromise;
+    expect(reportResponse.status()).toBe(200);
     await expect(reportModal).not.toBeVisible();
   });
 
-  test('should perform full ad deletion sequence', async ({ page }) => {
-    // 1. Create an ad first to ensure one exists for deleting
-    await createTestAd(page);
-
+  test('should pause and reactivate an active listing', async ({ page, request }) => {
+    const activeAd = await fixtureAd(page, request, 'Mercasto E2E Active Listing');
     await page.goto('/profile');
 
-    // Switch to the "Revisión" (In Review) tab to see the pending ad
-    const revisionTab = page.locator('button').filter({ hasText: /Revisión|Review|Pending/i }).first();
-    await expect(revisionTab).toBeVisible({ timeout: 5000 });
-    await revisionTab.click();
-    await page.waitForTimeout(500);
+    await page.getByTestId(`pause-ad-${activeAd.id}`).click();
+    await expect(page.getByTestId(`reactivate-ad-${activeAd.id}`)).toBeVisible();
+    await expect.poll(async () => (await fixtureAd(page, request, activeAd.title)).status).toBe('paused');
 
-    // Verify the delete button of the ad card is visible
-    const deleteButton = page.locator('button[title*="Eliminar"], button[title*="Delete"], button:has(.lucide-trash-2), button:has(svg.lucide-trash-2)').first();
-    await expect(deleteButton).toBeVisible();
+    await page.getByTestId(`reactivate-ad-${activeAd.id}`).click();
+    await expect(page.getByTestId(`pause-ad-${activeAd.id}`)).toBeVisible();
+    await expect.poll(async () => (await fixtureAd(page, request, activeAd.title)).status).toBe('active');
+  });
 
-    page.once('dialog', async dialog => {
+  test('should open the paid renewal checkout for an expired listing', async ({ page, request }) => {
+    const expiredAd = await fixtureAd(page, request, 'Mercasto E2E Expired Listing');
+    await page.goto('/profile');
+
+    await page.getByTestId(`republish-ad-${expiredAd.id}`).click();
+    await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:18001\/checkout\/local-checkout-/, { timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Clip local checkout' })).toBeVisible();
+  });
+
+  test('should perform full ad deletion sequence', async ({ page, request }) => {
+    const { adId, adTitle } = await createTestAd(page);
+    await page.goto('/profile');
+
+    page.once('dialog', async (dialog) => {
       expect(dialog.message().toLowerCase()).toMatch(/seguro|sure/);
       await dialog.accept();
     });
+    await page.getByTestId(`delete-ad-${adId}`).click();
 
-    await deleteButton.click();
-    await page.waitForTimeout(2000);
+    await expect(page.getByTestId(`dashboard-ad-${adId}`)).toHaveCount(0);
+    await expect.poll(async () => (await authenticatedAds(page, request)).some((item) => item.id === adId)).toBe(false);
+    await expect(page.getByRole('heading', { name: adTitle })).toHaveCount(0);
   });
+
 });

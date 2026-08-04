@@ -115,7 +115,7 @@ class AdRenewalWebhookController extends Controller
                     'Authorization' => 'Basic ' . base64_encode($apiKey . ':' . $apiSecret),
                     'Accept' => 'application/json',
                 ])
-                ->get('https://api.payclip.com/v2/checkout/' . rawurlencode($paymentRequestId));
+                ->get(rtrim((string) config('services.clip.verification_url'), '/') . '/' . rawurlencode($paymentRequestId));
         } catch (\Throwable $error) {
             Log::warning('Clip renewal verification request failed', [
                 'payment_id' => $payment->id,

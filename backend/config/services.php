@@ -71,6 +71,8 @@ return [
         'api_key' => env('CLIP_API_KEY'),
         'api_secret' => env('CLIP_API_SECRET'),
         'webhook_secret' => env('CLIP_WEBHOOK_SECRET'),
+        'checkout_url' => env('CLIP_CHECKOUT_URL', 'https://api.payclip.com/v2/checkout'),
+        'verification_url' => env('CLIP_VERIFICATION_URL', 'https://api.payclip.com/v2/checkout'),
     ],
 
     'gemini' => [

@@ -42,8 +42,8 @@ export default function EditAdScreen({ t, lang }) {
   const [loadingCategoryFields, setLoadingCategoryFields] = useState(false);
 
   const [form, setForm] = useState({
-    title: '', description: '', price: '', location: '', state: '',
-    category: '', condition: 'Nuevo', attributes: {}
+    title: '', description: '', price: '', location: '', city: '', state: '',
+    latitude: '', longitude: '', subcategory: '', category: '', condition: 'Nuevo', attributes: {}
   });
 
   const [images, setImages] = useState([]);
@@ -60,19 +60,31 @@ export default function EditAdScreen({ t, lang }) {
   };
 
   useEffect(() => {
-    if (!token) { navigate('/'); return; }
+    if (!token) { navigate('/'); return undefined; }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
     const fetchAll = async () => {
       try {
+        const requestOptions = { signal: controller.signal };
         const [adRes, catRes] = await Promise.all([
           fetch(`${API_URL}/ads/${id}/edit`, {
+            ...requestOptions,
             headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
           }),
-          fetch(`${API_URL}/categories`, { headers: { Accept: 'application/json' } })
+          fetch(`${API_URL}/categories`, {
+            ...requestOptions,
+            headers: { Accept: 'application/json' }
+          })
         ]);
+        if (cancelled) return;
         if (adRes.status === 403) { navigate('/'); return; }
         if (!adRes.ok) throw new Error(t.error_loading_ad || 'No se pudo cargar el anuncio');
         const adData = await adRes.json();
         const catData = catRes.ok ? await catRes.json() : [];
+        if (cancelled) return;
+
         setAd(adData);
         setCategories(Array.isArray(catData) ? catData : (catData.data || []));
         let parsedAttrs = {};
@@ -85,7 +97,11 @@ export default function EditAdScreen({ t, lang }) {
           description: localizedText(adData.description) || '',
           price: adData.price ?? '',
           location: adData.location || '',
+          city: adData.city || adData.location || '',
           state: adData.state || '',
+          latitude: adData.latitude ?? '',
+          longitude: adData.longitude ?? '',
+          subcategory: adData.subcategory || parsedAttrs.subcategory || '',
           category: adData.category || '',
           condition: normalizedCondition,
           attributes: parsedAttrs
@@ -95,12 +111,17 @@ export default function EditAdScreen({ t, lang }) {
           path: url.replace(`${STORAGE_URL}/`, ''), file: null, preview: url
         })));
       } catch (err) {
-        setError(err.message);
+        if (!cancelled && err.name !== 'AbortError') setError(err.message);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
+
     fetchAll();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [id, token, navigate]);
 
   useEffect(() => {
@@ -160,8 +181,10 @@ export default function EditAdScreen({ t, lang }) {
     e.preventDefault(); setSaving(true); setError(null);
     try {
       const formData = new FormData();
-      ['title','description','price','location','category','condition'].forEach(k => formData.append(k, form[k]));
-      formData.append('state', form.state || '');
+      ['title','description','price','location','city','state','latitude','longitude','subcategory','category'].forEach((key) => {
+        formData.append(key, form[key] ?? '');
+      });
+      formData.append('condition', form.condition === 'Nuevo' ? 'nuevo' : 'usado');
       Object.entries(form.attributes).forEach(([k, v]) => {
         if (Array.isArray(v)) v.forEach(val => formData.append(`attributes[${k}][]`, val));
         else if (v !== '' && v !== null && v !== undefined) formData.append(`attributes[${k}]`, v);
@@ -228,7 +251,7 @@ export default function EditAdScreen({ t, lang }) {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className={labelClass}>{t.ad_title || 'Título'} *</label>
-          <input type="text" value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))}
+          <input type="text" name="title" data-testid="edit-ad-title" value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))}
             required maxLength={255} placeholder="Ej: iPhone 15 Pro en perfecto estado"
             className={fieldClass} />
         </div>
@@ -237,7 +260,7 @@ export default function EditAdScreen({ t, lang }) {
           <label className={labelClass}>{t.ad_price || 'Precio'} *</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
-            <input type="number" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))}
+            <input type="number" name="price" data-testid="edit-ad-price" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))}
               required min={0} step="0.01" placeholder="0.00"
               className={`${fieldClass} pl-8`} />
           </div>

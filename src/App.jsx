@@ -2993,12 +2993,15 @@ function App() {
         },
         body: JSON.stringify(reportForm)
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || 'No pudimos enviar el reporte.');
+      }
       showToast(data.message || 'Reporte enviado.');
       setShowReportModal(false);
       setReportForm({ reason: '', comments: '' });
       setReportingAd(null);
-    } catch (err) { console.error("Report error", err); showToast('Error de conexión', 'error'); }
+    } catch (err) { console.error("Report error", err); showToast(err.message || 'Error de conexión', 'error'); }
   };
 
   // --- ПОЖАЛОВАТЬСЯ НА ПОЛЬЗОВАТЕЛЯ ---
@@ -4278,7 +4281,7 @@ function App() {
               <Route path="/help" element={<StaticPages currentTab="help" />} />
               <Route path="/safety" element={<StaticPages currentTab="safety" />} />
               <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
-              <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen /></React.Suspense></RequireAuth>} />
+              <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen smsEnabled={availableProviders.sms} /></React.Suspense></RequireAuth>} />
               <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
               <Route path="/ads/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
               <Route path="/anuncio/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
@@ -4369,6 +4372,7 @@ function App() {
             user={user}
             t={t}
             lang={lang}
+            smsEnabled={availableProviders.sms}
             onClose={() => {
               localStorage.setItem('onboarding_done', '1');
               setShowOnboarding(false);

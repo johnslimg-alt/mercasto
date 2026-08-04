@@ -55,7 +55,7 @@ const INTERESTS = [
   { slug: 'mascotas', emoji: '🐕', label: 'Mascotas' },
 ];
 
-export default function OnboardingModal({ onClose, user, t, lang }) {
+export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = false }) {
   const [step, setStep] = useState(0);
   const [selectedRole, setSelectedRole] = useState('');
   const [selectedInterests, setSelectedInterests] = useState([]);
@@ -175,7 +175,7 @@ export default function OnboardingModal({ onClose, user, t, lang }) {
 
   const checklist = [
     { icon: Camera, label: dictionary.onboarding_checklist_photo || 'Agrega una foto de perfil', done: !!(user?.avatar_url || user?.profile_photo_path || user?.avatar) },
-    { icon: Phone, label: dictionary.onboarding_checklist_phone || 'Verifica tu teléfono', done: !!(user?.phone_verified) },
+    ...(smsEnabled ? [{ icon: Phone, label: dictionary.onboarding_checklist_phone || 'Verifica tu teléfono', done: !!(user?.phone_verified) }] : []),
     { icon: FileText, label: dictionary.onboarding_checklist_bio || 'Escribe una descripción', done: !!(user?.bio && user.bio.trim()) },
   ];
 

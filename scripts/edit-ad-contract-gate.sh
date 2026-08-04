@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+SCREEN="src/components/screens/EditAdScreen.jsx"
+TEST="tests/e2e/ads-lifecycle.spec.js"
+
+echo "== Edit ad contract gate =="
+grep -qF "city: adData.city || adData.location || ''" "$SCREEN"
+grep -qF "latitude: adData.latitude ?? ''" "$SCREEN"
+grep -qF "longitude: adData.longitude ?? ''" "$SCREEN"
+grep -qF "subcategory: adData.subcategory || parsedAttrs.subcategory || ''" "$SCREEN"
+grep -qF "form.condition === 'Nuevo' ? 'nuevo' : 'usado'" "$SCREEN"
+grep -qF 'data-testid="edit-ad-price"' "$SCREEN"
+grep -qF 'data-testid="edit-ad-title"' "$SCREEN"
+grep -qF 'const controller = new AbortController();' "$SCREEN"
+grep -qF 'controller.abort();' "$SCREEN"
+grep -qF "expect(updateRequest.postData() || '').toContain(updatedTitle);" "$TEST"
+grep -qF 'edit-ad-${adId}' "$TEST"
+echo "edit ad contract gate OK"

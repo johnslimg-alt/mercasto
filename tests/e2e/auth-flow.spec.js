@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+const API_BASE_URL = process.env.API_BASE_URL || `${process.env.BASE_URL || 'https://mercasto.com'}/api`;
+
 const randomEmail = () => `e2e_${Date.now()}_${Math.floor(Math.random() * 9999)}@mailinator.com`;
 
 const getModal = (page) =>
@@ -41,7 +43,8 @@ async function registerUser(page, email, name = 'E2E Test User', password = 'E2e
   await modal.locator('input[name="name"]').fill(name);
   await modal.locator('input[name="email"]').fill(email);
   await modal.locator('input[name="password"]').fill(password);
-  await modal.locator('input[name="password"]').press('Enter');
+  await modal.locator('input[name="age_confirmed"]').check();
+  await modal.locator('button[type="submit"]').click();
 
   await page.waitForFunction(() => localStorage.getItem('auth_token') !== null, { timeout: 10000 }).catch(() => {});
 
@@ -103,9 +106,19 @@ test.describe('Authentication E2E Flow', () => {
     await expect(modal.locator('input[name="email"]')).toBeVisible();
   });
 
-  test('Google OAuth button is visible when provider is enabled', async ({ page }) => {
+  test('OAuth buttons follow the provider availability contract', async ({ page, request }) => {
+    const response = await request.get(`${API_BASE_URL}/auth/providers`);
+    expect(response.ok()).toBeTruthy();
+    const payload = await response.json();
+    const providers = payload.providers ?? payload;
+
     await openAuthModal(page);
-    await expect(page.getByText('Google')).toBeVisible({ timeout: 5000 });
+    const googleButton = page.getByRole('button', { name: 'Google' });
+    if (providers.google === true || providers.google?.enabled === true) {
+      await expect(googleButton).toBeVisible({ timeout: 5000 });
+    } else {
+      await expect(googleButton).toHaveCount(0);
+    }
   });
 
   test('no stack traces or secrets are visible in public UI', async ({ page }) => {
@@ -120,9 +133,13 @@ test.describe('Authentication E2E Flow', () => {
     await registerUser(page, email, 'E2E Login User', password);
 
     await page.goto('/profile');
-    const logoutButton = page.locator('button').filter({ hasText: /Cerrar|Logout/i }).filter({ visible: true }).first();
-    await expect(logoutButton).toBeVisible({ timeout: 10000 });
+    const accountButton = page.getByRole('button', { name: /E2E Login User|Abrir menú de cuenta/i }).filter({ visible: true }).first();
+    await expect(accountButton).toBeVisible({ timeout: 10000 });
+    await accountButton.click();
+    const logoutButton = page.getByRole('button', { name: 'Salir' }).filter({ visible: true }).first();
+    await expect(logoutButton).toBeVisible({ timeout: 5000 });
     await logoutButton.click();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBeNull();
 
     await page.goto('/');
     const modal = await openAuthModal(page);

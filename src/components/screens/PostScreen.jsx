@@ -20,11 +20,18 @@ import { isPublishFormEmpty, readPublishDraft, writePublishDraft } from '../../u
 // while the rest store the canonical Spanish label text as-is. Always posts in Spanish, since ad
 // content itself is not translated per-poster-language.
 function getPostSubcategoryOptions(category) {
-  const bySlug = subcategoriesByLang.es[category];
-  if (bySlug && !Array.isArray(bySlug)) {
-    return Object.keys(bySlug).map((slug) => ({ value: slug, label: bySlug[slug] }));
+  const taxonomyCategory = category === 'coches' ? 'motor' : category;
+  const translated = subcategoriesByLang.es[taxonomyCategory];
+
+  if (translated && !Array.isArray(translated)) {
+    return Object.keys(translated).map((slug) => ({ value: slug, label: translated[slug] }));
   }
-  return (subcategoriesMap[category] || []).map((label) => ({ value: label, label }));
+
+  const labels = Array.isArray(translated)
+    ? translated
+    : (subcategoriesMap[taxonomyCategory] || subcategoriesMap[category] || []);
+
+  return labels.map((label) => ({ value: label, label }));
 }
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
