@@ -41,7 +41,7 @@ jobs:
             return 1
           }
 
-          retry curl -fsSIL --max-time 30 https://mercasto.com/
+          retry curl -fsSL --max-time 30 -o /dev/null https://mercasto.com/
           retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/ | grep -i Mercasto"
           retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers | grep -Eq 'google|\\{'"
           retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/categories | grep -q '\"slug\"'"
