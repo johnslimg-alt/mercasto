@@ -49,9 +49,10 @@
     "smoke": "npm run smoke:prod",
     "check:compose": "DB_PASSWORD=${DB_PASSWORD:-ci} REDIS_PASSWORD=${REDIS_PASSWORD:-ci} GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-ci} docker compose config >/tmp/mercasto_compose_base.$(id -u).out && DB_PASSWORD=${DB_PASSWORD:-ci} REDIS_PASSWORD=${REDIS_PASSWORD:-ci} GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-ci} docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.$(id -u).out",
     "check:scripts": "find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n",
-    "check:recovery": "node scripts/check-recovery-guards.mjs",
+    "check:recovery": "node scripts/check-recovery-guards.mjs && npm run check:npm-audit-policy",
     "check:payment-retention": "bash scripts/payment-retention-scan.sh",
-    "check:cache-policy": "bash scripts/cache-policy-scan.sh"
+    "check:cache-policy": "bash scripts/cache-policy-scan.sh",
+    "check:npm-audit-policy": "node scripts/npm-audit-policy.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -72,7 +73,7 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-i18next": "^17.0.8",
-    "react-router-dom": "^7.14.2",
+    "react-router-dom": "7.18.2",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
@@ -89,5 +90,8 @@
     "globals": "^17.5.0",
     "tailwindcss": "^4.2.4",
     "vite": "^8.0.9"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
   }
 }
