@@ -91,11 +91,17 @@ jobs:
 
           case " $BUILD_SERVICES " in
             *" mercasto-frontend "*)
-              image_id=$(docker compose --env-file "$COMPOSE_ENV_FILE" images -q mercasto-frontend)
-              if [ -z "$image_id" ]; then
+              image_ref=$(
+                docker compose --env-file "$COMPOSE_ENV_FILE" config --images \
+                  | grep -E '(^|[-/])mercasto-frontend(:|$)' \
+                  | head -n 1 \
+                  || true
+              )
+              if [ -z "$image_ref" ] || ! docker image inspect "$image_ref" >/dev/null 2>&1; then
                 echo "Built frontend image was not found."
                 exit 1
               fi
+              image_id=$(docker image inspect --format '{{.Id}}' "$image_ref")
 
               dist_dir="$RUNNER_TEMP/mercasto-dist-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
               rm -rf "$dist_dir"
