@@ -201,15 +201,15 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [ProfileController::class, 'show']);
-    Route::post('/user/profile', [ProfileController::class, 'update']);
+    Route::middleware('throttle:profile-uploads')->post('/user/profile', [ProfileController::class, 'update']);
     Route::get('/user/profile', [ProfileController::class, 'getProfile']); // Получить профиль
-    Route::put('/user/profile', [ProfileController::class, 'update']); // Обновить профиль (PUT)
-    Route::post('/user/avatar', [ProfileController::class, 'uploadAvatar']); // Загрузить аватар
+    Route::middleware('throttle:profile-uploads')->put('/user/profile', [ProfileController::class, 'update']); // Обновить профиль (PUT)
+    Route::middleware('throttle:profile-uploads')->post('/user/avatar', [ProfileController::class, 'uploadAvatar']); // Загрузить аватар
     Route::get('/user/business-profile', [BusinessProfileController::class, 'show']);
     Route::put('/user/business-profile', [BusinessProfileController::class, 'update']);
-    Route::post('/user/business-profile/logo', [BusinessProfileController::class, 'uploadLogo']);
-    Route::post('/user/business-profile/banner', [BusinessProfileController::class, 'uploadBanner']);
-    Route::middleware('throttle:5,1')->post('/user/business-profile/csf', [BusinessProfileController::class, 'uploadCsf']);
+    Route::middleware('throttle:profile-uploads')->post('/user/business-profile/logo', [BusinessProfileController::class, 'uploadLogo']);
+    Route::middleware('throttle:profile-uploads')->post('/user/business-profile/banner', [BusinessProfileController::class, 'uploadBanner']);
+    Route::middleware('throttle:identity-uploads')->post('/user/business-profile/csf', [BusinessProfileController::class, 'uploadCsf']);
     Route::get('/admin/business-verifications', [BusinessProfileController::class, 'adminPendingVerifications']);
     Route::get('/admin/business-verifications/{userId}/csf', [BusinessProfileController::class, 'adminDownloadCsf'])->whereNumber('userId');
     Route::post('/admin/business-verifications/{userId}/review', [BusinessProfileController::class, 'adminReviewVerification'])->whereNumber('userId');
@@ -250,7 +250,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/mobile-push/unregister', [MobilePushController::class, 'unregister']); // Отписка от Web Push
     Route::delete('/user', [AccountDeletionController::class, 'delete']); // User self-deletion with financial/audit retention
     Route::post('/users/{id}/verify', [ProfileController::class, 'verifyUser'])->whereNumber('id');
-    Route::post('/user/kyc', [ProfileController::class, 'submitKyc']); // Загрузка документов KYC
+    Route::middleware('throttle:identity-uploads')->post('/user/kyc', [ProfileController::class, 'submitKyc']); // Загрузка документов KYC
 
     // 2FA Routes
     Route::post('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store']);
