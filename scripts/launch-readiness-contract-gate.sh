@@ -23,10 +23,26 @@ fi
 grep -qF 'REQUIRE_LEGAL_READY=1 npm run smoke:legal-readiness' "$STATUS"
 grep -qF 'npm run smoke:backup-freshness' "$STATUS"
 grep -qF 'Broad paid traffic starts before the managed CDN/WAF decision is implemented.' "$STATUS"
-grep -qF '#260 SMS provider readiness before enabling phone OTP' "$STATUS"
+if grep -qF '#260 ' "$STATUS"; then
+  echo "closed SMS issue #260 must not remain in the active blocker map" >&2
+  exit 1
+fi
+grep -qF 'SMS/phone OTP is not planned. Public phone/SMS UI must remain disabled.' "$STATUS"
 grep -qF '#268 security pass evidence' "$STATUS"
 grep -qF '#270 SEO and AEO readiness' "$STATUS"
 grep -qF '#271 Lighthouse and performance baseline' "$STATUS"
+
+python3 - "$PACKAGE" <<'PY2'
+import json
+import sys
+
+scripts = json.load(open(sys.argv[1]))['scripts']
+for name in ('smoke:all', 'gate:prod'):
+    if 'smoke:sms-readiness' in scripts[name]:
+        raise SystemExit(f'{name} still runs optional SMS provider readiness')
+if 'smoke:sms-launch-mode' not in scripts['verify:launch']:
+    raise SystemExit('verify:launch must enforce the disabled SMS product mode')
+PY2
 
 grep -qF 'bash scripts/public-e2e-ci.sh' "$PACKAGE"
 grep -qF 'npm ci --no-audit --no-fund' "$E2E"

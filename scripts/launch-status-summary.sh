@@ -38,7 +38,6 @@ EOF
 
 echo "\n== Launch blocker map =="
 cat <<'EOF'
-#260 SMS provider readiness before enabling phone OTP
 #261 direct nginx 80/443 architecture decision
 #262 production sync after autonomous commits
 #263 auth/account E2E
@@ -53,12 +52,17 @@ cat <<'EOF'
 #272 master launch go/no-go tracker
 EOF
 
+echo \"\n== Deferred product features ==\"
+cat <<'EOF'
+- SMS/phone OTP is not planned. Public phone/SMS UI must remain disabled.
+EOF
+
 echo "\n== Stop conditions =="
 cat <<'EOF'
 - UP is not 200.
 - VERIFY_EXIT is not 0.
 - verify:launch fails.
-- SMS launch-mode gate fails: provider is not ready while a public phone/SMS flow is enabled.
+- Public phone/SMS functionality becomes enabled; SMS/OTP is an intentionally excluded product feature.
 - Payment webhook evidence is missing.
 - Auth/account E2E evidence is missing.
 - Backup restore/rollback evidence is missing.
