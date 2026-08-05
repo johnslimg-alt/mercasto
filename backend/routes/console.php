@@ -53,6 +53,13 @@ Schedule::command('ads:moderate-pending --limit=100')
     ->withoutOverlapping()
     ->runInBackground();
 
+// Aggregate approved archived ads by seller. The command is idempotent and sends
+// at most one initial reminder plus one follow-up after 72 hours.
+Schedule::command('ads:remind-reactivation --execute --follow-up-after=72 --limit=500')
+    ->hourly()
+    ->withoutOverlapping(15)
+    ->runInBackground();
+
 // Expire ads that passed their expires_at date, notify owners
 Schedule::command('ads:expire')->daily();
 Schedule::command('ads:process-expiry')->dailyAt('08:00')->timezone('America/Mexico_City')->withoutOverlapping();
