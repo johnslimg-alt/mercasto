@@ -39,8 +39,8 @@ class AdModerationGuidanceService
         }
 
         if ($this->containsAny($flagText, [
-            'condition', 'condicion', 'contrad', 'discrep', 'inconsist',
-            'incoher', 'mileage', 'kilomet', 'metadata', 'attribute',
+            'condition', 'condicion', 'contrad', 'inconsist',
+            'mileage', 'kilomet', 'metadata', 'attribute',
         ])) {
             $issues['details'] = 'Corrige la condición, el kilometraje y los datos que no coincidan con la descripción.';
         }
