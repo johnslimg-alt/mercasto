@@ -56,6 +56,52 @@ class ManualReviewSellerCorrectionTest extends TestCase
             ->assertJsonPath('data.0.seller_correction', null);
     }
 
+    public function test_fraud_suspicion_with_concrete_price_or_photo_issue_is_fixable(): void
+    {
+        $ad = $this->manualReviewAd();
+        $this->decision($ad, ['potential_fraud', 'precio_incoherente', 'missing_original_photos']);
+
+        $response = $this->actingAs($this->seller, 'sanctum')
+            ->getJson('/api/user/ads')
+            ->assertOk();
+
+        $this->assertSame(
+            ['photos', 'price'],
+            $response->json('data.0.seller_correction.issue_codes'),
+        );
+        $this->assertStringNotContainsString(
+            'fraud',
+            strtolower(implode(' ', $response->json('data.0.seller_correction.messages'))),
+        );
+    }
+
+    public function test_fraud_suspicion_without_concrete_correction_remains_admin_only(): void
+    {
+        $ad = $this->manualReviewAd();
+        $this->decision($ad, ['potential_fraud']);
+
+        $this->actingAs($this->seller, 'sanctum')
+            ->getJson('/api/user/ads')
+            ->assertOk()
+            ->assertJsonPath('data.0.seller_correction', null);
+    }
+
+    public function test_high_advance_payment_gets_bounded_payment_guidance(): void
+    {
+        $ad = $this->manualReviewAd();
+        $this->decision($ad, ['high_advance_payment', 'potential_fraud']);
+
+        $response = $this->actingAs($this->seller, 'sanctum')
+            ->getJson('/api/user/ads')
+            ->assertOk();
+
+        $this->assertSame(['payment'], $response->json('data.0.seller_correction.issue_codes'));
+        $this->assertStringContainsString(
+            'pago inicial',
+            strtolower(implode(' ', $response->json('data.0.seller_correction.messages'))),
+        );
+    }
+
     public function test_material_edit_requeues_manual_review_ad(): void
     {
         $ad = $this->manualReviewAd();
