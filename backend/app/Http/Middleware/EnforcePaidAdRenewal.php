@@ -100,22 +100,6 @@ class EnforcePaidAdRenewal
             }
         }
 
-        if (preg_match('#^api/ads/(\d+)/status$#', $path, $matches)
-            && $request->isMethod('PATCH')
-            && $request->input('status') === 'active') {
-            $ad = DB::table('ads')->where('id', (int) $matches[1])->first();
-            if ($ad
-                && (int) $ad->user_id === (int) $user->id
-                && (bool) ($ad->is_catalog_filler ?? false)) {
-                return $next($request);
-            }
-            if ($ad
-                && (int) $ad->user_id === (int) $user->id
-                && ($ad->status === 'expired' || ! $this->hasTimeRemaining($ad))) {
-                return $this->renewals->createCheckout($request, $ad);
-            }
-        }
-
         return $next($request);
     }
 

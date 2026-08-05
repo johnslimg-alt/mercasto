@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\EnforcePaidAdRenewal;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Models\User;
@@ -98,6 +99,7 @@ class AdActivationLifecycleTest extends TestCase
 
     public function test_paused_reactivation_requires_a_live_expiry(): void
     {
+        $this->withoutMiddleware(EnforcePaidAdRenewal::class);
         Carbon::setTestNow('2026-08-05 12:00:00');
         $owner = User::factory()->create();
         $expired = $this->createAd($owner, [
@@ -125,6 +127,7 @@ class AdActivationLifecycleTest extends TestCase
 
     public function test_bulk_activation_rejects_inactive_or_expired_ads_atomically(): void
     {
+        $this->withoutMiddleware(EnforcePaidAdRenewal::class);
         Carbon::setTestNow('2026-08-05 12:00:00');
         $owner = User::factory()->create();
         $live = $this->createAd($owner, [

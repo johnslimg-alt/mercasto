@@ -31,4 +31,9 @@ fi
 
 grep -qF "approveSellerConfirmation" "$ADMIN_CENTER"
 
+if grep -q "api/ads/(\\d+)/status" "$ROOT/backend/app/Http/Middleware/EnforcePaidAdRenewal.php"; then
+  echo 'renewal middleware must not intercept generic status activation' >&2
+  exit 1
+fi
+
 echo 'ad activation lifecycle gate OK'
