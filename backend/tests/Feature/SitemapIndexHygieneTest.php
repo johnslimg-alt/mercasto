@@ -40,8 +40,18 @@ class SitemapIndexHygieneTest extends TestCase
 
     public function test_category_sitemap_skips_query_only_categories(): void
     {
-        Category::create(['slug' => 'motor', 'name' => ['es' => 'Motor']]);
-        Category::create(['slug' => 'formacion', 'name' => ['es' => 'Formación']]);
+        Category::create([
+            'slug' => 'motor',
+            'name' => ['es' => 'Motor'],
+            'icon' => 'Car',
+            'sort_order' => 1,
+        ]);
+        Category::create([
+            'slug' => 'formacion',
+            'name' => ['es' => 'Formación'],
+            'icon' => 'BookOpen',
+            'sort_order' => 2,
+        ]);
 
         $response = $this->get('/sitemap-categories.xml');
 
