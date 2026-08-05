@@ -89,6 +89,13 @@ test('mobile catalog reveals cards in small batches', async ({ page }, testInfo)
 
   await page.goto('/listings', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-catalog-card]')).toHaveCount(8);
+  const catalogImages = page.locator('[data-catalog-card] img');
+  await expect(catalogImages.nth(0)).toHaveAttribute('loading', 'eager');
+  await expect(catalogImages.nth(0)).toHaveAttribute('fetchpriority', 'high');
+  await expect(catalogImages.nth(1)).toHaveAttribute('loading', 'eager');
+  await expect(catalogImages.nth(1)).toHaveAttribute('fetchpriority', 'high');
+  await expect(catalogImages.nth(2)).toHaveAttribute('loading', 'lazy');
+  await expect(catalogImages.nth(2)).toHaveAttribute('fetchpriority', 'auto');
   await page.waitForTimeout(400);
   await expect(page.locator('[data-catalog-card]')).toHaveCount(8);
   const cls = await page.evaluate(() => window.__mercastoCatalogCls || 0);
