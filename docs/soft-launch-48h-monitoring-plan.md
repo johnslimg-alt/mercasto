@@ -9,7 +9,7 @@ Do not start soft launch until all are true:
 - `UP=200`.
 - `npm run verify:quick` passes.
 - `npm run verify:launch` passes.
-- SMS readiness is `ready`.
+- Public phone/SMS functionality is disabled (`public_sms_provider_enabled=false`).
 - Env readiness is `ready`.
 - Category data readiness is `ready`.
 - Public Playwright smoke passes.
@@ -34,7 +34,7 @@ Record checks at launch, +6h, +24h and +48h.
 | Error monitoring | Sentry errors reviewed | screenshot/summary |
 | Logs | Docker and Laravel logs reviewed for exceptions/secrets | summary |
 | Payments | checkout/webhook errors reviewed | provider/app summary |
-| SMS | OTP send/check errors reviewed | provider/app summary |
+| Phone/SMS | Confirm public phone/SMS functionality remains disabled | config/smoke summary |
 | Search/listings | listing create/search/detail checked | manual or E2E evidence |
 | Performance | homepage/listing/publish/account checked for slow responses | summary |
 | Abuse | auth/OTP/reporting rate limit events reviewed | summary |
@@ -55,7 +55,8 @@ bash scripts/backup-freshness-smoke.sh
 Soft launch may progress to public launch only when:
 
 - no Sev1/Sev2 incidents in 48 hours;
-- payment and SMS errors are understood and acceptable;
+- payment errors are understood and acceptable;
+- public phone/SMS functionality remained disabled throughout the window;
 - no secret/log disclosure is found;
 - no repeated frontend/backend container restarts;
 - support process is ready;

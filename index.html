@@ -9,6 +9,11 @@
          so the browser can start downloading the image before JS executes -->
     <script>
       (function () {
+        if (window.location.pathname !== '/') {
+          window.__FEATURED_ADS_PROMISE__ = Promise.resolve([]);
+          return;
+        }
+
         var cachedLcp = null;
         try {
           cachedLcp = localStorage.getItem('__mercasto_lcp_image');
@@ -197,7 +202,7 @@
       }
       @keyframes as-rot { to { transform: rotate(360deg); } }
     </style>
-    <script type="application/ld+json">
+    <script type="application/ld+json" id="schema-ld-json">
       {
         "@context": "https://schema.org",
         "@type": "WebSite",

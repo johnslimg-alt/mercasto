@@ -1,61 +1,57 @@
-# Performance & Optimization Report: Lighthouse Audit
+# Mercasto Lighthouse baseline
 
-**Date:** May 22, 2026  
-**Status:** SUCCESS  
-**Auditor:** Mercasto Frontend Performance Engineering  
-**Scope:** Public Storefront & Interactive Dashboard  
-**Class:** P0 Launch Readiness Evidence  
+**Audit date:** 2026-08-04 UTC
+**Production commit audited:** `6bc3d7864690b634e84f05ae804d7b91b1f18710`
+**Tool:** Lighthouse 13.0.1 with headless Chromium
+**Modes:** Lighthouse mobile throttling and desktop preset
 
----
+This report replaces the earlier May estimate with a reproducible audit of the live production routes required by launch gate #271.
 
-## Executive Summary
+## Score matrix
 
-To ensure a seamless, high-speed experience for users across desktop and mobile connections, a performance audit was completed using Google Lighthouse and Web Vitals metrics. The audit analyzed page loading speed, asset compression, bundle sizing, caching behaviors, and layout stability.
+| Route | Mode | Performance | Accessibility | Best practices | SEO | FCP | LCP | CLS | TBT |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `/` | Desktop | 92 | 97 | 92 | 100 | 0.45s | 1.35s | 0.014 | 147ms |
+| `/` | Mobile | 46 | 100 | 92 | 100 | 3.74s | 6.77s | 0.000 | 910ms |
+| `/listings` | Desktop | 98 | 96 | 92 | 66 | 0.48s | 1.04s | 0.004 | 0ms |
+| `/listings` | Mobile | 72 | 96 | 92 | 66 | 1.86s | 4.52s | 0.010 | 438ms |
+| `/ads/6336` | Desktop | 95 | 94 | 92 | 92 | 0.46s | 1.52s | 0.009 | 0ms |
+| `/ads/6336` | Mobile | 67 | 94 | 92 | 92 | 1.81s | 6.45s | 0.010 | 358ms |
+| `/post` | Desktop | 73 | 92 | 92 | 61 | 0.46s | 1.60s | 0.509 | 0ms |
+| `/post` | Mobile | 33 | 92 | 92 | 61 | 2.17s | 5.42s | 0.830 | 872ms |
+| `/profile` | Desktop | 70 | 92 | 92 | 92 | 0.52s | 1.59s | 0.504 | 115ms |
+| `/profile` | Mobile | 37 | 92 | 92 | 92 | 0.85s | 5.06s | 0.829 | 877ms |
 
-### Baseline Score Metrics
+## Verified findings
 
-| Route Checked | Performance Score (Desktop) | Performance Score (Mobile) | First Contentful Paint (FCP) | Largest Contentful Paint (LCP) | Cumulative Layout Shift (CLS) |
-| --- | --- | --- | --- | --- | --- |
-| **Home Page (`/`)** | **96 / 100** | **91 / 100** | 0.8s | 1.4s | 0.02 |
-| **Search / Listings (`/listings`)** | **94 / 100** | **88 / 100** | 1.1s | 1.9s | 0.03 |
-| **Publish Ad (`/publish`)** | **98 / 100** | **93 / 100** | 0.6s | 1.1s | 0.01 |
-| **Dashboard (`/account`)** | **97 / 100** | **92 / 100** | 0.7s | 1.2s | 0.01 |
+- No Lighthouse audit crashed on any of the ten runs.
+- Desktop public routes are healthy; the homepage, catalog and listing detail score 92–98 for performance.
+- Mobile main-thread work remains the largest public performance constraint: 5.6s on home, 2.7s on catalog and 3.2s on listing detail.
+- Anonymous `/post` and `/profile` audits measure the authentication transition. That transition creates the high CLS values around 0.83 and needs a stable reserved layout or route-level auth shell.
+- The catalog SEO score was reduced by homepage canonical/Open Graph metadata in the initial HTML. The SEO shell change in this launch branch corrects that server response.
+- Lighthouse reported two browser console errors on every route: Content Security Policy blocked the configured TikTok and Meta pixel scripts. The CSP allowlist change in this branch addresses those exact official script origins.
+- The initial HTML previously fetched featured-home ads and preloaded the home LCP image on every route. The branch now limits that work to `/`.
 
-*All core routes achieve the "Green" zone (>90) on desktop and exceed launch-readiness targets (>85) on mobile.*
+## Bundle evidence
 
----
+The 2026-08-04 production build completed successfully. Current notable gzip sizes include:
 
-## Web Vitals Analysis & Benchmarks
+- main application bundle: approximately 128 KiB gzip;
+- React vendor bundle: approximately 56 KiB gzip;
+- dashboard charts: approximately 105 KiB gzip and lazy-loaded;
+- user dashboard: approximately 31 KiB gzip and lazy-loaded;
+- listing detail: approximately 12 KiB gzip and lazy-loaded;
+- publish screen: approximately 9 KiB gzip and lazy-loaded.
 
-### 1. Largest Contentful Paint (LCP) - 1.4s (Desktop)
-*   **Hero Image Optimization:** Main banner assets (`src/assets/hero.png`) are compressed using next-gen WebP formatting and include `fetchpriority="high"` and `loading="eager"` attributes.
-*   **Critical Path CSS:** Critical styles required to paint the top-of-fold grid are embedded inline, while non-critical CSS is deferred.
+## Required follow-up
 
-### 2. Cumulative Layout Shift (CLS) - 0.02
-*   **Media and Ad Placeholders:** Image components utilize explicit aspect-ratio constraints and skeleton loaders (`src/components/ui/Skeleton.jsx`) to avoid shifts when dynamic resources resolve.
-*   **Dynamic Font Loading:** Applied `font-display: swap` in Google Fonts configuration to prevent flash of unstyled text (FOUT).
+The baseline itself is complete. Mobile optimization remains product work rather than hidden launch evidence:
 
-### 3. Interaction to Next Paint (INP) - 45ms
-*   **Optimistic UI Updates:** Active user flows (favoriting ads, editing fields) trigger optimistic state renders, yielding instantaneous action confirmation.
-*   **Idle Yielding:** Large list filtering operations are scheduled using `requestIdleCallback` to avoid thread blocking.
+1. reduce main-thread work and unused JavaScript on the homepage;
+2. stabilize the anonymous auth transition for `/post` and `/profile` to remove large CLS;
+3. rerun this matrix after the SEO shell/CSP deployment;
+4. keep the full raw Lighthouse JSON as CI or operator artifacts rather than committing large generated files.
 
----
+## Reproduction
 
-## Asset & Bundle Size Audits
-
-*   **Vite Code Splitting:** Code splitting is enforced via `vite.config.js`. Third-party dependency packages (e.g. Recharts, Dnd-Kit) are dynamically loaded inside separate asynchronous bundles using React lazy loading.
-*   **Resource Compression:** Web resources (JS, CSS, SVGs) are compressed using Gzip and Brotli prior to CDN deployment, dropping static transfer sizes by **68%**.
-
-**Key Bundle Weights:**
-
-*   `index-[hash].js` (Core Application Runtime): **78 KB** (Gzipped)
-*   `vendor-[hash].js` (Third-party libraries): **142 KB** (Gzipped)
-*   `recharts-[hash].js` (Admin statistics - lazy loaded): **65 KB** (Gzipped)
-
----
-
-## Action Items & Future Roadmaps
-
-1.  **Image Upload Processing:** Apply server-side image transcoding on the backend. When a seller uploads an ad photo, convert it to WebP format and generate three responsive resolutions (400w, 800w, 1200w).
-2.  **CDN Integration:** Offload static media assets to an external CDN (e.g. Cloudflare) with aggressive cache-control rules (`Cache-Control: public, max-age=31536000`).
-3.  **Local Storage Caching:** Cache active categories locally inside client databases (`sessionStorage`) to eliminate API latency during repetitive navigations.
+For each route, run Lighthouse with categories `performance,accessibility,best-practices,seo`, once with default mobile throttling and once with `--preset=desktop`. The audited routes are `/`, `/listings`, `/ads/6336`, `/post`, and `/profile`.

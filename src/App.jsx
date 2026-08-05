@@ -1413,6 +1413,9 @@ function App() {
         : `${viewedCompany.name} en ${viewedCompany.city || 'México'}. ${isBusiness ? 'Mira sus anuncios clasificados activos, opiniones de clientes y contáctalos de forma segura en Mercasto.' : 'Mira sus anuncios clasificados en Mercasto.'}`;
       ogImage = getImageUrl(viewedCompany.avatar_url, "https://mercasto.com/icon-512x512.png");
       ogType = "profile";
+    } else if (window.location.pathname === '/listings') {
+      title = 'Anuncios clasificados en México | Mercasto';
+      desc = 'Explora anuncios clasificados en todo México: autos, inmuebles, empleo, servicios, electrónica y más en Mercasto.';
     } else if (activeCat) {
       const catName = getCatName(categoriesData.find(c => c.slug === activeCat), lang) || activeCat;
       title = `${catName} en México | Anuncios Clasificados Mercasto`;
@@ -1423,6 +1426,8 @@ function App() {
     document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
     document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', title);
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', desc);
     document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
     const canonicalHref = viewedAd
       ? `https://mercasto.com/ads/${viewedAd.id}`
