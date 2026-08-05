@@ -10,6 +10,7 @@ const CLARITY_PROJECT_ID = import.meta.env.VITE_CLARITY_PROJECT_ID || '';
 const ANALYTICS_VERBOSE = import.meta.env.VITE_ANALYTICS_VERBOSE === 'true';
 
 const MAX_PARAM_LENGTH = 140;
+const MAX_PENDING_VENDOR_EVENTS = 100;
 const SCROLL_THRESHOLDS = [25, 50, 75, 90, 100];
 const CLICK_SELECTOR = [
   'a',
@@ -52,6 +53,8 @@ const META_STANDARD_EVENT_MAP = {
 };
 
 let vendorsReady = false;
+let vendorActivationAllowed = false;
+let pendingVendorEvents = [];
 let behaviorReady = false;
 let lastUrl = '';
 let pageStartedAt = Date.now();
@@ -256,7 +259,7 @@ function initClarity() {
 }
 
 function initAnalyticsVendors() {
-  if (!isEnabled() || vendorsReady) return;
+  if (!isEnabled() || !vendorActivationAllowed || vendorsReady) return;
   vendorsReady = true;
   initMetaPixel();
   initMicrosoftUet();
@@ -326,10 +329,34 @@ function sendToClarity(eventName, params) {
   });
 }
 
+function deliverVendorEvent(eventName, params) {
+  sendToMeta(eventName, params);
+  sendToMicrosoft(eventName, params);
+  sendToClarity(eventName, params);
+}
+
+function queueVendorEvent(eventName, params) {
+  pendingVendorEvents.push({ eventName, params: { ...params } });
+  if (pendingVendorEvents.length > MAX_PENDING_VENDOR_EVENTS) {
+    pendingVendorEvents = pendingVendorEvents.slice(-MAX_PENDING_VENDOR_EVENTS);
+  }
+}
+
+export function activateAnalyticsVendors() {
+  if (!isEnabled() || vendorActivationAllowed) return;
+  vendorActivationAllowed = true;
+  initAnalyticsVendors();
+
+  const queued = pendingVendorEvents;
+  pendingVendorEvents = [];
+  queued.forEach(({ eventName, params }) => deliverVendorEvent(eventName, params));
+  window.__mercastoAnalyticsVendorsActivated = true;
+}
+
 export function trackEvent(eventName, params = {}) {
   if (!isEnabled()) return;
 
-  initAnalyticsVendors();
+  if (vendorActivationAllowed) initAnalyticsVendors();
   const name = normalizeEventName(eventName);
   const payload = sanitizeParams({
     ...getPageContext(),
@@ -349,9 +376,11 @@ export function trackEvent(eventName, params = {}) {
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ event: name, ...payload });
 
-  sendToMeta(name, payload);
-  sendToMicrosoft(name, payload);
-  sendToClarity(name, payload);
+  if (vendorActivationAllowed) {
+    deliverVendorEvent(name, payload);
+  } else {
+    queueVendorEvent(name, payload);
+  }
 }
 
 export function trackPageView(path, title, params = {}) {
@@ -752,7 +781,6 @@ export function initBehaviorAnalytics() {
   if (!isEnabled() || behaviorReady) return;
   behaviorReady = true;
 
-  initAnalyticsVendors();
   patchHistoryNavigation();
   initAdImpressionTracking();
   initMutationTracking();

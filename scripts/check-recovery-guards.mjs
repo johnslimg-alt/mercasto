@@ -101,6 +101,30 @@ assertOrder(
 );
 
 assertContains(
+  'src/main.jsx',
+  'const vendorFallbackMs = 12000;',
+  'heavy analytics vendors have a conservative delayed fallback'
+);
+
+assertContains(
+  'src/main.jsx',
+  "window.addEventListener('pointerdown', activateVendorAnalytics",
+  'heavy analytics vendors activate on the first user interaction'
+);
+
+assertContains(
+  'src/utils/analytics.js',
+  'pendingVendorEvents',
+  'first-party analytics queues vendor events before external scripts activate'
+);
+
+assertContains(
+  'src/main.jsx',
+  'metaBridge.replayMetaBrowserEvents();',
+  'Meta browser conversions emitted before vendor activation are replayed'
+);
+
+assertContains(
   'src/utils/protectedRouteReturn.js',
   "trackSellerFunnel('seller_post_returned_after_auth'",
   'seller registration return is measured as a funnel step'

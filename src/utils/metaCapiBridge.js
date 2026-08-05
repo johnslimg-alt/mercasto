@@ -3,6 +3,7 @@ import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './fu
 
 const META_API_BASE = '/api/meta/events';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
+const META_BROWSER_SENT_MARKER = '__mercastoMetaBrowserSent';
 
 const EVENT_MAP = {
   ad_posted: { endpoint: 'post-ad', metaName: 'PostAd', custom: true },
@@ -92,7 +93,7 @@ async function sendServerEvent(endpoint, payload) {
 }
 
 function sendBrowserEvent(metaConfig, payload, eventID) {
-  if (typeof window.fbq !== 'function') return;
+  if (typeof window.fbq !== 'function') return false;
 
   const isReg = metaConfig.metaName === 'CompleteRegistration';
   const params = isReg ? {} : {
@@ -111,6 +112,7 @@ function sendBrowserEvent(metaConfig, payload, eventID) {
   } else {
     window.fbq('track', metaConfig.metaName, params, { eventID });
   }
+  return true;
 }
 
 function sendMappedEvent(metaConfig, item = {}) {
@@ -138,7 +140,13 @@ function sendMappedEvent(metaConfig, item = {}) {
     // Analytics must never block the user action when a frozen object is supplied.
   }
 
-  sendBrowserEvent(metaConfig, serverPayload, id);
+  if (sendBrowserEvent(metaConfig, serverPayload, id)) {
+    try {
+      item[META_BROWSER_SENT_MARKER] = true;
+    } catch {
+      // Analytics items may be frozen; replay remains best effort.
+    }
+  }
 
   if (metaConfig.server !== false && metaConfig.endpoint) {
     void sendServerEvent(metaConfig.endpoint, serverPayload);
@@ -278,4 +286,38 @@ export function installMetaCapiBridge() {
   };
 
   document.addEventListener('click', markTelegramClickForSharedAnalytics, true);
+}
+
+export function replayMetaBrowserEvents() {
+  if (!isBrowser() || typeof window.fbq !== 'function') return;
+  const dataLayer = Array.isArray(window.dataLayer) ? window.dataLayer : [];
+
+  dataLayer.forEach((item = {}) => {
+    if (!item || typeof item !== 'object' || item[META_BROWSER_SENT_MARKER]) return;
+    const normalizedEvent = String(item.event || '').trim().toLowerCase();
+    const metaConfig = EVENT_MAP[normalizedEvent];
+    if (!metaConfig) return;
+
+    const payload = buildPayload(item);
+    const isReg = metaConfig.metaName === 'CompleteRegistration';
+    const isPostAd = metaConfig.metaName === 'PostAd';
+    if (!isReg && !isPostAd && !payload.listing_id) return;
+    if (isReg && !payload.event_id) return;
+
+    const id = payload.event_id || eventId(metaConfig.endpoint || metaConfig.metaName.toLowerCase(), payload.listing_id || 'user');
+    const method = clean(item.method || item.contact_method || metaConfig.method || '');
+    const browserPayload = {
+      ...payload,
+      event_id: id,
+      ...(method ? { method } : {}),
+    };
+
+    if (sendBrowserEvent(metaConfig, browserPayload, id)) {
+      try {
+        item[META_BROWSER_SENT_MARKER] = true;
+      } catch {
+        // Best-effort replay for immutable analytics entries.
+      }
+    }
+  });
 }
