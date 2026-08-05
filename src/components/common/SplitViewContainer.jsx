@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { MapPin, List, LayoutGrid, ChevronDown, Search } from 'lucide-react';
 
 const MapV3 = React.lazy(() => import('./MapV3'));
@@ -40,6 +40,15 @@ export default function SplitViewContainer({
   });
   const listContainerRef = useRef(null);
   const adRefs = useRef({});
+  const revealSentinelRef = useRef(null);
+  const isMobileCatalog = useMemo(() => {
+    try {
+      return window.matchMedia('(max-width: 767px)').matches;
+    } catch {
+      return true;
+    }
+  }, []);
+  const [visibleCount, setVisibleCount] = useState(() => isMobileCatalog ? 8 : ads.length);
 
   // Обработчики для синхронизации
   const handleAdHover = useCallback((adId) => {
@@ -80,8 +89,40 @@ export default function SplitViewContainer({
     return '/placeholder-ad.svg';
   }, [getImageUrl]);
 
-  // Мемоизация маркеров для карты
+  useEffect(() => {
+    if (!isMobileCatalog) {
+      setVisibleCount(ads.length);
+      return;
+    }
+    setVisibleCount(current => Math.min(ads.length, Math.max(current || 0, Math.min(8, ads.length))));
+  }, [ads.length, isMobileCatalog]);
+
+  useEffect(() => {
+    if (!isMobileCatalog || visibleCount >= ads.length) return undefined;
+    const sentinel = revealSentinelRef.current;
+    if (!sentinel || !('IntersectionObserver' in window)) {
+      setVisibleCount(ads.length);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setVisibleCount(current => Math.min(ads.length, current + 8));
+      }
+    }, { rootMargin: '200px 0px' });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [ads.length, isMobileCatalog, visibleCount]);
+
+  const visibleAds = useMemo(
+    () => ads.slice(0, isMobileCatalog ? visibleCount : ads.length),
+    [ads, isMobileCatalog, visibleCount],
+  );
+
+  // Build map markers only after the collapsed map is opened. This avoids
+  // preparing dozens of marker objects during the mobile catalog's first paint.
   const mapMarkers = useMemo(() => {
+    if (mapCollapsed) return [];
     return ads.slice(0, 80).map((ad, index) => {
       const lat = Number(ad.latitude ?? ad.lat);
       const lng = Number(ad.longitude ?? ad.lng);
@@ -104,13 +145,14 @@ export default function SplitViewContainer({
         isSelected: selectedAdId === ad.id,
       };
     });
-  }, [ads, hoveredAdId, selectedAdId]);
+  }, [ads, hoveredAdId, mapCollapsed, selectedAdId]);
 
   // Рендер карточки в зависимости от viewLayout
   const renderAdItem = (ad, index) => (
     <React.Fragment key={ad.id}>
       <div
         ref={(el) => (adRefs.current[ad.id] = el)}
+        data-catalog-card
         onMouseEnter={() => handleAdHover(ad.id)}
         onMouseLeave={handleAdLeave}
         onClick={() => handleAdClick(ad)}
@@ -130,7 +172,7 @@ export default function SplitViewContainer({
       </div>
       
       {/* Infinite scroll trigger */}
-      {index === ads.length - 1 && <div ref={lastAdElementRef} />}
+      {index === visibleAds.length - 1 && visibleCount >= ads.length && <div ref={lastAdElementRef} data-catalog-page-sentinel />}
     </React.Fragment>
   );
 
@@ -248,7 +290,8 @@ export default function SplitViewContainer({
         ) : viewLayout === 'grid' ? (
           /* ═══ GRID VIEW ═══ */
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-            {ads.map((ad, index) => renderAdItem(ad, index))}
+            {visibleAds.map((ad, index) => renderAdItem(ad, index))}
+            {visibleCount < ads.length && <div ref={revealSentinelRef} data-catalog-batch-sentinel className="col-span-full h-px" />}
             
             {loadingMore && (
               <div className="col-span-full flex justify-center py-10">
@@ -265,7 +308,8 @@ export default function SplitViewContainer({
         ) : (
           /* ═══ LIST VIEW ═══ */
           <div className="space-y-3">
-            {ads.map((ad, index) => renderAdItem(ad, index))}
+            {visibleAds.map((ad, index) => renderAdItem(ad, index))}
+            {visibleCount < ads.length && <div ref={revealSentinelRef} data-catalog-batch-sentinel className="h-px" />}
             
             {loadingMore && (
               <div className="flex justify-center py-10">

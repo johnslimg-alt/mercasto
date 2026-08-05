@@ -18,7 +18,7 @@ grep -qF "location ~ ^/ads/[0-9]+/?$" default.conf
 grep -qF "window.location.pathname !== '/'" index.html
 grep -qF 'id="schema-ld-json"' index.html
 grep -qF "window.location.pathname === '/listings'" src/App.jsx
-grep -qF '<Route path="/listings" element={renderHomeScreen()} />' src/App.jsx
+grep -qF '<Route path="/listings" element={renderCatalogScreen()} />' src/App.jsx
 grep -qF 'alt={alt}' src/App.jsx
 grep -qF "alt={localizedText(ad.title, lang) || 'Imagen del anuncio'}" src/components/screens/AdDetailScreen.jsx
 grep -qF 'meta[name="twitter:title"]' src/App.jsx
