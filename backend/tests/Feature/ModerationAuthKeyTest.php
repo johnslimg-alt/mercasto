@@ -52,6 +52,7 @@ class ModerationAuthKeyTest extends TestCase
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
         $this->assertSame('approved', $ad->ai_moderation_status);
+        $this->assertNull($ad->expires_at);
         $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest()->firstOrFail();
         $this->assertSame('seller_confirmation_required', $decision->metadata['activation_mode']);
         $this->assertDatabaseHas('user_notifications', [
@@ -65,6 +66,39 @@ class ModerationAuthKeyTest extends TestCase
                 && $request->hasHeader('x-goog-api-key', 'test-auth-key')
                 && ! str_contains($request->url(), '?key=');
         });
+    }
+
+    public function test_automatic_approval_starts_a_fresh_configured_lifetime(): void
+    {
+        config(['marketplace.ad_lifetime_days' => 7]);
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [[
+                        'text' => json_encode([
+                            'decision' => 'approved',
+                            'reason' => 'Contenido permitido.',
+                            'confidence' => 0.99,
+                            'flags' => [],
+                        ]),
+                    ]]],
+                ]],
+            ], 200),
+        ]);
+
+        $ad = $this->legacyAd();
+        $ad->forceFill(['expires_at' => now()->subDay()])->saveQuietly();
+
+        app()->call([new ModerateAdWithAI($ad->id, true), 'handle']);
+
+        $ad->refresh();
+        $this->assertSame('active', $ad->status);
+        $this->assertSame('approved', $ad->ai_moderation_status);
+        $this->assertTrue($ad->expires_at->between(
+            now()->addDays(7)->subMinute(),
+            now()->addDays(7)->addMinute(),
+        ));
+        $this->assertNull($ad->reminder_sent_at);
     }
 
     public function test_legacy_logo_is_replaced_and_not_sent_as_multimodal_input(): void

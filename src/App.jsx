@@ -3085,7 +3085,7 @@ function App() {
       if (res.ok) {
         setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, republish_count: data.republish_count } : a));
         setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active' } : a));
-        showToast('¡Anuncio republicado exitosamente! Estará activo 30 días más.');
+        showToast('¡Anuncio republicado exitosamente! Estará activo 7 días más.');
       } else {
         showToast(data.message || 'No se pudo republicar el anuncio.', 'error');
       }
@@ -3109,9 +3109,10 @@ function App() {
         const newExpiry = data.expires_at ? new Date(data.expires_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
         setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, reminder_sent_at: null } : a));
         showToast(`¡Anuncio renovado hasta ${newExpiry}!`);
+      } else if (res.status === 402 && data.payment_required) {
+        showToast(data.message || 'Redirigiendo al pago seguro para renovar el anuncio.');
       } else if (res.status === 402) {
-        showToast('Necesitas créditos para republicar este anuncio.', 'error');
-        setCurrentTab('credits');
+        showToast(data.message || 'No se pudo iniciar la renovación.', 'error');
       } else {
         showToast(data.message || 'No se pudo renovar el anuncio.', 'error');
       }

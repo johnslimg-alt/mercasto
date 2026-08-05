@@ -228,6 +228,8 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $previousStatus = $ad->status;
             $ad->forceFill([
                 'status' => $newStatus,
+                'expires_at' => $newStatus === 'active' ? Ad::freshExpiry() : null,
+                'reminder_sent_at' => null,
                 'ai_moderation_status' => $decision,
                 'ai_moderation_reason' => $reason,
                 'ai_moderation_confidence' => $confidence,
