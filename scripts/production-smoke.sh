@@ -66,6 +66,8 @@ check_http_status "${BASE_URL}/" '^(200|301|302)$'
 check_http_status "${BASE_URL}/api/categories" '^200$'
 check_http_status "${BASE_URL}/api/ads?page=1" '^200$'
 
+SMOKE_HTTP_ATTEMPTS="${SMOKE_HTTP_ATTEMPTS:-12}" SMOKE_HTTP_RETRY_DELAY="${SMOKE_HTTP_RETRY_DELAY:-5}" BASE_URL="$BASE_URL"   bash scripts/crawler-policy-production-smoke.sh
+
 echo "== Sensitive path probes =="
 check_http_status "${BASE_URL}/.env" '^(403|404|410)$'
 check_http_status "${BASE_URL}/.git/config" '^(403|404|410)$'

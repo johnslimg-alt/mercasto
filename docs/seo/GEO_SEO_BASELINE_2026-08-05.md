@@ -142,21 +142,17 @@ OpenAI advertising landing validation may additionally require `OAI-AdsBot` if M
 
 Training/model-improvement controls are a separate product and legal decision, not an SEO ranking tactic:
 
-- `Google-Extended` controls Gemini training/grounding use and does not affect Google Search inclusion or ranking;
-- `ClaudeBot` can collect public web content for model development and follows robots.txt;
-- any decision for `GPTBot`, `ClaudeBot` or `Google-Extended` must be documented before changing robots rules.
+- `GPTBot` and `ClaudeBot` are blocked because both providers expose separate search crawlers;
+- `OAI-SearchBot`, `Claude-SearchBot`, `Claude-User` and `PerplexityBot` remain allowed for search, citation or user-directed retrieval;
+- `Google-Extended` remains allowed because its single token controls both model use and Gemini grounding, and Mercasto's current GEO objective values grounding visibility.
 
-This baseline does **not** change `robots.txt`.
+The full decision and trade-offs are maintained in `CRAWLER_AND_AI_REFERRAL_POLICY_2026-08-05.md`.
 
 ### `llms.txt`
 
-Do not add `/llms.txt` now.
+Do not publish `/llms.txt`.
 
-Reasons:
-
-- it does not replace robots.txt, canonicals, noindex, sitemaps or structured data;
-- current provider guidance for search discoverability focuses on crawler access and normal public web signals;
-- implementation should wait until Mercasto has a documented target consumer, supported format and maintenance owner.
+The obsolete repository file was removed because it contained unsupported claims and legacy routes. Normal public discovery remains governed by robots.txt, canonicals, noindex, sitemaps, structured data and factual source pages. Reconsider only for a named consumer with documented support and a maintenance owner.
 
 ## Official crawler references
 

@@ -1,3 +1,5 @@
+import { classifyReferrerHost, isAiReferralSource, normalizeTrafficSource } from './trafficSourceClassification.js';
+
 const FIRST_TOUCH_KEY = 'mercasto.attribution.first.v1';
 const LAST_TOUCH_KEY = 'mercasto.attribution.last.v1';
 const SESSION_TOUCH_KEY = 'mercasto.attribution.session.v1';
@@ -62,9 +64,8 @@ function inferReferrer() {
     if (referrer.origin === window.location.origin) return null;
 
     const hostname = referrer.hostname.replace(/^www\./, '').toLowerCase();
+    const classified = classifyReferrerHost(hostname);
     const knownSources = [
-      ['google.', 'google'],
-      ['bing.com', 'bing'],
       ['facebook.com', 'facebook'],
       ['instagram.com', 'instagram'],
       ['tiktok.com', 'tiktok'],
@@ -73,11 +74,12 @@ function inferReferrer() {
       ['x.com', 'x'],
       ['twitter.com', 'x'],
     ];
-    const source = knownSources.find(([needle]) => hostname.includes(needle))?.[1] || hostname;
+    const socialSource = knownSources.find(([needle]) => hostname.includes(needle))?.[1];
 
     return {
-      source,
-      medium: ['google', 'bing'].includes(source) ? 'organic' : 'referral',
+      source: socialSource || classified.source,
+      medium: socialSource ? 'referral' : classified.medium,
+      channel: socialSource ? 'referral' : classified.channel,
       referrerHost: hostname,
     };
   } catch {
@@ -85,7 +87,7 @@ function inferReferrer() {
   }
 }
 
-function attributionFromUrl(rawUrl = window.location.href, allowReferrer = false) {
+export function attributionFromUrl(rawUrl = window.location.href, allowReferrer = false) {
   let url;
   try {
     url = new URL(String(rawUrl), window.location.href);
@@ -97,8 +99,9 @@ function attributionFromUrl(rawUrl = window.location.href, allowReferrer = false
 
   const params = url.searchParams;
   const paid = inferPaidSource(params);
-  const source = clean(params.get(PARAMS.source) || paid?.source);
-  const medium = clean(params.get(PARAMS.medium) || paid?.medium);
+  const source = clean(normalizeTrafficSource(params.get(PARAMS.source) || paid?.source));
+  const requestedMedium = clean(params.get(PARAMS.medium) || paid?.medium);
+  const medium = requestedMedium || (isAiReferralSource(source) ? 'ai_referral' : '');
   const campaign = clean(params.get(PARAMS.campaign));
   const content = clean(params.get(PARAMS.content));
   const term = clean(params.get(PARAMS.term));
@@ -115,6 +118,7 @@ function attributionFromUrl(rawUrl = window.location.href, allowReferrer = false
     content,
     term,
     clickPlatform,
+    channel: clean(referral?.channel || (isAiReferralSource(source) ? 'ai_referral' : '')),
     referrerHost: clean(referral?.referrerHost),
     paid: Boolean(paid || /^(cpc|ppc|paid|paid_social|display|affiliate)$/i.test(medium)),
     landingPath: clean(`${url.pathname}${url.search}`, 500),
@@ -148,6 +152,9 @@ export function getCampaignAttribution() {
     attribution_term: clean(active.term),
     attribution_paid: Boolean(active.paid),
     attribution_click_platform: clean(active.clickPlatform),
+    attribution_channel: clean(active.channel),
+    attribution_referrer_host: clean(active.referrerHost),
+    attribution_ai_referral: active.channel === 'ai_referral' || isAiReferralSource(active.source),
     attribution_landing_path: clean(active.landingPath, 500),
     first_touch_source: clean(firstTouch?.source),
     first_touch_campaign: clean(firstTouch?.campaign),

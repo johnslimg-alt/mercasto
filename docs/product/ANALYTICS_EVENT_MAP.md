@@ -200,3 +200,7 @@ Phase 3: add backend-confirmed events for publish/status changes.
 Phase 4: connect dashboards.
 
 Do not block MVP launch on a full analytics platform, but do not start paid ads without the minimum funnel events.
+
+## AI referral attribution
+
+Every data-layer event can include the bounded fields `attribution_source`, `attribution_medium`, `attribution_channel`, `attribution_referrer_host`, and `attribution_ai_referral`. Identifiable ChatGPT, Perplexity, Claude, Gemini, and Microsoft Copilot visits use `ai_referral`; only the referrer hostname is retained by this layer, never the full referring URL or its query string.
