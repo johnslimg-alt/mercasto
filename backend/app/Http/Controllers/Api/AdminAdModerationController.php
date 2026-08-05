@@ -116,16 +116,19 @@ class AdminAdModerationController extends Controller
         $decision = $validated['decision'];
         $reason = trim((string) ($validated['reason'] ?? ''));
         $previousStatus = $ad->status;
+        $publishImmediately = $decision === 'approved' && $previousStatus === 'pending';
         $newStatus = match ($decision) {
-            'approved' => 'active',
+            'approved' => $publishImmediately ? 'active' : 'archived',
             'rejected' => 'rejected',
             default => 'archived',
         };
 
-        DB::transaction(function () use ($ad, $request, $decision, $reason, $newStatus, $previousStatus) {
+        DB::transaction(function () use ($ad, $request, $decision, $reason, $newStatus, $previousStatus, $publishImmediately) {
             $ad->forceFill([
                 'status' => $newStatus,
-                'ai_moderation_status' => 'admin_' . $decision,
+                'expires_at' => $publishImmediately ? Ad::freshExpiry() : null,
+                'reminder_sent_at' => null,
+                'ai_moderation_status' => $decision === 'approved' ? 'approved' : 'admin_' . $decision,
                 'ai_moderation_reason' => $reason !== '' ? $reason : 'Revisión manual del administrador.',
                 'ai_moderation_confidence' => null,
                 'ai_moderated_at' => now(),
@@ -137,12 +140,21 @@ class AdminAdModerationController extends Controller
                 'decision' => $decision,
                 'reason' => $reason !== '' ? $reason : null,
                 'moderator_id' => $request->user()->id,
-                'metadata' => ['previous_status' => $previousStatus],
+                'metadata' => [
+                    'previous_status' => $previousStatus,
+                    'activation_mode' => $decision === 'approved'
+                        ? ($publishImmediately ? 'automatic_fresh_submission' : 'seller_confirmation_required')
+                        : null,
+                ],
             ]);
         });
 
-        if ($decision === 'approved' && $previousStatus !== 'active') {
-            $this->notifyApproval($ad->fresh());
+        if ($decision === 'approved') {
+            if ($publishImmediately) {
+                $this->notifyApproval($ad->fresh());
+            } else {
+                $this->notifyApprovalPendingReactivation($ad->fresh());
+            }
         }
 
         $this->clearPublicCaches();
@@ -151,6 +163,9 @@ class AdminAdModerationController extends Controller
             'success' => true,
             'status' => $newStatus,
             'decision' => $decision,
+            'activation_mode' => $decision === 'approved'
+                ? ($publishImmediately ? 'automatic_fresh_submission' : 'seller_confirmation_required')
+                : null,
         ]);
     }
 
@@ -173,6 +188,30 @@ class AdminAdModerationController extends Controller
     private function authorizeAdmin(Request $request): void
     {
         abort_unless($request->user() && $request->user()->role === 'admin', 403, 'Acceso denegado');
+    }
+
+    private function notifyApprovalPendingReactivation(Ad $ad): void
+    {
+        try {
+            $notification = [
+                'user_id' => $ad->user_id,
+                'title' => 'Tu anuncio fue aprobado',
+                'message' => 'Confirma que el anuncio sigue disponible y revisa precio, estado y ubicación antes de activarlo.',
+                'type' => 'seller_reactivation_ready',
+                'data' => json_encode(['ad_id' => $ad->id], JSON_THROW_ON_ERROR),
+                'link' => '/profile?tab=my_ads&filter=review_ready',
+                'is_read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+            $notification['id'] = DB::table('user_notifications')->insertGetId($notification);
+            broadcast(new NewNotification((int) $ad->user_id, $notification))->toOthers();
+        } catch (Throwable $error) {
+            Log::warning('Could not notify archived moderation approval', [
+                'ad_id' => $ad->id,
+                'error' => $error->getMessage(),
+            ]);
+        }
     }
 
     private function notifyApproval(Ad $ad): void

@@ -2143,17 +2143,22 @@ function App() {
   }, [user, loadSearchAlerts]);
 
   const handleModerateAd = async (id, status) => {
+    const decision = status === 'active' ? 'approved' : 'rejected';
+    const reason = decision === 'rejected'
+      ? window.prompt('Indica el motivo del rechazo:')
+      : '';
+    if (decision === 'rejected' && !reason?.trim()) return;
+
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`${API_URL}/ads/${id}/status`, {
-        method: 'PATCH',
+      const res = await fetch(`${API_URL}/admin/moderation/ads/${id}/decision`, {
+        method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ decision, reason: reason?.trim() || '' })
       });
-      if (res.ok) {
-        setAdminPendingAds(prev => prev.filter(ad => ad.id !== id));
-        if (status === 'active') loadAds(1); // Refresh the public feed after approval
-      }
+      if (!res.ok) throw new Error('moderation-decision-failed');
+      setAdminPendingAds(prev => prev.filter(ad => ad.id !== id));
+      if (decision === 'approved') loadAds(1);
     } catch (err) { console.error("Error moderating ad", err); }
   };
 

@@ -53,7 +53,7 @@ fi
 grep -qF 'Estará activo 7 días más.' src/App.jsx
 grep -qF 'Los anuncios gratuitos están activos durante 7 días.' src/components/screens/AyudaScreen.jsx
 grep -qF '$needsReModeration ? '\''pending'\'' : $ad->status' "$CONTROLLER"
-grep -qF "No puedes activar un anuncio en revisión o rechazado." "$CONTROLLER"
+grep -qF "'status' => 'required|in:paused,inactive,archived'" "$CONTROLLER"
 
 # Media and upload hardening.
 grep -qF "'images' => 'nullable|array|max:10'" "$CONTROLLER"
