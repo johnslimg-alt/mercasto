@@ -125,6 +125,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
             $model = null;
             $response = null;
+            $result = null;
             $quotaDelays = [];
 
             foreach ($this->moderationModels() as $candidateModel) {
@@ -136,8 +137,24 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
                 $candidateResponse = $this->sendModerationRequest($apiKey, $candidateModel, $payload);
                 if ($candidateResponse->successful()) {
+                    try {
+                        $candidateResult = $this->parseResult(
+                            (string) $candidateResponse->json('candidates.0.content.parts.0.text', '')
+                        );
+                    } catch (Throwable $parseError) {
+                        $this->guardModel($candidateModel, 300, 'invalid_json');
+                        $quotaDelays[] = 300;
+                        Log::warning('Gemini moderation model returned invalid JSON; trying fallback', [
+                            'ad_id' => $ad->id,
+                            'model' => $candidateModel,
+                            'error' => $parseError->getMessage(),
+                        ]);
+                        continue;
+                    }
+
                     $model = $candidateModel;
                     $response = $candidateResponse;
+                    $result = $candidateResult;
                     break;
                 }
 
@@ -193,13 +210,11 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 );
             }
 
-            if (! $response instanceof Response || ! is_string($model)) {
+            if (! $response instanceof Response || ! is_string($model) || ! is_array($result)) {
                 $this->deferForQuota($ad, min($quotaDelays ?: [300]));
                 return;
             }
 
-            $rawText = (string) $response->json('candidates.0.content.parts.0.text', '');
-            $result = $this->parseResult($rawText);
             $decision = $this->safeDecision($result['decision'], $result['confidence']);
             $reason = trim((string) ($result['reason'] ?? 'Sin explicación del modelo.'));
             $confidence = max(0, min(1, (float) ($result['confidence'] ?? 0)));

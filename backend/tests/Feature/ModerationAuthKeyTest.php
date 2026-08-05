@@ -177,6 +177,51 @@ class ModerationAuthKeyTest extends TestCase
         $this->assertGreaterThan(time(), $guard['retry_at'] ?? 0);
     }
 
+    public function test_invalid_json_from_one_model_falls_through_to_the_next_model(): void
+    {
+        config([
+            'services.gemini.moderation_models' => [
+                'gemini-3.5-flash-lite',
+                'gemini-3.5-flash',
+            ],
+        ]);
+
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/gemini-3.5-flash-lite:generateContent')) {
+                return Http::response([
+                    'candidates' => [[
+                        'content' => ['parts' => [['text' => 'not-json']]],
+                    ]],
+                ], 200);
+            }
+
+            return Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [[
+                        'text' => json_encode([
+                            'decision' => 'approved',
+                            'reason' => 'Contenido permitido.',
+                            'confidence' => 0.96,
+                            'flags' => [],
+                        ]),
+                    ]]],
+                ]],
+            ], 200);
+        });
+
+        $ad = $this->legacyAd();
+        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
+
+        $this->assertSame('approved', $ad->fresh()->ai_moderation_status);
+        $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest()->firstOrFail();
+        $this->assertSame('gemini-3.5-flash', $decision->metadata['model']);
+        $guard = Cache::get(
+            'ai_moderation:model_unavailable:' . hash('sha256', 'gemini-3.5-flash-lite')
+        );
+        $this->assertSame('invalid_json', $guard['reason'] ?? null);
+        $this->assertGreaterThan(time(), $guard['retry_at'] ?? 0);
+    }
+
     public function test_transient_server_error_is_retried_once_before_manual_review(): void
     {
         Http::fakeSequence()
