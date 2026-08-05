@@ -22,11 +22,10 @@ class ManualReviewSellerCorrectionTest extends TestCase
         parent::setUp();
         Storage::fake('public');
         $this->seller = User::factory()->create();
-        $this->category = Category::query()->create([
-            'slug' => 'motor',
-            'name' => ['es' => 'Motor', 'en' => 'Motor'],
-            'icon' => 'Car',
-        ]);
+        $this->category = Category::query()->firstOrCreate(
+            ['slug' => 'motor'],
+            ['name' => ['es' => 'Motor', 'en' => 'Motor'], 'icon' => 'Car'],
+        );
     }
 
     public function test_my_ads_exposes_fixable_guidance_without_exposing_decision_metadata(): void
