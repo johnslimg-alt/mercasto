@@ -67,9 +67,16 @@ class PushController extends Controller
      */
     public function vapidPublicKey()
     {
+        $publicKey = trim((string) config('services.webpush.vapid_public_key'));
+        if ($publicKey === '') {
+            return response()->json([
+                'message' => 'Las notificaciones push no están disponibles temporalmente.',
+            ], 503)->header('Cache-Control', 'no-store');
+        }
+
         return response()->json([
-            'publicKey' => config('services.webpush.vapid_public_key'),
-        ]);
+            'publicKey' => $publicKey,
+        ])->header('Cache-Control', 'no-store');
     }
 
     /**
@@ -87,11 +94,20 @@ class PushController extends Controller
             ], 404);
         }
 
+        $publicKey = trim((string) config('services.webpush.vapid_public_key'));
+        $privateKey = trim((string) config('services.webpush.vapid_private_key'));
+        if ($publicKey === '' || $privateKey === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Las notificaciones push no están configuradas.',
+            ], 503);
+        }
+
         $auth = [
             'VAPID' => [
                 'subject' => 'mailto:hello@mercasto.com',
-                'publicKey' => config('services.webpush.vapid_public_key'),
-                'privateKey' => config('services.webpush.vapid_private_key'),
+                'publicKey' => $publicKey,
+                'privateKey' => $privateKey,
             ],
         ];
 
