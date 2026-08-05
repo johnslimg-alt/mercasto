@@ -1,0 +1,247 @@
+{
+  "version": 1,
+  "generated_at": "2026-08-05",
+  "source": "Read-only production PostgreSQL aggregates; no personal data exported",
+  "baseline": {
+    "active_total": 5677,
+    "active_genuine": 0,
+    "active_catalog_filler": 5677,
+    "genuine_archived": 174,
+    "genuine_expired": 48,
+    "genuine_rejected": 9,
+    "active_without_state": 4900
+  },
+  "thresholds": {
+    "national_inventory_qualified": {
+      "genuine_active_min": 30,
+      "genuine_recent_90d_min": 15,
+      "genuine_sellers_min": 10,
+      "states_min": 3,
+      "location_completeness_min_percent": 80
+    },
+    "state_category": {
+      "genuine_active_min": 20,
+      "genuine_recent_90d_min": 10,
+      "genuine_sellers_min": 8,
+      "cities_min": 2,
+      "location_completeness_min_percent": 90,
+      "consecutive_weekly_snapshots": 2
+    },
+    "city_category": {
+      "genuine_active_min": 12,
+      "genuine_recent_90d_min": 8,
+      "genuine_sellers_min": 5,
+      "location_completeness_min_percent": 100,
+      "consecutive_weekly_snapshots": 2
+    },
+    "exit_policy": {
+      "threshold_percent": 60,
+      "consecutive_weekly_snapshots": 4,
+      "action": "noindex and remove from sitemap; preserve useful navigation or redirect only when intent is equivalent"
+    }
+  },
+  "pages": [
+    {
+      "rank": 1,
+      "route": "/motor",
+      "intent": "autos, motos y refacciones en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 1240,
+      "genuine_active": 0,
+      "internal_links": ["/", "/listings?category=motor", "/post"],
+      "notes": "Keep factual; do not claim active verified sellers or national local supply."
+    },
+    {
+      "rank": 2,
+      "route": "/electronica",
+      "intent": "electrónica nueva y usada en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 1079,
+      "genuine_active": 0,
+      "internal_links": ["/", "/productos", "/listings?category=electronica", "/post"]
+    },
+    {
+      "rank": 3,
+      "route": "/inmuebles",
+      "intent": "inmuebles en venta y renta en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 580,
+      "genuine_active": 0,
+      "internal_links": ["/", "/listings?category=inmobiliaria", "/post"]
+    },
+    {
+      "rank": 4,
+      "route": "/servicios",
+      "intent": "servicios profesionales en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 580,
+      "genuine_active": 0,
+      "internal_links": ["/", "/listings?category=servicios", "/post"]
+    },
+    {
+      "rank": 5,
+      "route": "/empleos",
+      "intent": "empleos y vacantes en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 580,
+      "genuine_active": 0,
+      "internal_links": ["/", "/listings?category=empleo", "/post"]
+    },
+    {
+      "rank": 6,
+      "route": "/hogar",
+      "intent": "muebles y artículos para el hogar en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 480,
+      "genuine_active": 0,
+      "internal_links": ["/", "/productos", "/listings?category=hogar", "/post"]
+    },
+    {
+      "rank": 7,
+      "route": "/moda",
+      "intent": "ropa, calzado y accesorios en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 437,
+      "genuine_active": 0,
+      "internal_links": ["/", "/productos", "/listings?category=moda", "/post"]
+    },
+    {
+      "rank": 8,
+      "route": "/ocio",
+      "intent": "deportes, instrumentos y coleccionismo en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 330,
+      "genuine_active": 0,
+      "internal_links": ["/", "/productos", "/listings?category=ocio", "/post"]
+    },
+    {
+      "rank": 9,
+      "route": "/mascotas",
+      "intent": "mascotas, accesorios y servicios en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 303,
+      "genuine_active": 0,
+      "internal_links": ["/", "/productos", "/listings?category=mascotas", "/post"]
+    },
+    {
+      "rank": 10,
+      "route": "/turismo",
+      "intent": "turismo, hospedaje y actividades en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 27,
+      "genuine_active": 0,
+      "internal_links": ["/", "/listings?category=turismo", "/post"]
+    },
+    {
+      "rank": 11,
+      "route": "/infantil",
+      "intent": "artículos infantiles y para bebés en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 10,
+      "genuine_active": 0,
+      "internal_links": ["/", "/productos", "/listings?category=infantil", "/post"]
+    },
+    {
+      "rank": 12,
+      "route": "/boletos",
+      "intent": "boletos para conciertos y eventos en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 8,
+      "genuine_active": 0,
+      "internal_links": ["/", "/listings?category=boletos", "/post"]
+    },
+    {
+      "rank": 13,
+      "route": "/negocios",
+      "intent": "negocios, franquicias e inversiones en México",
+      "page_type": "national_vertical",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 7,
+      "genuine_active": 0,
+      "internal_links": ["/", "/listings?category=negocios", "/post"]
+    },
+    {
+      "rank": 14,
+      "route": "/productos",
+      "intent": "directorio de categorías de productos en México",
+      "page_type": "national_category_hub",
+      "status": "live_directory_not_inventory_qualified",
+      "catalog_active": 2645,
+      "genuine_active": 0,
+      "internal_links": ["/electronica", "/hogar", "/moda", "/ocio", "/infantil", "/mascotas", "/listings?category=formacion", "/post"],
+      "notes": "Aggregate directory count across child categories; never query or claim a standalone productos inventory category."
+    },
+    {
+      "rank": 15,
+      "route": "/electronica/quintana-roo",
+      "intent": "electrónica en Quintana Roo",
+      "page_type": "state_category_candidate",
+      "status": "blocked_no_genuine_inventory",
+      "catalog_active": 18,
+      "genuine_active": 0,
+      "internal_links": ["/electronica", "/electronica/quintana-roo/cancun", "/post"]
+    },
+    {
+      "rank": 16,
+      "route": "/turismo/quintana-roo/cancun",
+      "intent": "hospedaje y actividades turísticas en Cancún",
+      "page_type": "city_category_candidate",
+      "status": "blocked_no_genuine_inventory",
+      "catalog_active": 16,
+      "genuine_active": 0,
+      "internal_links": ["/turismo", "/turismo/quintana-roo", "/post"]
+    },
+    {
+      "rank": 17,
+      "route": "/motor/jalisco",
+      "intent": "autos y motos en Jalisco",
+      "page_type": "state_category_candidate",
+      "status": "blocked_no_genuine_inventory",
+      "catalog_active": 14,
+      "genuine_active": 0,
+      "internal_links": ["/motor", "/motor/jalisco/guadalajara", "/post"]
+    },
+    {
+      "rank": 18,
+      "route": "/turismo/ciudad-de-mexico/cuauhtemoc",
+      "intent": "actividades y hospedaje en Cuauhtémoc, Ciudad de México",
+      "page_type": "city_category_candidate",
+      "status": "blocked_no_genuine_inventory",
+      "catalog_active": 11,
+      "genuine_active": 0,
+      "internal_links": ["/turismo", "/turismo/ciudad-de-mexico", "/post"]
+    },
+    {
+      "rank": 19,
+      "route": "/motor/baja-california",
+      "intent": "autos y motos en Baja California",
+      "page_type": "state_category_candidate",
+      "status": "blocked_no_genuine_inventory",
+      "catalog_active": 11,
+      "genuine_active": 0,
+      "internal_links": ["/motor", "/motor/baja-california/tijuana", "/post"]
+    },
+    {
+      "rank": 20,
+      "route": "/motor/yucatan",
+      "intent": "autos y motos en Yucatán",
+      "page_type": "state_category_candidate",
+      "status": "blocked_no_genuine_inventory",
+      "catalog_active": 10,
+      "genuine_active": 0,
+      "internal_links": ["/motor", "/motor/yucatan/merida", "/post"]
+    }
+  ]
+}
