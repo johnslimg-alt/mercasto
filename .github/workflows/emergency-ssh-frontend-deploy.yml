@@ -90,6 +90,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -I --max-time 30 https://mercasto.com/
-          curl -sS --max-time 30 https://mercasto.com/ | head -c 500
-          curl -sS --max-time 30 https://mercasto.com/api/categories | head -c 300
+          smoke_dir="$(mktemp -d)"
+          trap 'rm -rf "$smoke_dir"' EXIT
+
+          curl -fsSI --max-time 30 https://mercasto.com/
+          curl -fsS --max-time 30 https://mercasto.com/ -o "$smoke_dir/home.html"
+          curl -fsS --max-time 30 https://mercasto.com/api/categories -o "$smoke_dir/categories.json"
+
+          head -c 500 "$smoke_dir/home.html"
+          printf '\n'
+          head -c 300 "$smoke_dir/categories.json"
+          printf '\n'
