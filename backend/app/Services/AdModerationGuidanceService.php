@@ -8,18 +8,13 @@ use Illuminate\Support\Str;
 
 class AdModerationGuidanceService
 {
-    private const BLOCKED_TERMS = [
-        'fraud',
-        'fraude',
-        'estafa',
+    private const ADMIN_ONLY_TERMS = [
         'desbloqueo',
         'unlock',
         'iptv',
         'copyright',
         'pyramid',
         'regulated',
-        'advance_payment',
-        'software_terceros',
     ];
 
     public function sellerCorrection(Ad $ad): ?array
@@ -32,7 +27,7 @@ class AdModerationGuidanceService
         $flags = $this->normalizedFlags($decision);
         $flagText = implode(' ', $flags);
 
-        if ($flagText === '' || $this->containsAny($flagText, self::BLOCKED_TERMS)) {
+        if ($flagText === '' || $this->containsAny($flagText, self::ADMIN_ONLY_TERMS)) {
             return null;
         }
 
@@ -44,8 +39,8 @@ class AdModerationGuidanceService
         }
 
         if ($this->containsAny($flagText, [
-            'condition', 'condicion', 'contrad', 'discrep', 'inconsist',
-            'incoher', 'mileage', 'kilomet', 'metadata', 'attribute',
+            'condition', 'condicion', 'contrad', 'inconsist',
+            'mileage', 'kilomet', 'metadata', 'attribute',
         ])) {
             $issues['details'] = 'Corrige la condición, el kilometraje y los datos que no coincidan con la descripción.';
         }
@@ -60,6 +55,12 @@ class AdModerationGuidanceService
             'descripcion_insuficiente', 'categoria_incorrecta', 'servicio_ofrecido_como_bien',
         ])) {
             $issues['description'] = 'Amplía la descripción y selecciona la categoría correcta.';
+        }
+
+        if ($this->containsAny($flagText, [
+            'advance_payment', 'anticipo',
+        ])) {
+            $issues['payment'] = 'Aclara el anticipo, reduce cualquier pago inicial excesivo y explica qué incluye antes de solicitar dinero.';
         }
 
         if ($issues === []) {

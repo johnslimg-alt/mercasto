@@ -13,12 +13,18 @@ MY_ADS="src/components/screens/MyAdsScreen.jsx"
 echo "== Seller correction flow gate =="
 
 grep -qF 'class AdModerationGuidanceService' "$SERVICE"
-grep -qF "'fraud'" "$SERVICE"
+grep -qF 'private const ADMIN_ONLY_TERMS' "$SERVICE"
 grep -qF "'desbloqueo'" "$SERVICE"
 grep -qF "'iptv'" "$SERVICE"
 grep -qF "'photos'" "$SERVICE"
 grep -qF "'details'" "$SERVICE"
 grep -qF "'price'" "$SERVICE"
+grep -qF "'payment'" "$SERVICE"
+grep -qF "'advance_payment'" "$SERVICE"
+if grep -qF "'fraud'," "$SERVICE"; then
+  echo "Fraud suspicion alone must not suppress concrete seller guidance" >&2
+  exit 1
+fi
 
 grep -qF 'public function latestModerationDecision(): HasOne' "$MODEL"
 grep -qF -- "->where('source', 'ai')" "$MODEL"
