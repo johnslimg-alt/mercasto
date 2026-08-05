@@ -63,7 +63,6 @@ class AdminAdModerationDecisionTest extends TestCase
         Mail::fake();
         $admin = User::factory()->create(['role' => 'admin']);
         $seller = User::factory()->create([
-            'email_notifications' => true,
             'notification_preferences' => ['email_alerts' => true],
         ]);
         $ad = $this->reviewAd($seller);
