@@ -10,6 +10,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Http\Client\Response;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
@@ -109,18 +110,13 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             }
 
             $model = (string) config('services.gemini.moderation_model', 'gemini-3.6-flash');
-            $response = Http::timeout(60)
-                ->withHeaders([
-                    'x-goog-api-key' => $apiKey,
-                    'Content-Type' => 'application/json',
-                ])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
-                    'contents' => [['parts' => $parts]],
-                    'generationConfig' => [
-                        'temperature' => 0.1,
-                        'responseMimeType' => 'application/json',
-                    ],
-                ]);
+            $response = $this->sendModerationRequest($apiKey, $model, [
+                'contents' => [['parts' => $parts]],
+                'generationConfig' => [
+                    'temperature' => 0.1,
+                    'responseMimeType' => 'application/json',
+                ],
+            ]);
 
             if (! $response->successful()) {
                 $providerMessage = trim((string) $response->json('error.message', ''));
@@ -219,6 +215,37 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'failed'
             );
         }
+    }
+
+    private function sendModerationRequest(string $apiKey, string $model, array $payload): Response
+    {
+        $request = fn (): Response => Http::timeout(60)
+            ->withHeaders([
+                'x-goog-api-key' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])
+            ->post(
+                "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent",
+                $payload,
+            );
+
+        try {
+            $response = $request();
+        } catch (Throwable $error) {
+            usleep(750_000);
+            return $request();
+        }
+
+        if ($response->serverError()) {
+            Log::warning('Gemini moderation transient response; retrying once', [
+                'ad_id' => $this->adId,
+                'status' => $response->status(),
+            ]);
+            usleep(750_000);
+            return $request();
+        }
+
+        return $response;
     }
 
     private function prompt(Ad $ad, bool $hasOriginalImages): string
