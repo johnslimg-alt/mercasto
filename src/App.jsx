@@ -1409,7 +1409,7 @@ function App() {
   useEffect(() => {
     localStorage.setItem('lang', lang);
     localStorage.setItem('mercasto_language', lang);
-    document.documentElement.lang = lang;
+    document.documentElement.lang = lang === 'es' ? 'es-MX' : lang;
     document.documentElement.dir = RTL_LANGUAGES.has(lang) ? 'rtl' : 'ltr';
     if (i18n.language !== lang) i18n.changeLanguage(lang);
   }, [lang]);
@@ -1488,6 +1488,38 @@ function App() {
         : `${window.location.origin}${window.location.pathname}`;
     document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalHref);
     document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
+
+    const privatePathPatterns = [
+      /^\/post\/?$/,
+      /^\/profile\/?$/,
+      /^\/admin(?:\/|$)/,
+      /^\/dashboard(?:\/|$)/,
+      /^\/notificaciones\/?$/,
+      /^\/mensajes\/?$/,
+      /^\/perfil\/editar\/?$/,
+      /^\/anuncio\/\d+\/editar\/?$/,
+    ];
+    const searchParams = new URLSearchParams(location.search);
+    const contentFilterKeys = [
+      'q', 'search', 'category', 'cat', 'state', 'city', 'location',
+      'min_price', 'max_price', 'condition', 'sort', 'page',
+    ];
+    const isFilteredResultsPage = ['/', '/listings'].includes(location.pathname)
+      && contentFilterKeys.some(key => searchParams.has(key));
+    const isPrivateRoute = privatePathPatterns.some(pattern => pattern.test(location.pathname));
+    const robotsContent = isPrivateRoute
+      ? 'noindex,nofollow,noarchive'
+      : isFilteredResultsPage
+        ? 'noindex,follow,max-image-preview:large'
+        : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+    let robotsEl = document.querySelector('meta[name="robots"]');
+    if (!robotsEl) {
+      robotsEl = document.createElement('meta');
+      robotsEl.setAttribute('name', 'robots');
+      document.head.appendChild(robotsEl);
+    }
+    robotsEl.setAttribute('content', robotsContent);
+
     let canonicalEl = document.querySelector('link[rel="canonical"]');
     if (!canonicalEl) {
       canonicalEl = document.createElement('link');
@@ -1562,7 +1594,7 @@ function App() {
         cleanupScript.remove();
       }
     };
-  }, [currentTab, activeCat, viewedAd, viewedCompany, categoriesData, lang]);
+  }, [currentTab, activeCat, viewedAd, viewedCompany, categoriesData, lang, location.pathname, location.search]);
 
   // --- WEBSOCKETS LISTENER ---
   useEffect(() => {

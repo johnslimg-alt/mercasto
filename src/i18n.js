@@ -23,7 +23,7 @@ if (forceSpanishCampaignLanding) {
   } catch {}
 
   if (typeof document !== 'undefined') {
-    document.documentElement.lang = 'es';
+    document.documentElement.lang = 'es-MX';
     document.documentElement.dir = 'ltr';
   }
 }
