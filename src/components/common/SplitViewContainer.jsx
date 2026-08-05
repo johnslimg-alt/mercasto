@@ -164,10 +164,12 @@ export default function SplitViewContainer({
             : 'hover:shadow-md'
         }`}
       >
-        {renderAdCard(ad, { 
+        {renderAdCard(ad, {
           displayImageUrl: getAdImage(ad),
           compact: viewLayout === 'list',
-          layout: viewLayout
+          layout: viewLayout,
+          priority: index < (isMobileCatalog ? 2 : 4),
+          imageWidth: isMobileCatalog ? 400 : 520,
         })}
       </div>
       
