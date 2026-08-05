@@ -66,6 +66,19 @@ check_http_status "${BASE_URL}/" '^(200|301|302)$'
 check_http_status "${BASE_URL}/api/categories" '^200$'
 check_http_status "${BASE_URL}/api/ads?page=1" '^200$'
 
+echo "== Crawler policy =="
+ROBOTS_TMP="/tmp/mercasto_robots.$(id -u).txt"
+trap 'rm -f "$ROBOTS_TMP"' EXIT
+curl -k -fsS --max-time 30 "${BASE_URL}/robots.txt" -o "$ROBOTS_TMP"
+for allowed in Googlebot Google-Extended OAI-SearchBot OAI-AdsBot Claude-SearchBot Claude-User PerplexityBot; do
+  grep -qF "User-agent: $allowed" "$ROBOTS_TMP"
+done
+for blocked in GPTBot ClaudeBot; do
+  grep -A1 -F "User-agent: $blocked" "$ROBOTS_TMP" | grep -qF 'Disallow: /'
+done
+check_http_status "${BASE_URL}/llms.txt" '^404$'
+echo "crawler policy OK"
+
 echo "== Sensitive path probes =="
 check_http_status "${BASE_URL}/.env" '^(403|404|410)$'
 check_http_status "${BASE_URL}/.git/config" '^(403|404|410)$'

@@ -74,12 +74,17 @@ if (sitemap.status === 200) {
   requireMatch('sitemap content', sitemap.text, /<urlset|<sitemapindex/i);
 
   const legalPagePaths = [
+    '/como-funciona',
+    '/seguridad',
+    '/ayuda/publicar-anuncio',
+    '/ayuda/comprar-y-contactar',
+    '/tarifas',
+    '/sobre-mercasto',
     '/terminos',
     '/privacidad',
     '/cookies',
     '/contacto',
     '/ayuda',
-    '/safety',
     '/reembolsos',
     '/moderacion',
   ];

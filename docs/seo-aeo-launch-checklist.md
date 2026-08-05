@@ -91,9 +91,9 @@ Every source page must:
 
 - Allow normal crawling of approved public pages for Googlebot, OAI-SearchBot and PerplexityBot unless logs show a capacity/security problem.
 - OAI-AdsBot is relevant if Mercasto submits ChatGPT Ads landing pages.
-- Treat Google-Extended, GPTBot and ClaudeBot as separate training/model-use policy decisions, not SEO ranking controls.
+- Allow Google-Extended for Gemini grounding; block GPTBot and ClaudeBot because separate search crawlers remain allowed.
 - Keep noindex pages crawlable so compatible search crawlers can read the noindex directive.
-- Do not implement `llms.txt` as a replacement for robots, sitemap, canonical, noindex or schema.
+- Do not publish `llms.txt`; the obsolete file was removed and it cannot replace robots, sitemap, canonical, noindex or schema.
 
 ## Verified evidence
 

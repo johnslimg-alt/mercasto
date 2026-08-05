@@ -71,7 +71,7 @@ for (const forbidden of [
   assert(!combinedDocs.includes(forbidden), `outdated or unsupported Growth SEO assumption returned: ${forbidden}`);
 }
 
-assert(baseline.includes('Do not add `/llms.txt` now.'), 'llms.txt decision must be explicit');
+assert(baseline.includes('Do not publish `/llms.txt`.'), 'llms.txt decision must be explicit');
 assert(checklist.includes('**Blocked: active genuine inventory is 0**'), 'state/city rollout blocker must stay visible');
 assert(growthPlan.includes('../seo/first-20-landing-page-map.json'), 'growth plan must link to the machine-readable map');
 
