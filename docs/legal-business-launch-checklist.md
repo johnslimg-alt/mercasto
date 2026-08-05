@@ -14,7 +14,7 @@ This checklist must be completed before public marketing. It does not replace le
 | Seller/business policy | Business profile expectations, verification, contact rules | Covered by current terms/moderation surfaces; human review pending |
 | Support process | Support email/contact path and SLA expectation | Public contact path complete; monitored owner/SLA pending |
 | Account deletion | User-visible delete-account process and retention notes | Complete and wired to authenticated deletion API |
-| SMS/phone verification | Disclosure for OTP and phone number usage | Pending launch-mode decision: enable with provider or disable/defer |
+| SMS/phone verification | Disclosure for OTP and phone number usage | Not planned; public phone/SMS functionality is disabled |
 
 ## Operational requirements
 
@@ -50,7 +50,7 @@ Do not launch publicly if any are missing:
 
 ## Verified technical evidence — 2026-08-04
 
-Current `main` commit: `32c42051d621bbaffb940537638ea012f16f56a6`.
+Current verified production commit: `6bc3d7864690b634e84f05ae804d7b91b1f18710`.
 
 - `REQUIRE_LEGAL_READY=1 bash scripts/legal-readiness-smoke.sh` passed against production.
 - All eight required public routes returned 200.
@@ -59,4 +59,4 @@ Current `main` commit: `32c42051d621bbaffb940537638ea012f16f56a6`.
 - Profile account deletion requires explicit `ELIMINAR` confirmation and calls authenticated `DELETE /api/user`.
 - Footer/help surfaces expose terms, privacy, cookies, support and safety links.
 
-This evidence closes implementation/rendering gaps. It does **not** replace legal review or operational ownership. The remaining launch decisions are the monitored support owner/SLA, moderation owner, refund/manual-recovery owner, policy-copy approval or accepted risk, and the SMS launch-mode decision.
+This evidence closes implementation/rendering gaps. It does **not** replace legal review or operational ownership. The remaining launch decisions are the monitored support owner/SLA, moderation owner, refund/manual-recovery owner, policy-copy approval or accepted risk. The SMS launch-mode decision is complete: phone/SMS functionality is not planned and remains disabled.

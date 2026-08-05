@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'frontend_shell_url' => env('FRONTEND_SHELL_URL', 'http://mercasto-frontend:8081/index.html'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

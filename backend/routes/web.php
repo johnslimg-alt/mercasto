@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ShareAdController;
+use App\Http\Controllers\SeoShellController;
 use App\Http\Controllers\Api\SitemapController;
 
 Route::get('/sitemap.xml', [SitemapController::class, 'sitemapIndex']);
@@ -11,6 +12,8 @@ Route::get('/sitemap-states.xml', [SitemapController::class, 'states']);
 Route::get('/sitemap-ads.xml', [SitemapController::class, 'ads']);
 
 Route::get('/share/ads/{id}', ShareAdController::class)->whereNumber('id');
+Route::get('/listings', [SeoShellController::class, 'listings']);
+Route::get('/ads/{id}', [SeoShellController::class, 'ad'])->whereNumber('id');
 
 Route::get('/', function () {
     return view('welcome');
