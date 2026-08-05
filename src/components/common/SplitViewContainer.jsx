@@ -49,6 +49,8 @@ export default function SplitViewContainer({
     }
   }, []);
   const [visibleCount, setVisibleCount] = useState(() => isMobileCatalog ? 8 : ads.length);
+  const genuineAds = useMemo(() => ads.filter(ad => !ad?.is_catalog_filler), [ads]);
+  const catalogReferenceCount = ads.length - genuineAds.length;
 
   // Обработчики для синхронизации
   const handleAdHover = useCallback((adId) => {
@@ -123,7 +125,7 @@ export default function SplitViewContainer({
   // preparing dozens of marker objects during the mobile catalog's first paint.
   const mapMarkers = useMemo(() => {
     if (mapCollapsed) return [];
-    return ads.slice(0, 80).map((ad, index) => {
+    return genuineAds.slice(0, 80).map((ad, index) => {
       const lat = Number(ad.latitude ?? ad.lat);
       const lng = Number(ad.longitude ?? ad.lng);
       
@@ -145,7 +147,7 @@ export default function SplitViewContainer({
         isSelected: selectedAdId === ad.id,
       };
     });
-  }, [ads, hoveredAdId, mapCollapsed, selectedAdId]);
+  }, [genuineAds, hoveredAdId, mapCollapsed, selectedAdId]);
 
   // Рендер карточки в зависимости от viewLayout
   const renderAdItem = (ad, index) => (
@@ -207,7 +209,8 @@ export default function SplitViewContainer({
               <div className="rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-2 shadow-lg">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <MapPin size={14} className="text-[#84CC16]" />
-                  <span>{ads.length} anuncio{ads.length !== 1 ? 's' : ''} en el mapa</span>
+                  <span>{genuineAds.length} anuncio{genuineAds.length !== 1 ? 's' : ''} real{genuineAds.length !== 1 ? 'es' : ''} en el mapa</span>
+                  {catalogReferenceCount > 0 && <span className="text-slate-500 dark:text-slate-400">· {catalogReferenceCount} referencia{catalogReferenceCount !== 1 ? 's' : ''} de catálogo fuera del mapa</span>}
                 </div>
               </div>
               {hoveredAdId && (
@@ -242,7 +245,7 @@ export default function SplitViewContainer({
             Resultados
           </h2>
           <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-[12px] font-bold text-slate-600 dark:text-slate-400">
-            {ads.length}
+            {genuineAds.length} reales{catalogReferenceCount > 0 ? ` · ${catalogReferenceCount} catálogo` : ''}
           </span>
         </div>
 

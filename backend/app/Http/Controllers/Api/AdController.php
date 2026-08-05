@@ -1353,8 +1353,11 @@ class AdController extends Controller
     {
         $ad = Ad::find($id);
         if ($ad) {
-            if ($ad->status !== 'active') {
-                return response()->json(['message' => 'Anuncio inactivo', 'ignored' => true]);
+            if ($ad->status !== 'active' || $ad->is_catalog_filler) {
+                return response()->json([
+                    'message' => $ad->is_catalog_filler ? 'Referencia de catálogo' : 'Anuncio inactivo',
+                    'ignored' => true,
+                ]);
             }
 
             // Доверяем только Laravel proxy handling, а не клиентским заголовкам напрямую.
@@ -1411,6 +1414,7 @@ class AdController extends Controller
         $validAdIds = DB::table('ads')
             ->whereIn('id', $adIds)
             ->where('status', 'active')
+            ->where('is_catalog_filler', false)
             ->pluck('id');
 
         $rows = $validAdIds
@@ -1614,7 +1618,14 @@ class AdController extends Controller
         // Кэшируем карту сайта в Redis на 1 час (3600 секунд)
         $xml = Cache::remember('sitemap_xml', 3600, function () {
             // Оптимизация памяти (OOM): используем DB фасады для получения сырых объектов, вместо тяжелых моделей Eloquent
-            $ads = DB::table('ads')->where('status', 'active')->latest()->limit(10000)->get(['id', 'updated_at', 'category']);
+            $ads = DB::table('ads')
+                ->where('status', 'active')
+                ->where('is_catalog_filler', false)
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->limit(10000)
+                ->get(['id', 'updated_at', 'category']);
 
             $content = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
             $content .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
@@ -1693,6 +1704,9 @@ class AdController extends Controller
         $xml = Cache::remember('google_merchant_xml', 3600, function () {
             $ads = Ad::with('user:id,name')
                 ->where('status', 'active')
+                ->where('is_catalog_filler', false)
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '>', now())
                 ->where('price', '>', 0)
                 ->latest()
                 ->limit(5000)
@@ -1711,8 +1725,11 @@ class AdController extends Controller
         $request->validate(['channel' => 'required|string|in:whatsapp,telegram,email,share,profile,phone']);
         $ad = Ad::findOrFail($id);
 
-        if ($ad->status !== 'active') {
-            return response()->json(['message' => 'Anuncio inactivo', 'ignored' => true]);
+        if ($ad->status !== 'active' || $ad->is_catalog_filler) {
+            return response()->json([
+                'message' => $ad->is_catalog_filler ? 'Referencia de catálogo' : 'Anuncio inactivo',
+                'ignored' => true,
+            ]);
         }
 
         $clientIpHash = hash('sha256', (string) $request->ip()); // GDPR Compliance
