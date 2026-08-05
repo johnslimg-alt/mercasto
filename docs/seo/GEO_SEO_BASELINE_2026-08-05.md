@@ -167,6 +167,18 @@ Reasons:
 - Anthropic crawler controls: https://support.anthropic.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler
 - Perplexity crawler controls: https://docs.perplexity.ai/docs/resources/perplexity-crawlers
 
+## Supply-readiness command
+
+The aggregate report is generated with:
+
+```bash
+php artisan ads:supply-readiness
+php artisan ads:supply-readiness --json
+php artisan ads:supply-readiness --json --category=motor --state=Jalisco
+```
+
+The report excludes catalog filler from every qualification metric. It emits only aggregate counts, completeness percentages and pass/fail checks; it does not include seller names, email addresses, phone numbers, listing titles, descriptions or individual seller IDs.
+
 ## Weekly measurement
 
 Record weekly snapshots for:
@@ -184,7 +196,7 @@ Record weekly snapshots for:
 ## Immediate next actions
 
 1. Restore genuine active supply through renewal/reactivation and seller acquisition.
-2. Add an aggregate supply-readiness report that excludes catalog filler.
+2. Run and retain the aggregate `ads:supply-readiness --json` report each week.
 3. Build the six GEO source pages from current product behavior and policies.
 4. Review the first 20 map weekly; do not create local routes until thresholds pass.
 5. Re-submit only changed sitemap shards and inspect affected URLs in Search Console after each approved route release.

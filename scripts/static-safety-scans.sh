@@ -31,6 +31,7 @@ bash scripts/chat-api-security-gate.sh
 bash scripts/chat-ui-flow-gate.sh
 bash scripts/listing-lifecycle-gate.sh
 bash scripts/moderation-pipeline-gate.sh
+bash scripts/supply-readiness-gate.sh
 bash scripts/location-search-gate.sh
 bash scripts/registration-consent-contract-gate.sh
 bash scripts/funnel-analytics-contract-gate.sh
