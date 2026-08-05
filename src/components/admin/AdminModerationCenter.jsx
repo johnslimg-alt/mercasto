@@ -174,6 +174,10 @@ export default function AdminModerationCenter() {
       setError(t('errors.rejectionReason'));
       return;
     }
+    if (decision === 'changes_requested' && !reason.trim()) {
+      setError(t('errors.changesReason', { defaultValue: 'Escribe los cambios concretos que debe realizar el vendedor.' }));
+      return;
+    }
 
     setActionLoading(true);
     setError('');
@@ -446,13 +450,16 @@ function AdReview({ detail, reason, setReason, actionLoading, submitDecision, re
       <section className="sticky bottom-0 rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
         <label className="block text-xs font-extrabold uppercase tracking-wide text-slate-500">{t('commentLabel')}</label>
         <textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} placeholder={t('commentPlaceholder')} className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-lime-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <button type="button" disabled={actionLoading} onClick={() => submitDecision('approved')} className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50">
             {detail.status === 'pending'
               ? t('approvePublish')
               : t('approveSellerConfirmation', { defaultValue: 'Aprobar; el vendedor confirma' })}
           </button>
-          <button type="button" disabled={actionLoading} onClick={() => submitDecision('manual_review')} className="rounded-xl bg-amber-500 px-4 py-3 text-sm font-extrabold text-slate-950 disabled:opacity-50">{t('leavePending')}</button>
+          <button type="button" disabled={actionLoading} onClick={() => submitDecision('changes_requested')} className="rounded-xl bg-amber-500 px-4 py-3 text-sm font-extrabold text-slate-950 disabled:opacity-50">
+            {t('requestChanges', { defaultValue: 'Solicitar cambios' })}
+          </button>
+          <button type="button" disabled={actionLoading} onClick={() => submitDecision('manual_review')} className="rounded-xl bg-slate-200 px-4 py-3 text-sm font-extrabold text-slate-800 disabled:opacity-50 dark:bg-slate-700 dark:text-white">{t('leavePending')}</button>
           <button type="button" disabled={actionLoading} onClick={() => submitDecision('rejected')} className="rounded-xl bg-red-600 px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50">{t('reject')}</button>
         </div>
       </section>

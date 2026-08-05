@@ -102,6 +102,43 @@ class ManualReviewSellerCorrectionTest extends TestCase
         );
     }
 
+
+    public function test_admin_requested_changes_are_visible_and_material_edit_requeues(): void
+    {
+        $ad = $this->manualReviewAd();
+        $ad->forceFill([
+            'ai_moderation_status' => 'admin_changes_requested',
+            'ai_moderation_reason' => 'Elimina cualquier oferta de IPTV sin licencia y describe únicamente servicios autorizados.',
+        ])->saveQuietly();
+
+        $response = $this->actingAs($this->seller, 'sanctum')
+            ->getJson('/api/user/ads')
+            ->assertOk();
+
+        $this->assertSame(
+            ['admin_request'],
+            $response->json('data.0.seller_correction.issue_codes'),
+        );
+        $this->assertSame(
+            'Elimina cualquier oferta de IPTV sin licencia y describe únicamente servicios autorizados.',
+            $response->json('data.0.seller_correction.messages.0'),
+        );
+        $this->assertArrayNotHasKey('latest_moderation_decision', $response->json('data.0'));
+
+        $this->actingAs($this->seller, 'sanctum')
+            ->postJson("/api/ads/{$ad->id}", $this->editPayload([
+                'description' => 'Servicio autorizado de instalación y soporte técnico.',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('status', 'pending')
+            ->assertJsonPath('ai_moderation_status', 'queued');
+
+        $ad->refresh();
+        $this->assertSame('pending', $ad->status);
+        $this->assertSame('queued', $ad->ai_moderation_status);
+        $this->assertNull($ad->ai_moderation_reason);
+    }
+
     public function test_material_edit_requeues_manual_review_ad(): void
     {
         $ad = $this->manualReviewAd();
