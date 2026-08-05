@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
 class RequeueLegacyModeration extends Command
 {
     protected $signature = 'ads:requeue-legacy-moderation
-        {--limit=25 : Maximum archived ads to inspect}
+        {--limit=5 : Maximum archived ads to inspect}
+        {--spacing=30 : Seconds between queued moderation jobs}
         {--execute : Requeue the selected ads}';
 
     protected $description = 'Safely recheck legacy moderation backlog without automatic publication';
@@ -28,7 +29,8 @@ class RequeueLegacyModeration extends Command
             return self::FAILURE;
         }
 
-        $limit = max(1, min(250, (int) $this->option('limit')));
+        $limit = max(1, min(25, (int) $this->option('limit')));
+        $spacing = max(0, min(300, (int) $this->option('spacing')));
         $ads = Ad::query()
             ->where('is_catalog_filler', false)
             ->where('status', 'archived')
@@ -68,8 +70,8 @@ class RequeueLegacyModeration extends Command
             return self::SUCCESS;
         }
 
-        foreach ($ads as $ad) {
-            DB::transaction(function () use ($ad): void {
+        foreach ($ads->values() as $index => $ad) {
+            DB::transaction(function () use ($ad, $index, $spacing): void {
                 $ad->forceFill([
                     'status' => 'archived',
                     'moderation_submitted_at' => now(),
@@ -79,12 +81,14 @@ class RequeueLegacyModeration extends Command
                     'ai_moderated_at' => null,
                 ])->saveQuietly();
 
-                ModerateAdWithAI::dispatch($ad->id, false)->afterCommit();
+                ModerateAdWithAI::dispatch($ad->id, false)
+                    ->delay(now()->addSeconds($index * $spacing))
+                    ->afterCommit();
             });
         }
 
         $this->info(
-            "Queued {$ads->count()} ad(s) for review. Approved ads still require seller confirmation."
+            "Queued {$ads->count()} ad(s) for paced review ({$spacing}s spacing). Approved ads still require seller confirmation."
         );
 
         return self::SUCCESS;

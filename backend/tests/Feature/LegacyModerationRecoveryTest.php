@@ -26,6 +26,11 @@ class LegacyModerationRecoveryTest extends TestCase
             'ai_moderation_status' => null,
             'moderation_submitted_at' => now()->subDays(10),
         ]);
+        $secondEligible = $this->ad($seller, [
+            'status' => 'archived',
+            'ai_moderation_status' => null,
+            'moderation_submitted_at' => now()->subDays(9),
+        ]);
         $catalog = $this->ad($seller, [
             'status' => 'archived',
             'is_catalog_filler' => true,
@@ -42,11 +47,21 @@ class LegacyModerationRecoveryTest extends TestCase
 
         $this->artisan('ads:requeue-legacy-moderation', [
             '--limit' => 10,
+            '--spacing' => 45,
             '--execute' => true,
         ])->assertSuccessful();
 
+        Bus::assertDispatchedTimes(ModerateAdWithAI::class, 2);
         Bus::assertDispatched(ModerateAdWithAI::class, function ($job) use ($eligible) {
-            return $job->adId === $eligible->id && $job->activateOnApproval === false;
+            return $job->adId === $eligible->id
+                && $job->activateOnApproval === false
+                && $job->delay !== null;
+        });
+        Bus::assertDispatched(ModerateAdWithAI::class, function ($job) use ($secondEligible) {
+            return $job->adId === $secondEligible->id
+                && $job->activateOnApproval === false
+                && $job->delay !== null
+                && $job->delay->greaterThan(now()->addSeconds(30));
         });
         Bus::assertNotDispatched(ModerateAdWithAI::class, fn ($job) => $job->adId === $catalog->id);
         Bus::assertNotDispatched(ModerateAdWithAI::class, fn ($job) => $job->adId === $rejected->id);

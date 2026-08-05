@@ -24,7 +24,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 2;
+    public int $tries = 6;
     public int $timeout = 90;
     public int $uniqueFor = 600;
 
@@ -54,6 +54,11 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
         $providerError = Cache::get('ai_moderation:provider_unavailable');
         if ($providerError) {
+            if (str_contains(strtolower((string) $providerError), 'quota')) {
+                $this->deferForQuota($ad, 180);
+                return;
+            }
+
             $this->leaveForManualReview(
                 $ad,
                 'La moderación automática está temporalmente desactivada por un problema de configuración del proveedor.',
@@ -144,12 +149,13 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 }
 
                 if ($response->status() === 429) {
-                    Cache::put('ai_moderation:provider_unavailable', 'Gemini quota is temporarily unavailable.', now()->addMinutes(15));
-                    $this->leaveForManualReview(
-                        $ad,
-                        'La moderación automática está temporalmente sin cuota. El anuncio requiere revisión manual.',
-                        'provider_quota'
+                    $delay = $this->quotaRetryDelay($response);
+                    Cache::put(
+                        'ai_moderation:provider_unavailable',
+                        'Gemini quota is temporarily unavailable.',
+                        now()->addSeconds($delay),
                     );
+                    $this->deferForQuota($ad, $delay);
                     return;
                 }
 
@@ -246,6 +252,55 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         }
 
         return $response;
+    }
+
+    private function deferForQuota(Ad $ad, int $delay): void
+    {
+        $delay = max(60, min(900, $delay));
+
+        if ($this->attempts() >= $this->tries) {
+            $this->leaveForManualReview(
+                $ad,
+                'La moderación automática sigue temporalmente sin cuota. El anuncio requiere revisión manual.',
+                'provider_quota'
+            );
+            return;
+        }
+
+        $ad->forceFill([
+            'status' => 'archived',
+            'ai_moderation_status' => 'queued',
+            'ai_moderation_reason' => 'Esperando disponibilidad temporal del proveedor de moderación.',
+            'ai_moderation_confidence' => null,
+            'ai_moderated_at' => null,
+        ])->saveQuietly();
+
+        Log::notice('AI moderation deferred for Gemini quota recovery', [
+            'ad_id' => $ad->id,
+            'attempt' => $this->attempts(),
+            'delay_seconds' => $delay,
+        ]);
+
+        $this->release($delay);
+    }
+
+    private function quotaRetryDelay(Response $response): int
+    {
+        $retryAfter = trim((string) $response->header('Retry-After', ''));
+        if (ctype_digit($retryAfter)) {
+            return max(60, min(900, (int) $retryAfter));
+        }
+
+        $details = $response->json('error.details', []);
+        $encoded = is_array($details)
+            ? json_encode($details, JSON_UNESCAPED_SLASHES)
+            : '';
+
+        if (is_string($encoded) && preg_match('/"retryDelay"\s*:\s*"?(\d+)s"?/i', $encoded, $matches)) {
+            return max(60, min(900, (int) $matches[1]));
+        }
+
+        return 180;
     }
 
     private function prompt(Ad $ad, bool $hasOriginalImages): string
