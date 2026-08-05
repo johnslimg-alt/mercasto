@@ -16,9 +16,9 @@ grep -qF "navigate(messagePath)" src/components/screens/AdDetailScreen.jsx
 grep -qF "writePublishDraft" src/components/screens/PostScreen.jsx
 grep -qF "data-testid=\"publish-location-required\"" src/components/screens/PostScreen.jsx
 grep -qF "if (!isUpdating) clearPublishDraft();" src/App.jsx
-grep -qF "source: 'saved_search'" src/components/screens/HomeScreen.jsx
+grep -qF "source: 'saved_search'" src/components/screens/CatalogScreen.jsx
 
-if grep -Eq 'onSearchSelect=\{\(filters\).*executeSearch\(\);' src/components/screens/HomeScreen.jsx; then
+if grep -Eq 'onSearchSelect=\{\(filters\).*executeSearch\(\);' src/components/screens/CatalogScreen.jsx; then
   echo "saved searches must pass explicit filters instead of searching stale React state" >&2
   exit 1
 fi
