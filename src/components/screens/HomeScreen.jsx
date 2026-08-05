@@ -1028,9 +1028,9 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                     <div className="w-11 h-11 mx-auto rounded-full bg-[#0F172A] text-white flex items-center justify-center font-bold shadow-lg">01</div>
 
-                    <h3 className="font-semibold mt-3">{t.post_60s || 'Publica en 60s'}</h3>
+                    <h3 className="font-semibold mt-3">{t.post_60s || 'Crea tu anuncio'}</h3>
 
-                    <p className="text-[13px] text-slate-600 mt-1">{t.post_60s_desc || 'Fotos, precio, ubicación. La IA hace el resto.'}</p>
+                    <p className="text-[13px] text-slate-600 mt-1">{t.post_60s_desc || 'Añade fotos, precio, condición y ubicación.'}</p>
 
                   </div>
 
@@ -1040,7 +1040,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                     <h3 className="font-semibold mt-3">{t.get_leads || 'Recibe contactos'}</h3>
 
-                    <p className="text-[13px] text-slate-600 mt-1">{t.get_leads_desc || 'Llamadas, WhatsApp o escaneo QR seguro.'}</p>
+                    <p className="text-[13px] text-slate-600 mt-1">{t.get_leads_desc || 'WhatsApp, Telegram u otros canales habilitados.'}</p>
 
                   </div>
 
@@ -1048,9 +1048,9 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                     <div className="w-11 h-11 mx-auto rounded-full bg-[#0F172A] text-white flex items-center justify-center font-bold shadow-lg">03</div>
 
-                    <h3 className="font-semibold mt-3">{t.meet_safely || 'Encuentros seguros'}</h3>
+                    <h3 className="font-semibold mt-3">{t.meet_safely || 'Verifica antes de pagar'}</h3>
 
-                    <p className="text-[13px] text-slate-600 mt-1">{t.meet_safely_desc || 'Perfiles verificados (KYC) para tu paz mental.'}</p>
+                    <p className="text-[13px] text-slate-600 mt-1">{t.meet_safely_desc || 'Verifica la identidad, el producto y las condiciones antes de pagar.'}</p>
 
                   </div>
 
@@ -1058,9 +1058,9 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                     <div className="w-11 h-11 mx-auto rounded-full bg-[#84CC16] text-slate-950 flex items-center justify-center font-bold shadow-lg">04</div>
 
-                    <h3 className="font-semibold mt-3">{t.sell_faster || 'Vende rápido'}</h3>
+                    <h3 className="font-semibold mt-3">{t.sell_faster || 'Gestiona tu anuncio'}</h3>
 
-                    <p className="text-[13px] text-slate-600 mt-1">{t.sell_faster_desc || 'Destaca tu anuncio y cierra el trato hoy.'}</p>
+                    <p className="text-[13px] text-slate-600 mt-1">{t.sell_faster_desc || 'Edita, renueva o promociona desde tu perfil.'}</p>
 
                   </div>
 
@@ -1086,7 +1086,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
           <p className="text-[13px] text-slate-600 mt-1">{t.avoid_scams_desc || 'Nunca pagues por adelantado. Revisa las insignias.'}</p>
 
-                  <button onClick={() => navigate('/safety')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
+                  <button onClick={() => navigate('/seguridad')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
 
                 </div>
 
@@ -1094,11 +1094,11 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center"><ShieldCheck className="w-5 h-5 text-blue-600" /></div>
 
-                  <h3 className="font-semibold mt-3">{t.safe_payments || 'Pagos seguros'}</h3>
+                  <h3 className="font-semibold mt-3">{t.safe_payments || 'Entrega y pago'}</h3>
 
                   <p className="text-[13px] text-slate-600 mt-1">{t.safe_payments_desc || 'Reúnete en público. Cuenta el dinero antes de irte.'}</p>
 
-                  <button onClick={() => navigate('/safety')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
+                  <button onClick={() => navigate('/seguridad')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
 
                 </div>
 
@@ -1106,9 +1106,9 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>
 
-                  <h3 className="font-semibold mt-3">{t.verified_sellers || 'Vendedores verificados'}</h3>
+                  <h3 className="font-semibold mt-3">{t.verified_sellers || 'Señales de verificación'}</h3>
 
-                  <p className="text-[13px] text-slate-600 mt-1">{t.verified_sellers_desc || 'Busca la insignia azul de identidad confirmada (KYC).'}</p>
+                  <p className="text-[13px] text-slate-600 mt-1">{t.verified_sellers_desc || 'Una insignia indica una verificación; no garantiza la transacción.'}</p>
 
                   <button onClick={() => navigate('/ayuda')} className="btn-sm border border-slate-300 mt-3 hover:bg-slate-50">{t.learn_more || 'Saber más'}</button>
 

@@ -40,6 +40,40 @@ class SeoShellControllerTest extends TestCase
         $response->assertDontSee('https://mercasto.test/" />', false);
     }
 
+    public function test_factual_source_pages_return_canonical_server_decorated_shells(): void
+    {
+        $pages = [
+            'como-funciona' => ['Cómo funciona Mercasto | Comprar y vender en México', 'WebPage'],
+            'seguridad' => ['Seguridad al comprar y vender | Mercasto México', 'WebPage'],
+            'ayuda/publicar-anuncio' => ['Cómo publicar un anuncio en Mercasto | Guía oficial', 'WebPage'],
+            'ayuda/comprar-y-contactar' => ['Cómo comprar y contactar vendedores | Mercasto', 'WebPage'],
+            'tarifas' => ['Tarifas de Mercasto | Publicación, renovación y promoción', 'WebPage'],
+            'sobre-mercasto' => ['Sobre Mercasto | Plataforma de clasificados en México', 'AboutPage'],
+        ];
+
+        foreach ($pages as $path => [$title, $type]) {
+            $response = $this->get("https://mercasto.test/{$path}");
+
+            $response->assertOk();
+            $response->assertSee("<title>{$title}</title>", false);
+            $response->assertSee("<link rel=\"canonical\" href=\"https://mercasto.test/{$path}\" />", false);
+            $response->assertSee('content="index,follow,max-image-preview:large"', false);
+            $response->assertSee('"@type":"' . $type . '"', false);
+            $response->assertSee('"@type":"Organization"', false);
+            $response->assertSee('"@type":"BreadcrumbList"', false);
+            $response->assertSee('"dateModified":"2026-08-05"', false);
+        }
+    }
+
+    public function test_legacy_source_aliases_redirect_to_canonical_pages(): void
+    {
+        $this->get('/safety')->assertStatus(301)->assertRedirect('/seguridad');
+        $this->get('/acerca-de')->assertStatus(301)->assertRedirect('/sobre-mercasto');
+        $this->get('/terms')->assertStatus(301)->assertRedirect('/terminos');
+        $this->get('/privacy')->assertStatus(301)->assertRedirect('/privacidad');
+        $this->get('/help')->assertStatus(301)->assertRedirect('/ayuda');
+    }
+
     public function test_active_ad_route_returns_product_metadata_without_raw_multilingual_json(): void
     {
         $user = User::factory()->create();

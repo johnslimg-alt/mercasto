@@ -28,6 +28,25 @@ class SitemapIndexHygieneTest extends TestCase
         $response->assertSee('/sitemap-ads.xml', false);
     }
 
+    public function test_main_sitemap_contains_canonical_source_pages_only(): void
+    {
+        $response = $this->get('/sitemap-main.xml');
+
+        $response->assertOk();
+        foreach ([
+            '/como-funciona',
+            '/seguridad',
+            '/ayuda/publicar-anuncio',
+            '/ayuda/comprar-y-contactar',
+            '/tarifas',
+            '/sobre-mercasto',
+        ] as $path) {
+            $response->assertSee('https://mercasto.test' . $path, false);
+        }
+        $response->assertDontSee('https://mercasto.test/safety', false);
+        $response->assertDontSee('https://mercasto.test/acerca-de', false);
+    }
+
     public function test_legacy_state_sitemap_stays_valid_but_empty(): void
     {
         $response = $this->get('/sitemap-states.xml');
