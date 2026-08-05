@@ -340,7 +340,7 @@ const urlBase64ToUint8Array = (base64String) => {
   return outputArray;
 };
 
-const MediaSlider = ({ media, autoplay }) => {
+const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio' }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -357,7 +357,7 @@ const MediaSlider = ({ media, autoplay }) => {
       {media[currentIndex].type === 'video' ? (
         <video src={media[currentIndex].url} controls className="max-w-full max-h-full object-contain" />
       ) : (
-        <img src={media[currentIndex].url} className="max-w-full max-h-full object-contain shadow-sm" />
+        <img src={media[currentIndex].url} alt={alt} className="max-w-full max-h-full object-contain shadow-sm" />
       )}
       {media.length > 1 && (
         <>
@@ -4272,6 +4272,7 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={renderHomeScreen()} />
+              <Route path="/listings" element={renderHomeScreen()} />
               <Route path="/vendedores" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerLandingScreen lang={lang} /></React.Suspense>} />
               <Route path="/publicar-gratis" element={<Navigate to="/vendedores" replace />} />
               <Route path="/post" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderPostScreen()}</RequireAuth>} />

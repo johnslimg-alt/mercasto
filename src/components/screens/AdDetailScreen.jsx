@@ -537,7 +537,7 @@ export default function AdDetailScreen({
         <div className="lg:col-span-2">
           {/* MEDIA SLIDER */}
           <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm h-[300px] md:h-[500px]">
-            <MediaSlider media={images} autoplay={sliderAutoplay} />
+            <MediaSlider media={images} autoplay={sliderAutoplay} alt={localizedText(ad.title, lang) || 'Imagen del anuncio'} />
           </div>
 
           {/* AD DETAILS */}

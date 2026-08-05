@@ -8,6 +8,7 @@ echo "== Analytics CSP gate =="
 
 grep -qF 'https://analytics.tiktok.com' security_headers.conf
 grep -qF 'https://connect.facebook.net' security_headers.conf
+grep -qF 'https://www.facebook.com' security_headers.conf
 grep -qF 'https://analytics.tiktok.com/i18n/pixel/events.js' src/utils/tiktokPixel.js
 grep -qF 'https://connect.facebook.net/en_US/fbevents.js' src/utils/analytics.js
 
