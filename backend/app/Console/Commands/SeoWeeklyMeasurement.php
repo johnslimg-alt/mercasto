@@ -31,17 +31,7 @@ class SeoWeeklyMeasurement extends Command
         }
 
         if ($this->option('store')) {
-            SeoMeasurementSnapshot::query()->updateOrCreate(
-                [
-                    'period_start' => $report['period']['start'],
-                    'period_end' => $report['period']['end'],
-                ],
-                [
-                    'generated_at' => $report['generated_at'],
-                    'external_complete' => $report['external']['external_complete'],
-                    'report' => $report,
-                ],
-            );
+            $this->storeSnapshot($report);
         }
 
         if ($this->option('json')) {
@@ -59,6 +49,30 @@ class SeoWeeklyMeasurement extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function storeSnapshot(array $report): void
+    {
+        $snapshot = SeoMeasurementSnapshot::query()
+            ->whereDate('period_start', $report['period']['start'])
+            ->whereDate('period_end', $report['period']['end'])
+            ->first();
+        $values = [
+            'generated_at' => $report['generated_at'],
+            'external_complete' => $report['external']['external_complete'],
+            'report' => $report,
+        ];
+
+        if ($snapshot) {
+            $snapshot->forceFill($values)->save();
+            return;
+        }
+
+        SeoMeasurementSnapshot::query()->create([
+            'period_start' => $report['period']['start'],
+            'period_end' => $report['period']['end'],
+            ...$values,
+        ]);
     }
 
     private function renderReport(array $report): void
