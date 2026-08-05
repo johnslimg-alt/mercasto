@@ -866,79 +866,23 @@ class AdController extends Controller
             return response()->json(['message' => 'No tienes permisos para cambiar el estado de este anuncio'], 403);
         }
 
-        $request->validate(['status' => 'required|in:active,inactive,archived,pending,paused,expired,rejected']);
+        $validated = $request->validate([
+            'status' => 'required|in:paused,inactive,archived',
+        ]);
+        $status = $validated['status'];
 
-        // Защита от обхода модерации: только админ может активировать объявление со статусом pending/rejected
-        if ($request->status === 'active' && in_array($ad->status, ['pending', 'rejected']) && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'No puedes activar un anuncio en revisión o rechazado.'], 403);
+        if ($status === 'paused' && ! in_array($ad->status, ['active', 'paused'], true)) {
+            return response()->json(['message' => 'Solo puedes pausar anuncios activos.'], 422);
         }
 
-        // Защита от спама: уведомляем подписчиков только при ПЕРВИЧНОЙ публикации (из pending в active), а не при каждом снятии с паузы
-        if ($request->status === 'active' && $ad->status === 'pending') {
-            $notificationData = [
-                'user_id' => $ad->user_id,
-                'title' => '¡Anuncio aprobado!',
-                'message' => 'Tu anuncio "' . $ad->title . '" ha sido revisado y ya está visible en la plataforma.',
-                'is_read' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-            $id = DB::table('user_notifications')->insertGetId($notificationData);
-            $notificationData['id'] = $id;
+        $ad->forceFill(['status' => $status])->save();
 
-            // Broadcast the event
-            broadcast(new NewNotification((int) $ad->user_id, $notificationData))->toOthers();
-
-            // Send Web Push Notification
-            $pushSubscribers = DB::table('push_subscriptions')->where('user_id', $ad->user_id)->get();
-            if ($pushSubscribers->count() > 0 && config('services.webpush.vapid_public_key')) {
-                // Асинхронная отправка Push-уведомлений, чтобы админ-панель не "зависала" при долгом ответе серверов Google/Apple
-                dispatch(function () use ($pushSubscribers, $ad) {
-                    $auth = [
-                        'VAPID' => [
-                            'subject' => 'mailto:hello@mercasto.com',
-                            'publicKey' => config('services.webpush.vapid_public_key'),
-                            'privateKey' => config('services.webpush.vapid_private_key'),
-                        ],
-                    ];
-                    $webPush = new WebPush($auth);
-                    $payload = json_encode(['title' => '¡Anuncio aprobado!', 'body' => 'Tu anuncio "' . $ad->title . '" ya está visible.', 'url' => '/?ad=' . $ad->id]);
-                    foreach ($pushSubscribers as $sub) {
-                        $webPush->queueNotification(
-                            Subscription::create([
-                                'endpoint' => $sub->endpoint,
-                                'publicKey' => $sub->public_key,
-                                'authToken' => $sub->auth_token,
-                            ]), $payload
-                        );
-                    }
-                    $webPush->flush();
-                });
-            }
-
-            // Email subscriptions logic
-            // Защита от OOM (Out Of Memory): отправляем письма порциями по 100 штук (Chunking)
-            User::whereIn('id', function($query) use ($ad) {
-                $query->select('user_id')->from('category_subscriptions')->where('category_slug', $ad->category);
-            })->where('id', '!=', $ad->user_id)->chunk(100, function ($subscribers) use ($ad) {
-                foreach ($subscribers as $subscriber) {
-                    $prefs = is_string($subscriber->notification_preferences) ? json_decode($subscriber->notification_preferences, true) : ($subscriber->notification_preferences ?? ['email_alerts' => true]);
-                    if ($prefs['email_alerts'] ?? true) {
-                         Mail::to($subscriber)->queue(new NewAdInCategory($ad));
-                    }
-                }
-            });
-        }
-
-        $ad->status = $request->status;
-        $ad->save();
-
-        // Сбрасываем кэш SEO и главной страницы
+        Cache::forget("ad_{$id}");
         Cache::forget('sitemap_xml');
         Cache::forget('google_merchant_xml');
         Cache::forget('ads_featured_block');
-        for ($i = 1; $i <= 10; $i++) {
-            Cache::forget("ads_index_page_{$i}");
+        for ($page = 1; $page <= 10; $page++) {
+            Cache::forget("ads_index_page_{$page}");
         }
 
         return response()->json(['success' => true, 'status' => $ad->status]);
@@ -2215,6 +2159,12 @@ class AdController extends Controller
                 'republished_at' => now(),
             ])->save();
         } elseif ($ad->status === 'paused') {
+            if (! $ad->expires_at || $ad->expires_at->isPast()) {
+                return response()->json([
+                    'message' => 'El periodo del anuncio terminó. Renueva el anuncio para volver a activarlo.',
+                ], 422);
+            }
+
             $ad->status = 'active';
             $ad->save();
         } else {
@@ -2305,15 +2255,30 @@ class AdController extends Controller
             return response()->json(['message' => 'No tienes permisos para modificar uno o más de estos anuncios'], 403);
         }
 
+        $affected = 0;
         if ($action === 'pause') {
-            Ad::whereIn('id', $adIds)->where('user_id', $userId)
-               ->where('status', 'active')
-               ->update(['status' => 'paused', 'updated_at' => now()]);
+            $affected = Ad::whereIn('id', $adIds)->where('user_id', $userId)
+                ->where('status', 'active')
+                ->update(['status' => 'paused', 'updated_at' => now()]);
 
         } elseif ($action === 'activate') {
-            Ad::whereIn('id', $adIds)->where('user_id', $userId)
-               ->whereIn('status', ['paused', 'inactive'])
-               ->update(['status' => 'active', 'updated_at' => now()]);
+            $eligibleCount = Ad::whereIn('id', $adIds)
+                ->where('user_id', $userId)
+                ->where('status', 'paused')
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '>', now())
+                ->count();
+
+            if ($eligibleCount !== count($adIds)) {
+                return response()->json([
+                    'message' => 'Solo puedes reactivar en grupo anuncios pausados cuyo periodo siga vigente.',
+                ], 422);
+            }
+
+            $affected = Ad::whereIn('id', $adIds)->where('user_id', $userId)
+                ->where('status', 'paused')
+                ->where('expires_at', '>', now())
+                ->update(['status' => 'active', 'updated_at' => now()]);
 
         } elseif ($action === 'delete') {
             // Mirror destroy() cleanup for multiple ads
@@ -2341,7 +2306,7 @@ class AdController extends Controller
             DB::table('ad_impressions')->whereIn('ad_id', $adIds)->delete();
             DB::table('reports')->whereIn('ad_id', $adIds)->delete();
             DB::table('payments')->whereIn('ad_id', $adIds)->update(['ad_id' => null]);
-            Ad::whereIn('id', $adIds)->where('user_id', $userId)->delete();
+            $affected = Ad::whereIn('id', $adIds)->where('user_id', $userId)->delete();
         }
 
         // Bust caches
@@ -2356,7 +2321,7 @@ class AdController extends Controller
 
         return response()->json([
             'success'  => true,
-            'affected' => count($adIds),
+            'affected' => $affected,
             'action'   => $action,
         ]);
     }

@@ -30,6 +30,7 @@ bash scripts/search-alert-flow-gate.sh
 bash scripts/chat-api-security-gate.sh
 bash scripts/chat-ui-flow-gate.sh
 bash scripts/listing-lifecycle-gate.sh
+bash scripts/ad-activation-lifecycle-gate.sh
 bash scripts/moderation-pipeline-gate.sh
 bash scripts/seller-reactivation-reminder-gate.sh
 bash scripts/seller-correction-flow-gate.sh
