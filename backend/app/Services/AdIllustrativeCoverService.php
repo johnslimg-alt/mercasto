@@ -5,28 +5,35 @@ namespace App\Services;
 use App\Models\Ad;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class AdIllustrativeCoverService
 {
     public function ensureCover(Ad $ad): ?string
     {
         $images = $this->images($ad->image_url);
-        $originals = array_values(array_filter(
-            $images,
-            fn (string $image) => ! str_starts_with($image, 'ads/placeholders/')
-        ));
-        $placeholders = array_values(array_filter(
+        $managedPlaceholders = array_values(array_filter(
             $images,
             fn (string $image) => str_starts_with($image, 'ads/placeholders/')
         ));
+        $legacyPlaceholders = array_values(array_filter(
+            $images,
+            fn (string $image) => $this->isLegacyPlaceholder($image)
+        ));
+        $illustrativeImages = array_values(array_unique(array_merge(
+            $managedPlaceholders,
+            $legacyPlaceholders,
+        )));
+        $originals = array_values(array_filter(
+            $images,
+            fn (string $image) => ! in_array($image, $illustrativeImages, true)
+        ));
 
-        // A real seller photo always wins. Remove the generated cover so it can never
-        // remain as the first image after the seller updates the listing.
+        // A real seller photo always wins. Remove every generated/legacy cover so
+        // it cannot remain first after the seller updates the listing.
         if ($originals !== []) {
-            if ($placeholders !== [] || $ad->generated_cover) {
-                if ($placeholders !== []) {
-                    Storage::disk('public')->delete($placeholders);
-                }
+            if ($illustrativeImages !== [] || $ad->generated_cover) {
+                Storage::disk('public')->delete($illustrativeImages);
                 $ad->forceFill([
                     'image_url' => json_encode($originals, JSON_UNESCAPED_SLASHES),
                     'generated_cover' => false,
@@ -36,11 +43,23 @@ class AdIllustrativeCoverService
             return null;
         }
 
-        if ($placeholders !== []) {
-            if (! $ad->generated_cover) {
-                $ad->forceFill(['generated_cover' => true])->saveQuietly();
+        // Managed covers already disclose that they are illustrative. Legacy logo
+        // files did not, so remove them and generate the current labeled cover.
+        if ($managedPlaceholders !== []) {
+            if ($legacyPlaceholders !== []) {
+                Storage::disk('public')->delete($legacyPlaceholders);
             }
-            return $placeholders[0];
+            if ($legacyPlaceholders !== [] || ! $ad->generated_cover) {
+                $ad->forceFill([
+                    'image_url' => json_encode($managedPlaceholders, JSON_UNESCAPED_SLASHES),
+                    'generated_cover' => true,
+                ])->saveQuietly();
+            }
+            return $managedPlaceholders[0];
+        }
+
+        if ($legacyPlaceholders !== []) {
+            Storage::disk('public')->delete($legacyPlaceholders);
         }
 
         $path = 'ads/placeholders/' . Str::uuid() . '.svg';
@@ -56,13 +75,7 @@ class AdIllustrativeCoverService
 
     public function hasOriginalImages(Ad $ad): bool
     {
-        foreach ($this->images($ad->image_url) as $image) {
-            if (! str_starts_with($image, 'ads/placeholders/')) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->originalImages($ad) !== [];
     }
 
     public function originalImages(Ad $ad): array
@@ -70,7 +83,30 @@ class AdIllustrativeCoverService
         return array_values(array_filter(
             $this->images($ad->image_url),
             fn (string $image) => ! str_starts_with($image, 'ads/placeholders/')
+                && ! $this->isLegacyPlaceholder($image)
         ));
+    }
+
+    private function isLegacyPlaceholder(string $image): bool
+    {
+        $knownHashes = array_values(array_filter(
+            config('marketplace.legacy_placeholder_sha256', []),
+            fn (mixed $hash) => is_string($hash) && preg_match('/^[a-f0-9]{64}$/i', $hash)
+        ));
+        if ($knownHashes === []) {
+            return false;
+        }
+
+        try {
+            $disk = Storage::disk('public');
+            if (! $disk->exists($image) || $disk->size($image) > 65536) {
+                return false;
+            }
+
+            return in_array(hash('sha256', $disk->get($image)), $knownHashes, true);
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function images(mixed $value): array

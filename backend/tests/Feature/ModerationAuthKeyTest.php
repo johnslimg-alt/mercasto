@@ -66,6 +66,54 @@ class ModerationAuthKeyTest extends TestCase
         });
     }
 
+    public function test_legacy_logo_is_replaced_and_not_sent_as_multimodal_input(): void
+    {
+        $legacyBytes = 'legacy-logo-binary';
+        $legacyPath = 'ads/copied-logo.webp';
+        Storage::disk('public')->put($legacyPath, $legacyBytes);
+        config([
+            'marketplace.legacy_placeholder_sha256' => [hash('sha256', $legacyBytes)],
+        ]);
+
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [[
+                        'text' => json_encode([
+                            'decision' => 'manual_review',
+                            'reason' => 'Falta fotografía original.',
+                            'confidence' => 0.91,
+                            'flags' => ['missing_original_photo'],
+                        ]),
+                    ]]],
+                ]],
+            ], 200),
+        ]);
+
+        $ad = $this->legacyAd();
+        $ad->forceFill([
+            'image_url' => json_encode([$legacyPath]),
+            'generated_cover' => false,
+        ])->saveQuietly();
+
+        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
+
+        $ad->refresh();
+        $images = json_decode($ad->image_url, true);
+        $this->assertCount(1, $images);
+        $this->assertStringStartsWith('ads/placeholders/', $images[0]);
+        $this->assertTrue((bool) $ad->generated_cover);
+        Storage::disk('public')->assertMissing($legacyPath);
+
+        Http::assertSent(function ($request) {
+            $parts = $request->data()['contents'][0]['parts'] ?? [];
+            return count($parts) === 1
+                && isset($parts[0]['text'])
+                && str_contains($parts[0]['text'], 'NO agregó fotografías originales')
+                && ! isset($parts[0]['inline_data']);
+        });
+    }
+
     public function test_transient_server_error_is_retried_once_before_manual_review(): void
     {
         Http::fakeSequence()
