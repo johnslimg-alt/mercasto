@@ -28,5 +28,6 @@ grep -qF "'noindex,follow,max-image-preview:large'" src/App.jsx
 grep -qF 'Mercasto: compra, vende y renta en todo México' src/components/screens/HomeScreen.jsx
 ! grep -qF 'sitemap-states.xml' <(sed -n '/\$sitemaps = \[/,/\];/p' backend/app/Http/Controllers/Api/SitemapController.php)
 grep -qF 'legacy' backend/app/Http/Controllers/Api/SitemapController.php
+node scripts/vertical-seo-contract.mjs
 
 echo "SEO route shell gate OK"

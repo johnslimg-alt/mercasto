@@ -1,4 +1,3 @@
-import SEO from "../../SEO";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
@@ -68,7 +67,7 @@ const SUBSECTIONS = [
   { name: 'Camionetas', query: 'camionetas', Icon: Car },
   { name: 'Camiones', query: 'camiones', Icon: Truck },
   { name: 'Refacciones', query: 'refacciones', Icon: Wrench },
-  { name: 'Verificados', query: 'vendedor verificado', Icon: Gauge },
+  { name: 'Segunda mano', query: 'usado', Icon: Gauge },
   { name: 'Autopartes', query: 'autopartes', Icon: PackageSearch },
 ];
 
@@ -100,7 +99,6 @@ export default function AutosLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/autos" />
       <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}
@@ -183,10 +181,10 @@ export default function AutosLanding({ lang = 'es' }) {
         {/* Stats bar */}
         <section className="bg-blue-600 rounded-3xl p-8 text-white text-center grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { n: '45,000+', label: 'Vehículos disponibles' },
-            { n: '1,200+', label: 'Vendedores verificados' },
-            { n: '32',      label: 'Estados de México' },
-            { n: 'Gratis',  label: 'Publicar anuncio' },
+            { n: 'Todo México', label: 'Busca por estado y ciudad' },
+            { n: 'Directo', label: 'Contacto con el vendedor' },
+            { n: '32 estados', label: 'Cobertura de búsqueda' },
+            { n: 'Gratis', label: 'Publicar anuncio' },
           ].map(s => (
             <div key={s.label}>
               <div className="text-3xl font-black mb-1">{s.n}</div>

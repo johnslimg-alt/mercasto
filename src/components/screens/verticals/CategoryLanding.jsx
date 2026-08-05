@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
-import SEO from '../../SEO';
 import { subcategoriesMap } from '../../../constants/locationsAndCategories';
 import { categorySchema } from '../../../constants/categorySchema';
 import { categoryLandingTranslations } from '../../../constants/categoryLandingTranslations';
@@ -80,14 +79,14 @@ const CATEGORY_CONFIG = {
   electronica: {
     title: 'Electrónica',
     subtitle: 'Los mejores productos electrónicos al mejor precio en México',
-    description: 'Encuentra televisores, audífonos, consolas de videojuegos y más. Compra electrónica nueva y usada de vendedores verificados en todo México.',
+    description: 'Encuentra televisores, audífonos, consolas de videojuegos y más. Compara anuncios de electrónica nueva y usada publicados en México.',
     seoTitle: 'Electrónica en México — Compra y Venta | Mercasto',
-    seoDesc: 'Compra y vende electrónica en México. TV, audífonos, consolas, cámaras y más. Vendedores verificados con reseñas en Mercasto.',
+    seoDesc: 'Explora anuncios de electrónica en México: TV, audífonos, consolas, cámaras, computadoras y accesorios.',
     color: 'blue',
     slug: 'electronica',
     trust: [
-      { Icon: BadgeCheck, title: 'Vendedores verificados', body: 'Revisamos cada vendedor para garantizarte una compra segura y sin sorpresas.' },
-      { Icon: ShieldCheck, title: 'Compra protegida', body: 'Lee reseñas de compradores anteriores antes de cerrar cualquier trato.' },
+      { Icon: BadgeCheck, title: 'Revisa el anuncio', body: 'Consulta fotos, descripción, estado y datos del vendedor antes de contactar.' },
+      { Icon: ShieldCheck, title: 'Opiniones cuando existen', body: 'Las valoraciones se muestran solo cuando otros usuarios han dejado una reseña.' },
       { Icon: Star, title: 'Mejores precios', body: 'Compara precios de cientos de vendedores y encuentra la mejor oferta.' },
     ],
     cta: '¿Tienes electrónica para vender?',
@@ -103,8 +102,8 @@ const CATEGORY_CONFIG = {
     color: 'purple',
     slug: 'moda',
     trust: [
-      { Icon: BadgeCheck, title: 'Tallas verificadas', body: 'Los vendedores incluyen medidas exactas para que siempre te quede bien.' },
-      { Icon: ShieldCheck, title: 'Con reseñas reales', body: 'Lee opiniones de compradores anteriores antes de comprar cualquier prenda.' },
+      { Icon: BadgeCheck, title: 'Confirma talla y estado', body: 'Revisa las medidas del anuncio y confírmalas con el vendedor antes de comprar.' },
+      { Icon: ShieldCheck, title: 'Opiniones cuando existen', body: 'Consulta las valoraciones disponibles y revisa el perfil del vendedor.' },
       { Icon: Star, title: 'Moda a tu precio', body: 'Desde marcas premium hasta ropa de segunda mano en excelente estado.' },
     ],
     cta: '¿Tienes ropa o accesorios para vender?',
@@ -120,8 +119,8 @@ const CATEGORY_CONFIG = {
     color: 'green',
     slug: 'hogar',
     trust: [
-      { Icon: BadgeCheck, title: 'Vendedores de confianza', body: 'Cada vendedor está verificado para que compres muebles y artículos con seguridad.' },
-      { Icon: ShieldCheck, title: 'Con fotos reales', body: 'Todos los anuncios incluyen fotografías del artículo real, sin imágenes de stock.' },
+      { Icon: BadgeCheck, title: 'Revisa el perfil', body: 'Consulta la información del vendedor y confirma las condiciones antes del trato.' },
+      { Icon: ShieldCheck, title: 'Confirma el artículo', body: 'Solicita fotos actuales, medidas y detalles del estado antes de acordar la compra.' },
       { Icon: Star, title: 'Precios accesibles', body: 'Muebles nuevos y usados en excelente estado a precios que se adaptan a tu presupuesto.' },
     ],
     cta: '¿Tienes artículos del hogar para vender?',
@@ -137,8 +136,8 @@ const CATEGORY_CONFIG = {
     color: 'blue',
     slug: 'informatica',
     trust: [
-      { Icon: BadgeCheck, title: 'Especificaciones verificadas', body: 'Los vendedores deben indicar especificaciones técnicas precisas en cada anuncio.' },
-      { Icon: ShieldCheck, title: 'Con reseñas reales', body: 'Lee la experiencia de otros compradores antes de adquirir cualquier equipo.' },
+      { Icon: BadgeCheck, title: 'Compara especificaciones', body: 'Revisa modelo, componentes y estado, y confirma los datos con el vendedor.' },
+      { Icon: ShieldCheck, title: 'Opiniones cuando existen', body: 'Consulta las valoraciones disponibles antes de contactar al vendedor.' },
       { Icon: Star, title: 'Tecnología al mejor precio', body: 'Compara equipos nuevos y reacondicionados de decenas de vendedores.' },
     ],
     cta: '¿Tienes equipo de tecnología para vender?',
@@ -150,12 +149,12 @@ const CATEGORY_CONFIG = {
     subtitle: 'Smartphones, accesorios y planes de telefonía en México',
     description: 'Encuentra los últimos smartphones, teléfonos usados, accesorios y planes de telefonía. Compra y vende teléfonos en Mercasto.',
     seoTitle: 'Teléfonos en México — Smartphones y Accesorios | Mercasto',
-    seoDesc: 'Compra y vende smartphones y teléfonos en México. Nuevos, usados y reacondicionados con garantía en Mercasto.',
+    seoDesc: 'Compra y vende smartphones y teléfonos en México. Nuevos, usados y reacondicionados publicados por vendedores en Mercasto.',
     color: 'blue',
     slug: 'telefonos',
     trust: [
-      { Icon: BadgeCheck, title: 'IMEI verificado', body: 'Pedimos a los vendedores verificar el IMEI para confirmar que el equipo no está reportado.' },
-      { Icon: ShieldCheck, title: 'Con reseñas reales', body: 'Lee la experiencia de compradores anteriores antes de adquirir cualquier dispositivo.' },
+      { Icon: BadgeCheck, title: 'Verifica el IMEI', body: 'Comprueba el IMEI y el estado del equipo antes de realizar cualquier pago.' },
+      { Icon: ShieldCheck, title: 'Opiniones cuando existen', body: 'Consulta las valoraciones disponibles y confirma la identidad del vendedor.' },
       { Icon: Star, title: 'Mejores precios', body: 'Smartphones nuevos, usados y reacondicionados a precios competitivos.' },
     ],
     cta: '¿Tienes un teléfono para vender?',
@@ -171,9 +170,9 @@ const CATEGORY_CONFIG = {
     color: 'green',
     slug: 'mascotas',
     trust: [
-      { Icon: BadgeCheck, title: 'Criadores verificados', body: 'Revisamos la identidad de criadores y establecimientos antes de publicar sus anuncios.' },
+      { Icon: BadgeCheck, title: 'Confirma al anunciante', body: 'Solicita información sanitaria, identificación y condiciones antes de adoptar o comprar.' },
       { Icon: ShieldCheck, title: 'Adopción responsable', body: 'Promovemos la adopción responsable con información completa sobre cada mascota.' },
-      { Icon: Star, title: 'Comunidad pet-friendly', body: 'Miles de amantes de las mascotas comparten consejos, productos y servicios en Mercasto.' },
+      { Icon: Star, title: 'Compara opciones', body: 'Revisa anuncios de adopción, accesorios, alimento y servicios para mascotas.' },
     ],
     cta: '¿Ofreces servicios para mascotas?',
     ctaDesc: 'Publica tus servicios veterinarios, peluquería o productos y llega a dueños de mascotas en tu ciudad.',
@@ -189,8 +188,8 @@ const CATEGORY_CONFIG = {
     color: 'green',
     slug: 'infantil',
     trust: [
-      { Icon: BadgeCheck, title: 'Seguridad garantizada', body: 'Todos los artículos para bebés cumplen con estándares de seguridad verificados.' },
-      { Icon: ShieldCheck, title: 'Vendedores de confianza', body: 'Compradores y vendedores verificados para que compres con total tranquilidad.' },
+      { Icon: BadgeCheck, title: 'Revisa seguridad y estado', body: 'Comprueba desgaste, piezas, retiros de producto y recomendaciones del fabricante.' },
+      { Icon: ShieldCheck, title: 'Confirma al vendedor', body: 'Revisa el perfil y acuerda una inspección antes de comprar artículos infantiles.' },
       { Icon: Star, title: 'Productos en buen estado', body: 'Encuentra artículos de calidad para niños a precios mucho más accesibles.' },
     ],
     cta: '¿Tienes artículos infantiles o de bebé para vender?',
@@ -206,8 +205,8 @@ const CATEGORY_CONFIG = {
     color: 'purple',
     slug: 'negocios',
     trust: [
-      { Icon: BadgeCheck, title: 'Empresas verificadas', body: 'Verificamos la legitimidad de cada negocio antes de publicarlo en la plataforma.' },
-      { Icon: BarChart3, title: 'Con información financiera', body: 'Accede a datos de ingresos y operación para tomar decisiones informadas.' },
+      { Icon: BadgeCheck, title: 'Verifica la información', body: 'Solicita documentos, permisos y antecedentes antes de negociar un negocio.' },
+      { Icon: BarChart3, title: 'Solicita datos financieros', body: 'Pide evidencia de ingresos, gastos, activos y obligaciones antes de decidir.' },
       { Icon: MessageCircle, title: 'Negociación directa', body: 'Comunícate directamente con el vendedor sin intermediarios ni comisiones ocultas.' },
     ],
     cta: '¿Tienes un negocio para vender?',
@@ -223,7 +222,7 @@ const CATEGORY_CONFIG = {
     color: 'purple',
     slug: 'ocio',
     trust: [
-      { Icon: BadgeCheck, title: 'Calidad verificada', body: 'Los vendedores detallan el estado de cada artículo para evitar sorpresas.' },
+      { Icon: BadgeCheck, title: 'Revisa el estado', body: 'Consulta la descripción y solicita fotos o evidencia adicional antes del trato.' },
       { Icon: ShieldCheck, title: 'Trato seguro', body: 'Revisa el artículo en persona en puntos de encuentro sugeridos antes de pagar.' },
       { Icon: Star, title: 'Colecciones exclusivas', body: 'Encuentra antigüedades, vinilos y figuras difíciles de conseguir en otros lados.' },
     ],
@@ -301,7 +300,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
     color: 'blue',
     slug: category,
     trust: [
-      { Icon: BadgeCheck, title: 'Verificado', body: 'Revisamos cada anuncio para garantizar tu seguridad.' },
+      { Icon: BadgeCheck, title: 'Revisa el anuncio', body: 'Consulta descripción, fotos y datos del vendedor antes de contactar.' },
       { Icon: ShieldCheck, title: 'Seguro', body: 'Compara y encuentra las mejores ofertas.' },
     ],
     cta: '¿Quieres publicar un anuncio?',
@@ -320,21 +319,9 @@ export default function CategoryLanding({ category, lang = 'es' }) {
       }
     : baseConfig;
   const c = COLOR_CLASSES[cfg?.color] || COLOR_CLASSES.blue;
-
   // Resolve subcategories from the shared constants map (same source as the rest of the app)
   const subcats = subcategoriesMap[cfg?.slug] || subcategoriesMap[category] || [];
   const iconMap = SUBCAT_ICONS[category] || {};
-
-  React.useEffect(() => {
-    if (!cfg) return undefined;
-    const frame = requestAnimationFrame(() => {
-      document.title = cfg.seoTitle;
-      document.querySelector('meta[name="description"]')?.setAttribute('content', cfg.seoDesc);
-      document.querySelector('meta[property="og:title"]')?.setAttribute('content', cfg.seoTitle);
-      document.querySelector('meta[property="og:description"]')?.setAttribute('content', cfg.seoDesc);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [cfg]);
 
   if (!cfg) {
     return <div className="flex h-screen items-center justify-center text-slate-500">{t.noAds}</div>;
@@ -360,7 +347,6 @@ export default function CategoryLanding({ category, lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <SEO title={cfg.seoTitle} description={cfg.seoDesc} url={`/${category}`} />
       <VerticalHero
         title={cfg.title}
         subtitle={cfg.subtitle}
@@ -384,7 +370,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
 
         {/* H1 + description */}
         <section>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-3">{cfg.title}</h1>
+          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-3">{cfg.title}</h2>
           <p className="text-slate-600 dark:text-slate-400 max-w-2xl text-base leading-relaxed">{cfg.description}</p>
         </section>
 

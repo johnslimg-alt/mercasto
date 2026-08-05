@@ -2,7 +2,7 @@ import { getTranslations, normalizeLanguage } from './translations';
 
 const content = {
   autos: {
-    es: ['Encuentra tu auto ideal en México', 'Miles de autos nuevos y usados al mejor precio', 'Buscar por marca, modelo, año…', 'Vehículos destacados'],
+    es: ['Encuentra tu auto ideal en México', 'Compara anuncios de autos nuevos y usados publicados en México', 'Buscar por marca, modelo, año…', 'Vehículos destacados'],
     en: ['Find your ideal car in Mexico', 'Thousands of new and used cars at the best price', 'Search by make, model or year…', 'Featured vehicles'],
     ru: ['Найдите идеальный автомобиль в Мексике', 'Тысячи новых и подержанных автомобилей', 'Марка, модель или год…', 'Популярные автомобили'],
     de: ['Finden Sie Ihr ideales Auto in Mexiko', 'Tausende Neu- und Gebrauchtwagen', 'Marke, Modell oder Baujahr…', 'Empfohlene Fahrzeuge'],
@@ -16,28 +16,28 @@ const content = {
     fr: ['Trouvez votre véhicule idéal et pièces', 'Voitures, motos, camions, pièces et plus', 'Marque, modèle ou type…', 'En vedette dans Moteur'],
   },
   inmuebles: {
-    es: ['Encuentra propiedades en México', 'Compra, renta o invierte en los mejores inmuebles del país', 'Ciudad, colonia o tipo de propiedad…', 'Propiedades destacadas'],
+    es: ['Encuentra propiedades en México', 'Explora propiedades en venta y renta publicadas en todo el país', 'Ciudad, colonia o tipo de propiedad…', 'Propiedades destacadas'],
     en: ['Find properties in Mexico', 'Buy, rent or invest in properties across the country', 'City, neighborhood or property type…', 'Featured properties'],
     ru: ['Найдите недвижимость в Мексике', 'Покупайте, арендуйте и инвестируйте', 'Город, район или тип недвижимости…', 'Популярная недвижимость'],
     de: ['Immobilien in Mexiko finden', 'Kaufen, mieten oder investieren', 'Stadt, Viertel oder Immobilientyp…', 'Empfohlene Immobilien'],
     fr: ['Trouvez un bien immobilier au Mexique', 'Achetez, louez ou investissez', 'Ville, quartier ou type de bien…', 'Biens en vedette'],
   },
   servicios: {
-    es: ['Contrata profesionales verificados', 'Especialistas confiables cerca de ti', 'Servicio, profesional o ciudad…', 'Servicios destacados'],
+    es: ['Encuentra servicios profesionales', 'Compara anuncios y perfiles cerca de ti', 'Servicio, profesional o ciudad…', 'Servicios destacados'],
     en: ['Hire verified professionals', 'Trusted specialists near you', 'Service, professional or city…', 'Featured services'],
     ru: ['Найдите проверенных специалистов', 'Надёжные специалисты рядом с вами', 'Услуга, специалист или город…', 'Популярные услуги'],
     de: ['Geprüfte Fachkräfte beauftragen', 'Vertrauenswürdige Profis in Ihrer Nähe', 'Dienstleistung, Fachkraft oder Stadt…', 'Empfohlene Dienste'],
     fr: ['Engagez des professionnels vérifiés', 'Des spécialistes de confiance près de vous', 'Service, professionnel ou ville…', 'Services en vedette'],
   },
   empleos: {
-    es: ['Encuentra trabajo en México', 'Miles de oportunidades laborales en todo el país', 'Puesto, empresa o ciudad…', 'Empleos recientes'],
+    es: ['Encuentra trabajo en México', 'Vacantes y oportunidades laborales publicadas en todo el país', 'Puesto, empresa o ciudad…', 'Empleos recientes'],
     en: ['Find jobs in Mexico', 'Thousands of opportunities across the country', 'Job title, company or city…', 'Recent jobs'],
     ru: ['Найдите работу в Мексике', 'Тысячи вакансий по всей стране', 'Должность, компания или город…', 'Новые вакансии'],
     de: ['Jobs in Mexiko finden', 'Tausende Stellenangebote im ganzen Land', 'Position, Unternehmen oder Stadt…', 'Aktuelle Stellen'],
     fr: ['Trouvez un emploi au Mexique', 'Des milliers d’opportunités dans tout le pays', 'Poste, entreprise ou ville…', 'Offres récentes'],
   },
   productos: {
-    es: ['Compra y vende artículos en México', 'Miles de productos nuevos y usados al mejor precio', 'Buscar productos, marcas, categorías…', 'Artículos destacados'],
+    es: ['Compra y vende artículos en México', 'Explora categorías de productos nuevos y usados publicados en México', 'Buscar productos, marcas, categorías…', 'Artículos destacados'],
     en: ['Buy and sell items in Mexico', 'Thousands of new and used products at the best price', 'Search goods, brands, categories…', 'Featured items'],
     ru: ['Покупайте и продавайте товары в Мексике', 'Тысячи новых и б/у товаров по лучшим ценам', 'Поиск товаров, брендов, категорий…', 'Популярные товары'],
     de: ['Kaufen und verkaufen Sie Artikel in Mexiko', 'Tausende neue und gebrauchte Produkte', 'Waren, Marken, Kategorien suchen…', 'Empfohlene Artikel'],
