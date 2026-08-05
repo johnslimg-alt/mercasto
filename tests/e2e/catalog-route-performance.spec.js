@@ -58,6 +58,11 @@ test('catalog route loads its own chunk without the marketing homepage', async (
   expect(requestedScripts.some(url => /CatalogScreen-/.test(url))).toBeTruthy();
   expect(requestedScripts.some(url => /HomeScreen-/.test(url))).toBeFalsy();
   expect(requestedApiUrls.filter(url => /[?&]category=(inmobiliaria|empleo|servicios|motor)/.test(url))).toEqual([]);
+  const initialCatalogRequests = requestedApiUrls.filter(rawUrl => {
+    const url = new URL(rawUrl);
+    return url.pathname === '/api/ads' && url.searchParams.get('page') === '1';
+  });
+  expect(initialCatalogRequests).toHaveLength(1);
 });
 
 

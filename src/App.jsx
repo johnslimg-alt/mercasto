@@ -884,7 +884,7 @@ function App() {
 
   // Защита от логических сбоев UI: сбрасываем специфичные для категории фильтры (ОЗУ, двигатель) при смене самой категории
   useEffect(() => {
-    setDynamicFilters({});
+    setDynamicFilters(current => Object.keys(current).length ? {} : current);
   }, [activeCat]);
 
   // FIX: Performance. Оптимизация рендеринга карточек, чтобы избежать создания сотен лишних функций при скролле
@@ -1161,8 +1161,16 @@ function App() {
     }
     setMinPrice(minPriceParam || '');
     setMaxPrice(maxPriceParam || '');
-    setConditionFilter(conditionParam ? conditionParam.split(',').filter(Boolean) : []);
-    setDynamicFilters({});
+    if (conditionParam) {
+      const nextConditions = conditionParam.split(',').filter(Boolean);
+      setConditionFilter(current => (
+        current.length === nextConditions.length
+        && current.every((value, index) => value === nextConditions[index])
+      ) ? current : nextConditions);
+    } else {
+      setConditionFilter(current => current.length ? [] : current);
+    }
+    setDynamicFilters(current => Object.keys(current).length ? {} : current);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
