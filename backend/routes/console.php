@@ -77,3 +77,11 @@ Schedule::command('digest:weekly')
     ->timezone('America/Mexico_City')
     ->withoutOverlapping()
     ->runInBackground();
+
+// Privacy-safe SEO, supply and conversion snapshot. External GSC/GA4 sections
+// report `not_configured` instead of failing until read-only credentials are installed.
+Schedule::command('seo:weekly-measurement --days=7 --store --json')
+    ->weeklyOn(1, '08:15')
+    ->timezone('America/Mexico_City')
+    ->withoutOverlapping(30)
+    ->runInBackground();
