@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class PushVapidContractTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_public_key_endpoint_is_unavailable_when_vapid_is_not_configured(): void
     {
         config([
