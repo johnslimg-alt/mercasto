@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Events\NewNotification;
 use App\Http\Controllers\Controller;
 use App\Jobs\ModerateAdWithAI;
+use App\Mail\SellerCorrectionRequiredMail;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class AdminAdModerationController extends Controller
@@ -109,13 +111,19 @@ class AdminAdModerationController extends Controller
         $this->authorizeAdmin($request);
 
         $validated = $request->validate([
-            'decision' => 'required|in:approved,rejected,manual_review',
-            'reason' => 'nullable|string|max:2000|required_if:decision,rejected',
+            'decision' => 'required|in:approved,rejected,manual_review,changes_requested',
+            'reason' => 'nullable|string|max:2000|required_if:decision,rejected,changes_requested',
         ]);
 
         $decision = $validated['decision'];
-        $reason = trim((string) ($validated['reason'] ?? ''));
+        $reason = trim((string) preg_replace('/\s+/u', ' ', strip_tags((string) ($validated['reason'] ?? ''))));
         $previousStatus = $ad->status;
+        if ($decision === 'changes_requested' && $previousStatus === 'active') {
+            return response()->json([
+                'message' => 'Pausa el anuncio activo antes de solicitar cambios.',
+            ], 422);
+        }
+
         $publishImmediately = $decision === 'approved' && $previousStatus === 'pending';
         $newStatus = match ($decision) {
             'approved' => $publishImmediately ? 'active' : 'archived',
@@ -123,12 +131,18 @@ class AdminAdModerationController extends Controller
             default => 'archived',
         };
 
-        DB::transaction(function () use ($ad, $request, $decision, $reason, $newStatus, $previousStatus, $publishImmediately) {
+        $moderationStatus = match ($decision) {
+            'approved' => 'approved',
+            'changes_requested' => 'admin_changes_requested',
+            default => 'admin_' . $decision,
+        };
+
+        DB::transaction(function () use ($ad, $request, $decision, $reason, $newStatus, $previousStatus, $publishImmediately, $moderationStatus) {
             $ad->forceFill([
                 'status' => $newStatus,
                 'expires_at' => $publishImmediately ? Ad::freshExpiry() : null,
                 'reminder_sent_at' => null,
-                'ai_moderation_status' => $decision === 'approved' ? 'approved' : 'admin_' . $decision,
+                'ai_moderation_status' => $moderationStatus,
                 'ai_moderation_reason' => $reason !== '' ? $reason : 'Revisión manual del administrador.',
                 'ai_moderation_confidence' => null,
                 'ai_moderated_at' => now(),
@@ -145,6 +159,7 @@ class AdminAdModerationController extends Controller
                     'activation_mode' => $decision === 'approved'
                         ? ($publishImmediately ? 'automatic_fresh_submission' : 'seller_confirmation_required')
                         : null,
+                    'seller_action_required' => $decision === 'changes_requested',
                 ],
             ]);
         });
@@ -155,6 +170,8 @@ class AdminAdModerationController extends Controller
             } else {
                 $this->notifyApprovalPendingReactivation($ad->fresh());
             }
+        } elseif ($decision === 'changes_requested') {
+            $this->notifyChangesRequested($ad->fresh(), $reason);
         }
 
         $this->clearPublicCaches();
@@ -188,6 +205,80 @@ class AdminAdModerationController extends Controller
     private function authorizeAdmin(Request $request): void
     {
         abort_unless($request->user() && $request->user()->role === 'admin', 403, 'Acceso denegado');
+    }
+
+    private function notifyChangesRequested(Ad $ad, string $reason): void
+    {
+        try {
+            $seller = $ad->user()->first();
+            if (! $seller) {
+                return;
+            }
+
+            $link = '/anuncio/' . $ad->id . '/editar';
+            $now = now();
+            $existing = DB::table('user_notifications')
+                ->where('user_id', $seller->id)
+                ->where('type', 'seller_changes_requested')
+                ->where('link', $link)
+                ->first();
+
+            $notification = [
+                'user_id' => $seller->id,
+                'title' => 'Tu anuncio necesita cambios',
+                'message' => $reason,
+                'type' => 'seller_changes_requested',
+                'data' => json_encode([
+                    'ad_id' => $ad->id,
+                    'issue_codes' => ['admin_request'],
+                ], JSON_THROW_ON_ERROR),
+                'link' => $link,
+                'is_read' => false,
+                'updated_at' => $now,
+            ];
+
+            $created = ! $existing;
+            if ($existing) {
+                DB::table('user_notifications')->where('id', $existing->id)->update($notification);
+                $notification['id'] = $existing->id;
+                $notification['created_at'] = $existing->created_at;
+            } else {
+                $notification['created_at'] = $now;
+                $notification['id'] = DB::table('user_notifications')->insertGetId($notification);
+            }
+
+            broadcast(new NewNotification((int) $seller->id, $notification))->toOthers();
+
+            if ($created && $this->emailEnabled($seller) && filled($seller->email)) {
+                Mail::to($seller->email)->queue(new SellerCorrectionRequiredMail(
+                    $seller,
+                    1,
+                    [$reason],
+                    rtrim((string) config('app.frontend_url', config('app.url')), '/') . $link,
+                ));
+            }
+        } catch (Throwable $error) {
+            Log::warning('Could not notify requested moderation changes', [
+                'ad_id' => $ad->id,
+                'error' => $error->getMessage(),
+            ]);
+        }
+    }
+
+    private function emailEnabled($user): bool
+    {
+        $preferences = $user->notification_preferences ?? [];
+        if (is_string($preferences)) {
+            $preferences = json_decode($preferences, true) ?: [];
+        }
+
+        if (array_key_exists('email_alerts', $preferences)) {
+            return (bool) $preferences['email_alerts'];
+        }
+
+        return $user->email_notifications === null
+            ? true
+            : (bool) $user->email_notifications;
     }
 
     private function notifyApprovalPendingReactivation(Ad $ad): void

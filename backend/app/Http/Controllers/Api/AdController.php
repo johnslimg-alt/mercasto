@@ -781,7 +781,10 @@ class AdController extends Controller
         // Защита от Bait-and-Switch и восстановление manual-review: содержательные
         // изменения скрытого объявления всегда запускают новый независимый цикл модерации.
         $requiresSellerCorrection = $ad->status === 'archived'
-            && $ad->ai_moderation_status === 'manual_review';
+            && in_array($ad->ai_moderation_status, [
+                'manual_review',
+                'admin_changes_requested',
+            ], true);
         $needsReModeration = $ad->status === 'rejected'
             || ($ad->status === 'active' && $contentChanged)
             || ($requiresSellerCorrection && $contentChanged);

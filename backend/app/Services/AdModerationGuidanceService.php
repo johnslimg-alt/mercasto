@@ -19,7 +19,23 @@ class AdModerationGuidanceService
 
     public function sellerCorrection(Ad $ad): ?array
     {
-        if ($ad->status !== 'archived' || $ad->ai_moderation_status !== 'manual_review') {
+        if ($ad->status !== 'archived') {
+            return null;
+        }
+
+        if ($ad->ai_moderation_status === 'admin_changes_requested') {
+            $message = trim(strip_tags((string) $ad->ai_moderation_reason));
+
+            return [
+                'required' => true,
+                'issue_codes' => ['admin_request'],
+                'messages' => [Str::limit($message !== '' ? $message : 'Corrige la información indicada por el equipo de moderación.', 1000)],
+                'action_url' => '/anuncio/' . $ad->id . '/editar',
+                'resubmits_after_edit' => true,
+            ];
+        }
+
+        if ($ad->ai_moderation_status !== 'manual_review') {
             return null;
         }
 
