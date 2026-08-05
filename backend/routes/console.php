@@ -60,6 +60,13 @@ Schedule::command('ads:remind-reactivation --execute --follow-up-after=72 --limi
     ->withoutOverlapping(15)
     ->runInBackground();
 
+// Notify only sellers whose manual-review ads contain fixable data/photo issues.
+// Sensitive fraud, regulated-service and copyright cases remain admin-only.
+Schedule::command('ads:notify-seller-corrections --execute --limit=500')
+    ->hourly()
+    ->withoutOverlapping(15)
+    ->runInBackground();
+
 // Expire ads that passed their expires_at date, notify owners
 Schedule::command('ads:expire')->daily();
 Schedule::command('ads:process-expiry')->dailyAt('08:00')->timezone('America/Mexico_City')->withoutOverlapping();
