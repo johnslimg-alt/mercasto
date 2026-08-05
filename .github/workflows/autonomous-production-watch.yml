@@ -2,15 +2,11 @@ name: Autonomous Production Watch
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/autonomous-production-watch.yml'
-      - 'docker-compose.yml'
-      - 'docker-compose.override.yml'
-      - 'package.json'
-      - 'scripts/static-safety-scans.sh'
+  workflow_run:
+    workflows:
+      - Deploy Mercasto
+    types:
+      - completed
   schedule:
     - cron: '17 */6 * * *'
 
@@ -29,24 +25,25 @@ jobs:
   public-watch:
     name: Public production watch
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
     timeout-minutes: 12
     steps:
       - name: Check public endpoints
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
-            echo "Waiting for push deploy window before production watch..."
-            sleep 180
-          fi
-
           check_head() {
             local url="$1"
             local pattern="$2"
             local attempt
             local status
             for attempt in 1 2 3 4 5 6; do
-              status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
+              # GitHub-hosted runners do not provide reliable IPv6 egress.
+              # Force IPv4 so this remains an application/edge availability check.
+              status="$(curl -4 -k -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 30 "$url" || true)"
               status="${status:-000}"
               echo "$url -> $status (attempt $attempt/6)"
               if [[ "$status" =~ $pattern ]]; then
@@ -76,9 +73,9 @@ jobs:
             done
             "$@"
           }
-          retry curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/home.html
-          retry curl -fsS --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/sitemap.xml
-          retry curl -fsS --max-time 30 https://mercasto.com/robots.txt -o /tmp/robots.txt
+          retry curl -4 -fsS --connect-timeout 10 --max-time 30 https://mercasto.com/ -o /tmp/home.html
+          retry curl -4 -fsS --connect-timeout 10 --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/sitemap.xml
+          retry curl -4 -fsS --connect-timeout 10 --max-time 30 https://mercasto.com/robots.txt -o /tmp/robots.txt
           grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/home.html
           grep -Eiq 'name="description"|property="og:description"' /tmp/home.html
           grep -Eiq 'application/ld\+json|schema.org' /tmp/home.html
@@ -95,7 +92,7 @@ jobs:
             local attempt
             local status
             for attempt in 1 2 3 4 5 6; do
-              status="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 30 "$url" || true)"
+              status="$(curl -4 -k -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 30 "$url" || true)"
               status="${status:-000}"
               echo "$url -> $status (attempt $attempt/6)"
               if [[ "$status" =~ $pattern ]]; then
@@ -131,6 +128,10 @@ jobs:
   repository-watch:
     name: Repository static watch
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
     timeout-minutes: 12
     steps:
       - name: Checkout repository
