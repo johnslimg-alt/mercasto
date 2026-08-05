@@ -66,6 +66,39 @@ class ModerationAuthKeyTest extends TestCase
         });
     }
 
+    public function test_transient_server_error_is_retried_once_before_manual_review(): void
+    {
+        Http::fakeSequence()
+            ->push([
+                'error' => [
+                    'status' => 'UNAVAILABLE',
+                    'message' => 'Service temporarily unavailable.',
+                ],
+            ], 503)
+            ->push([
+                'candidates' => [[
+                    'content' => ['parts' => [[
+                        'text' => json_encode([
+                            'decision' => 'approved',
+                            'reason' => 'Contenido permitido.',
+                            'confidence' => 0.97,
+                            'flags' => [],
+                        ]),
+                    ]]],
+                ]],
+            ], 200);
+
+        $ad = $this->legacyAd();
+        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
+
+        $this->assertSame('approved', $ad->fresh()->ai_moderation_status);
+        $this->assertDatabaseHas('ad_moderation_decisions', [
+            'ad_id' => $ad->id,
+            'decision' => 'approved',
+        ]);
+        Http::assertSentCount(2);
+    }
+
     public function test_repeated_provider_failure_is_recorded_once_per_attempt(): void
     {
         Http::fake([
