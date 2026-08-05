@@ -1,62 +1,112 @@
-# SEO and AEO launch checklist
+# SEO, GEO and AEO launch checklist
 
-This checklist defines the SEO/AEO work required before public marketing. It complements `scripts/seo-public-audit.sh` and public Playwright smoke tests.
+This checklist defines the public-search and AI-discovery controls required before expanding Mercasto landing pages. It complements `scripts/seo-public-audit.sh`, `scripts/seo-route-shell-gate.sh`, public Playwright smoke tests and issue #426.
 
-## Current automated basics
-
-- `/robots.txt` returns 200.
-- `/sitemap.xml` returns 200.
-- Public routes render without server errors in smoke tests.
-- Share OG smoke exists for listing share pages.
-
-## P1 SEO/AEO requirements
+## Current production status — 2026-08-05
 
 | Area | Requirement | Status |
 | --- | --- | --- |
-| Robots | Production robots allows intended crawl surfaces and blocks internal/private surfaces | Guarded |
-| Sitemap | Includes important public landing pages and listing/category surfaces | Automated and live; final URL sample recorded below |
-| Canonicals | Homepage, listings, listing detail and landing pages have canonical URLs | Route-specific server shell implemented; production verification pending |
-| OG/Twitter | Homepage, listing detail and share routes have title/description/image metadata | Route-specific server shell implemented; production verification pending |
-| Structured data | Organization/WebSite/Breadcrumb/ListItem/Product or Offer where appropriate | WebSite, CollectionPage and Product implemented; breadcrumb expansion deferred |
-| Category landing pages | Indexable category pages for priority marketplace categories | Open |
-| State/city landing pages | Mexico-wide state/city landing pages without single-city bias | Open |
-| Performance | Core Web Vitals/Lighthouse baseline captured | Complete: `docs/perf/lighthouse-report.md` |
-| AEO content | Clear marketplace FAQ/help content for common buyer/seller questions | Public help content exists; search-query coverage review pending |
-| Internationalization | Spanish-first copy and stable hreflang/canonical decision | Spanish-first canonical URLs; no hreflang until localized indexable routes exist |
-| Indexing | Google Search Console property and sitemap submission | Manual evidence required |
+| Robots | Production robots allows intended crawl surfaces and does not replace page-level noindex | Guarded and live |
+| Sitemap | Includes canonical public surfaces only | Guarded and live |
+| Canonicals | Homepage, listings, listing detail and vertical pages have stable canonicals | Verified live |
+| Private/filter routes | Auth/private routes and query/filter results cannot enter the index unintentionally | Guarded and live |
+| Language | Spanish-first public shell declares `es-MX` | Guarded and live |
+| OG/Twitter | Public routes expose route-appropriate title, description, URL and image metadata | Guarded; real share preview remains periodic QA |
+| Structured data | WebSite, CollectionPage, BreadcrumbList and listing schema where appropriate | Implemented and guarded |
+| Category landing pages | 14 national vertical/category directories with unique metadata and one H1 | Implemented and live |
+| Category aliases | Non-sitemap aliases are noindex and canonicalize to a primary vertical | Implemented and live |
+| State/city landing pages | Implement only after genuine inventory thresholds pass | **Blocked: active genuine inventory is 0** |
+| Performance | Mobile/desktop baseline and focused optimization evidence | Complete under #415 |
+| AEO/GEO source pages | Factual answer-first help/about/safety/pricing sources | Planned under #426 |
+| AI crawler policy | Search/citation crawlers separated from training/model-improvement crawlers | Documented; no robots change in baseline |
+| `llms.txt` | Add only for a documented supported consumer and maintenance owner | Deferred |
+| Internationalization | Spanish-first canonical URLs; no hreflang until separate localized indexable routes exist | Guarded |
+| Search Console | Property verified, sitemap submitted and successful | Verified manually and recorded |
+| Measurement | Weekly genuine-supply, Search Console and conversion report | Pending implementation |
 
-## Required evidence before public marketing
+## Required evidence before adding any indexable landing page
 
-- `npm run smoke:seo` output.
-- Playwright public smoke artifact.
-- Lighthouse or equivalent report for homepage, listings and listing detail.
-- Sitemap URL list reviewed.
-- OG/share preview checked for a real listing.
-- Search Console property or equivalent indexing setup recorded.
+- stable canonical URL and route taxonomy entry;
+- one unique H1, title and description;
+- factual visible copy consistent with the product;
+- route-appropriate structured data;
+- internal-link path from an existing canonical page;
+- sitemap entry only after indexability approval;
+- genuine active inventory, recency, seller-diversity and location-completeness thresholds;
+- Playwright indexability/canonical test;
+- static contract preventing duplicate or unsupported metadata;
+- Search Console URL inspection after deployment;
+- conversion tracking for registration, first publication and first contact.
 
 ## Stop conditions
 
-Do not start SEO/paid/public marketing if:
+Do not launch or index a new page if any condition applies:
 
-- robots/sitemap fail;
-- homepage or listing detail has public stack traces;
-- sensitive/internal routes are indexable;
-- listing pages lack stable public metadata;
-- Mexico-wide location logic regresses to a single-city launch surface.
+- robots, sitemap, canonical or structured-data verification fails;
+- the route is a private, admin, debug, auth or parameter-only surface;
+- the page has no genuine active seller inventory when its intent promises current local supply;
+- catalog filler is being counted as genuine marketplace supply;
+- state/city information is incomplete or inconsistent;
+- the page duplicates a stable parent or filter result;
+- copy contains fabricated scale, review, seller-verification, safety or availability claims;
+- mobile performance, accessibility or browser smoke regresses;
+- crawler policy changes without product/legal review.
 
-## Category and Mexico location plan
+## Category and location policy
 
-- Keep the current priority category surfaces (`/autos`, `/inmuebles`, `/empleos`, `/servicios`, `/productos` and tourism/store surfaces) as the first indexable vertical set.
-- Expand category metadata and breadcrumbs from the existing category sitemap rather than creating duplicate query-string URLs.
-- Add state landing pages only when each page has useful inventory and unique copy; use stable normalized state slugs and canonicalize filter/query variants to that path.
-- Add city pages after state pages, with minimum inventory/content thresholds to avoid thin indexable pages.
-- Do not reintroduce Puerto Vallarta-only assumptions; all location pages must use the Mexico-wide state/city data source.
+- Keep the 14 national vertical/category routes as factual directory/reference surfaces.
+- Do not describe a national directory as inventory-qualified until its genuine-supply threshold passes.
+- Keep query/filter variants `noindex,follow` and canonicalize them to a stable parent page.
+- Add a state-category page only after two consecutive weekly snapshots satisfy its threshold.
+- Add a city-category page only after two consecutive weekly snapshots satisfy its higher threshold.
+- If a qualified page remains below 60% of its entry threshold for four weekly snapshots, noindex it and remove it from the sitemap.
+- Redirect only when another route serves equivalent intent; otherwise preserve useful navigation and replacement results.
 
-## Verified evidence — 2026-08-04
+The machine-readable route candidates and thresholds are in:
 
-- `npm run smoke:seo` passed against production.
-- `robots.txt`, sitemap index and sitemap shards returned 200 with expected content types.
-- Fresh Lighthouse 13.0.1 audits were captured for five required routes in mobile and desktop modes.
-- The audit identified incorrect initial canonical/OG metadata for `/listings` and `/ads/{id}`; this branch adds server-decorated SPA shells and regression coverage.
-- The audit identified CSP-blocked TikTok and Meta scripts; this branch adds only the two official script origins to `script-src`.
-- Search Console property verification and sitemap submission remain manual account evidence and are the only external indexing step not completed by repository/server automation.
+- `docs/seo/first-20-landing-page-map.json`
+- `docs/seo/GEO_SEO_BASELINE_2026-08-05.md`
+
+## GEO source-page checklist
+
+Before asking search or AI systems to cite Mercasto, publish and maintain factual primary sources for:
+
+- how Mercasto works;
+- buyer and seller safety;
+- publishing and moderation;
+- buying and contacting an advertiser;
+- pricing, renewal and promotion;
+- organization, ownership and contact details.
+
+Every source page must:
+
+- answer the core question near the top;
+- identify Mercasto as the publisher/owner;
+- show a visible update date;
+- link to relevant primary policy or product pages;
+- avoid generated statistics or unsupported guarantees;
+- remain synchronized with the actual application.
+
+## Crawler policy
+
+- Allow normal crawling of approved public pages for Googlebot, OAI-SearchBot and PerplexityBot unless logs show a capacity/security problem.
+- OAI-AdsBot is relevant if Mercasto submits ChatGPT Ads landing pages.
+- Treat Google-Extended, GPTBot and ClaudeBot as separate training/model-use policy decisions, not SEO ranking controls.
+- Keep noindex pages crawlable so compatible search crawlers can read the noindex directive.
+- Do not implement `llms.txt` as a replacement for robots, sitemap, canonical, noindex or schema.
+
+## Verified evidence
+
+### 2026-08-04
+
+- Search Console property verified.
+- `/sitemap.xml` submitted successfully.
+- Fresh Lighthouse audits captured for five required routes.
+
+### 2026-08-05
+
+- PR #428 deployed: `es-MX`, page-level index hygiene and canonical sitemap cleanup.
+- PR #429 deployed: 14 unique vertical metadata contracts, CollectionPage/BreadcrumbList schema, one H1 and 11 noindex aliases.
+- Live audit passed 14/14 verticals and 11/11 aliases.
+- Read-only production aggregates found 5,677 active catalog filler references and **0 active genuine user listings**.
+- State/city page rollout was blocked until genuine supply thresholds pass.

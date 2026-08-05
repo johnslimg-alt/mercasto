@@ -1,166 +1,198 @@
 # Mercasto Growth and SEO Launch Plan
 
-Owner: CMO Agent + Marketer & SEO
+Owner: Product + Growth + SEO/AEO
 
-Purpose: prepare organic and paid acquisition only after the core marketplace flow is stable.
+Purpose: grow genuine marketplace supply and organic demand without publishing thin, duplicate or misleading search pages.
+
+Related implementation issue: #426
 
 ## Positioning
 
-Mercasto is a Mexico-first marketplace to buy, sell, rent, and find local services with trust signals and WhatsApp-friendly contact.
+Mercasto is a Mexico-first classifieds marketplace where people can publish, discover and contact advertisers directly.
 
-Core Spanish positioning options:
+Approved factual Spanish positioning:
 
 - Compra, vende y renta en México.
-- Publica gratis y vende más rápido.
-- Encuentra autos, servicios, inmuebles y productos cerca de ti.
-- Un marketplace local con perfiles, reportes y verificación.
+- Publica tu anuncio y recibe contacto directo.
+- Encuentra autos, servicios, inmuebles, empleos y productos en México.
+- Explora anuncios por categoría y ubicación.
+
+Do not use unverified scale, seller-verification, guaranteed-safety, review or “sell faster” claims unless the product and current aggregate data support them.
 
 ## SEO architecture
 
-Build pages around three dimensions:
+Build indexable pages around three dimensions only after their quality gates pass:
 
 1. category;
-2. state/city;
-3. intent.
+2. state or city;
+3. search intent.
 
-Examples:
+Current canonical national examples:
 
-- `/autos`
+- `/motor`
 - `/servicios`
 - `/inmuebles`
 - `/electronica`
-- `/muebles`
-- `/autos/jalisco/puerto-vallarta`
-- `/servicios/jalisco/puerto-vallarta`
-- `/inmuebles/ciudad-de-mexico`
+- `/productos`
+
+Future location-route shape, blocked until inventory qualification:
+
+- `/motor/jalisco`
+- `/motor/jalisco/guadalajara`
+- `/servicios/quintana-roo`
+- `/turismo/quintana-roo/cancun`
+
+Query/filter variants remain `noindex,follow` and canonicalize to a stable parent page.
 
 ## First 20 landing pages
 
-1. Autos usados en México
-2. Autos usados en Jalisco
-3. Autos usados en Puerto Vallarta
-4. Autos usados en Guadalajara
-5. Autos usados en Ciudad de México
-6. Servicios en México
-7. Servicios en Puerto Vallarta
-8. Plomeros en Puerto Vallarta
-9. Electricistas en Puerto Vallarta
-10. Aire acondicionado en Puerto Vallarta
-11. Inmuebles en México
-12. Renta de casas en Puerto Vallarta
-13. Renta de departamentos en Ciudad de México
-14. Electrónica usada en México
-15. Celulares usados en México
-16. Muebles usados en México
-17. Marketplace en Puerto Vallarta
-18. Vender gratis en México
-19. Publicar anuncio gratis en México
-20. Tiendas y vendedores verificados en México
+The source of truth is:
+
+- [`../seo/first-20-landing-page-map.json`](../seo/first-20-landing-page-map.json)
+- [`../seo/GEO_SEO_BASELINE_2026-08-05.md`](../seo/GEO_SEO_BASELINE_2026-08-05.md)
+
+The map contains:
+
+- 14 existing national category/vertical directories;
+- 6 category-location candidates;
+- explicit inventory, recency, seller-diversity and location-completeness thresholds;
+- a blocked status for every location candidate while genuine active supply is zero.
+
+Do not replace this map with a city-first marketing wish list. Refresh it from production aggregates and Search Console evidence.
 
 ## Page requirements
 
-Each landing page should include:
+Every approved indexable landing page must include:
 
-- H1 with category + location;
-- short localized intro;
-- listing grid or empty state;
-- internal links to related cities/categories;
-- CTA to publish listing;
-- trust/safety block;
-- FAQ block;
+- one H1 matching category and location intent;
+- unique Spanish title and description;
+- factual answer-first introduction;
+- genuine qualifying inventory or a clearly labeled factual directory experience;
+- internal links to stable parent and related pages;
+- publication CTA;
+- safety guidance without guarantees;
+- FAQ only when based on real product behavior or user questions;
 - canonical URL;
-- meta title and description;
-- structured data where appropriate.
+- route-appropriate structured data;
+- visible update/ownership signals for source/help content.
+
+## Supply qualification
+
+Catalog filler never counts as genuine marketplace inventory.
+
+Before implementing a state-category page, require two weekly snapshots with at least:
+
+- 20 genuine active listings;
+- 10 genuine recent listings;
+- 8 distinct genuine sellers;
+- 2 represented cities;
+- 90% location completeness.
+
+Before implementing a city-category page, require two weekly snapshots with at least:
+
+- 12 genuine active listings;
+- 8 genuine recent listings;
+- 5 distinct genuine sellers;
+- complete state and city data.
+
+See the baseline document for national and exit thresholds.
+
+## Seller acquisition before location SEO
+
+The current priority is restoring genuine active supply, not generating more local URLs.
+
+Seller acquisition should measure:
+
+- registration completed;
+- first publication completed;
+- publication still active after moderation;
+- first genuine buyer contact;
+- renewal/reactivation after expiry;
+- category/state/city completeness.
+
+A city can become an SEO candidate only after supply is durable and diverse enough to serve the search intent.
 
 ## Paid ads test plan
 
-Do not start paid campaigns until QA passes publish/search/contact flows.
+Do not scale paid campaigns until publish, search and contact QA passes and landing-page measurement is verified.
 
-### First campaign angles
+### Seller acquisition angles
 
-1. Seller acquisition
-   - Publica gratis tu anuncio en México.
-   - Vende tu auto, mueble o celular más rápido.
-   - Recibe clientes por WhatsApp.
-
-2. Services providers
-   - Consigue clientes para tus servicios.
-   - Perfil de proveedor local.
-   - Publica tus trabajos y recibe solicitudes.
-
-3. Autos
-   - Publica tu auto usado.
-   - Encuentra compradores cerca de ti.
-   - Próximamente: perfiles verificados y más seguridad.
+- Publica tu anuncio en México.
+- Muestra tu auto, mueble, celular o servicio a personas interesadas.
+- Recibe contacto directo según las opciones disponibles en el anuncio.
 
 ### Channels
 
-- Facebook/Instagram first.
-- TikTok only when short video creative exists.
-- Google Search later for high-intent pages.
+- Meta and Google Search for measurable high-intent acquisition.
+- TikTok when native short-form creative and event measurement are available.
+- Do not send paid traffic to thin or blocked GEO pages.
 
-## WhatsApp-first seller acquisition script
+## Outreach script
 
 ```text
-Hola, estamos lanzando Mercasto, un marketplace para comprar, vender y encontrar servicios en México.
+Hola, estamos desarrollando Mercasto, una plataforma de anuncios clasificados para comprar, vender y encontrar servicios en México.
 
-Puedes publicar tus productos o servicios gratis y recibir contactos por WhatsApp.
+Puedes publicar tu producto o servicio y recibir contacto directo de personas interesadas.
 
-Estamos invitando a los primeros vendedores de [ciudad/categoría]. ¿Quieres que te ayude a publicar tu primer anuncio?
+Estamos incorporando vendedores de [ciudad/categoría]. ¿Quieres que te ayude a revisar el proceso de publicación?
 ```
 
 ## Analytics required
 
 Track:
 
-- landing page view;
-- category click;
+- landing-page view;
+- category or location click;
 - search submitted;
 - listing viewed;
 - publish CTA clicked;
-- registration started;
-- listing submitted;
-- WhatsApp/contact click;
-- seller dashboard opened;
-- boost/PRO interest clicked.
+- registration completed;
+- listing submitted, moderated and activated;
+- WhatsApp/chat/contact click;
+- listing expired, renewed or reactivated;
+- genuine active supply by category/state/city.
 
-## SEO risks
+## SEO and GEO risks
 
-- Thin pages with no listings.
-- Duplicate city/category pages.
-- Bad Spanish copy.
-- Slow mobile performance.
-- No internal linking.
-- Indexing pages before they have useful content.
+- thin pages with no genuine listings;
+- duplicate city/category URLs;
+- catalog filler presented as current local seller supply;
+- unsupported verification, review, scale or guarantee claims;
+- incomplete state/city data;
+- poor Spanish copy;
+- weak internal linking;
+- crawler policy changed without product/legal review;
+- `llms.txt` treated as a substitute for normal web indexing controls.
 
 ## Launch sequence
 
-1. Stabilize marketplace MVP.
-2. Create top category pages.
-3. Create Puerto Vallarta pilot pages.
-4. Add internal linking.
-5. Add analytics events.
-6. Start seller acquisition manually.
-7. Run small paid tests after QA.
-8. Expand to Guadalajara and CDMX.
+1. Keep technical index hygiene and category metadata green.
+2. Restore and measure genuine active inventory.
+3. Publish factual Mercasto source/help pages for GEO citation readiness.
+4. Review the first-20 map weekly.
+5. Implement one qualifying state route behind tests.
+6. Validate canonical, schema, sitemap and Search Console behavior.
+7. Expand only after two weekly threshold snapshots and post-launch measurement.
 
 ## Output format
 
 ```markdown
-# Growth Launch Result
+# Growth and GEO/SEO result
 
 Date:
 Owner:
+Production snapshot:
 
-## Pages ready
+## Genuine supply ready
 
-## Copy ready
+## Pages qualified
 
-## Analytics ready
+## Pages blocked
 
-## Campaigns ready
+## Search and AI discovery evidence
 
-## Blockers
+## Conversion evidence
 
-## Next 7 days
+## Risks and next actions
 ```
