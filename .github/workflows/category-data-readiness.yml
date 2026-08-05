@@ -8,6 +8,7 @@ on:
       - 'backend/database/**'
       - 'backend/app/**'
       - 'scripts/category-data-smoke.sh'
+      - '.github/workflows/category-data-readiness.yml'
       - 'docs/**'
 
 permissions:
