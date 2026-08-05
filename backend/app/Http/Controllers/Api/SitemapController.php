@@ -32,7 +32,7 @@ class SitemapController extends Controller
 
     public function categories()
     {
-        $content = Cache::remember('sitemap_categories_v3', 3600, function () {
+        $content = Cache::remember('sitemap_categories_v4', 3600, function () {
             return $this->generateCategoriesSitemap();
         });
 
@@ -42,7 +42,7 @@ class SitemapController extends Controller
 
     public function states()
     {
-        $content = Cache::remember('sitemap_states_v2', 3600, function () {
+        $content = Cache::remember('sitemap_states_v3', 3600, function () {
             return $this->generateStatesSitemap();
         });
 
@@ -71,7 +71,6 @@ class SitemapController extends Controller
         $sitemaps = [
             ['loc' => "{$baseUrl}/sitemap-main.xml", 'lastmod' => $now],
             ['loc' => "{$baseUrl}/sitemap-categories.xml", 'lastmod' => $now],
-            ['loc' => "{$baseUrl}/sitemap-states.xml", 'lastmod' => $now],
             ['loc' => "{$baseUrl}/sitemap-ads.xml", 'lastmod' => $now],
         ];
 
@@ -157,7 +156,12 @@ class SitemapController extends Controller
 
         $seenUrls = [];
         foreach ($categories as $category) {
-            $route = $verticalRoutes[$category->slug] ?? ('?category=' . rawurlencode($category->slug));
+            $route = $verticalRoutes[$category->slug] ?? null;
+            if (!$route) {
+                // Query-filter pages canonicalize to the generic catalog/home and must not
+                // be advertised as standalone search landing pages.
+                continue;
+            }
             $url = "{$baseUrl}/{$route}";
             if (isset($seenUrls[$url])) {
                 continue;
@@ -177,21 +181,11 @@ class SitemapController extends Controller
 
     private function generateStatesSitemap()
     {
-        $baseUrl = config('app.url');
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-
-        foreach (self::MEXICO_STATES as $state) {
-            $xml .= $this->urlEntry(
-                "{$baseUrl}/?state={$state}",
-                'daily',
-                '0.8',
-                now()->toW3cString()
-            );
-        }
-
-        $xml .= "</urlset>\n";
-        return $xml;
+        // State-filter URLs currently canonicalize to the homepage. Keep the legacy
+        // endpoint valid but empty until dedicated state landing routes exist.
+        return '<?xml version="1.0" encoding="UTF-8"?>' . "\n" .
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n" .
+            "</urlset>\n";
     }
 
     private function generateAdsSitemap()

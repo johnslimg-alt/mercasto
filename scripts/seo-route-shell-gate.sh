@@ -22,5 +22,11 @@ grep -qF '<Route path="/listings" element={renderCatalogScreen()} />' src/App.js
 grep -qF 'alt={alt}' src/App.jsx
 grep -qF "alt={localizedText(ad.title, lang) || 'Imagen del anuncio'}" src/components/screens/AdDetailScreen.jsx
 grep -qF 'meta[name="twitter:title"]' src/App.jsx
+grep -qF '<html lang="es-MX">' index.html
+grep -qF "'noindex,nofollow,noarchive'" src/App.jsx
+grep -qF "'noindex,follow,max-image-preview:large'" src/App.jsx
+grep -qF 'Mercasto: compra, vende y renta en todo México' src/components/screens/HomeScreen.jsx
+! grep -qF 'sitemap-states.xml' <(sed -n '/\$sitemaps = \[/,/\];/p' backend/app/Http/Controllers/Api/SitemapController.php)
+grep -qF 'legacy' backend/app/Http/Controllers/Api/SitemapController.php
 
 echo "SEO route shell gate OK"

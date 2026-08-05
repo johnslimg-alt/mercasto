@@ -35,6 +35,6 @@ export async function loadLanguage(language) {
 
 export function applyDocumentLanguage(language = 'es') {
   const lang = normalizeLanguage(language);
-  document.documentElement.lang = lang;
+  document.documentElement.lang = lang === 'es' ? 'es-MX' : lang;
   document.documentElement.dir = RTL_LANGUAGES.has(lang) ? 'rtl' : 'ltr';
 }
