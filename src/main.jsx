@@ -3,22 +3,43 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import AppWrapper from './App.jsx'
-import AdminModerationCenter from './components/admin/AdminModerationCenter.jsx'
-import AdvertisingHub from './components/admin/AdvertisingHub.jsx'
+import AdminOverlays from './components/admin/AdminOverlays.jsx'
 import { UIProvider } from './contexts/UIContext.jsx'
 import { ToastProvider } from './components/ui/Toast.jsx'
 import { initBehaviorAnalytics } from './utils/analytics'
 import { installCampaignAttribution } from './utils/campaignAttribution'
-import { installMetaCapiBridge } from './utils/metaCapiBridge'
-import { initTikTokPixel } from './utils/tiktokPixel'
 import { installProtectedRouteReturn } from './utils/protectedRouteReturn'
-import { installPaidAdRenewalBridge } from './utils/paidAdRenewalBridge'
-import { installAdExpiryCountdown } from './utils/adExpiryCountdown'
 import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 // Leaflet CSS is loaded lazily alongside the map bundle (see MapV3 loadLeaflet)
 // so it no longer bloats the render-blocking critical stylesheet.
 import './index.css'
 import './i18n'; // Multi-language support
+
+function scheduleNonCriticalBootstrap() {
+  const start = () => {
+    const run = () => {
+      initBehaviorAnalytics();
+      Promise.allSettled([
+        import('./utils/metaCapiBridge').then(({ installMetaCapiBridge }) => installMetaCapiBridge()),
+        import('./utils/tiktokPixel').then(({ initTikTokPixel }) => initTikTokPixel()),
+        import('./utils/paidAdRenewalBridge').then(({ installPaidAdRenewalBridge }) => installPaidAdRenewalBridge()),
+        import('./utils/adExpiryCountdown').then(({ installAdExpiryCountdown }) => installAdExpiryCountdown()),
+      ]);
+    };
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(run, { timeout: 1200 });
+    } else {
+      window.setTimeout(run, 250);
+    }
+  };
+
+  if (document.readyState === 'complete') {
+    start();
+  } else {
+    window.addEventListener('load', start, { once: true });
+  }
+}
 
 // Seller acquisition traffic must enter the publication flow directly.
 // Preserve query/hash attribution while removing the obsolete landing-page hop.
@@ -35,11 +56,7 @@ if (['/vendedores', '/publicar-gratis'].includes(window.location.pathname)) {
 installCampaignAttribution();
 installStaleChunkRecovery();
 installProtectedRouteReturn();
-installPaidAdRenewalBridge();
-installAdExpiryCountdown();
-installMetaCapiBridge();
-initTikTokPixel();
-initBehaviorAnalytics();
+scheduleNonCriticalBootstrap();
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
@@ -49,9 +66,8 @@ if (rootElement) {
         <ToastProvider>
           <BrowserRouter>
             <AppWrapper />
-            {/* Keep admin overlays inside the shared router/provider tree so they reuse the authenticated admin session. */}
-            <AdminModerationCenter />
-            <AdvertisingHub />
+            {/* Admin-only overlays stay out of the public critical path. */}
+            <AdminOverlays />
           </BrowserRouter>
         </ToastProvider>
       </UIProvider>
