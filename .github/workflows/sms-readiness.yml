@@ -1,26 +1,34 @@
-name: SMS Readiness Evidence
+name: SMS Launch Mode Evidence
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/sms-readiness.yml'
       - 'scripts/sms-readiness-smoke.sh'
+      - 'scripts/sms-launch-mode-smoke.sh'
       - 'backend/config/**'
+      - 'backend/app/Http/Controllers/Api/AuthController.php'
+      - 'backend/app/Http/Controllers/Api/PhoneVerificationController.php'
+      - 'src/App.jsx'
+      - 'src/components/OnboardingModal.jsx'
+      - 'src/components/screens/ProfileEditScreen.jsx'
+      - 'src/components/screens/AyudaScreen.jsx'
       - 'docs/**'
 
 permissions:
   contents: read
 
 jobs:
-  sms-readiness:
+  sms-launch-mode:
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
-      - name: Run SMS readiness smoke
+      - name: Verify SMS remains safely disabled
         run: |
           set -euo pipefail
           cd /var/www/mercasto
           git fetch origin main
-          git reset --hard origin/main
-          REQUIRE_SMS_READY=1 bash scripts/sms-readiness-smoke.sh
+          git switch -C main origin/main
+          SMS_LAUNCH_MODE=disabled bash scripts/sms-launch-mode-smoke.sh
