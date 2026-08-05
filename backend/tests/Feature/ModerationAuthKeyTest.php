@@ -99,6 +99,33 @@ class ModerationAuthKeyTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_quota_response_releases_job_without_recording_a_false_failure(): void
+    {
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'error' => [
+                    'status' => 'RESOURCE_EXHAUSTED',
+                    'message' => 'Quota exceeded.',
+                ],
+            ], 429, ['Retry-After' => '75']),
+        ]);
+
+        $ad = $this->legacyAd();
+        $job = (new ModerateAdWithAI($ad->id, false))->withFakeQueueInteractions();
+        app()->call([$job, 'handle']);
+
+        $job->assertReleased(75);
+        $ad->refresh();
+        $this->assertSame('archived', $ad->status);
+        $this->assertSame('queued', $ad->ai_moderation_status);
+        $this->assertNull($ad->ai_moderated_at);
+        $this->assertSame(0, AdModerationDecision::query()->where('ad_id', $ad->id)->count());
+        $this->assertSame(
+            'Gemini quota is temporarily unavailable.',
+            Cache::get('ai_moderation:provider_unavailable')
+        );
+    }
+
     public function test_repeated_provider_failure_is_recorded_once_per_attempt(): void
     {
         Http::fake([
