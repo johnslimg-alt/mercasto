@@ -7,6 +7,7 @@ import { sizedImage } from './utils/imageHelpers';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
 import { clearPublishDraft } from './utils/publishDraft';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
+import { getVerticalCanonicalAlias, getVerticalSeo } from './constants/verticalSeo';
 
 // Subcategory data is either an array of Spanish labels (canonical value == display label)
 // or an object keyed by a stable slug (canonical value == slug, label is translated).
@@ -1447,8 +1448,10 @@ function App() {
 
   // --- ДИНАМИЧЕСКОЕ SEO & GOOGLE TAG MANAGER ---
   useEffect(() => {
+    const verticalSeo = getVerticalSeo(location.pathname);
+    const verticalCanonicalAlias = getVerticalCanonicalAlias(location.pathname);
     let title = "Mercasto | Compra, Vende y Renta en Todo México";
-    let desc = "Únete a Mercasto, el mercado local de crecimiento más rápido en México. Compra autos, renta departamentos, busca empleo y ofrece servicios cerca de ti.";
+    let desc = "Explora anuncios clasificados de productos, autos, inmuebles, empleos y servicios publicados en México.";
     let ogImage = "https://mercasto.com/icon-512x512.png";
     let ogType = "website";
 
@@ -1468,6 +1471,9 @@ function App() {
     } else if (window.location.pathname === '/listings') {
       title = 'Anuncios clasificados en México | Mercasto';
       desc = 'Explora anuncios clasificados en todo México: autos, inmuebles, empleo, servicios, electrónica y más en Mercasto.';
+    } else if (verticalSeo) {
+      title = verticalSeo.title;
+      desc = verticalSeo.description;
     } else if (activeCat) {
       const catName = getCatName(categoriesData.find(c => c.slug === activeCat), lang) || activeCat;
       title = `${catName} en México | Anuncios Clasificados Mercasto`;
@@ -1485,7 +1491,9 @@ function App() {
       ? `https://mercasto.com/ads/${viewedAd.id}`
       : viewedCompany
         ? `https://mercasto.com/vendedor/${viewedCompany.id}`
-        : `${window.location.origin}${window.location.pathname}`;
+        : verticalCanonicalAlias
+          ? `${window.location.origin}${verticalCanonicalAlias}`
+          : `${window.location.origin}${window.location.pathname}`;
     document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalHref);
     document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
 
@@ -1509,7 +1517,7 @@ function App() {
     const isPrivateRoute = privatePathPatterns.some(pattern => pattern.test(location.pathname));
     const robotsContent = isPrivateRoute
       ? 'noindex,nofollow,noarchive'
-      : isFilteredResultsPage
+      : isFilteredResultsPage || Boolean(verticalCanonicalAlias)
         ? 'noindex,follow,max-image-preview:large'
         : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
     let robotsEl = document.querySelector('meta[name="robots"]');
@@ -1569,6 +1577,47 @@ function App() {
       if (viewedCompany.website) {
         schemaData.sameAs = viewedCompany.website;
       }
+    } else if (verticalSeo) {
+      schemaData = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "CollectionPage",
+            "@id": `${canonicalHref}#collection`,
+            "url": canonicalHref,
+            "name": verticalSeo.title,
+            "description": verticalSeo.description,
+            "inLanguage": "es-MX",
+            "isPartOf": {
+              "@type": "WebSite",
+              "@id": "https://mercasto.com/#website",
+              "name": "Mercasto",
+              "url": "https://mercasto.com/"
+            },
+            "about": {
+              "@type": "Thing",
+              "name": verticalSeo.name
+            }
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Inicio",
+                "item": "https://mercasto.com/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": verticalSeo.name,
+                "item": canonicalHref
+              }
+            ]
+          }
+        ]
+      };
     }
 
     if (schemaData) {

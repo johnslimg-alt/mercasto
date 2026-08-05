@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
@@ -60,7 +59,6 @@ export default function InmueblesLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/inmuebles" />
       <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}

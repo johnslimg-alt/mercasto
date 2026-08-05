@@ -1,13 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
-import VerticalAdGrid from '../../verticals/VerticalAdGrid';
-import MapV3 from '../../common/MapV3';
-import { Laptop, Home, Shirt, Gamepad2, Baby, Dog, BookOpen, HelpCircle } from 'lucide-react';
+import { Laptop, Home, Shirt, Gamepad2, Baby, Dog, BookOpen } from 'lucide-react';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const SUBSECTIONS = [
   { name: 'Electrónica', query: 'electronica', Icon: Laptop },
@@ -22,10 +18,8 @@ const SUBSECTIONS = [
 export default function ProductosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'productos');
-  const [selectedSub, setSelectedSub] = useState('');
-
   const handleSearch = (q, location = {}) => {
-    const params = new URLSearchParams({ category: selectedSub || 'productos' });
+    const params = new URLSearchParams();
     if (q) params.set('search', q);
     if (location.state) params.set('state', location.state);
     if (location.city) params.set('location', location.city);
@@ -34,22 +28,22 @@ export default function ProductosLanding({ lang = 'es' }) {
   };
 
   const applySubcategory = (slug) => {
+    if (slug === 'formacion') {
+      navigate('/listings?category=formacion');
+      return;
+    }
     navigate(`/${slug}`);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
-      <SEO 
-        title={copy.title} 
-        description={copy.subtitle} 
-      />
 
       <VerticalHero 
         title={copy.title}
         subtitle={copy.subtitle}
-        placeholder={copy.placeholder}
+        searchPlaceholder={copy.placeholder}
         onSearch={handleSearch}
-        bgGradient="from-pink-500 via-red-500 to-yellow-500"
+        color="purple"
       />
 
       {/* SUBSECTIONS GRID */}
@@ -80,42 +74,14 @@ export default function ProductosLanding({ lang = 'es' }) {
         </div>
       </div>
 
-      {/* ADS GRID SECTION */}
-      <div className="max-w-[1440px] mx-auto px-4 lg:px-6 mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-[20px] font-black tracking-tight text-slate-900 dark:text-white">
-              {copy.featuredTitle}
-            </h3>
-          </div>
-          
-          <VerticalAdGrid 
-            category="productos" 
-            lang={lang} 
-            limit={6} 
-          />
+      <section className="max-w-[1440px] mx-auto px-4 lg:px-6 mt-12">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Cómo explorar productos en Mercasto</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            Elige una categoría para consultar anuncios publicados, filtrar por ubicación y contactar directamente al anunciante. Los resultados con filtros usan páginas de búsqueda no indexables para evitar duplicados.
+          </p>
         </div>
-
-        {/* MAP PANEL */}
-        <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[90px] h-[480px] flex flex-col">
-            <div className="mb-4">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                {lang === 'es' ? 'Mapa de Productos' : 'Goods Map'}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {lang === 'es' ? 'Encuentra artículos cerca de tu ubicación.' : 'Find goods near your location.'}
-              </p>
-            </div>
-            <div className="flex-1 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700 relative">
-              <MapV3 
-                category="productos" 
-                interactive={false}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

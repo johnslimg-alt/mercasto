@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
@@ -56,7 +55,6 @@ export default function EmpleosLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/empleos" />
       <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}
@@ -129,10 +127,10 @@ export default function EmpleosLanding({ lang = 'es' }) {
         {/* Stats */}
         <section className="bg-purple-600 rounded-3xl p-8 text-white text-center grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { n: '12,000+',          label: 'Empleos activos' },
-            { n: '3,500+',           label: 'Empresas publicando' },
-            { n: 'CDMX · GDL · MTY', label: 'Principales ciudades' },
-            { n: 'Gratis',           label: 'Buscar trabajo' },
+            { n: 'Todo México', label: 'Busca por estado y ciudad' },
+            { n: 'Directo', label: 'Contacto con el anunciante' },
+            { n: 'Remoto', label: 'Filtra por modalidad' },
+            { n: 'Gratis', label: 'Buscar oportunidades' },
           ].map(s => (
             <div key={s.label}>
               <div className="text-3xl font-black mb-1">{s.n}</div>

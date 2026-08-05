@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
@@ -19,13 +18,13 @@ const SUBSECTIONS = [
   { name: 'Retiros y Wellness', query: 'retiros_bienestar', Icon: Heart },
 ];
 
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
 export default function TurismoLanding({ lang = 'es' }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'turismo');
-  const [selectedSub, setSelectedSub] = useState('');
-
   const handleSearch = (q, location = {}) => {
-    const params = new URLSearchParams({ category: selectedSub || 'turismo' });
+    const params = new URLSearchParams({ category: 'turismo' });
     if (q) params.set('search', q);
     if (location.state) params.set('state', location.state);
     if (location.city) params.set('location', location.city);
@@ -33,23 +32,20 @@ export default function TurismoLanding({ lang = 'es' }) {
     navigate(`/?${params.toString()}`);
   };
 
-  const applySubcategory = (slug) => {
-    navigate(`/${slug}`);
+  const applySubcategory = (query) => {
+    const params = new URLSearchParams({ category: 'turismo', search: query });
+    navigate(`/listings?${params.toString()}`);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
-      <SEO 
-        title={copy.title} 
-        description={copy.subtitle} 
-      />
 
       <VerticalHero 
         title={copy.title}
         subtitle={copy.subtitle}
-        placeholder={copy.placeholder}
+        searchPlaceholder={copy.placeholder}
         onSearch={handleSearch}
-        bgGradient="from-sky-500 via-teal-500 to-emerald-500"
+        color="green"
       />
 
       {/* SUBSECTIONS GRID */}
@@ -89,10 +85,11 @@ export default function TurismoLanding({ lang = 'es' }) {
             </h3>
           </div>
           
-          <VerticalAdGrid 
-            category="turismo" 
-            lang={lang} 
-            limit={6} 
+          <VerticalAdGrid
+            apiUrl={`${API_URL}/ads?category=turismo&per_page=6`}
+            viewAllUrl="/listings?category=turismo"
+            viewAllLabel="Ver anuncios de turismo →"
+            cols={3}
           />
         </div>
 

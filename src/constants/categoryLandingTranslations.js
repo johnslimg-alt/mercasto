@@ -4,24 +4,24 @@ export const categoryLandingTranslations = {
     "electronica": {
       "title": "Electrónica",
       "subtitle": "Los mejores productos electrónicos al mejor precio en México",
-      "description": "Encuentra televisores, audífonos, consolas de videojuegos y más. Compra electrónica nueva y usada de vendedores verificados en todo México.",
+      "description": "Encuentra televisores, audífonos, consolas de videojuegos y más. Compara anuncios de electrónica nueva y usada publicados en México.",
       "seoTitle": "Electrónica en México — Compra y Venta | Mercasto",
-      "seoDesc": "Compra y vende electrónica en México. TV, audífonos, consolas, cámaras y más. Vendedores verificados con reseñas en Mercasto.",
+      "seoDesc": "Explora anuncios de electrónica en México: TV, audífonos, consolas, cámaras, computadoras y accesorios.",
       "cta": "¿Tienes electrónica para vender?",
-      "ctaDesc": "Publica tu anuncio gratis y llega a miles de compradores en México.",
+      "ctaDesc": "Publica tu anuncio gratis y permite que compradores en México lo encuentren.",
       "ctaBtn": "Vender electrónica →",
       "trust": [
         {
-          "title": "Vendedores verificados",
-          "body": "Revisamos cada vendedor para garantizarte una compra segura y sin sorpresas."
+          "title": "Revisa el anuncio",
+          "body": "Consulta fotos, descripción, estado y datos del vendedor antes de contactar."
         },
         {
-          "title": "Compra protegida",
-          "body": "Lee reseñas de compradores anteriores antes de cerrar cualquier trato."
+          "title": "Opiniones cuando existen",
+          "body": "Las valoraciones se muestran solo cuando otros usuarios han dejado una reseña."
         },
         {
           "title": "Mejores precios",
-          "body": "Compara precios de cientos de vendedores y encuentra la mejor oferta."
+          "body": "Compara precios y condiciones entre los anuncios disponibles."
         }
       ]
     },
@@ -32,16 +32,16 @@ export const categoryLandingTranslations = {
       "seoTitle": "Moda en México — Ropa, Calzado y Accesorios | Mercasto",
       "seoDesc": "Compra y vende ropa, calzado y accesorios en México. Moda nueva y usada para hombre, mujer y niños en Mercasto.",
       "cta": "¿Tienes ropa o accesorios para vender?",
-      "ctaDesc": "Publica tu anuncio gratis y vende tu ropa a compradores en toda México.",
+      "ctaDesc": "Publica tu anuncio gratis y permite que compradores en México encuentren tu ropa.",
       "ctaBtn": "Vender moda →",
       "trust": [
         {
-          "title": "Tallas verificadas",
-          "body": "Los vendedores incluyen medidas exactas para que siempre te quede bien."
+          "title": "Confirma talla y estado",
+          "body": "Revisa las medidas del anuncio y confírmalas con el vendedor antes de comprar."
         },
         {
-          "title": "Con reseñas reales",
-          "body": "Lee opiniones de compradores anteriores antes de comprar cualquier prenda."
+          "title": "Opiniones cuando existen",
+          "body": "Consulta las valoraciones disponibles y revisa el perfil del vendedor."
         },
         {
           "title": "Moda a tu precio",
@@ -61,11 +61,11 @@ export const categoryLandingTranslations = {
       "trust": [
         {
           "title": "Vendedores de confianza",
-          "body": "Cada vendedor está verificado para que compres muebles y artículos con seguridad."
+          "body": "Consulta la información del vendedor y confirma las condiciones antes del trato."
         },
         {
           "title": "Con fotos reales",
-          "body": "Todos los anuncios incluyen fotografías del artículo real, sin imágenes de stock."
+          "body": "Solicita fotos actuales, medidas y detalles del estado antes de acordar la compra."
         },
         {
           "title": "Precios accesibles",
@@ -80,16 +80,16 @@ export const categoryLandingTranslations = {
       "seoTitle": "Tecnología en México — Computadoras y Componentes | Mercasto",
       "seoDesc": "Compra y vende tecnología en México. Laptops, PCs, servidores, componentes y gadgets en Mercasto.",
       "cta": "¿Tienes equipo de tecnología para vender?",
-      "ctaDesc": "Publica tu anuncio gratis y conecta con compradores tech en México.",
+      "ctaDesc": "Publica tu anuncio gratis y permite que compradores de tecnología lo encuentren.",
       "ctaBtn": "Vender tecnología →",
       "trust": [
         {
-          "title": "Especificaciones verificadas",
-          "body": "Los vendedores deben indicar especificaciones técnicas precisas en cada anuncio."
+          "title": "Compara especificaciones",
+          "body": "Revisa modelo, componentes y estado, y confirma los datos con el vendedor."
         },
         {
-          "title": "Con reseñas reales",
-          "body": "Lee la experiencia de otros compradores antes de adquirir cualquier equipo."
+          "title": "Opiniones cuando existen",
+          "body": "Consulta las valoraciones disponibles antes de contactar al vendedor."
         },
         {
           "title": "Tecnología al mejor precio",
@@ -108,12 +108,12 @@ export const categoryLandingTranslations = {
       "ctaBtn": "Vender teléfono →",
       "trust": [
         {
-          "title": "IMEI verificado",
-          "body": "Pedimos a los vendedores verificar el IMEI para confirmar que el equipo no está reportado."
+          "title": "Verifica el IMEI",
+          "body": "Comprueba el IMEI y el estado del equipo antes de realizar cualquier pago."
         },
         {
-          "title": "Con reseñas reales",
-          "body": "Lee la experiencia de compradores anteriores antes de adquirir cualquier dispositivo."
+          "title": "Opiniones cuando existen",
+          "body": "Consulta las valoraciones disponibles y confirma la identidad del vendedor."
         },
         {
           "title": "Mejores precios",
@@ -132,8 +132,8 @@ export const categoryLandingTranslations = {
       "ctaBtn": "Publicar anuncio →",
       "trust": [
         {
-          "title": "Criadores verificados",
-          "body": "Revisamos la identidad de criadores y establecimientos antes de publicar sus anuncios."
+          "title": "Confirma al anunciante",
+          "body": "Solicita información sanitaria, identificación y condiciones antes de adoptar o comprar."
         },
         {
           "title": "Adopción responsable",
@@ -141,7 +141,7 @@ export const categoryLandingTranslations = {
         },
         {
           "title": "Comunidad pet-friendly",
-          "body": "Miles de amantes de las mascotas comparten consejos, productos y servicios en Mercasto."
+          "body": "Compara anuncios de adopción, accesorios, alimento y servicios para mascotas."
         }
       ]
     },
@@ -156,12 +156,12 @@ export const categoryLandingTranslations = {
       "ctaBtn": "Vender artículo →",
       "trust": [
         {
-          "title": "Seguridad garantizada",
-          "body": "Todos los artículos para bebés cumplen con estándares de seguridad verificados."
+          "title": "Revisa seguridad y estado",
+          "body": "Comprueba desgaste, piezas, retiros de producto y recomendaciones del fabricante."
         },
         {
           "title": "Vendedores de confianza",
-          "body": "Compradores y vendedores verificados para que compres con total tranquilidad."
+          "body": "Revisa el perfil y acuerda una inspección antes de comprar artículos infantiles."
         },
         {
           "title": "Productos en buen estado",
@@ -176,16 +176,16 @@ export const categoryLandingTranslations = {
       "seoTitle": "Negocios en Venta en México — Franquicias e Inversiones | Mercasto",
       "seoDesc": "Compra y vende negocios en México. Franquicias, empresas en venta y oportunidades de inversión en Mercasto.",
       "cta": "¿Tienes un negocio para vender?",
-      "ctaDesc": "Publica tu negocio gratis y conecta con inversores y compradores serios en México.",
+      "ctaDesc": "Publica la información del negocio y recibe contacto directo de personas interesadas.",
       "ctaBtn": "Publicar negocio →",
       "trust": [
         {
-          "title": "Empresas verificadas",
-          "body": "Verificamos la legitimidad de cada negocio antes de publicarlo en la plataforma."
+          "title": "Verifica la información",
+          "body": "Solicita documentos, permisos y antecedentes antes de negociar un negocio."
         },
         {
-          "title": "Con información financiera",
-          "body": "Accede a datos de ingresos y operación para tomar decisiones informadas."
+          "title": "Solicita datos financieros",
+          "body": "Pide evidencia de ingresos, gastos, activos y obligaciones antes de decidir."
         },
         {
           "title": "Negociación directa",
@@ -200,12 +200,12 @@ export const categoryLandingTranslations = {
       "seoTitle": "Ocio, Deportes y Coleccionismo en México | Mercasto",
       "seoDesc": "Compra y vende artículos deportivos, instrumentos musicales, libros, cómics y pasatiempos en México con Mercasto.",
       "cta": "¿Tienes artículos de deporte u ocio para vender?",
-      "ctaDesc": "Publica tu anuncio gratis y vende tus instrumentos, bicicletas o cómics de inmediato.",
+      "ctaDesc": "Publica tu anuncio gratis para mostrar instrumentos, bicicletas o cómics a personas interesadas.",
       "ctaBtn": "Vender artículos →",
       "trust": [
         {
-          "title": "Calidad verificada",
-          "body": "Los vendedores detallan el estado de cada artículo para evitar sorpresas."
+          "title": "Revisa el estado",
+          "body": "Consulta la descripción y solicita fotos o evidencia adicional antes del trato."
         },
         {
           "title": "Trato seguro",
@@ -490,13 +490,13 @@ export const categoryLandingTranslations = {
       "subtitle": "Os melhores produtos eletrônicos pelo melhor preço no México",
       "description": "Encontre televisores, fones de ouvido, consoles de videogame e mais. Compre eletrônicos novos e usados de vendedores verificados em todo o México.",
       "seoTitle": "Eletrônicos no México — Compra e Venda | Mercasto",
-      "seoDesc": "Compre e venda eletrônicos no México. TV, fones de ouvido, consoles, câmeras e mais. Vendedores verificados com avaliações no Mercasto.",
+      "seoDesc": "Explore anúncios de eletrônicos no México: TVs, fones de ouvido, consoles, câmeras, computadores e acessórios.",
       "cta": "Tem eletrônicos para vender?",
       "ctaDesc": "Publique seu anúncio grátis e alcance milhares de compradores no México.",
       "ctaBtn": "Vender eletrônicos →",
       "trust": [
         {
-          "title": "Vendedores verificados",
+          "title": "Revise o anúncio",
           "body": "Revisamos cada vendedor para garantir uma compra segura e sem surpresas."
         },
         {
@@ -592,7 +592,7 @@ export const categoryLandingTranslations = {
       "ctaBtn": "Vender telefone →",
       "trust": [
         {
-          "title": "IMEI verificado",
+          "title": "Verifique o IMEI",
           "body": "Pedimos aos vendedores verificar o IMEI para confirmar que o equipamento não está reportado."
         },
         {
@@ -616,7 +616,7 @@ export const categoryLandingTranslations = {
       "ctaBtn": "Publicar anúncio →",
       "trust": [
         {
-          "title": "Criadores verificados",
+          "title": "Confirme o anunciante",
           "body": "Verificamos a identidade de criadores e estabelecimentos antes de publicar seus anúncios."
         },
         {
@@ -664,7 +664,7 @@ export const categoryLandingTranslations = {
       "ctaBtn": "Publicar negócio →",
       "trust": [
         {
-          "title": "Empresas verificadas",
+          "title": "Verifique as informações",
           "body": "Verificamos a legitimidade de cada negócio antes de publicá-lo na plataforma."
         },
         {

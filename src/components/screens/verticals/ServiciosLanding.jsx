@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import SEO from '../../SEO';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
@@ -24,10 +23,10 @@ const SERVICE_CATS = [
 ];
 
 const TRUST = [
-  { Icon: BadgeCheck, title: 'Profesionales verificados',
-    body: 'Revisamos la identidad y experiencia de cada proveedor antes de publicar.' },
-  { Icon: ShieldCheck, title: 'Con reseñas reales',
-    body: 'Lee opiniones de clientes anteriores antes de contratar a cualquier profesional.' },
+  { Icon: BadgeCheck, title: 'Revisa el perfil',
+    body: 'Consulta la información del anunciante, experiencia declarada y detalles del servicio.' },
+  { Icon: ShieldCheck, title: 'Opiniones cuando existen',
+    body: 'Consulta las valoraciones disponibles y confirma referencias antes de contratar.' },
   { Icon: Wrench, title: 'Sin intermediarios',
     body: 'Contacta directamente al profesional y negocia el precio sin comisiones.' },
 ];
@@ -47,7 +46,6 @@ export default function ServiciosLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <SEO title={`${copy.title} — Mercasto`} description={copy.subtitle} url="/servicios" />
       <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}
