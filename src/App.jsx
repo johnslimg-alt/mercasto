@@ -3383,6 +3383,8 @@ function App() {
     window.history.pushState({ popup: 'ad' }, '', `#ad-${ad.id}`);
     setViewedAd(ad);
     window.scrollTo(0, 0); // Исправляет проблему "белого экрана" из-за скролла
+    if (ad.is_catalog_filler) return;
+
     fetch(`${API_URL}/ads/${ad.id}/view`, { method: 'POST' })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -3467,7 +3469,7 @@ function App() {
     }
 
     return (
-      <article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
+      <article ref={isCatalogFiller ? null : (node) => observeAdImpression(node, ad.id)} key={ad.id} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
           <img src={safeImage} width={imageWidth} height={Math.round(imageWidth * 0.75)} loading={options.priority ? 'eager' : 'lazy'} fetchPriority={options.priority ? 'high' : 'auto'} decoding="async" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleAdImageError} alt={localizedText(ad.title, lang)}/>
           <button type="button" aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'} aria-pressed={isFav} onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
@@ -3480,7 +3482,7 @@ function App() {
           {!isCatalogFiller && !isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
         </div>
         <div className="ad-result-body p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-10 text-[#0F172A] dark:text-white">
-	          <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>
+	          <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">{isCatalogFiller && <span className="mr-1 text-[10px] font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Precio de referencia</span>}${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>
 	          <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{localizedText(ad.title, lang)}</h3>
 	          <div className="mt-1.5">
 	            <AdRatingStars ad={ad} compact />

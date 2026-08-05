@@ -29,6 +29,7 @@ class ContactController extends Controller
 
         $ad = Ad::with('user:id,name,email,notification_preferences')
             ->where('status', 'active')
+            ->where('is_catalog_filler', false)
             ->find($id);
 
         if (!$ad || !$ad->user || !filter_var($ad->user->email, FILTER_VALIDATE_EMAIL)) {
