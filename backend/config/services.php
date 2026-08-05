@@ -78,6 +78,16 @@ return [
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
         'moderation_model' => env('GEMINI_MODERATION_MODEL', 'gemini-3.6-flash'),
+        'moderation_models' => array_values(array_unique(array_filter(array_map(
+            'trim',
+            array_merge(
+                [env('GEMINI_MODERATION_MODEL', 'gemini-3.6-flash')],
+                explode(',', env(
+                    'GEMINI_MODERATION_FALLBACK_MODELS',
+                    'gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.1-flash-lite,gemini-2.5-flash-lite,gemini-2.5-flash,gemini-2.0-flash-lite,gemini-2.0-flash'
+                ))
+            )
+        )))),
     ],
 
     'deepseek' => [

@@ -24,7 +24,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 6;
+    public int $tries = 24;
     public int $timeout = 90;
     public int $uniqueFor = 600;
 
@@ -54,17 +54,18 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
         $providerError = Cache::get('ai_moderation:provider_unavailable');
         if ($providerError) {
+            // Older deployments used a global quota guard. Quotas are actually
+            // model-scoped, so clear that legacy guard and let the model pool run.
             if (str_contains(strtolower((string) $providerError), 'quota')) {
-                $this->deferForQuota($ad, 180);
+                Cache::forget('ai_moderation:provider_unavailable');
+            } else {
+                $this->leaveForManualReview(
+                    $ad,
+                    'La moderación automática está temporalmente desactivada por un problema de configuración del proveedor.',
+                    'provider_error'
+                );
                 return;
             }
-
-            $this->leaveForManualReview(
-                $ad,
-                'La moderación automática está temporalmente desactivada por un problema de configuración del proveedor.',
-                'provider_error'
-            );
-            return;
         }
 
         $covers->ensureCover($ad);
@@ -114,18 +115,34 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 }
             }
 
-            $model = (string) config('services.gemini.moderation_model', 'gemini-3.6-flash');
-            $response = $this->sendModerationRequest($apiKey, $model, [
+            $payload = [
                 'contents' => [['parts' => $parts]],
                 'generationConfig' => [
                     'temperature' => 0.1,
                     'responseMimeType' => 'application/json',
                 ],
-            ]);
+            ];
 
-            if (! $response->successful()) {
-                $providerMessage = trim((string) $response->json('error.message', ''));
-                $isInvalidKey = $response->status() === 400
+            $model = null;
+            $response = null;
+            $quotaDelays = [];
+
+            foreach ($this->moderationModels() as $candidateModel) {
+                $cachedDelay = $this->cachedModelDelay($candidateModel);
+                if ($cachedDelay !== null) {
+                    $quotaDelays[] = $cachedDelay;
+                    continue;
+                }
+
+                $candidateResponse = $this->sendModerationRequest($apiKey, $candidateModel, $payload);
+                if ($candidateResponse->successful()) {
+                    $model = $candidateModel;
+                    $response = $candidateResponse;
+                    break;
+                }
+
+                $providerMessage = trim((string) $candidateResponse->json('error.message', ''));
+                $isInvalidKey = $candidateResponse->status() === 400
                     && str_contains(strtolower($providerMessage), 'api key not valid');
 
                 if ($isInvalidKey) {
@@ -137,7 +154,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
                     Log::critical('AI moderation disabled because Gemini API key is invalid', [
                         'ad_id' => $ad->id,
-                        'status' => $response->status(),
+                        'status' => $candidateResponse->status(),
                     ]);
 
                     $this->leaveForManualReview(
@@ -148,18 +165,37 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     return;
                 }
 
-                if ($response->status() === 429) {
-                    $delay = $this->quotaRetryDelay($response);
-                    Cache::put(
-                        'ai_moderation:provider_unavailable',
-                        'Gemini quota is temporarily unavailable.',
-                        now()->addSeconds($delay),
-                    );
-                    $this->deferForQuota($ad, $delay);
-                    return;
+                if ($candidateResponse->status() === 429) {
+                    $dailyQuota = $this->isDailyPerModelQuota($candidateResponse);
+                    $delay = $dailyQuota
+                        ? $this->secondsUntilDailyQuotaReset()
+                        : $this->quotaRetryDelay($candidateResponse);
+                    $this->guardModel($candidateModel, $delay, $dailyQuota ? 'daily_quota' : 'rate_limit');
+                    $quotaDelays[] = $delay;
+
+                    Log::notice('Gemini moderation model quota exhausted; trying fallback', [
+                        'ad_id' => $ad->id,
+                        'model' => $candidateModel,
+                        'daily_quota' => $dailyQuota,
+                        'retry_seconds' => $delay,
+                    ]);
+                    continue;
                 }
 
-                throw new \RuntimeException('Gemini HTTP ' . $response->status());
+                if ($candidateResponse->serverError()) {
+                    $this->guardModel($candidateModel, 300, 'server_error');
+                    $quotaDelays[] = 300;
+                    continue;
+                }
+
+                throw new \RuntimeException(
+                    'Gemini HTTP ' . $candidateResponse->status() . ' for model ' . $candidateModel
+                );
+            }
+
+            if (! $response instanceof Response || ! is_string($model)) {
+                $this->deferForQuota($ad, min($quotaDelays ?: [300]));
+                return;
             }
 
             $rawText = (string) $response->json('candidates.0.content.parts.0.text', '');
@@ -254,9 +290,83 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         return $response;
     }
 
+    private function moderationModels(): array
+    {
+        $models = config('services.gemini.moderation_models', []);
+        if (! is_array($models)) {
+            $models = [];
+        }
+
+        $models = array_values(array_unique(array_filter(array_map(
+            fn (mixed $model) => is_string($model) ? trim($model) : '',
+            $models,
+        ))));
+
+        if ($models === []) {
+            $models[] = (string) config('services.gemini.moderation_model', 'gemini-3.6-flash');
+        }
+
+        return $models;
+    }
+
+    private function modelGuardKey(string $model): string
+    {
+        return 'ai_moderation:model_unavailable:' . hash('sha256', $model);
+    }
+
+    private function cachedModelDelay(string $model): ?int
+    {
+        $guard = Cache::get($this->modelGuardKey($model));
+        if (! is_array($guard)) {
+            return null;
+        }
+
+        $retryAt = (int) ($guard['retry_at'] ?? 0);
+        $delay = $retryAt - time();
+        if ($delay <= 0) {
+            Cache::forget($this->modelGuardKey($model));
+            return null;
+        }
+
+        return $delay;
+    }
+
+    private function guardModel(string $model, int $delay, string $reason): void
+    {
+        $delay = max(60, min(86400, $delay));
+        Cache::put(
+            $this->modelGuardKey($model),
+            [
+                'model' => $model,
+                'reason' => $reason,
+                'retry_at' => time() + $delay,
+            ],
+            now()->addSeconds($delay),
+        );
+    }
+
+    private function isDailyPerModelQuota(Response $response): bool
+    {
+        $details = $response->json('error.details', []);
+        $encoded = is_array($details)
+            ? json_encode($details, JSON_UNESCAPED_SLASHES)
+            : '';
+
+        return is_string($encoded)
+            && str_contains($encoded, 'GenerateRequestsPerDayPerProjectPerModel');
+    }
+
+    private function secondsUntilDailyQuotaReset(): int
+    {
+        $nowPacific = now('America/Los_Angeles');
+        $resetPacific = $nowPacific->copy()->addDay()->startOfDay()->addMinutes(5);
+
+        return max(300, (int) $nowPacific->diffInSeconds($resetPacific));
+    }
+
     private function deferForQuota(Ad $ad, int $delay): void
     {
-        $delay = max(60, min(900, $delay));
+        $delay = max(60, min(21600, $delay));
 
         if ($this->attempts() >= $this->tries) {
             $this->leaveForManualReview(

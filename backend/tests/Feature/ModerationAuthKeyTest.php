@@ -21,10 +21,11 @@ class ModerationAuthKeyTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public');
-        Cache::forget('ai_moderation:provider_unavailable');
+        Cache::flush();
         config([
             'services.gemini.api_key' => 'test-auth-key',
             'services.gemini.moderation_model' => 'gemini-3.6-flash',
+            'services.gemini.moderation_models' => ['gemini-3.6-flash'],
         ]);
     }
 
@@ -114,6 +115,68 @@ class ModerationAuthKeyTest extends TestCase
         });
     }
 
+    public function test_daily_model_quota_falls_through_to_the_next_configured_model(): void
+    {
+        config([
+            'services.gemini.moderation_models' => [
+                'gemini-3.6-flash',
+                'gemini-3.5-flash-lite',
+            ],
+        ]);
+
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/gemini-3.6-flash:generateContent')) {
+                return Http::response([
+                    'error' => [
+                        'status' => 'RESOURCE_EXHAUSTED',
+                        'message' => 'Daily model quota exhausted.',
+                        'details' => [[
+                            '@type' => 'type.googleapis.com/google.rpc.QuotaFailure',
+                            'violations' => [[
+                                'quotaId' => 'GenerateRequestsPerDayPerProjectPerModel-FreeTier',
+                            ]],
+                        ]],
+                    ],
+                ], 429);
+            }
+
+            return Http::response([
+                'candidates' => [[
+                    'content' => ['parts' => [[
+                        'text' => json_encode([
+                            'decision' => 'approved',
+                            'reason' => 'Contenido permitido.',
+                            'confidence' => 0.97,
+                            'flags' => [],
+                        ]),
+                    ]]],
+                ]],
+            ], 200);
+        });
+
+        $ad = $this->legacyAd();
+        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
+
+        $this->assertSame('approved', $ad->fresh()->ai_moderation_status);
+        $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest()->firstOrFail();
+        $this->assertSame('gemini-3.5-flash-lite', $decision->metadata['model']);
+        $this->assertSame('seller_confirmation_required', $decision->metadata['activation_mode']);
+        Http::assertSent(fn ($request) => str_contains(
+            $request->url(),
+            '/gemini-3.6-flash:generateContent'
+        ));
+        Http::assertSent(fn ($request) => str_contains(
+            $request->url(),
+            '/gemini-3.5-flash-lite:generateContent'
+        ));
+
+        $guard = Cache::get(
+            'ai_moderation:model_unavailable:' . hash('sha256', 'gemini-3.6-flash')
+        );
+        $this->assertSame('daily_quota', $guard['reason'] ?? null);
+        $this->assertGreaterThan(time(), $guard['retry_at'] ?? 0);
+    }
+
     public function test_transient_server_error_is_retried_once_before_manual_review(): void
     {
         Http::fakeSequence()
@@ -168,10 +231,12 @@ class ModerationAuthKeyTest extends TestCase
         $this->assertSame('queued', $ad->ai_moderation_status);
         $this->assertNull($ad->ai_moderated_at);
         $this->assertSame(0, AdModerationDecision::query()->where('ad_id', $ad->id)->count());
-        $this->assertSame(
-            'Gemini quota is temporarily unavailable.',
-            Cache::get('ai_moderation:provider_unavailable')
+        $guard = Cache::get(
+            'ai_moderation:model_unavailable:' . hash('sha256', 'gemini-3.6-flash')
         );
+        $this->assertSame('rate_limit', $guard['reason'] ?? null);
+        $this->assertGreaterThan(time(), $guard['retry_at'] ?? 0);
+        $this->assertNull(Cache::get('ai_moderation:provider_unavailable'));
     }
 
     public function test_repeated_provider_failure_is_recorded_once_per_attempt(): void
