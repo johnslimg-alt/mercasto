@@ -52,7 +52,7 @@ class SitemapController extends Controller
 
     public function ads()
     {
-        $content = Cache::remember('sitemap_ads_v3', 1800, function () {
+        $content = Cache::remember('sitemap_ads_v4', 1800, function () {
             return $this->generateAdsSitemap();
         });
 
@@ -198,11 +198,17 @@ class SitemapController extends Controller
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 
-        // Последние 10000 активных объявлений
-        $ads = Ad::whereIn('status', ['approved', 'active'])
-            ->orderBy('updated_at', 'desc')
+        // Only genuine, publicly available listings belong in the search sitemap.
+        // Catalog references, seller-confirmation-ready approvals and expired rows stay
+        // accessible through the product UI but must not be advertised for indexing.
+        $ads = Ad::query()
+            ->where('is_catalog_filler', false)
+            ->where('status', 'active')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '>', now())
+            ->orderByDesc('updated_at')
             ->limit(10000)
-            ->get(['id', 'title', 'updated_at']);
+            ->get(['id', 'updated_at']);
 
         foreach ($ads as $ad) {
             $xml .= $this->urlEntry(

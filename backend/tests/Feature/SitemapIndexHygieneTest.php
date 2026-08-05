@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Ad;
 use App\Models\Category;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -45,6 +47,52 @@ class SitemapIndexHygieneTest extends TestCase
         }
         $response->assertDontSee('https://mercasto.test/safety', false);
         $response->assertDontSee('https://mercasto.test/acerca-de', false);
+    }
+
+    public function test_ad_sitemap_contains_only_genuine_active_unexpired_listings(): void
+    {
+        $user = User::factory()->create();
+        $base = [
+            'user_id' => $user->id,
+            'description' => 'Descripción verificable.',
+            'price' => 1000,
+            'location' => 'Veracruz',
+            'category' => 'general',
+            'condition' => 'usado',
+        ];
+
+        $genuine = Ad::query()->create($base + [
+            'title' => 'Anuncio real disponible',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+        $catalog = Ad::query()->create($base + [
+            'title' => 'Referencia de catálogo',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => true,
+        ]);
+        $approved = Ad::query()->create($base + [
+            'title' => 'Aprobado esperando vendedor',
+            'status' => 'approved',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+        ]);
+        $expired = Ad::query()->create($base + [
+            'title' => 'Activo pero vencido',
+            'status' => 'active',
+            'expires_at' => now()->subMinute(),
+            'is_catalog_filler' => false,
+        ]);
+
+        $response = $this->get('/sitemap-ads.xml');
+
+        $response->assertOk();
+        $response->assertSee("https://mercasto.test/ads/{$genuine->id}", false);
+        $response->assertDontSee("https://mercasto.test/ads/{$catalog->id}", false);
+        $response->assertDontSee("https://mercasto.test/ads/{$approved->id}", false);
+        $response->assertDontSee("https://mercasto.test/ads/{$expired->id}", false);
     }
 
     public function test_legacy_state_sitemap_stays_valid_but_empty(): void

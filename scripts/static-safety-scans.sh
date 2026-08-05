@@ -12,6 +12,7 @@ bash scripts/launch-readiness-contract-gate.sh
 bash scripts/seo-route-shell-gate.sh
 bash scripts/geo-source-pages-gate.sh
 bash scripts/crawler-policy-gate.sh
+bash scripts/catalog-index-hygiene-gate.sh
 bash scripts/analytics-csp-gate.sh
 bash scripts/e2e-fixture-safety-gate.sh
 bash scripts/isolated-launch-e2e-gate.sh

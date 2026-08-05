@@ -111,12 +111,41 @@ class SeoShellController extends Controller
         $ad = Ad::query()->where('status', 'active')->findOrFail($id);
         $title = Str::limit($this->localized($ad->title) ?: 'Anuncio en Mercasto', 80, '');
         $description = Str::limit(
-            trim(strip_tags($this->localized($ad->description))) ?: 'Mira este anuncio en Mercasto, marketplace de clasificados para México.',
+            trim(strip_tags($this->localized($ad->description))) ?: 'Mira esta referencia en Mercasto, plataforma de clasificados para México.',
             180,
             '',
         );
         $canonical = url('/ads/' . $ad->id);
         $image = $this->resolveImage($ad);
+        $isCatalogFiller = (bool) $ad->is_catalog_filler;
+        $isCurrentlyAvailable = $ad->expires_at && $ad->expires_at->isFuture();
+        $isIndexableListing = ! $isCatalogFiller && $isCurrentlyAvailable;
+
+        if (! $isIndexableListing) {
+            return $this->renderShell([
+                'title' => $isCatalogFiller
+                    ? $title . ' | Catálogo Mercasto'
+                    : $title . ' | Anuncio no disponible',
+                'description' => $description,
+                'canonical' => $canonical,
+                'type' => 'website',
+                'image' => $image,
+                'robots' => 'noindex,follow,max-image-preview:large',
+            ], [
+                '@context' => 'https://schema.org',
+                '@type' => 'WebPage',
+                'name' => $title,
+                'description' => $description,
+                'image' => $image,
+                'url' => $canonical,
+                'isPartOf' => [
+                    '@type' => 'WebSite',
+                    'name' => 'Mercasto',
+                    'url' => url('/'),
+                ],
+            ]);
+        }
+
         $price = number_format((float) $ad->price, 2, '.', '');
 
         return $this->renderShell([
