@@ -37,10 +37,18 @@ function scheduleNonCriticalBootstrap() {
     const run = () => {
       initBehaviorAnalytics();
       Promise.allSettled([
-        import('./utils/metaCapiBridge').then(({ installMetaCapiBridge }) => installMetaCapiBridge()),
-        import('./utils/tiktokPixel').then(({ initTikTokPixel }) => initTikTokPixel()),
-        import('./utils/paidAdRenewalBridge').then(({ installPaidAdRenewalBridge }) => installPaidAdRenewalBridge()),
-        import('./utils/adExpiryCountdown').then(({ installAdExpiryCountdown }) => installAdExpiryCountdown()),
+        import('./utils/metaCapiBridge').then(({ installMetaCapiBridge }) => {
+          installMetaCapiBridge();
+        }),
+        import('./utils/tiktokPixel').then(({ initTikTokPixel }) => {
+          initTikTokPixel();
+        }),
+        import('./utils/paidAdRenewalBridge').then(({ installPaidAdRenewalBridge }) => {
+          installPaidAdRenewalBridge();
+        }),
+        import('./utils/adExpiryCountdown').then(({ installAdExpiryCountdown }) => {
+          installAdExpiryCountdown();
+        }),
       ]);
     };
 
