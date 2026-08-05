@@ -156,6 +156,29 @@ const AdRatingStars = ({ ad, compact = false }) => {
   );
 };
 
+function ProtectedRoutePlaceholder({ loading = false }) {
+  return (
+    <section
+      className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-12"
+      aria-live="polite"
+    >
+      <div className="flex min-h-56 w-full max-w-md flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white/90 p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
+        {loading ? (
+          <Loader2 className="h-8 w-8 animate-spin text-[#84CC16]" aria-label="Cargando sesión" />
+        ) : (
+          <>
+            <ShieldCheck className="mb-4 h-10 w-10 text-[#84CC16]" aria-hidden="true" />
+            <h1 className="text-xl font-black text-slate-900 dark:text-white">Inicia sesión para continuar</h1>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Conservaremos esta página para que puedas continuar justo después de entrar.
+            </p>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function RequireAuth({ user, authReady, setAuthMode, setShowAuthModal, admin = false, children }) {
   const hasToken = Boolean(localStorage.getItem('auth_token'));
 
@@ -166,10 +189,8 @@ function RequireAuth({ user, authReady, setAuthMode, setShowAuthModal, admin = f
     }
   }, [authReady, hasToken, setAuthMode, setShowAuthModal, user]);
 
-  if (!authReady) {
-    return <div className="flex min-h-[50vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#84CC16]" /></div>;
-  }
-  if (!user || !hasToken) return <Navigate to="/" replace />;
+  if (!authReady) return <ProtectedRoutePlaceholder loading />;
+  if (!user || !hasToken) return <ProtectedRoutePlaceholder />;
   if (admin && user.role !== 'admin') return <Navigate to="/profile" replace />;
   return children;
 }
