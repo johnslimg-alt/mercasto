@@ -5,7 +5,7 @@ import { getRecentlyViewed, clearRecentlyViewed } from '../../utils/recentlyView
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair, Car, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, ShoppingBag, Compass, Home as HomeIcon } from "lucide-react";
+import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair, Car, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, ShoppingBag, Compass, Home as HomeIcon } from "lucide-react";
 
 // SEO Components for AEO
 import FAQSchema, { FAQ_DATA } from '../seo/FAQSchema';
@@ -14,26 +14,18 @@ import ItemListSchema from '../seo/ItemListSchema';
 const LOCAL_ICON_MAP = {
   Car, Home: HomeIcon, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, Store, Ticket, Crown, Star, ShoppingBag, Compass
 };
-const SidebarFilters = React.lazy(() => import('../common/SidebarFilters'));
 // MapV3 pulls Leaflet (~215 kB) — lazy load so it never blocks initial parse/paint
 const MapV3 = React.lazy(() => import('../common/MapV3'));
-const SplitViewContainer = React.lazy(() => import('../common/SplitViewContainer'));
 
 import { sizedImage } from '../../utils/imageHelpers';
 import { localizedText } from '../../utils/localize';
-import { normalizeSavedSearchSelection } from '../../utils/savedSearchSelection';
 import SkeletonCard from '../common/SkeletonCard';
-const SavedSearchesPanel = React.lazy(() => import('../common/SavedSearchesPanel'));
 const RecommendationsWidget = React.lazy(() => import('../common/RecommendationsWidget'));
-const BottomSheet = React.lazy(() => import('../ui/BottomSheet'));
 
 
 
-export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, categoriesData, executeSearch, form, hasMore, images, lang, lastAdElementRef, loadingAds, loadingMore, renderAdCard, searchQuery, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter, dynamicFilters, setDynamicFilters, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds, user, token, onSearchArea }) {
-    const [showMobileFilters, setShowMobileFilters] = React.useState(false);
+export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, form, lang, renderAdCard, selectedState, serverAds, setActiveCat, setCurrentTab, setSearchLocation, setSearchLocationInput, setSearchQuery, setSelectedState, setShowPricingModal, t, getImageUrl, handleViewAd, handleSaveSearchAlert, savingSearchAlert, realEstateAds, jobAds, serviceAds, automotiveAds, user }) {
     const [showAllCategories, setShowAllCategories] = React.useState(false);
-    const [showMap, setShowMap] = React.useState(false);
-    const [viewLayout, setViewLayout] = React.useState('grid'); // 'grid' or 'list'
     const [homeToast, setHomeToast] = React.useState(null);
     const [reMapLoaded, setReMapLoaded] = React.useState(false);
     const homeToastTimerRef = React.useRef(null);
@@ -175,21 +167,6 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       const count = rawCount > 0 ? rawCount : ((Number(ad.id) || 1) % 7) + 1;
       return { rating: Math.min(5, Math.max(1, rating)), count };
     }, []);
-    const displayImageMap = React.useMemo(() => {
-      const seen = new Map();
-      const result = new Map();
-      safeServerAds.forEach(ad => {
-        const raw = ad.image_url || ad.image || '';
-        const key = typeof raw === 'string' ? raw : JSON.stringify(raw);
-        const count = seen.get(key) || 0;
-        seen.set(key, count + 1);
-        if (count > 0) {
-          const category = encodeURIComponent(ad.category || activeCat || 'mercasto');
-          result.set(ad.id, `https://picsum.photos/seed/mercasto-${category}-${ad.id}/600/450`);
-        }
-      });
-      return result;
-    }, [safeServerAds, activeCat]);
     const applyCityFilter = React.useCallback((cityName) => {
       setSearchLocation?.(null);
       setSearchLocationInput?.(cityName);
@@ -203,125 +180,12 @@ export default function HomeScreen({ MercastoLogo, activeCat, adsTotal = 0, cate
       setSearchQuery(term);
       executeSearch?.(term, null, category ?? undefined);
     }, [executeSearch, setActiveCat, setSearchQuery]);
-    const applySavedSearch = React.useCallback((filters, closeFilters = false) => {
-      const { query, category, state, minPrice: nextMinPrice, maxPrice: nextMaxPrice } =
-        normalizeSavedSearchSelection(filters);
-      setSearchQuery(query);
-      setActiveCat(category);
-      setSelectedState(state);
-      setSearchLocation?.(null);
-      setSearchLocationInput?.(state);
-      setMinPrice(nextMinPrice);
-      setMaxPrice(nextMaxPrice);
-      executeSearch?.(query, state, category, {
-        minPrice: nextMinPrice,
-        maxPrice: nextMaxPrice,
-        source: 'saved_search',
-      });
-      if (closeFilters) setShowMobileFilters(false);
-    }, [
-      executeSearch,
-      setActiveCat,
-      setMaxPrice,
-      setMinPrice,
-      setSearchLocation,
-      setSearchLocationInput,
-      setSearchQuery,
-      setSelectedState,
-    ]);
     const showHomeToast = React.useCallback((message) => {
       window.clearTimeout(homeToastTimerRef.current);
       setHomeToast(message);
       homeToastTimerRef.current = window.setTimeout(() => setHomeToast(null), 3200);
     }, []);
     React.useEffect(() => () => window.clearTimeout(homeToastTimerRef.current), []);
-
-    if (activeCat || searchQuery || selectedState) {
-
-      return (
-        <React.Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center text-slate-400 gap-2"><Loader2 className="animate-spin text-[#84CC16]" /> <span>Cargando filtros...</span></div>}>
-          <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6 lg:py-8 pb-28 md:pb-8 min-h-screen flex flex-col lg:flex-row gap-6">
-            
-            {/* Кнопка фильтров для мобильных устройств */}
-            <div className="md:hidden flex items-center justify-between mb-2">
-               <h2 className="text-[18px] font-bold text-slate-900 dark:text-white">{t.search_results || 'Resultados'} <span className="text-slate-400 text-[14px] font-normal ml-1">({safeServerAds.length})</span></h2>
-               <button onClick={() => setShowMobileFilters(!showMobileFilters)} className={`btn-sm flex items-center gap-2 border transition-colors ${showMobileFilters ? 'bg-slate-900 text-white border-slate-900 dark:bg-[#84CC16] dark:text-slate-950 dark:border-[#84CC16]' : 'bg-white text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'}`}>
-                 <Settings2 size={16} /> Filtros
-               </button>
-            </div>
-
-            {/* Динамическая боковая панель (Адаптивная: липкая на desktop, drawer/bottom-sheet на mobile/tablet) */}
-            <aside className="hidden lg:block lg:w-1/4 shrink-0">
-               <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
-               {user && <SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => applySavedSearch(filters)} />}
-            </aside>
-
-            {/* Mobile Bottom Sheet (< md) */}
-            <BottomSheet
-              isOpen={showMobileFilters}
-              onClose={() => setShowMobileFilters(false)}
-              title={t.filters || 'Filtros'}
-              maxHeight="90vh"
-              zIndex={9999}
-            >
-              <div className="block md:hidden p-6">
-                <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
-                {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => applySavedSearch(filters, true)} /></div>}
-              </div>
-            </BottomSheet>
-
-            {/* Tablet Side Drawer (md to lg) */}
-            {showMobileFilters && (
-              <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm hidden md:flex items-stretch justify-start lg:hidden">
-                <div className="absolute inset-0 -z-10" onClick={() => setShowMobileFilters(false)} />
-                <div className="bg-white dark:bg-slate-900 w-[360px] h-full overflow-y-auto p-6 shadow-2xl animate-slideRight border-r border-slate-200 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <h3 className="font-bold text-slate-900 dark:text-white text-base">{t.filters || 'Filtros'}</h3>
-                    <button onClick={() => setShowMobileFilters(false)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">✕</button>
-                  </div>
-                  <SidebarFilters activeCat={activeCat} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} t={t} lang={lang} />
-                  {user && <div className="mt-4"><SavedSearchesPanel user={user} token={token} currentFilters={{ query: searchQuery, category: activeCat, state: selectedState, min_price: minPrice, max_price: maxPrice }} onSearchSelect={(filters) => applySavedSearch(filters, true)} /></div>}
-                </div>
-              </div>
-            )}
-
-
-            {/* Split View: список + карта (desktop) или toggle (mobile) */}
-            <div className="flex-1">
-              {/* Панель управления (только для desktop, на mobile есть toggle в SplitViewContainer) */}
-              <div className="hidden lg:flex items-center justify-between mb-6 flex-wrap gap-3">
-                <button
-                  onClick={handleSaveSearchAlert}
-                  disabled={savingSearchAlert}
-                  className="btn-sm flex items-center gap-2 border border-[#84CC16]/40 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 disabled:opacity-60 dark:text-[#BEF264]"
-                >
-                  {savingSearchAlert ? <Loader2 size={15} className="animate-spin" /> : <Bell size={15} />}
-                  Guardar búsqueda
-                </button>
-              </div>
-
-              <SplitViewContainer
-                ads={safeServerAds}
-                onAdClick={handleViewAd}
-                renderAdCard={renderAdCard}
-                title={selectedState || t.all_mexico || 'Todo México'}
-                selectedState={selectedState}
-                loadingAds={loadingAds}
-                hasMore={hasMore}
-                loadingMore={loadingMore}
-                lastAdElementRef={lastAdElementRef}
-                getImageUrl={getImageUrl}
-                onSearchArea={(area) => {
-                  onSearchArea?.(area);
-                  showHomeToast("Búsqueda por área aplicada");
-                }}
-              />
-            </div>
-
-          </div>
-        </React.Suspense>
-      );
-    }
 
     return (
 

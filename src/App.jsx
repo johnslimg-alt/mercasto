@@ -394,7 +394,20 @@ const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio' }) => {
 
 const AdminScreen = React.lazy(() => import('./components/screens/AdminScreen'));
 
-import HomeScreen from './components/screens/HomeScreen';
+let homeScreenModulePromise;
+let catalogScreenModulePromise;
+const loadHomeScreen = () => (homeScreenModulePromise ||= import('./components/screens/HomeScreen'));
+const loadCatalogScreen = () => (catalogScreenModulePromise ||= import('./components/screens/CatalogScreen'));
+const HomeScreen = React.lazy(loadHomeScreen);
+const CatalogScreen = React.lazy(loadCatalogScreen);
+
+// Start the route chunk as soon as App evaluates instead of waiting for the
+// first Suspense render. Other routes keep both public-feed chunks deferred.
+if (window.location.pathname === '/listings' || (window.location.pathname === '/' && window.location.search)) {
+  loadCatalogScreen();
+} else if (window.location.pathname === '/') {
+  loadHomeScreen();
+}
 
 const PostScreen = React.lazy(() => import('./components/screens/PostScreen'));
 const SellerLandingScreen = React.lazy(() => import('./components/screens/SellerLandingScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500 font-medium">No pudimos cargar esta página.</div> })));
@@ -1110,7 +1123,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (location.pathname !== '/') return;
+    if (!['/', '/listings'].includes(location.pathname)) return;
     const params = new URLSearchParams(location.search);
     const hash = location.hash || window.location.hash;
     if (params.has('ad') || params.has('store') || hash.startsWith('#ad-') || hash.startsWith('#company-')) return;
@@ -1820,6 +1833,10 @@ function App() {
   useEffect(() => { loadFavorites(); }, [loadFavorites]);
 
   useEffect(() => {
+    // These four curated feeds only power marketing sections on the unfiltered
+    // homepage. Catalog/detail routes should not pay for their requests or state updates.
+    if (location.pathname !== '/' || location.search) return undefined;
+
     const fetchCategoryAds = async () => {
       try {
         const [reRes, jobRes, srvRes, autoRes] = await Promise.all([
@@ -1849,7 +1866,8 @@ function App() {
       }
     };
     fetchCategoryAds();
-  }, []);
+    return undefined;
+  }, [location.pathname, location.search]);
 
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: ПОЛЬЗОВАТЕЛИ ---
   const loadAdminUsers = useCallback(async () => {
@@ -3784,8 +3802,88 @@ function App() {
     setRadius(radius);
   }, []);
 
-  // --- РЕНДЕР ГЛАВНОЙ СТРАНИЦЫ ---
-  const renderHomeScreen = () => <HomeScreen AdSenseBanner={AdSenseBanner} MercastoLogo={MercastoLogo} activeCat={activeCat} adsTotal={adsTotal} categoriesData={categoriesData} executeSearch={executeSearch} form={form} hasMore={hasMore} images={images} lang={lang} lastAdElementRef={lastAdElementRef} loadingAds={loadingAds} loadingMore={loadingMore} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchQuery={searchQuery} selectedState={selectedState} serverAds={serverAds} setActiveCat={setActiveCat} setCurrentTab={setCurrentTab} setSearchLocation={setSearchLocation} setSearchLocationInput={setSearchLocationInput} setSearchQuery={setSearchQuery} setSelectedState={setSelectedState} setShowPricingModal={setShowPricingModal} t={t} isDarkMode={isDarkMode} minPrice={minPrice} setMinPrice={setMinPrice} maxPrice={maxPrice} setMaxPrice={setMaxPrice} conditionFilter={conditionFilter} setConditionFilter={setConditionFilter} dynamicFilters={dynamicFilters} setDynamicFilters={setDynamicFilters} getImageUrl={getImageUrl} handleViewAd={handleViewAd} handleSaveSearchAlert={handleSaveSearchAlert} savingSearchAlert={savingSearchAlert} realEstateAds={realEstateAds} jobAds={jobAds} serviceAds={serviceAds} automotiveAds={automotiveAds} user={user} token={localStorage.getItem('auth_token')} onSearchArea={handleSearchArea} />;
+  // Keep the homepage and hydrated catalog in separate chunks. Catalog routes no
+  // longer parse or execute the long marketing homepage before showing results.
+  const renderHomeScreen = () => (
+    <HomeScreen
+      activeCat={activeCat}
+      adsTotal={adsTotal}
+      executeSearch={executeSearch}
+      form={form}
+      lang={lang}
+      renderAdCard={renderAdCard}
+      renderSkeletonCard={renderSkeletonCard}
+      selectedState={selectedState}
+      serverAds={serverAds}
+      setActiveCat={setActiveCat}
+      setCurrentTab={setCurrentTab}
+      setSearchLocation={setSearchLocation}
+      setSearchLocationInput={setSearchLocationInput}
+      setSearchQuery={setSearchQuery}
+      setSelectedState={setSelectedState}
+      setShowPricingModal={setShowPricingModal}
+      t={t}
+      getImageUrl={getImageUrl}
+      handleViewAd={handleViewAd}
+      handleSaveSearchAlert={handleSaveSearchAlert}
+      savingSearchAlert={savingSearchAlert}
+      realEstateAds={realEstateAds}
+      jobAds={jobAds}
+      serviceAds={serviceAds}
+      automotiveAds={automotiveAds}
+      user={user}
+    />
+  );
+
+  const renderCatalogScreen = () => (
+    <CatalogScreen
+      activeCat={activeCat}
+      conditionFilter={conditionFilter}
+      dynamicFilters={dynamicFilters}
+      executeSearch={executeSearch}
+      getImageUrl={getImageUrl}
+      handleSaveSearchAlert={handleSaveSearchAlert}
+      handleViewAd={handleViewAd}
+      hasMore={hasMore}
+      lang={lang}
+      lastAdElementRef={lastAdElementRef}
+      loadingAds={loadingAds}
+      loadingMore={loadingMore}
+      maxPrice={maxPrice}
+      minPrice={minPrice}
+      onSearchArea={handleSearchArea}
+      renderAdCard={renderAdCard}
+      savingSearchAlert={savingSearchAlert}
+      searchQuery={searchQuery}
+      selectedState={selectedState}
+      serverAds={serverAds}
+      setActiveCat={setActiveCat}
+      setConditionFilter={setConditionFilter}
+      setDynamicFilters={setDynamicFilters}
+      setMaxPrice={setMaxPrice}
+      setMinPrice={setMinPrice}
+      setSearchLocation={setSearchLocation}
+      setSearchLocationInput={setSearchLocationInput}
+      setSearchQuery={setSearchQuery}
+      setSelectedState={setSelectedState}
+      t={t}
+      token={localStorage.getItem('auth_token')}
+      user={user}
+    />
+  );
+
+  const catalogQuery = new URLSearchParams(location.search);
+  const hasCatalogIntent = Boolean(
+    activeCat
+    || searchQuery
+    || selectedState
+    || minPrice
+    || maxPrice
+    || conditionFilter.length
+    || ['q', 'search', 'category', 'cat', 'state', 'city', 'location', 'min_price', 'max_price', 'condition']
+      .some(key => catalogQuery.has(key))
+  );
+  const renderHomeRoute = () => (hasCatalogIntent ? renderCatalogScreen() : renderHomeScreen());
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} user={user} setUser={setUser} />;
@@ -4292,8 +4390,8 @@ function App() {
             renderStorefrontScreen()
           ) : (
             <Routes>
-              <Route path="/" element={renderHomeScreen()} />
-              <Route path="/listings" element={renderHomeScreen()} />
+              <Route path="/" element={renderHomeRoute()} />
+              <Route path="/listings" element={renderCatalogScreen()} />
               <Route path="/vendedores" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerLandingScreen lang={lang} /></React.Suspense>} />
               <Route path="/publicar-gratis" element={<Navigate to="/vendedores" replace />} />
               <Route path="/post" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderPostScreen()}</RequireAuth>} />
