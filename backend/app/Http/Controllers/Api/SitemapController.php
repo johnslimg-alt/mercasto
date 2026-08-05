@@ -22,7 +22,7 @@ class SitemapController extends Controller
 
     public function index()
     {
-        $content = Cache::remember('sitemap_main_v2', 3600, function () {
+        $content = Cache::remember('sitemap_main_v3', 3600, function () {
             return $this->generateMainSitemap();
         });
 
@@ -108,15 +108,19 @@ class SitemapController extends Controller
             $xml .= $this->urlEntry("{$baseUrl}/{$vertical}", 'daily', '0.9', $now);
         }
 
-        // Public information and legal pages that have real frontend routes.
+        // Factual source pages and legal pages with canonical frontend routes.
         $legalPages = [
-            'acerca-de' => ['monthly', '0.6'],
+            'como-funciona' => ['monthly', '0.8'],
+            'seguridad' => ['monthly', '0.8'],
+            'ayuda/publicar-anuncio' => ['monthly', '0.8'],
+            'ayuda/comprar-y-contactar' => ['monthly', '0.8'],
+            'tarifas' => ['monthly', '0.8'],
+            'sobre-mercasto' => ['monthly', '0.7'],
             'terminos' => ['monthly', '0.6'],
             'privacidad' => ['monthly', '0.6'],
             'cookies' => ['monthly', '0.5'],
             'contacto' => ['monthly', '0.5'],
             'ayuda' => ['monthly', '0.5'],
-            'safety' => ['monthly', '0.5'],
             'reembolsos' => ['monthly', '0.5'],
             'moderacion' => ['monthly', '0.5'],
         ];

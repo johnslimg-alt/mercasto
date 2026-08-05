@@ -80,23 +80,23 @@ class SupportChatbotService
         $faqs = [
             'cómo me registro' => 'Para registrarte en Mercasto:\n\n1. Haz clic en "Registrarse" en la esquina superior derecha\n2. Ingresa tu email y crea una contraseña\n3. Confirma tu email\n4. ¡Listo! Ya puedes publicar anuncios',
             
-            'cómo publico un anuncio' => 'Para publicar un anuncio:\n\n1. Inicia sesión en tu cuenta\n2. Haz clic en "Publicar anuncio"\n3. Selecciona la categoría\n4. Agrega título, descripción, fotos y precio\n5. Haz clic en "Publicar"\n\n¡Tu anuncio estará visible en minutos!',
+            'cómo publico un anuncio' => 'Para publicar un anuncio:\n\n1. Inicia sesión en tu cuenta\n2. Haz clic en "Publicar anuncio"\n3. Selecciona la categoría\n4. Agrega título, descripción, fotos y precio\n5. Haz clic en "Publicar"\n\nEl anuncio se enviará a moderación y puede permanecer pendiente mientras se revisa.',
             
-            'cuánto cuesta publicar' => 'Publicar anuncios en Mercasto es GRATIS. Puedes publicar hasta 10 anuncios activos sin costo.\n\nSi necesitas más, ofrecemos planes PRO desde $499 MXN/mes con beneficios adicionales.',
+            'cuánto cuesta publicar' => 'La activación inicial de un anuncio elegible es gratuita durante 7 días. Renovarlo por otros 7 días cuesta $49 MXN. Las promociones opcionales y sus precios vigentes se muestran en la página de Tarifas.',
             
-            'cómo contacto al vendedor' => 'Para contactar a un vendedor:\n\n1. Abre el anuncio que te interesa\n2. Haz clic en el botón "Contactar"\n3. Elige tu canal preferido:\n   - Mensaje en Mercasto (recomendado)\n   - WhatsApp\n   - Email\n   - Teléfono\n\n¡Es así de fácil!',
+            'cómo contacto al vendedor' => 'Para contactar a un vendedor:\n\n1. Abre el anuncio que te interesa\n2. Haz clic en el botón "Contactar"\n3. Elige tu canal preferido:\n   - Mensajes internos, cuando estén disponibles\n   - WhatsApp o Telegram\n   - Email o teléfono, si el vendedor los habilitó\n\nAl contactar, confirma disponibilidad, condición, ubicación y forma de entrega.',
             
-            'es seguro comprar' => 'Sí, Mercasto es seguro. Te recomendamos:\n\n✓ Usar el chat de Mercasto para comunicarte\n✓ Verificar la identidad del vendedor\n✓ Nunca pagues por adelantado sin ver el producto\n✓ Reúnete en lugares públicos\n✓ Revisa las reseñas del vendedor\n\nSi detectas algo sospechoso, repórtalo inmediatamente.',
+            'es seguro comprar' => 'Mercasto modera anuncios y recibe reportes, pero no garantiza las transacciones. Verifica la identidad, el producto y los documentos; evita anticipos a desconocidos; reúnete en un lugar público cuando sea posible y reporta cualquier señal sospechosa.',
             
             'cómo elimino mi anuncio' => 'Para eliminar un anuncio:\n\n1. Ve a "Mi cuenta" → "Mis anuncios"\n2. Busca el anuncio que quieres eliminar\n3. Haz clic en los 3 puntos (⋮)\n4. Selecciona "Eliminar"\n5. Confirma la eliminación\n\nEl anuncio desaparecerá inmediatamente.',
             
-            'cómo edito mi anuncio' => 'Para editar un anuncio:\n\n1. Ve a "Mi cuenta" → "Mis anuncios"\n2. Busca el anuncio y haz clic en "Editar"\n3. Modifica lo que necesites\n4. Haz clic en "Guardar cambios"\n\nLos cambios se aplican inmediatamente.',
+            'cómo edito mi anuncio' => 'Para editar un anuncio:\n\n1. Ve a "Mi cuenta" → "Mis anuncios"\n2. Busca el anuncio y haz clic en "Editar"\n3. Modifica lo que necesites\n4. Haz clic en "Guardar cambios"\n\nLos cambios importantes pueden enviar el anuncio nuevamente a moderación antes de quedar visibles.',
             
-            'qué es mercasto pro' => 'Mercasto PRO es nuestro plan premium con beneficios exclusivos:\n\n⭐ Hasta 100 anuncios activos\n📊 Analíticas avanzadas\n🎯 Anuncios destacados\n🏷️ Badge "PRO" en tu perfil\n📞 Soporte prioritario\n\nPrecio: $499 MXN/mes',
+            'qué es mercasto pro' => 'Las opciones comerciales y promociones vigentes se muestran en https://mercasto.com/tarifas. Revisa el importe, la duración y el producto antes de iniciar el pago.',
             
             'cómo recupero mi contraseña' => 'Para recuperar tu contraseña:\n\n1. Haz clic en "Iniciar sesión"\n2. Selecciona "¿Olvidaste tu contraseña?"\n3. Ingresa tu email\n4. Recibirás un enlace para crear una nueva contraseña\n5. Sigue las instrucciones del email\n\nSi no recibes el email, revisa tu carpeta de spam.',
             
-            'puedo vender mi empresa' => 'Sí, ofrecemos cuentas Business para empresas:\n\n🏢 Múltiples usuarios en tu equipo\n📦 Gestión masiva de anuncios\n📈 Analíticas empresariales\n💼 Facturación corporativa\n\nPlanes desde $499 MXN/mes. Contáctanos para más información.',
+            'puedo vender mi empresa' => 'Mercasto ofrece opciones para negocios. Consulta https://mercasto.com/tarifas y contacta a soporte para confirmar funciones, precio y disponibilidad antes de contratar.',
         ];
 
         foreach ($faqs as $keyword => $answer) {
@@ -141,7 +141,7 @@ class SupportChatbotService
      */
     private function buildSystemPrompt(?int $userId): string
     {
-        $prompt = "Eres MercastoBot, el asistente virtual de Mercasto, el marketplace líder en México.\n\n";
+        $prompt = "Eres MercastoBot, el asistente virtual de la plataforma de clasificados Mercasto para México.\n\n";
         
         $prompt .= "TU ROL:\n";
         $prompt .= "- Ayudar a usuarios con preguntas sobre la plataforma\n";
@@ -150,12 +150,12 @@ class SupportChatbotService
         $prompt .= "- Ser amigable, profesional y conciso\n\n";
         
         $prompt .= "INFORMACIÓN DE MERCASTO:\n";
-        $prompt .= "- Marketplace de compraventa en México\n";
+        $prompt .= "- Plataforma de anuncios clasificados para México\n";
         $prompt .= "- Categorías: Autos, Inmuebles, Electrónica, Hogar, Moda, Empleos, Servicios\n";
-        $prompt .= "- Funciones: Publicación gratuita, chat en tiempo real, sistema de reseñas, recomendaciones AI\n";
-        $prompt .= "- Planes: Free (10 anuncios), PRO ($499/mes, 100 anuncios), Enterprise ($1,999/mes, ilimitado)\n";
-        $prompt .= "- Pagos: Aceptamos Clip para transacciones seguras\n";
-        $prompt .= "- Soporte: 24/7 vía chat\n\n";
+        $prompt .= "- Funciones: publicación y moderación de anuncios, búsqueda, filtros y contacto directo\n";
+        $prompt .= "- Vigencia: activación inicial gratuita por 7 días; renovación por otros 7 días a $49 MXN\n";
+        $prompt .= "- Pagos de productos Mercasto: el checkout muestra proveedor, concepto e importe; Mercasto no procesa la compraventa entre particulares\n";
+        $prompt .= "- Soporte: usa las opciones publicadas en https://mercasto.com/contacto\n\n";
         
         $prompt .= "REGLAS:\n";
         $prompt .= "1. Responde en español mexicano\n";
@@ -166,11 +166,8 @@ class SupportChatbotService
         $prompt .= "6. Si detectas frustración, ofrece escalar a soporte humano\n";
         $prompt .= "7. No uses emojis excesivos (máximo 2-3 por mensaje)\n\n";
         
-        $prompt .= "FUNCIONES ESPECIALES:\n";
-        $prompt .= "- Sugerencias de precios con AI\n";
-        $prompt .= "- Generación de descripciones automáticas\n";
-        $prompt .= "- Reconocimiento de imágenes para categorización\n";
-        $prompt .= "- Sistema de gamificación (XP, logros, rachas)\n";
+        $prompt .= "FUNCIONES DISPONIBLES:\n";
+        $prompt .= "- Generación asistida de descripciones\n";
         $prompt .= "- Búsquedas guardadas con notificaciones\n";
         $prompt .= "- App móvil (PWA instalable)\n\n";
         

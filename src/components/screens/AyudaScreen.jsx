@@ -15,11 +15,11 @@ const SECTIONS = [
     faqs: [
       {
         q: '¿Cómo publico un anuncio?',
-        a: 'Es gratis y toma menos de 5 minutos. Haz clic en el botón "Publicar" en la barra de navegación, completa el formulario con título, descripción, precio y fotos, y listo. Tu anuncio estará visible para miles de compradores en tu área.',
+        a: 'Haz clic en "Publicar", completa categoría, título, descripción, precio, condición, ubicación y fotografías cuando correspondan. El anuncio puede quedar pendiente mientras pasa por moderación.',
       },
       {
         q: '¿Cuántos anuncios puedo publicar?',
-        a: 'Puedes publicar anuncios ilimitados en tu cuenta. No existe un límite en la cantidad de anuncios activos que puedes tener simultáneamente.',
+        a: 'El límite vigente depende de las condiciones mostradas en tu cuenta y del producto contratado. La sección "Mis anuncios" muestra cuántos anuncios puedes gestionar.',
       },
       {
         q: '¿Cuánto tiempo dura mi anuncio?',
@@ -82,7 +82,7 @@ const SECTIONS = [
     faqs: [
       {
         q: '¿Cómo reporto un anuncio sospechoso?',
-        a: 'En cada anuncio encontrarás el botón "Reportar" (ícono de bandera). Al hacer clic podrás seleccionar el motivo: fraudulento, inapropiado, precio irreal, etc. Nuestro equipo revisa los reportes en menos de 24 horas.',
+        a: 'En cada anuncio puedes usar la opción de reporte y explicar el motivo. Mercasto prioriza los casos según el riesgo y no promete un plazo fijo de resolución.',
       },
       {
         q: '¿Cómo evito fraudes al comprar?',
@@ -103,15 +103,15 @@ const SECTIONS = [
     faqs: [
       {
         q: '¿Qué es un anuncio Destacado?',
-        a: 'Un anuncio Destacado aparece al tope de los resultados de búsqueda y en la sección principal de la categoría correspondiente. Esto aumenta significativamente su visibilidad y las probabilidades de venta rápida.',
+        a: 'Un producto de promoción puede cambiar la posición o presentación del anuncio durante el periodo indicado. No garantiza impresiones, contactos ni una venta.',
       },
       {
         q: '¿Cuánto cuesta destacar un anuncio?',
-        a: 'Los planes de Destacado comienzan desde $49 MXN por 7 días. También disponemos de paquetes de 15 y 30 días con mejor precio por día. Puedes ver todos los planes desde tu anuncio → "Promocionar".',
+        a: 'Las opciones vigentes son: Subir 3 días por $49 MXN, Resaltar 7 días por $79 MXN, Destacado 7 días por $149 MXN y Top de categoría 7 días por $399 MXN.',
       },
       {
         q: '¿Cómo se realiza el pago para destacar?',
-        a: 'El pago se realiza con tarjeta de crédito o débito a través de una pasarela de pagos segura. Tu información bancaria está protegida con cifrado SSL y nunca se almacena en nuestros servidores.',
+        a: 'El checkout muestra el proveedor, el concepto, el importe y los medios de pago disponibles. Revisa esos datos antes de confirmar y conserva el comprobante del proveedor.',
       },
     ],
   },
