@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, BellOff, Check, X, Loader2 } from 'lucide-react';
 import { useToast } from './Toast';
+import { ensurePushSubscription, fetchVapidPublicKey } from '../../utils/webPush';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -33,23 +34,10 @@ export default function PushNotificationManager({ user, compact = false }) {
 
   const fetchVapidKey = async () => {
     try {
-      const response = await fetch(`${API_BASE}/push/vapid-key`);
-      const data = await response.json();
-      setVapidKey(data.publicKey);
+      setVapidKey(await fetchVapidPublicKey(API_BASE));
     } catch (error) {
       console.error('Failed to fetch VAPID key:', error);
     }
-  };
-
-  const urlBase64ToUint8Array = (base64String) => {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
   };
 
   const subscribe = async () => {
@@ -61,10 +49,7 @@ export default function PushNotificationManager({ user, compact = false }) {
       if (permission !== 'granted') { toast.warning('Permiso denegado'); setLoading(false); return; }
       if (!('serviceWorker' in navigator)) { toast.error('Service Worker no soportado'); setLoading(false); return; }
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      });
+      const subscription = await ensurePushSubscription(registration, vapidKey);
       const response = await fetch(`${API_BASE}/push/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },

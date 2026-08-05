@@ -49,12 +49,19 @@ class SendPushNotification extends Command
 
         $this->info("Found {$subscriptions->count()} subscription(s)");
 
-        // Configure WebPush
+        // Configure WebPush from cached Laravel configuration.
+        $publicKey = trim((string) config('services.webpush.vapid_public_key'));
+        $privateKey = trim((string) config('services.webpush.vapid_private_key'));
+        if ($publicKey === '' || $privateKey === '') {
+            $this->error('Web Push VAPID keys are not configured.');
+            return self::FAILURE;
+        }
+
         $auth = [
             'VAPID' => [
                 'subject' => 'mailto:hello@mercasto.com',
-                'publicKey' => env('VAPID_PUBLIC_KEY'),
-                'privateKey' => env('VAPID_PRIVATE_KEY'),
+                'publicKey' => $publicKey,
+                'privateKey' => $privateKey,
             ],
         ];
 

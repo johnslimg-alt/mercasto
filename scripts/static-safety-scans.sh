@@ -32,6 +32,7 @@ bash scripts/chat-ui-flow-gate.sh
 bash scripts/listing-lifecycle-gate.sh
 bash scripts/moderation-pipeline-gate.sh
 bash scripts/seller-reactivation-reminder-gate.sh
+bash scripts/web-push-vapid-gate.sh
 bash scripts/supply-readiness-gate.sh
 bash scripts/location-search-gate.sh
 bash scripts/registration-consent-contract-gate.sh

@@ -6,6 +6,7 @@ import { localizedText } from './utils/localize';
 import { sizedImage } from './utils/imageHelpers';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
 import { clearPublishDraft } from './utils/publishDraft';
+import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
 import { getVerticalCanonicalAlias, getVerticalSeo } from './constants/verticalSeo';
 
@@ -345,21 +346,6 @@ const getRelativePath = (url) => {
 const getCatName = (cat, lang) => {
   if (!cat) return '';
   return cat.name?.[lang] || cat.name?.['es'] || cat.name;
-};
-
-// Утилита для безопасной конвертации VAPID-ключей Web Push
-const urlBase64ToUint8Array = (base64String) => {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
 };
 
 const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio', priority = false }) => {
@@ -942,7 +928,6 @@ function App() {
     }
   }, [showAuthModal]);
 
-  const PUBLIC_VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BAhZDxk3BjI_OCkHCOEyihsxsuCfcDtMilUZjMfecw-Lt4JvHNfYkmZIU_llDiaF3L0uOtXsgU60IZksmtpTrIs';
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
   const lastAdElementRef = useCallback(node => {
@@ -1695,10 +1680,8 @@ function App() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-      });
+      const vapidKey = await fetchVapidPublicKey(API_URL);
+      const subscription = await ensurePushSubscription(registration, vapidKey);
       const token = localStorage.getItem('auth_token');
       await fetch(`${API_URL}/user/push-subscribe`, {
         method: 'POST',
@@ -1734,8 +1717,21 @@ function App() {
     }
 
     // Автоматически обновляем подписку, если пользователь уже разрешил уведомления
-    if (user && Notification.permission === 'granted') {
-       subscribeToPush();
+    const preferences = user?.notification_preferences;
+    let normalizedPreferences = preferences || {};
+    if (typeof preferences === 'string') {
+      try {
+        normalizedPreferences = JSON.parse(preferences || '{}');
+      } catch {
+        normalizedPreferences = {};
+      }
+    }
+    if (
+      user
+      && normalizedPreferences.push_notifications !== false
+      && Notification.permission === 'granted'
+    ) {
+      subscribeToPush();
     }
 
   }, [user]);
