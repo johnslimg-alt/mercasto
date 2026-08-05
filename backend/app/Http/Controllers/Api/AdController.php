@@ -12,6 +12,7 @@ use Intervention\Image\Alignment;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Str;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -23,6 +24,7 @@ use App\Jobs\NotifyPriceDropJob;
 use App\Jobs\ProcessReferralRewardJob;
 use App\Mail\NewAdInCategory;
 use App\Models\User;
+use App\Services\AdModerationGuidanceService;
 use Illuminate\Support\Facades\Mail;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
@@ -753,14 +755,36 @@ class AdController extends Controller
             $videoProcessingStatus = null;
         }
 
-        // Защита от Bait-and-Switch (Обход модерации): отправляем на перемодерацию при критичных изменениях контента
-        $needsReModeration = false;
-        if (in_array($ad->status, ['active', 'rejected'])) {
-            // Защита от Permanent Rejection Soft-Lock: если объявление было отклонено, ЛЮБОЕ редактирование отправляет его на повторную проверку
-            if ($ad->status === 'rejected' || $ad->title !== $validated['title'] || $ad->description !== $validated['description'] || $request->hasFile('images') || count($imagesToDelete) > 0 || $request->hasFile('video_file') || $request->boolean('remove_video')) {
-                $needsReModeration = true;
-            }
-        }
+        $nextTitle = strip_tags($validated['title']);
+        $nextDescription = strip_tags($validated['description'], '<p><br><b><i><ul><ol><li>');
+        $nextCondition = $validated['condition'] ?? $ad->condition;
+        $nextSubcategory = $request->input('subcategory', $ad->subcategory);
+        $nextAttributes = $request->filled('attributes') ? $request->input('attributes') : $ad->attributes;
+        $nextImageUrl = count($finalImagePaths) > 0 ? json_encode(array_values($finalImagePaths)) : null;
+
+        $contentChanged =
+            $ad->title !== $nextTitle
+            || (float) $ad->price !== (float) $validated['price']
+            || $ad->condition !== $nextCondition
+            || $ad->description !== $nextDescription
+            || $ad->location !== $validated['location']
+            || $ad->state !== ($validated['state'] ?? $ad->state)
+            || $ad->city !== $validated['city']
+            || (float) $ad->latitude !== (float) $lat
+            || (float) $ad->longitude !== (float) $lng
+            || $ad->category !== $validated['category']
+            || $ad->subcategory !== $nextSubcategory
+            || Arr::sortRecursive((array) $ad->attributes) !== Arr::sortRecursive((array) $nextAttributes)
+            || array_values($currentImages) !== array_values($finalImagePaths)
+            || $ad->video_url !== $videoPath;
+
+        // Защита от Bait-and-Switch и восстановление manual-review: содержательные
+        // изменения скрытого объявления всегда запускают новый независимый цикл модерации.
+        $requiresSellerCorrection = $ad->status === 'archived'
+            && $ad->ai_moderation_status === 'manual_review';
+        $needsReModeration = $ad->status === 'rejected'
+            || ($ad->status === 'active' && $contentChanged)
+            || ($requiresSellerCorrection && $contentChanged);
 
         // 4. Detect price drop before updating
         $oldPrice = (float) $ad->price;
@@ -769,26 +793,33 @@ class AdController extends Controller
 
         // 4. Обновляем объявление
         $ad->update([
-            'title' => strip_tags($validated['title']),
+            'title' => $nextTitle,
             'price' => $validated['price'],
-            'condition' => $validated['condition'] ?? $ad->condition,
-            'description' => strip_tags($validated['description'], '<p><br><b><i><ul><ol><li>'),
+            'condition' => $nextCondition,
+            'description' => $nextDescription,
             'location' => $validated['location'],
             'state' => $validated['state'] ?? $ad->state,
             'city' => $validated['city'],
             'latitude' => $lat,
             'longitude' => $lng,
             'category' => $validated['category'],
-            'subcategory' => $request->input('subcategory', $ad->subcategory),
-            'attributes' => $request->filled('attributes') ? $request->input('attributes') : $ad->attributes,
-            'image_url' => count($finalImagePaths) > 0 ? json_encode($finalImagePaths) : null,
+            'subcategory' => $nextSubcategory,
+            'attributes' => $nextAttributes,
+            'image_url' => $nextImageUrl,
             'video_url' => $videoPath,
             'video_processing_status' => $videoProcessingStatus,
-            'status' => $needsReModeration ? 'pending' : $ad->status, // Сбрасываем статус, если были критичные изменения
+            'status' => $needsReModeration ? 'pending' : $ad->status,
+            'expires_at' => $needsReModeration ? null : $ad->expires_at,
+            'moderation_submitted_at' => $needsReModeration ? now() : $ad->moderation_submitted_at,
+            'ai_moderation_status' => $needsReModeration ? 'queued' : $ad->ai_moderation_status,
+            'ai_moderation_reason' => $needsReModeration ? null : $ad->ai_moderation_reason,
+            'ai_moderation_confidence' => $needsReModeration ? null : $ad->ai_moderation_confidence,
+            'ai_moderated_at' => $needsReModeration ? null : $ad->ai_moderated_at,
+            'reminder_sent_at' => $needsReModeration ? null : $ad->reminder_sent_at,
         ]);
 
         // Handle price drop: persist old price and dispatch fan-out notifications
-        if ($isPriceDrop) {
+        if ($isPriceDrop && ! $needsReModeration && $ad->status === 'active') {
             $ad->update([
                 'old_price'        => $oldPrice,
                 'price_dropped_at' => now(),
@@ -1527,9 +1558,9 @@ class AdController extends Controller
     /**
      * Получение всех объявлений текущего пользователя
      */
-    public function myAds(Request $request)
+    public function myAds(Request $request, AdModerationGuidanceService $guidance)
     {
-        $ads = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
+        $ads = Ad::with(['user:' . self::PUBLIC_AD_USER_COLUMNS, 'latestModerationDecision'])
             ->addSelect(['whatsapp_clicks' => DB::table('ad_clicks')
                 ->selectRaw('count(*)')
                 ->whereColumn('ad_id', 'ads.id')
@@ -1541,6 +1572,12 @@ class AdController extends Controller
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(500); // Защита UX: увеличиваем лимит, чтобы PRO-продавцы не теряли доступ к своим объявлениям (фронтенд пока не поддерживает кнопку "Загрузить еще" в дашборде)
+
+        $ads->getCollection()->transform(function (Ad $ad) use ($guidance) {
+            $ad->setAttribute('seller_correction', $guidance->sellerCorrection($ad));
+            $ad->unsetRelation('latestModerationDecision');
+            return $ad;
+        });
 
         return response()->json($ads);
     }

@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Ad extends Model
 {
@@ -117,6 +118,14 @@ class Ad extends Model
     public function moderationDecisions(): HasMany
     {
         return $this->hasMany(AdModerationDecision::class)->latest();
+    }
+
+    public function latestModerationDecision(): HasOne
+    {
+        return $this->hasOne(AdModerationDecision::class)
+            ->where('source', 'ai')
+            ->where('decision', 'manual_review')
+            ->latestOfMany();
     }
 
     public function contactClicks(): HasMany
