@@ -48,6 +48,12 @@ class EnforcePaidAdRenewal
                     return $next($request);
                 }
 
+                if ($action === 'activate'
+                    && $ad->status === 'archived'
+                    && ($ad->ai_moderation_status ?? null) === 'approved') {
+                    return $next($request);
+                }
+
                 if ($action === 'activate' && $ad->status !== 'expired' && $this->hasTimeRemaining($ad)) {
                     return $next($request);
                 }
