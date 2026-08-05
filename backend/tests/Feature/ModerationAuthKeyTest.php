@@ -58,6 +58,8 @@ class ModerationAuthKeyTest extends TestCase
         $this->assertDatabaseHas('user_notifications', [
             'user_id' => $ad->user_id,
             'title' => 'Tu anuncio fue revisado',
+            'type' => 'seller_reactivation_ready',
+            'link' => '/profile?tab=my_ads&filter=review_ready',
         ]);
 
         Http::assertSent(function ($request) {

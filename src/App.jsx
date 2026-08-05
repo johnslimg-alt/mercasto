@@ -707,6 +707,19 @@ function App() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [editingCatId, setEditingCatId] = useState(null);
   const [dashboardTab, setDashboardTab] = useState('my_ads');
+
+
+  useEffect(() => {
+    if (location.pathname !== '/profile') return;
+    const requestedTab = new URLSearchParams(location.search).get('tab');
+    const allowedTabs = new Set([
+      'my_ads', 'favorites', 'saved_searches', 'company', 'stats',
+      'transactions', 'contact_history', 'reviews', 'privacy', 'settings',
+    ]);
+    if (requestedTab && allowedTabs.has(requestedTab)) {
+      setDashboardTab(requestedTab);
+    }
+  }, [location.pathname, location.search]);
   const [adminTab, setAdminTab] = useState('categories');
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminUserSearch, setAdminUserSearch] = useState('');

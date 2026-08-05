@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { BarChart3, CheckSquare, ExternalLink, Loader2, Pencil, PlusCircle, Square, Trash2, TrendingUp, X, Zap } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
 
@@ -72,6 +72,18 @@ export default function MyAdsScreen({
   const [sortBy, setSortBy] = useState('recent');
   const [bulkLoading, setBulkLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const requestedFilter = new URLSearchParams(location.search).get('filter');
+    const allowedFilters = new Set([
+      'all', 'active', 'paused', 'featured', 'draft',
+      'pending', 'review_ready', 'sold', 'rejected',
+    ]);
+    if (requestedFilter && allowedFilters.has(requestedFilter)) {
+      setFilter(requestedFilter);
+    }
+  }, [location.search]);
 
   const counts = useMemo(() => ({
     all: userAds.length,
