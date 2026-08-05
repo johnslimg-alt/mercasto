@@ -15,6 +15,23 @@ import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 import './index.css'
 import './i18n'; // Multi-language support
 
+// Seller acquisition traffic must enter the publication flow directly.
+// Preserve query/hash attribution while removing the obsolete landing-page hop.
+if (['/vendedores', '/publicar-gratis'].includes(window.location.pathname)) {
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `/post${window.location.search}${window.location.hash}`,
+  );
+}
+
+// Install acquisition attribution before analytics bridges so every downstream
+// event keeps its campaign context across registration and SPA navigation.
+installCampaignAttribution();
+installStaleChunkRecovery();
+installProtectedRouteReturn();
+scheduleNonCriticalBootstrap();
+
 function scheduleNonCriticalBootstrap() {
   const start = () => {
     const run = () => {
@@ -40,23 +57,6 @@ function scheduleNonCriticalBootstrap() {
     window.addEventListener('load', start, { once: true });
   }
 }
-
-// Seller acquisition traffic must enter the publication flow directly.
-// Preserve query/hash attribution while removing the obsolete landing-page hop.
-if (['/vendedores', '/publicar-gratis'].includes(window.location.pathname)) {
-  window.history.replaceState(
-    window.history.state,
-    '',
-    `/post${window.location.search}${window.location.hash}`,
-  );
-}
-
-// Install acquisition attribution before analytics bridges so every downstream
-// event keeps its campaign context across registration and SPA navigation.
-installCampaignAttribution();
-installStaleChunkRecovery();
-installProtectedRouteReturn();
-scheduleNonCriticalBootstrap();
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
