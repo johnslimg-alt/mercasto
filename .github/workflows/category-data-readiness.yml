@@ -25,4 +25,15 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           docker exec mercasto_backend_container php artisan migrate --force
-          REQUIRE_CATEGORY_DATA_READY=1 bash scripts/category-data-smoke.sh
+
+          # This check only executes inside an already-running container.
+          # Compose still parses the model, so supply non-secret placeholders
+          # through a disposable env file instead of reading backend/.env.
+          compose_env_file="$(mktemp)"
+          trap 'rm -f "$compose_env_file"' EXIT
+          DB_PASSWORD=ci \
+          REDIS_PASSWORD=ci \
+          GRAFANA_PASSWORD=ci \
+          COMPOSE_ENV_FILE="$compose_env_file" \
+          REQUIRE_CATEGORY_DATA_READY=1 \
+            bash scripts/category-data-smoke.sh
