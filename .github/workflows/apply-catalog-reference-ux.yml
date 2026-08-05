@@ -1,0 +1,245 @@
+name: Apply catalog reference UX patch
+
+on:
+  push:
+    branches:
+      - fix/catalog-reference-ux-analytics
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/catalog-reference-ux-analytics
+          fetch-depth: 0
+
+      - name: Apply guarded replacements
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              text = file.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one match, found {count}')
+              file.write_text(text.replace(old, new, 1))
+
+          def replace_in_method(path, method, next_marker, old, new):
+              file = Path(path)
+              text = file.read_text()
+              start = text.index(f'public function {method}')
+              end = text.index(next_marker, start)
+              segment = text[start:end]
+              count = segment.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}:{method}: expected one match, found {count}')
+              text = text[:start] + segment.replace(old, new, 1) + text[end:]
+              file.write_text(text)
+
+          app = 'src/App.jsx'
+          replace_once(
+              app,
+              "    window.scrollTo(0, 0); // Исправляет проблему \\\"белого экрана\\\" из-за скролла\n    fetch(`${API_URL}/ads/${ad.id}/view`, { method: 'POST' })",
+              "    window.scrollTo(0, 0); // Исправляет проблему \\\"белого экрана\\\" из-за скролла\n    if (ad.is_catalog_filler) return;\n\n    fetch(`${API_URL}/ads/${ad.id}/view`, { method: 'POST' })",
+          )
+          replace_once(
+              app,
+              '<article ref={(node) => observeAdImpression(node, ad.id)} key={ad.id}',
+              '<article ref={isCatalogFiller ? null : (node) => observeAdImpression(node, ad.id)} key={ad.id}',
+          )
+          replace_once(
+              app,
+              '<div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>',
+              '<div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">{isCatalogFiller && <span className="mr-1 text-[10px] font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Precio de referencia</span>}${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span></div>',
+          )
+
+          split = 'src/components/common/SplitViewContainer.jsx'
+          replace_once(
+              split,
+              "  const [visibleCount, setVisibleCount] = useState(() => isMobileCatalog ? 8 : ads.length);",
+              "  const [visibleCount, setVisibleCount] = useState(() => isMobileCatalog ? 8 : ads.length);\n  const genuineAds = useMemo(() => ads.filter(ad => !ad?.is_catalog_filler), [ads]);\n  const catalogReferenceCount = ads.length - genuineAds.length;",
+          )
+          replace_once(split, '    return ads.slice(0, 80).map((ad, index) => {', '    return genuineAds.slice(0, 80).map((ad, index) => {')
+          replace_once(split, '  }, [ads, hoveredAdId, mapCollapsed, selectedAdId]);', '  }, [genuineAds, hoveredAdId, mapCollapsed, selectedAdId]);')
+          replace_once(
+              split,
+              "                  <span>{ads.length} anuncio{ads.length !== 1 ? 's' : ''} en el mapa</span>",
+              "                  <span>{genuineAds.length} anuncio{genuineAds.length !== 1 ? 's' : ''} real{genuineAds.length !== 1 ? 'es' : ''} en el mapa</span>\n                  {catalogReferenceCount > 0 && <span className=\"text-slate-500 dark:text-slate-400\">· {catalogReferenceCount} referencia{catalogReferenceCount !== 1 ? 's' : ''} de catálogo fuera del mapa</span>}",
+          )
+          replace_once(
+              split,
+              "            {ads.length}\n          </span>",
+              "            {genuineAds.length} reales{catalogReferenceCount > 0 ? ` · ${catalogReferenceCount} catálogo` : ''}\n          </span>",
+          )
+
+          controller = 'backend/app/Http/Controllers/Api/AdController.php'
+          old_guard = "            if ($ad->status !== 'active') {\n                return response()->json(['message' => 'Anuncio inactivo', 'ignored' => true]);\n            }"
+          new_guard = "            if ($ad->status !== 'active' || $ad->is_catalog_filler) {\n                return response()->json([\n                    'message' => $ad->is_catalog_filler ? 'Referencia de catálogo' : 'Anuncio inactivo',\n                    'ignored' => true,\n                ]);\n            }"
+          replace_in_method(controller, 'recordView', '/**\n     * Record visible ad cards', old_guard, new_guard)
+          replace_in_method(controller, 'recordClick', '/**\n     * Generate ad description', old_guard, new_guard)
+          replace_in_method(
+              controller,
+              'recordImpressions',
+              '/**\n     * Пожаловаться на объявление',
+              "        $validAdIds = DB::table('ads')\n            ->whereIn('id', $adIds)\n            ->where('status', 'active')\n            ->pluck('id');",
+              "        $validAdIds = DB::table('ads')\n            ->whereIn('id', $adIds)\n            ->where('status', 'active')\n            ->where('is_catalog_filler', false)\n            ->pluck('id');",
+          )
+          replace_once(
+              controller,
+              "            $ads = DB::table('ads')->where('status', 'active')->latest()->limit(10000)->get(['id', 'updated_at', 'category']);",
+              "            $ads = DB::table('ads')\n                ->where('status', 'active')\n                ->where('is_catalog_filler', false)\n                ->whereNotNull('expires_at')\n                ->where('expires_at', '>', now())\n                ->latest()\n                ->limit(10000)\n                ->get(['id', 'updated_at', 'category']);",
+          )
+          replace_once(
+              controller,
+              "            $ads = Ad::with('user:id,name')\n                ->where('status', 'active')\n                ->where('price', '>', 0)",
+              "            $ads = Ad::with('user:id,name')\n                ->where('status', 'active')\n                ->where('is_catalog_filler', false)\n                ->whereNotNull('expires_at')\n                ->where('expires_at', '>', now())\n                ->where('price', '>', 0)",
+          )
+
+          contact = 'backend/app/Http/Controllers/Api/ContactController.php'
+          replace_once(
+              contact,
+              "        $ad = Ad::with('user:id,name,email,notification_preferences')\n            ->where('status', 'active')\n            ->find($id);",
+              "        $ad = Ad::with('user:id,name,email,notification_preferences')\n            ->where('status', 'active')\n            ->where('is_catalog_filler', false)\n            ->find($id);",
+          )
+
+          static = 'scripts/static-safety-scans.sh'
+          replace_once(
+              static,
+              'bash scripts/catalog-index-hygiene-gate.sh\n',
+              'bash scripts/catalog-index-hygiene-gate.sh\nbash scripts/catalog-reference-integrity-gate.sh\n',
+          )
+
+          Path('scripts/catalog-reference-integrity-gate.sh').write_text('''#!/usr/bin/env bash
+          set -euo pipefail
+
+          ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+          cd "$ROOT_DIR"
+
+          echo "== Catalog reference integrity gate =="
+          grep -qF "if (ad.is_catalog_filler) return;" src/App.jsx
+          grep -qF "isCatalogFiller ? null : (node) => observeAdImpression" src/App.jsx
+          grep -qF "Precio de referencia" src/App.jsx
+          grep -qF "const genuineAds = useMemo" src/components/common/SplitViewContainer.jsx
+          grep -qF "referencia{catalogReferenceCount" src/components/common/SplitViewContainer.jsx
+          grep -qF -- "->where('is_catalog_filler', false)" backend/app/Http/Controllers/Api/ContactController.php
+          test "$(grep -cF -- "->where('is_catalog_filler', false)" backend/app/Http/Controllers/Api/AdController.php)" -ge 3
+          grep -qF "CatalogReferenceAnalyticsTest" backend/tests/Feature/CatalogReferenceAnalyticsTest.php
+          echo "catalog reference integrity gate OK"
+          ''')
+
+          Path('backend/tests/Feature/CatalogReferenceAnalyticsTest.php').write_text('''<?php
+
+          namespace Tests\\Feature;
+
+          use App\\Models\\Ad;
+          use App\\Models\\User;
+          use Illuminate\\Foundation\\Testing\\RefreshDatabase;
+          use Illuminate\\Support\\Facades\\Mail;
+          use Tests\\TestCase;
+
+          class CatalogReferenceAnalyticsTest extends TestCase
+          {
+              use RefreshDatabase;
+
+              public function test_catalog_reference_view_is_ignored(): void
+              {
+                  $ad = $this->makeAd(true);
+
+                  $this->postJson("/api/ads/{$ad->id}/view")
+                      ->assertOk()
+                      ->assertJson(['ignored' => true, 'message' => 'Referencia de catálogo']);
+
+                  $this->assertDatabaseCount('ad_views', 0);
+                  $this->assertSame(0, (int) $ad->fresh()->views);
+              }
+
+              public function test_batch_impressions_record_only_genuine_active_ads(): void
+              {
+                  $catalog = $this->makeAd(true);
+                  $genuine = $this->makeAd(false);
+
+                  $this->postJson('/api/ads/impressions', [
+                      'ad_ids' => [$catalog->id, $genuine->id],
+                      'placement' => 'feed',
+                  ])->assertOk()->assertJson(['recorded' => 1]);
+
+                  $this->assertDatabaseMissing('ad_impressions', ['ad_id' => $catalog->id]);
+                  $this->assertDatabaseHas('ad_impressions', ['ad_id' => $genuine->id]);
+              }
+
+              public function test_catalog_reference_click_is_ignored(): void
+              {
+                  $ad = $this->makeAd(true);
+
+                  $this->postJson("/api/ads/{$ad->id}/click", ['channel' => 'share'])
+                      ->assertOk()
+                      ->assertJson(['ignored' => true, 'message' => 'Referencia de catálogo']);
+
+                  $this->assertDatabaseCount('ad_clicks', 0);
+              }
+
+              public function test_catalog_reference_cannot_relay_a_seller_email(): void
+              {
+                  Mail::fake();
+                  $ad = $this->makeAd(true);
+
+                  $this->postJson("/api/ads/{$ad->id}/contact-seller", [
+                      'name' => 'Comprador de prueba',
+                      'email' => 'buyer@example.test',
+                      'message' => 'Quiero información adicional sobre este producto.',
+                      'website' => '',
+                  ])->assertNotFound();
+
+                  Mail::assertNothingQueued();
+              }
+
+              private function makeAd(bool $catalog): Ad
+              {
+                  $user = User::factory()->create(['email' => uniqid('seller_', true).'@example.test']);
+                  $ad = new Ad();
+                  $ad->forceFill([
+                      'user_id' => $user->id,
+                      'title' => 'Artículo de prueba',
+                      'description' => 'Descripción suficiente para la prueba.',
+                      'price' => 1000,
+                      'location' => 'Pachuca de Soto',
+                      'state' => 'Hidalgo',
+                      'category' => 'hogar',
+                      'condition' => 'usado',
+                      'status' => 'active',
+                      'expires_at' => now()->addDays(3),
+                      'is_catalog_filler' => $catalog,
+                      'views' => 0,
+                  ])->save();
+
+                  return $ad;
+              }
+          }
+          ''')
+          PY
+
+          chmod +x scripts/catalog-reference-integrity-gate.sh
+          bash scripts/catalog-reference-integrity-gate.sh
+          npm run lint:ci
+
+      - name: Commit normal code change and remove bootstrap workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-catalog-reference-ux.yml
+          git add src/App.jsx src/components/common/SplitViewContainer.jsx \
+            backend/app/Http/Controllers/Api/AdController.php \
+            backend/app/Http/Controllers/Api/ContactController.php \
+            backend/tests/Feature/CatalogReferenceAnalyticsTest.php \
+            scripts/catalog-reference-integrity-gate.sh scripts/static-safety-scans.sh
+          git commit -m "Keep catalog references out of maps and analytics"
+          git push origin HEAD:fix/catalog-reference-ux-analytics
