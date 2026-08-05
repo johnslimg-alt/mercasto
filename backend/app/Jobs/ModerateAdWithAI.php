@@ -27,13 +27,16 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
     public int $timeout = 90;
     public int $uniqueFor = 600;
 
-    public function __construct(public int $adId)
+    public function __construct(
+        public int $adId,
+        public bool $activateOnApproval = true,
+    )
     {
     }
 
     public function uniqueId(): string
     {
-        return (string) $this->adId;
+        return $this->adId . ':' . ($this->activateOnApproval ? 'activate' : 'review');
     }
 
     public function backoff(): array
@@ -105,10 +108,13 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 }
             }
 
-            $model = (string) config('services.gemini.moderation_model', 'gemini-1.5-flash');
+            $model = (string) config('services.gemini.moderation_model', 'gemini-3.6-flash');
             $response = Http::timeout(60)
-                ->retry(2, 500)
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                ->withHeaders([
+                    'x-goog-api-key' => $apiKey,
+                    'Content-Type' => 'application/json',
+                ])
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
                     'contents' => [['parts' => $parts]],
                     'generationConfig' => [
                         'temperature' => 0.1,
@@ -141,9 +147,17 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     return;
                 }
 
-                throw new \RuntimeException(
-                    'Gemini HTTP ' . $response->status() . ($providerMessage !== '' ? ': ' . $providerMessage : '')
-                );
+                if ($response->status() === 429) {
+                    Cache::put('ai_moderation:provider_unavailable', 'Gemini quota is temporarily unavailable.', now()->addMinutes(15));
+                    $this->leaveForManualReview(
+                        $ad,
+                        'La moderación automática está temporalmente sin cuota. El anuncio requiere revisión manual.',
+                        'provider_quota'
+                    );
+                    return;
+                }
+
+                throw new \RuntimeException('Gemini HTTP ' . $response->status());
             }
 
             $rawText = (string) $response->json('candidates.0.content.parts.0.text', '');
@@ -153,7 +167,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $confidence = max(0, min(1, (float) ($result['confidence'] ?? 0)));
 
             $newStatus = match ($decision) {
-                'approved' => 'active',
+                'approved' => $this->activateOnApproval ? 'active' : 'archived',
                 'rejected' => 'rejected',
                 default => 'archived',
             };
@@ -178,11 +192,18 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     'had_original_images' => $covers->hasOriginalImages($ad),
                     'previous_status' => $previousStatus,
                     'result' => $result,
+                    'activation_mode' => $this->activateOnApproval
+                        ? 'automatic'
+                        : 'seller_confirmation_required',
                 ],
             ]);
 
             if ($decision === 'approved') {
-                $this->notifyApproval($ad);
+                if ($this->activateOnApproval) {
+                    $this->notifyApproval($ad);
+                } else {
+                    $this->notifyApprovalPendingReactivation($ad);
+                }
             }
 
             $this->clearPublicCaches();
@@ -194,7 +215,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
             $this->leaveForManualReview(
                 $ad,
-                'La revisión automática falló y el anuncio quedó pendiente para una persona. ' . $error->getMessage(),
+                'La revisión automática falló y el anuncio requiere revisión manual.',
                 'failed'
             );
         }
@@ -286,13 +307,55 @@ PROMPT;
             'ai_moderated_at' => now(),
         ])->saveQuietly();
 
-        AdModerationDecision::create([
-            'ad_id' => $ad->id,
-            'source' => 'ai',
-            'decision' => 'manual_review',
-            'reason' => $reason,
-            'metadata' => ['technical_status' => $aiStatus],
-        ]);
+        $attemptStartedAt = $ad->moderation_submitted_at
+            ?: $ad->created_at
+            ?: now()->subMinute();
+        $alreadyRecorded = AdModerationDecision::query()
+            ->where('ad_id', $ad->id)
+            ->where('source', 'ai')
+            ->where('decision', 'manual_review')
+            ->where('created_at', '>=', $attemptStartedAt)
+            ->get()
+            ->contains(
+                fn (AdModerationDecision $decision) =>
+                    ($decision->metadata['technical_status'] ?? null) === $aiStatus
+            );
+
+        if (! $alreadyRecorded) {
+            AdModerationDecision::create([
+                'ad_id' => $ad->id,
+                'source' => 'ai',
+                'decision' => 'manual_review',
+                'reason' => $reason,
+                'metadata' => [
+                    'technical_status' => $aiStatus,
+                    'activation_mode' => $this->activateOnApproval
+                        ? 'automatic'
+                        : 'seller_confirmation_required',
+                ],
+            ]);
+        }
+    }
+
+    private function notifyApprovalPendingReactivation(Ad $ad): void
+    {
+        try {
+            $notification = [
+                'user_id' => $ad->user_id,
+                'title' => 'Tu anuncio fue revisado',
+                'message' => 'Tu anuncio "' . $ad->title . '" fue aprobado. Confirma que sigue disponible y revisa las opciones de renovación desde tu perfil.',
+                'is_read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+            $notification['id'] = DB::table('user_notifications')->insertGetId($notification);
+            broadcast(new NewNotification((int) $ad->user_id, $notification))->toOthers();
+        } catch (Throwable $error) {
+            Log::warning('Could not notify moderation reactivation approval', [
+                'ad_id' => $ad->id,
+                'error' => $error->getMessage(),
+            ]);
+        }
     }
 
     private function notifyApproval(Ad $ad): void

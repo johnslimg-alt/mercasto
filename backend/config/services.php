@@ -77,6 +77,7 @@ return [
 
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
+        'moderation_model' => env('GEMINI_MODERATION_MODEL', 'gemini-3.6-flash'),
     ],
 
     'deepseek' => [

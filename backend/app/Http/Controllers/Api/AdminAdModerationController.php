@@ -75,7 +75,7 @@ class AdminAdModerationController extends Controller
 
         $ad->forceFill([
             'status' => 'archived',
-            'moderation_submitted_at' => $ad->moderation_submitted_at ?: $ad->created_at ?: now(),
+            'moderation_submitted_at' => now(),
             'ai_moderation_status' => 'queued',
             'ai_moderation_reason' => null,
             'ai_moderation_confidence' => null,

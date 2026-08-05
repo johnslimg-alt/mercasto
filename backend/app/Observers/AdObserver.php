@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Http\Controllers\Api\IndexNowController;
+use App\Jobs\GenerateAdEmbedding;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Services\AdIllustrativeCoverService;
@@ -24,6 +25,7 @@ class AdObserver
     {
         Log::info('Ad created, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'create');
+        $this->queueEmbedding($ad);
 
         if ($ad->status === 'pending') {
             $this->queueForModeration($ad);
@@ -67,6 +69,10 @@ class AdObserver
             'image_url',
             'video_url',
         ]);
+        if ($contentChanged) {
+            $this->queueEmbedding($ad);
+        }
+
         $submittedAgain = $ad->wasChanged('status') && $ad->status === 'pending';
         $isModerationItem = $ad->status === 'pending'
             || (
@@ -95,6 +101,15 @@ class AdObserver
     {
         Log::info('Ad force deleted, notifying IndexNow', ['ad_id' => $ad->id]);
         IndexNowController::notifyAdChange($ad, 'delete');
+    }
+
+    private function queueEmbedding(Ad $ad): void
+    {
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
+        GenerateAdEmbedding::dispatch($ad->id)->afterCommit();
     }
 
     private function queueForModeration(Ad $ad): void

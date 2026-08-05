@@ -80,7 +80,8 @@ export default function MyAdsScreen({
     featured: userAds.filter(ad => ad.promoted || ad.is_featured).length,
     draft: userAds.filter(ad => ad.status === 'draft').length,
     pending: userAds.filter(ad => ad.status === 'pending').length,
-    sold: userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived').length,
+    review_ready: userAds.filter(ad => ad.status === 'archived' && ad.ai_moderation_status === 'approved').length,
+    sold: userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved')).length,
     rejected: userAds.filter(ad => ad.status === 'rejected').length,
   }), [userAds]);
 
@@ -91,7 +92,8 @@ export default function MyAdsScreen({
     else if (filter === 'featured') list = userAds.filter(ad => ad.promoted || ad.is_featured);
     else if (filter === 'draft') list = userAds.filter(ad => ad.status === 'draft');
     else if (filter === 'pending') list = userAds.filter(ad => ad.status === 'pending');
-    else if (filter === 'sold') list = userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived');
+    else if (filter === 'review_ready') list = userAds.filter(ad => ad.status === 'archived' && ad.ai_moderation_status === 'approved');
+    else if (filter === 'sold') list = userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved'));
     else if (filter === 'rejected') list = userAds.filter(ad => ad.status === 'rejected');
     else list = userAds;
 
@@ -152,6 +154,43 @@ export default function MyAdsScreen({
     }
   };
 
+  const confirmLegacyReactivation = async (ad) => {
+    const confirmed = window.confirm(
+      t.confirm_reactivation_details
+        || 'Confirma que el anuncio sigue disponible y que el precio, estado y ubicación son correctos.'
+    );
+    if (!confirmed) return;
+
+    setBulkLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`${API_URL}/ads/${ad.id}/activate`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          confirm_available: true,
+          price: ad.price,
+          condition: ad.condition,
+          location: ad.location,
+          state: ad.state,
+          city: ad.city,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Error');
+      setToast({
+        type: 'success',
+        text: t.reactivation_success || 'Anuncio reactivado por 7 días.',
+      });
+      onRefreshAds?.();
+    } catch (error) {
+      setToast({ type: 'error', text: error.message || t.connection_error || 'Error de red' });
+    } finally {
+      setBulkLoading(false);
+      setTimeout(() => setToast(null), 4000);
+    }
+  };
+
   const doBulkPromoteWithCredits = async () => {
     if (selectedIds.size === 0) return;
     setBulkLoading(true);
@@ -192,6 +231,7 @@ export default function MyAdsScreen({
     ['featured', t.featured_status || 'Featured', counts.featured],
     ['draft', t.draft_status || 'Drafts', counts.draft],
     ['pending', t.pending_status || 'Pending review', counts.pending],
+    ['review_ready', t.review_ready_status || 'Listo para reactivar', counts.review_ready],
     ['sold', t.sold_status || 'Sold', counts.sold],
     ['rejected', t.rejected_status || 'Rejected', counts.rejected],
   ];
@@ -284,6 +324,7 @@ export default function MyAdsScreen({
                        ad.status === 'expired' ? (t.expired_status || 'Expirado') :
                        ad.status === 'draft' ? (t.draft_status || 'Borrador') :
                        ad.status === 'pending' ? (t.pending_status || 'En Moderación') :
+                       ad.status === 'archived' && ad.ai_moderation_status === 'approved' ? (t.review_ready_status || 'Listo para reactivar') :
                        ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived' ? (t.sold_status || 'Vendido') :
                        ad.status === 'rejected' ? (t.rejected_status || 'Rechazado') :
                        ad.status}
@@ -323,6 +364,7 @@ export default function MyAdsScreen({
                   <Link to={`/anuncio/${ad.id}/editar`} data-testid={`edit-ad-${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 text-[11px]"><Pencil className="w-3 h-3" /> {t.edit || 'Editar'}</Link>
                   {ad.status === 'active' && <button data-testid={`pause-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.pause || 'Pausar'}</button>}
                   {ad.status === 'paused' && <button data-testid={`reactivate-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}
+                  {ad.status === 'archived' && ad.ai_moderation_status === 'approved' && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate || 'Confirmar y reactivar'}</button>}
                   {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1 text-[11px]">{t.renew || 'Renew'}</button> : null; })()}
                   {ad.status === 'expired' && <button data-testid={`republish-ad-${ad.id}`} onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1 text-[11px]">{t.republish || 'Republicar'}</button>}
                   {ad.status === 'active' && PROMO_CATEGORIES.map((key) => {

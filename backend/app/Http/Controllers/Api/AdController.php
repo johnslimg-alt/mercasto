@@ -579,48 +579,6 @@ class AdController extends Controller
         // /api/meta/events/post-ad) using the same event_id as the browser Pixel call, so it
         // dedupes correctly. This controller intentionally does not send its own CAPI event.
 
-        // --- AI СИСТЕМА: СЕМАНТИЧЕСКИЙ ПОИСК (EMBEDDINGS) И АВТО-МОДЕРАЦИЯ ---
-        dispatch(function () use ($ad) {
-            $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-            if (!$apiKey) return;
-
-            // 1. Генерация Вектора (Embedding) для Умного Поиска
-            $textContent = "{$ad->title} {$ad->category} {$ad->description}";
-            $embedRes = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
-                'model' => 'models/text-embedding-004',
-                'content' => ['parts' => [['text' => $textContent]]]
-            ]);
-            if ($embedRes->successful() && $embedding = $embedRes->json('embedding.values')) {
-                $embeddingString = '[' . implode(',', $embedding) . ']';
-                DB::statement('UPDATE ads SET embedding = ?::vector WHERE id = ?', [$embeddingString, $ad->id]);
-            }
-
-            // 2. ИИ Авто-Модерация Контента (Анализ фото и текста)
-            if ($ad->status === 'pending') {
-                $images = json_decode($ad->image_url, true) ?? [];
-                $parts = [['text' => "Act as a marketplace moderator. Analyze this ad. Title: '{$ad->title}'. Description: '{$ad->description}'. Return JSON ONLY: {\"status\": \"approved\"|\"rejected\", \"reason\": \"why\"}. Reject if it contains NSFW, weapons, drugs, scams, or inappropriate images. Approve otherwise."]];
-
-                foreach (array_slice($images, 0, 2) as $img) {
-                    $path = Storage::disk('public')->path($img);
-                    if (file_exists($path)) {
-                        $parts[] = ['inline_data' => ['mime_type' => mime_content_type($path), 'data' => base64_encode(file_get_contents($path))]];
-                    }
-                }
-
-                $modRes = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => [['parts' => $parts]]
-                ]);
-
-                if ($modRes->successful() && preg_match('/\{.*\}/s', $modRes->json('candidates.0.content.parts.0.text'), $matches)) {
-                    $data = json_decode($matches[0], true);
-                    if (isset($data['status'])) {
-                        $newStatus = $data['status'] === 'approved' ? 'active' : 'rejected';
-                        DB::table('ads')->where('id', $ad->id)->update(['status' => $newStatus]);
-                    }
-                }
-            }
-        });
-
         $ad->load('user');
         $ad->whatsapp_clicks = DB::table('ad_clicks')
             ->where('ad_id', $ad->id)
@@ -848,46 +806,6 @@ class AdController extends Controller
         if ($request->hasFile('video_file')) {
             ProcessVideoWatermark::dispatch($ad->fresh());
         }
-
-        // --- AI СИСТЕМА: ОБНОВЛЕНИЕ ВЕКТОРА И ПОВТОРНАЯ МОДЕРАЦИЯ ---
-        dispatch(function () use ($ad) {
-            $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-            if (!$apiKey) return;
-
-            $textContent = "{$ad->title} {$ad->category} {$ad->description}";
-            $embedRes = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
-                'model' => 'models/text-embedding-004',
-                'content' => ['parts' => [['text' => $textContent]]]
-            ]);
-            if ($embedRes->successful() && $embedding = $embedRes->json('embedding.values')) {
-                $embeddingString = '[' . implode(',', $embedding) . ']';
-                DB::statement('UPDATE ads SET embedding = ?::vector WHERE id = ?', [$embeddingString, $ad->id]);
-            }
-
-            if ($ad->status === 'pending') {
-                $images = json_decode($ad->image_url, true) ?? [];
-                $parts = [['text' => "Act as a marketplace moderator. Analyze this ad. Title: '{$ad->title}'. Description: '{$ad->description}'. Return JSON ONLY: {\"status\": \"approved\"|\"rejected\", \"reason\": \"why\"}. Reject if it contains NSFW, weapons, drugs, scams, or inappropriate images. Approve otherwise."]];
-
-                foreach (array_slice($images, 0, 2) as $img) {
-                    $path = Storage::disk('public')->path($img);
-                    if (file_exists($path)) {
-                        $parts[] = ['inline_data' => ['mime_type' => mime_content_type($path), 'data' => base64_encode(file_get_contents($path))]];
-                    }
-                }
-
-                $modRes = Http::timeout(30)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => [['parts' => $parts]]
-                ]);
-
-                if ($modRes->successful() && preg_match('/\{.*\}/s', $modRes->json('candidates.0.content.parts.0.text'), $matches)) {
-                    $data = json_decode($matches[0], true);
-                    if (isset($data['status'])) {
-                        $newStatus = $data['status'] === 'approved' ? 'active' : 'rejected';
-                        DB::table('ads')->where('id', $ad->id)->update(['status' => $newStatus]);
-                    }
-                }
-            }
-        });
 
         // 5. Возвращаем ответ
         $ad->load('user');
@@ -2238,12 +2156,35 @@ class AdController extends Controller
         if ($request->user()->id !== $ad->user_id) {
             return response()->json(['message' => 'No tienes permisos para reactivar este anuncio'], 403);
         }
-        if ($ad->status !== 'paused') {
-            return response()->json(['message' => 'Solo puedes reactivar anuncios pausados'], 422);
-        }
+        if ($ad->status === 'archived' && $ad->ai_moderation_status === 'approved') {
+            $validated = $request->validate([
+                'confirm_available' => 'required|accepted',
+                'price' => 'required|numeric|min:0|max:9999999999.99',
+                'condition' => 'required|in:nuevo,usado,new,used',
+                'location' => 'required|string|max:255',
+                'state' => 'required|string|max:60',
+                'city' => 'required|string|max:100',
+            ]);
 
-        $ad->status = 'active';
-        $ad->save();
+            $ad->forceFill([
+                'price' => $validated['price'],
+                'condition' => $validated['condition'],
+                'location' => trim($validated['location']),
+                'state' => trim($validated['state']),
+                'city' => trim($validated['city']),
+                'status' => 'active',
+                'expires_at' => now()->addDays((int) config('marketplace.ad_lifetime_days', 7)),
+                'reminder_sent_at' => null,
+                'republished_at' => now(),
+            ])->save();
+        } elseif ($ad->status === 'paused') {
+            $ad->status = 'active';
+            $ad->save();
+        } else {
+            return response()->json([
+                'message' => 'Solo puedes reactivar anuncios pausados o aprobados pendientes de confirmación.',
+            ], 422);
+        }
 
         Cache::forget("ad_{$id}");
         Cache::forget('sitemap_xml');
