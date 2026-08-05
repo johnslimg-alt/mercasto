@@ -1,19 +1,45 @@
 import useDocumentMeta from '../../hooks/useDocumentMeta';
 import { localizedText } from '../../utils/localize';
-import QRCode from 'qrcode';
 import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Shield, CheckCircle, AlertTriangle, Share2, Heart, MessageCircle, ChevronLeft, Calendar, Tag, BarChart3, User, Pencil, Pause, Play, Loader2, Send, Star, X } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { addRecentlyViewed } from '../../utils/recentlyViewed';
 import { events } from '../../utils/analytics';
-import MapV3 from '../common/MapV3';
-import RecommendationsWidget from '../common/RecommendationsWidget';
 import BottomSheet from '../ui/BottomSheet';
 
+
+
+const MapV3 = React.lazy(() => import('../common/MapV3'));
+const RecommendationsWidget = React.lazy(() => import('../common/RecommendationsWidget'));
+
+function useNearViewport(rootMargin = '0px') {
+  const ref = useRef(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (ready) return undefined;
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setReady(true);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setReady(true);
+        observer.disconnect();
+      }
+    }, { rootMargin });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ready, rootMargin]);
+
+  return [ref, ready];
+}
 
 // --- MAP COORDINATES ---
 const STATE_COORDS = {
@@ -302,6 +328,8 @@ export default function AdDetailScreen({
   const [renderedAtMs] = useState(() => Date.now());
   const [showQR, setShowQR] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [mapMountRef, mapReady] = useNearViewport('0px');
+  const [relatedMountRef, relatedReady] = useNearViewport('300px');
 
   const adMarker = useMemo(() => {
     if (!ad) return [];
@@ -338,7 +366,7 @@ export default function AdDetailScreen({
   }, [ad?.id]);
 
   useEffect(() => {
-    if (!ad?.id) {
+    if (!ad?.id || !relatedReady) {
       setSimilarAds([]);
       return;
     }
@@ -348,7 +376,7 @@ export default function AdDetailScreen({
       .then(r => r.ok ? r.json() : [])
       .then(data => setSimilarAds(Array.isArray(data) ? data.slice(0, 8) : []))
       .catch(() => setSimilarAds([]));
-  }, [API_URL, ad?.id]);
+  }, [API_URL, ad?.id, relatedReady]);
 
   useEffect(() => {
     if (!ad?.id) { setPriceHistory([]); return; }
@@ -434,11 +462,17 @@ export default function AdDetailScreen({
     navigate(messagePath);
   };
 
-  const handleShowQR = () => {
-    QRCode.toDataURL(shareUrl, { width: 300, margin: 2 })
-      .then(url => { setQrDataUrl(url); setShowQR(true); })
-      .catch(err => console.error('QR generation failed', err));
-    setShowShareMenu(false);
+  const handleShowQR = async () => {
+    try {
+      const { default: QRCode } = await import('qrcode');
+      const url = await QRCode.toDataURL(shareUrl, { width: 300, margin: 2 });
+      setQrDataUrl(url);
+      setShowQR(true);
+    } catch (err) {
+      console.error('QR generation failed', err);
+    } finally {
+      setShowShareMenu(false);
+    }
   };
 
   const copyShareLink = async () => {
@@ -537,7 +571,7 @@ export default function AdDetailScreen({
         <div className="lg:col-span-2">
           {/* MEDIA SLIDER */}
           <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm h-[300px] md:h-[500px]">
-            <MediaSlider media={images} autoplay={sliderAutoplay} alt={localizedText(ad.title, lang) || 'Imagen del anuncio'} />
+            <MediaSlider media={images} autoplay={sliderAutoplay} alt={localizedText(ad.title, lang) || 'Imagen del anuncio'} priority />
           </div>
 
           {/* AD DETAILS */}
@@ -596,11 +630,21 @@ export default function AdDetailScreen({
                     <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">La ubicación es aproximada y se muestra solo con datos públicos del anuncio.</p>
                   </div>
                 </div>
-                <MapV3
-                  title={locationLabel || 'Todo México'}
-                  markers={adMarker}
-                  className="h-[220px] w-full rounded-none border-0 border-t border-slate-200 shadow-none dark:border-slate-700 md:h-[280px]"
-                />
+                <div ref={mapMountRef} data-ad-detail-map-shell className="h-[220px] w-full border-t border-slate-200 dark:border-slate-700 md:h-[280px]">
+                  {mapReady ? (
+                    <React.Suspense fallback={<div className="h-full w-full animate-pulse bg-slate-200 dark:bg-slate-800" data-ad-detail-map-placeholder />}>
+                      <MapV3
+                        title={locationLabel || 'Todo México'}
+                        markers={adMarker}
+                        className="h-full w-full rounded-none border-0 shadow-none"
+                      />
+                    </React.Suspense>
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-medium text-slate-500 dark:bg-slate-900 dark:text-slate-400" data-ad-detail-map-placeholder>
+                      Mapa de ubicación
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -828,27 +872,37 @@ export default function AdDetailScreen({
         </div>
       </div>
 
-      {/* ПОХОЖИЕ ОБЪЯВЛЕНИЯ */}
-      {similarAds.length > 0 && (
-        <div className="mt-10">
-          <h2 className="text-[20px] font-bold text-slate-900 mb-5">{t.similar_ads || 'You may also like'}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {similarAds.map(simAd => (
-              <div key={simAd.id} className="cursor-pointer" onClick={() => setViewedAd(simAd)}>
-                {renderAdCard(simAd)}
+      <div ref={relatedMountRef} data-ad-detail-related-shell className="min-h-24">
+        {relatedReady ? (
+          <>
+            {/* ПОХОЖИЕ ОБЪЯВЛЕНИЯ */}
+            {similarAds.length > 0 && (
+              <div className="mt-10">
+                <h2 className="text-[20px] font-bold text-slate-900 mb-5">{t.similar_ads || 'You may also like'}</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {similarAds.map(simAd => (
+                    <div key={simAd.id} className="cursor-pointer" onClick={() => setViewedAd(simAd)}>
+                      {renderAdCard(simAd)}
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* AI RECOMMENDATIONS */}
-      <div className="mt-10">
-        <RecommendationsWidget
-          userId={currentUser?.id}
-          excludeAdId={ad?.id}
-          limit={12}
-          onAdClick={(recAd) => setViewedAd(recAd)}
-        />
+            )}
+            {/* AI RECOMMENDATIONS */}
+            <div className="mt-10">
+              <React.Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" data-ad-detail-recommendations-placeholder />}>
+                <RecommendationsWidget
+                  userId={currentUser?.id}
+                  excludeAdId={ad?.id}
+                  limit={12}
+                  onAdClick={(recAd) => setViewedAd(recAd)}
+                />
+              </React.Suspense>
+            </div>
+          </>
+        ) : (
+          <div className="mt-10 h-24" data-ad-detail-related-placeholder />
+        )}
       </div>
 
       {/* QR Code Modal */}
