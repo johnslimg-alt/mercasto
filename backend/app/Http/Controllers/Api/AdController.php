@@ -567,7 +567,7 @@ class AdController extends Controller
             'video_url' => $videoPath,
             'video_processing_status' => $videoProcessingStatus,
             'status' => 'pending', // Отправляем на модерацию
-            'expires_at' => now()->addDays(30),
+            'expires_at' => null,
         ]);
 
         // Если видео было загружено, отправляем его в очередь на обработку
@@ -2173,7 +2173,7 @@ class AdController extends Controller
                 'state' => trim($validated['state']),
                 'city' => trim($validated['city']),
                 'status' => 'active',
-                'expires_at' => now()->addDays((int) config('marketplace.ad_lifetime_days', 7)),
+                'expires_at' => Ad::freshExpiry(),
                 'reminder_sent_at' => null,
                 'republished_at' => now(),
             ])->save();
@@ -2194,7 +2194,7 @@ class AdController extends Controller
     }
 
     /**
-     * Republish an expired ad (free tier: max 3 times)
+     * Internal republish fallback. Regular seller renewals are intercepted by paid-renewal middleware.
      */
     public function republish(Request $request, $id)
     {
@@ -2218,7 +2218,7 @@ class AdController extends Controller
 
         $ad->update([
             'status' => 'active',
-            'expires_at' => now()->addDays(30),
+            'expires_at' => Ad::freshExpiry(),
             'republish_count' => $ad->republish_count + 1,
             'republished_at' => now(),
         ]);
@@ -2393,9 +2393,8 @@ class AdController extends Controller
 
     /**
      * PUT /api/ads/{id}/renew
-     * Renew an ad's expiry by 30 days from now.
-     * - Free if the ad is still active (not expired).
-     * - Costs 1 referral_credit if the ad has already expired.
+     * Internal renewal fallback using the configured listing lifetime.
+     * Regular seller requests are intercepted by paid-renewal middleware.
      * Clears reminder_sent_at so reminders can fire again next cycle.
      */
     public function renew(Request $request, $id)
@@ -2421,7 +2420,7 @@ class AdController extends Controller
 
         $ad->update([
             'status'          => 'active',
-            'expires_at'      => now()->addDays(30),
+            'expires_at'      => Ad::freshExpiry(),
             'reminder_sent_at' => null,
         ]);
 

@@ -46,6 +46,7 @@ class AdTest extends TestCase
         $this->assertDatabaseHas('ads', [
             'title' => 'iPhone 15 Pro',
             'user_id' => $user->id,
+            'expires_at' => null,
         ]);
     }
 

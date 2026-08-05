@@ -23,7 +23,7 @@ const SECTIONS = [
       },
       {
         q: '¿Cuánto tiempo dura mi anuncio?',
-        a: 'Los anuncios están activos por 30 días. Al finalizar este período, recibirás una notificación para renovarlos gratis con un solo clic desde la sección "Mis anuncios" de tu perfil.',
+        a: 'Los anuncios gratuitos están activos durante 7 días. Después puedes renovarlos por $49 MXN por otros 7 días o eliminarlos sin costo desde la sección "Mis anuncios" de tu perfil.',
       },
       {
         q: '¿Puedo editar mi anuncio después de publicarlo?',

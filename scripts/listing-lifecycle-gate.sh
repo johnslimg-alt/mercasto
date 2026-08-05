@@ -42,6 +42,16 @@ grep -qF "No tienes permisos para cambiar el estado de este anuncio" "$CONTROLLE
 
 # Create/edit moderation behavior.
 grep -qF "'status' => 'pending', // Отправляем на модерацию" "$CONTROLLER"
+grep -qF "'expires_at' => null," "$CONTROLLER"
+grep -qF "'expires_at' => Ad::freshExpiry()," "$CONTROLLER"
+grep -qF "'expires_at' => \$newStatus === 'active' ? Ad::freshExpiry() : null," backend/app/Jobs/ModerateAdWithAI.php
+grep -qF 'public static function freshExpiry(): Carbon' backend/app/Models/Ad.php
+if grep -qF 'now()->addDays(30)' "$CONTROLLER"; then
+  echo "Legacy 30-day listing expiry remains in AdController" >&2
+  exit 1
+fi
+grep -qF 'Estará activo 7 días más.' src/App.jsx
+grep -qF 'Los anuncios gratuitos están activos durante 7 días.' src/components/screens/AyudaScreen.jsx
 grep -qF '$needsReModeration ? '\''pending'\'' : $ad->status' "$CONTROLLER"
 grep -qF "No puedes activar un anuncio en revisión o rechazado." "$CONTROLLER"
 

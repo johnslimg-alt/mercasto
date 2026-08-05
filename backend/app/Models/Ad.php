@@ -92,11 +92,21 @@ class Ad extends Model
         }
 
         $expiresAt = Carbon::parse($value);
-        $maximumFreeExpiry = now()->addDays((int) config('marketplace.ad_lifetime_days', 7));
+        $maximumFreeExpiry = self::freshExpiry();
 
         $this->attributes['expires_at'] = $expiresAt->greaterThan($maximumFreeExpiry)
             ? $maximumFreeExpiry
             : $expiresAt;
+    }
+
+    public static function lifetimeDays(): int
+    {
+        return max(1, (int) config('marketplace.ad_lifetime_days', 7));
+    }
+
+    public static function freshExpiry(): Carbon
+    {
+        return now()->addDays(self::lifetimeDays());
     }
 
     public function user()
