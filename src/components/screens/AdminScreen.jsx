@@ -5,6 +5,7 @@ import { Shield, Pencil, PlusCircle, Heart, MapPin, Search, ChevronLeft, Chevron
 import { IconMap } from '../../constants/iconMap';
 import { localizedText } from '../../utils/localize';
 import AdminBusinessVerifications from './AdminBusinessVerifications';
+import AdminSeoMeasurement from '../admin/AdminSeoMeasurement';
 export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons, adminLoading, adminPendingAds, adminReportTab, adminReports, adminTab, adminUserReports, adminUserSearch, adminUsers, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments, token }) {
     if (userRole !== 'admin') return <div className="p-10 text-center font-bold text-red-500">{t.access_denied || 'Access denied'}</div>;
     React.useEffect(() => {
@@ -23,13 +24,14 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
         <div className="p-4 md:p-8 w-full max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
             <h2 className="hidden md:flex text-2xl font-bold items-center gap-3 text-slate-900 tracking-tight"><Shield className="text-red-500" size={32}/> {t.admin_panel}</h2>
-            <div className="bg-slate-200 p-1 rounded-xl flex items-center w-fit">
+            <div className="bg-slate-200 p-1 rounded-xl flex flex-wrap items-center gap-1 w-fit">
                <button onClick={() => setAdminTab('categories')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'categories' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.cat_tab}</button>
                <button onClick={() => {setAdminTab('users'); loadAdminUsers();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.users_tab}</button>
                <button onClick={() => {setAdminTab('moderation'); loadPendingAds();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'moderation' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.mod_tab}</button>
                <button onClick={() => {setAdminTab('coupons'); loadCoupons();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'coupons' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.coupons_tab}</button>
                <button onClick={() => {setAdminTab('reports'); loadAdminReports();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'reports' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.reports_tab}</button>
                <button onClick={() => {setAdminTab('payments'); loadAdminPayments(1);}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'payments' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.admin_payments_tab || 'Pagos'}</button>
+               <button onClick={() => setAdminTab('seo_geo')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all inline-flex items-center gap-1.5 ${adminTab === 'seo_geo' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}><Globe size={14}/> SEO/GEO</button>
                <button onClick={() => setAdminTab('business_verifications')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'business_verifications' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>RFC/CSF</button>
             </div>
           </div>
@@ -510,6 +512,8 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                 )}
               </div>
             </div>
+          ) : adminTab === 'seo_geo' ? (
+            <AdminSeoMeasurement token={token} />
           ) : adminTab === 'business_verifications' ? (
             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="p-5 border-b border-slate-100 dark:border-slate-700">
