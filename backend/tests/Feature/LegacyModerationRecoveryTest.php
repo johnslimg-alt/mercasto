@@ -40,6 +40,11 @@ class LegacyModerationRecoveryTest extends TestCase
             'status' => 'rejected',
             'moderation_submitted_at' => now()->subDays(10),
         ]);
+        $manualReview = $this->ad($seller, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'manual_review',
+            'moderation_submitted_at' => now()->subDays(11),
+        ]);
 
         $this->artisan('ads:requeue-legacy-moderation', ['--limit' => 10])
             ->assertSuccessful();
@@ -65,11 +70,43 @@ class LegacyModerationRecoveryTest extends TestCase
         });
         Bus::assertNotDispatched(ModerateAdWithAI::class, fn ($job) => $job->adId === $catalog->id);
         Bus::assertNotDispatched(ModerateAdWithAI::class, fn ($job) => $job->adId === $rejected->id);
+        Bus::assertNotDispatched(ModerateAdWithAI::class, fn ($job) => $job->adId === $manualReview->id);
 
         $eligible->refresh();
         $this->assertSame('archived', $eligible->status);
         $this->assertSame('queued', $eligible->ai_moderation_status);
         $this->assertNotNull($eligible->moderation_submitted_at);
+    }
+
+
+    public function test_manual_review_requires_an_explicit_override_to_requeue(): void
+    {
+        Bus::fake();
+        Cache::forget('ai_moderation:provider_unavailable');
+        config(['services.gemini.api_key' => 'test-auth-key']);
+
+        $seller = User::factory()->create();
+        $manualReview = $this->ad($seller, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'manual_review',
+            'moderation_submitted_at' => now()->subDays(10),
+        ]);
+
+        $this->artisan('ads:requeue-legacy-moderation', [
+            '--limit' => 5,
+            '--execute' => true,
+        ])->assertSuccessful();
+        Bus::assertNothingDispatched();
+
+        $this->artisan('ads:requeue-legacy-moderation', [
+            '--limit' => 5,
+            '--include-manual-review' => true,
+            '--execute' => true,
+        ])->assertSuccessful();
+
+        Bus::assertDispatched(ModerateAdWithAI::class, fn ($job) =>
+            $job->adId === $manualReview->id && $job->activateOnApproval === false
+        );
     }
 
     private function ad(User $seller, array $overrides = []): Ad
