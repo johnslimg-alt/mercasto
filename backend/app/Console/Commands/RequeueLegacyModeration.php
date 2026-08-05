@@ -13,6 +13,7 @@ class RequeueLegacyModeration extends Command
     protected $signature = 'ads:requeue-legacy-moderation
         {--limit=5 : Maximum archived ads to inspect}
         {--spacing=30 : Seconds between queued moderation jobs}
+        {--include-manual-review : Explicitly retry content decisions that require human review}
         {--execute : Requeue the selected ads}';
 
     protected $description = 'Safely recheck legacy moderation backlog without automatic publication';
@@ -31,17 +32,21 @@ class RequeueLegacyModeration extends Command
 
         $limit = max(1, min(25, (int) $this->option('limit')));
         $spacing = max(0, min(300, (int) $this->option('spacing')));
+        $retryStatuses = [
+            'failed',
+            'provider_error',
+            'provider_quota',
+        ];
+        if ($this->option('include-manual-review')) {
+            $retryStatuses[] = 'manual_review';
+        }
+
         $ads = Ad::query()
             ->where('is_catalog_filler', false)
             ->where('status', 'archived')
-            ->where(function ($query) {
+            ->where(function ($query) use ($retryStatuses) {
                 $query->whereNull('ai_moderation_status')
-                    ->orWhereIn('ai_moderation_status', [
-                        'failed',
-                        'provider_error',
-                        'provider_quota',
-                        'manual_review',
-                    ]);
+                    ->orWhereIn('ai_moderation_status', $retryStatuses);
             })
             ->where(function ($query) {
                 $query->whereNotNull('moderation_submitted_at')
