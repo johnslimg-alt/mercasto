@@ -361,7 +361,7 @@ const urlBase64ToUint8Array = (base64String) => {
   return outputArray;
 };
 
-const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio' }) => {
+const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio', priority = false }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -378,7 +378,17 @@ const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio' }) => {
       {media[currentIndex].type === 'video' ? (
         <video src={media[currentIndex].url} controls className="max-w-full max-h-full object-contain" />
       ) : (
-        <img src={media[currentIndex].url} alt={alt} className="max-w-full max-h-full object-contain shadow-sm" />
+        <img
+          src={media[currentIndex].url}
+          alt={alt}
+          width="800"
+          height="600"
+          loading={priority && currentIndex === 0 ? 'eager' : 'lazy'}
+          fetchPriority={priority && currentIndex === 0 ? 'high' : 'auto'}
+          decoding="async"
+          data-ad-detail-hero={priority && currentIndex === 0 ? 'true' : undefined}
+          className="max-w-full max-h-full object-contain shadow-sm"
+        />
       )}
       {media.length > 1 && (
         <>
