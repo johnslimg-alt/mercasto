@@ -139,7 +139,7 @@ class SeoWeeklyMeasurementService
                 ->where('is_catalog_filler', true)
                 ->where('status', 'active')
                 ->count(),
-            'source_pages' => count((array) config('seo_source_pages', [])),
+            'source_pages' => count((array) config('seo_source_pages.pages', [])),
             'location_routes_open' => 0,
         ];
     }
