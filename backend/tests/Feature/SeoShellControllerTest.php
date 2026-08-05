@@ -87,6 +87,8 @@ class SeoShellControllerTest extends TestCase
             'condition' => 'usado',
             'image_url' => 'ads/bicicleta.webp',
             'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
         ]);
 
         $response = $this->get("https://mercasto.test/ads/{$ad->id}");
@@ -100,6 +102,59 @@ class SeoShellControllerTest extends TestCase
         $response->assertDontSee('City bicycle');
         $response->assertDontSee('&quot;es&quot;');
         $response->assertSee('<script type="module" src="/assets/app-current.js"></script>', false);
+    }
+
+    public function test_catalog_reference_is_noindex_and_never_claims_product_availability(): void
+    {
+        $user = User::factory()->create();
+        $ad = Ad::query()->create([
+            'user_id' => $user->id,
+            'title' => 'Referencia de catálogo',
+            'description' => 'Ejemplo para inspirar una publicación real.',
+            'price' => 900,
+            'location' => 'México',
+            'category' => 'hogar',
+            'condition' => 'nuevo',
+            'status' => 'active',
+            'expires_at' => now()->addDays(30),
+            'is_catalog_filler' => true,
+        ]);
+
+        $response = $this->get("https://mercasto.test/ads/{$ad->id}");
+
+        $response->assertOk();
+        $response->assertSee('<title>Referencia de catálogo | Catálogo Mercasto</title>', false);
+        $response->assertSee('content="noindex,follow,max-image-preview:large"', false);
+        $response->assertSee('"@type":"WebPage"', false);
+        $response->assertDontSee('"@type":"Product"', false);
+        $response->assertDontSee('"@type":"Offer"', false);
+        $response->assertDontSee('https://schema.org/InStock', false);
+    }
+
+    public function test_expired_active_listing_is_noindex_and_not_in_stock(): void
+    {
+        $user = User::factory()->create();
+        $ad = Ad::query()->create([
+            'user_id' => $user->id,
+            'title' => 'Anuncio vencido',
+            'description' => 'Ya no debe presentarse como disponible.',
+            'price' => 500,
+            'location' => 'Puebla',
+            'category' => 'hogar',
+            'condition' => 'usado',
+            'status' => 'active',
+            'expires_at' => now()->subMinute(),
+            'is_catalog_filler' => false,
+        ]);
+
+        $response = $this->get("https://mercasto.test/ads/{$ad->id}");
+
+        $response->assertOk();
+        $response->assertSee('<title>Anuncio vencido | Anuncio no disponible</title>', false);
+        $response->assertSee('content="noindex,follow,max-image-preview:large"', false);
+        $response->assertSee('"@type":"WebPage"', false);
+        $response->assertDontSee('"@type":"Product"', false);
+        $response->assertDontSee('https://schema.org/InStock', false);
     }
 
     public function test_inactive_ad_does_not_receive_an_indexable_shell(): void

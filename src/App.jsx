@@ -1452,11 +1452,26 @@ function App() {
     let ogImage = "https://mercasto.com/icon-512x512.png";
     let ogType = "website";
 
+    const isViewedCatalogFiller = Boolean(viewedAd?.is_catalog_filler);
+    const viewedExpiry = viewedAd?.expires_at ? new Date(viewedAd.expires_at) : null;
+    const isViewedListingIndexable = Boolean(
+      viewedAd
+      && !isViewedCatalogFiller
+      && viewedAd.status === 'active'
+      && viewedExpiry
+      && Number.isFinite(viewedExpiry.getTime())
+      && viewedExpiry.getTime() > Date.now()
+    );
+
     if (viewedAd) {
-      title = `${localizedText(viewedAd.title, lang)} - ${viewedAd.location?.split(',')[0]} | Mercasto`;
+      title = isViewedCatalogFiller
+        ? `${localizedText(viewedAd.title, lang)} | Catálogo Mercasto`
+        : !isViewedListingIndexable
+          ? `${localizedText(viewedAd.title, lang)} | Anuncio no disponible`
+          : `${localizedText(viewedAd.title, lang)} - ${viewedAd.location?.split(',')[0]} | Mercasto`;
       desc = viewedAd.description ? localizedText(viewedAd.description, lang).substring(0, 160) : desc;
       ogImage = getImageUrl(viewedAd.image_url);
-      ogType = "product";
+      ogType = isViewedListingIndexable ? "product" : "website";
     } else if (viewedCompany) {
       const isBusiness = viewedCompany.role === 'business';
       title = `${viewedCompany.name} - ${isBusiness ? 'Tienda Oficial' : 'Vendedor'} en Mercasto`;
@@ -1514,7 +1529,7 @@ function App() {
     const isPrivateRoute = privatePathPatterns.some(pattern => pattern.test(location.pathname));
     const robotsContent = isPrivateRoute
       ? 'noindex,nofollow,noarchive'
-      : isFilteredResultsPage || Boolean(verticalCanonicalAlias)
+      : isFilteredResultsPage || Boolean(verticalCanonicalAlias) || (viewedAd && !isViewedListingIndexable)
         ? 'noindex,follow,max-image-preview:large'
         : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
     let robotsEl = document.querySelector('meta[name="robots"]');
@@ -1541,7 +1556,7 @@ function App() {
 
     let schemaData = null;
 
-    if (viewedAd) {
+    if (viewedAd && isViewedListingIndexable) {
       schemaData = {
         "@context": "https://schema.org",
         "@type": "Product",
