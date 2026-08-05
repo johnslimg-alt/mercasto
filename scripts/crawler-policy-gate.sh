@@ -8,6 +8,8 @@ ROBOTS="public/robots.txt"
 BACKEND_ROBOTS="backend/public/robots.txt"
 POLICY="docs/seo/CRAWLER_AND_AI_REFERRAL_POLICY_2026-08-05.md"
 ATTRIBUTION="src/utils/campaignAttribution.js"
+PROD_SMOKE="scripts/crawler-policy-production-smoke.sh"
+PRODUCTION_SMOKE="scripts/production-smoke.sh"
 CLASSIFIER="src/utils/trafficSourceClassification.js"
 
 echo "== Crawler and AI referral policy gate =="
@@ -32,6 +34,8 @@ done
 test ! -e public/llms.txt
 test ! -e backend/public/llms.txt
 grep -qF 'location = /llms.txt { return 404; }' default.conf
+grep -qF 'Published crawler policy smoke' "$PROD_SMOKE"
+grep -qF 'bash scripts/crawler-policy-production-smoke.sh' "$PRODUCTION_SMOKE"
 grep -qF 'Mercasto does not publish `/llms.txt`.' "$POLICY"
 grep -qF 'Google-Extended | Allow public routes' "$POLICY"
 grep -qF 'GPTBot | Block all' "$POLICY"
