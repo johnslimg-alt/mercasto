@@ -46,10 +46,12 @@ jobs:
           set -euo pipefail
           cd /var/www/mercasto
           # The live gate is read-only and must not require access to production secrets.
+          compose_env_file="$(mktemp)"
+          trap 'rm -f "$compose_env_file"' EXIT
           DB_PASSWORD=ci \
           REDIS_PASSWORD=ci \
           GRAFANA_PASSWORD=ci \
-          COMPOSE_ENV_FILE=/dev/null \
+          COMPOSE_ENV_FILE="$compose_env_file" \
             bash scripts/server-operator.sh status
 
       - name: Run quick production verification
@@ -57,11 +59,13 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          # Preserve the same no-secret contract if npm is absent and the fallback path runs.
+          # Some smoke scripts require COMPOSE_ENV_FILE to be a regular file.
+          compose_env_file="$(mktemp)"
+          trap 'rm -f "$compose_env_file"' EXIT
           DB_PASSWORD=ci \
           REDIS_PASSWORD=ci \
           GRAFANA_PASSWORD=ci \
-          COMPOSE_ENV_FILE=/dev/null \
+          COMPOSE_ENV_FILE="$compose_env_file" \
             bash scripts/server-operator.sh verify_quick
 
       - name: Run runner health snapshot
