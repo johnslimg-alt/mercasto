@@ -73,6 +73,7 @@ class SeoWeeklyMeasurementTest extends TestCase
         $this->assertSame(1, $report['internal']['current']['genuine_contact_clicks']);
         $this->assertSame(1, $report['indexability']['indexable_genuine_listing_urls']);
         $this->assertSame(1, $report['indexability']['active_catalog_references_noindex']);
+        $this->assertSame(6, $report['indexability']['source_pages']);
         $this->assertSame('not_configured', $report['external']['search_console']['status']);
         $this->assertSame('not_configured', $report['external']['ga4']['status']);
         $this->assertFalse($report['external']['external_complete']);

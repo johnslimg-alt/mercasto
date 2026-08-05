@@ -24,6 +24,7 @@ grep -qF -- "SeoMeasurementSnapshot::query()->create" "$COMMAND"
 grep -qF -- "where('is_catalog_filler', false)" "$SERVICE"
 grep -qF -- "indexable_genuine_listing_urls" "$SERVICE"
 grep -qF -- "active_catalog_references_noindex" "$SERVICE"
+grep -qF -- "config('seo_source_pages.pages', [])" "$SERVICE"
 grep -qF -- "privacy_hits" "$SERVICE"
 grep -qF -- "full_referrer_url" "$SERVICE"
 
