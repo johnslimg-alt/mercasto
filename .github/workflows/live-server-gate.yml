@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Gate to run'
+        description: 'Read-only gate to run'
         required: true
         default: 'status'
         type: choice
@@ -32,44 +32,56 @@ concurrency:
 jobs:
   server-gate:
     name: Manual server gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 45
     if: >-
       ${{ github.event_name == 'workflow_dispatch' ||
           (github.event.workflow_run.conclusion == 'success' &&
            github.event.workflow_run.event == 'pull_request' &&
            github.event.workflow_run.head_repository.full_name == github.repository) }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Validate SSH inputs
-        env:
-          SSH_HOST: ${{ secrets.MERCASTO_SSH_HOST }}
-          SSH_USER: ${{ secrets.MERCASTO_SSH_USER }}
-          SSH_KEY: ${{ secrets.MERCASTO_SSH_PRIVATE_KEY }}
+      - name: Verify trusted production checkout
+        shell: bash
         run: |
           set -euo pipefail
-          test -n "${SSH_HOST}" || { echo "Missing MERCASTO_SSH_HOST" >&2; exit 64; }
-          test -n "${SSH_USER}" || { echo "Missing MERCASTO_SSH_USER" >&2; exit 64; }
-          test -n "${SSH_KEY}" || { echo "Missing MERCASTO_SSH_PRIVATE_KEY" >&2; exit 64; }
+          test -d /var/www/mercasto/.git
+          test -f /var/www/mercasto/scripts/server-operator.sh
+          cd /var/www/mercasto
+          test "$(git rev-parse --abbrev-ref HEAD)" = main
+          test -z "$(git status --short)"
 
-      - name: Scan server host key
+      - name: Resolve read-only operation
+        id: operation
+        shell: bash
         env:
-          SSH_HOST: ${{ secrets.MERCASTO_SSH_HOST }}
-          SSH_PORT: ${{ secrets.MERCASTO_SSH_PORT }}
+          REQUESTED_OPERATION: ${{ github.event.inputs.operation || 'verify_quick' }}
         run: |
           set -euo pipefail
-          install -m 700 -d ~/.ssh
-          touch ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
-          ssh-keyscan -p "${SSH_PORT:-22}" -T 10 "${SSH_HOST}" >> ~/.ssh/known_hosts
-          echo "Host key scanned successfully."
+          case "${REQUESTED_OPERATION}" in
+            status|verify_quick|security_smoke|seo_aeo_smoke) ;;
+            *) echo "Unsupported operation: ${REQUESTED_OPERATION}" >&2; exit 64 ;;
+          esac
+          echo "value=${REQUESTED_OPERATION}" >> "${GITHUB_OUTPUT}"
 
-      - name: Run gate
+      - name: Run trusted server-resident gate
+        shell: bash
         env:
-          SSH_HOST: ${{ secrets.MERCASTO_SSH_HOST }}
-          SSH_PORT: ${{ secrets.MERCASTO_SSH_PORT }}
-          SSH_USER: ${{ secrets.MERCASTO_SSH_USER }}
-          SSH_KEY: ${{ secrets.MERCASTO_SSH_PRIVATE_KEY }}
-          OPERATION: ${{ github.event.inputs.operation || 'verify_quick' }}
-        run: bash scripts/live-server-gate.sh "${OPERATION}"
+          OPERATION: ${{ steps.operation.outputs.value }}
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          compose_env_file="$(mktemp)"
+          trap 'rm -f "$compose_env_file"' EXIT
+          DB_PASSWORD=ci \
+          REDIS_PASSWORD=ci \
+          GRAFANA_PASSWORD=ci \
+          COMPOSE_ENV_FILE="$compose_env_file" \
+            bash scripts/server-operator.sh "${OPERATION}"
+
+      - name: Capture runner health
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/server-operator.sh runner_health

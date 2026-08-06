@@ -275,15 +275,30 @@ PY
     ;;
 
   runner_health)
-    print_header "GitHub runners"
-    docker ps -a --filter name=gh-runner --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
-    for runner in gh-runner-1 gh-runner-2 gh-runner-3; do
-      if docker inspect "$runner" >/dev/null 2>&1; then
-        echo ""
-        echo "-- $runner logs --"
-        docker logs --tail=40 "$runner" 2>&1 | sed -E 's/(ACCESS_TOKEN|RUNNER_TOKEN|GITHUB_ACCESS_TOKEN)=([^[:space:]]+)/\1=***REDACTED***/g'
+    print_header "GitHub runner services"
+    if command -v systemctl >/dev/null 2>&1; then
+      mapfile -t runner_services < <(
+        systemctl list-units --type=service --all --no-legend 'actions.runner.*.service' 2>/dev/null           | awk '{print $1}'
+      )
+      if [[ "${#runner_services[@]}" -eq 0 ]]; then
+        echo "No systemd GitHub runner service found."
+      else
+        for service in "${runner_services[@]}"; do
+          echo "-- $service --"
+          systemctl show "$service" --no-pager             -p ActiveState -p SubState -p MainPID -p NRestarts
+        done
       fi
-    done
+    else
+      echo "systemctl is unavailable."
+    fi
+
+    echo ""
+    echo "-- Runner.Listener processes --"
+    ps -eo pid=,user=,etime=,args= | grep '[R]unner.Listener' || echo "No Runner.Listener process found."
+
+    echo ""
+    echo "-- Legacy Docker runner containers --"
+    docker ps -a --filter name=gh-runner --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
     ;;
 
   logs_frontend)
