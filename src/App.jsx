@@ -559,11 +559,47 @@ function App() {
   const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
   const [emailBannerSent, setEmailBannerSent] = useState(false);
 
-  // Show onboarding only after auth state has been initialized.
+  // Show onboarding once for organic registrations. High-intent protected-route
+  // registrations continue to bypass it through protectedRouteReturn.
   useEffect(() => {
-    if (user && localStorage.getItem('just_registered') === '1' && !user.phone_verified) {
-      setTimeout(() => setShowOnboarding(true), 500);
+    const resolved = Boolean(
+      user?.onboarding_completed_at
+      || user?.onboarding_skipped_at
+      || (user?.id != null && localStorage.getItem('onboarding_done_user_id') === String(user.id)),
+    );
+    if (!user || resolved || localStorage.getItem('just_registered') !== '1') return undefined;
+
+    const timer = window.setTimeout(() => setShowOnboarding(true), 500);
+    return () => window.clearTimeout(timer);
+  }, [user]);
+
+  // A transient network failure must not block browsing. Retry the server-side
+  // completion/skip marker after the authenticated session is available again.
+  useEffect(() => {
+    if (!user) return;
+    const token = localStorage.getItem('auth_token');
+    const pending = localStorage.getItem('onboarding_pending_sync');
+    if (!token || !pending) return;
+
+    let pendingSync;
+    try { pendingSync = JSON.parse(pending); }
+    catch { localStorage.removeItem('onboarding_pending_sync'); return; }
+
+    if (String(pendingSync?.user_id ?? '') !== String(user.id) || !pendingSync?.payload) {
+      localStorage.removeItem('onboarding_pending_sync');
+      return;
     }
+
+    fetch('/api/user/preferences', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(pendingSync.payload),
+    }).then((response) => {
+      if (response.ok) localStorage.removeItem('onboarding_pending_sync');
+    }).catch(() => {});
   }, [user]);
   const [resetToken, setResetToken] = useState('');
   const [resetEmail, setResetEmail] = useState('');
@@ -4635,10 +4671,7 @@ function App() {
             t={t}
             lang={lang}
             smsEnabled={availableProviders.sms}
-            onClose={() => {
-              localStorage.setItem('onboarding_done', '1');
-              setShowOnboarding(false);
-            }}
+            onClose={() => setShowOnboarding(false)}
           />
         </Suspense>
       )}
