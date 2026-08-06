@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: manual-verification-suite-${{ github.ref }}
+  group: manual-verification-suite-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
