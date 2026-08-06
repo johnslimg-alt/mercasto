@@ -13,6 +13,7 @@ files=(
   scripts/listing-route-smoke.sh
   scripts/security-probes.sh
   scripts/security-header-smoke.sh
+  scripts/public-production-watch.sh
   scripts/session-cookie-smoke.sh
   scripts/share-og-smoke.sh
 )

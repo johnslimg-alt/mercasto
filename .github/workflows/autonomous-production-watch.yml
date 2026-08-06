@@ -30,100 +30,51 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     timeout-minutes: 12
+    outputs:
+      fallback_required: ${{ steps.watch.outputs.fallback_required }}
     steps:
-      - name: Check public endpoints
-        shell: bash
-        run: |
-          set -euo pipefail
-          check_head() {
-            local url="$1"
-            local pattern="$2"
-            local attempt
-            local status
-            for attempt in 1 2 3 4 5 6; do
-              # GitHub-hosted runners do not provide reliable IPv6 egress.
-              # Force IPv4 so this remains an application/edge availability check.
-              status="$(curl -4 -k -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 30 "$url" || true)"
-              status="${status:-000}"
-              echo "$url -> $status (attempt $attempt/6)"
-              if [[ "$status" =~ $pattern ]]; then
-                return 0
-              fi
-              sleep 8
-            done
-            echo "unexpected status for $url after retries: $status" >&2
-            exit 1
-          }
-          check_head https://mercasto.com/up '^200$'
-          check_head https://mercasto.com/ '^(200|301|302)$'
-          check_head https://mercasto.com/api/categories '^200$'
-          check_head 'https://mercasto.com/api/ads?page=1' '^200$'
-          check_head https://mercasto.com/api/auth/providers '^200$'
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Check public search signals
+      - name: Check production from external runner
+        id: watch
         shell: bash
         run: |
-          set -euo pipefail
-          retry() {
-            local attempt
-            for attempt in 1 2 3 4 5 6; do
-              "$@" && return 0
-              echo "retrying public search command in 8s ($attempt/6): $*" >&2
-              sleep 8
-            done
-            "$@"
-          }
-          retry curl -4 -fsS --connect-timeout 10 --max-time 30 https://mercasto.com/ -o /tmp/home.html
-          retry curl -4 -fsS --connect-timeout 10 --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/sitemap.xml
-          retry curl -4 -fsS --connect-timeout 10 --max-time 30 https://mercasto.com/robots.txt -o /tmp/robots.txt
-          grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/home.html
-          grep -Eiq 'name="description"|property="og:description"' /tmp/home.html
-          grep -Eiq 'application/ld\+json|schema.org' /tmp/home.html
-          grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/sitemap.xml
-          grep -Eiq 'Sitemap:|User-agent:' /tmp/robots.txt
+          set +e
+          bash scripts/public-production-watch.sh external
+          watch_exit=$?
+          set -e
 
-      - name: Check public denial paths
+          case "$watch_exit" in
+            0)
+              echo 'fallback_required=false' >> "$GITHUB_OUTPUT"
+              ;;
+            75)
+              echo 'fallback_required=true' >> "$GITHUB_OUTPUT"
+              echo '::warning::GitHub-hosted runner has no TCP route to Mercasto; requesting the read-only self-hosted fallback.'
+              ;;
+            *)
+              echo 'fallback_required=false' >> "$GITHUB_OUTPUT"
+              exit "$watch_exit"
+              ;;
+          esac
+
+  fallback-watch:
+    name: Self-hosted production fallback
+    needs: public-watch
+    if: >-
+      always() &&
+      needs.public-watch.result == 'success' &&
+      needs.public-watch.outputs.fallback_required == 'true'
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm production from srv1
         shell: bash
-        run: |
-          set -euo pipefail
-          check_head() {
-            local url="$1"
-            local pattern="$2"
-            local attempt
-            local status
-            for attempt in 1 2 3 4 5 6; do
-              status="$(curl -4 -k -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 30 "$url" || true)"
-              status="${status:-000}"
-              echo "$url -> $status (attempt $attempt/6)"
-              if [[ "$status" =~ $pattern ]]; then
-                return 0
-              fi
-              sleep 8
-            done
-            echo "unexpected status for $url after retries: $status" >&2
-            exit 1
-          }
-          for path in \
-            /.env \
-            /.git/config \
-            /backend/.env \
-            /composer.json \
-            /composer.lock \
-            /package.json \
-            /package-lock.json \
-            /pnpm-lock.yaml \
-            /yarn.lock \
-            /vite.config.js \
-            /vite.config.ts \
-            /vite.config.mjs \
-            /tailwind.config.js \
-            /tailwind.config.ts \
-            /tailwind.config.mjs \
-            /horizon \
-            /vendor/horizon
-          do
-            check_head "https://mercasto.com${path}" '^(403|404|410)$'
-          done
+        run: bash scripts/public-production-watch.sh fallback
 
   repository-watch:
     name: Repository static watch
@@ -153,8 +104,13 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - public-watch
+      - fallback-watch
       - repository-watch
-    if: failure()
+    if: >-
+      always() &&
+      (needs.public-watch.result == 'failure' ||
+       needs.fallback-watch.result == 'failure' ||
+       needs.repository-watch.result == 'failure')
     timeout-minutes: 5
     steps:
       - name: Create or update production watch issue

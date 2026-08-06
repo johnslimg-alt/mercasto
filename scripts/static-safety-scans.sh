@@ -27,6 +27,7 @@ bash scripts/cache-policy-scan.sh
 bash scripts/session-config-scan.sh
 node --test scripts/session-cookie-smoke.test.mjs
 node --test scripts/security-header-smoke.test.mjs
+node --test scripts/public-production-watch.test.mjs
 bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh
 bash scripts/payment-retention-scan.sh

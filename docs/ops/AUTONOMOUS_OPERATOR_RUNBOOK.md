@@ -116,6 +116,16 @@ Listening for Jobs
 
 If runner reuse breaks, restore with the runner compose file and a valid GitHub access token outside the repo. Never store the token in tracked files.
 
+### Production watch connectivity fallback
+
+`Autonomous Production Watch` uses a GitHub-hosted runner as the primary external observer. A self-hosted srv1 fallback is allowed only when every external attempt returns HTTP `000`, meaning no HTTP connection was established from that runner.
+
+- Any real HTTP response with an unexpected status remains a failure and does not use fallback.
+- The fallback repeats the same read-only endpoints, search signals, and denial-path checks.
+- A fallback failure remains a production-watch incident.
+- A successful fallback classifies the event as GitHub-runner connectivity loss, not proof that external reachability is healthy.
+- The workflow never deploys, migrates, restarts containers, or mutates production data.
+
 ## Definition of done
 
 A lane is done only when all are true:
