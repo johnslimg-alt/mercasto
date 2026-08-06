@@ -66,7 +66,7 @@ export default function WaitlistLanding() {
 
   const shareReferral = (platform) => {
     const referralLink = `${window.location.origin}/waitlist?ref=${referralCode}`;
-    const message = `🚀 Únete a Mercasto - Los clasificados del futuro con AI. Estoy en la posición #${position}, ¡ayúdame a subir!\n\n${referralLink}`;
+    const message = `🚀 Únete a Mercasto - La plataforma de clasificados más moderna con IA. Estoy en la posición #${position}, ¡ayúdame a subir!\n\n${referralLink}`;
     
     let url = '';
     switch(platform) {
@@ -219,12 +219,11 @@ export default function WaitlistLanding() {
               🚀 Próximamente
             </div>
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Los clasificados del futuro
+              La plataforma de clasificados más moderna con IA
               <span className="text-lime-600"> está llegando</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Compra y vende con inteligencia artificial. Anuncios automáticos, 
-              precios inteligentes, y una experiencia de usuario sin igual.
+              Compra y vende con AI: publicación asistida, descripciones, recomendaciones y moderación inteligente en una experiencia moderna.
             </p>
             
             {/* Features */}

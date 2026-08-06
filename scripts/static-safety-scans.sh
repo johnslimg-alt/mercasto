@@ -66,6 +66,7 @@ bash scripts/funnel-analytics-contract-gate.sh
 bash scripts/design-token-contract-gate.sh
 bash scripts/conversion-journey-gate.sh
 bash scripts/auth-account-gate.sh
+node --test scripts/ai-brand-positioning.test.mjs
 bash scripts/attribute-flow-gate.sh
 bash scripts/otp-abuse-control-gate.sh
 

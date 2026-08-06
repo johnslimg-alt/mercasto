@@ -35,6 +35,7 @@
     "smoke:port-ownership": "bash scripts/port-ownership-smoke.sh",
     "e2e:install": "npx playwright install --with-deps chromium",
     "e2e:public": "npx playwright test tests/e2e/public-smoke.spec.js",
+    "e2e:ai-brand": "playwright test tests/e2e/ai-brand-positioning.spec.js",
     "e2e:public:ci": "bash scripts/public-e2e-ci.sh",
     "check:session-config": "bash scripts/session-config-scan.sh",
     "check:payment-webhook-idempotency": "bash scripts/payment-webhook-idempotency-scan.sh",
