@@ -6,7 +6,7 @@ import { getTranslations } from '../../utils/translations';
 const HOME_FAQS_ES = [
   {
     question: '¿Qué es Mercasto?',
-    answer: 'Mercasto es la plataforma de anuncios clasificados más moderna con IA para México. Organiza publicaciones y facilita el contacto directo entre compradores y vendedores.',
+    answer: 'Mercasto es la plataforma de anuncios clasificados más moderna e inteligente con AI para México. Organiza publicaciones y facilita el contacto directo entre compradores y vendedores.',
   },
   {
     question: '¿Cómo usa Mercasto la AI?',
@@ -30,7 +30,7 @@ const HOME_FAQS_ES = [
   },
 ];
 const HOME_FAQS_EN = [
-  { question: 'What is Mercasto?', answer: 'Mercasto is the most modern AI-powered classifieds platform for Mexico. It organizes listings and helps buyers contact sellers directly.' },
+  { question: 'What is Mercasto?', answer: 'Mercasto is the most modern and intelligent AI-powered classifieds platform for Mexico. It organizes listings and helps buyers contact sellers directly.' },
   { question: 'How does Mercasto use AI?', answer: 'Mercasto uses AI to assist posting, improve descriptions, provide recommendations, and support listing moderation.' },
   { question: 'How much does it cost to post?', answer: 'The initial activation of an eligible listing is free for seven days. Renewing it for seven more days costs 49 MXN.' },
   { question: 'How do I contact a seller?', answer: 'Depending on the listing, you can use WhatsApp, Telegram, email, phone, or the internal messaging flow.' },
