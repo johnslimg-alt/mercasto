@@ -23,6 +23,7 @@ jobs:
   repository-gates:
     name: Repository safety gates
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -42,6 +43,7 @@ jobs:
   compose-config:
     name: Validate Docker Compose config
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -55,6 +57,7 @@ jobs:
   frontend-build:
     name: Build frontend
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
