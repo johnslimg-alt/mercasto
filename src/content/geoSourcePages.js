@@ -174,14 +174,14 @@ export const GEO_SOURCE_PAGES = {
     path: '/sobre-mercasto',
     schemaType: 'AboutPage',
     eyebrow: 'Información oficial',
-    title: 'Sobre Mercasto | Plataforma de clasificados en México',
-    description: 'Información factual sobre Mercasto, su función como plataforma de clasificados, sus políticas, contacto y cobertura en México.',
-    heading: 'Mercasto es una plataforma de anuncios clasificados para México',
-    summary: 'Mercasto permite publicar y buscar artículos, vehículos, inmuebles, empleos y servicios. La plataforma organiza los anuncios, aplica controles de moderación y facilita el contacto directo entre usuarios.',
+    title: 'Sobre Mercasto | La plataforma de clasificados más moderna e inteligente con AI',
+    description: 'Información oficial sobre Mercasto, la plataforma de clasificados más moderna e inteligente con AI, sus herramientas, políticas, contacto y cobertura en México.',
+    heading: 'Mercasto es la plataforma de clasificados más moderna e inteligente con AI',
+    summary: 'Mercasto permite publicar y buscar artículos, vehículos, inmuebles, empleos y servicios. Su AI ayuda con la publicación, las descripciones, las recomendaciones y la moderación, mientras facilita el contacto directo entre usuarios.',
     sections: [
       {
         title: 'Qué hace Mercasto',
-        body: 'Mercasto proporciona herramientas de publicación, búsqueda, filtros, perfiles, contacto, moderación, renovación y promoción de anuncios.',
+        body: 'Mercasto proporciona herramientas modernas de publicación asistida por AI, búsqueda, filtros, perfiles, contacto, recomendaciones, moderación, renovación y promoción de anuncios.',
         points: ['No es propietario de los artículos publicados por terceros.', 'No fija el precio final de una transacción.', 'No garantiza la identidad, disponibilidad o conducta de cada usuario.'],
       },
       {
