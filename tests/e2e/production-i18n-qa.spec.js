@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const routes = ['/', '/autos', '/inmuebles', '/servicios', '/empleos'];
+const bannedPublicCopy = /MVP|stack trace|stacktrace|En construcción|Página en construcción|Error Crítico|white screen|coming soon|under construction|lorem ipsum|localhost:|127\.0\.0\.1|ngrok/i;
 const locales = [
   ['es', 'ltr'],
   ['en', 'ltr'],
@@ -24,7 +25,9 @@ for (const [locale, direction] of locales) {
     for (const route of routes) {
       await page.goto(`https://mercasto.com${route}?qa=cb1fc5c`, { waitUntil: 'domcontentloaded' });
       await expect(page.locator('body')).not.toContainText('Mercasto no pudo cargar');
-      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      await expect(page.locator('body')).not.toContainText(bannedPublicCopy);
+      const expectedHtmlLang = locale === 'es' ? 'es-MX' : locale;
+      await expect(page.locator('html')).toHaveAttribute('lang', expectedHtmlLang);
       if (direction === 'rtl') {
         await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
       }
@@ -53,6 +56,7 @@ test('mobile production smoke', async ({ browser }) => {
   for (const route of routes) {
     await page.goto(`https://mercasto.com${route}?qa=mobile`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).not.toContainText('Mercasto no pudo cargar');
+    await expect(page.locator('body')).not.toContainText(bannedPublicCopy);
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
