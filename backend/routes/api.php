@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\AdminAnalyticsController;
+use App\Http\Controllers\Api\AdminSeoMeasurementController;
 use App\Http\Controllers\Api\TwoFactorAuthenticationController;
 use App\Http\Controllers\Api\MobilePushController;
 use App\Http\Controllers\Api\PhoneVerificationController;
@@ -279,6 +280,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/user-reports', [ProfileController::class, 'getUserReports']); // Жалобы на пользователей
     Route::delete('/admin/user-reports/{id}', [ProfileController::class, 'deleteUserReport'])->whereNumber('id'); // Удалить жалобу на пользователя
     Route::get('/admin/analytics', [AdminAnalyticsController::class, 'analytics']); // Admin analytics
+    Route::get('/admin/seo-measurement', AdminSeoMeasurementController::class); // Privacy-safe SEO/GEO snapshots
     Route::post('/users/{id}/role', [ProfileController::class, 'changeRole'])->whereNumber('id'); // Изменение роли (Админ)
     Route::delete('/users/{id}', [ProfileController::class, 'destroy'])->whereNumber('id'); // Удаление пользователя (Админ)
     Route::get('/favorites', [AdController::class, 'favorites']);
