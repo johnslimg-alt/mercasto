@@ -26,15 +26,35 @@ Recommended event payload convention:
 ```json
 {
   "event": "listing_viewed",
-  "user_id": "optional",
-  "listing_id": "required when applicable",
-  "category": "optional",
-  "city": "optional",
-  "state": "optional",
-  "source": "homepage|search|category|seo|dashboard",
-  "timestamp": "server_or_client_timestamp"
+  "event_version": "2026-08-04",
+  "platform": "web",
+  "source": "search",
+  "event_id": "listing_viewed_opaque_id",
+  "occurred_at": "2026-08-06T00:00:00Z",
+  "language": "es",
+  "user_id": "optional_internal_id",
+  "listing_id": "required_when_applicable",
+  "category": "optional_controlled_value",
+  "city": "optional_public_or_coarse_value",
+  "state": "optional_public_or_coarse_value"
 }
 ```
+
+### Required property rules
+
+Every event must include this bounded envelope:
+
+| Property | Requirement | Notes |
+|---|---|---|
+| `event_version` | Required | Stable contract version such as `2026-08-04`. |
+| `platform` | Required | Controlled value: `web`, `ios`, `android`, or `huawei`. |
+| `source` | Required | Controlled surface such as `homepage`, `search`, `listing`, `publish_flow`, `dashboard`, or `seo`. |
+| `event_id` | Required | Opaque bounded identifier for deduplication; never a token or credential. |
+| `occurred_at` | Required | ISO-8601 client or server timestamp. |
+| `language` | Required | Supported UI language code. |
+| `user_id` | Optional | Internal ID only when authenticated and allowed by the analytics destination. |
+
+Properties in the event tables below are required when the trigger supplies that context. Omit unavailable optional context instead of sending empty strings, raw form values, or `null` placeholders. IDs must be internal bounded identifiers, not emails, phone numbers, addresses, tokens, or provider payloads.
 
 ## Core funnel events
 
@@ -58,6 +78,24 @@ Recommended event payload convention:
 | `favorite_toggled` | User favorites/unfavorites | listing_id, action |
 | `report_started` | User opens report flow | listing_id, reason_selected |
 | `report_submitted` | User submits report | listing_id, reason |
+
+### Authentication and account access
+
+| Event | Trigger | Required properties |
+|---|---|---|
+| `auth_entry_viewed` | Login/register surface opens | intent, source |
+| `sign_up_attempt` | User submits a registration method | method, consent_version, source |
+| `sign_up` | Backend-confirmed account creation succeeds | method, account_type, source |
+| `sign_up_failed` | Registration attempt fails | method, failure_class, source |
+| `login_attempt` | User submits login or starts an OAuth exchange | method, source |
+| `login` | Bearer-token login or OAuth exchange succeeds | method, two_factor_used, source |
+| `login_failed` | Login, OAuth exchange, or 2FA challenge fails | method, failure_class, source |
+| `password_reset_requested` | Password reset request is accepted or safely rejected | outcome_class, source |
+| `logout` | Authenticated session/token is revoked client-side or server-side | source |
+
+`sign_up_attempt`, `sign_up`, and `sign_up_failed` are the current canonical registration funnel names in `src/utils/funnelAnalytics.js`. The remaining auth names are the target contract for future implementation and must not be emitted under competing aliases.
+
+Allowed `method` values should be controlled (`password`, `google`, `telegram`, `phone`, `apple`, or another reviewed provider). `failure_class` must be coarse, for example `invalid_credentials`, `consent_required`, `rate_limited`, `provider_unavailable`, `two_factor_invalid`, or `validation_failed`; never send the submitted identifier, raw provider error, password, OTP, recovery code, or validation payload.
 
 ### Seller funnel
 
@@ -109,6 +147,7 @@ Recommended event payload convention:
 Required before paid ads:
 
 - homepage viewed;
+- sign-up attempt, success, and failure;
 - search submitted;
 - listing viewed;
 - contact clicked;
@@ -140,7 +179,9 @@ Do not send:
 - full phone number;
 - payment credentials;
 - raw uploaded media data;
-- access tokens.
+- access tokens;
+- email addresses, phone numbers, passwords, OTP values, OAuth codes, 2FA secrets, or recovery codes;
+- raw authentication/provider error messages or submitted form values.
 
 Prefer:
 
@@ -149,7 +190,8 @@ Prefer:
 - listing ID;
 - seller ID;
 - coarse source;
-- boolean flags such as `has_media`.
+- boolean flags such as `has_media` or `two_factor_used`;
+- controlled auth method, consent version, outcome class, and coarse failure class.
 
 ## Dashboards needed
 
