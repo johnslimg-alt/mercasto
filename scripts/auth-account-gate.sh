@@ -10,6 +10,7 @@ TWO_FACTOR="backend/app/Http/Controllers/Api/TwoFactorAuthenticationController.p
 DELETE_ACCOUNT="backend/app/Http/Controllers/Api/AccountDeletionController.php"
 PROFILE="backend/app/Http/Controllers/Api/ProfileController.php"
 APP="src/App.jsx"
+PUBLIC_SMOKE="tests/e2e/public-smoke.spec.js"
 
 echo "== Auth and account launch gate =="
 
@@ -19,6 +20,7 @@ test -f "$TWO_FACTOR"
 test -f "$DELETE_ACCOUNT"
 test -f "$PROFILE"
 test -f "$APP"
+test -f "$PUBLIC_SMOKE"
 
 # Public auth routes must be rate-limited.
 grep -qF "Route::middleware('throttle:auth')->group(function ()" "$ROUTES"
@@ -122,5 +124,18 @@ grep -qF "forgot-password" "$APP"
 grep -qF "reset-password" "$APP"
 grep -qF "handleLogout" "$APP"
 grep -qF "delete account" "$APP" || grep -qF "eliminar tu cuenta" "$APP" || grep -qF "eliminar cuenta" "$APP"
+
+# Browser auth/account deep links must resolve to real screens rather than the SPA 404 fallback.
+grep -qF 'function AuthEntryRoute' "$APP"
+grep -qF '<Route path="/login" element={<AuthEntryRoute mode="login"' "$APP"
+grep -qF '<Route path="/register" element={<AuthEntryRoute mode="register"' "$APP"
+grep -qF '<Route path="/publish" element={<Navigate to="/post" replace />}' "$APP"
+grep -qF '<Route path="/account/listings" element={<Navigate to="/profile?tab=my_ads" replace />}' "$APP"
+grep -qF '<Route path="/account/billing" element={<Navigate to="/profile?tab=transactions" replace />}' "$APP"
+grep -qF '<Route path="/account/promotions" element={<Navigate to="/tarifas" replace />}' "$APP"
+grep -qF '<Route path="/admin/login" element={<Navigate to="/admin" replace />}' "$APP"
+grep -qF 'function LegacyAccountListingRoute' "$APP"
+grep -qF "opens the matching authentication entry instead of a 404" "$PUBLIC_SMOKE"
+grep -qF "resolves to its protected browser destination" "$PUBLIC_SMOKE"
 
 echo "auth and account launch gate OK"

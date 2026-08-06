@@ -197,6 +197,57 @@ function RequireAuth({ user, authReady, setAuthMode, setShowAuthModal, admin = f
   return children;
 }
 
+function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal }) {
+  const hasToken = Boolean(localStorage.getItem('auth_token'));
+  const isRegistration = mode === 'register';
+
+  useEffect(() => {
+    if (authReady && (!user || !hasToken)) {
+      setAuthMode(mode);
+      setShowAuthModal(true);
+    }
+  }, [authReady, hasToken, mode, setAuthMode, setShowAuthModal, user]);
+
+  if (!authReady) return <ProtectedRoutePlaceholder loading />;
+  if (user && hasToken) return <Navigate to="/profile" replace />;
+
+  return (
+    <section className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <ShieldCheck className="mx-auto mb-4 h-10 w-10 text-[#84CC16]" aria-hidden="true" />
+        <h1 className="text-2xl font-black text-slate-900 dark:text-white">
+          {isRegistration ? 'Crea tu cuenta en Mercasto' : 'Inicia sesión en Mercasto'}
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+          {isRegistration
+            ? 'Publica, guarda búsquedas y contacta vendedores desde una cuenta segura.'
+            : 'Accede a tus anuncios, favoritos, mensajes y datos de cuenta.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setAuthMode(mode);
+            setShowAuthModal(true);
+          }}
+          className="btn-lg mt-6 w-full bg-[#84CC16] text-white hover:bg-[#65A30D]"
+        >
+          {isRegistration ? 'Crear cuenta' : 'Iniciar sesión'}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function LegacyAccountListingRoute({ suffix }) {
+  const { id } = useParams();
+  const safeId = encodeURIComponent(String(id || ''));
+  const target = suffix === 'photos'
+    ? `/anuncio/${safeId}/editar?section=photos`
+    : `/anuncio/${safeId}/editar`;
+
+  return <Navigate to={target} replace />;
+}
+
 // --- ЛОГОТИП И ИКОНКИ ---
 const MercastoLogo = ({ className = "h-11", isFooter = false }) => (
   <div className={`flex items-center gap-2 ${className}`}>
@@ -4558,6 +4609,16 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={renderHomeRoute()} />
+              <Route path="/login" element={<AuthEntryRoute mode="login" user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} />} />
+              <Route path="/register" element={<AuthEntryRoute mode="register" user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} />} />
+              <Route path="/publish" element={<Navigate to="/post" replace />} />
+              <Route path="/account" element={<Navigate to="/profile" replace />} />
+              <Route path="/account/listings" element={<Navigate to="/profile?tab=my_ads" replace />} />
+              <Route path="/account/billing" element={<Navigate to="/profile?tab=transactions" replace />} />
+              <Route path="/account/promotions" element={<Navigate to="/tarifas" replace />} />
+              <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
+              <Route path="/account/listing/:id/edit" element={<LegacyAccountListingRoute suffix="edit" />} />
+              <Route path="/account/listing/:id/photos" element={<LegacyAccountListingRoute suffix="photos" />} />
               <Route path="/listings" element={renderCatalogScreen()} />
               <Route path="/vendedores" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerLandingScreen lang={lang} /></React.Suspense>} />
               <Route path="/publicar-gratis" element={<Navigate to="/vendedores" replace />} />

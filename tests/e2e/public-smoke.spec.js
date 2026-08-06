@@ -74,6 +74,58 @@ async function expectHealthyPublicResponse(request, path) {
   ).toBe(true);
 }
 
+test.describe('browser route aliases', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('lang', 'es');
+      localStorage.setItem('mercasto_language', 'es');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+    });
+  });
+
+  for (const mode of ['login', 'register']) {
+    test(`/${mode} opens the matching authentication entry instead of a 404`, async ({ page }) => {
+      await page.goto(`/${mode}`, { waitUntil: 'domcontentloaded' });
+      await expect(page.locator('body')).not.toContainText(/Error 404|No encontrado/i);
+      await expect(page.locator('input[name="email"]')).toBeVisible();
+      await expect(page.locator('input[name="password"]')).toBeVisible();
+
+      if (mode === 'register') {
+        await expect(page.locator('input[name="name"]')).toBeVisible();
+        await expect(page.locator('input[name="age_confirmed"]')).toBeVisible();
+      } else {
+        await expect(page.locator('input[name="name"]')).toHaveCount(0);
+      }
+    });
+  }
+
+  const protectedAliases = [
+    { path: '/publish', target: /\/post$/, heading: /Inicia sesión para continuar/i },
+    { path: '/account', target: /\/profile$/, heading: /Inicia sesión para continuar/i },
+    { path: '/account/listings', target: /\/profile\?tab=my_ads$/, heading: /Inicia sesión para continuar/i },
+    { path: '/account/billing', target: /\/profile\?tab=transactions$/, heading: /Inicia sesión para continuar/i },
+    { path: '/admin/login', target: /\/admin$/, heading: /Inicia sesión para continuar/i },
+    { path: '/account/listing/1/edit', target: /\/anuncio\/1\/editar$/, heading: /Inicia sesión para continuar/i },
+    { path: '/account/listing/1/photos', target: /\/anuncio\/1\/editar\?section=photos$/, heading: /Inicia sesión para continuar/i },
+  ];
+
+  for (const route of protectedAliases) {
+    test(`${route.path} resolves to its protected browser destination`, async ({ page }) => {
+      await page.goto(route.path, { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(route.target);
+      await expect(page.getByRole('heading', { name: route.heading })).toBeVisible();
+      await expect(page.locator('body')).not.toContainText(/Error 404|No encontrado/i);
+    });
+  }
+
+  test('/account/promotions resolves to the public pricing page', async ({ page }) => {
+    await page.goto('/account/promotions', { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/\/tarifas$/);
+    await expect(page.getByRole('heading', { name: /Publicar es gratuito durante siete días/i })).toBeVisible();
+  });
+});
+
 test.describe('public launch smoke', () => {
   for (const route of publicRoutes) {
     test(`${route} renders without server error`, async ({ page }) => {
