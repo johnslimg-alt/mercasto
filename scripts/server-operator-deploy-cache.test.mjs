@@ -98,6 +98,8 @@ fi
       env: {
         ...process.env,
         PATH: `${bin}:${process.env.PATH}`,
+        OPERATION: 'deploy_main',
+        CONFIRM: 'MERCASTO',
         PROJECT_DIR: fixture,
         TRACE_FILE: trace,
         COMPOSE_ENV_FILE: 'backend/.env',
