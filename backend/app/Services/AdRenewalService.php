@@ -73,6 +73,9 @@ class AdRenewalService
                         'locale' => 'es-MX',
                         'merchant_info' => ['show_contact_info' => false],
                     ],
+                    'custom_payment_options' => [
+                        'payment_method_types' => ['debit', 'credit', 'cash'],
+                    ],
                 ]);
         } catch (\Throwable $error) {
             DB::table('payments')->where('id', $paymentId)->update([
