@@ -221,7 +221,7 @@ function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, 
         </h1>
         <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+          {tagline || 'La plataforma de clasificados más moderna con IA'}
         </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
           {isRegistration
@@ -1542,7 +1542,7 @@ function App() {
   useEffect(() => {
     const verticalSeo = getVerticalSeo(location.pathname);
     const verticalCanonicalAlias = getVerticalCanonicalAlias(location.pathname);
-    let title = `Mercasto | ${t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}`;
+    let title = `Mercasto | ${t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}`;
     let desc = t.ai_brand_description || 'Mercasto combina publicación asistida, descripciones, recomendaciones y moderación con IA para comprar y vender más rápido en México.';
     let ogImage = "https://mercasto.com/icon-512x512.png";
     let ogType = "website";
@@ -1577,7 +1577,7 @@ function App() {
       ogType = "profile";
     } else if (window.location.pathname === '/listings') {
       title = `Anuncios clasificados con IA en México | Mercasto`;
-      desc = t.ai_brand_description || 'La plataforma de clasificados más moderna e inteligente con AI para México.';
+      desc = t.ai_brand_description || 'La plataforma de clasificados más moderna con IA para México.';
     } else if (verticalSeo) {
       title = verticalSeo.title;
       desc = verticalSeo.description;
@@ -4608,7 +4608,7 @@ function App() {
         <div className="border-t border-lime-200/70 bg-lime-50/95 dark:border-lime-500/20 dark:bg-lime-950/40" data-testid="global-ai-brand-strip">
           <div className="mx-auto flex max-w-[1440px] items-center justify-center gap-1.5 px-4 py-1.5 text-center text-[11px] font-extrabold text-lime-900 sm:text-xs dark:text-lime-200">
             <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}</span>
+            <span>{t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}</span>
           </div>
         </div>
       </header>
@@ -4693,7 +4693,7 @@ function App() {
               <div className="footer-logo flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
                 <MercastoLogo className="h-8" isFooter={true} tagline={t.ai_brand_short || 'Clasificados con IA'} />
               </div>
-              <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'La plataforma de clasificados más moderna e inteligente con AI para México.'}</p>
+              <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'La plataforma de clasificados más moderna con IA para México.'}</p>
             </div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda/comprar-y-contactar" onClick={(e) => { e.preventDefault(); navigate('/ayuda/comprar-y-contactar'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/seguridad" onClick={(e) => { e.preventDefault(); navigate('/seguridad'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><a href="/tarifas" onClick={(e) => { e.preventDefault(); navigate('/tarifas'); }} className="hover:text-white cursor-pointer">{t.pricing || 'Tarifas'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
@@ -4757,7 +4757,7 @@ function App() {
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
               <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">Verificación de dos pasos</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
-                {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+                {t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}
               </p>
               <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">Ingresa el código de tu app de autenticación.</p>
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
@@ -4774,7 +4774,7 @@ function App() {
               <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
               <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">Acceso con Teléfono</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
-                {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+                {t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}
               </p>
 
               {authMode === 'phone_request' ? (
@@ -4800,7 +4800,7 @@ function App() {
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}
                 </h2>
                 <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
-                  {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+                  {t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}
                 </p>
                 {authMode === 'register' && localStorage.getItem('pendingReferral') && (
                   <div className="bg-lime-50 border border-lime-200 rounded-2xl px-4 py-3 mb-2 flex items-center gap-2 text-sm text-lime-800 dark:bg-lime-900/20 dark:border-lime-400/30 dark:text-lime-300">

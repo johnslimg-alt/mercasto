@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 const locales = [
-  ['es', 'La plataforma de clasificados más moderna e inteligente con AI'],
-  ['en', 'The most modern and intelligent AI-powered classifieds platform'],
-  ['ru', 'Самая современная и умная доска объявлений с AI'],
+  ['es', 'La plataforma de clasificados más moderna con IA'],
+  ['en', 'The most modern AI-powered classifieds platform'],
+  ['ru', 'Самая современная доска объявлений с AI'],
 ];
 
 for (const [language, tagline] of locales) {
