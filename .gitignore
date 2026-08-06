@@ -80,3 +80,6 @@ tests/e2e/debug.spec.js
 
 # Generated internal AI audit outputs
 backend/storage/app/ai-audits/
+
+# Local AI/agent worktrees must never become repository gitlinks
+.claude/worktrees/
