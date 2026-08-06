@@ -105,7 +105,8 @@ fi
     });
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 
-    const lines = read(trace, 'utf8').trim().split('\n');
+    const traceText = read(trace, 'utf8').trim();
+    const lines = traceText.split('\n');
     const index = (fragment) => lines.findIndex((line) => line.includes(fragment));
     const reset = index('git reset --hard origin/main');
     const cleared = index('up-cache-cleared');
@@ -114,11 +115,18 @@ fi
     const optimize = index('php artisan optimize');
     const reload = index('nginx -s reload');
     const verify = index('npm run verify:quick');
+    const diagnostics = `trace:
+${traceText}
+stdout:
+${result.stdout}
+stderr:
+${result.stderr}`;
 
-    assert.ok(reset >= 0 && reset < cleared && cleared <= start);
-    assert.ok(start < migrate && migrate < optimize && optimize < reload && reload < verify);
+    assert.ok(reset >= 0, `deploy must invoke git reset\n${diagnostics}`);
+    assert.ok(cleared >= 0, `docker up must observe cleared bootstrap caches\n${diagnostics}`);
+    assert.equal(lines.filter((line) => line === 'up-cache-cleared').length, 1, diagnostics);
+    assert.ok(start >= 0 && start < migrate && migrate < optimize && optimize < reload && reload < verify, diagnostics);
     assert.equal(read(join(cache, 'config.php'), 'utf8'), 'fresh');
-    assert.equal(lines.filter((line) => line === 'up-cache-cleared').length, 1);
     assert.throws(() => read(join(cache, 'events.php'), 'utf8'));
     assert.throws(() => read(join(cache, 'routes-v7.php'), 'utf8'));
   } finally {
