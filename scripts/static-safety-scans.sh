@@ -41,6 +41,7 @@ node --test scripts/server-operator-deploy-cache.test.mjs
 node --test scripts/manual-server-gate-self-hosted.test.mjs
 node --test scripts/automerge-workflow-guard.test.mjs
 node --test scripts/hosted-workflow-timeout-guard.test.mjs
+node --test scripts/workflow-concurrency-guard.test.mjs
 node --test scripts/seo-audit-request.test.mjs
 bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh

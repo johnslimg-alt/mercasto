@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: e2e-seller-${{ github.ref }}
+  group: e2e-seller-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:

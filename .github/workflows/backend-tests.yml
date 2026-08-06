@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: backend-phpunit-${{ github.ref }}
+  group: backend-phpunit-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:

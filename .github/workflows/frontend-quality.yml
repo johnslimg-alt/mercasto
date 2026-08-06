@@ -46,7 +46,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 concurrency:
-  group: frontend-quality-${{ github.ref }}
+  group: frontend-quality-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:

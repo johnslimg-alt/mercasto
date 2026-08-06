@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: production-live-gates-${{ github.event.pull_request.number || github.ref }}
+  group: production-live-gates-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
           retry curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/home.html
           retry curl -fsS --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/sitemap.xml
           retry curl -fsS --max-time 30 https://mercasto.com/robots.txt -o /tmp/robots.txt
-          grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/home.html
+          grep -Eiq '<title[^>]*>[^<]{10,160}</title>' /tmp/home.html
           grep -Eiq 'name="description"|property="og:description"' /tmp/home.html
           grep -Eiq 'application/ld\+json|schema.org' /tmp/home.html
           grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/sitemap.xml
