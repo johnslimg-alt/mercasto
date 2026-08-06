@@ -9,10 +9,12 @@ DECISION="docs/security/EDGE_WAF_DDOS_DECISION.md"
 RUNBOOK="docs/ops/TRAFFIC_ATTACK_RUNBOOK.md"
 COMPOSE="docker-compose.yml"
 IPV6_RULES="ops/firewall/mercasto-rules.v6"
+HEADER_SMOKE="scripts/security-header-smoke.sh"
+PRODUCTION_SMOKE="scripts/production-smoke.sh"
 
 echo "== Origin edge security contract gate =="
 
-for file in "$NGINX" "$DECISION" "$RUNBOOK" "$COMPOSE" "$IPV6_RULES"; do
+for file in "$NGINX" "$DECISION" "$RUNBOOK" "$COMPOSE" "$IPV6_RULES" "$HEADER_SMOKE" "$PRODUCTION_SMOKE"; do
   test -f "$file"
 done
 
@@ -26,6 +28,13 @@ grep -qF 'limit_conn mercasto_conn_per_ip 10;' "$NGINX"
 grep -qF 'client_header_timeout 15s;' "$NGINX"
 grep -qF 'client_body_timeout 120s;' "$NGINX"
 grep -qF 'reset_timedout_connection on;' "$NGINX"
+server_tokens_line="$(grep -n '^server_tokens off;' "$NGINX" | cut -d: -f1)"
+first_server_line="$(grep -n '^server {' "$NGINX" | head -1 | cut -d: -f1)"
+test "$(grep -c '^server_tokens off;' "$NGINX")" = '1'
+test -n "$server_tokens_line"
+test -n "$first_server_line"
+test "$server_tokens_line" -lt "$first_server_line"
+grep -qF 'bash scripts/security-header-smoke.sh' "$PRODUCTION_SMOKE"
 grep -qF ':INPUT DROP' "$IPV6_RULES"
 grep -qF -- '-p ipv6-icmp -j ACCEPT' "$IPV6_RULES"
 grep -qF -- '--dport 22 -j ACCEPT' "$IPV6_RULES"

@@ -7,6 +7,7 @@ Primary reference model: OWASP Web Security Testing Guide (WSTG), plus Mercasto-
 ## Automated gates already in repo
 
 - `npm run smoke:security`
+- `npm run smoke:security-headers`
 - `npm run smoke:public-manifests`
 - `npm run smoke:route-audit`
 - `npm run check:static-safety`
@@ -24,6 +25,7 @@ Primary reference model: OWASP Web Security Testing Guide (WSTG), plus Mercasto-
 | Authentication | Register/login/logout/password reset/2FA/delete account verified; brute-force protection present | Playwright/manual evidence, route throttles |
 | Authorization | Users cannot edit/delete others' listings, profiles, payments, or admin resources | E2E/API negative tests |
 | Session/cookie security | Secure session settings and CSRF/Sanctum behavior verified | `session-config-scan.sh`, browser checks |
+| Browser/edge headers | HSTS, CSP safety directives, nosniff, clickjacking, referrer/permissions policy and server-version hiding verified | `smoke:security-headers` |
 | File upload | Media type/size/storage validation and no executable uploads | `media-upload-validation-scan.sh`, upload E2E |
 | Payments/webhooks | Signed webhook required, invalid signature rejected, duplicate webhook idempotent | payment issue #265 evidence |
 | Rate limiting | Auth, OTP, search, ads, AI, payments, reports and webhooks rate-limited | static routes review and runtime smoke |

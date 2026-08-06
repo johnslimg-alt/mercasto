@@ -63,7 +63,8 @@
     "check:payment-payload-privacy": "bash scripts/payment-payload-privacy-gate.sh",
     "check:security-audit": "bash scripts/security-audit-gate.sh",
     "smoke:security-audit": "bash scripts/security-audit-smoke.sh",
-    "check:launch-readiness-contract": "bash scripts/launch-readiness-contract-gate.sh"
+    "check:launch-readiness-contract": "bash scripts/launch-readiness-contract-gate.sh",
+    "smoke:security-headers": "bash scripts/security-header-smoke.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
