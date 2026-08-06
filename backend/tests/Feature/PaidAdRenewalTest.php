@@ -116,7 +116,8 @@ class PaidAdRenewalTest extends TestCase
             return $request->url() === 'https://api.payclip.com/v2/checkout'
                 && (float) $request['amount'] === 49.0
                 && $request['currency'] === 'MXN'
-                && $request['metadata']['ad_id'] === (string) $ad->id;
+                && $request['metadata']['ad_id'] === (string) $ad->id
+                && $request['custom_payment_options']['payment_method_types'] === ['debit', 'credit', 'cash'];
         });
     }
 

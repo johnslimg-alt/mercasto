@@ -141,6 +141,9 @@ class PaymentController extends Controller
                     'locale' => 'es-MX',
                     'merchant_info' => ['show_contact_info' => false],
                 ],
+                'custom_payment_options' => [
+                    'payment_method_types' => ['debit', 'credit', 'cash'],
+                ],
             ]);
         } catch (\Throwable $e) {
             DB::table('payments')->where('clip_checkout_id', $checkoutId)->update([

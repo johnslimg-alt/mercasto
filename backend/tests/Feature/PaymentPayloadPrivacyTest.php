@@ -117,6 +117,11 @@ class PaymentPayloadPrivacyTest extends TestCase
         $this->assertStringNotContainsString('4242', $response->getContent());
         $this->assertStringNotContainsString('private-transaction', $response->getContent());
 
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://clip.example.test/checkout'
+                && $request['custom_payment_options']['payment_method_types'] === ['debit', 'credit', 'cash'];
+        });
+
         $payment = DB::table('payments')->where('user_id', $user->id)->first();
         $storedAudit = json_decode((string) $payment->clip_checkout_response, true);
         $this->assertSame('failed', $payment->status);
