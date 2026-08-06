@@ -9,16 +9,38 @@ use Illuminate\Support\Facades\DB;
 
 class GenerateEmbeddings extends Command
 {
-    protected $signature = 'mercasto:generate-embeddings';
+    protected $signature = 'mercasto:generate-embeddings
+        {--limit=0 : Maximum number of listings to process (0 = all eligible)}
+        {--include-catalog : Include catalog reference listings}
+        {--dry-run : Report eligible listings without calling Ollama or writing vectors}';
     protected $description = 'Generate vector embeddings for all active listings using the local Ollama instance';
 
-    public function handle()
+    public function handle(): int
     {
-        $this->info('Starting embedding generation for all listings...');
-        
-        $ads = Ad::where('status', 'active')->get();
+        $includeCatalog = (bool) $this->option('include-catalog');
+        $limit = max(0, (int) $this->option('limit'));
+
+        $query = Ad::query()
+            ->where('status', 'active')
+            ->when(! $includeCatalog, fn ($builder) => $builder->where('is_catalog_filler', false))
+            ->orderBy('id');
+
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        $ads = $query->get();
         $total = $ads->count();
-        $this->info("Found {$total} active listings.");
+        $scope = $includeCatalog ? 'active listings (including catalog references)' : 'active genuine listings';
+        $this->info("Found {$total} {$scope}.");
+
+        if ((bool) $this->option('dry-run')) {
+            $this->info('Dry run: no Ollama requests or database writes were performed.');
+
+            return self::SUCCESS;
+        }
+
+        $this->info('Starting embedding generation...');
 
         $success = 0;
         $failed = 0;
@@ -34,8 +56,7 @@ class GenerateEmbeddings extends Command
                     ". Location: " . ($ad->location ?? '');
 
             try {
-                // OLLAMA_HOST is defined in .env, e.g. http://mercasto_ollama:11434
-                $ollamaUrl = env('OLLAMA_HOST', 'http://mercasto_ollama:11434') . '/api/embeddings';
+                $ollamaUrl = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/') . '/api/embeddings';
                 
                 $response = Http::timeout(30)->post($ollamaUrl, [
                     'model' => 'nomic-embed-text',
@@ -68,5 +89,7 @@ class GenerateEmbeddings extends Command
         }
 
         $this->info("Done! Successfully generated {$success} embeddings. Failed {$failed}.");
+
+        return $failed === 0 ? self::SUCCESS : self::FAILURE;
     }
 }

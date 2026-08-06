@@ -1,0 +1,104 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Ad;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
+
+class SearchReadinessTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_semantic_search_accepts_q_alias_and_falls_back_when_ollama_is_unavailable(): void
+    {
+        config(['services.ollama.base_url' => 'http://ollama.test']);
+        Http::fake([
+            'http://ollama.test/api/embeddings' => Http::response(['error' => 'unavailable'], 503),
+        ]);
+
+        $ad = $this->activeAd('Bicicleta urbana', 'Lista para rodar por la ciudad.');
+        $this->activeAd('Teléfono Android', 'Equipo en buen estado.');
+
+        $response = $this->getJson('/api/search/semantic?q=bicicleta');
+
+        $response->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $ad->id);
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/embeddings');
+    }
+
+    public function test_vector_query_failure_falls_back_to_keyword_search_without_pg_trgm(): void
+    {
+        config(['services.ollama.base_url' => 'http://ollama.test']);
+        Http::fake([
+            'http://ollama.test/api/embeddings' => Http::response([
+                'embedding' => [0.1, 0.2, 0.3],
+            ]),
+        ]);
+
+        $ad = $this->activeAd('iPhone 14 Pro', 'Smartphone de 256 GB.');
+
+        $response = $this->getJson('/api/search/semantic?search=iphone');
+
+        $response->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $ad->id);
+    }
+
+
+    public function test_embedding_backfill_dry_run_targets_only_genuine_active_listings_by_default(): void
+    {
+        Http::preventStrayRequests();
+
+        $this->activeAd('Bicicleta real', 'Anuncio publicado por una persona.');
+        $catalog = $this->activeAd('Bicicleta de catálogo', 'Referencia informativa.');
+        $catalog->forceFill(['is_catalog_filler' => true, 'attributes' => []])->save();
+
+        $exitCode = Artisan::call('mercasto:generate-embeddings', ['--dry-run' => true]);
+        $output = Artisan::output();
+
+        $this->assertSame(0, $exitCode);
+        $this->assertStringContainsString('Found 1 active genuine listings.', $output);
+        $this->assertStringContainsString('no Ollama requests or database writes', $output);
+        $this->assertDatabaseCount('embeddings', 0);
+    }
+
+    public function test_short_semantic_query_returns_a_controlled_empty_response(): void
+    {
+        Http::preventStrayRequests();
+
+        $this->getJson('/api/search/semantic?q=x')
+            ->assertOk()
+            ->assertExactJson(['data' => [], 'total' => 0]);
+    }
+
+    public function test_semantic_query_length_is_bounded(): void
+    {
+        Http::preventStrayRequests();
+
+        $this->getJson('/api/search/semantic?q=' . str_repeat('a', 101))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('q');
+    }
+
+    private function activeAd(string $title, string $description): Ad
+    {
+        return Ad::create([
+            'user_id' => User::factory()->create()->id,
+            'title' => $title,
+            'description' => $description,
+            'price' => 2500,
+            'location' => 'Veracruz',
+            'category' => 'general',
+            'condition' => 'used',
+            'status' => 'active',
+            'is_catalog_filler' => false,
+        ]);
+    }
+}
