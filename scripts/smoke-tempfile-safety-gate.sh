@@ -12,6 +12,7 @@ files=(
   scripts/cache-header-smoke.sh
   scripts/listing-route-smoke.sh
   scripts/security-probes.sh
+  scripts/security-header-smoke.sh
   scripts/session-cookie-smoke.sh
   scripts/share-og-smoke.sh
 )

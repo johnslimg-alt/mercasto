@@ -28,6 +28,7 @@ npm run gate:prod
 | Frontend build | `npm run build` | Vite production assets compile. |
 | Public production smoke | `npm run smoke:prod` | Public health, homepage, categories, ads, sensitive paths, internal ports, PHP upload limits. |
 | Security probes | `npm run smoke:security` | Sensitive HTTP paths and internal service ports are not exposed. |
+| Security response headers | `npm run smoke:security-headers` | Verifies hardened HTML/API headers, permanent HTTPS redirect, and absence of exact server-version disclosure. |
 | Listing route smoke | `npm run smoke:routes` | Listing/deep-link routes remain reachable or correctly redirected. |
 | Route audit | `npm run smoke:route-audit` | Public route policy does not regress. |
 | SEO/AEO audit | `npm run smoke:seo` | Public metadata, robots/sitemap, and answer-engine surfaces are reachable and sane. |
@@ -38,6 +39,7 @@ npm run gate:prod
 | Check | Surface | How to verify | Pass criteria | Owner |
 | --- | --- | --- | --- | --- |
 | Homepage availability | `https://mercasto.com/` | `npm run smoke:prod` and `curl -I https://mercasto.com/` | HTTP 200; security headers present; no 5xx. | CEO/Major operator |
+| Security response headers | Homepage, categories API, HTTP redirect | `npm run smoke:security-headers` | HSTS, CSP safety directives, nosniff, clickjacking, referrer and permissions policies present; HTTP redirects permanently to HTTPS; `Server` does not expose an exact version. | Security/Infra agent |
 | Homepage cache headers | `https://mercasto.com/` | `npm run smoke:cache-headers` | Homepage HTML is not long-cacheable with public immutable headers and does not expose Service-Worker-Allowed. | Frontend/Infra agent |
 | Health endpoint | `https://mercasto.com/up` | `npm run smoke:prod` | HTTP 200. | CEO/Major operator |
 | Categories API | `https://mercasto.com/api/categories` | `npm run smoke:prod` | HTTP 200 JSON; no 502/500. | Backend agent |
