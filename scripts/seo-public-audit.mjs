@@ -1,17 +1,37 @@
+import dns from 'node:dns';
+
+import {
+  normalizedAttemptCount,
+  requestSeoAuditText,
+} from './seo-audit-request.mjs';
+
+dns.setDefaultResultOrder('ipv4first');
+
 const baseUrl = process.env.BASE_URL || 'https://mercasto.com';
+const connectBaseUrl = process.env.SEO_AUDIT_CONNECT_BASE_URL || baseUrl;
+const attempts = normalizedAttemptCount(process.env.SEO_AUDIT_ATTEMPTS);
+
 
 async function fetchText(path) {
-  const url = new URL(path, baseUrl).toString();
-  let fetchUrl = url;
-  const headers = {};
-  if (url.includes('mercasto.com')) {
-    fetchUrl = url.replace('mercasto.com', 'localhost');
-    headers['Host'] = 'mercasto.com';
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await requestSeoAuditText(path, {
+        baseUrl,
+        connectBaseUrl,
+        insecureTls: process.env.SEO_AUDIT_INSECURE_TLS === '1',
+      });
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        console.warn(`retrying ${new URL(path, baseUrl)} after network failure (${attempt}/${attempts})`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
   }
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-  const response = await fetch(fetchUrl, { headers, redirect: 'follow' });
-  const text = await response.text();
-  return { url, status: response.status, text };
+
+  throw lastError;
 }
 
 function requireMatch(label, text, pattern) {
