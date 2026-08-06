@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "planning_only": true,
+  "baseline_date": "2026-08-06",
+  "production_snapshot": {
+    "category_rows": 15,
+    "active_genuine_listings": 1,
+    "active_catalog_references": 5677,
+    "registered_states": 32,
+    "registered_cities_or_municipalities": 423,
+    "genuine_location_complete": 1
+  },
+  "canonical_verticals": [
+    {
+      "slug": "motor",
+      "storage": "motor",
+      "public_route": "/motor",
+      "aliases": [
+        "coches",
+        "coches-y-motor"
+      ],
+      "status": "canonical"
+    },
+    {
+      "slug": "inmobiliaria",
+      "storage": "inmobiliaria",
+      "public_route": "/inmuebles",
+      "aliases": [
+        "inmuebles"
+      ],
+      "status": "canonical"
+    },
+    {
+      "slug": "empleo",
+      "storage": "empleo",
+      "public_route": "/empleos",
+      "aliases": [
+        "empleos"
+      ],
+      "status": "canonical"
+    },
+    {
+      "slug": "servicios",
+      "storage": "servicios",
+      "public_route": "/servicios",
+      "aliases": [],
+      "status": "canonical"
+    },
+    {
+      "slug": "productos",
+      "storage": "child-category",
+      "public_route": "/productos",
+      "aliases": [],
+      "status": "virtual_parent"
+    },
+    {
+      "slug": "turismo",
+      "storage": "turismo",
+      "public_route": "/turismo",
+      "aliases": [],
+      "status": "canonical"
+    },
+    {
+      "slug": "boletos",
+      "storage": "boletos",
+      "public_route": "/boletos",
+      "aliases": [],
+      "status": "canonical"
+    },
+    {
+      "slug": "negocios",
+      "storage": "negocios",
+      "public_route": "/negocios",
+      "aliases": [],
+      "status": "canonical"
+    }
+  ],
+  "product_children": [
+    {
+      "slug": "electronica",
+      "public_route": "/electronica",
+      "legacy_top_level": [
+        "telefonos",
+        "informatica"
+      ],
+      "review": "map legacy values to reviewed subcategories before backfill"
+    },
+    {
+      "slug": "hogar",
+      "public_route": "/hogar",
+      "legacy_top_level": []
+    },
+    {
+      "slug": "moda",
+      "public_route": "/moda",
+      "legacy_top_level": []
+    },
+    {
+      "slug": "ocio",
+      "public_route": "/ocio",
+      "legacy_top_level": [
+        "deportes",
+        "coleccionismo"
+      ]
+    },
+    {
+      "slug": "infantil",
+      "public_route": "/infantil",
+      "legacy_top_level": [
+        "bebes"
+      ]
+    },
+    {
+      "slug": "mascotas",
+      "public_route": "/mascotas",
+      "legacy_top_level": []
+    },
+    {
+      "slug": "formacion",
+      "public_route": null,
+      "legacy_top_level": [],
+      "review": "keep under /productos until standalone supply qualifies"
+    }
+  ],
+  "tourism_legacy_storage": [
+    "hospedaje",
+    "tours",
+    "boletos_turismo",
+    "articulos_camping",
+    "souvenirs",
+    "renta_vehiculos",
+    "guias_servicios",
+    "atracciones_exp",
+    "retiros_bienestar"
+  ],
+  "location_model": {
+    "country": "MX",
+    "current_fields": [
+      "state",
+      "city",
+      "location",
+      "latitude",
+      "longitude"
+    ],
+    "planned_normalized_fields": [
+      "state_code",
+      "municipality_code"
+    ],
+    "observed_aliases": {
+      "CDMX": "Ciudad de México"
+    },
+    "custom_city_policy": "navigation-only until matched to the approved registry; never auto-index free text",
+    "catalog_policy": "catalog filler never qualifies category/location supply"
+  },
+  "route_activation_source": "docs/seo/first-20-landing-page-map.json"
+}
