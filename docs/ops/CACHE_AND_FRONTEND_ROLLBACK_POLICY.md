@@ -37,6 +37,8 @@ No service worker should be registered in production unless all of these are tru
 
 ## Frontend-only incident rollback tree
 
+Use the detailed owner/action branches in `docs/ops/P1_ROLLBACK_DECISION_TREE.md`; the rules below are the cache-specific summary.
+
 Use this when the public site loads but the frontend is visibly broken, while backend health remains good.
 
 1. Confirm scope:
