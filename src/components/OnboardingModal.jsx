@@ -133,7 +133,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
       id: 'welcome',
       emoji: '🎉',
       title: dictionary.onboarding_welcome_title || `¡Bienvenido${user?.name ? `, ${user.name.split(' ')[0]}` : ''}!`,
-      subtitle: dictionary.onboarding_welcome_subtitle || 'La plataforma de clasificados más moderna con IA',
+      subtitle: dictionary.onboarding_welcome_subtitle || 'La plataforma de clasificados más moderna e inteligente con AI',
     },
     // Step 1: Role selection
     {

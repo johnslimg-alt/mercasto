@@ -19,7 +19,7 @@ import { trackPageView, trackEvent } from '../../utils/analytics';
 
 const TRANSLATIONS = {
   es: {
-    ai_brand_tagline: 'La plataforma de clasificados más moderna con IA',
+    ai_brand_tagline: 'La plataforma de clasificados más moderna e inteligente con AI',
     seo_title: 'Publica Anuncios Gratis en México | Mercasto',
     badge: 'Clasificados 100% Gratis en México',
     hero_title: 'Vende más rápido y sin pagar comisiones',
@@ -70,7 +70,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Empezar Ahora'
   },
   en: {
-    ai_brand_tagline: 'The most modern AI-powered classifieds platform',
+    ai_brand_tagline: 'The most modern and intelligent AI-powered classifieds platform',
     seo_title: 'Publish Free Classified Ads in Mexico | Mercasto',
     badge: '100% Free Classifieds in Mexico',
     hero_title: 'Sell faster and without paying commissions',
@@ -121,7 +121,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Get Started'
   },
   pt: {
-    ai_brand_tagline: 'A plataforma de classificados mais moderna com IA',
+    ai_brand_tagline: 'A plataforma de classificados mais moderna e inteligente com AI',
     seo_title: 'Publique anúncios classificados gratuitos no México | Mercasto',
     badge: 'Classificados 100% Gratuitos no México',
     hero_title: 'Venda mais rápido e sem pagar comissões',
@@ -172,7 +172,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Começar Agora'
   },
   fr: {
-    ai_brand_tagline: 'La plateforme de petites annonces la plus moderne avec IA',
+    ai_brand_tagline: 'La plateforme de petites annonces la plus moderne et intelligente avec IA',
     seo_title: 'Publiez des petites annonces gratuites au Mexique | Mercasto',
     badge: 'Petites annonces 100% gratuites au Mexique',
     hero_title: 'Vendez plus vite et sans payer de commissions',
@@ -223,7 +223,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Commencer maintenant'
   },
   de: {
-    ai_brand_tagline: 'Die modernste KI-gestützte Kleinanzeigenplattform',
+    ai_brand_tagline: 'Die modernste und intelligenteste KI-gestützte Kleinanzeigenplattform',
     seo_title: 'Kostenlose Kleinanzeigen in Mexiko veröffentlichen | Mercasto',
     badge: '100% kostenlose Kleinanzeigen in Mexiko',
     hero_title: 'Schneller verkaufen und ohne Provisionen zu zahlen',
@@ -274,7 +274,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Jetzt starten'
   },
   it: {
-    ai_brand_tagline: 'La piattaforma di annunci più moderna con IA',
+    ai_brand_tagline: 'La piattaforma di annunci più moderna e intelligente con AI',
     seo_title: 'Pubblica annunci gratuiti in Messico | Mercasto',
     badge: 'Annunci classificati gratuiti al 100% in Messico',
     hero_title: 'Vendi più velocemente e senza pagare commissioni',
@@ -325,7 +325,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Inizia ora'
   },
   ru: {
-    ai_brand_tagline: 'Самая современная доска объявлений с AI',
+    ai_brand_tagline: 'Самая современная и умная доска объявлений с AI',
     seo_title: 'Подать бесплатные объявления в Мексике | Mercasto',
     badge: '100% бесплатные объявления в Мексике',
     hero_title: 'Продавайте быстрее и без комиссии',
@@ -376,7 +376,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'Начать сейчас'
   },
   zh: {
-    ai_brand_tagline: '最现代化的 AI 分类信息平台',
+    ai_brand_tagline: '最现代、最智能的 AI 分类信息平台',
     seo_title: '在墨西哥发布免费分类广告 | Mercasto',
     badge: '墨西哥 100% 免费分类广告',
     hero_title: '销售更快且无需支付佣金',
@@ -427,7 +427,7 @@ const TRANSLATIONS = {
     cta_footer_btn: '立即开始'
   },
   ja: {
-    ai_brand_tagline: '最も先進的なAIクラシファイドプラットフォーム',
+    ai_brand_tagline: '最も先進的でスマートなAIクラシファイドプラットフォーム',
     seo_title: 'メキシコで無料広告を掲載 | Mercasto',
     badge: 'メキシコで100%無料のクラシファイド広告',
     hero_title: '手数料なしでより速く売却',
@@ -478,7 +478,7 @@ const TRANSLATIONS = {
     cta_footer_btn: '今すぐ始める'
   },
   ko: {
-    ai_brand_tagline: '가장 현대적인 AI 기반 분류 광고 플랫폼',
+    ai_brand_tagline: '가장 현대적이고 스마트한 AI 기반 분류 광고 플랫폼',
     seo_title: '멕시코 무료 분류 광고 등록 | Mercasto',
     badge: '멕시코 100% 무료 분류 광고',
     hero_title: '수수료 없이 더 빠르게 판매하세요',
@@ -529,7 +529,7 @@ const TRANSLATIONS = {
     cta_footer_btn: '지금 시작하기'
   },
   ar: {
-    ai_brand_tagline: 'أحدث منصة إعلانات مبوبة مدعومة بالذكاء الاصطناعي',
+    ai_brand_tagline: 'أحدث وأذكى منصة إعلانات مبوبة مدعومة بالذكاء الاصطناعي',
     seo_title: 'انشر إعلانات مبوبة مجانية في المكسيك | Mercasto',
     badge: 'إعلانات مبوبة مجانية 100% في المكسيك',
     hero_title: 'بع أسرع وبدون دفع أي عمولات',
@@ -580,7 +580,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'ابدأ الآن'
   },
   he: {
-    ai_brand_tagline: 'פלטפורמת המודעות המסווגות המתקדמת ביותר עם AI',
+    ai_brand_tagline: 'פלטפורמת המודעות המסווגות המתקדמת והחכמה ביותר עם AI',
     seo_title: 'פרסם מודעות לוח בחינם במקסיקו | Mercasto',
     badge: 'לוח מודעות 100% חינם במקסיקו',
     hero_title: 'למכור מהר יותר וללא תשלום עמלות',
@@ -631,7 +631,7 @@ const TRANSLATIONS = {
     cta_footer_btn: 'להתחיל עכשיו'
   },
   yi: {
-    ai_brand_tagline: 'די מאָדערנסטע קלאַסיפֿיצירטע מודעות־פּלאַטפֿאָרמע מיט AI',
+    ai_brand_tagline: 'די מאָדערנסטע און קלוגסטע קלאַסיפֿיצירטע מודעות־פּלאַטפֿאָרמע מיט AI',
     seo_title: 'פרסם פרייע קלאסיפייד מודעות אין מעקסיקא | Mercasto',
     badge: '100% פרייע קלאסיפיידס אין מעקסיקא',
     hero_title: 'פאַרקויפֿן פאַסטער און אָן צאָלן קאָמיסיעס',
