@@ -70,6 +70,20 @@ compose_ps() {
   "${COMPOSE_PROD[@]}" ps
 }
 
+clear_laravel_bootstrap_caches() {
+  local cache_dir="$PROJECT_DIR/backend/bootstrap/cache"
+
+  print_header "Clear stale Laravel bootstrap caches"
+  rm -f "$cache_dir/config.php" "$cache_dir/events.php"
+  find "$cache_dir" -maxdepth 1 -type f -name 'routes-*.php' -delete
+}
+
+refresh_laravel_bootstrap_caches() {
+  print_header "Refresh Laravel bootstrap caches"
+  "${COMPOSE_PROD[@]}" exec -T mercasto-backend php artisan optimize
+  test -s "$PROJECT_DIR/backend/bootstrap/cache/config.php"
+}
+
 retry_command() {
   local attempts="${SERVER_OPERATOR_RETRY_ATTEMPTS:-6}"
   local delay="${SERVER_OPERATOR_RETRY_DELAY:-5}"
@@ -127,6 +141,11 @@ nginx_config_test() {
   "${COMPOSE_PROD[@]}" exec -T mercasto-frontend nginx -t
 }
 
+nginx_reload_upstreams() {
+  print_header "Reload nginx upstreams"
+  "${COMPOSE_PROD[@]}" exec -T mercasto-frontend nginx -s reload
+}
+
 seo_aeo_probe() {
   print_header "SEO/AEO smoke"
   download_with_retry https://mercasto.com/ /tmp/mercasto-home.html
@@ -153,6 +172,7 @@ run_verify_quick() {
   "${COMPOSE_PROD[@]}" config >"/tmp/mercasto_compose_override.$(id -u).out"
   bash scripts/static-safety-scans.sh
   bash scripts/production-smoke.sh
+  bash scripts/category-filter-smoke.sh
   bash scripts/auth-providers-smoke.sh
   bash scripts/public-manifest-smoke.sh
   bash scripts/security-probes.sh
@@ -186,11 +206,14 @@ case "$OPERATION" in
     git fetch origin main --prune
     git reset --hard origin/main
     git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    clear_laravel_bootstrap_caches
     print_header "Build and start stack"
     "${COMPOSE_PROD[@]}" up -d --build --remove-orphans
     nginx_config_test
     print_header "Run migrations"
     "${COMPOSE_PROD[@]}" exec -T mercasto-backend php artisan migrate --force
+    refresh_laravel_bootstrap_caches
+    nginx_reload_upstreams
     run_verify_quick
     ;;
 

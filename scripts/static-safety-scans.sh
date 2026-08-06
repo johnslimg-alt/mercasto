@@ -36,6 +36,7 @@ node --test scripts/session-cookie-smoke.test.mjs
 node --test scripts/security-header-smoke.test.mjs
 node --test scripts/public-production-watch.test.mjs
 node --test scripts/category-filter-smoke.test.mjs
+node --test scripts/server-operator-deploy-cache.test.mjs
 node --test scripts/seo-audit-request.test.mjs
 bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh
