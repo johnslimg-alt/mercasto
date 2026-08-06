@@ -128,7 +128,9 @@ download_200 "${BASE_URL}/" "$TMP_DIR/home.html"
 download_200 "${BASE_URL}/sitemap.xml" "$TMP_DIR/sitemap.xml"
 download_200 "${BASE_URL}/robots.txt" "$TMP_DIR/robots.txt"
 
-grep -Eiq '<title[^>]*>[^<]{10,70}</title>' "$TMP_DIR/home.html"
+# Availability watch: localized brand titles may exceed the traditional SEO display length.
+# SEO quality is enforced separately; here we only reject missing or pathological titles.
+grep -Eiq '<title[^>]*>[^<]{10,160}</title>' "$TMP_DIR/home.html"
 grep -Eiq 'name="description"|property="og:description"' "$TMP_DIR/home.html"
 grep -Eiq 'application/ld\+json|schema.org' "$TMP_DIR/home.html"
 grep -Eiq '<urlset|<sitemapindex|<url>' "$TMP_DIR/sitemap.xml"
