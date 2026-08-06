@@ -1,7 +1,7 @@
 {
-  "name": "Mercasto Marketplace",
+  "name": "Mercasto — Clasificados con IA",
   "short_name": "Mercasto",
-  "description": "Compra, Vende y Renta en Todo México",
+  "description": "La plataforma de clasificados más moderna con IA para México",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F8FAFC",

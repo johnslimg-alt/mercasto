@@ -198,7 +198,7 @@ function RequireAuth({ user, authReady, setAuthMode, setShowAuthModal, admin = f
   return children;
 }
 
-function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal }) {
+function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, tagline }) {
   const hasToken = Boolean(localStorage.getItem('auth_token'));
   const isRegistration = mode === 'register';
 
@@ -219,6 +219,10 @@ function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal }
         <h1 className="text-2xl font-black text-slate-900 dark:text-white">
           {isRegistration ? 'Crea tu cuenta en Mercasto' : 'Inicia sesión en Mercasto'}
         </h1>
+        <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          {tagline || 'La plataforma de clasificados más moderna con IA'}
+        </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
           {isRegistration
             ? 'Publica, guarda búsquedas y contacta vendedores desde una cuenta segura.'
@@ -250,7 +254,7 @@ function LegacyAccountListingRoute({ suffix }) {
 }
 
 // --- ЛОГОТИП И ИКОНКИ ---
-const MercastoLogo = ({ className = "h-11", isFooter = false }) => (
+const MercastoLogo = ({ className = "h-11", isFooter = false, tagline = "Clasificados con IA" }) => (
   <div className={`flex items-center gap-2 ${className}`}>
     {/* Новый лаконичный логотип: Буква "M" внутри геолокационного пина */}
     <svg viewBox="0 0 100 100" className="h-full w-auto drop-shadow-md">
@@ -259,7 +263,10 @@ const MercastoLogo = ({ className = "h-11", isFooter = false }) => (
     </svg>
     <div className="flex flex-col justify-center">
       <span className={`font-sans text-xl md:text-2xl font-black leading-none tracking-tight ${isFooter ? 'text-white' : 'text-slate-900 dark:text-white'}`}>Mercasto</span>
-      <span className={`text-[7.5px] font-bold uppercase tracking-widest leading-none mt-1 ${isFooter ? 'text-[#84CC16]' : 'text-[#3f6212] dark:text-[#84CC16]'}`}>Clasificados</span>
+      <span className={`text-[7.5px] font-bold uppercase tracking-widest leading-none mt-1 ${isFooter ? 'text-[#84CC16]' : 'text-[#3f6212] dark:text-[#84CC16]'}`}>
+        <span className="sm:hidden">AI</span>
+        <span className="hidden sm:inline">{tagline}</span>
+      </span>
     </div>
   </div>
 );
@@ -1535,8 +1542,8 @@ function App() {
   useEffect(() => {
     const verticalSeo = getVerticalSeo(location.pathname);
     const verticalCanonicalAlias = getVerticalCanonicalAlias(location.pathname);
-    let title = "Mercasto | Compra, Vende y Renta en Todo México";
-    let desc = "Explora anuncios clasificados de productos, autos, inmuebles, empleos y servicios publicados en México.";
+    let title = `Mercasto | ${t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}`;
+    let desc = t.ai_brand_description || 'Mercasto combina publicación asistida, descripciones, recomendaciones y moderación con IA para comprar y vender más rápido en México.';
     let ogImage = "https://mercasto.com/icon-512x512.png";
     let ogType = "website";
 
@@ -1569,8 +1576,8 @@ function App() {
       ogImage = getImageUrl(viewedCompany.avatar_url, "https://mercasto.com/icon-512x512.png");
       ogType = "profile";
     } else if (window.location.pathname === '/listings') {
-      title = 'Anuncios clasificados en México | Mercasto';
-      desc = 'Explora anuncios clasificados en todo México: autos, inmuebles, empleo, servicios, electrónica y más en Mercasto.';
+      title = `Anuncios clasificados con IA en México | Mercasto`;
+      desc = t.ai_brand_description || 'La plataforma de clasificados más moderna con IA para México.';
     } else if (verticalSeo) {
       title = verticalSeo.title;
       desc = verticalSeo.description;
@@ -1743,7 +1750,7 @@ function App() {
         cleanupScript.remove();
       }
     };
-  }, [currentTab, activeCat, viewedAd, viewedCompany, categoriesData, lang, location.pathname, location.search]);
+  }, [currentTab, activeCat, viewedAd, viewedCompany, categoriesData, lang, location.pathname, location.search, t]);
 
   // --- WEBSOCKETS LISTENER ---
   useEffect(() => {
@@ -4293,7 +4300,7 @@ function App() {
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
           <div className="relative flex items-center gap-2 h-[44px] sm:h-[48px] lg:h-[54px]">
             <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
-              <MercastoLogo className="h-6 sm:h-7 lg:h-9" />
+              <MercastoLogo className="h-6 sm:h-7 lg:h-9" tagline={t.ai_brand_short || 'Clasificados con IA'} />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
@@ -4598,6 +4605,12 @@ function App() {
             </nav>
           </div>
         </div>
+        <div className="border-t border-lime-200/70 bg-lime-50/95 dark:border-lime-500/20 dark:bg-lime-950/40" data-testid="global-ai-brand-strip">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-center gap-1.5 px-4 py-1.5 text-center text-[11px] font-extrabold text-lime-900 sm:text-xs dark:text-lime-200">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}</span>
+          </div>
+        </div>
       </header>
 
       {/* MAIN CONTENT */}
@@ -4610,8 +4623,8 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={renderHomeRoute()} />
-              <Route path="/login" element={<AuthEntryRoute mode="login" user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} />} />
-              <Route path="/register" element={<AuthEntryRoute mode="register" user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} />} />
+              <Route path="/login" element={<AuthEntryRoute mode="login" user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} tagline={t.ai_brand_tagline} />} />
+              <Route path="/register" element={<AuthEntryRoute mode="register" user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} tagline={t.ai_brand_tagline} />} />
               <Route path="/publish" element={<Navigate to="/post" replace />} />
               <Route path="/account" element={<Navigate to="/profile" replace />} />
               <Route path="/account/listings" element={<Navigate to="/profile?tab=my_ads" replace />} />
@@ -4678,9 +4691,9 @@ function App() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div>
               <div className="footer-logo flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
-                <MercastoLogo className="h-8" isFooter={true} />
+                <MercastoLogo className="h-8" isFooter={true} tagline={t.ai_brand_short || 'Clasificados con IA'} />
               </div>
-              <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'Clasificados para buscar, publicar y contactar directamente a vendedores en México.'}</p>
+              <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'La plataforma de clasificados más moderna con IA para México.'}</p>
             </div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda/comprar-y-contactar" onClick={(e) => { e.preventDefault(); navigate('/ayuda/comprar-y-contactar'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/seguridad" onClick={(e) => { e.preventDefault(); navigate('/seguridad'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><a href="/tarifas" onClick={(e) => { e.preventDefault(); navigate('/tarifas'); }} className="hover:text-white cursor-pointer">{t.pricing || 'Tarifas'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
@@ -4742,8 +4755,11 @@ function App() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !authLoading) setShowAuthModal(false); }}>
           {requiresTwoFactor ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
-              <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">Verificación de dos pasos</h2>
-              <p className="text-center text-slate-500 dark:text-slate-400 text-sm -mt-4 mb-6">Ingresa el código de tu app de autenticación.</p>
+              <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">Verificación de dos pasos</h2>
+              <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
+                {t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}
+              </p>
+              <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">Ingresa el código de tu app de autenticación.</p>
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
                 <input name="code" required autoFocus placeholder="Código de autenticación o recuperación" maxLength="32" className="w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                 <div className="pt-2">
@@ -4756,7 +4772,10 @@ function App() {
           ) : authMode === 'phone_request' || authMode === 'phone_verify' ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
               <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-              <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">Acceso con Teléfono</h2>
+              <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">Acceso con Teléfono</h2>
+              <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
+                {t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}
+              </p>
 
               {authMode === 'phone_request' ? (
                 <form onSubmit={handlePhoneRequestSubmit} className="space-y-3.5">
@@ -4777,9 +4796,12 @@ function App() {
           ) : (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
                 <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-                <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">
+                <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}
                 </h2>
+                <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
+                  {t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}
+                </p>
                 {authMode === 'register' && localStorage.getItem('pendingReferral') && (
                   <div className="bg-lime-50 border border-lime-200 rounded-2xl px-4 py-3 mb-2 flex items-center gap-2 text-sm text-lime-800 dark:bg-lime-900/20 dark:border-lime-400/30 dark:text-lime-300">
                     <span className="text-lg">🎁</span>
