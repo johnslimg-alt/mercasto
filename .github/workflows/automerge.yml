@@ -39,12 +39,13 @@ env:
 
 concurrency:
   group: automerge-${{ github.event.pull_request.number || github.event.workflow_run.head_branch || github.run_id }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   automerge:
     name: Merge PRs labeled automerge
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Resolve PR number
         id: resolve
