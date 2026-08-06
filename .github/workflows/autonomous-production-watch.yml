@@ -34,7 +34,7 @@ jobs:
       fallback_required: ${{ steps.watch.outputs.fallback_required }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check production from external runner
         id: watch
@@ -70,7 +70,7 @@ jobs:
     timeout-minutes: 12
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Confirm production from srv1
         shell: bash
@@ -86,7 +86,7 @@ jobs:
     timeout-minutes: 12
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check scripts
         run: npm run check:scripts
