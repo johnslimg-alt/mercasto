@@ -204,35 +204,103 @@ class AdQueryFilters
                 continue;
             }
 
-            $attributeKey = (string) $field['key'];
             $filterType = (string) Arr::get($field, 'filter', 'exact');
             $valueType = (string) Arr::get($field, 'type', 'string');
 
             if ($filterType === 'range' && is_array($rawValue)) {
-                self::applyRangeAttributeFilter($query, $attributeKey, $rawValue, $valueType);
+                self::applyRangeAttributeFilter($query, $field, $rawValue, $valueType);
                 continue;
             }
 
-            self::applyExactAttributeFilter($query, $attributeKey, $rawValue, $valueType);
+            self::applyExactAttributeFilter($query, $field, $rawValue, $valueType);
         }
     }
 
-    private static function applyRangeAttributeFilter(Builder $query, string $attributeKey, array $value, string $valueType): void
+    private static function applyRangeAttributeFilter(Builder $query, array $field, array $value, string $valueType): void
     {
         $min = self::numeric($value['min'] ?? null);
         $max = self::numeric($value['max'] ?? null);
 
+        if ($min === null && $max === null) {
+            return;
+        }
+
+        $min = $valueType === 'integer' && $min !== null ? (int) $min : $min;
+        $max = $valueType === 'integer' && $max !== null ? (int) $max : $max;
+        $storageKeys = self::storageKeys($field);
+
+        $query->where(static function (Builder $outer) use ($storageKeys, $min, $max): void {
+            foreach ($storageKeys as $index => $storageKey) {
+                $method = $index === 0 ? 'where' : 'orWhere';
+                $outer->{$method}(static function (Builder $inner) use ($storageKey, $min, $max): void {
+                    self::applyNumericStorageRange($inner, $storageKey, $min, $max);
+                });
+            }
+        });
+    }
+
+    private static function applyNumericStorageRange(Builder $query, string $storageKey, float|int|null $min, float|int|null $max): void
+    {
+        $numericExpression = self::numericStorageExpression($query, $storageKey);
+
+        if ($numericExpression === null) {
+            if ($min !== null) {
+                $query->where("attributes->{$storageKey}", '>=', $min);
+            }
+
+            if ($max !== null) {
+                $query->where("attributes->{$storageKey}", '<=', $max);
+            }
+
+            return;
+        }
+
+        [$expression, $bindings] = $numericExpression;
+
         if ($min !== null) {
-            $query->where("attributes->{$attributeKey}", '>=', $valueType === 'integer' ? (int) $min : $min);
+            $query->whereRaw("{$expression} >= ?", [...$bindings, $min]);
         }
 
         if ($max !== null) {
-            $query->where("attributes->{$attributeKey}", '<=', $valueType === 'integer' ? (int) $max : $max);
+            $query->whereRaw("{$expression} <= ?", [...$bindings, $max]);
         }
     }
 
-    private static function applyExactAttributeFilter(Builder $query, string $attributeKey, mixed $rawValue, string $valueType): void
+    private static function numericStorageExpression(Builder $query, string $storageKey): ?array
     {
+        $driver = $query->getConnection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            return [
+                "CASE WHEN (attributes::jsonb ->> ?) ~ '^-?[0-9]+([.][0-9]+)?$' THEN (attributes::jsonb ->> ?)::numeric END",
+                [$storageKey, $storageKey],
+            ];
+        }
+
+        $jsonPath = '$."' . str_replace(['\\', '"'], ['\\\\', '\"'], $storageKey) . '"';
+
+        if ($driver === 'sqlite') {
+            return [
+                "CASE WHEN json_type(attributes, ?) IN ('integer', 'real') THEN CAST(json_extract(attributes, ?) AS REAL) END",
+                [$jsonPath, $jsonPath],
+            ];
+        }
+
+        if ($driver === 'mysql') {
+            return [
+                "CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(attributes, ?)) REGEXP '^-?[0-9]+([.][0-9]+)?$' THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(attributes, ?)) AS DECIMAL(20,6)) END",
+                [$jsonPath, $jsonPath],
+            ];
+        }
+
+        return null;
+    }
+
+    private static function applyExactAttributeFilter(Builder $query, array|string $field, mixed $rawValue, string $valueType): void
+    {
+        $field = is_array($field) ? $field : ['key' => $field];
+        $storageKeys = self::storageKeys($field);
+
         if (is_array($rawValue)) {
             $values = collect($rawValue)
                 ->map(fn (mixed $item): mixed => self::sanitizeValue($item, $valueType))
@@ -243,7 +311,12 @@ class AdQueryFilters
                 ->all();
 
             if ($values !== []) {
-                $query->whereIn("attributes->{$attributeKey}", $values);
+                $query->where(static function (Builder $outer) use ($storageKeys, $values): void {
+                    foreach ($storageKeys as $index => $storageKey) {
+                        $method = $index === 0 ? 'whereIn' : 'orWhereIn';
+                        $outer->{$method}("attributes->{$storageKey}", $values);
+                    }
+                });
             }
 
             return;
@@ -252,17 +325,41 @@ class AdQueryFilters
         $value = self::sanitizeValue($rawValue, $valueType);
 
         if ($value !== null && $value !== '') {
-            $query->where("attributes->{$attributeKey}", $value);
+            $query->where(static function (Builder $outer) use ($storageKeys, $value): void {
+                foreach ($storageKeys as $index => $storageKey) {
+                    $method = $index === 0 ? 'where' : 'orWhere';
+                    $outer->{$method}("attributes->{$storageKey}", $value);
+                }
+            });
         }
+    }
+
+    private static function storageKeys(array $field): array
+    {
+        return collect([(string) Arr::get($field, 'key', '')])
+            ->merge((array) Arr::get($field, 'storage_aliases', []))
+            ->map(static fn (mixed $key): string => trim((string) $key))
+            ->filter(static fn (string $key): bool => $key !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private static function allowedFilterMap(string $category): array
     {
-        $databaseMap = self::databaseFilterMap($category);
-        if ($databaseMap !== []) {
-            return $databaseMap;
+        $map = self::configuredFilterMap($category);
+
+        foreach (self::databaseFilterMap($category) as $key => $field) {
+            if (! isset($map[$key])) {
+                $map[$key] = $field;
+            }
         }
 
+        return $map;
+    }
+
+    private static function configuredFilterMap(string $category): array
+    {
         $verticals = (array) config('category_attributes.verticals', []);
         $map = [];
 
@@ -312,10 +409,11 @@ class AdQueryFilters
                         $key = (string) $attribute->key;
                         $dbType = (string) $attribute->type;
 
+                        $isRange = in_array($dbType, ['range', 'number', 'integer', 'decimal'], true);
                         $field = [
                             'key' => $key,
-                            'type' => $dbType === 'range' ? 'number' : ($dbType === 'boolean' ? 'boolean' : 'string'),
-                            'filter' => $dbType === 'range' ? 'range' : 'exact',
+                            'type' => $isRange ? 'number' : ($dbType === 'boolean' ? 'boolean' : 'string'),
+                            'filter' => $isRange ? 'range' : 'exact',
                         ];
 
                         $map[self::normalizeKey($key)] = $field;

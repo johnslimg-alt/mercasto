@@ -6,22 +6,24 @@ return [
     'verticals' => [
         'autos' => [
             'category_slugs' => [
+                'motor',
                 'coches-y-motor/coches',
                 'coches-y-motor/motos',
                 'coches-y-motor/refacciones',
             ],
             'attributes' => [
-                'marca' => ['type' => 'string', 'filter' => 'exact'],
-                'modelo' => ['type' => 'string', 'filter' => 'exact'],
-                'año' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['year']],
-                'kilometraje' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['km']],
-                'transmision' => ['type' => 'string', 'filter' => 'exact'],
-                'combustible' => ['type' => 'string', 'filter' => 'exact'],
+                'marca' => ['type' => 'string', 'filter' => 'exact', 'aliases' => ['brand'], 'storage_aliases' => ['brand']],
+                'modelo' => ['type' => 'string', 'filter' => 'exact', 'aliases' => ['model'], 'storage_aliases' => ['model']],
+                'año' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['year'], 'storage_aliases' => ['year']],
+                'kilometraje' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['km', 'kms'], 'storage_aliases' => ['km', 'kms']],
+                'transmision' => ['type' => 'string', 'filter' => 'exact', 'aliases' => ['transmission'], 'storage_aliases' => ['transmission']],
+                'combustible' => ['type' => 'string', 'filter' => 'exact', 'aliases' => ['fuel'], 'storage_aliases' => ['fuel']],
             ],
         ],
 
         'inmuebles' => [
             'category_slugs' => [
+                'inmobiliaria',
                 'inmuebles/casas-en-venta',
                 'inmuebles/casas-en-renta',
                 'inmuebles/departamentos',
@@ -32,16 +34,17 @@ return [
                 'inmuebles/renta-vacacional',
             ],
             'attributes' => [
-                'metros_cuadrados' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['m2']],
-                'habitaciones' => ['type' => 'integer', 'filter' => 'range'],
-                'baños' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['banos']],
-                'tipo' => ['type' => 'string', 'filter' => 'exact'],
-                'operacion' => ['type' => 'string', 'filter' => 'exact'],
+                'metros_cuadrados' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['m2', 'area'], 'storage_aliases' => ['m2', 'area']],
+                'habitaciones' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['rooms'], 'storage_aliases' => ['rooms']],
+                'baños' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['banos', 'bathrooms'], 'storage_aliases' => ['banos', 'bathrooms']],
+                'tipo' => ['type' => 'string', 'filter' => 'exact', 'aliases' => ['property_type'], 'storage_aliases' => ['property_type']],
+                'operacion' => ['type' => 'string', 'filter' => 'exact', 'aliases' => ['listing_type'], 'storage_aliases' => ['listing_type']],
             ],
         ],
 
         'empleos' => [
             'category_slugs' => [
+                'empleo',
                 'empleos/ventas',
                 'empleos/chofer',
                 'empleos/construccion',
@@ -52,9 +55,9 @@ return [
                 'empleos/medio-tiempo',
             ],
             'attributes' => [
-                'salario' => ['type' => 'integer', 'filter' => 'range'],
-                'tipo_empleo' => ['type' => 'string', 'filter' => 'exact'],
-                'modalidad' => ['type' => 'string', 'filter' => 'exact'],
+                'salario' => ['type' => 'integer', 'filter' => 'range', 'aliases' => ['salary'], 'storage_aliases' => ['salary']],
+                'tipo_empleo' => ['type' => 'string', 'filter' => 'exact', 'aliases' => ['contract_type'], 'storage_aliases' => ['contract_type']],
+                'modalidad' => ['type' => 'string', 'filter' => 'exact', 'aliases' => ['working_hours'], 'storage_aliases' => ['working_hours']],
                 'experiencia' => ['type' => 'string', 'filter' => 'exact'],
             ],
         ],
