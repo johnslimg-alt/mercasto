@@ -9,6 +9,7 @@ use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class ClipWebhookTest extends TestCase
@@ -58,6 +59,7 @@ class ClipWebhookTest extends TestCase
             'title' => '¡Pago exitoso!',
         ]);
         $this->assertDatabaseCount('user_notifications', 1);
+        Event::assertDispatchedTimes(NewNotification::class, 1);
 
         $storedAudit = json_decode((string) DB::table('payments')
             ->where('clip_payment_request_id', self::PAYMENT_REQUEST_ID)
@@ -81,6 +83,107 @@ class ClipWebhookTest extends TestCase
                     'Basic ' . base64_encode('test-api-key:test-api-secret')
                 );
         });
+        Http::assertSentCount(1);
+    }
+
+    public function test_duplicate_completed_checkout_does_not_double_credit_balance(): void
+    {
+        $user = User::factory()->create(['balance' => 0]);
+        $this->createPendingPayment($user, [
+            'amount' => 100.00,
+            'description' => '100 Créditos Mercasto',
+            'product_code' => 'credits_100',
+        ]);
+
+        Http::fake([
+            $this->clipStatusUrl() => Http::response(
+                $this->completedCheckoutResponse(['amount' => 100.00]),
+                200
+            ),
+        ]);
+
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())
+            ->assertOk()
+            ->assertJson(['status' => 'received']);
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())
+            ->assertOk()
+            ->assertJson(['status' => 'received']);
+
+        $this->assertSame(100.0, (float) DB::table('users')->where('id', $user->id)->value('balance'));
+        $this->assertDatabaseCount('user_notifications', 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_duplicate_completed_checkout_keeps_one_promotion_ledger_row(): void
+    {
+        $user = User::factory()->create();
+        $adId = DB::table('ads')->insertGetId([
+            'user_id' => $user->id,
+            'title' => 'Auto para prueba de promoción',
+            'description' => 'Anuncio de prueba',
+            'price' => 100000,
+            'category' => 'motor',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->createPendingPayment($user, [
+            'ad_id' => $adId,
+            'description' => 'Subir 24 horas (Anuncio #' . $adId . ')',
+            'product_code' => 'boost_1_day',
+        ]);
+
+        Http::fake([
+            $this->clipStatusUrl() => Http::response($this->completedCheckoutResponse(), 200),
+        ]);
+
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())->assertOk();
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())->assertOk();
+
+        $this->assertDatabaseHas('ads', [
+            'id' => $adId,
+            'promoted' => 'urgente',
+            'boost_type' => 'boost_1_day',
+        ]);
+        $this->assertDatabaseHas('ad_promotions', [
+            'ad_id' => $adId,
+            'type' => 'lift',
+        ]);
+        $this->assertDatabaseCount('ad_promotions', 1);
+        $this->assertDatabaseCount('user_notifications', 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_fulfillment_failure_rolls_back_paid_transition_and_credit_balance(): void
+    {
+        $user = User::factory()->create(['balance' => 0]);
+        $this->createPendingPayment($user, [
+            'amount' => 100.00,
+            'description' => '100 Créditos Mercasto',
+            'product_code' => 'credits_100',
+        ]);
+
+        Http::fake([
+            $this->clipStatusUrl() => Http::response(
+                $this->completedCheckoutResponse(['amount' => 100.00]),
+                200
+            ),
+        ]);
+        Schema::drop('user_notifications');
+
+        $this->withoutExceptionHandling();
+        try {
+            $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload());
+            $this->fail('Expected fulfillment database failure was not raised.');
+        } catch (\Throwable $exception) {
+            $this->assertStringContainsString('user_notifications', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('payments', [
+            'clip_payment_request_id' => self::PAYMENT_REQUEST_ID,
+            'status' => 'pending',
+        ]);
+        $this->assertSame(0.0, (float) DB::table('users')->where('id', $user->id)->value('balance'));
         Http::assertSentCount(1);
     }
 
@@ -147,9 +250,9 @@ class ClipWebhookTest extends TestCase
         Http::assertNothingSent();
     }
 
-    private function createPendingPayment(User $user): void
+    private function createPendingPayment(User $user, array $overrides = []): void
     {
-        DB::table('payments')->insert([
+        DB::table('payments')->insert(array_merge([
             'user_id' => $user->id,
             'ad_id' => null,
             'clip_checkout_id' => self::CHECKOUT_ID,
@@ -160,7 +263,7 @@ class ClipWebhookTest extends TestCase
             'status' => 'pending',
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ], $overrides));
     }
 
     private function completedWebhookPayload(array $overrides = []): array
