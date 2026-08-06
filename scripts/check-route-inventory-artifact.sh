@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ARTIFACT="$ROOT_DIR/docs/route-inventory-generated.md"
+ARTIFACT="${ROUTE_INVENTORY_ARTIFACT:-$ROOT_DIR/docs/route-inventory-generated.md}"
 
 if [[ ! -f "$ARTIFACT" ]]; then
   echo "missing route inventory artifact: $ARTIFACT" >&2
