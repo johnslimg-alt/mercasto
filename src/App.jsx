@@ -565,7 +565,7 @@ function App() {
     const resolved = Boolean(
       user?.onboarding_completed_at
       || user?.onboarding_skipped_at
-      || localStorage.getItem('onboarding_done') === '1',
+      || (user?.id != null && localStorage.getItem('onboarding_done_user_id') === String(user.id)),
     );
     if (!user || resolved || localStorage.getItem('just_registered') !== '1') return undefined;
 
@@ -581,9 +581,14 @@ function App() {
     const pending = localStorage.getItem('onboarding_pending_sync');
     if (!token || !pending) return;
 
-    let payload;
-    try { payload = JSON.parse(pending); }
+    let pendingSync;
+    try { pendingSync = JSON.parse(pending); }
     catch { localStorage.removeItem('onboarding_pending_sync'); return; }
+
+    if (String(pendingSync?.user_id ?? '') !== String(user.id) || !pendingSync?.payload) {
+      localStorage.removeItem('onboarding_pending_sync');
+      return;
+    }
 
     fetch('/api/user/preferences', {
       method: 'POST',
@@ -591,7 +596,7 @@ function App() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(pendingSync.payload),
     }).then((response) => {
       if (response.ok) localStorage.removeItem('onboarding_pending_sync');
     }).catch(() => {});

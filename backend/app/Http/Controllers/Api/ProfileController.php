@@ -397,14 +397,24 @@ class ProfileController extends Controller
             'preferred_role' => 'nullable|string|in:buyer,seller,both',
             'preferred_categories' => 'nullable|array|max:20',
             'preferred_categories.*' => 'string|max:50',
+            'onboarding_resolution' => 'nullable|string|in:completed,skipped',
             'onboarding_completed_at' => 'nullable|date',
             'onboarding_skipped_at' => 'nullable|date',
         ]);
 
+        $resolution = $data['onboarding_resolution'] ?? null;
+        unset($data['onboarding_resolution']);
+
         $user = $request->user();
         $user->fill($data);
 
-        if (! empty($data['onboarding_completed_at'])) {
+        if ($resolution === 'completed') {
+            $user->onboarding_completed_at = now();
+            $user->onboarding_skipped_at = null;
+        } elseif ($resolution === 'skipped') {
+            $user->onboarding_skipped_at = now();
+            $user->onboarding_completed_at = null;
+        } elseif (! empty($data['onboarding_completed_at'])) {
             $user->onboarding_skipped_at = null;
         } elseif (! empty($data['onboarding_skipped_at'])) {
             $user->onboarding_completed_at = null;

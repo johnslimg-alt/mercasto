@@ -21,7 +21,7 @@ class OnboardingPreferencesTest extends TestCase
         $response = $this->postJson('/api/user/preferences', [
             'preferred_role' => 'seller',
             'preferred_categories' => ['motor', 'servicios'],
-            'onboarding_skipped_at' => now()->toIso8601String(),
+            'onboarding_resolution' => 'skipped',
         ]);
 
         $response->assertOk()
@@ -45,7 +45,7 @@ class OnboardingPreferencesTest extends TestCase
         $this->postJson('/api/user/preferences', [
             'preferred_role' => 'both',
             'preferred_categories' => [],
-            'onboarding_completed_at' => now()->toIso8601String(),
+            'onboarding_resolution' => 'completed',
         ])->assertOk()
             ->assertJsonPath('data.preferred_role', 'both')
             ->assertJsonPath('data.onboarding_skipped_at', null);
@@ -55,15 +55,16 @@ class OnboardingPreferencesTest extends TestCase
         $this->assertNull($user->onboarding_skipped_at);
     }
 
-    public function test_onboarding_rejects_unknown_role_values(): void
+    public function test_onboarding_rejects_unknown_role_and_resolution_values(): void
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
         $this->postJson('/api/user/preferences', [
             'preferred_role' => 'admin',
+            'onboarding_resolution' => 'dismissed',
         ])->assertUnprocessable()
-            ->assertJsonValidationErrors('preferred_role');
+            ->assertJsonValidationErrors(['preferred_role', 'onboarding_resolution']);
 
         $this->assertNull($user->fresh()->preferred_role);
     }

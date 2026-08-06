@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { X, CheckCircle, ArrowRight, ArrowLeft, Camera, Phone, FileText, ShoppingBag, Store, Users, MapPin, Bell, Heart, Star, Sparkles, MessageCircle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const ONBOARDING_DONE_USER_KEY = 'onboarding_done_user_id';
+const ONBOARDING_PENDING_SYNC_KEY = 'onboarding_pending_sync';
 
 const ROLES = [
   {
@@ -70,18 +72,18 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
   }, [user]);
 
   const persistResolution = async (resolution) => {
-    const resolvedAt = new Date().toISOString();
     const payload = {
       preferred_role: selectedRole || null,
       preferred_categories: selectedInterests,
-      onboarding_completed_at: resolution === 'completed' ? resolvedAt : null,
-      onboarding_skipped_at: resolution === 'skipped' ? resolvedAt : null,
+      onboarding_resolution: resolution,
     };
 
     localStorage.setItem('onboarding_role', selectedRole);
     localStorage.setItem('onboarding_interests', JSON.stringify(selectedInterests));
 
     const token = localStorage.getItem('auth_token');
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 4000);
     let persisted = false;
     if (token) {
       try {
@@ -92,19 +94,28 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
             'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
+          signal: controller.signal,
         });
         persisted = response.ok;
       } catch {
         persisted = false;
+      } finally {
+        window.clearTimeout(timeout);
       }
+    } else {
+      window.clearTimeout(timeout);
     }
 
     if (persisted) {
-      localStorage.removeItem('onboarding_pending_sync');
+      localStorage.removeItem(ONBOARDING_PENDING_SYNC_KEY);
     } else {
-      localStorage.setItem('onboarding_pending_sync', JSON.stringify(payload));
+      localStorage.setItem(ONBOARDING_PENDING_SYNC_KEY, JSON.stringify({
+        user_id: user?.id ?? null,
+        payload,
+      }));
     }
-    localStorage.setItem('onboarding_done', '1');
+    if (user?.id != null) localStorage.setItem(ONBOARDING_DONE_USER_KEY, String(user.id));
+    localStorage.removeItem('onboarding_done');
     localStorage.removeItem('just_registered');
   };
 
@@ -209,7 +220,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
       ];
     }
     return [
-      { step: '1', icon: '📝', label: 'Publica gratis', desc: 'Sube fotos y describe lo que vendes en minutos' },
+      { step: '1', icon: '📝', label: 'Crea tu anuncio', desc: 'Sube fotos y describe lo que vendes en minutos' },
       { step: '2', icon: '🤝', label: 'Coordina con confianza', desc: 'Usa los canales públicos y revisa la reputación' },
       { step: '3', icon: '✅', label: 'Compra o vende', desc: 'Acuerda la entrega y el pago directamente con la otra persona' },
     ];

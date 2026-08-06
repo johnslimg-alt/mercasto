@@ -18,6 +18,7 @@ async function prepareOrganicRegistration(page, options = {}) {
     localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('just_registered', '1');
     localStorage.removeItem('onboarding_done');
+    localStorage.removeItem('onboarding_done_user_id');
     localStorage.removeItem('onboarding_pending_sync');
   }, newUser);
 
@@ -81,8 +82,7 @@ test('seller onboarding persists completion and opens the real publication route
   expect(payloads).toHaveLength(1);
   expect(payloads[0].preferred_role).toBe('seller');
   expect(payloads[0].preferred_categories).toEqual([]);
-  expect(payloads[0].onboarding_completed_at).toBeTruthy();
-  expect(payloads[0].onboarding_skipped_at).toBeNull();
+  expect(payloads[0].onboarding_resolution).toBe('completed');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('just_registered'))).toBeNull();
 });
 
@@ -93,12 +93,11 @@ test('closing onboarding persists a server-side skipped state', async ({ page })
 
   await expect(page.getByRole('heading', { name: /¡Bienvenido/ })).toHaveCount(0);
   expect(payloads).toHaveLength(1);
-  expect(payloads[0].onboarding_completed_at).toBeNull();
-  expect(payloads[0].onboarding_skipped_at).toBeTruthy();
+  expect(payloads[0].onboarding_resolution).toBe('skipped');
   await expect.poll(() => page.evaluate(() => ({
-    done: localStorage.getItem('onboarding_done'),
+    doneUserId: localStorage.getItem('onboarding_done_user_id'),
     justRegistered: localStorage.getItem('just_registered'),
-  }))).toEqual({ done: '1', justRegistered: null });
+  }))).toEqual({ doneUserId: String(newUser.id), justRegistered: null });
 });
 
 test('server-resolved onboarding is not shown again', async ({ page }) => {
@@ -130,4 +129,51 @@ test('server-resolved onboarding is not shown again', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
   await expect(page.getByRole('heading', { name: /¡Bienvenido/ })).toHaveCount(0);
+});
+
+
+test('a local completion marker from another account does not suppress onboarding', async ({ page }) => {
+  await page.addInitScript((user) => {
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('auth_token', 'onboarding-e2e-token');
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('just_registered', '1');
+    localStorage.setItem('onboarding_done_user_id', '123');
+  }, newUser);
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/user') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(newUser) });
+    }
+    if (path === '/api/auth/providers') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"sms":false}' });
+    }
+    if (path === '/api/categories') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('dialog', { name: /¡Bienvenido/ })).toBeVisible();
+});
+
+test('failed persistence stores a user-scoped retry payload', async ({ page }) => {
+  await prepareOrganicRegistration(page, { preferenceStatus: 503 });
+
+  const onboarding = page.getByRole('dialog', { name: /¡Bienvenido/ });
+  await onboarding.getByRole('button', { name: 'Cerrar' }).click();
+  await expect(onboarding).toHaveCount(0);
+
+  await expect.poll(() => page.evaluate(() => {
+    const raw = localStorage.getItem('onboarding_pending_sync');
+    return raw ? JSON.parse(raw) : null;
+  })).toEqual({
+    user_id: newUser.id,
+    payload: {
+      preferred_role: null,
+      preferred_categories: [],
+      onboarding_resolution: 'skipped',
+    },
+  });
 });
