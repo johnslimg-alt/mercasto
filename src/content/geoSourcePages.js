@@ -174,9 +174,9 @@ export const GEO_SOURCE_PAGES = {
     path: '/sobre-mercasto',
     schemaType: 'AboutPage',
     eyebrow: 'Información oficial',
-    title: 'Sobre Mercasto | La plataforma de clasificados más moderna con IA',
-    description: 'Información oficial sobre Mercasto, la plataforma de clasificados más moderna con IA, sus herramientas, políticas, contacto y cobertura en México.',
-    heading: 'Mercasto es la plataforma de clasificados más moderna con IA',
+    title: 'Sobre Mercasto | La plataforma de clasificados más moderna e inteligente con AI',
+    description: 'Información oficial sobre Mercasto, la plataforma de clasificados más moderna e inteligente con AI, sus herramientas, políticas, contacto y cobertura en México.',
+    heading: 'Mercasto es la plataforma de clasificados más moderna e inteligente con AI',
     summary: 'Mercasto permite publicar y buscar artículos, vehículos, inmuebles, empleos y servicios. Su AI ayuda con la publicación, las descripciones, las recomendaciones y la moderación, mientras facilita el contacto directo entre usuarios.',
     sections: [
       {

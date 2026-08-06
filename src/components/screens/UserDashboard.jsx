@@ -336,7 +336,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             </p>
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300" data-testid="dashboard-ai-brand-message">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-              {t.ai_brand_tagline || 'La plataforma de clasificados más moderna con IA'}
+              {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
             </p>
           </div>
           

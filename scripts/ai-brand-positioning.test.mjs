@@ -4,9 +4,9 @@ import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 
 const languages = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja'];
-const expectedTaglines = {"es": "La plataforma de clasificados más moderna con IA", "en": "The most modern AI-powered classifieds platform", "pt": "A plataforma de classificados mais moderna com IA", "fr": "La plateforme de petites annonces la plus moderne avec IA", "de": "Die modernste KI-gestützte Kleinanzeigenplattform", "it": "La piattaforma di annunci più moderna con IA", "ru": "Самая современная доска объявлений с AI", "zh": "最现代化的 AI 分类信息平台", "ja": "最も先進的なAIクラシファイドプラットフォーム", "ko": "가장 현대적인 AI 기반 분류 광고 플랫폼", "ar": "أحدث منصة إعلانات مبوبة مدعومة بالذكاء الاصطناعي", "he": "פלטפורמת המודעות המסווגות המתקדמת ביותר עם AI", "yi": "די מאָדערנסטע קלאַסיפֿיצירטע מודעות־פּלאַטפֿאָרמע מיט AI"};
+const expectedTaglines = {"es": "La plataforma de clasificados más moderna e inteligente con AI", "en": "The most modern and intelligent AI-powered classifieds platform", "pt": "A plataforma de classificados mais moderna e inteligente com AI", "fr": "La plateforme de petites annonces la plus moderne et intelligente avec IA", "de": "Die modernste und intelligenteste KI-gestützte Kleinanzeigenplattform", "it": "La piattaforma di annunci più moderna e intelligente con AI", "ru": "Самая современная и умная доска объявлений с AI", "zh": "最现代、最智能的 AI 分类信息平台", "ja": "最も先進的でスマートなAIクラシファイドプラットフォーム", "ko": "가장 현대적이고 스마트한 AI 기반 분류 광고 플랫폼", "ar": "أحدث وأذكى منصة إعلانات مبوبة مدعومة بالذكاء الاصطناعي", "he": "פלטפורמת המודעות המסווגות המתקדמת והחכמה ביותר עם AI", "yi": "די מאָדערנסטע און קלוגסטע קלאַסיפֿיצירטע מודעות־פּלאַטפֿאָרמע מיט AI"};
 const source = (path) => readFileSync(path, 'utf8');
-const canonical = { es: 'La plataforma de clasificados más moderna con IA', en: 'The most modern AI-powered classifieds platform', ru: 'Самая современная доска объявлений с AI' };
+const canonical = { es: 'La plataforma de clasificados más moderna e inteligente con AI', en: 'The most modern and intelligent AI-powered classifieds platform', ru: 'Самая современная и умная доска объявлений с AI' };
 const canonicalShort = { es: 'Clasificados con IA', en: 'AI-powered classifieds', ru: 'Объявления с AI' };
 
 test('every supported language carries the AI brand contract', async () => {
@@ -46,13 +46,13 @@ test('public metadata and official source copy use the AI positioning', () => {
   const faq = source('src/components/seo/FAQSchema.jsx');
   const refunds = source('public/reembolsos/index.html');
   const moderation = source('public/moderacion/index.html');
-  assert.match(index, /La plataforma de clasificados más moderna con IA/);
+  assert.match(index, /La plataforma de clasificados más moderna e inteligente con AI/);
   assert.match(index, /moderación inteligente/);
-  assert.match(geo, /plataforma de clasificados más moderna con IA/);
+  assert.match(geo, /plataforma de clasificados más moderna e inteligente con AI/);
   assert.match(geo, /publicación asistida por AI/);
-  assert.match(manifest, /clasificados más moderna con IA/);
+  assert.match(manifest, /clasificados más moderna e inteligente con AI/);
   assert.match(faq, /¿Cómo usa Mercasto la AI\?/);
-  assert.match(faq, /most modern AI-powered classifieds platform/);
-  assert.match(refunds, /plataforma de clasificados más moderna con IA/);
-  assert.match(moderation, /plataforma de clasificados más moderna con IA/);
+  assert.match(faq, /most modern and intelligent AI-powered classifieds platform/);
+  assert.match(refunds, /plataforma de clasificados más moderna e inteligente con AI/);
+  assert.match(moderation, /plataforma de clasificados más moderna e inteligente con AI/);
 });
