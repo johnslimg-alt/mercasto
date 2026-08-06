@@ -32,7 +32,7 @@ case "$status" in
     ;;
 esac
 
-session_cookie_line="$(grep -i '^set-cookie:' "$TMP_HEADERS" | grep -i "${COOKIE_NAME}=" | head -1 || true)"
+session_cookie_line="$(grep -i '^set-cookie:' "$TMP_HEADERS" | grep -i "${COOKIE_NAME}=" | head -1 | tr -d '\r' || true)"
 
 if [[ -z "$session_cookie_line" ]]; then
   echo "session cookie '${COOKIE_NAME}' was not observed; endpoint may not create a Laravel session cookie" >&2

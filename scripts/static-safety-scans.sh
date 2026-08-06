@@ -25,6 +25,7 @@ bash scripts/edit-ad-contract-gate.sh
 bash scripts/paid-renewal-contract-gate.sh
 bash scripts/cache-policy-scan.sh
 bash scripts/session-config-scan.sh
+node --test scripts/session-cookie-smoke.test.mjs
 bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh
 bash scripts/payment-retention-scan.sh
