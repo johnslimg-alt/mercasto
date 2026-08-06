@@ -157,6 +157,7 @@ common_env=(
   -e DEEPSEEK_API_KEY=
   -e OLLAMA_BASE_URL="http://$OLLAMA_CONTAINER:11434"
   -e OLLAMA_CHAT_MODEL=e2e-fallback
+  -e VAPID_PUBLIC_KEY=e2e-vapid-public-key
   -e CLIP_WEBHOOK_SECRET="$WEBHOOK_SECRET"
   -e CLIP_API_KEY=test-api-key
   -e CLIP_API_SECRET=test-api-secret
@@ -187,7 +188,9 @@ fi
 
 echo "== Start isolated frontend =="
 VITE_API_BASE_URL="http://127.0.0.1:$API_PORT/api" \
+VITE_API_URL="http://127.0.0.1:$API_PORT/api" \
 VITE_STORAGE_URL="http://127.0.0.1:$API_PORT/storage" \
+VITE_DISABLE_REALTIME=true \
 npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT" > /tmp/mercasto-frontend-e2e.log 2>&1 &
 FRONTEND_PID=$!
 if ! wait_for_url "http://127.0.0.1:$FRONTEND_PORT" "Vite frontend"; then
@@ -226,6 +229,14 @@ base_env=(
   CLIP_WEBHOOK_SECRET="$WEBHOOK_SECRET"
   CI=1
 )
+
+if suite_enabled visual; then
+  echo "== Authenticated UI visual evidence =="
+  env "${base_env[@]}" \
+    EVIDENCE_COMMIT="$(git rev-parse HEAD)" \
+    EVIDENCE_DATE="${EVIDENCE_DATE:-$(date -u +%F)}" \
+    node scripts/capture-authenticated-ui-visual-evidence.mjs
+fi
 
 if suite_enabled auth; then
   echo "== Auth/account E2E =="

@@ -36,6 +36,7 @@ import {
 // Dynamic import keeps laravel-echo + pusher-js (~73 KB) out of the critical bundle.
 let _echoInstance = null;
 async function getEcho() {
+  if (import.meta.env.VITE_DISABLE_REALTIME === 'true') return null;
   if (_echoInstance) return _echoInstance;
   const mod = await import('./echo');
   _echoInstance = mod.default;
