@@ -4,8 +4,9 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import test from 'node:test';
 
+const approvedAiTitle = 'Mercasto | La plataforma de clasificados más moderna e inteligente con AI';
 const homepage = `<!doctype html><html><head>
-<title>Mercasto clasificados México</title>
+<title>${approvedAiTitle}</title>
 <meta name="description" content="Compra y vende en México">
 <script type="application/ld+json">{"@context":"https://schema.org"}</script>
 </head><body>Mercasto</body></html>`;
@@ -83,6 +84,11 @@ function createHealthyServer({ upStatus = 200 } = {}) {
     response.end('not found');
   });
 }
+
+test('approved AI title exceeds the former 70-character watch limit', () => {
+  assert.ok([...approvedAiTitle].length > 70);
+  assert.ok([...approvedAiTitle].length <= 160);
+});
 
 test('passes the complete read-only watch on a healthy endpoint set', async () => {
   const server = createHealthyServer();
