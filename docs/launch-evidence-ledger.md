@@ -17,20 +17,23 @@ Public launch requires:
 
 | Gate | Status | Evidence owner | Evidence location |
 | --- | --- | --- | --- |
-| Production health | Green last verified | Ops | issue #262 or latest server output |
-| Direct 80/443 ownership | Guarded | Ops | issue #261, `smoke:port-ownership` |
-| Env readiness | Open | Ops | `smoke:env-readiness` output |
-| SMS readiness | Deferred safely | Ops/Product | issue #260, `smoke:sms-launch-mode` |
-| Auth/account E2E | Green locally | QA/Product | isolated launch E2E: 16/16 |
-| Ads lifecycle E2E | Green locally | QA/Product | isolated launch E2E: 12/12 |
-| Payments/webhooks | Green locally | Ops/Payments | isolated launch E2E: 8/8; backend PHPUnit coverage |
-| Category seed/fresh DB | Blocked | Backend/Data | issue #266 |
-| Restore/rollback/alerts | Blocked | Ops | issue #267 |
-| Security pass | Blocked | Security/Ops | issue #268 |
-| Legal/business | Blocked | Founder/Ops | issue TBD |
-| SEO/AEO | Open | Growth/Ops | issue TBD |
-| Performance/Lighthouse | Open | Frontend/Ops | issue TBD |
-| Soft launch monitoring | Not started | Ops/Product | `docs/soft-launch-48h-monitoring-plan.md` |
+| Production health | Green on `bb9eba24` | Ops | `docs/evidence/operator/2026-08-06/README.md`, latest `verify_quick` |
+| Direct 80/443 ownership | Green/guarded | Ops | issue #261, `smoke:port-ownership` |
+| Env readiness | Operational check retained | Ops | `smoke:env-readiness` |
+| SMS readiness | Disabled by product decision | Ops/Product | issues #225/#260, `smoke:sms-launch-mode` |
+| Auth/account E2E | Green | QA/Product | isolated launch E2E: 16/16 |
+| Ads lifecycle E2E | Green | QA/Product | isolated launch E2E: 12/12 |
+| Payments/webhooks | Green | Ops/Payments | isolated launch E2E: 8/8; issue #287 |
+| Category seed/fresh DB | Green | Backend/Data | issue #266 |
+| Restore/rollback/alerts | Green | Ops | issue #267, backup/restore drill |
+| Security pass | Green | Security/Ops | issues #268/#287 |
+| Legal/business | Technical green; human sign-off open | Founder/Ops | issue #269 |
+| SEO/AEO | Green | Growth/Ops | issue #270 |
+| Performance/Lighthouse | Green baseline | Frontend/Ops | issue #271, `docs/perf/lighthouse-report.md` |
+| UI visual QA | Green | Frontend/QA | issue #286, PRs #485/#486 |
+| Managed CDN/WAF | Open before broad paid scale | Security/Ops | issue #408 |
+| GitHub Actions lane | Degraded/intermittent | Ops | issue #183 |
+| Final launch decision/monitoring | Open | Ops/Product | issue #272 |
 
 ## Required command evidence
 
@@ -75,7 +78,7 @@ Public launch must stop if any of these are true:
 - `UP` is not `200`;
 - `VERIFY_EXIT` is not `0`;
 - `verify:launch` fails;
-- SMS readiness is not ready;
+- SMS/phone functionality is unexpectedly enabled without a new product decision and readiness review;
 - payment webhook evidence is missing;
 - auth/account E2E evidence is missing;
 - backup restore/rollback evidence is missing;
@@ -97,4 +100,17 @@ Public launch must stop if any of these are true:
 - Static safety and local launch-contract gates: passed.
 - SMS launch mode: provider unavailable in production, user-facing SMS controls deferred, endpoints fail closed.
 
-Still required before GO: remaining security/edge evidence, operational legal owners/human review, strict production `verify:launch`, and 48-hour soft-launch monitoring.
+Still required before unrestricted broad paid scale: human legal/business sign-off (#269), a compatible managed CDN/WAF decision (#408), the final monitoring/decision record (#272), and resolution or explicit acceptance of the intermittent Actions lane (#183).
+
+
+## Operator closure evidence — 2026-08-06
+
+- Production commit `bb9eba246e861ca4677202cd6f9ac527bc026278`: clean checkout, 11/11 services healthy/running, `/up=ok`, `verify_quick` exit 0.
+- Reverb secure edge: real TLS WebSocket handshake returned `101 Switching Protocols` with `Upgrade: websocket` on port 443.
+- SSL monitoring: daily monitor and expiry logs current; certbot timer enabled/active; current Mercasto certificate had 35 days remaining.
+- Database agent role: `mercasto_readonly` read 57 granted objects; a schema write was denied and no probe object remained.
+- Historical public MCP SSE claim was disproved and retired; the dormant ignored write-capable bridge was moved to root-only quarantine.
+- Full sanitized evidence: `docs/evidence/operator/2026-08-06/README.md` and `report.json`.
+- UI evidence: 33 screenshots total across production anonymous and isolated authenticated desktop/tablet/mobile states, issues #286 / PRs #485–#486.
+
+Remaining constraints are #269, #408, #183 and the final decision/monitoring record in #272.

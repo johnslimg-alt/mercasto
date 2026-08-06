@@ -26,6 +26,7 @@ bash scripts/admin-seo-measurement-gate.sh
 bash scripts/analytics-csp-gate.sh
 bash scripts/e2e-fixture-safety-gate.sh
 bash scripts/isolated-launch-e2e-gate.sh
+bash scripts/mcp-production-retirement-gate.sh
 bash scripts/smoke-tempfile-safety-gate.sh
 bash scripts/publish-taxonomy-gate.sh
 bash scripts/edit-ad-contract-gate.sh

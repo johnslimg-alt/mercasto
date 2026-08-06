@@ -1,0 +1,71 @@
+{
+  "verified_at_utc": "2026-08-06",
+  "production_commit": "bb9eba246e861ca4677202cd6f9ac527bc026278",
+  "production": {
+    "checkout_clean": true,
+    "compose_services": 11,
+    "unhealthy_services": 0,
+    "up_ok": true,
+    "verify_quick_exit": 0
+  },
+  "reverb": {
+    "nginx_app_proxy_present": true,
+    "internal_target": "mercasto-reverb:8082",
+    "tls_port": 443,
+    "handshake_status": 101,
+    "upgrade_header": "websocket",
+    "connection_header": "upgrade"
+  },
+  "ssl_monitoring": {
+    "certbot_timer_enabled": true,
+    "certbot_timer_active": true,
+    "daily_monitor_log_current": true,
+    "daily_expiry_log_current": true,
+    "notification_password_configured": true,
+    "live_certificate_not_after": "2026-09-11T00:33:16Z",
+    "days_remaining_at_verification": 35
+  },
+  "database_readonly": {
+    "role": "mercasto_readonly",
+    "can_login": true,
+    "superuser": false,
+    "create_database": false,
+    "create_role": false,
+    "replication": false,
+    "select_objects": 57,
+    "ads_read_succeeded": true,
+    "create_table_denied": true,
+    "write_probe_exit": 3,
+    "probe_table_absent": true,
+    "site_healthy_after_probe": true
+  },
+  "mcp_sse": {
+    "historical_repaired_claim_verified": false,
+    "public_url_returns_event_stream": false,
+    "public_url_returns_mercasto_html": true,
+    "certificate_matches_mcp_hostname": false,
+    "host_nginx_active": false,
+    "mcp_site_enabled": false,
+    "listener_3000": false,
+    "listener_8001": false,
+    "ignored_write_capable_bridge_quarantined": true,
+    "decision": "retired",
+    "approved_alternative": "bounded non-root SSH MCP"
+  },
+  "linked_gates": {
+    "seo_aeo_issue_270": "closed",
+    "lighthouse_issue_271": "closed",
+    "ui_issue_286": "closed",
+    "security_issue_287": "closed",
+    "launch_e2e": "36/36 passed, 0 failed, 0 skipped",
+    "sms_issue_225": "closed_not_planned",
+    "sms_issue_260": "closed_not_planned"
+  },
+  "remaining_open_constraints": [
+    183,
+    269,
+    272,
+    408
+  ],
+  "contains_secrets": false
+}
