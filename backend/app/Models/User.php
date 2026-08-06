@@ -66,6 +66,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'preferred_role',
         'preferred_categories',
         'onboarding_completed_at',
+        'onboarding_skipped_at',
     ];
 
     /**
@@ -120,6 +121,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'business_rfc_verified_at' => 'datetime',
             'preferred_categories' => 'array',
             'onboarding_completed_at' => 'datetime',
+            'onboarding_skipped_at' => 'datetime',
         ];
     }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, CheckCircle, ArrowRight, ArrowLeft, Camera, Phone, FileText, ShoppingBag, Store, Users, MapPin, Bell, Heart, Star, Sparkles, MessageCircle } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const ROLES = [
   {
@@ -59,40 +59,53 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
   const [step, setStep] = useState(0);
   const [selectedRole, setSelectedRole] = useState('');
   const [selectedInterests, setSelectedInterests] = useState([]);
+  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
   const dictionary = t || {};
 
-  // Clear the just_registered flag immediately on mount
   useEffect(() => {
-    localStorage.removeItem('just_registered');
-  }, []);
+    if (user?.preferred_role) setSelectedRole(user.preferred_role);
+    if (Array.isArray(user?.preferred_categories)) setSelectedInterests(user.preferred_categories);
+  }, [user]);
 
-  // Save role and interests to localStorage and backend
-  const savePreferences = async () => {
+  const persistResolution = async (resolution) => {
+    const resolvedAt = new Date().toISOString();
+    const payload = {
+      preferred_role: selectedRole || null,
+      preferred_categories: selectedInterests,
+      onboarding_completed_at: resolution === 'completed' ? resolvedAt : null,
+      onboarding_skipped_at: resolution === 'skipped' ? resolvedAt : null,
+    };
+
     localStorage.setItem('onboarding_role', selectedRole);
     localStorage.setItem('onboarding_interests', JSON.stringify(selectedInterests));
-    
-    // Try to save to backend if user is authenticated
+
     const token = localStorage.getItem('auth_token');
+    let persisted = false;
     if (token) {
       try {
-        await fetch(`${API_URL}/user/preferences`, {
+        const response = await fetch(`${API_URL}/user/preferences`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            preferred_role: selectedRole,
-            preferred_categories: selectedInterests,
-            onboarding_completed_at: new Date().toISOString(),
-          }),
+          body: JSON.stringify(payload),
         });
-      } catch (e) {
-        // Silent fail - preferences saved locally at least
+        persisted = response.ok;
+      } catch {
+        persisted = false;
       }
     }
+
+    if (persisted) {
+      localStorage.removeItem('onboarding_pending_sync');
+    } else {
+      localStorage.setItem('onboarding_pending_sync', JSON.stringify(payload));
+    }
+    localStorage.setItem('onboarding_done', '1');
+    localStorage.removeItem('just_registered');
   };
 
   const toggleInterest = (slug) => {
@@ -123,7 +136,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
       id: 'interests',
       emoji: '✨',
       title: '¿Qué te interesa?',
-      subtitle: 'Selecciona al menos 2 categorías',
+      subtitle: 'Elige categorías si quieres personalizar tu inicio',
     },
     // Step 3: How it works (personalized)
     {
@@ -157,20 +170,21 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
   };
 
   const handleComplete = async () => {
-    await savePreferences();
-    localStorage.setItem('onboarding_done', '1');
-    
-    // Navigate based on role
-    if (selectedRole === 'seller') {
-      onClose();
-      navigate('/publicar');
-    } else if (selectedRole === 'buyer') {
-      onClose();
-      navigate('/');
+    setSaving(true);
+    await persistResolution('completed');
+    onClose();
+
+    if (selectedRole === 'buyer') {
+      navigate('/listings');
     } else {
-      onClose();
-      navigate('/perfil');
+      navigate('/post');
     }
+  };
+
+  const handleSkip = async () => {
+    setSaving(true);
+    await persistResolution('skipped');
+    onClose();
   };
 
   const checklist = [
@@ -189,15 +203,15 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
     }
     if (selectedRole === 'seller') {
       return [
-        { step: '1', icon: '📝', label: 'Publica gratis', desc: 'Sube fotos y describe lo que vendes en minutos' },
+        { step: '1', icon: '📝', label: 'Crea tu anuncio', desc: 'Sube fotos y describe lo que vendes en minutos' },
         { step: '2', icon: '🤝', label: 'Coordina', desc: 'Responde a interesados y acuerda la entrega' },
-        { step: '3', icon: '💰', label: 'Vende', desc: 'Recibe tu pago y gana dinero con lo que no usas' },
+        { step: '3', icon: '💰', label: 'Vende', desc: 'Acuerda la entrega y el pago directamente con la persona interesada' },
       ];
     }
     return [
       { step: '1', icon: '📝', label: 'Publica gratis', desc: 'Sube fotos y describe lo que vendes en minutos' },
       { step: '2', icon: '🤝', label: 'Coordina con confianza', desc: 'Usa los canales públicos y revisa la reputación' },
-      { step: '3', icon: '✅', label: 'Compra o vende', desc: 'Coordina la entrega y recibe tu pago' },
+      { step: '3', icon: '✅', label: 'Compra o vende', desc: 'Acuerda la entrega y el pago directamente con la otra persona' },
     ];
   };
 
@@ -217,21 +231,24 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
       };
     }
     return {
-      primary: 'Completar perfil',
-      secondary: 'Omitir por ahora',
+      primary: 'Crear mi primer anuncio',
+      secondary: 'Explorar clasificados',
       icon: Users,
     };
   };
 
   const canProceed = () => {
     if (currentStep.id === 'role') return !!selectedRole;
-    if (currentStep.id === 'interests') return selectedInterests.length >= 2;
+    if (currentStep.id === 'interests') return true;
     return true;
   };
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-title"
         className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[90vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
@@ -241,14 +258,14 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
           : 'from-[#84CC16] to-[#65A30D]'
         } px-6 pt-6 pb-5 relative flex-shrink-0`}>
           <button
-            onClick={onClose}
+            onClick={handleSkip}
             className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
             aria-label="Cerrar"
           >
             <X size={20} />
           </button>
           <div className="text-4xl mb-2">{currentStep.emoji}</div>
-          <h2 className="text-white font-bold text-xl leading-tight">{currentStep.title}</h2>
+          <h2 id="onboarding-title" className="text-white font-bold text-xl leading-tight">{currentStep.title}</h2>
           <p className="text-white/80 text-[13px] mt-1">{currentStep.subtitle}</p>
 
           {/* Progress bar */}
@@ -272,7 +289,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                 🛒
               </div>
               <p className="text-slate-600 dark:text-slate-400 text-center text-[15px] leading-relaxed max-w-xs">
-                Compra, vende y renta en todo México. Miles de productos y servicios cerca de ti.
+                Explora clasificados por categoría y publica lo que quieres vender en México.
               </p>
               <div className="flex gap-2 flex-wrap justify-center">
                 {['🚗 Autos', '🏠 Casas', '💼 Empleos', '📱 Tech', '🔧 Servicios'].map(tag => (
@@ -285,8 +302,8 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                 <div className="flex items-start gap-3">
                   <Sparkles size={20} className="text-[#84CC16] flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[13px] font-semibold text-slate-800 dark:text-white">Publicación 100% gratis</p>
-                    <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Sin comisiones, sin costos ocultos</p>
+                    <p className="text-[13px] font-semibold text-slate-800 dark:text-white">Primera activación elegible: 0 MXN por 7 días</p>
+                    <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Después puedes renovar por 49 MXN por 7 días adicionales.</p>
                   </div>
                 </div>
               </div>
@@ -330,7 +347,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
           {currentStep.id === 'interests' && (
             <div className="flex flex-col gap-3 py-1 animate-in slide-in-from-right-4 duration-300">
               <p className="text-[13px] text-slate-500 dark:text-slate-400 text-center mb-1">
-                Te mostraremos anuncios relevantes para ti
+                Esta selección es opcional y puedes cambiarla después
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {INTERESTS.map(interest => {
@@ -354,7 +371,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                 })}
               </div>
               <p className="text-[12px] text-center text-slate-400 dark:text-slate-500">
-                {selectedInterests.length}/9 seleccionadas {selectedInterests.length >= 2 && '✓'}
+                {selectedInterests.length}/9 seleccionadas
               </p>
             </div>
           )}
@@ -419,12 +436,14 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
             <>
               <button
                 onClick={handleComplete}
+                disabled={saving}
                 className="w-full bg-gradient-to-r from-[#84CC16] to-[#65A30D] hover:from-[#65A30D] hover:to-[#84CC16] text-white font-semibold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
               >
-                {getFinalCTA().primary} <ArrowRight size={16} />
+                {saving ? 'Guardando…' : getFinalCTA().primary} <ArrowRight size={16} />
               </button>
               <button
-                onClick={onClose}
+                onClick={handleSkip}
+                disabled={saving}
                 className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[13px] py-1.5 transition-colors"
               >
                 {dictionary.onboarding_skip_btn || 'Omitir por ahora'}

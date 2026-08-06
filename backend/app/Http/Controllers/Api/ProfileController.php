@@ -394,17 +394,33 @@ class ProfileController extends Controller
     public function updatePreferences(Request $request)
     {
         $data = $request->validate([
-            'preferred_role' => 'nullable|string|max:50',
-            'preferred_categories' => 'nullable|array',
-            'preferred_categories.*' => 'string|max:100',
+            'preferred_role' => 'nullable|string|in:buyer,seller,both',
+            'preferred_categories' => 'nullable|array|max:20',
+            'preferred_categories.*' => 'string|max:50',
             'onboarding_completed_at' => 'nullable|date',
+            'onboarding_skipped_at' => 'nullable|date',
         ]);
 
         $user = $request->user();
         $user->fill($data);
+
+        if (! empty($data['onboarding_completed_at'])) {
+            $user->onboarding_skipped_at = null;
+        } elseif (! empty($data['onboarding_skipped_at'])) {
+            $user->onboarding_completed_at = null;
+        }
+
         $user->save();
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'preferred_role' => $user->preferred_role,
+                'preferred_categories' => $user->preferred_categories,
+                'onboarding_completed_at' => $user->onboarding_completed_at,
+                'onboarding_skipped_at' => $user->onboarding_skipped_at,
+            ],
+        ]);
     }
 
     public function changeRole(Request $request, $id)
