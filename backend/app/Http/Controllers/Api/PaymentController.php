@@ -339,12 +339,20 @@ class PaymentController extends Controller
             );
         }
 
-        // Atomic paid transition prevents duplicate fulfillment and duplicate
-        // Meta Purchase events when Clip retries the same notification.
-        $updated = DB::table('payments')
-            ->where('id', $payment->id)
-            ->where('status', '!=', 'paid')
-            ->update([
+        // Lock the payment and commit the paid transition together with every
+        // database fulfillment effect. If any effect fails, the payment remains
+        // pending so a later Clip retry can safely complete the purchase.
+        $fulfillment = DB::transaction(function () use ($payment, $verificationId, $payload): ?array {
+            $lockedPayment = DB::table('payments')
+                ->where('id', $payment->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedPayment || $lockedPayment->status === 'paid') {
+                return null;
+            }
+
+            DB::table('payments')->where('id', $lockedPayment->id)->update([
                 'status' => 'paid',
                 'clip_payment_request_id' => $verificationId,
                 'webhook_payload' => json_encode(PaymentPayloadSanitizer::webhook($payload)),
@@ -352,36 +360,48 @@ class PaymentController extends Controller
                 'updated_at' => now(),
             ]);
 
-        if ($updated) {
-            $payment = DB::table('payments')->where('id', $payment->id)->first();
-            if ($payment && $payment->user_id) {
-                // Purchase reflects the verified payment itself, so schedule it
-                // before optional fulfillment/notification side effects.
-                defer(fn () => $this->sendMetaPurchase($meta, $request, $payment))->always();
+            $fulfilledPayment = DB::table('payments')->where('id', $lockedPayment->id)->first();
+            $notificationData = null;
 
-                $this->activatePaidProduct($payment);
+            if ($fulfilledPayment && $fulfilledPayment->user_id) {
+                $this->activatePaidProduct($fulfilledPayment);
 
                 // Бизнес-логика: Зачисление кредитов (если в описании есть слово «Crédito»)
-                $desc = strtolower($payment->description);
-                if ((str_contains($desc, 'crédito') || str_contains($desc, 'credito')) && $payment->amount >= 1) {
-                    DB::table('users')->where('id', $payment->user_id)->increment('balance', $payment->amount);
+                $desc = strtolower($fulfilledPayment->description);
+                if ((str_contains($desc, 'crédito') || str_contains($desc, 'credito')) && $fulfilledPayment->amount >= 1) {
+                    DB::table('users')->where('id', $fulfilledPayment->user_id)->increment('balance', $fulfilledPayment->amount);
                 }
 
-                $this->activateAdPromotion($payment);
+                $this->activateAdPromotion($fulfilledPayment);
 
-                // Безопасная генерация Push-уведомления в реальном времени через WebSocket
                 $notificationData = [
-                    'user_id' => $payment->user_id,
+                    'user_id' => $fulfilledPayment->user_id,
                     'title' => '¡Pago exitoso!',
-                    'message' => 'Tu pago de $' . number_format($payment->amount, 2) . ' MXN por "' . $payment->description . '" se procesó correctamente.',
+                    'message' => 'Tu pago de $' . number_format($fulfilledPayment->amount, 2) . ' MXN por "' . $fulfilledPayment->description . '" se procesó correctamente.',
                     'is_read' => false,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
-                $notifId = DB::table('user_notifications')->insertGetId($notificationData);
-                $notificationData['id'] = $notifId;
+                $notificationData['id'] = DB::table('user_notifications')->insertGetId($notificationData);
+            }
 
-                broadcast(new NewNotification((int) $payment->user_id, $notificationData));
+            return [
+                'payment' => $fulfilledPayment,
+                'notification' => $notificationData,
+            ];
+        });
+
+        if ($fulfillment) {
+            $fulfilledPayment = $fulfillment['payment'];
+            $notificationData = $fulfillment['notification'];
+
+            // External side effects run only after the database transaction commits.
+            if ($fulfilledPayment && $fulfilledPayment->user_id) {
+                defer(fn () => $this->sendMetaPurchase($meta, $request, $fulfilledPayment))->always();
+            }
+
+            if ($notificationData) {
+                broadcast(new NewNotification((int) $notificationData['user_id'], $notificationData));
             }
         }
 
