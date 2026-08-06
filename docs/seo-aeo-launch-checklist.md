@@ -2,7 +2,7 @@
 
 This checklist defines the public-search and AI-discovery controls required before expanding Mercasto landing pages. It complements `scripts/seo-public-audit.sh`, `scripts/seo-route-shell-gate.sh`, public Playwright smoke tests and issue #426.
 
-## Current production status — 2026-08-05
+## Current production status — 2026-08-06
 
 | Area | Requirement | Status |
 | --- | --- | --- |
@@ -15,14 +15,14 @@ This checklist defines the public-search and AI-discovery controls required befo
 | Structured data | WebSite, CollectionPage, BreadcrumbList and listing schema where appropriate | Implemented and guarded |
 | Category landing pages | 14 national vertical/category directories with unique metadata and one H1 | Implemented and live |
 | Category aliases | Non-sitemap aliases are noindex and canonicalize to a primary vertical | Implemented and live |
-| State/city landing pages | Implement only after genuine inventory thresholds pass | **Blocked: active genuine inventory is 0** |
+| State/city landing pages | Implement only after genuine inventory thresholds pass | **Blocked: qualification thresholds not met**; latest stored snapshot reports 1 active genuine listing |
 | Performance | Mobile/desktop baseline and focused optimization evidence | Complete under #415 |
-| AEO/GEO source pages | Factual answer-first help/about/safety/pricing sources | Planned under #426 |
-| AI crawler policy | Search/citation crawlers separated from training/model-improvement crawlers | Documented; no robots change in baseline |
-| `llms.txt` | Add only for a documented supported consumer and maintenance owner | Deferred |
+| AEO/GEO source pages | Factual answer-first help/about/safety/pricing sources | Six source pages implemented and guarded |
+| AI crawler policy | Search/citation crawlers separated from training/model-improvement crawlers | Published and guarded in production |
+| `llms.txt` | Add only for a documented supported consumer and maintenance owner | Retired; production returns HTTP 404 |
 | Internationalization | Spanish-first canonical URLs; no hreflang until separate localized indexable routes exist | Guarded |
-| Search Console | Property verified, sitemap submitted and successful | Verified manually and recorded |
-| Measurement | Weekly genuine-supply, Search Console and conversion report | Pending implementation |
+| Search Console | Property verified, sitemap submitted and successful | Restricted read reporting connected and verified |
+| Measurement | Weekly genuine-supply, Search Console, GA4 and conversion report | Implemented; latest strict snapshot is externally complete |
 
 ## Required evidence before adding any indexable landing page
 
@@ -110,3 +110,13 @@ Every source page must:
 - Live audit passed 14/14 verticals and 11/11 aliases.
 - Read-only production aggregates found 5,677 active catalog filler references and **0 active genuine user listings**.
 - State/city page rollout was blocked until genuine supply thresholds pass.
+
+
+### 2026-08-06
+
+- PR #450 published the crawler policy: search/citation crawlers are allowed, GPTBot and ClaudeBot are blocked, and `/llms.txt` returns a real HTTP 404.
+- PRs #452 and #456 implemented privacy-safe weekly measurement with idempotent stored snapshots and fail-closed optional external reporting.
+- PR #461 exposed the aggregate-only weekly SEO/GEO report to authorized admins and confirmed six configured factual source pages.
+- Restricted Search Console reporting and GA4 Viewer reporting are connected through protected VPS credentials; the strict weekly command reports both providers `ok`.
+- The latest stored period (`2026-07-30` through `2026-08-06`) is `external_complete=true` and reports 1 active genuine listing, 1 indexable genuine listing URL and 5,677 catalog references kept noindex.
+- State/city rollout remains blocked because category/location supply, seller diversity, recency and consecutive-snapshot thresholds are not met. A single genuine listing does not qualify any local route.

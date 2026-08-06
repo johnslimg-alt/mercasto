@@ -72,7 +72,9 @@ for (const forbidden of [
 }
 
 assert(baseline.includes('Do not publish `/llms.txt`.'), 'llms.txt decision must be explicit');
-assert(checklist.includes('**Blocked: active genuine inventory is 0**'), 'state/city rollout blocker must stay visible');
+assert(checklist.includes('**Blocked: qualification thresholds not met**'), 'state/city rollout blocker must stay threshold-based and visible');
+assert(!checklist.includes('| Measurement | Weekly genuine-supply, Search Console and conversion report | Pending implementation |'), 'implemented weekly measurement cannot regress to pending');
+assert(checklist.includes('Restricted Search Console reporting and GA4 Viewer reporting are connected'), 'external reporting status must stay documented');
 assert(growthPlan.includes('../seo/first-20-landing-page-map.json'), 'growth plan must link to the machine-readable map');
 
 console.log(`GEO/SEO plan contract OK: ${liveDirectories.length} live directories, ${blockedLocations.length} blocked location candidates.`);
