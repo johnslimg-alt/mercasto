@@ -66,6 +66,19 @@ Expected core tables:
 - jobs/queue tables if database queue is used;
 - sessions if database sessions are used.
 
+Compare planner estimates with actual counts for suspicious or unexpectedly large relations:
+
+```sql
+SELECT relname, n_live_tup, n_dead_tup, last_analyze, last_autoanalyze
+FROM pg_stat_user_tables
+ORDER BY n_live_tup DESC;
+
+-- Run exact COUNT only for a bounded list of relations that look inconsistent.
+SELECT count(*) FROM real_estate_developments;
+```
+
+A read-only audit must report stale statistics; it must not run `ANALYZE`, `VACUUM` or table rewrites without an approved maintenance step.
+
 ## 5. Index audit
 
 List indexes:
@@ -84,21 +97,33 @@ Recommended indexes to verify depending on schema:
 - ads(latitude, longitude) if radius search is frequent;
 - vector index on embedding if semantic search is live;
 - reports(status) if moderation queue exists;
-- notifications(user_id, read_at) if notifications exist.
+- user_notifications(user_id, is_read, created_at) if notification cleanup/query volume justifies it.
 
 ## 6. Query plan samples
 
 Run only read-only EXPLAIN statements.
 
 ```sql
-EXPLAIN ANALYZE SELECT * FROM ads WHERE status = 'active' ORDER BY created_at DESC LIMIT 16;
-EXPLAIN ANALYZE SELECT * FROM ads WHERE status = 'active' AND category = 'autos' ORDER BY created_at DESC LIMIT 16;
+SET statement_timeout = '15s';
+BEGIN READ ONLY;
+EXPLAIN (ANALYZE, BUFFERS, WAL, SUMMARY)
+SELECT * FROM ads WHERE status = 'active' ORDER BY created_at DESC LIMIT 16;
+EXPLAIN (ANALYZE, BUFFERS, WAL, SUMMARY)
+SELECT * FROM ads WHERE status = 'active' AND category = 'motor' ORDER BY created_at DESC LIMIT 16;
+ROLLBACK;
 ```
 
-For vector search, adapt to actual column name and operator:
+For vector search, use a vector with the actual stored dimension instead of a hand-written short literal:
 
 ```sql
-EXPLAIN ANALYZE SELECT id FROM ads WHERE embedding IS NOT NULL ORDER BY embedding <=> '[0,0,0]'::vector LIMIT 16;
+BEGIN READ ONLY;
+EXPLAIN (ANALYZE, BUFFERS, WAL, SUMMARY)
+SELECT id
+FROM ads
+WHERE embedding IS NOT NULL
+ORDER BY embedding <=> (SELECT embedding FROM ads WHERE embedding IS NOT NULL LIMIT 1)
+LIMIT 16;
+ROLLBACK;
 ```
 
 Expected:
@@ -114,6 +139,10 @@ Check backup directory:
 ```bash
 ls -lah postgres-backups || true
 find postgres-backups -type f -maxdepth 1 -print | tail -20 || true
+LATEST_BACKUP=$(ls -t postgres-backups/*.dump | head -1)
+pg_restore -l "$LATEST_BACKUP" >/dev/null
+findmnt -T postgres-backups -o TARGET,SOURCE,FSTYPE,OPTIONS
+findmnt -T /path/to/remote-or-replicated/backups -o TARGET,SOURCE,FSTYPE,OPTIONS
 ```
 
 Expected:
@@ -121,7 +150,8 @@ Expected:
 - backups exist;
 - file timestamps are recent;
 - retention is working;
-- backup size is plausible.
+- backup size is plausible;
+- a purported off-host copy resolves to a different failure domain, not only a second directory on the production disk.
 
 ## 8. Manual backup test
 
@@ -138,25 +168,21 @@ ls -lh "$FILE"
 
 Create a temporary restore database or temporary container. Never restore over production during audit.
 
-Suggested pattern:
+Required pattern:
+
+1. Start a disposable PostgreSQL container/database outside the production cluster.
+2. Retrieve the chosen local or remote artifact and verify its checksum.
+3. Restore with `pg_restore --no-owner` into the disposable target.
+4. Verify extensions, migrations, row counts and smoke tests.
+5. Destroy the disposable target after evidence is recorded.
 
 ```bash
-# Create temp DB name
-RESTORE_DB="mercasto_restore_test_$(date +%Y%m%d_%H%M%S)"
-
-# Create temp database
-docker exec mercasto_db_container createdb -U "$DB_USERNAME" "$RESTORE_DB"
-
-# Restore latest backup into temp DB
 LATEST_BACKUP=$(ls -t postgres-backups/*.dump | head -1)
-cat "$LATEST_BACKUP" | docker exec -i mercasto_db_container pg_restore -U "$DB_USERNAME" -d "$RESTORE_DB"
-
-# Inspect tables
-docker exec mercasto_db_container psql -U "$DB_USERNAME" -d "$RESTORE_DB" -c "\dt"
-
-# Drop temp DB after verification
-docker exec mercasto_db_container dropdb -U "$DB_USERNAME" "$RESTORE_DB"
+pg_restore -l "$LATEST_BACKUP" >/dev/null
+pg_restore --no-owner --dbname="$DISPOSABLE_DATABASE_URL" "$LATEST_BACKUP"
 ```
+
+Never create/drop the audit target inside the live production database cluster unless a separately approved recovery procedure explicitly requires it.
 
 ## 10. Output format
 
