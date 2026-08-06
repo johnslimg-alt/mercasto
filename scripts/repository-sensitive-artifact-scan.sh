@@ -30,6 +30,16 @@ if [[ -n "$blocked_artifacts" ]]; then
   fail=1
 fi
 
+tracked_gitlinks="$(git ls-files --stage | awk '$1 == "160000" { sub(/^[^\t]*\t/, ""); print }')"
+
+if [[ -n "$tracked_gitlinks" ]]; then
+  echo "Tracked gitlinks are forbidden in Mercasto; local agent worktrees must stay untracked:"
+  while IFS= read -r path; do
+    [[ -n "$path" ]] && printf ' - %s\n' "$path"
+  done <<< "$tracked_gitlinks"
+  fail=1
+fi
+
 public_php="$(while IFS= read -r path; do
   if [[ -f "$path" ]]; then
     printf '%s\n' "$path"
