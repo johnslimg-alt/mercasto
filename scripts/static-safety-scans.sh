@@ -8,6 +8,8 @@ echo "== Mercasto static safety scans =="
 
 bash scripts/repository-sensitive-artifact-scan.sh
 bash scripts/repository-sensitive-artifact-scan.test.sh
+bash scripts/official-actions-node24-gate.sh
+bash scripts/official-actions-node24-gate.test.sh
 bash scripts/security-audit-gate.sh
 bash scripts/launch-readiness-contract-gate.sh
 bash scripts/seo-route-shell-gate.sh
