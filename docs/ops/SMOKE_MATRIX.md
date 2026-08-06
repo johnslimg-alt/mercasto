@@ -95,3 +95,9 @@ If any gate fails:
 - Add signed Clip webhook fixture tests using non-production secrets.
 - Add browser matrix artifacts for iOS Safari, iOS Chrome, Android Chrome, desktop Chrome.
 - Promote this matrix into branch protection once native auto-merge is enabled in repository settings.
+
+### SEO audit connection policy
+
+`npm run smoke:seo` connects directly to `BASE_URL` by default. CI and GitHub-hosted runners must not rewrite the production hostname to localhost.
+
+For an explicit origin-local diagnostic only, set `SEO_AUDIT_CONNECT_BASE_URL` to the local listener; the audit preserves the public hostname in the `Host` header. Set `SEO_AUDIT_INSECURE_TLS=1` only when that explicitly selected local listener uses an untrusted certificate. Network fetches retry up to three times by default; `SEO_AUDIT_ATTEMPTS` is bounded to 1–5.
