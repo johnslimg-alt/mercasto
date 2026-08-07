@@ -3,6 +3,7 @@ set -euo pipefail
 
 FRONTEND_CONTAINER="${FRONTEND_CONTAINER:-mercasto_frontend_container}"
 PUBLIC_FRONTEND_CONTAINER="${PUBLIC_FRONTEND_CONTAINER:-mercasto_frontend_container}"
+PUBLIC_INTERFACE="${PUBLIC_INTERFACE:-eth0}"
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 IPV4_RULES_FILE="${IPV4_RULES_FILE:-/etc/iptables/rules.v4}"
 IPV6_RULES_FILE="${IPV6_RULES_FILE:-/etc/iptables/rules.v6}"
@@ -83,20 +84,27 @@ if [[ -e "$LOCKDOWN_MARKER" ]]; then
 
   for cidr in "${cf_v4[@]}"; do
     grep -qF -- "-A INPUT -s ${cidr} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$firewall_v4"
-    grep -qF -- "-A DOCKER-USER -s ${cidr} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$docker_user_v4"
+    grep -qF -- "-A DOCKER-USER -s ${cidr} -i ${PUBLIC_INTERFACE} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$docker_user_v4"
     grep -qF -- "-A INPUT -s ${cidr} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$persistent_v4"
-    grep -qF -- "-A DOCKER-USER -s ${cidr} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$persistent_v4"
+    grep -qF -- "-A DOCKER-USER -s ${cidr} -i ${PUBLIC_INTERFACE} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$persistent_v4"
   done
   for cidr in "${cf_v6[@]}"; do
     grep -qF -- "-A INPUT -s ${cidr} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$firewall_v6"
-    grep -qF -- "-A DOCKER-USER -s ${cidr} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$docker_user_v6"
+    grep -qF -- "-A DOCKER-USER -s ${cidr} -i ${PUBLIC_INTERFACE} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$docker_user_v6"
     grep -qF -- "-A INPUT -s ${cidr} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$persistent_v6"
-    grep -qF -- "-A DOCKER-USER -s ${cidr} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$persistent_v6"
+    grep -qF -- "-A DOCKER-USER -s ${cidr} -i ${PUBLIC_INTERFACE} -p tcp -m multiport --dports 80,443 -j ACCEPT" <<<"$persistent_v6"
   done
-  grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$docker_user_v4"
-  grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$docker_user_v6"
-  grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$persistent_v4"
-  grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$persistent_v6"
+  legacy_drop='-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP'
+  for rules in "$docker_user_v4" "$docker_user_v6" "$persistent_v4" "$persistent_v6"; do
+    if grep -qF -- "$legacy_drop" <<<"$rules"; then
+      echo "unscoped DOCKER-USER web drop would block container egress" >&2
+      exit 1
+    fi
+  done
+  grep -qF -- "-A DOCKER-USER -i ${PUBLIC_INTERFACE} -p tcp -m multiport --dports 80,443 -j DROP" <<<"$docker_user_v4"
+  grep -qF -- "-A DOCKER-USER -i ${PUBLIC_INTERFACE} -p tcp -m multiport --dports 80,443 -j DROP" <<<"$docker_user_v6"
+  grep -qF -- "-A DOCKER-USER -i ${PUBLIC_INTERFACE} -p tcp -m multiport --dports 80,443 -j DROP" <<<"$persistent_v4"
+  grep -qF -- "-A DOCKER-USER -i ${PUBLIC_INTERFACE} -p tcp -m multiport --dports 80,443 -j DROP" <<<"$persistent_v6"
   echo "firewall mode=cloudflare-lockdown"
 else
   for rules in "$firewall_v4" "$firewall_v6" "$persistent_v4" "$persistent_v6"; do
