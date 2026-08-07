@@ -9,6 +9,7 @@ import { clearPublishDraft } from './utils/publishDraft';
 import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
 import { getVerticalCanonicalAlias, getVerticalSeo } from './constants/verticalSeo';
+import { getPublicSeo } from './constants/publicSeo';
 
 // Subcategory data is either an array of Spanish labels (canonical value == display label)
 // or an object keyed by a stable slug (canonical value == slug, label is translated).
@@ -1541,6 +1542,7 @@ function App() {
   // --- ДИНАМИЧЕСКОЕ SEO & GOOGLE TAG MANAGER ---
   useEffect(() => {
     const verticalSeo = getVerticalSeo(location.pathname);
+    const publicSeo = getPublicSeo(location.pathname);
     const verticalCanonicalAlias = getVerticalCanonicalAlias(location.pathname);
     let title = `Mercasto | ${t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}`;
     let desc = t.ai_brand_description || 'Mercasto combina publicación asistida, descripciones, recomendaciones y moderación con IA para comprar y vender más rápido en México.';
@@ -1581,6 +1583,9 @@ function App() {
     } else if (verticalSeo) {
       title = verticalSeo.title;
       desc = verticalSeo.description;
+    } else if (publicSeo) {
+      title = publicSeo.title;
+      desc = publicSeo.description;
     } else if (activeCat) {
       const catName = getCatName(categoriesData.find(c => c.slug === activeCat), lang) || activeCat;
       title = `${catName} en México | Anuncios Clasificados Mercasto`;

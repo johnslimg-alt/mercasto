@@ -51,7 +51,7 @@ export default function ContactoScreen() {
     document.title = 'Contacto | Mercasto';
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
-    meta.content = 'Contáctanos en Mercasto. Respondemos en menos de 24 horas por correo electrónico.';
+    meta.content = 'Consulta los canales oficiales para contactar al equipo de Mercasto sobre soporte, seguridad, moderación o tu cuenta.';
     window.scrollTo(0, 0);
   }, []);
 
@@ -116,7 +116,7 @@ export default function ContactoScreen() {
       <div className="bg-white border-b border-slate-100 dark:border-slate-800 dark:bg-slate-900">
         <div className="max-w-5xl mx-auto px-4 py-10 md:py-14">
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2 dark:text-white">Contáctanos</h1>
-          <p className="text-slate-500 text-lg dark:text-slate-300">Estamos aquí para ayudarte. Respondemos en menos de 24 horas.</p>
+          <p className="text-slate-500 text-lg dark:text-slate-300">Estamos aquí para ayudarte. Escríbenos por los canales oficiales de contacto.</p>
         </div>
       </div>
 

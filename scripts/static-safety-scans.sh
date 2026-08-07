@@ -17,6 +17,7 @@ bash scripts/official-actions-node24-gate.test.sh
 bash scripts/security-audit-gate.sh
 bash scripts/launch-readiness-contract-gate.sh
 bash scripts/seo-route-shell-gate.sh
+node scripts/sitemap-shell-contract.mjs
 bash scripts/geo-source-pages-gate.sh
 bash scripts/crawler-policy-gate.sh
 bash scripts/catalog-index-hygiene-gate.sh

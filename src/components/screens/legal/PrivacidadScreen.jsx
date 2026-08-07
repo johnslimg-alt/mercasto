@@ -30,7 +30,7 @@ export default function PrivacidadScreen() {
     document.title = 'Política de Privacidad | Mercasto';
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
-    meta.content = 'Consulta la Política de Privacidad de Mercasto conforme a la LFPDPPP de México.';
+    meta.content = 'Consulta la Política de Privacidad de Mercasto y cómo se tratan los datos personales conforme al marco aplicable en México.';
     window.scrollTo(0, 0);
   }, []);
 

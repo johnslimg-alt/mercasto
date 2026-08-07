@@ -65,6 +65,57 @@ class SeoShellControllerTest extends TestCase
         }
     }
 
+    public function test_vertical_routes_return_canonical_server_decorated_shells(): void
+    {
+        foreach ((array) config('vertical_seo.pages', []) as $path => $page) {
+            $response = $this->get("https://mercasto.test/{$path}");
+
+            $response->assertOk();
+            $response->assertSee('<title>' . $page['title'] . '</title>', false);
+            $response->assertSee('<link rel="canonical" href="https://mercasto.test/' . $path . '" />', false);
+            $response->assertSee('content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"', false);
+            $response->assertSee('"@type":"CollectionPage"', false);
+            $response->assertSee('"@type":"BreadcrumbList"', false);
+            $response->assertSee('"@type":"Organization"', false);
+        }
+    }
+
+    public function test_vertical_aliases_are_noindex_with_the_canonical_vertical(): void
+    {
+        foreach ((array) config('vertical_seo.aliases', []) as $alias => $canonical) {
+            $page = config('vertical_seo.pages.' . $canonical);
+            $response = $this->get('https://mercasto.test/' . $alias);
+
+            $response->assertOk();
+            $response->assertSee('<title>' . $page['title'] . '</title>', false);
+            $response->assertSee('<link rel="canonical" href="https://mercasto.test/' . $canonical . '" />', false);
+            $response->assertSee('content="noindex,follow,max-image-preview:large"', false);
+        }
+    }
+
+    public function test_real_spa_redirects_are_http_redirects(): void
+    {
+        foreach ((array) config('vertical_seo.redirects', []) as $alias => $target) {
+            $this->get('/' . $alias)
+                ->assertStatus(301)
+                ->assertRedirect('/' . $target);
+        }
+    }
+
+    public function test_public_sitemap_pages_return_canonical_server_decorated_shells(): void
+    {
+        foreach ((array) config('public_seo.pages', []) as $path => $page) {
+            $response = $this->get("https://mercasto.test/{$path}");
+
+            $response->assertOk();
+            $response->assertSee('<title>' . $page['title'] . '</title>', false);
+            $response->assertSee('<link rel="canonical" href="https://mercasto.test/' . $path . '" />', false);
+            $response->assertSee('content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"', false);
+            $response->assertSee('"@type":"' . $page['type'] . '"', false);
+            $response->assertSee('"@type":"BreadcrumbList"', false);
+        }
+    }
+
     public function test_legacy_source_aliases_redirect_to_canonical_pages(): void
     {
         $this->get('/safety')->assertStatus(301)->assertRedirect('/seguridad');

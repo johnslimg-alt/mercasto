@@ -62,7 +62,7 @@ export default function CookiesScreen() {
     document.title = 'Política de Cookies | Mercasto';
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
-    meta.content = 'Conoce la Política de Cookies de Mercasto: qué cookies usamos, cómo y para qué.';
+    meta.content = 'Consulta qué cookies y tecnologías similares usa Mercasto, para qué se utilizan y cómo administrar tus preferencias.';
     window.scrollTo(0, 0);
   }, []);
 
