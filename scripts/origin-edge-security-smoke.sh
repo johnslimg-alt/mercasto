@@ -22,7 +22,8 @@ for expected in \
   'zone=mercasto_conn_per_ip:20m' \
   'limit_req_status 429' \
   'limit_conn_status 429' \
-  'limit_conn mercasto_conn_per_ip 60'  'limit_req zone=mercasto_api_per_ip burst=120 nodelay' \
+  'limit_conn mercasto_conn_per_ip 60' \
+  'limit_req zone=mercasto_api_per_ip burst=120 nodelay' \
   'client_header_timeout 15s' \
   'client_body_timeout 120s' \
   'reset_timedout_connection on'; do
@@ -45,7 +46,8 @@ else
   firewall_v4="$(sudo -n iptables -S INPUT)"
   firewall_v6="$(sudo -n ip6tables -S INPUT)"
   docker_user_v4="$(sudo -n iptables -S DOCKER-USER 2>/dev/null || true)"
-  docker_user_v6="$(sudo -n ip6tables -S DOCKER-USER 2>/dev/null || true)"  persistent_v4="$(sudo -n cat "$IPV4_RULES_FILE")"
+  docker_user_v6="$(sudo -n ip6tables -S DOCKER-USER 2>/dev/null || true)"
+  persistent_v4="$(sudo -n cat "$IPV4_RULES_FILE")"
   persistent_v6="$(sudo -n cat "$IPV6_RULES_FILE")"
 fi
 
@@ -59,7 +61,6 @@ for rules in "$firewall_v4" "$firewall_v6"; do
     fi
   done
 done
-
 grep -qF ':INPUT DROP' <<<"$persistent_v4"
 grep -qF ':INPUT DROP' <<<"$persistent_v6"
 grep -qF -- '-p ipv6-icmp -j ACCEPT' <<<"$persistent_v6"
@@ -67,8 +68,10 @@ grep -qF -- '--dport 22 -j ACCEPT' <<<"$persistent_v4"
 grep -qF -- '--dport 22 -j ACCEPT' <<<"$persistent_v6"
 
 if [[ -e "$LOCKDOWN_MARKER" ]]; then
-  mapfile -t cf_v4 < <(sed -nE 's/^set_real_ip_from ([0-9.]+\/[0-9]+);$/\1/p' <<<"$nginx_config" | sort -u)
-  mapfile -t cf_v6 < <(sed -nE 's/^set_real_ip_from ([0-9a-fA-F:]+\/[0-9]+);$/\1/p' <<<"$nginx_config" | sort -u)
+  cf_v4=()
+  while IFS= read -r cidr; do cf_v4+=("$cidr"); done < <(sed -nE "s/^set_real_ip_from ([0-9.]+\/[0-9]+);$/\1/p" <<<"$nginx_config" | sort -u)
+  cf_v6=()
+  while IFS= read -r cidr; do cf_v6+=("$cidr"); done < <(sed -nE "s/^set_real_ip_from ([0-9a-fA-F:]+\/[0-9]+);$/\1/p" <<<"$nginx_config" | sort -u)
   test "${#cf_v4[@]}" -eq 15
   test "${#cf_v6[@]}" -eq 7
   for rules in "$firewall_v4" "$firewall_v6" "$persistent_v4" "$persistent_v6"; do
@@ -93,7 +96,8 @@ if [[ -e "$LOCKDOWN_MARKER" ]]; then
   grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$docker_user_v4"
   grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$docker_user_v6"
   grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$persistent_v4"
-  grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$persistent_v6"  echo "firewall mode=cloudflare-lockdown"
+  grep -qF -- '-A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' <<<"$persistent_v6"
+  echo "firewall mode=cloudflare-lockdown"
 else
   for rules in "$firewall_v4" "$firewall_v6" "$persistent_v4" "$persistent_v6"; do
     grep -qF -- '--dport 80 -j ACCEPT' <<<"$rules"
@@ -112,7 +116,6 @@ while IFS='|' read -r name ports; do
     exit 1
   fi
 done <<<"$published"
-
 echo "Docker public-port ownership OK"
 
 status="$(curl -ksS -o "$TMP_DIR/up" -w '%{http_code}' --max-time 20 "$BASE_URL/up")"

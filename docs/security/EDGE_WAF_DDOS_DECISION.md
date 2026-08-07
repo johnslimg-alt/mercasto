@@ -20,11 +20,13 @@ Status: Cloudflare edge active; origin-lockdown TTL drain in progress
 2. A non-bypassable managed edge is required before broad paid marketing; final origin 80/443 lockdown must complete after the old DNS cache window drains.
 3. During the bounded TTL-drain window, nginx origin limits and the host default-drop firewall remain mandatory compensating controls.
 4. Traefik must not be enabled for mercasto.com before issue #261. The frontend container continues to own ports 80/443.
-5. Provider client-IP headers may be trusted before final firewall lockdown only when trust is explicitly limited to the provider's published source CIDRs. Global or arbitrary proxy trust is forbidden.6. After the lockdown marker is created, production smoke must require Cloudflare-only web ingress in both INPUT and DOCKER-USER and reject any global web ACCEPT rule.
+5. Provider client-IP headers may be trusted before final firewall lockdown only when trust is explicitly limited to the provider's published source CIDRs. Global or arbitrary proxy trust is forbidden.
+6. After the lockdown marker is created, production smoke must require Cloudflare-only web ingress in both INPUT and DOCKER-USER and reject any global web ACCEPT rule.
 7. Cloudflare Free does not provide the full managed-rules phase originally planned; broad paid scale still requires either an appropriate managed-rules plan or explicit owner risk acceptance in #408/#272.
 
 ## Origin lockdown checklist
 
+- Run `sudo ops/firewall/cloudflare-origin-lockdown.sh preflight`; do not continue unless it reports the current Nginx/CIDR/firewall baseline as safe.
 - Wait for the previous 14,400-second direct-A cache window to drain and verify major resolvers no longer return the origin.
 - Back up active and persistent IPv4/IPv6 firewall state.
 - Preserve global SSH on port 22 and existing internal Docker allowances.
@@ -36,5 +38,7 @@ Status: Cloudflare edge active; origin-lockdown TTL drain in progress
 - Run production smoke and live gates.
 
 ## Rollback
+
+For a normal firewall-only rollback, run `sudo ops/firewall/cloudflare-origin-lockdown.sh rollback`, then verify public and direct-origin behavior. The apply path also creates a root-only full firewall backup for emergency restoration.
 
 If edge activation or origin lockdown breaks critical flows, restore the backed-up firewall first, remove the lockdown marker, then set affected web records DNS-only or restore the prior Hostinger nameservers if needed. Keep DNS-01 renewal intact and run the complete production smoke suite. Origin nginx limits remain enabled during rollback.
