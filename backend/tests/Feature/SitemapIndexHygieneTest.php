@@ -47,6 +47,10 @@ class SitemapIndexHygieneTest extends TestCase
         }
         $response->assertDontSee('https://mercasto.test/safety', false);
         $response->assertDontSee('https://mercasto.test/acerca-de', false);
+        $response->assertSee('https://mercasto.test/reembolsos/', false);
+        $response->assertSee('https://mercasto.test/moderacion/', false);
+        $response->assertDontSee('<loc>https://mercasto.test/reembolsos</loc>', false);
+        $response->assertDontSee('<loc>https://mercasto.test/moderacion</loc>', false);
     }
 
     public function test_ad_sitemap_contains_only_genuine_active_unexpired_listings(): void

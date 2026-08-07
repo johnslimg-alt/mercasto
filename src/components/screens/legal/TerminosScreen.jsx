@@ -33,7 +33,7 @@ export default function TerminosScreen() {
     document.title = 'Términos de Uso | Mercasto';
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
-    meta.content = 'Lee los Términos de Uso de Mercasto, el portal de clasificados líder en México.';
+    meta.content = 'Consulta los Términos de Uso vigentes de Mercasto para publicar, buscar y contactar mediante la plataforma de clasificados.';
     window.scrollTo(0, 0);
   }, []);
 

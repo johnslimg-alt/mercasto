@@ -38,6 +38,161 @@ class SeoShellController extends Controller
         ]);
     }
 
+    public function vertical(Request $request): Response
+    {
+        $path = trim($request->path(), '/');
+        $pages = config('vertical_seo.pages', []);
+        $page = $pages[$path] ?? null;
+
+        if (! is_array($page)) {
+            abort(404);
+        }
+
+        $canonical = url('/' . $path);
+        $organizationId = url('/#organization');
+        $websiteId = url('/#website');
+
+        return $this->renderShell([
+            'title' => $page['title'],
+            'description' => $page['description'],
+            'canonical' => $canonical,
+            'type' => 'website',
+            'image' => url('/icon-512x512.png'),
+            'robots' => 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1',
+        ], [
+            '@context' => 'https://schema.org',
+            '@graph' => [
+                [
+                    '@type' => 'CollectionPage',
+                    '@id' => $canonical . '#collection',
+                    'url' => $canonical,
+                    'name' => $page['title'],
+                    'description' => $page['description'],
+                    'inLanguage' => 'es-MX',
+                    'isPartOf' => ['@id' => $websiteId],
+                    'publisher' => ['@id' => $organizationId],
+                ],
+                [
+                    '@type' => 'BreadcrumbList',
+                    '@id' => $canonical . '#breadcrumb',
+                    'itemListElement' => [
+                        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Inicio', 'item' => url('/')],
+                        ['@type' => 'ListItem', 'position' => 2, 'name' => $page['name'], 'item' => $canonical],
+                    ],
+                ],
+                [
+                    '@type' => 'Organization',
+                    '@id' => $organizationId,
+                    'name' => 'Mercasto',
+                    'url' => url('/'),
+                    'logo' => url('/icon-512x512.png'),
+                ],
+                [
+                    '@type' => 'WebSite',
+                    '@id' => $websiteId,
+                    'name' => 'Mercasto',
+                    'url' => url('/'),
+                    'inLanguage' => 'es-MX',
+                    'publisher' => ['@id' => $organizationId],
+                ],
+            ],
+        ]);
+    }
+
+    public function verticalAlias(Request $request): Response
+    {
+        $path = trim($request->path(), '/');
+        $canonicalPath = config('vertical_seo.aliases.' . $path);
+        $page = $canonicalPath ? config('vertical_seo.pages.' . $canonicalPath) : null;
+
+        if (! is_string($canonicalPath) || ! is_array($page)) {
+            abort(404);
+        }
+
+        $canonical = url('/' . $canonicalPath);
+
+        return $this->renderShell([
+            'title' => $page['title'],
+            'description' => $page['description'],
+            'canonical' => $canonical,
+            'type' => 'website',
+            'image' => url('/icon-512x512.png'),
+            'robots' => 'noindex,follow,max-image-preview:large',
+        ], [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebPage',
+            'name' => $page['title'],
+            'description' => $page['description'],
+            'url' => $canonical,
+            'isPartOf' => [
+                '@type' => 'WebSite',
+                'name' => 'Mercasto',
+                'url' => url('/'),
+            ],
+        ]);
+    }
+
+    public function publicPage(Request $request): Response
+    {
+        $path = trim($request->path(), '/');
+        $pages = config('public_seo.pages', []);
+        $page = $pages[$path] ?? null;
+
+        if (! is_array($page)) {
+            abort(404);
+        }
+
+        $canonical = url('/' . $path);
+        $organizationId = url('/#organization');
+        $websiteId = url('/#website');
+
+        return $this->renderShell([
+            'title' => $page['title'],
+            'description' => $page['description'],
+            'canonical' => $canonical,
+            'type' => 'website',
+            'image' => url('/icon-512x512.png'),
+            'robots' => 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1',
+        ], [
+            '@context' => 'https://schema.org',
+            '@graph' => [
+                [
+                    '@type' => $page['type'],
+                    '@id' => $canonical . '#webpage',
+                    'url' => $canonical,
+                    'name' => $page['title'],
+                    'description' => $page['description'],
+                    'inLanguage' => 'es-MX',
+                    'isPartOf' => ['@id' => $websiteId],
+                    'publisher' => ['@id' => $organizationId],
+                ],
+                [
+                    '@type' => 'BreadcrumbList',
+                    '@id' => $canonical . '#breadcrumb',
+                    'itemListElement' => [
+                        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Inicio', 'item' => url('/')],
+                        ['@type' => 'ListItem', 'position' => 2, 'name' => $page['name'], 'item' => $canonical],
+                    ],
+                ],
+                [
+                    '@type' => 'Organization',
+                    '@id' => $organizationId,
+                    'name' => 'Mercasto',
+                    'url' => url('/'),
+                    'logo' => url('/icon-512x512.png'),
+                ],
+                [
+                    '@type' => 'WebSite',
+                    '@id' => $websiteId,
+                    'name' => 'Mercasto',
+                    'url' => url('/'),
+                    'inLanguage' => 'es-MX',
+                    'publisher' => ['@id' => $organizationId],
+                ],
+            ],
+        ]);
+    }
+
     public function source(Request $request): Response
     {
         $path = trim($request->path(), '/');
