@@ -39,6 +39,18 @@ foreach ($checks as $check) {
     }
 }
 
+$knownFixtureEmails = [
+    'seller_e2e@mercasto.com', 'admin_e2e@mercasto.com', 'buyer_e2e@mercasto.com',
+    'reset_desktop_e2e@mercasto.com', 'reset_mobile_e2e@mercasto.com',
+    'twofactor_desktop_e2e@mercasto.com', 'twofactor_mobile_e2e@mercasto.com',
+];
+$unexpected = App\Models\User::whereIn('email', array_slice($knownFixtureEmails, 2))->count();
+$resetTokens = Illuminate\Support\Facades\DB::table('password_reset_tokens')->whereIn('email', $knownFixtureEmails)->count();
+if ($unexpected !== 0 || $resetTokens !== 0) {
+    fwrite(STDERR, "FAIL: unexpected production E2E fixture accounts or reset tokens exist\n");
+    exit(5);
+}
+
 echo "production_e2e_accounts=secured\n";
 PHP
 
