@@ -1,0 +1,16 @@
+[Unit]
+Description=Mercasto monthly remote PostgreSQL restore drill
+After=docker.service network-online.target
+Wants=network-online.target
+OnFailure=mercasto-offsite-backup-alert.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+ExecStart=/usr/local/sbin/mercasto-offsite-backup --restore-drill
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+TimeoutStartSec=45min

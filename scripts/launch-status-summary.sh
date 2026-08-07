@@ -21,6 +21,7 @@ Strict launch gates:
   npm run smoke:sms-launch-mode
   REQUIRE_LEGAL_READY=1 npm run smoke:legal-readiness
   npm run smoke:backup-freshness
+  npm run smoke:offsite-backup
   npm run verify:launch
 
 Browser smoke:
@@ -28,6 +29,7 @@ Browser smoke:
 
 Ops evidence:
   bash scripts/backup-freshness-smoke.sh
+  bash scripts/offsite-backup-smoke.sh
 
 Security evidence:
   npm run smoke:security
@@ -50,6 +52,7 @@ cat <<'EOF'
 #270 SEO and AEO readiness
 #271 Lighthouse and performance baseline
 #272 master launch go/no-go tracker
+#500 true off-host PostgreSQL backup replication
 EOF
 
 echo \"\n== Deferred product features ==\"
@@ -66,6 +69,7 @@ cat <<'EOF'
 - Payment webhook evidence is missing.
 - Auth/account E2E evidence is missing.
 - Backup restore/rollback evidence is missing.
+- Off-host backup replication or monthly remote restore evidence is stale/failed.
 - Security evidence issue #287 is not completed.
 - Legal/business readiness is missing.
 - Secrets or stack traces are found in public output.

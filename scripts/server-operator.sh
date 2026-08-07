@@ -163,6 +163,7 @@ run_verify_quick() {
   print_header "verify:quick"
   if command -v npm >/dev/null 2>&1; then
     npm run verify:quick
+    bash scripts/offsite-backup-smoke.sh
     return
   fi
 
@@ -179,6 +180,7 @@ run_verify_quick() {
   bash scripts/production-error-mode-smoke.sh
   bash scripts/production-session-security-smoke.sh
   bash scripts/origin-edge-security-smoke.sh
+  bash scripts/offsite-backup-smoke.sh
   bash scripts/listing-route-smoke.sh
   bash scripts/production-route-audit.sh
   seo_aeo_probe

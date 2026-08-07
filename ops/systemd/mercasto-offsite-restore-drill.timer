@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Mercasto remote restore drill monthly
+
+[Timer]
+OnCalendar=*-*-01 21:30:00 UTC
+Persistent=true
+RandomizedDelaySec=15m
+Unit=mercasto-offsite-restore-drill.service
+
+[Install]
+WantedBy=timers.target

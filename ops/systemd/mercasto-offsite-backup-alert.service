@@ -1,0 +1,9 @@
+[Unit]
+Description=Record Mercasto off-host backup replication failure
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+ExecStart=/bin/sh -c "install -d -m 700 /var/lib/mercasto-offsite-backup; date -u +%%Y-%%m-%%dT%%H:%%M:%%SZ > /var/lib/mercasto-offsite-backup/FAILED; logger -p authpriv.err -t mercasto-offsite-backup Backup replication failed; inspect systemctl status mercasto-offsite-backup.service"
