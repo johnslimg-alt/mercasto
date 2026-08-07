@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\DeepSeekClient;
+use App\Services\LocalAiClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -15,7 +14,7 @@ use Throwable;
 
 class AiDescriptionController extends Controller
 {
-    public function __invoke(Request $request, DeepSeekClient $deepSeek): JsonResponse
+    public function __invoke(Request $request, LocalAiClient $ai): JsonResponse
     {
         $request->validate([
             'title' => 'required|string|min:3|max:200',
@@ -37,36 +36,23 @@ class AiDescriptionController extends Controller
         $facts = $this->factsFromRequest($request);
 
         try {
-            $description = $this->generateWithDeepSeek($deepSeek, $facts);
+            $description = $this->generateWithLocalAi($ai, $facts);
 
             return response()->json(['description' => $this->guardDescription($description, $request)]);
-        } catch (Throwable $deepSeekError) {
-            Log::warning('DeepSeek description failed; trying Ollama fallback', [
+        } catch (Throwable $aiError) {
+            Log::error('Local AI description failed', [
                 'user_id' => $request->user()->id,
-                'error' => $deepSeekError->getMessage(),
+                'error' => $aiError->getMessage(),
             ]);
         }
 
-        try {
-            $description = $this->generateWithOllama($facts);
 
-            return response()->json(['description' => $this->guardDescription($description, $request)]);
-        } catch (Throwable $ollamaError) {
-            Log::error('AI description generation failed', [
-                'providers' => ['deepseek', 'ollama'],
-                'user_id' => $request->user()->id,
-                'error' => $ollamaError->getMessage(),
-            ]);
-
-            return response()->json([
-                'error' => 'No se pudo generar la descripción. Inténtalo de nuevo.',
-            ], 500);
-        }
+        return response()->json(['error' => 'No se pudo generar la descripción. Inténtalo de nuevo.'], 500);
     }
 
-    private function generateWithDeepSeek(DeepSeekClient $deepSeek, string $facts): string
+    private function generateWithLocalAi(LocalAiClient $ai, string $facts): string
     {
-        $result = $deepSeek->chatFlash(
+        $result = $ai->chatFlash(
             [
                 [
                     'role' => 'system',
@@ -77,39 +63,12 @@ class AiDescriptionController extends Controller
                     'content' => "Datos confirmados:\n{$facts}\nEscribe una descripción atractiva, honesta y breve. Máximo 100 palabras.",
                 ],
             ],
-            ['max_tokens' => 160, 'temperature' => 0, 'timeout' => 30, 'thinking' => 'disabled']
+            ['max_tokens' => 140, 'temperature' => 0, 'timeout' => 90, 'num_ctx' => 2048]
         );
 
         $description = trim((string) ($result['choices'][0]['message']['content'] ?? ''));
         if ($description === '') {
-            throw new RuntimeException('Empty response from DeepSeek.');
-        }
-
-        return $description;
-    }
-
-    private function generateWithOllama(string $facts): string
-    {
-        $response = Http::acceptJson()
-            ->asJson()
-            ->timeout(45)
-            ->post('http://ollama:11434/api/generate', [
-                'model' => 'qwen2.5:1.5b',
-                'prompt' => $this->systemPrompt() . "\n\nDatos confirmados:\n{$facts}\nEscribe una descripción atractiva, honesta y breve. Máximo 100 palabras.",
-                'stream' => false,
-                'options' => [
-                    'temperature' => 0.25,
-                    'num_predict' => 180,
-                ],
-            ]);
-
-        if ($response->failed()) {
-            throw new RuntimeException('Ollama request failed with status ' . $response->status() . '.');
-        }
-
-        $description = trim((string) ($response->json('response') ?? ''));
-        if ($description === '') {
-            throw new RuntimeException('Empty response from Ollama.');
+            throw new RuntimeException('Empty response from local AI.');
         }
 
         return $description;
@@ -143,7 +102,7 @@ class AiDescriptionController extends Controller
 
     private function systemPrompt(): string
     {
-        return 'Redactas anuncios para Mercasto.com. Regla principal: usa SOLO los datos confirmados por el usuario. Prohibido inventar color, batería, accesorios, garantía, factura, caja, cargador, rayones, golpes, envíos o entregas si no están en los datos. Si faltan detalles, invita a preguntar. Responde solo la descripción en español mexicano profesional.';
+        return 'Redactas anuncios para Mercasto.com. Regla principal: usa SOLO los datos confirmados por el usuario. Prohibido inventar color, batería, accesorios, garantía, factura, caja, cargador, rayones, golpes, envíos o entregas si no están en los datos. No añadas características, componentes, rendimiento, estado o beneficios que no estén explícitamente en los datos. Si faltan detalles, invita a preguntar. Responde solo la descripción en español mexicano profesional.';
     }
 
     private function guardDescription(string $description, Request $request): string

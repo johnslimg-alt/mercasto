@@ -16,7 +16,7 @@ class ModerationQueueCommandTest extends TestCase
     public function test_command_dispatches_oldest_pending_ads_first(): void
     {
         Bus::fake();
-        config(['services.gemini.api_key' => 'test-gemini-key']);
+        config(['services.ollama.chat_model' => 'qwen3-vl:4b-instruct']);
 
         $seller = User::factory()->create();
         $base = [

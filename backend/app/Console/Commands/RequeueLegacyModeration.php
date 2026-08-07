@@ -20,8 +20,8 @@ class RequeueLegacyModeration extends Command
 
     public function handle(): int
     {
-        if ((string) config('services.gemini.api_key') === '') {
-            $this->error('GEMINI_API_KEY is not configured.');
+        if ((string) config('services.ollama.chat_model') === '') {
+            $this->error('Local Ollama chat model is not configured.');
             return self::FAILURE;
         }
 

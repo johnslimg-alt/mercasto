@@ -11,11 +11,6 @@
 # optional/background services that are safe to reduce during provider limits.
 
 services:
-  ollama:
-    cpus: "0.50"
-    mem_limit: 1g
-    mem_reservation: 256m
-
   cadvisor:
     cpus: "0.20"
     mem_limit: 256m

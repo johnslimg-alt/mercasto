@@ -15,7 +15,7 @@ class OllamaClient
     public function __construct()
     {
         $this->baseUrl = config('services.ollama.url', 'http://mercasto_ollama:11434');
-        $this->defaultModel = config('services.ollama.model', 'qwen2.5-coder:1.5b');
+        $this->defaultModel = config('services.ollama.model', 'qwen3-vl:4b-instruct');
         $this->timeout = config('services.ollama.timeout', 60);
     }
 

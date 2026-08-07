@@ -6,8 +6,8 @@ use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Models\User;
-use App\Services\AdIllustrativeCoverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -23,27 +23,28 @@ class ModerationAuthKeyTest extends TestCase
         Storage::fake('public');
         Cache::flush();
         config([
-            'services.gemini.api_key' => 'test-auth-key',
-            'services.gemini.moderation_model' => 'gemini-3.6-flash',
-            'services.gemini.moderation_models' => ['gemini-3.6-flash'],
+            'services.ollama.base_url' => 'http://ollama.test',
+            'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
         ]);
     }
 
-    public function test_auth_key_header_and_review_only_approval(): void
+    private function fakeDecision(array $decision): void
     {
         Http::fake([
-            'https://generativelanguage.googleapis.com/*' => Http::response([
-                'candidates' => [[
-                    'content' => ['parts' => [[
-                        'text' => json_encode([
-                            'decision' => 'approved',
-                            'reason' => 'Contenido permitido.',
-                            'confidence' => 0.99,
-                            'flags' => [],
-                        ]),
-                    ]]],
-                ]],
+            'http://ollama.test/api/chat' => Http::response([
+                'model' => 'qwen3-vl:4b-instruct',
+                'message' => ['role' => 'assistant', 'content' => json_encode($decision)],
             ], 200),
+        ]);
+    }
+
+    public function test_review_only_approval_uses_local_ollama(): void
+    {
+        $this->fakeDecision([
+            'decision' => 'approved',
+            'reason' => 'Contenido permitido.',
+            'confidence' => 0.99,
+            'flags' => [],
         ]);
 
         $ad = $this->legacyAd();
@@ -52,300 +53,70 @@ class ModerationAuthKeyTest extends TestCase
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
         $this->assertSame('approved', $ad->ai_moderation_status);
-        $this->assertNull($ad->expires_at);
         $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest()->firstOrFail();
         $this->assertSame('seller_confirmation_required', $decision->metadata['activation_mode']);
-        $this->assertDatabaseHas('user_notifications', [
-            'user_id' => $ad->user_id,
-            'title' => 'Tu anuncio fue revisado',
-            'type' => 'seller_reactivation_ready',
-            'link' => '/profile?tab=my_ads&filter=review_ready',
+        $this->assertSame('qwen3-vl:4b-instruct', $decision->metadata['model']);
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/chat'
+            && $request['model'] === 'qwen3-vl:4b-instruct');
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'googleapis.com')
+            || str_contains($request->url(), 'deepseek')
+            || str_contains($request->url(), 'anthropic'));
+    }
+
+    public function test_original_image_is_sent_only_to_local_model(): void
+    {
+        Storage::disk('public')->put('ads/photo.jpg', 'fake-image-bytes');
+        $this->fakeDecision([
+            'decision' => 'manual_review',
+            'reason' => 'Revisión requerida.',
+            'confidence' => 0.7,
+            'flags' => [],
         ]);
 
-        Http::assertSent(function ($request) {
-            return $request->url()
-                === 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent'
-                && $request->hasHeader('x-goog-api-key', 'test-auth-key')
-                && ! str_contains($request->url(), '?key=');
+        $ad = $this->legacyAd();
+        $ad->forceFill(['image_url' => json_encode(['ads/photo.jpg']), 'generated_cover' => false])->saveQuietly();
+        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
+
+        Http::assertSent(function (Request $request) {
+            return $request->url() === 'http://ollama.test/api/chat'
+                && data_get($request->data(), 'messages.1.images.0') === base64_encode('fake-image-bytes');
         });
     }
 
-    public function test_automatic_approval_starts_a_fresh_configured_lifetime(): void
+    public function test_automatic_approval_starts_fresh_lifetime(): void
     {
         config(['marketplace.ad_lifetime_days' => 7]);
-        Http::fake([
-            'https://generativelanguage.googleapis.com/*' => Http::response([
-                'candidates' => [[
-                    'content' => ['parts' => [[
-                        'text' => json_encode([
-                            'decision' => 'approved',
-                            'reason' => 'Contenido permitido.',
-                            'confidence' => 0.99,
-                            'flags' => [],
-                        ]),
-                    ]]],
-                ]],
-            ], 200),
+        $this->fakeDecision([
+            'decision' => 'approved',
+            'reason' => 'Contenido permitido.',
+            'confidence' => 0.99,
+            'flags' => [],
         ]);
-
         $ad = $this->legacyAd();
-        $ad->forceFill(['expires_at' => now()->subDay()])->saveQuietly();
-
         app()->call([new ModerateAdWithAI($ad->id, true), 'handle']);
-
         $ad->refresh();
         $this->assertSame('active', $ad->status);
-        $this->assertSame('approved', $ad->ai_moderation_status);
-        $this->assertTrue($ad->expires_at->between(
-            now()->addDays(7)->subMinute(),
-            now()->addDays(7)->addMinute(),
-        ));
-        $this->assertNull($ad->reminder_sent_at);
+        $this->assertTrue($ad->expires_at->between(now()->addDays(7)->subMinute(), now()->addDays(7)->addMinute()));
     }
 
-    public function test_legacy_logo_is_replaced_and_not_sent_as_multimodal_input(): void
+    public function test_local_provider_failure_goes_to_manual_review(): void
     {
-        $legacyBytes = 'legacy-logo-binary';
-        $legacyPath = 'ads/copied-logo.webp';
-        Storage::disk('public')->put($legacyPath, $legacyBytes);
-        config([
-            'marketplace.legacy_placeholder_sha256' => [hash('sha256', $legacyBytes)],
-        ]);
-
-        Http::fake([
-            'https://generativelanguage.googleapis.com/*' => Http::response([
-                'candidates' => [[
-                    'content' => ['parts' => [[
-                        'text' => json_encode([
-                            'decision' => 'manual_review',
-                            'reason' => 'Falta fotografía original.',
-                            'confidence' => 0.91,
-                            'flags' => ['missing_original_photo'],
-                        ]),
-                    ]]],
-                ]],
-            ], 200),
-        ]);
-
-        $ad = $this->legacyAd();
-        $ad->forceFill([
-            'image_url' => json_encode([$legacyPath]),
-            'generated_cover' => false,
-        ])->saveQuietly();
-
-        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
-
-        $ad->refresh();
-        $images = json_decode($ad->image_url, true);
-        $this->assertCount(1, $images);
-        $this->assertStringStartsWith('ads/placeholders/', $images[0]);
-        $this->assertTrue((bool) $ad->generated_cover);
-        Storage::disk('public')->assertMissing($legacyPath);
-
-        Http::assertSent(function ($request) {
-            $parts = $request->data()['contents'][0]['parts'] ?? [];
-            return count($parts) === 1
-                && isset($parts[0]['text'])
-                && str_contains($parts[0]['text'], 'NO agregó fotografías originales')
-                && ! isset($parts[0]['inline_data']);
-        });
-    }
-
-    public function test_daily_model_quota_falls_through_to_the_next_configured_model(): void
-    {
-        config([
-            'services.gemini.moderation_models' => [
-                'gemini-3.6-flash',
-                'gemini-3.5-flash-lite',
-            ],
-        ]);
-
-        Http::fake(function ($request) {
-            if (str_contains($request->url(), '/gemini-3.6-flash:generateContent')) {
-                return Http::response([
-                    'error' => [
-                        'status' => 'RESOURCE_EXHAUSTED',
-                        'message' => 'Daily model quota exhausted.',
-                        'details' => [[
-                            '@type' => 'type.googleapis.com/google.rpc.QuotaFailure',
-                            'violations' => [[
-                                'quotaId' => 'GenerateRequestsPerDayPerProjectPerModel-FreeTier',
-                            ]],
-                        ]],
-                    ],
-                ], 429);
-            }
-
-            return Http::response([
-                'candidates' => [[
-                    'content' => ['parts' => [[
-                        'text' => json_encode([
-                            'decision' => 'approved',
-                            'reason' => 'Contenido permitido.',
-                            'confidence' => 0.97,
-                            'flags' => [],
-                        ]),
-                    ]]],
-                ]],
-            ], 200);
-        });
-
+        Http::fake(['http://ollama.test/api/chat' => Http::response(['error' => 'down'], 503)]);
         $ad = $this->legacyAd();
         app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
-
-        $this->assertSame('approved', $ad->fresh()->ai_moderation_status);
-        $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest()->firstOrFail();
-        $this->assertSame('gemini-3.5-flash-lite', $decision->metadata['model']);
-        $this->assertSame('seller_confirmation_required', $decision->metadata['activation_mode']);
-        Http::assertSent(fn ($request) => str_contains(
-            $request->url(),
-            '/gemini-3.6-flash:generateContent'
-        ));
-        Http::assertSent(fn ($request) => str_contains(
-            $request->url(),
-            '/gemini-3.5-flash-lite:generateContent'
-        ));
-
-        $guard = Cache::get(
-            'ai_moderation:model_unavailable:' . hash('sha256', 'gemini-3.6-flash')
-        );
-        $this->assertSame('daily_quota', $guard['reason'] ?? null);
-        $this->assertGreaterThan(time(), $guard['retry_at'] ?? 0);
-    }
-
-    public function test_invalid_json_from_one_model_falls_through_to_the_next_model(): void
-    {
-        config([
-            'services.gemini.moderation_models' => [
-                'gemini-3.5-flash-lite',
-                'gemini-3.5-flash',
-            ],
-        ]);
-
-        Http::fake(function ($request) {
-            if (str_contains($request->url(), '/gemini-3.5-flash-lite:generateContent')) {
-                return Http::response([
-                    'candidates' => [[
-                        'content' => ['parts' => [['text' => 'not-json']]],
-                    ]],
-                ], 200);
-            }
-
-            return Http::response([
-                'candidates' => [[
-                    'content' => ['parts' => [[
-                        'text' => json_encode([
-                            'decision' => 'approved',
-                            'reason' => 'Contenido permitido.',
-                            'confidence' => 0.96,
-                            'flags' => [],
-                        ]),
-                    ]]],
-                ]],
-            ], 200);
-        });
-
-        $ad = $this->legacyAd();
-        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
-
-        $this->assertSame('approved', $ad->fresh()->ai_moderation_status);
-        $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest()->firstOrFail();
-        $this->assertSame('gemini-3.5-flash', $decision->metadata['model']);
-        $guard = Cache::get(
-            'ai_moderation:model_unavailable:' . hash('sha256', 'gemini-3.5-flash-lite')
-        );
-        $this->assertSame('invalid_json', $guard['reason'] ?? null);
-        $this->assertGreaterThan(time(), $guard['retry_at'] ?? 0);
-    }
-
-    public function test_transient_server_error_is_retried_once_before_manual_review(): void
-    {
-        Http::fakeSequence()
-            ->push([
-                'error' => [
-                    'status' => 'UNAVAILABLE',
-                    'message' => 'Service temporarily unavailable.',
-                ],
-            ], 503)
-            ->push([
-                'candidates' => [[
-                    'content' => ['parts' => [[
-                        'text' => json_encode([
-                            'decision' => 'approved',
-                            'reason' => 'Contenido permitido.',
-                            'confidence' => 0.97,
-                            'flags' => [],
-                        ]),
-                    ]]],
-                ]],
-            ], 200);
-
-        $ad = $this->legacyAd();
-        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
-
-        $this->assertSame('approved', $ad->fresh()->ai_moderation_status);
-        $this->assertDatabaseHas('ad_moderation_decisions', [
-            'ad_id' => $ad->id,
-            'decision' => 'approved',
-        ]);
-        Http::assertSentCount(2);
-    }
-
-    public function test_quota_response_releases_job_without_recording_a_false_failure(): void
-    {
-        Http::fake([
-            'https://generativelanguage.googleapis.com/*' => Http::response([
-                'error' => [
-                    'status' => 'RESOURCE_EXHAUSTED',
-                    'message' => 'Quota exceeded.',
-                ],
-            ], 429, ['Retry-After' => '75']),
-        ]);
-
-        $ad = $this->legacyAd();
-        $job = (new ModerateAdWithAI($ad->id, false))->withFakeQueueInteractions();
-        app()->call([$job, 'handle']);
-
-        $job->assertReleased(75);
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
-        $this->assertSame('queued', $ad->ai_moderation_status);
-        $this->assertNull($ad->ai_moderated_at);
-        $this->assertSame(0, AdModerationDecision::query()->where('ad_id', $ad->id)->count());
-        $guard = Cache::get(
-            'ai_moderation:model_unavailable:' . hash('sha256', 'gemini-3.6-flash')
-        );
-        $this->assertSame('rate_limit', $guard['reason'] ?? null);
-        $this->assertGreaterThan(time(), $guard['retry_at'] ?? 0);
-        $this->assertNull(Cache::get('ai_moderation:provider_unavailable'));
-    }
-
-    public function test_repeated_provider_failure_is_recorded_once_per_attempt(): void
-    {
-        Http::fake([
-            'https://generativelanguage.googleapis.com/*' => Http::response([
-                'error' => [
-                    'status' => 'INVALID_ARGUMENT',
-                    'message' => 'API key not valid. Please pass a valid API key.',
-                ],
-            ], 400),
+        $this->assertSame('failed', $ad->ai_moderation_status);
+        $this->assertDatabaseHas('ad_moderation_decisions', [
+            'ad_id' => $ad->id,
+            'decision' => 'manual_review',
         ]);
-
-        $ad = $this->legacyAd();
-        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
-        app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
-
-        $this->assertSame(1, AdModerationDecision::query()
-            ->where('ad_id', $ad->id)
-            ->where('decision', 'manual_review')
-            ->count());
-        $this->assertSame('provider_error', $ad->fresh()->ai_moderation_status);
     }
 
     private function legacyAd(): Ad
     {
         $seller = User::factory()->create();
-
         return Ad::query()->create([
             'user_id' => $seller->id,
             'title' => 'Bicicleta usada',

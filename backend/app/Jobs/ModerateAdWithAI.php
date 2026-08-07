@@ -6,16 +6,15 @@ use App\Events\NewNotification;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
+use App\Services\LocalAiClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Http\Client\Response;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -24,8 +23,8 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 24;
-    public int $timeout = 90;
+    public int $tries = 3;
+    public int $timeout = 180;
     public int $uniqueFor = 600;
 
     public function __construct(
@@ -45,28 +44,14 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         return [30, 120];
     }
 
-    public function handle(AdIllustrativeCoverService $covers): void
+    public function handle(AdIllustrativeCoverService $covers, LocalAiClient $ai): void
     {
         $ad = Ad::query()->with('user:id,name,email')->find($this->adId);
         if (! $ad || ! in_array($ad->status, ['pending', 'archived'], true)) {
             return;
         }
 
-        $providerError = Cache::get('ai_moderation:provider_unavailable');
-        if ($providerError) {
-            // Older deployments used a global quota guard. Quotas are actually
-            // model-scoped, so clear that legacy guard and let the model pool run.
-            if (str_contains(strtolower((string) $providerError), 'quota')) {
-                Cache::forget('ai_moderation:provider_unavailable');
-            } else {
-                $this->leaveForManualReview(
-                    $ad,
-                    'La moderación automática está temporalmente desactivada por un problema de configuración del proveedor.',
-                    'provider_error'
-                );
-                return;
-            }
-        }
+        Cache::forget('ai_moderation:provider_unavailable');
 
         $covers->ensureCover($ad);
         $ad->refresh();
@@ -78,36 +63,16 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             'ai_moderation_reason' => null,
         ])->saveQuietly();
 
-        $apiKey = (string) config('services.gemini.api_key');
-        if ($apiKey === '') {
-            Cache::put('ai_moderation:provider_unavailable', 'GEMINI_API_KEY is not configured.', now()->addHour());
-            $this->leaveForManualReview(
-                $ad,
-                'La moderación automática no está configurada. El anuncio requiere revisión manual.',
-                'provider_error'
-            );
-            return;
-        }
-
         try {
-            $parts = [[
-                'text' => $this->prompt($ad, $covers->hasOriginalImages($ad)),
-            ]];
-
+            $images = [];
             foreach (array_slice($covers->originalImages($ad), 0, 3) as $imagePath) {
                 try {
                     if (! Storage::disk('public')->exists($imagePath)) {
                         continue;
                     }
-
-                    $parts[] = [
-                        'inline_data' => [
-                            'mime_type' => Storage::disk('public')->mimeType($imagePath) ?: 'image/jpeg',
-                            'data' => base64_encode(Storage::disk('public')->get($imagePath)),
-                        ],
-                    ];
+                    $images[] = base64_encode(Storage::disk('public')->get($imagePath));
                 } catch (Throwable $mediaError) {
-                    Log::warning('AI moderation skipped unreadable image', [
+                    Log::warning('Local AI moderation skipped unreadable image', [
                         'ad_id' => $ad->id,
                         'image' => $imagePath,
                         'error' => $mediaError->getMessage(),
@@ -115,105 +80,20 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 }
             }
 
-            $payload = [
-                'contents' => [['parts' => $parts]],
-                'generationConfig' => [
-                    'temperature' => 0.1,
-                    'responseMimeType' => 'application/json',
-                ],
+            $messages = [
+                ['role' => 'system', 'content' => 'Eres el moderador privado de Mercasto. Responde exclusivamente JSON válido, sin markdown ni texto adicional.'],
+                ['role' => 'user', 'content' => $this->prompt($ad, $covers->hasOriginalImages($ad)), 'images' => $images],
             ];
 
-            $model = null;
-            $response = null;
-            $result = null;
-            $quotaDelays = [];
-
-            foreach ($this->moderationModels() as $candidateModel) {
-                $cachedDelay = $this->cachedModelDelay($candidateModel);
-                if ($cachedDelay !== null) {
-                    $quotaDelays[] = $cachedDelay;
-                    continue;
-                }
-
-                $candidateResponse = $this->sendModerationRequest($apiKey, $candidateModel, $payload);
-                if ($candidateResponse->successful()) {
-                    try {
-                        $candidateResult = $this->parseResult(
-                            (string) $candidateResponse->json('candidates.0.content.parts.0.text', '')
-                        );
-                    } catch (Throwable $parseError) {
-                        $this->guardModel($candidateModel, 300, 'invalid_json');
-                        $quotaDelays[] = 300;
-                        Log::warning('Gemini moderation model returned invalid JSON; trying fallback', [
-                            'ad_id' => $ad->id,
-                            'model' => $candidateModel,
-                            'error' => $parseError->getMessage(),
-                        ]);
-                        continue;
-                    }
-
-                    $model = $candidateModel;
-                    $response = $candidateResponse;
-                    $result = $candidateResult;
-                    break;
-                }
-
-                $providerMessage = trim((string) $candidateResponse->json('error.message', ''));
-                $isInvalidKey = $candidateResponse->status() === 400
-                    && str_contains(strtolower($providerMessage), 'api key not valid');
-
-                if ($isInvalidKey) {
-                    Cache::put(
-                        'ai_moderation:provider_unavailable',
-                        'Gemini API key is invalid.',
-                        now()->addHour()
-                    );
-
-                    Log::critical('AI moderation disabled because Gemini API key is invalid', [
-                        'ad_id' => $ad->id,
-                        'status' => $candidateResponse->status(),
-                    ]);
-
-                    $this->leaveForManualReview(
-                        $ad,
-                        'La moderación automática está temporalmente desactivada por un problema de configuración. El anuncio requiere revisión manual.',
-                        'provider_error'
-                    );
-                    return;
-                }
-
-                if ($candidateResponse->status() === 429) {
-                    $dailyQuota = $this->isDailyPerModelQuota($candidateResponse);
-                    $delay = $dailyQuota
-                        ? $this->secondsUntilDailyQuotaReset()
-                        : $this->quotaRetryDelay($candidateResponse);
-                    $this->guardModel($candidateModel, $delay, $dailyQuota ? 'daily_quota' : 'rate_limit');
-                    $quotaDelays[] = $delay;
-
-                    Log::notice('Gemini moderation model quota exhausted; trying fallback', [
-                        'ad_id' => $ad->id,
-                        'model' => $candidateModel,
-                        'daily_quota' => $dailyQuota,
-                        'retry_seconds' => $delay,
-                    ]);
-                    continue;
-                }
-
-                if ($candidateResponse->serverError()) {
-                    $this->guardModel($candidateModel, 300, 'server_error');
-                    $quotaDelays[] = 300;
-                    continue;
-                }
-
-                throw new \RuntimeException(
-                    'Gemini HTTP ' . $candidateResponse->status() . ' for model ' . $candidateModel
-                );
-            }
-
-            if (! $response instanceof Response || ! is_string($model) || ! is_array($result)) {
-                $this->deferForQuota($ad, min($quotaDelays ?: [300]));
-                return;
-            }
+            $aiResponse = $ai->chatPro($messages, [
+                'temperature' => 0.1,
+                'max_tokens' => 320,
+                'timeout' => 150,
+                'num_ctx' => 4096,
+                'keep_alive' => '2m',
+            ]);
+            $model = (string) ($aiResponse['model'] ?? config('services.ollama.chat_model', 'qwen3-vl:4b-instruct'));
+            $result = $this->parseResult((string) data_get($aiResponse, 'choices.0.message.content', ''));
 
             $decision = $this->safeDecision($result['decision'], $result['confidence']);
             $reason = trim((string) ($result['reason'] ?? 'Sin explicación del modelo.'));
@@ -276,160 +156,6 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         }
     }
 
-    private function sendModerationRequest(string $apiKey, string $model, array $payload): Response
-    {
-        $request = fn (): Response => Http::timeout(60)
-            ->withHeaders([
-                'x-goog-api-key' => $apiKey,
-                'Content-Type' => 'application/json',
-            ])
-            ->post(
-                "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent",
-                $payload,
-            );
-
-        try {
-            $response = $request();
-        } catch (Throwable $error) {
-            usleep(750_000);
-            return $request();
-        }
-
-        if ($response->serverError()) {
-            Log::warning('Gemini moderation transient response; retrying once', [
-                'ad_id' => $this->adId,
-                'status' => $response->status(),
-            ]);
-            usleep(750_000);
-            return $request();
-        }
-
-        return $response;
-    }
-
-    private function moderationModels(): array
-    {
-        $models = config('services.gemini.moderation_models', []);
-        if (! is_array($models)) {
-            $models = [];
-        }
-
-        $models = array_values(array_unique(array_filter(array_map(
-            fn (mixed $model) => is_string($model) ? trim($model) : '',
-            $models,
-        ))));
-
-        if ($models === []) {
-            $models[] = (string) config('services.gemini.moderation_model', 'gemini-3.6-flash');
-        }
-
-        return $models;
-    }
-
-    private function modelGuardKey(string $model): string
-    {
-        return 'ai_moderation:model_unavailable:' . hash('sha256', $model);
-    }
-
-    private function cachedModelDelay(string $model): ?int
-    {
-        $guard = Cache::get($this->modelGuardKey($model));
-        if (! is_array($guard)) {
-            return null;
-        }
-
-        $retryAt = (int) ($guard['retry_at'] ?? 0);
-        $delay = $retryAt - time();
-        if ($delay <= 0) {
-            Cache::forget($this->modelGuardKey($model));
-            return null;
-        }
-
-        return $delay;
-    }
-
-    private function guardModel(string $model, int $delay, string $reason): void
-    {
-        $delay = max(60, min(86400, $delay));
-        Cache::put(
-            $this->modelGuardKey($model),
-            [
-                'model' => $model,
-                'reason' => $reason,
-                'retry_at' => time() + $delay,
-            ],
-            now()->addSeconds($delay),
-        );
-    }
-
-    private function isDailyPerModelQuota(Response $response): bool
-    {
-        $details = $response->json('error.details', []);
-        $encoded = is_array($details)
-            ? json_encode($details, JSON_UNESCAPED_SLASHES)
-            : '';
-
-        return is_string($encoded)
-            && str_contains($encoded, 'GenerateRequestsPerDayPerProjectPerModel');
-    }
-
-    private function secondsUntilDailyQuotaReset(): int
-    {
-        $nowPacific = now('America/Los_Angeles');
-        $resetPacific = $nowPacific->copy()->addDay()->startOfDay()->addMinutes(5);
-
-        return max(300, (int) $nowPacific->diffInSeconds($resetPacific));
-    }
-
-    private function deferForQuota(Ad $ad, int $delay): void
-    {
-        $delay = max(60, min(21600, $delay));
-
-        if ($this->attempts() >= $this->tries) {
-            $this->leaveForManualReview(
-                $ad,
-                'La moderación automática sigue temporalmente sin cuota. El anuncio requiere revisión manual.',
-                'provider_quota'
-            );
-            return;
-        }
-
-        $ad->forceFill([
-            'status' => 'archived',
-            'ai_moderation_status' => 'queued',
-            'ai_moderation_reason' => 'Esperando disponibilidad temporal del proveedor de moderación.',
-            'ai_moderation_confidence' => null,
-            'ai_moderated_at' => null,
-        ])->saveQuietly();
-
-        Log::notice('AI moderation deferred for Gemini quota recovery', [
-            'ad_id' => $ad->id,
-            'attempt' => $this->attempts(),
-            'delay_seconds' => $delay,
-        ]);
-
-        $this->release($delay);
-    }
-
-    private function quotaRetryDelay(Response $response): int
-    {
-        $retryAfter = trim((string) $response->header('Retry-After', ''));
-        if (ctype_digit($retryAfter)) {
-            return max(60, min(900, (int) $retryAfter));
-        }
-
-        $details = $response->json('error.details', []);
-        $encoded = is_array($details)
-            ? json_encode($details, JSON_UNESCAPED_SLASHES)
-            : '';
-
-        if (is_string($encoded) && preg_match('/"retryDelay"\s*:\s*"?(\d+)s"?/i', $encoded, $matches)) {
-            return max(60, min(900, (int) $matches[1]));
-        }
-
-        return 180;
-    }
-
     private function prompt(Ad $ad, bool $hasOriginalImages): string
     {
         $attributes = json_encode($ad->attributes ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -474,7 +200,7 @@ PROMPT;
         }
 
         if (! is_array($decoded)) {
-            throw new \RuntimeException('Gemini returned invalid JSON.');
+            throw new \RuntimeException('Local AI returned invalid JSON.');
         }
 
         $decision = strtolower((string) ($decoded['decision'] ?? $decoded['status'] ?? 'manual_review'));

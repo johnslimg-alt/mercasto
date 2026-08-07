@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\User;
-use App\Services\AdIllustrativeCoverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -18,21 +17,19 @@ class ModerateAdWithAITest extends TestCase
     public function test_low_confidence_approval_remains_for_manual_review(): void
     {
         Storage::fake('public');
-        config()->set('services.gemini.api_key', 'test-key');
+        config([
+            'services.ollama.base_url' => 'http://ollama.test',
+            'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
+        ]);
         Http::fake([
-            '*' => Http::response([
-                'candidates' => [[
-                    'content' => [
-                        'parts' => [[
-                            'text' => json_encode([
-                                'decision' => 'approved',
-                                'reason' => 'Contenido permitido, pero faltan datos.',
-                                'confidence' => 0.60,
-                                'flags' => ['insufficient_detail'],
-                            ]),
-                        ]],
-                    ],
-                ]],
+            'http://ollama.test/api/chat' => Http::response([
+                'model' => 'qwen3-vl:4b-instruct',
+                'message' => ['role' => 'assistant', 'content' => json_encode([
+                    'decision' => 'approved',
+                    'reason' => 'Contenido permitido, pero faltan datos.',
+                    'confidence' => 0.60,
+                    'flags' => ['insufficient_detail'],
+                ])],
             ]),
         ]);
 
@@ -55,7 +52,7 @@ class ModerateAdWithAITest extends TestCase
             'ai_moderation_status' => 'queued',
         ]);
 
-        (new ModerateAdWithAI($ad->id))->handle(app(AdIllustrativeCoverService::class));
+        app()->call([new ModerateAdWithAI($ad->id), 'handle']);
 
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
