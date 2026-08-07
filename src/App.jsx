@@ -2927,6 +2927,7 @@ function App() {
           location:   form.location   || undefined,
           price:      form.price      || undefined,
           attributes: attrs,
+          locale:     lang,
         }),
       });
 
