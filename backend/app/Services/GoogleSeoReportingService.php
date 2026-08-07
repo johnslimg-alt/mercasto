@@ -44,6 +44,105 @@ class GoogleSeoReportingService
         ];
     }
 
+    public function inspectUrls(array $urls): array
+    {
+        $readiness = $this->readiness();
+        if (! $readiness['search_console_configured']) {
+            throw new RuntimeException('Search Console reporting is not configured.');
+        }
+
+        $site = trim((string) config('seo_reporting.search_console_site_url'));
+        $endpoint = trim((string) config('seo_reporting.search_console_inspection_api'));
+        $timeout = (int) config('seo_reporting.timeout_seconds', 20);
+        $normalized = collect($urls)
+            ->map(fn ($url) => trim((string) $url))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($normalized->isEmpty() || $normalized->count() > 20) {
+            throw new RuntimeException('URL inspection requires between 1 and 20 unique URLs.');
+        }
+
+        foreach ($normalized as $url) {
+            $this->assertInspectableUrl($url, $site);
+        }
+
+        $token = $this->accessToken();
+
+        return [
+            'site_url' => $site,
+            'count' => $normalized->count(),
+            'results' => $normalized->map(function (string $url) use ($token, $site, $endpoint, $timeout): array {
+                try {
+                    $response = Http::withToken($token)->timeout($timeout)->post($endpoint, [
+                        'inspectionUrl' => $url,
+                        'siteUrl' => $site,
+                        'languageCode' => 'en-US',
+                    ]);
+                    $this->requireSuccess($response);
+                    $status = (array) data_get($response->json(), 'inspectionResult.indexStatusResult', []);
+
+                    return [
+                        'url' => $url,
+                        'status' => 'ok',
+                        'verdict' => (string) ($status['verdict'] ?? 'VERDICT_UNSPECIFIED'),
+                        'coverage_state' => (string) ($status['coverageState'] ?? ''),
+                        'robots_txt_state' => (string) ($status['robotsTxtState'] ?? ''),
+                        'indexing_state' => (string) ($status['indexingState'] ?? ''),
+                        'page_fetch_state' => (string) ($status['pageFetchState'] ?? ''),
+                        'last_crawl_time' => (string) ($status['lastCrawlTime'] ?? ''),
+                        'google_canonical' => (string) ($status['googleCanonical'] ?? ''),
+                        'user_canonical' => (string) ($status['userCanonical'] ?? ''),
+                        'sitemap_count' => count((array) ($status['sitemap'] ?? [])),
+                    ];
+                } catch (Throwable) {
+                    return [
+                        'url' => $url,
+                        'status' => 'error',
+                        'reason' => 'provider_request_failed',
+                    ];
+                }
+            })->all(),
+        ];
+    }
+
+    private function assertInspectableUrl(string $url, string $site): void
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts) || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) {
+            throw new RuntimeException('Inspection URLs must be clean absolute URLs without credentials, query strings, or fragments.');
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
+            throw new RuntimeException('Inspection URLs must use HTTP or HTTPS.');
+        }
+
+        if (str_starts_with($site, 'sc-domain:')) {
+            $siteHost = strtolower(trim(substr($site, strlen('sc-domain:'))));
+            if ($host !== $siteHost && ! str_ends_with($host, '.' . $siteHost)) {
+                throw new RuntimeException('Inspection URL is outside the configured Search Console property.');
+            }
+            return;
+        }
+
+        $siteParts = parse_url($site);
+        if (! is_array($siteParts)
+            || strtolower((string) ($siteParts['scheme'] ?? '')) !== $scheme
+            || strtolower((string) ($siteParts['host'] ?? '')) !== $host
+            || (int) ($siteParts['port'] ?? 0) !== (int) ($parts['port'] ?? 0)) {
+            throw new RuntimeException('Inspection URL is outside the configured Search Console property.');
+        }
+
+        $sitePath = '/' . ltrim((string) ($siteParts['path'] ?? '/'), '/');
+        $urlPath = '/' . ltrim((string) ($parts['path'] ?? '/'), '/');
+        if ($sitePath !== '/' && ! str_starts_with($urlPath, rtrim($sitePath, '/') . '/')) {
+            throw new RuntimeException('Inspection URL is outside the configured Search Console URL-prefix property.');
+        }
+    }
+
     public function readiness(): array
     {
         $path = $this->credentialPath();

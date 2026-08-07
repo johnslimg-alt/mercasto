@@ -9,6 +9,10 @@ return [
         'GOOGLE_SEARCH_CONSOLE_API',
         'https://searchconsole.googleapis.com/webmasters/v3'
     ),
+    'search_console_inspection_api' => env(
+        'GOOGLE_SEARCH_CONSOLE_INSPECTION_API',
+        'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect'
+    ),
     'analytics_data_api' => env(
         'GOOGLE_ANALYTICS_DATA_API',
         'https://analyticsdata.googleapis.com/v1beta'
