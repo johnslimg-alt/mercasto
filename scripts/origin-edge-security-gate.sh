@@ -18,6 +18,15 @@ for file in "$NGINX" "$DECISION" "$RUNBOOK" "$COMPOSE" "$IPV6_RULES" "$HEADER_SM
   test -f "$file"
 done
 
+grep -qF 'real_ip_header CF-Connecting-IP;' "$NGINX"
+grep -qF 'real_ip_recursive on;' "$NGINX"
+test "$(grep -c '^set_real_ip_from ' "$NGINX")" = '22'
+if grep -Eq '^set_real_ip_from (0\.0\.0\.0/0|::/0);' "$NGINX"; then
+  echo 'refusing globally trusted real-ip source' >&2
+  exit 1
+fi
+grep -qF 'set_real_ip_from 173.245.48.0/20;' "$NGINX"
+grep -qF 'set_real_ip_from 2c0f:f248::/32;' "$NGINX"
 grep -qF 'limit_req_zone $binary_remote_addr zone=mercasto_api_per_ip:20m rate=30r/s;' "$NGINX"
 grep -qF 'limit_conn_zone $binary_remote_addr zone=mercasto_conn_per_ip:20m;' "$NGINX"
 grep -qF 'limit_req_status 429;' "$NGINX"

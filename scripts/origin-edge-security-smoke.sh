@@ -12,6 +12,10 @@ echo "== Origin edge security smoke =="
 
 nginx_config="$(docker exec "$FRONTEND_CONTAINER" nginx -T 2>&1)"
 for expected in \
+  'real_ip_header CF-Connecting-IP' \
+  'real_ip_recursive on' \
+  'set_real_ip_from 173.245.48.0/20' \
+  'set_real_ip_from 2c0f:f248::/32' \
   'zone=mercasto_api_per_ip:20m rate=30r/s' \
   'zone=mercasto_conn_per_ip:20m' \
   'limit_req_status 429' \
@@ -23,8 +27,12 @@ for expected in \
   'reset_timedout_connection on'; do
   grep -qF "$expected" <<<"$nginx_config"
 done
+if grep -Eq 'set_real_ip_from (0\.0\.0\.0/0|::/0)' <<<"$nginx_config"; then
+  echo "unsafe global real-ip trust found in active nginx config" >&2
+  exit 1
+fi
 
-echo "active nginx edge limits OK"
+echo "active nginx edge limits and Cloudflare real-IP trust OK"
 if [[ "$(id -u)" -eq 0 ]]; then
   firewall_v4="$(iptables -S INPUT)"
   firewall_v6="$(ip6tables -S INPUT)"
