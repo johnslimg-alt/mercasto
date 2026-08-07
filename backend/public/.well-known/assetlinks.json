@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.mercasto.app",
+      "sha256_cert_fingerprints": [
+        "5A:70:DD:5A:8C:BD:24:96:4E:72:6A:E4:D9:20:0F:99:2C:CE:24:75:D7:AE:C5:FC:4C:A5:86:1D:5F:57:74:98"
+      ]
+    }
+  }
+]

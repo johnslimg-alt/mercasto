@@ -46,6 +46,8 @@ jobs:
           retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/auth/providers | grep -Eq 'google|\\{'"
           retry bash -c "curl -fsSL --max-time 30 https://mercasto.com/api/categories | grep -q '\"slug\"'"
           retry bash -c "curl -fsSL --max-time 30 'https://mercasto.com/api/ads?page=1' | grep -Eq '\"data\"|\"id\"|\\['"
+          retry bash -c "curl -fsS --max-time 30 -D /tmp/assetlinks.headers https://mercasto.com/.well-known/assetlinks.json -o /tmp/assetlinks.json && grep -qi '^content-type: *application/json' /tmp/assetlinks.headers && python3 -c 'import json; d=json.load(open(\"/tmp/assetlinks.json\")); assert any(x.get(\"target\",{}).get(\"package_name\")==\"com.mercasto.app\" for x in d)'"
+          retry bash -c "status=\$(curl -sS --max-time 30 -o /tmp/aasa.body -D /tmp/aasa.headers -w '%{http_code}' https://mercasto.com/.well-known/apple-app-site-association); [ \"\$status\" = 404 ] || { [ \"\$status\" = 200 ] && grep -qi '^content-type: *application/json' /tmp/aasa.headers && python3 -m json.tool /tmp/aasa.body >/dev/null; }"
 
       - name: Check protected public paths
         shell: bash
