@@ -12,21 +12,30 @@ class BackupDatabase extends Command
     protected $signature = 'db:backup';
     protected $description = 'Create a PostgreSQL dump and upload it to AWS S3';
 
-    public function handle()
+    public function handle(): int
     {
         $filename = 'mercasto-backup-' . now()->format('Y-m-d-H-i-s') . '.sql';
         $path = storage_path('app/' . $filename);
 
         $this->info("Generating database dump...");
 
+        $connection = (array) config('database.connections.pgsql', []);
+        $password = (string) ($connection['password'] ?? '');
+
+        if ($password === '') {
+            $this->error('Database password is not configured; refusing to run a backup.');
+
+            return self::FAILURE;
+        }
+
         $process = new Process([
             'pg_dump',
-            '-U', env('DB_USERNAME', 'mercasto_user'),
-            '-h', env('DB_HOST', 'postgres'),
-            '-p', env('DB_PORT', '5432'),
-            env('DB_DATABASE', 'mercasto'),
+            '-U', (string) ($connection['username'] ?? 'mercasto_user'),
+            '-h', (string) ($connection['host'] ?? 'postgres'),
+            '-p', (string) ($connection['port'] ?? '5432'),
+            (string) ($connection['database'] ?? 'mercasto'),
         ]);
-        $process->setEnv(['PGPASSWORD' => env('DB_PASSWORD', 'secret')]);
+        $process->setEnv(['PGPASSWORD' => $password]);
 
         try {
             $process->mustRun();
@@ -35,8 +44,12 @@ class BackupDatabase extends Command
             $this->info("Uploading backup to S3...");
             Storage::disk('s3')->put('backups/' . $filename, file_get_contents($path));
             unlink($path); // Очищаем локальный диск
+
+            return self::SUCCESS;
         } catch (ProcessFailedException $e) {
             \Illuminate\Support\Facades\Log::error('Database backup failed: ' . $e->getMessage());
+
+            return self::FAILURE;
         }
     }
 }
