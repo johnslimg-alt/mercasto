@@ -50,6 +50,7 @@ bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh
 bash scripts/offsite-backup-contract-gate.sh
 bash scripts/schema-drift-contract-gate.sh
+bash scripts/postgres-observability-contract-gate.sh
 bash scripts/payment-retention-scan.sh
 bash scripts/privacy-retention-contract-gate.sh
 bash scripts/payment-payload-privacy-gate.sh
