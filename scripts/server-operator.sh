@@ -165,6 +165,7 @@ run_verify_quick() {
     npm run verify:quick
     bash scripts/offsite-backup-smoke.sh
     bash scripts/production-schema-drift-smoke.sh
+    bash scripts/production-e2e-account-security-smoke.sh
     bash scripts/postgres-observability-activation-smoke.sh
     return
   fi

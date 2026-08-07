@@ -1,4 +1,4 @@
-name: Seller & Payment E2E Tests
+name: Seller Production E2E Tests
 
 on:
   workflow_dispatch:
@@ -22,9 +22,6 @@ jobs:
       BASE_URL: https://mercasto.com
       E2E_SELLER_EMAIL: ${{ secrets.E2E_SELLER_EMAIL }}
       E2E_SELLER_PASSWORD: ${{ secrets.E2E_SELLER_PASSWORD }}
-      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
-      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
-      CLIP_WEBHOOK_SECRET: ${{ secrets.CLIP_WEBHOOK_SECRET }}
 
     steps:
       - name: Checkout
@@ -48,9 +45,6 @@ jobs:
           missing=()
           [ -z "${E2E_SELLER_EMAIL}" ]   && missing+=("E2E_SELLER_EMAIL")
           [ -z "${E2E_SELLER_PASSWORD}" ] && missing+=("E2E_SELLER_PASSWORD")
-          [ -z "${E2E_ADMIN_EMAIL}" ]    && missing+=("E2E_ADMIN_EMAIL")
-          [ -z "${E2E_ADMIN_PASSWORD}" ] && missing+=("E2E_ADMIN_PASSWORD")
-          [ -z "${CLIP_WEBHOOK_SECRET}" ] && missing+=("CLIP_WEBHOOK_SECRET")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "❌ Missing required secrets: ${missing[*]}" >&2
             echo "Set them in Settings → Secrets → Actions" >&2
@@ -64,8 +58,8 @@ jobs:
       - name: Run ads lifecycle E2E tests
         run: CI=1 npx playwright test tests/e2e/ads-lifecycle.spec.js --reporter=list
 
-      - name: Run payments E2E tests (full — with seller & webhook secrets)
-        run: CI=1 npx playwright test tests/e2e/payments.spec.js --reporter=list
+      - name: Confirm payment E2E remains isolated from production
+        run: bash scripts/isolated-launch-e2e-gate.sh
 
       - name: Upload Playwright report
         if: always()
