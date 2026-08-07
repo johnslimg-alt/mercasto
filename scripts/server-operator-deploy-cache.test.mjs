@@ -67,6 +67,8 @@ test('mocked deploy enforces cache and upstream refresh order', () => {
   chmodSync(join(fixture, 'scripts', 'offsite-backup-smoke.sh'), 0o755);
   writeFileSync(join(fixture, 'scripts', 'production-schema-drift-smoke.sh'), '#!/usr/bin/env bash\nexit 0\n');
   chmodSync(join(fixture, 'scripts', 'production-schema-drift-smoke.sh'), 0o755);
+  writeFileSync(join(fixture, 'scripts', 'postgres-observability-activation-smoke.sh'), '#!/usr/bin/env bash\nexit 0\n');
+  chmodSync(join(fixture, 'scripts', 'postgres-observability-activation-smoke.sh'), 0o755);
   writeFileSync(join(fixture, 'docker-compose.yml'), 'services: {}\n');
   writeFileSync(join(fixture, 'backend', '.env'), 'APP_ENV=testing\n');
   writeFileSync(join(cache, 'config.php'), 'stale');
