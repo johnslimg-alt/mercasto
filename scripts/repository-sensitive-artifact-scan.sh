@@ -7,9 +7,11 @@ cd "$ROOT_DIR"
 fail=0
 
 tracked_backups="$(git ls-files | grep -E '\.(dump|sql|bak|old|orig|backup|save|swp|pem|key|p12|pfx)$|~$' || true)"
+tracked_agent_backups="$(git ls-files '.codex-backups/**' || true)"
 workspace_backups="$(find . \
   -path './.git' -prune -o \
   -path './.claude' -prune -o \
+  -path './.codex-backups' -prune -o \
   -path './node_modules' -prune -o \
   -path './backend/vendor' -prune -o \
   -path './backend/storage' -prune -o \
@@ -20,7 +22,7 @@ workspace_backups="$(find . \
      -o -name '*.orig' -o -name '*.backup' -o -name '*.save' -o -name '*.swp' \
      -o -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' -o -name '*~' \) \
   -print | sed 's#^./##')"
-blocked_artifacts="$(printf '%s\n%s\n' "$tracked_backups" "$workspace_backups" | sed '/^$/d' | sort -u)"
+blocked_artifacts="$(printf '%s\n%s\n%s\n' "$tracked_backups" "$tracked_agent_backups" "$workspace_backups" | sed '/^$/d' | sort -u)"
 
 if [[ -n "$blocked_artifacts" ]]; then
   echo "Backup or credential artifacts are forbidden:"

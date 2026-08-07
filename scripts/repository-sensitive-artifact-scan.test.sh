@@ -35,4 +35,22 @@ fi
 grep -qF 'Tracked gitlinks are forbidden in Mercasto' <<< "$negative_output"
 grep -qF '.claude/worktrees/fixture' <<< "$negative_output"
 
-echo 'repository gitlink regression test OK'
+git -C "$TMP_DIR" reset --hard -q HEAD
+mkdir -p "$TMP_DIR/.codex-backups/session"
+printf 'local agent backup\n' > "$TMP_DIR/.codex-backups/session/notes.txt"
+git -C "$TMP_DIR" add -f .codex-backups/session/notes.txt
+
+set +e
+agent_backup_output="$(bash "$TMP_DIR/scripts/repository-sensitive-artifact-scan.sh" 2>&1)"
+agent_backup_status=$?
+set -e
+
+if (( agent_backup_status == 0 )); then
+  echo 'repository artifact scan accepted a tracked agent backup tree' >&2
+  exit 1
+fi
+
+grep -qF 'Backup or credential artifacts are forbidden' <<< "$agent_backup_output"
+grep -qF '.codex-backups/session/notes.txt' <<< "$agent_backup_output"
+
+echo 'repository sensitive artifact regression tests OK'

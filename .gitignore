@@ -81,8 +81,9 @@ tests/e2e/debug.spec.js
 # Generated internal AI audit outputs
 backend/storage/app/ai-audits/
 
-# Local AI/agent worktrees must never become repository gitlinks
+# Local AI/agent state must never be committed as repository backup material
 .claude/worktrees/
+.codex-backups/
 
 # Python bytecode
 __pycache__/
