@@ -1,0 +1,53 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Ad;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
+
+class AdIndexSearchTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_catalog_search_is_case_insensitive_and_prioritizes_title_matches(): void
+    {
+        Http::preventStrayRequests();
+
+        $descriptionOnly = $this->activeAd('Departamento céntrico', 'Incluye un iPhone usado.');
+        $titleMatch = $this->activeAd('iPhone 15 Pro', 'Equipo en buen estado.');
+
+        $response = $this->getJson('/api/ads?search=iphone');
+
+        $response->assertOk()
+            ->assertJsonPath('total', 2)
+            ->assertJsonPath('data.0.id', $titleMatch->id)
+            ->assertJsonPath('data.1.id', $descriptionOnly->id);
+    }
+
+    public function test_catalog_search_rejects_queries_over_one_hundred_characters(): void
+    {
+        Http::preventStrayRequests();
+
+        $this->getJson('/api/ads?search=' . str_repeat('a', 101))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('search');
+    }
+
+    private function activeAd(string $title, string $description): Ad
+    {
+        return Ad::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'title' => $title,
+            'description' => $description,
+            'price' => 2500,
+            'location' => 'Veracruz',
+            'category' => 'general',
+            'condition' => 'used',
+            'status' => 'active',
+            'is_catalog_filler' => false,
+        ]);
+    }
+}
