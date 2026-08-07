@@ -35,7 +35,7 @@ This checklist defines the public-search and AI-discovery controls required befo
 - genuine active inventory, recency, seller-diversity and location-completeness thresholds;
 - Playwright indexability/canonical test;
 - static contract preventing duplicate or unsupported metadata;
-- Search Console URL inspection after deployment;
+- Search Console URL inspection after deployment via bounded read-only `seo:inspect-urls`;
 - conversion tracking for registration, first publication and first contact.
 
 ## Stop conditions
