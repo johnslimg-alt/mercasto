@@ -165,6 +165,7 @@ run_verify_quick() {
     npm run verify:quick
     bash scripts/offsite-backup-smoke.sh
     bash scripts/production-schema-drift-smoke.sh
+    bash scripts/postgres-observability-activation-smoke.sh
     return
   fi
 
@@ -183,6 +184,7 @@ run_verify_quick() {
   bash scripts/origin-edge-security-smoke.sh
   bash scripts/offsite-backup-smoke.sh
   bash scripts/production-schema-drift-smoke.sh
+  bash scripts/postgres-observability-activation-smoke.sh
   bash scripts/listing-route-smoke.sh
   bash scripts/production-route-audit.sh
   seo_aeo_probe

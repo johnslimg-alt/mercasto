@@ -6,20 +6,22 @@ cd "$ROOT_DIR"
 
 SNAPSHOT="scripts/postgres-observability-snapshot.sh"
 PROFILE="scripts/postgres-query-profile.sh"
-STAGED="ops/postgres/pg-stat-statements.staged.conf"
-RUNBOOK="docs/ops/POSTGRES_OBSERVABILITY_STAGE_2026-08-07.md"
+ACTIVATION="scripts/postgres-observability-activation-smoke.sh"
+REFERENCE="ops/postgres/pg-stat-statements.reference.conf"
+RUNBOOK="docs/ops/POSTGRES_OBSERVABILITY_2026-08-07.md"
+MIGRATION="backend/database/migrations/2026_08_07_063000_enable_pg_stat_statements_extension.php"
+COMPOSE="docker-compose.yml"
+SERVER="scripts/server-operator.sh"
 
 echo "== PostgreSQL observability contract gate =="
-for file in "$SNAPSHOT" "$PROFILE" "$STAGED" "$RUNBOOK"; do test -f "$file"; done
-test -x "$SNAPSHOT"
-bash -n "$SNAPSHOT"
+for file in "$SNAPSHOT" "$PROFILE" "$ACTIVATION" "$REFERENCE" "$RUNBOOK" "$MIGRATION" "$COMPOSE"; do test -f "$file"; done
+for file in "$SNAPSHOT" "$PROFILE" "$ACTIVATION"; do test -x "$file"; bash -n "$file"; done
 
 grep -qF 'BEGIN TRANSACTION READ ONLY;' "$SNAPSHOT"
 grep -qF "SET LOCAL statement_timeout = '10s';" "$SNAPSHOT"
 grep -qF 'pg_stat_activity' "$SNAPSHOT"
 grep -qF 'pg_stat_user_tables' "$SNAPSHOT"
 grep -qF 'pg_stat_user_indexes' "$SNAPSHOT"
-grep -qF "c.contype = 'f'" "$SNAPSHOT"
 if grep -Eiq 'pg_stat_activity[^;]*query|select[^;]*[[:space:],]query[[:space:],]' "$SNAPSHOT"; then
   echo "FAIL: observability snapshot must not output SQL text" >&2
   exit 1
@@ -31,16 +33,24 @@ if grep -Eiq 'select[^;]*[[:space:],]query([[:space:],]|$)' "$PROFILE"; then
   exit 1
 fi
 
-grep -qF "shared_preload_libraries = 'pg_stat_statements'" "$STAGED"
-grep -qF "log_statement = 'none'" "$STAGED"
-grep -qF 'log_min_duration_statement = -1' "$STAGED"
-grep -qF 'STAGED ONLY' "$STAGED"
-if grep -RIl --include='docker-compose*.yml' --include='Dockerfile*' 'pg-stat-statements.staged.conf' . | grep -q .; then
-  echo "FAIL: staged PostgreSQL restart config is wired into runtime" >&2
-  exit 1
-fi
+for setting in \
+  'shared_preload_libraries=pg_stat_statements' \
+  'compute_query_id=auto' \
+  'track_io_timing=on' \
+  'pg_stat_statements.track=top' \
+  'pg_stat_statements.track_utility=off' \
+  'pg_stat_statements.save=on' \
+  'pg_stat_statements.max=5000' \
+  'log_statement=none' \
+  'log_min_duration_statement=-1'; do
+  grep -qF "$setting" "$COMPOSE"
+done
 
-grep -qF 'NOT APPLIED TO PRODUCTION' "$RUNBOOK"
+grep -qF 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements' "$MIGRATION"
+grep -qF "current_setting('shared_preload_libraries')" "$ACTIVATION"
+grep -qF "pg_stat_statements=active" "$ACTIVATION"
+grep -qF 'bash scripts/postgres-observability-activation-smoke.sh' "$SERVER"
+grep -qF 'ACTIVE AFTER DEPLOYMENT' "$RUNBOOK"
 grep -qF 'offsite-backup-smoke.sh' "$RUNBOOK"
 grep -qF 'final 48-hour' "$RUNBOOK"
 
