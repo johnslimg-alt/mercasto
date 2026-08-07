@@ -80,4 +80,5 @@ node --test scripts/ai-brand-positioning.test.mjs
 bash scripts/attribute-flow-gate.sh
 bash scripts/otp-abuse-control-gate.sh
 
+bash scripts/legacy-secret-fallback-gate.sh
 echo "static safety scans OK"
