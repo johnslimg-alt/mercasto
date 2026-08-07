@@ -52,13 +52,10 @@ jobs:
           fi
           echo "✅ All required secrets are present."
 
-      - name: Run auth E2E tests
-        run: CI=1 npx playwright test tests/e2e/auth-flow.spec.js --reporter=list
+      - name: Run read-only seller production smoke
+        run: CI=1 npx playwright test tests/e2e/seller-production-smoke.spec.js --workers=1 --retries=1 --reporter=list
 
-      - name: Run ads lifecycle E2E tests
-        run: CI=1 npx playwright test tests/e2e/ads-lifecycle.spec.js --reporter=list
-
-      - name: Confirm payment E2E remains isolated from production
+      - name: Confirm full lifecycle and payment E2E remain isolated from production
         run: bash scripts/isolated-launch-e2e-gate.sh
 
       - name: Upload Playwright report
