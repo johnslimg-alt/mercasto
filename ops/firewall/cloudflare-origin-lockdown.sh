@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CF_V4_FILE="${CF_V4_FILE:-$ROOT_DIR/ops/firewall/cloudflare-ips.v4}"
 CF_V6_FILE="${CF_V6_FILE:-$ROOT_DIR/ops/firewall/cloudflare-ips.v6}"
 FRONTEND_CONTAINER="${FRONTEND_CONTAINER:-mercasto_frontend_container}"
+PUBLIC_INTERFACE="${PUBLIC_INTERFACE:-$(ip route show default 2>/dev/null | awk '/default/{print $5; exit}')}"
 MARKER="${LOCKDOWN_MARKER:-/etc/mercasto/cloudflare-origin-lockdown}"
 PERSIST_V4="${IPV4_RULES_FILE:-/etc/iptables/rules.v4}"
 PERSIST_V6="${IPV6_RULES_FILE:-/etc/iptables/rules.v6}"
@@ -32,7 +33,7 @@ load_cidrs() {
 
 require_commands() {
   local cmd
-  for cmd in iptables ip6tables iptables-save ip6tables-save iptables-restore ip6tables-restore docker install; do
+  for cmd in ip iptables ip6tables iptables-save ip6tables-save iptables-restore ip6tables-restore docker install; do
     command -v "$cmd" >/dev/null
   done
   test -f "$PERSIST_V4"
@@ -55,6 +56,7 @@ verify_baseline() {
   grep -qF -- '--dport 22 -j ACCEPT' < <(ip6tables -S INPUT)
   iptables -S DOCKER-USER >/dev/null
   ip6tables -S DOCKER-USER >/dev/null
+  test -n "$PUBLIC_INTERFACE"
   verify_nginx_cidrs
 }
 
@@ -139,15 +141,15 @@ apply_lockdown() {
   local cidr
   for cidr in "${CF_V4[@]}"; do
     add_rule_once iptables INPUT -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
-    add_rule_once iptables DOCKER-USER -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
+    add_rule_once iptables DOCKER-USER -i "$PUBLIC_INTERFACE" -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
   done
   for cidr in "${CF_V6[@]}"; do
     add_rule_once ip6tables INPUT -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
-    add_rule_once ip6tables DOCKER-USER -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
+    add_rule_once ip6tables DOCKER-USER -i "$PUBLIC_INTERFACE" -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
   done
 
-  add_rule_once iptables DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
-  add_rule_once ip6tables DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
+  add_rule_once iptables DOCKER-USER -i "$PUBLIC_INTERFACE" -p tcp -m multiport --dports 80,443 -j DROP
+  add_rule_once ip6tables DOCKER-USER -i "$PUBLIC_INTERFACE" -p tcp -m multiport --dports 80,443 -j DROP
 
   delete_rule_all iptables INPUT -p tcp --dport 80 -j ACCEPT
   delete_rule_all iptables INPUT -p tcp --dport 443 -j ACCEPT
@@ -165,14 +167,14 @@ verify_live_lockdown() {
   local cidr
   for cidr in "${CF_V4[@]}"; do
     iptables -C INPUT -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
-    iptables -C DOCKER-USER -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
+    iptables -C DOCKER-USER -i "$PUBLIC_INTERFACE" -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
   done
   for cidr in "${CF_V6[@]}"; do
     ip6tables -C INPUT -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
-    ip6tables -C DOCKER-USER -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
+    ip6tables -C DOCKER-USER -i "$PUBLIC_INTERFACE" -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
   done
-  iptables -C DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
-  ip6tables -C DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
+  iptables -C DOCKER-USER -i "$PUBLIC_INTERFACE" -p tcp -m multiport --dports 80,443 -j DROP
+  ip6tables -C DOCKER-USER -i "$PUBLIC_INTERFACE" -p tcp -m multiport --dports 80,443 -j DROP
   ! iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null
   ! iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null
   ! ip6tables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null
@@ -182,15 +184,19 @@ verify_live_lockdown() {
 rollback_lockdown() {
   verify_baseline
   local cidr
+  delete_rule_all iptables DOCKER-USER -i "$PUBLIC_INTERFACE" -p tcp -m multiport --dports 80,443 -j DROP
+  delete_rule_all ip6tables DOCKER-USER -i "$PUBLIC_INTERFACE" -p tcp -m multiport --dports 80,443 -j DROP
   delete_rule_all iptables DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
   delete_rule_all ip6tables DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
 
   for cidr in "${CF_V4[@]}"; do
     delete_rule_all iptables INPUT -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
+    delete_rule_all iptables DOCKER-USER -i "$PUBLIC_INTERFACE" -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
     delete_rule_all iptables DOCKER-USER -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
   done
   for cidr in "${CF_V6[@]}"; do
     delete_rule_all ip6tables INPUT -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
+    delete_rule_all ip6tables DOCKER-USER -i "$PUBLIC_INTERFACE" -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
     delete_rule_all ip6tables DOCKER-USER -s "$cidr" -p tcp -m multiport --dports 80,443 -j ACCEPT
   done
 

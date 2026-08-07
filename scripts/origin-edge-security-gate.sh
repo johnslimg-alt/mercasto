@@ -89,6 +89,11 @@ apply = script.split('apply_lockdown() {', 1)[1].split('verify_live_lockdown() {
 assert apply.index('create_backup') < apply.index('for cidr in "${CF_V4[@]}"')
 assert apply.index('persist_live_rules') < apply.index('write_marker')
 assert 'DOCKER-USER is not empty' in apply
+assert 'PUBLIC_INTERFACE' in script
+assert 'add_rule_once iptables DOCKER-USER -i "$PUBLIC_INTERFACE"' in apply
+assert 'add_rule_once ip6tables DOCKER-USER -i "$PUBLIC_INTERFACE"' in apply
+assert 'add_rule_once iptables DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' not in apply
+assert 'add_rule_once ip6tables DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP' not in apply
 rollback = script.split('rollback_lockdown() {', 1)[1].split('status_lockdown() {', 1)[0]
 assert 'add_rule_once iptables INPUT -p tcp --dport 80 -j ACCEPT' in rollback
 assert 'add_rule_once ip6tables INPUT -p tcp --dport 443 -j ACCEPT' in rollback
