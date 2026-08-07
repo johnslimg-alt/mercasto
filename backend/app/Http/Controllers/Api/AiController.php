@@ -3,16 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\DeepSeekClient;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class AiController extends Controller
 {
     /**
-     * Generate an ad description from text fields (title, category, price, location).
-     * Google Gemini is the remote provider for this endpoint.
+     * Generate an ad description using the private local AI provider.
+     * Existing DeepSeekClient name is a compatibility adapter; it is local-only.
      */
-    public function generateDescription(Request $request)
+    public function generateDescription(Request $request, DeepSeekClient $ai)
     {
         $request->validate([
             'title'    => 'required|string|max:200',
@@ -29,34 +30,25 @@ class AiController extends Controller
         if ($request->location) $prompt .= "Ubicación: {$request->location}\n";
         $prompt .= "\nEscribe solo la descripción, sin introducción ni comillas. En español mexicano. Máximo 150 palabras.";
 
-        $geminiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-        if (!$geminiKey) {
-            return response()->json(['message' => 'No AI API key configured.'], 501);
-        }
-
-        $model = config('services.gemini.text_model', 'gemini-2.5-flash-lite');
-
         try {
-            $res = Http::timeout(15)->post(
-                "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$geminiKey}",
-                [
-                    'contents' => [[
-                        'parts' => [['text' => $prompt]],
-                    ]],
-                ]
-            );
+            $result = $ai->chatFlash([
+                ['role' => 'user', 'content' => $prompt],
+            ], [
+                'temperature' => 0.2,
+                'max_tokens' => 220,
+                'timeout' => 45,
+            ]);
 
-            if ($res->successful()) {
-                $text = $res->json('candidates.0.content.parts.0.text');
-
+            $text = data_get($result, 'choices.0.message.content');
+            if (is_string($text) && trim($text) !== '') {
                 return response()->json([
-                    'description' => trim((string) $text),
-                    'provider'    => 'gemini',
-                    'model'       => $model,
+                    'description' => trim($text),
+                    'provider' => 'ollama',
+                    'model' => $result['model'] ?? config('services.ollama.chat_model'),
                 ]);
             }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Gemini text AI Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Local text AI error', ['error' => $e->getMessage()]);
         }
 
         return response()->json(['message' => 'Error al generar descripción con IA.'], 500);
