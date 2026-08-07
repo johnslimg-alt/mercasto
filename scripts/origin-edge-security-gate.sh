@@ -10,11 +10,12 @@ RUNBOOK="docs/ops/TRAFFIC_ATTACK_RUNBOOK.md"
 COMPOSE="docker-compose.yml"
 IPV6_RULES="ops/firewall/mercasto-rules.v6"
 HEADER_SMOKE="scripts/security-header-smoke.sh"
+ORIGIN_SMOKE="scripts/origin-edge-security-smoke.sh"
 PRODUCTION_SMOKE="scripts/production-smoke.sh"
 
 echo "== Origin edge security contract gate =="
 
-for file in "$NGINX" "$DECISION" "$RUNBOOK" "$COMPOSE" "$IPV6_RULES" "$HEADER_SMOKE" "$PRODUCTION_SMOKE"; do
+for file in "$NGINX" "$DECISION" "$RUNBOOK" "$COMPOSE" "$IPV6_RULES" "$HEADER_SMOKE" "$ORIGIN_SMOKE" "$PRODUCTION_SMOKE"; do
   test -f "$file"
 done
 
@@ -49,10 +50,15 @@ grep -qF -- '-p ipv6-icmp -j ACCEPT' "$IPV6_RULES"
 grep -qF -- '--dport 22 -j ACCEPT' "$IPV6_RULES"
 grep -qF -- '--dport 80 -j ACCEPT' "$IPV6_RULES"
 grep -qF -- '--dport 443 -j ACCEPT' "$IPV6_RULES"
-grep -qF 'managed edge is required before broad paid marketing' "$DECISION"
+grep -qF 'A non-bypassable managed edge is required before broad paid marketing' "$DECISION"
 grep -qF 'Traefik must not be enabled' "$DECISION"
 grep -qF 'Volumetric attack' "$RUNBOOK"
 grep -qF 'frontend container continues to own ports 80/443' "$DECISION"
+grep -qF 'LOCKDOWN_MARKER="${LOCKDOWN_MARKER:-/etc/mercasto/cloudflare-origin-lockdown}"' "$ORIGIN_SMOKE"
+grep -qF 'iptables -S DOCKER-USER' "$ORIGIN_SMOKE"
+grep -qF 'ip6tables -S DOCKER-USER' "$ORIGIN_SMOKE"
+grep -qF 'firewall mode=cloudflare-lockdown' "$ORIGIN_SMOKE"
+grep -qF 'firewall mode=pre-lockdown TTL drain' "$ORIGIN_SMOKE"
 
 python3 - <<'PY'
 from pathlib import Path
