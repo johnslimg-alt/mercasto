@@ -24,6 +24,7 @@ bash scripts/catalog-index-hygiene-gate.sh
 bash scripts/catalog-reference-integrity-gate.sh
 bash scripts/seo-weekly-measurement-gate.sh
 bash scripts/seo-url-inspection-gate.sh
+bash scripts/backend-ai-provider-boundary-gate.sh
 bash scripts/admin-seo-measurement-gate.sh
 bash scripts/analytics-csp-gate.sh
 bash scripts/e2e-fixture-safety-gate.sh
