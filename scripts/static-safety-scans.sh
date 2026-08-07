@@ -81,4 +81,5 @@ bash scripts/attribute-flow-gate.sh
 bash scripts/otp-abuse-control-gate.sh
 
 bash scripts/legacy-secret-fallback-gate.sh
+bash scripts/internal-service-exposure-watch.test.sh
 echo "static safety scans OK"

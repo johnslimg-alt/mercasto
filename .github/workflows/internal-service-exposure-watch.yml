@@ -1,0 +1,70 @@
+name: Internal Service Exposure Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '11 * * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: internal-service-exposure-watch
+  cancel-in-progress: false
+
+jobs:
+  exposure-watch:
+    name: Check internal listeners
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 5
+    steps:
+      - name: Verify trusted production checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /var/www/mercasto
+          test -x /var/www/mercasto/scripts/internal-service-exposure-watch.sh
+
+      - name: Check listeners and Docker network mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/internal-service-exposure-watch.sh
+
+  report-failure:
+    name: Report internal service exposure
+    runs-on: ubuntu-latest
+    needs: exposure-watch
+    if: failure()
+    timeout-minutes: 5
+    steps:
+      - name: Create or update exposure incident
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const marker = 'INTERNAL_SERVICE_EXPOSURE_INCIDENT';
+            const title = 'Internal service exposure watch failing';
+            const body = [
+              marker,
+              '',
+              'The hourly read-only listener watch found a non-loopback internal-service listener, a wildcard Docker publish, or a host-network container.',
+              '',
+              `Latest failed run: ${runUrl}`,
+              '',
+              'Safety boundary: this workflow is read-only. It never stops containers, changes firewall rules, or mutates application/database state.'
+            ].join('\n');
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'incident', per_page: 30
+            });
+            const existing = issues.find(issue => issue.title === title || (issue.body || '').includes(marker));
+            if (existing) {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body: `Still failing. Latest run: ${runUrl}` });
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['production', 'autonomous-watch', 'incident'] });
+            }
