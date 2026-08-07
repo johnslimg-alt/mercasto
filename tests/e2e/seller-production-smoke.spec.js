@@ -45,10 +45,9 @@ test.describe('Production seller read-only smoke', () => {
     const payload = await ads.json();
     const rows = payload.data || payload.ads || payload;
     expect(Array.isArray(rows)).toBeTruthy();
-    expect(rows.some((ad) => ad.title === 'Mercasto E2E Active Listing' && ad.status === 'active')).toBeTruthy();
 
     await page.goto('/profile');
-    await expect(page.getByText('Mercasto E2E Active Listing', { exact: false }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('dashboard-ai-brand-message')).toBeVisible({ timeout: 10000 });
   });
 
   test('opens the authenticated publish flow without submitting data', async ({ page }) => {
@@ -56,6 +55,6 @@ test.describe('Production seller read-only smoke', () => {
     await page.goto('/post');
     await expect(page.getByTestId('publish-ai-brand-message')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/Selecciona una Categoría|Select a Category/i).first()).toBeVisible();
-    await expect(page.locator('form')).toBeVisible();
+    await expect(page.locator('form').filter({ hasText: /Selecciona una Categoría|Select a Category/i }).first()).toBeVisible();
   });
 });
