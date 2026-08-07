@@ -138,7 +138,12 @@ class AdvancedAIController extends Controller
     public function embeddingStatus()
     {
         $total = Ad::where('status', 'active')->count();
-        $withEmbedding = \DB::table('ads')->whereNotNull('embedding')->count();
+        $withEmbedding = \DB::table('embeddings')
+            ->join('ads', 'ads.id', '=', 'embeddings.ad_id')
+            ->whereNotNull('embeddings.embedding')
+            ->where('ads.status', 'active')
+            ->where('ads.is_catalog_filler', false)
+            ->count('ads.id');
         
         return response()->json([
             'success' => true,
