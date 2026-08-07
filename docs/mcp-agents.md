@@ -87,5 +87,7 @@ The historical public Shell MCP/SSE bridge is retired in production.
 - `start_mcp_vps.sh` intentionally fails closed and must not be converted back into a tunnel launcher.
 - `start_mcp_chatgpt.cjs` is a local experimental helper only and remains blocked unless a human explicitly sets its high-risk opt-in flag.
 - Production automation must use a bounded non-root SSH identity, an allowlisted command surface and the read/write gates in this guide.
+- The retired public DNS name `mcp.mercasto.com` and its certificate renewal lineage were removed on 2026-08-07; do not recreate them.
+- Historical public-SSE Nginx and client scratch files are intentionally absent and protected by the retirement gate.
 
 The 2026-08-06 verification and retirement evidence is recorded in `docs/evidence/operator/2026-08-06/README.md`.
