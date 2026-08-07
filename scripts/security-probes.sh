@@ -50,7 +50,13 @@ for path in \
   "/package-lock.json" \
   "/vendor/autoload.php" \
   "/horizon" \
-  "/vendor/horizon"
+  "/vendor/horizon" \
+  "/wp-login.php" \
+  "/xmlrpc.php" \
+  "/wp-admin/" \
+  "/wp-content/plugins/" \
+  "/wp-includes/js/jquery/" \
+  "/scanner-probe.php"
 do
   check_denied "${BASE_URL}${path}"
 done
