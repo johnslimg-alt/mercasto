@@ -36,6 +36,7 @@ bash scripts/session-config-scan.sh
 node --test scripts/session-cookie-smoke.test.mjs
 node --test scripts/security-header-smoke.test.mjs
 node --test scripts/public-production-watch.test.mjs
+node --test scripts/search-query-plan-contract.test.mjs
 node --test scripts/category-filter-smoke.test.mjs
 node --test scripts/server-operator-deploy-cache.test.mjs
 node --test scripts/manual-server-gate-self-hosted.test.mjs

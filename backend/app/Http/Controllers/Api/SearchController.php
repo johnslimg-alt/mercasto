@@ -13,6 +13,7 @@ use Throwable;
 class SearchController extends Controller
 {
     private const MAX_SEMANTIC_DISTANCE = 0.35;
+    private const MIN_EXACT_KEYWORD_RESULTS = 3;
 
     public function semanticSearch(Request $request)
     {
@@ -30,38 +31,40 @@ class SearchController extends Controller
             return response()->json(['data' => [], 'total' => 0]);
         }
 
-        $ollamaHost = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
+        if ($this->hasGenuineSemanticCoverage()) {
+            $ollamaHost = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
 
-        try {
-            $response = Http::timeout(15)->post($ollamaHost . '/api/embeddings', [
-                'model' => 'nomic-embed-text',
-                'prompt' => $q,
-            ]);
-            $embedding = $response->successful() ? $response->json('embedding') : null;
+            try {
+                $response = Http::timeout(15)->post($ollamaHost . '/api/embeddings', [
+                    'model' => 'nomic-embed-text',
+                    'prompt' => $q,
+                ]);
+                $embedding = $response->successful() ? $response->json('embedding') : null;
 
-            if (is_array($embedding) && $embedding !== []) {
-                $embeddingString = '[' . implode(',', $embedding) . ']';
+                if (is_array($embedding) && $embedding !== []) {
+                    $embeddingString = '[' . implode(',', $embedding) . ']';
 
-                $query = Ad::with('user:id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp')
-                    ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
-                    ->selectRaw('ads.*, (embeddings.embedding <=> ?) AS vec_distance', [$embeddingString])
-                    ->where('ads.status', 'active')
-                    ->where('ads.is_catalog_filler', false)
-                    ->whereRaw('(embeddings.embedding <=> ?) <= ?', [
-                        $embeddingString,
-                        self::MAX_SEMANTIC_DISTANCE,
-                    ]);
+                    $query = Ad::with('user:id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp')
+                        ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
+                        ->selectRaw('ads.*, (embeddings.embedding <=> ?) AS vec_distance', [$embeddingString])
+                        ->where('ads.status', 'active')
+                        ->where('ads.is_catalog_filler', false)
+                        ->whereRaw('(embeddings.embedding <=> ?) <= ?', [
+                            $embeddingString,
+                            self::MAX_SEMANTIC_DISTANCE,
+                        ]);
 
-                $this->applyCommonFilters($query, $request, 'ads');
-                $query->orderBy('vec_distance', 'asc');
+                    $this->applyCommonFilters($query, $request, 'ads');
+                    $query->orderBy('vec_distance', 'asc');
 
-                $results = $query->paginate(16);
-                if ($results->total() > 0) {
-                    return response()->json($results);
+                    $results = $query->paginate(16);
+                    if ($results->total() > 0) {
+                        return response()->json($results);
+                    }
                 }
+            } catch (Throwable) {
+                // A missing embedding service/table/extension must fall back to keyword search.
             }
-        } catch (Throwable) {
-            // A missing embedding service/table/extension must fall back to keyword search.
         }
 
         return $this->keywordSearch($request, $q);
@@ -74,27 +77,45 @@ class SearchController extends Controller
     {
         $normalizedQ = mb_strtolower($q, 'UTF-8');
         $term = '%' . $normalizedQ . '%';
-
         $supportsTrigram = $this->supportsTrigram();
+        $titleLike = $this->caseInsensitiveContainsExpression('ads.title');
+        $descriptionLike = $this->caseInsensitiveContainsExpression('ads.description');
+
+        $exactQuery = Ad::with('user:id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp')
+            ->where('ads.status', 'active')
+            ->where(function ($sub) use ($term, $titleLike, $descriptionLike) {
+                $sub->whereRaw($titleLike, [$term])
+                    ->orWhereRaw($descriptionLike, [$term]);
+            });
+
+        $this->applyCommonFilters($exactQuery, $request);
+        $exactQuery
+            ->orderByRaw("CASE WHEN {$titleLike} THEN 0 ELSE 1 END", [$term])
+            ->orderByDesc('ads.created_at');
+
+        $exactResults = $exactQuery->paginate(16);
+        if (!$supportsTrigram || $exactResults->total() >= self::MIN_EXACT_KEYWORD_RESULTS) {
+            return response()->json($exactResults);
+        }
+
+        // Sparse exact results only: add an index-supported pg_trgm word-similarity fallback.
         $query = Ad::with('user:id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp')
             ->where('ads.status', 'active')
-            ->where(function ($sub) use ($term, $normalizedQ, $supportsTrigram) {
-                $sub->whereRaw('LOWER(title) LIKE ?', [$term])
-                    ->orWhereRaw('LOWER(description) LIKE ?', [$term]);
-
-                if ($supportsTrigram) {
-                    $sub->orWhereRaw('similarity(LOWER(title), ?) > 0.2', [$normalizedQ]);
-                }
+            ->where(function ($sub) use ($term, $normalizedQ, $titleLike, $descriptionLike) {
+                $sub->where(function ($exact) use ($term, $titleLike, $descriptionLike) {
+                    $exact->whereRaw($titleLike, [$term])
+                        ->orWhereRaw($descriptionLike, [$term]);
+                })->orWhereRaw('ads.title %> ?', [$normalizedQ]);
             });
 
         $this->applyCommonFilters($query, $request);
-        $query->orderByRaw('CASE WHEN LOWER(title) LIKE ? THEN 0 ELSE 1 END', [$term]);
-
-        if ($supportsTrigram) {
-            $query->orderByRaw('similarity(LOWER(title), ?) DESC', [$normalizedQ]);
-        } else {
-            $query->orderByDesc('created_at');
-        }
+        $query
+            ->orderByRaw(
+                "CASE WHEN {$titleLike} THEN 0 WHEN {$descriptionLike} THEN 1 ELSE 2 END",
+                [$term, $term],
+            )
+            ->orderByRaw('word_similarity(?, ads.title) DESC', [$normalizedQ])
+            ->orderByDesc('ads.created_at');
 
         return response()->json($query->paginate(16));
     }
@@ -115,15 +136,18 @@ class SearchController extends Controller
         }
 
         $normalizedQuery = mb_strtolower($q, 'UTF-8');
-        $cacheKey = 'suggestions:' . md5($normalizedQuery);
+        $cacheKey = 'suggestions:v2:' . md5($normalizedQuery);
 
         $suggestions = Cache::remember($cacheKey, 300, function () use ($normalizedQuery) {
             $term = '%' . $normalizedQuery . '%';
+            $titleLike = $this->caseInsensitiveContainsExpression('title');
+            $stateLike = $this->caseInsensitiveContainsExpression('state');
+            $locationLike = $this->caseInsensitiveContainsExpression('location');
 
-            // 1. Ads titles — exact LIKE
+            // 1. Ads titles — index-compatible exact contains
             $ads = DB::table('ads')
                 ->where('status', 'active')
-                ->whereRaw('LOWER(title) LIKE ?', [$term])
+                ->whereRaw($titleLike, [$term])
                 ->select('title')
                 ->distinct()
                 ->limit(6)
@@ -142,7 +166,7 @@ class SearchController extends Controller
             $states = DB::table('ads')
                 ->where('status', 'active')
                 ->whereNotNull('state')
-                ->whereRaw('LOWER(state) LIKE ?', [$term])
+                ->whereRaw($stateLike, [$term])
                 ->select('state')
                 ->distinct()
                 ->limit(3)
@@ -152,7 +176,7 @@ class SearchController extends Controller
             $cities = DB::table('ads')
                 ->where('status', 'active')
                 ->whereNotNull('location')
-                ->whereRaw('LOWER(location) LIKE ?', [$term])
+                ->whereRaw($locationLike, [$term])
                 ->select('location')
                 ->distinct()
                 ->limit(4)
@@ -184,21 +208,21 @@ class SearchController extends Controller
 
             // 6. Fuzzy fallback via pg_trgm — only when exact results are few
             $fuzzy = collect();
-            if ($exact->count() < 3 && mb_strlen($normalizedQuery) >= 3) {
-                try {
-                    $fuzzy = DB::table('ads')
-                        ->where('status', 'active')
-                        ->whereRaw('similarity(LOWER(title), ?) > 0.15', [$normalizedQuery])
-                        ->whereRaw('LOWER(title) NOT LIKE ?', ['%' . $normalizedQuery . '%']) // only truly fuzzy results
-                        ->selectRaw('title, similarity(LOWER(title), ?) AS sim', [$normalizedQuery])
-                        ->distinct()
-                        ->orderByRaw('sim DESC')
-                        ->limit(4)
-                        ->pluck('title')
-                        ->map(fn ($t) => '~' . $t); // prefix ~ to mark as fuzzy in frontend
-                } catch (\Exception $e) {
-                    // pg_trgm not available
-                }
+            if (
+                $exact->count() < self::MIN_EXACT_KEYWORD_RESULTS
+                && mb_strlen($normalizedQuery) >= 3
+                && $this->supportsTrigram()
+            ) {
+                $fuzzy = DB::table('ads')
+                    ->where('status', 'active')
+                    ->whereRaw('title %> ?', [$normalizedQuery])
+                    ->whereRaw('title NOT ILIKE ?', [$term])
+                    ->selectRaw('title, word_similarity(?, title) AS sim', [$normalizedQuery])
+                    ->distinct()
+                    ->orderByRaw('sim DESC')
+                    ->limit(4)
+                    ->pluck('title')
+                    ->map(fn ($title) => '~' . $title);
             }
 
             return $exact->merge($fuzzy)->take(8)->values();
@@ -235,6 +259,32 @@ class SearchController extends Controller
         }
     }
 
+
+    private function caseInsensitiveContainsExpression(string $column): string
+    {
+        return DB::connection()->getDriverName() === 'pgsql'
+            ? "{$column} ILIKE ?"
+            : "LOWER({$column}) LIKE ?";
+    }
+
+    private function hasGenuineSemanticCoverage(): bool
+    {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            return true;
+        }
+
+        return Cache::remember('search:genuine_semantic_coverage', 300, static function (): bool {
+            try {
+                return DB::table('embeddings')
+                    ->join('ads', 'ads.id', '=', 'embeddings.ad_id')
+                    ->where('ads.status', 'active')
+                    ->where('ads.is_catalog_filler', false)
+                    ->exists();
+            } catch (Throwable) {
+                return false;
+            }
+        });
+    }
 
     private function supportsTrigram(): bool
     {

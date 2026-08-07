@@ -7,7 +7,7 @@ use App\Models\Ad;
 use App\Support\AdQueryFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 
 class AdIndexController extends Controller
 {
@@ -18,6 +18,8 @@ class AdIndexController extends Controller
      */
     public function index(Request $request)
     {
+        $request->validate(['search' => 'nullable|string|max:100']);
+
         $page = (int) $request->query('page', 1);
         if ($page > 100) {
             return response()->json(['message' => 'Límite de paginación excedido para proteger la base de datos.'], 400);
@@ -54,35 +56,20 @@ class AdIndexController extends Controller
         }
 
         if ($request->filled('search')) {
-            $search = (string) $request->search;
+            $search = trim((string) $request->search);
 
-            // Всегда фильтруем по тексту (title/description) — это гарантирует результаты
-            // даже когда эмбеддинги в БД не заполнены.
-            // ILIKE (а не LIKE) — т.к. в Postgres LIKE регистрозависим: "iphone" не совпадал с "iPhone".
-            $like = '%' . $search . '%';
-            $query->where(function ($q) use ($like): void {
-                $q->whereRaw('title ILIKE ?', [$like])
-                    ->orWhereRaw('description ILIKE ?', [$like]);
-            });
+            if ($search !== '') {
+                $like = '%' . mb_strtolower($search, 'UTF-8') . '%';
+                $titleLike = $this->caseInsensitiveContainsExpression('title');
+                $descriptionLike = $this->caseInsensitiveContainsExpression('description');
 
-            // Семантические эмбеддинги используем ТОЛЬКО для улучшения сортировки,
-            // не исключая объявления без эмбеддинга (иначе поиск возвращал 0).
-            $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-            if ($apiKey) {
-                try {
-                    $response = Http::timeout(4)->post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
-                        'model' => 'models/text-embedding-004',
-                        'content' => ['parts' => [['text' => $search]]],
-                    ]);
-
-                    if ($response->successful() && $embedding = $response->json('embedding.values')) {
-                        $embeddingString = '[' . implode(',', $embedding) . ']';
-                        // NULLS LAST: объявления с эмбеддингом ранжируются по близости, остальные — после
-                        $query->orderByRaw('CASE WHEN embedding IS NULL THEN 1 ELSE 0 END, embedding <=> ?', [$embeddingString]);
-                    }
-                } catch (\Throwable $e) {
-                    // Если сервис эмбеддингов недоступен — просто остаёмся на текстовом поиске
-                }
+                // Public catalog search is deterministic and index-compatible. Semantic ranking
+                // belongs to /api/search/semantic, whose canonical storage is embeddings.embedding.
+                $query->where(function ($sub) use ($like, $titleLike, $descriptionLike): void {
+                    $sub->whereRaw($titleLike, [$like])
+                        ->orWhereRaw($descriptionLike, [$like]);
+                });
+                $query->orderByRaw("CASE WHEN {$titleLike} THEN 0 ELSE 1 END", [$like]);
             }
         }
 
@@ -195,6 +182,13 @@ class AdIndexController extends Controller
         }
 
         return response()->json($query->paginate(16));
+    }
+
+    private function caseInsensitiveContainsExpression(string $column): string
+    {
+        return DB::connection()->getDriverName() === 'pgsql'
+            ? "{$column} ILIKE ?"
+            : "LOWER({$column}) LIKE ?";
     }
 
     /**

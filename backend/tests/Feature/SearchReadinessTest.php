@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -51,6 +52,48 @@ class SearchReadinessTest extends TestCase
             ->assertJsonPath('data.0.id', $ad->id);
     }
 
+
+    public function test_keyword_fallback_prioritizes_title_matches_over_description_only_matches(): void
+    {
+        config(['services.ollama.base_url' => 'http://ollama.test']);
+        Http::fake([
+            'http://ollama.test/api/embeddings' => Http::response(['error' => 'unavailable'], 503),
+        ]);
+
+        $descriptionOnly = $this->activeAd('Departamento céntrico', 'Casa amplia con patio.');
+        $titleMatch = $this->activeAd('Casa pequeña', 'Propiedad lista para habitar.');
+
+        $response = $this->getJson('/api/search/semantic?q=casa');
+
+        $response->assertOk()
+            ->assertJsonPath('total', 2)
+            ->assertJsonPath('data.0.id', $titleMatch->id)
+            ->assertJsonPath('data.1.id', $descriptionOnly->id);
+    }
+
+    public function test_suggestions_return_active_exact_titles_and_are_bounded(): void
+    {
+        Cache::flush();
+        $active = $this->activeAd('Casa luminosa', 'Anuncio activo.');
+        $inactive = $this->activeAd('Casa archivada', 'Anuncio inactivo.');
+        $inactive->forceFill(['status' => 'inactive'])->save();
+
+        $response = $this->getJson('/api/search/suggestions?q=casa');
+
+        $response->assertOk();
+        $suggestions = $response->json();
+        $this->assertIsArray($suggestions);
+        $this->assertContains($active->title, $suggestions);
+        $this->assertNotContains($inactive->title, $suggestions);
+        $this->assertLessThanOrEqual(8, count($suggestions));
+    }
+
+    public function test_suggestion_query_length_is_bounded(): void
+    {
+        $this->getJson('/api/search/suggestions?q=' . str_repeat('a', 81))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('q');
+    }
 
     public function test_embedding_backfill_dry_run_targets_only_genuine_active_listings_by_default(): void
     {
