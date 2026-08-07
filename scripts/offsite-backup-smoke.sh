@@ -10,7 +10,7 @@ run_root() {
 }
 
 echo "== Off-host PostgreSQL backup smoke =="
-test -x "$STATUS_BIN"
+run_root test -x "$STATUS_BIN"
 run_root systemctl is-enabled --quiet mercasto-offsite-backup.timer
 run_root systemctl is-active --quiet mercasto-offsite-backup.timer
 run_root systemctl is-enabled --quiet mercasto-offsite-restore-drill.timer
