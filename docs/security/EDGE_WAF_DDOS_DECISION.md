@@ -1,38 +1,40 @@
 # Edge, WAF, and DDoS decision
 
-Date: 2026-08-04
+Date: 2026-08-07
 Owner: Mercasto operations
-Status: approved origin baseline; managed edge required before broad paid traffic
+Status: Cloudflare edge active; origin-lockdown TTL drain in progress
 
 ## Verified posture
 
-- DNS currently resolves directly to the Mercasto VPS through the existing authoritative DNS provider.
-- No managed CDN or WAF is currently in the request path.
-- The frontend nginx container is the only Docker service publishing ports 80 and 443.
-- The host firewall uses dual-stack default-drop input policies and permits global inbound traffic only for SSH, HTTP, and HTTPS.
-- Database, Redis, queue, AI, and application backend ports are not published publicly.
-- Application rate limits protect authentication, listing writes, uploads, payments, contact actions, and AI helpers.
-- Security headers, safe errors, upload validation, ownership checks, and bearer-only API auth are automated.
+- Cloudflare is authoritative for `mercasto.com`; apex, www, and API are proxied while mail records stay DNS-only.
+- The frontend nginx container remains the only Docker service publishing ports 80 and 443.
+- Cloudflare Full (strict), WebSockets, cache bypass, Clip webhook exclusions, automatic DDoS protection, a custom Skip rule, and a conservative edge write-flood limiter are active.
+- Nginx trusts `CF-Connecting-IP` only when the TCP peer is one of Cloudflare's published IPv4/IPv6 networks; direct peers cannot spoof that header into the real-IP path.
+- DNS-01 renewal is proven and the Certbot host/container renewal paths both have the Cloudflare DNS plugin.
+- The host firewall remains dual-stack default-drop, but global web ingress is temporarily retained only while the previous direct-origin A-record TTL drains.
+- A direct IPv4 origin probe was observed traversing Docker DNAT/FORWARD, so final origin lockdown must protect both INPUT and DOCKER-USER paths.
 
 ## Decision
 
-1. Direct-origin mode is acceptable only for controlled validation and limited organic traffic.
-2. Cloudflare or an equivalent managed edge is required before broad paid marketing or a material traffic increase.
-3. Until managed edge activation, nginx origin connection/request limits and the host default-drop firewall are mandatory compensating controls.
+1. Controlled soft-launch traffic may continue through the active Cloudflare edge.
+2. A non-bypassable managed edge is required before broad paid marketing; final origin 80/443 lockdown must complete after the old DNS cache window drains.
+3. During the bounded TTL-drain window, nginx origin limits and the host default-drop firewall remain mandatory compensating controls.
 4. Traefik must not be enabled for mercasto.com before issue #261. The frontend container continues to own ports 80/443.
-5. Provider client-IP headers must not be trusted while the origin is directly reachable. Real-IP restoration is enabled only after the firewall restricts web traffic to published provider ranges.
+5. Provider client-IP headers may be trusted before final firewall lockdown only when trust is explicitly limited to the provider's published source CIDRs. Global or arbitrary proxy trust is forbidden.6. After the lockdown marker is created, production smoke must require Cloudflare-only web ingress in both INPUT and DOCKER-USER and reject any global web ACCEPT rule.
+7. Cloudflare Free does not provide the full managed-rules phase originally planned; broad paid scale still requires either an appropriate managed-rules plan or explicit owner risk acceptance in #408/#272.
 
-## Managed edge activation checklist
+## Origin lockdown checklist
 
-- Add the zone and change authoritative nameservers through the DNS account owner.
-- Proxy apex, www, and API records; keep mail records DNS-only.
-- Use Full strict TLS and validate the origin certificate.
-- Enable managed WAF, automatic DDoS protection, bot controls, and path-specific rate limits.
-- Preserve websocket support and bypass cache for authenticated, API, payment, and webhook routes.
-- Restrict origin web ports to provider ranges before trusting provider real-IP headers.
-- Verify health, OAuth, payments, webhooks, uploads, websockets, analytics, and rollback.
-- Keep provider account identifiers and credentials in the secret manager, never in the repository.
+- Wait for the previous 14,400-second direct-A cache window to drain and verify major resolvers no longer return the origin.
+- Back up active and persistent IPv4/IPv6 firewall state.
+- Preserve global SSH on port 22 and existing internal Docker allowances.
+- Allow web ports 80/443 from all current Cloudflare IPv4/IPv6 CIDRs in INPUT.
+- Apply the same Cloudflare allowlist in DOCKER-USER, then drop all other forwarded web traffic there.
+- Remove global INPUT accepts for ports 80 and 443 and persist both IPv4 and IPv6 rules.
+- Create `/etc/mercasto/cloudflare-origin-lockdown` only after the rules are saved successfully; that marker switches live smoke into strict Cloudflare-only enforcement.
+- Prove a direct non-Cloudflare request to the origin fails while proxied site/API/TLS/WebSocket/Clip paths remain healthy.
+- Run production smoke and live gates.
 
 ## Rollback
 
-If edge activation breaks critical flows, restore prior DNS, remove real-IP trust, restore the prior firewall allowlist, and run the complete production smoke suite. Origin limits remain enabled during rollback.
+If edge activation or origin lockdown breaks critical flows, restore the backed-up firewall first, remove the lockdown marker, then set affected web records DNS-only or restore the prior Hostinger nameservers if needed. Keep DNS-01 renewal intact and run the complete production smoke suite. Origin nginx limits remain enabled during rollback.
