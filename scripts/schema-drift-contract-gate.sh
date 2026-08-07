@@ -34,6 +34,10 @@ if grep -qE "Schema::create\(['\"]payment_products['\"]" backend/database/seeder
 fi
 grep -qF 'bash scripts/production-schema-drift-smoke.sh' scripts/server-operator.sh
 bash -n scripts/production-schema-drift-smoke.sh
-python3 -m py_compile scripts/schema-migration-inventory.py
+python3 - <<'PYCODE'
+from pathlib import Path
+path = Path('scripts/schema-migration-inventory.py')
+compile(path.read_text(encoding='utf-8'), str(path), 'exec')
+PYCODE
 
 echo "production schema drift contract gate OK"
