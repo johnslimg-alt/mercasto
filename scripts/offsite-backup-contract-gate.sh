@@ -24,6 +24,11 @@ grep -qF "OnFailure=mercasto-offsite-backup-alert.service" ops/systemd/mercasto-
 grep -qF "OnCalendar=*-*-* 00,06,12,18:30:00 UTC" ops/systemd/mercasto-offsite-backup.timer
 grep -qF "OnCalendar=*-*-01 21:30:00 UTC" ops/systemd/mercasto-offsite-restore-drill.timer
 grep -qF "bash scripts/offsite-backup-smoke.sh" "$SERVER"
+grep -qF 'run_root test -x "$STATUS_BIN"' "$SMOKE"
+if grep -qE '^test -x "\$STATUS_BIN"$' "$SMOKE"; then
+  echo "FAIL: offsite smoke checks the root-only status binary without run_root" >&2
+  exit 1
+fi
 if grep -RIEq --exclude=offsite-backup-contract-gate.sh 'AWS_SECRET_ACCESS_KEY=[A-Za-z0-9_/+=-]{16,}|R2_[A-Z_]*SECRET=[A-Za-z0-9_/+=-]{16,}' ops scripts docs; then
   echo "FAIL: possible offsite-backup secret committed" >&2
   exit 1
