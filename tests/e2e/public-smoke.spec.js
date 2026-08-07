@@ -199,7 +199,7 @@ test.describe('public launch smoke', () => {
   });
 
   test('sensitive files are denied', async ({ request }) => {
-    const paths = ['/.env', '/.git/config', '/backend/.env', '/composer.json', '/package.json'];
+    const paths = ['/.env', '/.git/config', '/backend/.env', '/composer.json', '/package.json', '/wp-login.php', '/wp-admin/', '/wp-includes/js/jquery/', '/scanner-probe.php'];
     for (const path of paths) {
       const response = await request.get(path);
       expect(response.status(), `${path} should be hidden`).toBe(404);
