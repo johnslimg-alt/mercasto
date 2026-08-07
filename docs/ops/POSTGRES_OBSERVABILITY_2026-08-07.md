@@ -36,17 +36,22 @@ The versioned compose command applies:
 
 ## Deployment verification
 
-A deployment containing this change intentionally recreates/restarts the PostgreSQL container once because `shared_preload_libraries` is a postmaster setting. The deploy sequence must:
+The ordinary application deploy updated the compose definition and migration but did not recreate the already-running PostgreSQL container. Because `shared_preload_libraries` is a postmaster setting, activation therefore used one explicit targeted `--force-recreate postgres` only after the off-host backup/restore drill and normalized compose command were rechecked. The recreated database became healthy at `2026-08-07T06:50:52Z`, after which the activation smoke and public endpoints passed.
 
-1. require `bash scripts/offsite-backup-smoke.sh` to be green;
-2. start PostgreSQL with the versioned compose command;
-3. wait for the normal Docker health check;
-4. run Laravel migrations, which create `pg_stat_statements` on PostgreSQL only;
-5. run `bash scripts/postgres-observability-activation-smoke.sh` from `verify_quick`;
-6. require public/API/live gates and the Autonomous Server Live Gate to pass;
-7. capture a queryid-only profile only after the extension has accumulated enough calls.
+Future PostgreSQL containers created from the versioned compose definition inherit the active settings automatically. Verification requires:
 
-This activation must complete before the final 48-hour launch observation window starts. No index add/drop or autovacuum tuning is part of this change.
+1. `bash scripts/offsite-backup-smoke.sh` green before any intentional PostgreSQL recreate;
+2. normal Docker database health after startup;
+3. the PostgreSQL-only migration to keep `pg_stat_statements` installed;
+4. `bash scripts/postgres-observability-activation-smoke.sh` green;
+5. public/API/live gates and Autonomous Server Live Gate green;
+6. queryid-only profiling after enough calls accumulate.
+
+Activation completed before the final 48-hour launch observation window. No index add/drop or autovacuum tuning was part of activation.
+
+## Read-only health watch
+
+`PostgreSQL Observability Watch` runs every six hours from the trusted production checkout without a repository checkout on the self-hosted runner. It alerts only on aggregate operational thresholds: connection saturation at or above 80%, lock waiters, transactions older than 60 seconds, idle-in-transaction sessions, material dead-tuple pressure, autovacuum lag, or loss of the pg_stat_statements activation contract. It never exports SQL text/parameters and never restarts, vacuums, or changes indexes.
 
 ## Rollback
 
