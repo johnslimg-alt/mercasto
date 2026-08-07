@@ -82,6 +82,7 @@ return [
         'timeout' => env('OLLAMA_TIMEOUT', 60),
         'base_url' => env('OLLAMA_BASE_URL', 'http://ollama:11434'),
         'chat_model' => env('OLLAMA_CHAT_MODEL', 'qwen3-vl:4b-instruct'),
+        'keep_alive' => env('OLLAMA_KEEP_ALIVE', '24h'),
     ],
 
 

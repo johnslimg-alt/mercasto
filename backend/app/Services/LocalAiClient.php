@@ -41,7 +41,7 @@ class LocalAiClient
             'model' => $model,
             'messages' => $messages,
             'stream' => false,
-            'keep_alive' => Arr::get($options, 'keep_alive', '2m'),
+            'keep_alive' => Arr::get($options, 'keep_alive', config('services.ollama.keep_alive', '24h')),
             'options' => [
                 'temperature' => Arr::get($options, 'temperature', 0.2),
                 'top_p' => Arr::get($options, 'top_p', 0.9),

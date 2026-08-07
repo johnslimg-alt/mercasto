@@ -90,7 +90,6 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'max_tokens' => 320,
                 'timeout' => 150,
                 'num_ctx' => 4096,
-                'keep_alive' => '2m',
             ]);
             $model = (string) ($aiResponse['model'] ?? config('services.ollama.chat_model', 'qwen3-vl:4b-instruct'));
             $result = $this->parseResult((string) data_get($aiResponse, 'choices.0.message.content', ''));

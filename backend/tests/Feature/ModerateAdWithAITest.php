@@ -6,6 +6,7 @@ use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -20,6 +21,7 @@ class ModerateAdWithAITest extends TestCase
         config([
             'services.ollama.base_url' => 'http://ollama.test',
             'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
+            'services.ollama.keep_alive' => '24h',
         ]);
         Http::fake([
             'http://ollama.test/api/chat' => Http::response([
@@ -53,6 +55,9 @@ class ModerateAdWithAITest extends TestCase
         ]);
 
         app()->call([new ModerateAdWithAI($ad->id), 'handle']);
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/chat'
+            && $request['keep_alive'] === '24h');
 
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
