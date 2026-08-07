@@ -105,8 +105,8 @@ if (sitemap.status === 200) {
     '/cookies',
     '/contacto',
     '/ayuda',
-    '/reembolsos',
-    '/moderacion',
+    '/reembolsos/',
+    '/moderacion/',
   ];
 
   if (/<sitemapindex/i.test(sitemap.text)) {
@@ -119,8 +119,12 @@ if (sitemap.status === 200) {
     const mainPath = new URL(mainSitemapUrl).pathname;
     const { text: mainText } = await fetchText(mainPath);
     legalPagePaths.forEach((path) => requireSitemapUrl(mainText, path));
+    rejectMatch('sitemap excludes non-canonical /reembolsos', mainText, /<loc>https:\/\/mercasto\.com\/reembolsos<\/loc>/i);
+    rejectMatch('sitemap excludes non-canonical /moderacion', mainText, /<loc>https:\/\/mercasto\.com\/moderacion<\/loc>/i);
   } else {
     legalPagePaths.forEach((path) => requireSitemapUrl(sitemap.text, path));
+    rejectMatch('sitemap excludes non-canonical /reembolsos', sitemap.text, /<loc>https:\/\/mercasto\.com\/reembolsos<\/loc>/i);
+    rejectMatch('sitemap excludes non-canonical /moderacion', sitemap.text, /<loc>https:\/\/mercasto\.com\/moderacion<\/loc>/i);
   }
 }
 
