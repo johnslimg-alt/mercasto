@@ -20,6 +20,7 @@ class AiDescriptionFallbackTest extends TestCase
         config([
             'services.ollama.base_url' => 'http://ollama.test',
             'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
+            'services.ollama.keep_alive' => '24h',
         ]);
     }
 
@@ -54,7 +55,8 @@ class AiDescriptionFallbackTest extends TestCase
             'Bicicleta urbana usada en Veracruz por $2,500 MXN. Escríbeme para más información.'
         );
 
-        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/chat');
+        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/chat'
+            && $request['keep_alive'] === '24h');
         Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'googleapis.com')
             || str_contains($request->url(), 'deepseek')
             || str_contains($request->url(), 'anthropic'));
