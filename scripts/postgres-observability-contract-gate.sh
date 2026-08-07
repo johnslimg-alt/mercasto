@@ -7,6 +7,8 @@ cd "$ROOT_DIR"
 SNAPSHOT="scripts/postgres-observability-snapshot.sh"
 PROFILE="scripts/postgres-query-profile.sh"
 ACTIVATION="scripts/postgres-observability-activation-smoke.sh"
+HEALTH="scripts/postgres-observability-health.sh"
+WATCH=".github/workflows/postgres-observability-watch.yml"
 REFERENCE="ops/postgres/pg-stat-statements.reference.conf"
 RUNBOOK="docs/ops/POSTGRES_OBSERVABILITY_2026-08-07.md"
 MIGRATION="backend/database/migrations/2026_08_07_063000_enable_pg_stat_statements_extension.php"
@@ -14,8 +16,8 @@ COMPOSE="docker-compose.yml"
 SERVER="scripts/server-operator.sh"
 
 echo "== PostgreSQL observability contract gate =="
-for file in "$SNAPSHOT" "$PROFILE" "$ACTIVATION" "$REFERENCE" "$RUNBOOK" "$MIGRATION" "$COMPOSE"; do test -f "$file"; done
-for file in "$SNAPSHOT" "$PROFILE" "$ACTIVATION"; do test -x "$file"; bash -n "$file"; done
+for file in "$SNAPSHOT" "$PROFILE" "$ACTIVATION" "$HEALTH" "$WATCH" "$REFERENCE" "$RUNBOOK" "$MIGRATION" "$COMPOSE"; do test -f "$file"; done
+for file in "$SNAPSHOT" "$PROFILE" "$ACTIVATION" "$HEALTH"; do test -x "$file"; bash -n "$file"; done
 
 grep -qF 'BEGIN TRANSACTION READ ONLY;' "$SNAPSHOT"
 grep -qF "SET LOCAL statement_timeout = '10s';" "$SNAPSHOT"
@@ -49,6 +51,25 @@ done
 grep -qF 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements' "$MIGRATION"
 grep -qF "current_setting('shared_preload_libraries')" "$ACTIVATION"
 grep -qF "pg_stat_statements=active" "$ACTIVATION"
+grep -qF 'BEGIN TRANSACTION READ ONLY;' "$HEALTH"
+grep -qF "interval '60 seconds'" "$HEALTH"
+grep -qF 'value >= 80' "$HEALTH"
+grep -qF 'n_dead_tup >= 1000' "$HEALTH"
+grep -qF '>= 25' "$HEALTH"
+grep -qF 'n_dead_tup >= 500' "$HEALTH"
+grep -qF "interval '21 days'" "$HEALTH"
+if grep -Eiq 'pg_stat_activity[^;]*query|select[^;]*[[:space:],]query[[:space:],]' "$HEALTH"; then
+  echo "FAIL: health watch must not output SQL text" >&2
+  exit 1
+fi
+grep -qF "cron: '23 */6 * * *'" "$WATCH"
+grep -qF 'runs-on: [self-hosted, linux, docker]' "$WATCH"
+grep -qF '/var/www/mercasto/scripts/postgres-observability-health.sh' "$WATCH"
+grep -qF 'POSTGRES_OBSERVABILITY_WATCH_INCIDENT' "$WATCH"
+if grep -qF 'actions/checkout' "$WATCH"; then
+  echo "FAIL: trusted self-hosted database watch must not checkout workflow code" >&2
+  exit 1
+fi
 grep -qF 'bash scripts/postgres-observability-activation-smoke.sh' "$SERVER"
 grep -qF 'ACTIVE AFTER DEPLOYMENT' "$RUNBOOK"
 grep -qF 'offsite-backup-smoke.sh' "$RUNBOOK"

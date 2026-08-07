@@ -1,0 +1,75 @@
+name: PostgreSQL Observability Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 */6 * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: postgres-observability-watch
+  cancel-in-progress: false
+
+jobs:
+  database-watch:
+    name: Check PostgreSQL aggregate health
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 10
+    steps:
+      - name: Verify trusted production checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /var/www/mercasto
+          test -x /var/www/mercasto/scripts/postgres-observability-health.sh
+
+      - name: Run read-only database health watch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/postgres-observability-health.sh
+
+  report-failure:
+    name: Report PostgreSQL observability incident
+    runs-on: ubuntu-latest
+    needs: database-watch
+    if: failure()
+    timeout-minutes: 5
+    steps:
+      - name: Create or update database watch issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const marker = 'POSTGRES_OBSERVABILITY_WATCH_INCIDENT';
+            const title = 'PostgreSQL observability watch failing';
+            const body = [
+              marker,
+              '',
+              'The read-only PostgreSQL observability watch crossed a health threshold or could not read aggregate metrics.',
+              '',
+              `Latest failed run: ${runUrl}`,
+              '',
+              'Checks: connection saturation, lock waits, transactions over 60 seconds, idle-in-transaction sessions, dead-tuple pressure, autovacuum lag, and pg_stat_statements activation.',
+              '',
+              'Safety boundary: the watch is read-only and does not export SQL text or parameters, restart PostgreSQL, vacuum, or add/drop indexes.'
+            ].join('\n');
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'incident', per_page: 30
+            });
+            const existing = issues.find(issue => issue.title === title || (issue.body || '').includes(marker));
+            if (existing) {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body: `Still failing. Latest run: ${runUrl}` });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo, title, body,
+                labels: ['database', 'production', 'autonomous-watch', 'incident']
+              });
+            }
