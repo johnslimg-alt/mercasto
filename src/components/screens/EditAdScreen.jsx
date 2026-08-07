@@ -168,7 +168,7 @@ export default function EditAdScreen({ t, lang }) {
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ title: form.title, category: form.category || undefined,
           condition: form.condition || undefined, location: form.location || undefined,
-          price: form.price || undefined, attributes: attrs }),
+          price: form.price || undefined, attributes: attrs, locale: lang }),
       });
       const data = await res.json();
       if (!res.ok) { setAiError(data.error || data.message || 'No se pudo generar la descripción.'); return; }
