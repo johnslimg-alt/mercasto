@@ -8,6 +8,8 @@ on:
     paths:
       - 'backend/database/**'
       - '.github/workflows/backend-schema-inventory.yml'
+      - 'scripts/schema-migration-inventory.py'
+      - 'ops/schema/known-unmanaged-production-tables.txt'
 
 permissions:
   contents: read
@@ -41,6 +43,12 @@ jobs:
             echo
             echo '## Table keyword matches'
             grep -RInE 'payments|ad_promotions|user_notifications|clip_checkout_id|webhook_payload' backend/database backend/app 2>/dev/null || true
+            echo
+            echo '## Migration-managed tables'
+            python3 scripts/schema-migration-inventory.py
+            echo
+            echo '## Known production-only unmanaged tables'
+            grep -Ev '^[[:space:]]*(#|$)' ops/schema/known-unmanaged-production-tables.txt || true
           } | tee /tmp/mercasto-schema-inventory/backend-schema-inventory.md
 
       - name: Upload schema inventory artifact

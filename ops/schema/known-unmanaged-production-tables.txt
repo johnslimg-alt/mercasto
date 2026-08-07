@@ -1,0 +1,5 @@
+# Known production-only tables intentionally not adopted by migrations yet.
+# Any addition/removal must be reviewed with production schema-drift evidence.
+blacklist
+category_names_backup_20260704
+real_estate_developments

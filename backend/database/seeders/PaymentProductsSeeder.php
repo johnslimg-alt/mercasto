@@ -4,6 +4,7 @@ namespace Database\Seeders;
  
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
  
 class PaymentProductsSeeder extends Seeder
 {
@@ -93,46 +94,22 @@ class PaymentProductsSeeder extends Seeder
             ],
         ];
 
-        // Perform idempotent updateOrCreate seed into the database if the table exists
-        if (\Illuminate\Support\Facades\Schema::hasTable('payment_products')) {
-            foreach ($products as $product) {
-                DB::table('payment_products')->updateOrInsert(
-                    ['code' => $product['code']],
-                    [
-                        'name' => $product['name'],
-                        'price' => $product['price'],
-                        'description' => $product['description'],
-                        'type' => $product['type'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]
-                );
-            }
-        } else {
-            // Dynamically create payment_products table if needed so it is fully idempotent and robust
-            \Illuminate\Support\Facades\Schema::create('payment_products', function ($table) {
-                $table->id();
-                $table->string('code')->unique();
-                $table->string('name');
-                $table->decimal('price', 10, 2);
-                $table->text('description')->nullable();
-                $table->string('type')->nullable();
-                $table->timestamps();
-            });
+        if (! Schema::hasTable('payment_products')) {
+            throw new \RuntimeException('payment_products table is missing; run migrations before seeding.');
+        }
 
-            foreach ($products as $product) {
-                DB::table('payment_products')->updateOrInsert(
-                    ['code' => $product['code']],
-                    [
-                        'name' => $product['name'],
-                        'price' => $product['price'],
-                        'description' => $product['description'],
-                        'type' => $product['type'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]
-                );
-            }
+        foreach ($products as $product) {
+            DB::table('payment_products')->updateOrInsert(
+                ['code' => $product['code']],
+                [
+                    'name' => $product['name'],
+                    'price' => $product['price'],
+                    'description' => $product['description'],
+                    'type' => $product['type'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
     }
 }

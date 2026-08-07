@@ -48,6 +48,7 @@ node --test scripts/seo-audit-request.test.mjs
 bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh
 bash scripts/offsite-backup-contract-gate.sh
+bash scripts/schema-drift-contract-gate.sh
 bash scripts/payment-retention-scan.sh
 bash scripts/payment-payload-privacy-gate.sh
 bash scripts/payment-webhook-idempotency-scan.sh
