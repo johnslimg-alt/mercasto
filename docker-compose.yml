@@ -335,7 +335,7 @@ services:
         max-file: "3"
 
   certbot:
-    image: certbot/certbot:v2.10.0
+    image: certbot/dns-cloudflare:v2.10.0
     container_name: certbot
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
