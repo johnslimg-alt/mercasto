@@ -36,6 +36,18 @@ class AdIndexSearchTest extends TestCase
             ->assertJsonValidationErrors('search');
     }
 
+    public function test_similar_ads_falls_back_to_category_without_a_canonical_vector(): void
+    {
+        $source = $this->activeAd('Mesa de comedor', 'Mesa de madera sólida.');
+        $fallback = $this->activeAd('Sillas de comedor', 'Juego de cuatro sillas.');
+
+        $response = $this->getJson('/api/ads/' . $source->id . '/similar');
+
+        $response->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.id', $fallback->id);
+    }
+
     private function activeAd(string $title, string $description): Ad
     {
         return Ad::query()->create([

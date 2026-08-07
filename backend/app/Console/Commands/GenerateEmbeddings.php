@@ -74,9 +74,6 @@ class GenerateEmbeddings extends Command
                         DO UPDATE SET embedding = EXCLUDED.embedding, updated_at = NOW()
                     ', [$ad->id, $embeddingString]);
 
-                    // 2. Also update ads table embedding column for compatibility
-                    DB::statement('UPDATE ads SET embedding = ?::vector WHERE id = ?', [$embeddingString, $ad->id]);
-
                     $success++;
                 } else {
                     $this->error("Ollama API failed for ad ID {$ad->id}: " . $response->body());

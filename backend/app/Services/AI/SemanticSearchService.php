@@ -4,25 +4,17 @@ namespace App\Services\AI;
 
 use App\Models\Ad;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SemanticSearchService
 {
-    private OllamaClient $ollama;
-
-    public function __construct(OllamaClient $ollama)
+    public function __construct(private OllamaClient $ollama)
     {
-        $this->ollama = $ollama;
     }
 
     /**
-     * Search ads using semantic similarity (vector embeddings)
-     * Understands meaning, not just keywords
-     * 
-     * Examples:
-     *   "auto barato" → finds "carro económico", "vehículo a buen precio"
-     *   "phone for gaming" → finds "iPhone 15 Pro Max", "Samsung Galaxy S24 Ultra"
+     * Search genuine active ads through the canonical embeddings table.
      */
     public function search(
         string $query,
@@ -33,43 +25,37 @@ class SemanticSearchService
         ?float $maxPrice = null,
         float $similarityThreshold = 0.3
     ): array {
-        // Get embedding for the query
         $queryEmbedding = $this->ollama->embed($query);
-        
-        if (!$queryEmbedding) {
+
+        if (! $queryEmbedding) {
             Log::warning('Semantic search failed: no embedding generated');
+
             return ['results' => [], 'fallback' => true];
         }
 
-        // Convert embedding array to PostgreSQL vector format
         $vectorString = '[' . implode(',', $queryEmbedding) . ']';
 
-        // Build the query with cosine distance
         $results = DB::table('ads')
-            ->select([
-                'ads.*',
-                DB::raw('1 - (embedding <=> ?::vector) as similarity'),
-            ])
-            ->whereNotNull('embedding')
-            ->where('status', 'active')
-            ->addBinding($vectorString, 'select')
-            ->when($category, fn($q) => $q->where('category', $category))
-            ->when($state, fn($q) => $q->where('state', $state))
-            ->when($minPrice, fn($q) => $q->where('price', '>=', $minPrice))
-            ->when($maxPrice, fn($q) => $q->where('price', '<=', $maxPrice))
-            ->whereRaw('1 - (embedding <=> ?::vector) >= ?', [$vectorString, $similarityThreshold])
-            ->orderByRaw('embedding <=> ?::vector', [$vectorString])
+            ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
+            ->select('ads.*')
+            ->selectRaw('1 - (embeddings.embedding <=> ?::vector) as similarity', [$vectorString])
+            ->whereNotNull('embeddings.embedding')
+            ->where('ads.status', 'active')
+            ->where('ads.is_catalog_filler', false)
+            ->when($category, fn ($builder) => $builder->where('ads.category', $category))
+            ->when($state, fn ($builder) => $builder->where('ads.state', $state))
+            ->when($minPrice, fn ($builder) => $builder->where('ads.price', '>=', $minPrice))
+            ->when($maxPrice, fn ($builder) => $builder->where('ads.price', '<=', $maxPrice))
+            ->whereRaw('1 - (embeddings.embedding <=> ?::vector) >= ?', [$vectorString, $similarityThreshold])
+            ->orderByRaw('embeddings.embedding <=> ?::vector', [$vectorString])
             ->limit($limit)
-            ->get(['id', 'user_id', 'title', 'description', 'price', 'location', 'category', 'image_url', 'status', 'created_at', 'views', 'condition', 'state', 'similarity_score']);
+            ->get();
 
-        // Enhance results with Ad model
-        $adIds = $results->pluck('id')->toArray();
         $ads = Ad::with(['user'])
-            ->whereIn('id', $adIds)
+            ->whereIn('id', $results->pluck('id'))
             ->get()
             ->keyBy('id');
 
-        // Preserve similarity scores
         return [
             'results' => $results->map(function ($row) use ($ads) {
                 $ad = $ads->get($row->id);
@@ -77,6 +63,7 @@ class SemanticSearchService
                     $ad->similarity_score = round($row->similarity * 100, 1);
                     $ad->search_type = 'semantic';
                 }
+
                 return $ad;
             })->filter()->values(),
             'query' => $query,
@@ -86,75 +73,78 @@ class SemanticSearchService
     }
 
     /**
-     * Generate and store embedding for an ad
-     * Called when ad is created or updated
+     * Generate and store an ad embedding in the canonical embeddings table.
      */
     public function generateEmbedding(Ad $ad): bool
     {
-        // Build text representation for embedding
-        $text = $this->buildAdText($ad);
-        
-        $embedding = $this->ollama->embed($text);
-        
-        if (!$embedding) {
+        $embedding = $this->ollama->embed($this->buildAdText($ad));
+
+        if (! $embedding) {
             return false;
         }
 
         $vectorString = '[' . implode(',', $embedding) . ']';
-        
+
         DB::statement(
-            'UPDATE ads SET embedding = ?::vector WHERE id = ?',
-            [$vectorString, $ad->id]
+            <<<'SQL'
+                INSERT INTO embeddings (ad_id, embedding, created_at, updated_at)
+                VALUES (?, ?::vector, NOW(), NOW())
+                ON CONFLICT (ad_id)
+                DO UPDATE SET embedding = EXCLUDED.embedding, updated_at = NOW()
+            SQL,
+            [$ad->id, $vectorString]
         );
 
         Log::info('Embedding generated', ['ad_id' => $ad->id, 'dims' => count($embedding)]);
+
         return true;
     }
 
     /**
-     * Generate embeddings for all ads that don't have one
-     * Run as a scheduled job
+     * Generate canonical embeddings for active genuine ads that do not have one.
      */
     public function backfillEmbeddings(int $batchSize = 50): array
     {
         $adsWithoutEmbeddings = DB::table('ads')
-            ->whereNull('embedding')
-            ->where('status', 'active')
+            ->leftJoin('embeddings', 'ads.id', '=', 'embeddings.ad_id')
+            ->whereNull('embeddings.embedding')
+            ->where('ads.status', 'active')
+            ->where('ads.is_catalog_filler', false)
+            ->orderBy('ads.id')
             ->limit($batchSize)
-            ->get(['id', 'user_id', 'title', 'description', 'price', 'location', 'category', 'image_url', 'status', 'created_at', 'views', 'condition', 'state', 'similarity_score']);
+            ->pluck('ads.id');
 
         $processed = 0;
         $failed = 0;
 
-        foreach ($adsWithoutEmbeddings as $adRow) {
-            $ad = Ad::find($adRow->id);
+        foreach ($adsWithoutEmbeddings as $adId) {
+            $ad = Ad::find($adId);
             if ($ad && $this->generateEmbedding($ad)) {
                 $processed++;
             } else {
                 $failed++;
             }
-            
-            // Rate limiting: small delay between API calls
-            usleep(100000); // 100ms
+
+            usleep(100000);
         }
 
-        return ['processed' => $processed, 'failed' => $failed, 'remaining' => $this->countWithoutEmbeddings()];
+        return [
+            'processed' => $processed,
+            'failed' => $failed,
+            'remaining' => $this->countWithoutEmbeddings(),
+        ];
     }
 
-    /**
-     * Count ads without embeddings
-     */
     public function countWithoutEmbeddings(): int
     {
         return DB::table('ads')
-            ->whereNull('embedding')
-            ->where('status', 'active')
-            ->count();
+            ->leftJoin('embeddings', 'ads.id', '=', 'embeddings.ad_id')
+            ->whereNull('embeddings.embedding')
+            ->where('ads.status', 'active')
+            ->where('ads.is_catalog_filler', false)
+            ->count('ads.id');
     }
 
-    /**
-     * Build text representation of ad for embedding
-     */
     private function buildAdText(Ad $ad): string
     {
         $parts = [
@@ -165,7 +155,6 @@ class SemanticSearchService
             ' ',
         ];
 
-        // Add attributes if present
         if ($ad->attributes) {
             $attrs = is_string($ad->attributes) ? json_decode($ad->attributes, true) : $ad->attributes;
             if (is_array($attrs)) {
@@ -179,37 +168,47 @@ class SemanticSearchService
     }
 
     /**
-     * Find similar ads using vector similarity
+     * Find similar genuine active ads through canonical embeddings.
      */
     public function findSimilar(Ad $ad, int $limit = 10): array
     {
-        if (!$ad->embedding) {
+        try {
+            $vectorString = DB::table('embeddings')
+                ->where('ad_id', $ad->id)
+                ->selectRaw('embedding::text as embedding_text')
+                ->value('embedding_text');
+        } catch (Throwable) {
             return [];
         }
 
-        $vectorString = is_string($ad->embedding) 
-            ? $ad->embedding 
-            : '[' . implode(',', is_array($ad->embedding) ? $ad->embedding : json_decode($ad->embedding, true)) . ']';
+        if (! is_string($vectorString) || $vectorString === '') {
+            return [];
+        }
 
         $similar = DB::table('ads')
-            ->select([
-                'ads.*',
-                DB::raw('1 - (embedding <=> ?::vector) as similarity'),
-            ])
-            ->where('id', '!=', $ad->id)
-            ->whereNotNull('embedding')
-            ->where('status', 'active')
-            ->addBinding($vectorString, 'select')
-            ->orderByRaw('embedding <=> ?::vector', [$vectorString])
+            ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
+            ->select('ads.id')
+            ->selectRaw('1 - (embeddings.embedding <=> ?::vector) as similarity', [$vectorString])
+            ->where('ads.id', '!=', $ad->id)
+            ->whereNotNull('embeddings.embedding')
+            ->where('ads.status', 'active')
+            ->where('ads.is_catalog_filler', false)
+            ->orderByRaw('embeddings.embedding <=> ?::vector', [$vectorString])
             ->limit($limit)
-            ->get(['id', 'user_id', 'title', 'description', 'price', 'location', 'category', 'image_url', 'status', 'created_at', 'views', 'condition', 'state', 'similarity_score']);
+            ->get();
 
-        return Ad::with(['user'])
+        $ads = Ad::with(['user'])
             ->whereIn('id', $similar->pluck('id'))
             ->get()
-            ->each(function ($item) use ($similar) {
-                $row = $similar->firstWhere('id', $item->id);
+            ->keyBy('id');
+
+        return $similar->map(function ($row) use ($ads) {
+            $item = $ads->get($row->id);
+            if ($item) {
                 $item->similarity_score = round(($row->similarity ?? 0) * 100, 1);
-            });
+            }
+
+            return $item;
+        })->filter()->values()->all();
     }
 }

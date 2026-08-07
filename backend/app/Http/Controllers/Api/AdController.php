@@ -261,26 +261,12 @@ class AdController extends Controller
         }
 
         if ($request->filled('search')) {
-            $search = $request->search;
-            $apiKey = config('services.gemini.api_key', env('GEMINI_API_KEY'));
-            $vectorSearchSuccess = false;
-
-            if ($apiKey) {
-                $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$apiKey}", [
-                    'model' => 'models/text-embedding-004',
-                    'content' => ['parts' => [['text' => $search]]]
-                ]);
-                if ($response->successful() && $embedding = $response->json('embedding.values')) {
-                    $embeddingString = '[' . implode(',', $embedding) . ']';
-                    $query->whereNotNull('embedding')->orderByRaw('embedding <=> ?', [$embeddingString]);
-                    $vectorSearchSuccess = true;
-                }
-            }
-
-            if (!$vectorSearchSuccess) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+            $search = trim((string) $request->search);
+            if ($search !== '') {
+                $like = '%' . $search . '%';
+                $query->where(function ($q) use ($like) {
+                    $q->whereRaw('title ILIKE ?', [$like])
+                        ->orWhereRaw('description ILIKE ?', [$like]);
                 });
             }
         }
@@ -2353,8 +2339,17 @@ class AdController extends Controller
     {
         $ad = Ad::findOrFail($id);
 
-        // Если вектора нет — fallback на ту же категорию
-        if (!$ad->embedding) {
+        try {
+            $embeddingString = DB::table('embeddings')
+                ->where('ad_id', $ad->id)
+                ->selectRaw('embedding::text as embedding_text')
+                ->value('embedding_text');
+        } catch (\Throwable) {
+            $embeddingString = null;
+        }
+
+        // No canonical vector: deterministic category fallback.
+        if (! is_string($embeddingString) || $embeddingString === '') {
             $fallback = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
                 ->where('status', 'active')
                 ->where('category', $ad->category)
@@ -2362,22 +2357,23 @@ class AdController extends Controller
                 ->latest()
                 ->limit(8)
                 ->get();
+
             return response()->json($fallback);
         }
 
-        $embeddingString = $ad->embedding;
-
-        // pgvector: сортировка по косинусному расстоянию (<=>)
         $similar = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
-            ->selectRaw("*, (embedding <=> ?) AS vec_distance", [$embeddingString])
-            ->where('status', 'active')
-            ->where('id', '!=', $ad->id)
-            ->whereNotNull('embedding')
+            ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
+            ->select('ads.*')
+            ->selectRaw('(embeddings.embedding <=> ?::vector) AS vec_distance', [$embeddingString])
+            ->where('ads.status', 'active')
+            ->where('ads.is_catalog_filler', false)
+            ->where('ads.id', '!=', $ad->id)
+            ->whereNotNull('embeddings.embedding')
             ->orderBy('vec_distance')
             ->limit(8)
             ->get();
 
-        // Если pgvector вернул меньше 4 — дополняем той же категорией
+        // If genuine semantic supply is sparse, preserve the existing category fallback.
         if ($similar->count() < 4) {
             $extra = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
                 ->where('status', 'active')
@@ -2392,6 +2388,7 @@ class AdController extends Controller
 
         return response()->json($similar->values());
     }
+
 
 
 
