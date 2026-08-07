@@ -75,40 +75,15 @@ return [
         'verification_url' => env('CLIP_VERIFICATION_URL', 'https://api.payclip.com/v2/checkout'),
     ],
 
-    'gemini' => [
-        'api_key' => env('GEMINI_API_KEY'),
-        'moderation_model' => env('GEMINI_MODERATION_MODEL', 'gemini-3.6-flash'),
-        'moderation_models' => array_values(array_unique(array_filter(array_map(
-            'trim',
-            array_merge(
-                [env('GEMINI_MODERATION_MODEL', 'gemini-3.6-flash')],
-                explode(',', env(
-                    'GEMINI_MODERATION_FALLBACK_MODELS',
-                    'gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.1-flash-lite,gemini-2.5-flash-lite,gemini-2.5-flash,gemini-2.0-flash-lite,gemini-2.0-flash'
-                ))
-            )
-        )))),
-    ],
-
-    'deepseek' => [
-        'api_key' => env('DEEPSEEK_API_KEY'),
-        'base_url' => env('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
-        'fast_model' => env('DEEPSEEK_FAST_MODEL', 'deepseek-v4-flash'),
-        'pro_model' => env('DEEPSEEK_PRO_MODEL', 'deepseek-v4-pro'),
-    ],
 
     'ollama' => [
         'url' => env('OLLAMA_URL', 'http://mercasto_ollama:11434'),
-        'model' => env('OLLAMA_MODEL', 'qwen2.5-coder:1.5b'),
+        'model' => env('OLLAMA_MODEL', 'qwen3-vl:4b-instruct'),
         'timeout' => env('OLLAMA_TIMEOUT', 60),
         'base_url' => env('OLLAMA_BASE_URL', 'http://ollama:11434'),
-        'chat_model' => env('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b'),
+        'chat_model' => env('OLLAMA_CHAT_MODEL', 'qwen3-vl:4b-instruct'),
     ],
 
-    'ollama_old' => [
-        'base_url' => env('OLLAMA_BASE_URL', 'http://ollama:11434'),
-        'chat_model' => env('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b'),
-    ],
 
     'webpush' => [
         'vapid_public_key' => env('VAPID_PUBLIC_KEY'),

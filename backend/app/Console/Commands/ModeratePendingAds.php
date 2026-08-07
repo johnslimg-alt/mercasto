@@ -27,8 +27,8 @@ class ModeratePendingAds extends Command
             return self::SUCCESS;
         }
 
-        if ((string) config('services.gemini.api_key') === '') {
-            $this->warn('AI moderation skipped because GEMINI_API_KEY is not configured.');
+        if ((string) config('services.ollama.chat_model') === '') {
+            $this->warn('AI moderation skipped because Local Ollama chat model is not configured.');
             return self::SUCCESS;
         }
 

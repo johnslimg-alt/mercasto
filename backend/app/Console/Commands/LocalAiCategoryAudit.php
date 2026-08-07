@@ -2,18 +2,18 @@
 
 namespace App\Console\Commands;
 
-use App\Services\DeepSeekClient;
+use App\Services\LocalAiClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
 
-class DeepSeekCategoryAudit extends Command
+class LocalAiCategoryAudit extends Command
 {
-    protected $signature = 'deepseek:category-audit {--model=flash} {--out=storage/app/ai-audits/category-attributes-audit.json}';
+    protected $signature = 'ai:category-audit {--model=flash} {--out=storage/app/ai-audits/category-attributes-audit.json}';
 
-    protected $description = 'Internal DeepSeek audit for Mercasto category attributes and filters.';
+    protected $description = 'Internal local AI audit for Mercasto category attributes and filters.';
 
-    public function handle(DeepSeekClient $client): int
+    public function handle(LocalAiClient $client): int
     {
         $model = (string) $this->option('model');
         $out = (string) $this->option('out');
@@ -69,7 +69,7 @@ class DeepSeekCategoryAudit extends Command
         $content = $response['choices'][0]['message']['content'] ?? '';
 
         if (! is_string($content) || trim($content) === '') {
-            throw new RuntimeException('DeepSeek returned empty content.');
+            throw new RuntimeException('Local AI returned empty content.');
         }
 
         $decoded = json_decode($content, true);
@@ -77,7 +77,7 @@ class DeepSeekCategoryAudit extends Command
         if (! is_array($decoded)) {
             File::ensureDirectoryExists(base_path('storage/app/ai-audits'));
             file_put_contents(base_path('storage/app/ai-audits/category-attributes-audit.raw.txt'), $content);
-            throw new RuntimeException('DeepSeek returned non-JSON content. Raw response saved to storage/app/ai-audits/category-attributes-audit.raw.txt');
+            throw new RuntimeException('Local AI returned non-JSON content. Raw response saved to storage/app/ai-audits/category-attributes-audit.raw.txt');
         }
 
         File::ensureDirectoryExists(dirname(base_path($out)));

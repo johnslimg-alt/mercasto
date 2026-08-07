@@ -193,10 +193,12 @@ services:
       - autoheal=false
 
   ollama:
-    image: ollama/ollama:0.1.48
+    image: ollama/ollama:0.32.6
     container_name: mercasto_ollama
     expose:
       - "11434"
+    cpus: "2.0"
+    mem_limit: 5g
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
     volumes:

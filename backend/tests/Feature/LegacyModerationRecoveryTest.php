@@ -18,7 +18,7 @@ class LegacyModerationRecoveryTest extends TestCase
     {
         Bus::fake();
         Cache::forget('ai_moderation:provider_unavailable');
-        config(['services.gemini.api_key' => 'test-auth-key']);
+        config(['services.ollama.chat_model' => 'qwen3-vl:4b-instruct']);
 
         $seller = User::factory()->create();
         $eligible = $this->ad($seller, [
@@ -83,7 +83,7 @@ class LegacyModerationRecoveryTest extends TestCase
     {
         Bus::fake();
         Cache::forget('ai_moderation:provider_unavailable');
-        config(['services.gemini.api_key' => 'test-auth-key']);
+        config(['services.ollama.chat_model' => 'qwen3-vl:4b-instruct']);
 
         $seller = User::factory()->create();
         $manualReview = $this->ad($seller, [

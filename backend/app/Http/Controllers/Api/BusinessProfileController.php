@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\LocalAiClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -182,7 +183,7 @@ class BusinessProfileController extends Controller
      * automáticamente cuando la IA está segura de una coincidencia exacta;
      * cualquier duda queda pendiente de revisión manual por un administrador.
      */
-    public function uploadCsf(Request $request)
+    public function uploadCsf(Request $request, LocalAiClient $ai)
     {
         $user = $request->user();
 
@@ -192,12 +193,6 @@ class BusinessProfileController extends Controller
 
         if (empty($user->business_rfc)) {
             return response()->json(['message' => 'Captura tu RFC antes de subir la Constancia de Situación Fiscal.'], 400);
-        }
-
-        $geminiKey = config('services.gemini.api_key');
-        if (empty($geminiKey)) {
-            \Illuminate\Support\Facades\Log::error('Gemini API key not configured — CSF verification rejected');
-            return response()->json(['message' => 'La verificación automática no está disponible temporalmente. Inténtalo más tarde.'], 503);
         }
 
         if ($user->business_csf_url && ! str_starts_with($user->business_csf_url, 'http')) {
@@ -230,7 +225,7 @@ class BusinessProfileController extends Controller
             ]);
         }
 
-        $aiResult = $this->crossCheckCsfWithAi($text, $user->business_rfc, $user->business_name ?: $user->name, $geminiKey);
+        $aiResult = $this->crossCheckCsfWithAi($text, $user->business_rfc, $user->business_name ?: $user->name, $ai);
 
         $user->business_csf_url = $path;
         $user->business_rfc_ai_notes = $aiResult['notes'];
@@ -257,49 +252,32 @@ class BusinessProfileController extends Controller
     }
 
     /**
-     * Pide a Gemini que compare el texto extraído de la CSF contra el RFC y
+     * Pide al modelo local que compare el texto extraído de la CSF contra el RFC y
      * nombre capturados. Devuelve ['verdict' => match|mismatch|uncertain, 'notes' => string].
      */
-    private function crossCheckCsfWithAi(string $csfText, string $rfc, string $businessName, string $geminiKey): array
+    private function crossCheckCsfWithAi(string $csfText, string $rfc, string $businessName, LocalAiClient $ai): array
     {
         $prompt = "Eres un verificador de documentos fiscales mexicanos (SAT). "
-            . "Se te da el texto extraído de una Constancia de Situación Fiscal (CSF) y los datos que un usuario capturó en un formulario. "
-            . "Responde EXCLUSIVAMENTE con un JSON de la forma {\"verdict\": \"match\"|\"mismatch\"|\"uncertain\", \"notes\": \"...\"}. "
-            . "\"match\" solo si el RFC del documento coincide EXACTAMENTE con el capturado y el documento aparenta ser una CSF real y vigente. "
-            . "\"mismatch\" si el RFC no coincide o el nombre/razón social es claramente distinto. "
-            . "\"uncertain\" si el texto es ambiguo, incompleto, o no puedes confirmar con seguridad.\n\n"
-            . "RFC capturado: {$rfc}\n"
-            . "Nombre/razón social capturado: {$businessName}\n\n"
-            . "Texto extraído de la CSF:\n" . mb_substr($csfText, 0, 6000);
+            . "Compara el texto extraído de una Constancia de Situación Fiscal con los datos capturados. "
+            . "Responde EXCLUSIVAMENTE JSON: {\"verdict\":\"match|mismatch|uncertain\",\"notes\":\"...\"}. "
+            . "Usa match solo si el RFC coincide EXACTAMENTE; ante cualquier duda usa uncertain.\n\n"
+            . "RFC capturado: {$rfc}\nNombre/razón social: {$businessName}\n\nTexto CSF:\n" . mb_substr($csfText, 0, 6000);
 
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout(20)->post(
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$geminiKey}",
-                [
-                    'contents' => [['parts' => [['text' => $prompt]]]],
-                    'generationConfig' => ['temperature' => 0, 'responseMimeType' => 'application/json'],
-                ]
-            );
-
-            if (! $response->successful()) {
-                \Illuminate\Support\Facades\Log::error('Gemini CSF check failed', ['status' => $response->status()]);
-                return ['verdict' => 'uncertain', 'notes' => 'No se pudo completar la verificación automática. Pendiente de revisión manual.'];
-            }
-
-            $raw = $response->json('candidates.0.content.parts.0.text', '');
-            $decoded = json_decode(trim($raw), true);
-
-            if (! is_array($decoded) || ! in_array($decoded['verdict'] ?? null, ['match', 'mismatch', 'uncertain'], true)) {
+            $result = $ai->chatFlash([
+                ['role' => 'system', 'content' => 'Procesas datos fiscales de forma privada y local. Devuelve solo JSON válido.'],
+                ['role' => 'user', 'content' => $prompt],
+            ], ['temperature' => 0, 'max_tokens' => 220, 'timeout' => 90]);
+            $raw = (string) data_get($result, 'choices.0.message.content', '');
+            $raw = trim(preg_replace('/^```(?:json)?|```$/m', '', $raw) ?? $raw);
+            $decoded = json_decode($raw, true);
+            if (! is_array($decoded) || ! in_array($decoded['verdict'] ?? null, ['match','mismatch','uncertain'], true)) {
                 return ['verdict' => 'uncertain', 'notes' => 'Respuesta de IA no interpretable. Pendiente de revisión manual.'];
             }
-
-            return [
-                'verdict' => $decoded['verdict'],
-                'notes' => (string) ($decoded['notes'] ?? ''),
-            ];
+            return ['verdict' => $decoded['verdict'], 'notes' => (string) ($decoded['notes'] ?? '')];
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Gemini CSF check exception', ['error' => $e->getMessage()]);
-            return ['verdict' => 'uncertain', 'notes' => 'Error al contactar el servicio de verificación. Pendiente de revisión manual.'];
+            \Illuminate\Support\Facades\Log::error('Local CSF AI check exception', ['error' => $e->getMessage()]);
+            return ['verdict' => 'uncertain', 'notes' => 'Error en la verificación local. Pendiente de revisión manual.'];
         }
     }
 

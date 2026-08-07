@@ -115,7 +115,7 @@ class AdObserver
     private function queueForModeration(Ad $ad): void
     {
         // The application test suite uses the synchronous queue driver. Dispatching here
-        // would perform an external Gemini request while unrelated factories are creating
+        // would perform an AI moderation request while unrelated factories are creating
         // ads. The job and command are covered explicitly; production and local runtime
         // continue to queue moderation normally.
         if (app()->runningUnitTests()) {

@@ -1743,7 +1743,7 @@ class AdController extends Controller
     }
 
     /**
-     * Generate ad description using DeepSeek AI (text fields, no image required)
+     * Generate ad description using Local AI (text fields, no image required)
      * POST /api/ads/generate-description
      */
     public function generateDescription(Request $request)
@@ -1781,8 +1781,8 @@ class AdController extends Controller
         }
 
         try {
-            /** @var \App\Services\DeepSeekClient $client */
-            $client = app(\App\Services\DeepSeekClient::class);
+            /** @var \App\Services\LocalAiClient $client */
+            $client = app(\App\Services\LocalAiClient::class);
             $result = $client->chatFlash(
                 [
                     [
@@ -1799,7 +1799,7 @@ class AdController extends Controller
 
             $text = $result['choices'][0]['message']['content'] ?? null;
             if (!$text) {
-                throw new \RuntimeException('Empty response from DeepSeek.');
+                throw new \RuntimeException('Empty response from local AI.');
             }
 
             $description = trim($text);
@@ -1809,7 +1809,7 @@ class AdController extends Controller
 
             return response()->json(['description' => $description]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('DeepSeek generateDescription error: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Local AI generateDescription error: ' . $e->getMessage());
             return response()->json([
                 'error' => 'No se pudo generar la descripción. Inténtalo de nuevo.',
             ], 500);
@@ -2072,8 +2072,8 @@ class AdController extends Controller
 
     private function askAiText(string $system, string $prompt, int $maxTokens): string
     {
-        /** @var \App\Services\DeepSeekClient $client */
-        $client = app(\App\Services\DeepSeekClient::class);
+        /** @var \App\Services\LocalAiClient $client */
+        $client = app(\App\Services\LocalAiClient::class);
         $result = $client->chatFlash(
             [
                 ['role' => 'system', 'content' => $system],
