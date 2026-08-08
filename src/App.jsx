@@ -717,6 +717,7 @@ function App() {
   }, [navigate, currentTab, images]);
 
   const handleHeaderCategoryClick = useCallback((slug = '') => {
+    if (slug) events.categorySelected(slug, { source: 'header_category' });
     setViewedAd(null);
     setViewedCompany(null);
     setActiveCat(slug);

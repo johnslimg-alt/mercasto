@@ -859,6 +859,9 @@ export const events = {
   phoneVerified: (params = {}) =>
     trackEvent('phone_verified', params),
 
+  categorySelected: (category, params = {}) =>
+    trackEvent('category_selected', { category, ...params }),
+
   searchPerformed: (query, category, params = {}) =>
     trackEvent(FUNNEL_EVENTS.SEARCH, { search_term: query, category, ...params }),
 
