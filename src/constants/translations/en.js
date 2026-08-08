@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "Capacity",
   "filter_label_tipo_cobro": "Billing",
   "filter_label_entrega": "Delivery",
-  "filter_label_accesorios_surf": "Included accessories"
+  "filter_label_accesorios_surf": "Included accessories",
 
+  notifications_load_error: "We couldn't load notifications.",
+  notifications_login_required: 'Sign in to see your notifications.',
+  notifications_back: 'Back',
+  notifications_title: 'Notifications',
+  notifications_mark_all: 'Mark all as read',
+  notifications_loading: 'Loading...',
+  notifications_empty_title: 'You have no notifications yet',
+  notifications_empty_desc: 'When the price of a saved listing drops, we’ll notify you here.',
+  notifications_price_drop_prefix: 'Price dropped:',
+  notifications_before: 'Before',
+  notifications_now: 'now',
+  notifications_load_more: 'Load more',
 };

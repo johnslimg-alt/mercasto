@@ -49,6 +49,17 @@ const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
 const SearchSuggestions = React.lazy(() => import('./components/common/SearchSuggestions'));
 import { useUI } from './contexts/UIContext';
 
+function LocalizedRouteLoadError({ translationKey }) {
+  const { lang, loadedLangVersion } = useUI();
+  void loadedLangVersion;
+  const copy = getTranslations(lang);
+  return (
+    <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">
+      {copy[translationKey] || ''}
+    </div>
+  );
+}
+
 const SUPPORTED_LANGUAGES = new Set([
   'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
 ]);
@@ -459,7 +470,7 @@ const CookiesScreen = React.lazy(() => import('./components/screens/legal/Cookie
 const NotFoundScreen = React.lazy(() => import('./components/screens/NotFoundScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Página no encontrada.</div> })));
 const VerificarEmailScreen = React.lazy(() => import('./components/screens/VerificarEmailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const StoresScreen = React.lazy(() => import('./components/screens/StoresScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el directorio de tiendas.</div> })));
-const NotificationsScreen = React.lazy(() => import('./components/screens/NotificationsScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar las notificaciones.</div> })));
+const NotificationsScreen = React.lazy(() => import('./components/screens/NotificationsScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="notifications_load_error" /> })));
 const ChatScreen = React.lazy(() => import('./components/screens/ChatScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar los mensajes.</div> })));
 const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
 const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
@@ -4574,7 +4585,7 @@ function App() {
               <Route path="/vendedores" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerLandingScreen lang={lang} /></React.Suspense>} />
               <Route path="/publicar-gratis" element={<Navigate to="/vendedores" replace />} />
               <Route path="/post" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderPostScreen()}</RequireAuth>} />
-              <Route path="/notificaciones" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotificationsScreen user={user} /></React.Suspense></RequireAuth>} />
+              <Route path="/notificaciones" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotificationsScreen user={user} t={t} lang={lang} /></React.Suspense></RequireAuth>} />
               <Route path="/mensajes" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ChatScreen user={user} lang={lang} t={t} /></React.Suspense></RequireAuth>} />
               <Route path="/profile" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderUserDashboard()}</RequireAuth>} />
               <Route path="/admin" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} admin>{renderAdminScreen()}</RequireAuth>} />

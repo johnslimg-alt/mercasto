@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "קיבולת",
   "filter_label_tipo_cobro": "חיוב",
   "filter_label_entrega": "משלוח",
-  "filter_label_accesorios_surf": "אביזרים כלולים"
+  "filter_label_accesorios_surf": "אביזרים כלולים",
 
+  notifications_load_error: 'לא הצלחנו לטעון את ההתראות.',
+  notifications_login_required: 'יש להתחבר כדי לראות את ההתראות שלך.',
+  notifications_back: 'חזרה',
+  notifications_title: 'התראות',
+  notifications_mark_all: 'סימון הכול כנקרא',
+  notifications_loading: 'טוען...',
+  notifications_empty_title: 'אין לך עדיין התראות',
+  notifications_empty_desc: 'כשמחיר של מודעה ששמרת ירד, נודיע לך כאן.',
+  notifications_price_drop_prefix: 'המחיר ירד:',
+  notifications_before: 'לפני',
+  notifications_now: 'עכשיו',
+  notifications_load_more: 'טעינת עוד',
 };

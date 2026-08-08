@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "Вместимость",
   "filter_label_tipo_cobro": "Тарификация",
   "filter_label_entrega": "Доставка",
-  "filter_label_accesorios_surf": "Включённые аксессуары"
+  "filter_label_accesorios_surf": "Включённые аксессуары",
 
+  notifications_load_error: 'Не удалось загрузить уведомления.',
+  notifications_login_required: 'Войдите, чтобы посмотреть уведомления.',
+  notifications_back: 'Назад',
+  notifications_title: 'Уведомления',
+  notifications_mark_all: 'Отметить все как прочитанные',
+  notifications_loading: 'Загрузка...',
+  notifications_empty_title: 'У вас пока нет уведомлений',
+  notifications_empty_desc: 'Когда цена сохранённого объявления снизится, мы сообщим здесь.',
+  notifications_price_drop_prefix: 'Цена снизилась:',
+  notifications_before: 'Было',
+  notifications_now: 'сейчас',
+  notifications_load_more: 'Загрузить ещё',
 };

@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "السعة",
   "filter_label_tipo_cobro": "نظام الفوترة",
   "filter_label_entrega": "التوصيل",
-  "filter_label_accesorios_surf": "الملحقات المشمولة"
+  "filter_label_accesorios_surf": "الملحقات المشمولة",
 
+  notifications_load_error: 'تعذّر تحميل الإشعارات.',
+  notifications_login_required: 'سجّل الدخول لعرض إشعاراتك.',
+  notifications_back: 'رجوع',
+  notifications_title: 'الإشعارات',
+  notifications_mark_all: 'تحديد الكل كمقروء',
+  notifications_loading: 'جارٍ التحميل...',
+  notifications_empty_title: 'لا توجد لديك إشعارات بعد',
+  notifications_empty_desc: 'عندما ينخفض سعر إعلان محفوظ، سنخبرك هنا.',
+  notifications_price_drop_prefix: 'انخفض السعر:',
+  notifications_before: 'قبل',
+  notifications_now: 'الآن',
+  notifications_load_more: 'تحميل المزيد',
 };

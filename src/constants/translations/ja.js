@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "定員",
   "filter_label_tipo_cobro": "課金方式",
   "filter_label_entrega": "配送",
-  "filter_label_accesorios_surf": "付属品"
+  "filter_label_accesorios_surf": "付属品",
 
+  notifications_load_error: '通知を読み込めませんでした。',
+  notifications_login_required: '通知を見るにはログインしてください。',
+  notifications_back: '戻る',
+  notifications_title: '通知',
+  notifications_mark_all: 'すべて既読にする',
+  notifications_loading: '読み込み中...',
+  notifications_empty_title: 'まだ通知はありません',
+  notifications_empty_desc: '保存した広告の価格が下がったら、ここでお知らせします。',
+  notifications_price_drop_prefix: '値下げされました：',
+  notifications_before: '以前',
+  notifications_now: '現在',
+  notifications_load_more: 'さらに読み込む',
 };
