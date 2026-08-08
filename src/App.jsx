@@ -4247,13 +4247,13 @@ function App() {
       {/* GLOBAL HEADER */}
       <header className="site-header sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-          <div className="relative flex items-center gap-2 h-[44px] sm:h-[48px] lg:h-[54px]">
+          <div data-testid="desktop-header-row" className="desktop-header-row relative flex items-center gap-2 h-[44px] sm:h-[48px] lg:h-[54px]">
             <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
               <MercastoLogo className="h-6 sm:h-7 lg:h-9" tagline={t.ai_brand_short || 'Clasificados con IA'} />
             </a>
             <div className="hidden lg:flex flex-1 items-center">
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
-              <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
+              <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="desktop-header-control desktop-header-search-control header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
               <input data-testid="desktop-search-input" value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
                 {searchLocation?.lat && (
@@ -4268,7 +4268,7 @@ function App() {
                     </select>
                   </>
                 )}
-                <button type="submit" data-testid="desktop-search-submit" className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white m-1 ml-2 flex items-center gap-1.5 rounded-full shadow-sm shadow-[#84CC16]/30">
+                <button type="submit" data-testid="desktop-search-submit" className="desktop-header-search-submit btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white m-1 ml-2 flex items-center gap-1.5 rounded-full shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn || "Buscar"}
                 </button>
@@ -4292,19 +4292,19 @@ function App() {
                   </select>
                 </div>
                 <div className="relative">
-                  <button type="button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label="Cambiar ubicación">
+                  <button type="button" data-testid="mobile-location-button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label="Cambiar ubicación">
                     <MapPin className="w-3 h-3 text-[#84CC16]" />
                     <span className="truncate max-w-[45px] text-[10px] font-extrabold uppercase">{searchLocationInput || t.all_mexico || "Todo México"}</span>
                   </button>
                   {showMobileLocationPicker && (
                     <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
-                      <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
+                      <select data-testid="mobile-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                         <option value="">{t.all_mexico || 'Todo México'}</option>
                         {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                       </select>
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad'}</label>
-                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
+                      <select data-testid="mobile-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
@@ -4331,12 +4331,12 @@ function App() {
                   )}
                 </div>
               </div>
-              <button type="button" onClick={() => setIsDarkMode(v => !v)} className="header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
+              <button type="button" onClick={() => setIsDarkMode(v => !v)} className="desktop-header-control header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               {/* DESKTOP LOCATION SELECTOR */}
               <div className="relative hidden lg:block">
-                <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="header-lang-select hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-bold text-slate-700 dark:text-slate-200 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer mr-1">
+                <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-bold text-slate-700 dark:text-slate-200 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer mr-1">
                   <MapPin className="w-3.5 h-3.5 text-[#84CC16]" />
                   <span className="truncate max-w-[110px]">{searchLocationInput || t.all_mexico || "Todo México"}</span>
                 </button>
@@ -4344,26 +4344,26 @@ function App() {
                   <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50 bg-white dark:bg-slate-950">
                     <div className="mb-3">
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
-                      <select value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
+                      <select data-testid="desktop-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                         <option value="">{t.all_mexico || 'Todo México'}</option>
                         {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                       </select>
                     </div>
                     <div className="mb-4">
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad / Municipio'}</label>
-                      <select value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
+                      <select data-testid="desktop-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
                         <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
                     </div>
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">{t.cancel || 'Cerrar'}</button>
-                      <button type="button" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                      <button type="button" data-testid="desktop-location-cancel" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">{t.cancel || 'Cerrar'}</button>
+                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
                     </div>
                   </div>
                 )}
               </div>
-              <div className="header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
+              <div className="desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
                 <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
                   {LANGUAGE_OPTIONS.map(l => (
@@ -4372,10 +4372,10 @@ function App() {
                 </select>
               </div>
               <div className="relative hidden sm:block">
-              <button type="button" onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl" aria-label={t.messages || 'Mensajes'}>
+              <button type="button" onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.messages || 'Mensajes'}>
                 <MessageCircle className="w-[22px] h-[22px]" />
               </button>
-              <button type="button" onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications || 'Notificaciones'}>
+              <button type="button" onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications || 'Notificaciones'}>
 
                   <Bell className="w-[22px] h-[22px]" />
                   {unreadCount > 0 && (
@@ -4445,16 +4445,16 @@ function App() {
                   </div>
                 )}
               </div>
-            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title="Directorio de Tiendas">
+            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title="Directorio de Tiendas">
                 <Store className="w-[22px] h-[22px]" />
                 <span className="text-[13px] font-bold hidden md:block">{navLabels[5]}</span>
             </button>
-            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label={t.favorites || 'Favoritos'}>
+            <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label={t.favorites || 'Favoritos'}>
                 <Heart className="w-[22px] h-[22px]" />
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
             <div className="relative hidden sm:block">
-            <button onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
+            <button onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
                 {user?.avatar_url ? (
                   <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-full object-cover" alt=""/>
                 ) : (
@@ -4472,7 +4472,7 @@ function App() {
                 </div>
               )}
               </div>
-              <button onClick={() => { setCurrentTab('post'); setViewedAd(null); setViewedCompany(null); }} className="btn-lg bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white shadow-md shadow-[#84CC16]/20 ml-1 hidden sm:inline-flex items-center gap-1.5">
+              <button onClick={() => { setCurrentTab('post'); setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control btn-lg bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white shadow-md shadow-[#84CC16]/20 ml-1 hidden sm:inline-flex items-center gap-1.5">
               <PlusCircle className="w-4 h-4" /> {t.post_ad || "Publicar"}
               </button>
             </div>
