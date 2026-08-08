@@ -28,12 +28,10 @@ test('mobile header has a working search button and location cascade', async ({ 
   await page.getByTestId('mobile-search-submit').click();
   await expect(page).toHaveURL(/search=iPhone/);
 
-  await page.locator('.mobile-location-chip').click();
-  const state = page.locator('[data-testid="mobile-header-search"] + * select').first();
-  await state.selectOption('Nuevo León');
-  const selects = page.locator('.header-popover select');
-  await expect(selects.nth(1)).toBeEnabled();
-  await selects.nth(1).selectOption('Monterrey');
+  await page.getByTestId('mobile-location-button').click();
+  await page.getByTestId('mobile-location-state').selectOption('Nuevo León');
+  await expect(page.getByTestId('mobile-location-city')).toBeEnabled();
+  await page.getByTestId('mobile-location-city').selectOption('Monterrey');
   await page.getByTestId('mobile-location-apply').click();
 
   await expect(page).toHaveURL(/state=Nuevo\+Le%C3%B3n/);
