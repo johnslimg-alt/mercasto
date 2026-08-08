@@ -25,7 +25,9 @@ if [[ "${PLAYWRIGHT_SKIP_BROWSER_INSTALL:-0}" != "1" ]]; then
   npx --no-install playwright install chromium
 fi
 
-npx --no-install playwright test tests/e2e/public-smoke.spec.js \
+npx --no-install playwright test \
+  tests/e2e/public-smoke.spec.js \
+  tests/e2e/public-link-integrity.spec.js \
   --output="$results_dir"
 
 printf 'public E2E artifact root: %s\n' "$artifact_root"

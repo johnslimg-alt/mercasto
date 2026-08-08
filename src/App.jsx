@@ -4711,7 +4711,7 @@ function App() {
             </div>
           ) : authMode === 'phone_request' || authMode === 'phone_verify' ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
-              <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+              <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
               <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">Acceso con Teléfono</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
                 {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
@@ -4735,7 +4735,7 @@ function App() {
             </div>
           ) : (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                <button onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+                <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
                 <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}
                 </h2>
