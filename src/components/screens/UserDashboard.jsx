@@ -56,7 +56,7 @@ const StatCard = ({ icon: Icon, label, value, change, trend, color = 'blue', onC
 };
 
 // Tab Button Component
-const TabButton = ({ icon: Icon, label, active, onClick, count, color = 'lime' }) => {
+const TabButton = ({ icon: Icon, label, active, onClick, count, color = 'lime', tabId }) => {
   const activeColors = {
     lime: 'text-lime-700 dark:text-lime-400 bg-lime-50 dark:bg-lime-500/10 border-lime-200 dark:border-lime-500/30',
     red: 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30',
@@ -66,7 +66,10 @@ const TabButton = ({ icon: Icon, label, active, onClick, count, color = 'lime' }
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-pressed={active}
+      data-testid={tabId ? `dashboard-tab-${tabId}` : undefined}
       className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
         active 
           ? activeColors[color] + ' shadow-sm' 
@@ -553,6 +556,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={Package}
                 label={t.my_ads}
                 active={dashboardTab === 'my_ads'}
+                tabId="my_ads"
                 onClick={() => setDashboardTab('my_ads')}
                 count={userAds.length}
                 color="lime"
@@ -561,6 +565,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={Heart}
                 label={t.favorites}
                 active={dashboardTab === 'favorites'}
+                tabId="favorites"
                 onClick={() => setDashboardTab('favorites')}
                 count={favoriteAds.length}
                 color="red"
@@ -569,6 +574,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={Bell}
                 label={t.saved_searches || 'Búsquedas guardadas'}
                 active={dashboardTab === 'saved_searches'}
+                tabId="saved_searches"
                 onClick={() => setDashboardTab('saved_searches')}
                 count={searchAlerts.length}
                 color="blue"
@@ -578,6 +584,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   icon={Store}
                   label={t.company_profile}
                   active={dashboardTab === 'company'}
+                tabId="company"
                   onClick={() => setDashboardTab('company')}
                   color="purple"
                 />
@@ -586,6 +593,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={BarChart3}
                 label={t.stats || 'Estadísticas'}
                 active={dashboardTab === 'stats'}
+                tabId="stats"
                 onClick={() => setDashboardTab('stats')}
                 color="lime"
               />
@@ -593,6 +601,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={CreditCard}
                 label={t.transactions_tab || 'Transacciones'}
                 active={dashboardTab === 'transactions'}
+                tabId="transactions"
                 onClick={() => setDashboardTab('transactions')}
                 color="lime"
               />
@@ -600,6 +609,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={MessageCircle}
                 label={t.contact_history || 'Historial de contactos'}
                 active={dashboardTab === 'contact_history'}
+                tabId="contact_history"
                 onClick={() => setDashboardTab('contact_history')}
                 color="lime"
               />
@@ -607,6 +617,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={Star}
                 label={t.pending_reviews || 'Valorar'}
                 active={dashboardTab === 'reviews'}
+                tabId="reviews"
                 onClick={() => setDashboardTab('reviews')}
                 color="purple"
               />
@@ -614,6 +625,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={Shield}
                 label={t.privacy_settings || 'Privacidad'}
                 active={dashboardTab === 'privacy'}
+                tabId="privacy"
                 onClick={() => setDashboardTab('privacy')}
                 color="lime"
               />
@@ -621,6 +633,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 icon={Settings}
                 label={t.settings}
                 active={dashboardTab === 'settings'}
+                tabId="settings"
                 onClick={() => setDashboardTab('settings')}
                 color="lime"
               />

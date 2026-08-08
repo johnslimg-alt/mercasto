@@ -17,6 +17,8 @@ grep -qF 'tests/e2e/auth-flow.spec.js' scripts/run-isolated-launch-e2e.sh
 grep -qF 'tests/e2e/ads-lifecycle.spec.js' scripts/run-isolated-launch-e2e.sh
 grep -qF 'tests/e2e/payments.spec.js' scripts/run-isolated-launch-e2e.sh
 grep -qF 'suite_enabled visual' scripts/run-isolated-launch-e2e.sh
+grep -qF 'suite_enabled cabinets' scripts/run-isolated-launch-e2e.sh
+grep -qF 'tests/e2e/authenticated-cabinet-matrix.spec.js' scripts/run-isolated-launch-e2e.sh
 grep -qF 'capture-authenticated-ui-visual-evidence.mjs' scripts/run-isolated-launch-e2e.sh
 grep -qF 'never mutate production payments' tests/e2e/payments.spec.js
 node --check scripts/capture-authenticated-ui-visual-evidence.mjs

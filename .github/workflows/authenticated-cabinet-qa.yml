@@ -1,0 +1,56 @@
+name: Authenticated Cabinet Visual QA
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/components/screens/UserDashboard.jsx'
+      - 'src/components/screens/AdminScreen.jsx'
+      - 'src/components/admin/AdvertisingHub.jsx'
+      - 'tests/e2e/authenticated-cabinet-matrix.spec.js'
+      - 'scripts/run-isolated-launch-e2e.sh'
+      - 'scripts/isolated-launch-e2e-gate.sh'
+      - '.github/workflows/authenticated-cabinet-qa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: authenticated-cabinet-qa-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  cabinet-qa:
+    name: Isolated seller buyer admin cabinet QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      E2E_SUITES: visual,cabinets
+      EVIDENCE_OUTPUT: docs/evidence/ui-visual-qa/manual-authenticated-cabinets
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run isolated authenticated visual and interaction matrix
+        run: bash scripts/run-isolated-launch-e2e.sh
+
+      - name: Upload authenticated visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: authenticated-cabinet-visual-${{ github.run_number }}
+          path: |
+            docs/evidence/ui-visual-qa/manual-authenticated-cabinets/
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
