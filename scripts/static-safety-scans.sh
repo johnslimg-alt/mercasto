@@ -73,6 +73,7 @@ bash scripts/supply-readiness-gate.sh
 bash scripts/location-search-gate.sh
 bash scripts/registration-consent-contract-gate.sh
 bash scripts/funnel-analytics-contract-gate.sh
+node --test scripts/buyer-nudge-contract-gate.test.mjs
 bash scripts/mobile-app-association-gate.sh
 bash scripts/design-token-contract-gate.sh
 bash scripts/conversion-journey-gate.sh
