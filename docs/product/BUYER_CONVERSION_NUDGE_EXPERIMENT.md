@@ -6,7 +6,7 @@ The implementation is shipped **disabled by default**. `VITE_BUYER_NUDGE_ROLLOUT
 
 ## Audience and safety
 
-The nudge is anonymous-only, mobile-safe, dismissible, and capped to one impression per browser every seven days. It never appears on authentication, publish, account/profile, admin, messages, notification, payment/checkout, pricing, referral, verification, moderation, or refund flows.
+The nudge is anonymous-only, mobile-safe, dismissible, and capped to one impression per browser every seven days. It never appears on authentication, publish, account/profile, admin, messages, notification, payment/checkout, pricing, referral, verification, moderation, refund, or seller-acquisition/publish-help flows.
 
 It does not read `auth_token`, does not create its own auth-return state, and does not revive the old `/post` state contract. The existing auth modal and `protectedRouteReturn` remain the only owners of authentication and protected-journey return behavior.
 

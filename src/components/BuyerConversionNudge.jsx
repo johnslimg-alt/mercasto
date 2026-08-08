@@ -74,8 +74,9 @@ export default function BuyerConversionNudge({
   return (
     <aside
       className="fixed bottom-20 left-3 right-3 z-[90] mx-auto max-w-xl rounded-2xl border border-lime-300/70 bg-white/95 p-3 shadow-2xl backdrop-blur md:bottom-6 md:left-auto md:right-6 md:w-[420px] dark:border-lime-500/30 dark:bg-slate-950/95"
-      role="status"
-      aria-live="polite"
+      role="region"
+      aria-label={copy.title}
+      data-analytics-ignore="true"
       data-testid="buyer-conversion-nudge"
     >
       <button
