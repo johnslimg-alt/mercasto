@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const root = process.cwd();
 const localesDir = path.join(root, 'src/locales');
+const expectedLanguages = ['es', 'en', 'ru', 'pt', 'fr', 'de', 'it', 'zh', 'ko', 'ja', 'ar', 'he', 'yi'];
 const files = fs.readdirSync(localesDir).filter((file) => file.endsWith('.json')).sort();
 
 const flatten = (value, prefix = '', result = {}) => {
@@ -26,6 +28,13 @@ const visit = (directory) => {
 const base = flatten(JSON.parse(fs.readFileSync(path.join(localesDir, 'en.json'), 'utf8')));
 let failed = false;
 
+const localeFileLanguages = files.map((file) => path.basename(file, '.json')).sort();
+const expectedSorted = [...expectedLanguages].sort();
+if (JSON.stringify(localeFileLanguages) !== JSON.stringify(expectedSorted)) {
+  failed = true;
+  console.error(`locale JSON set mismatch: expected=${expectedSorted.join(',')} actual=${localeFileLanguages.join(',')}`);
+}
+
 for (const file of files) {
   const locale = flatten(JSON.parse(fs.readFileSync(path.join(localesDir, file), 'utf8')));
   const missing = Object.keys(base).filter((key) => !(key in locale));
@@ -33,6 +42,43 @@ for (const file of files) {
   if (missing.length || empty.length) {
     failed = true;
     console.error(`${file}: missing=${missing.length}, empty=${empty.length}`);
+  }
+}
+
+const runtimeTranslationsDir = path.join(root, 'src/constants/translations');
+const runtimeFiles = fs.readdirSync(runtimeTranslationsDir)
+  .filter((file) => file.endsWith('.js'))
+  .map((file) => path.basename(file, '.js'))
+  .sort();
+
+if (JSON.stringify(runtimeFiles) !== JSON.stringify(expectedSorted)) {
+  failed = true;
+  console.error(`runtime translation file set mismatch: expected=${expectedSorted.join(',')} actual=${runtimeFiles.join(',')}`);
+}
+
+const runtimeResources = {};
+for (const language of expectedLanguages) {
+  const filePath = path.join(runtimeTranslationsDir, `${language}.js`);
+  try {
+    runtimeResources[language] = (await import(pathToFileURL(filePath).href)).default || {};
+  } catch (error) {
+    failed = true;
+    console.error(`runtime translations ${language}: unable to import: ${error.message}`);
+    runtimeResources[language] = {};
+  }
+}
+
+const runtimeBase = runtimeResources.en || {};
+const runtimeBaseKeys = Object.keys(runtimeBase);
+for (const language of expectedLanguages) {
+  const locale = runtimeResources[language] || {};
+  const keys = Object.keys(locale);
+  const missing = runtimeBaseKeys.filter((key) => !(key in locale));
+  const extra = keys.filter((key) => !(key in runtimeBase));
+  const empty = keys.filter((key) => typeof locale[key] !== 'string' || !locale[key].trim());
+  if (missing.length || extra.length || empty.length) {
+    failed = true;
+    console.error(`runtime translations ${language}: missing=${missing.length}, extra=${extra.length}, empty=${empty.length}`);
   }
 }
 
@@ -57,7 +103,6 @@ if (fs.existsSync(moderationSourcePath)) {
     }
 
     if (moderationResources) {
-      const expectedLanguages = ['es', 'en', 'ru', 'pt', 'fr', 'de', 'it', 'zh', 'ko', 'ja', 'ar', 'he', 'yi'];
       const moderationBase = flatten(moderationResources.en || {});
       const baseKeys = Object.keys(moderationBase);
 
@@ -92,4 +137,4 @@ for (const file of sourceFiles) {
 }
 
 if (failed) process.exit(1);
-console.log(`i18n audit passed: ${files.length} locale JSON files, ${Object.keys(base).length} structured keys, and complete intelligent moderation translations.`);
+console.log(`i18n audit passed: ${files.length} locale JSON files (${Object.keys(base).length} structured keys), ${expectedLanguages.length} runtime translation modules (${runtimeBaseKeys.length} keys each), and complete intelligent moderation translations.`);
