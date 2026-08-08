@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { formatDateTime } from '../../utils/localeFormat';
 import {
   ArrowLeft,
   CircleAlert,
@@ -29,12 +30,12 @@ function formatTimestamp(value, lang = 'es') {
   if (!value) return '';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '';
-  return new Intl.DateTimeFormat(lang, {
+  return formatDateTime(value, lang, {
     hour: '2-digit',
     minute: '2-digit',
     day: '2-digit',
     month: 'short',
-  }).format(parsed);
+  });
 }
 
 function uniqueMessages(messages) {
@@ -72,7 +73,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
     return {
       ad_id: requestedAdId,
       user_id: requestedSellerId,
-      name: t.seller || 'Vendedor',
+      name: t.seller,
       ad: { id: requestedAdId, title: requestedTitle },
     };
   }, [requestedAdId, requestedSellerId, requestedTitle, t.seller, user?.id]);
@@ -107,7 +108,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
         }
       }
     } catch {
-      if (!quiet) setError(t.chat_load_failed || 'No pudimos cargar tus mensajes.');
+      if (!quiet) setError(t.chat_load_failed);
     } finally {
       if (!quiet) setLoadingConversations(false);
     }
@@ -126,7 +127,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
       setMessages(uniqueMessages(Array.isArray(data.messages) ? data.messages : []));
       setError('');
     } catch {
-      if (!quiet) setError(t.chat_load_failed || 'No pudimos cargar esta conversación.');
+      if (!quiet) setError(t.chat_load_failed);
     } finally {
       if (!quiet) setLoadingMessages(false);
     }
@@ -217,7 +218,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
     const receiverId = Number(target?.user_id || 0);
     const adId = Number(target?.ad_id || target?.ad?.id || 0);
     if (!receiverId || !adId) {
-      setError(t.chat_target_missing || 'No pudimos identificar al vendedor o el anuncio.');
+      setError(t.chat_target_missing);
       return;
     }
 
@@ -230,7 +231,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
         body: JSON.stringify({ receiver_id: receiverId, ad_id: adId, content }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || payload.message || 'send failed');
+      if (!response.ok) throw new Error('send failed');
 
       setDraft('');
       setMessages((previous) => uniqueMessages([...previous, payload]));
@@ -240,8 +241,8 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
         setSearchParams({ conversation: String(nextConversationId) }, { replace: true });
       }
       await loadConversations({ quiet: true });
-    } catch (sendError) {
-      setError(sendError.message || t.chat_send_failed || 'No pudimos enviar el mensaje.');
+    } catch {
+      setError(t.chat_send_failed);
     } finally {
       setSending(false);
     }
@@ -262,18 +263,18 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
             type="button"
             onClick={() => navigate(-1)}
             className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-            aria-label={t.back || 'Volver'}
+            aria-label={t.back}
           >
             <ArrowLeft size={20} />
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-lg font-black text-slate-900 dark:text-white">
-              {t.messages || 'Mensajes'}
+              {t.messages}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {realtimeConnected
-                ? (t.chat_realtime || 'Actualización en tiempo real')
-                : (t.chat_polling || 'Actualización automática')}
+                ? (t.chat_realtime)
+                : (t.chat_polling)}
             </p>
           </div>
           <button
@@ -283,7 +284,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
               if (selectedConversationId) loadMessages(selectedConversationId);
             }}
             className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-            aria-label={t.retry || 'Actualizar'}
+            aria-label={t.retry}
           >
             <RefreshCw size={19} />
           </button>
@@ -301,10 +302,10 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
               <MessageCircle className="shrink-0 text-lime-700 dark:text-lime-300" size={20} />
               <span className="min-w-0">
                 <span className="block truncate text-sm font-black text-slate-900 dark:text-white">
-                  {t.new_message || 'Nuevo mensaje'}
+                  {t.new_message}
                 </span>
                 <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
-                  {requestedTitle || t.seller || 'Vendedor'}
+                  {requestedTitle || t.seller}
                 </span>
               </span>
             </button>
@@ -318,10 +319,10 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
             <div className="px-6 py-20 text-center">
               <MessageCircle className="mx-auto mb-3 text-slate-300 dark:text-slate-600" size={42} />
               <p className="font-bold text-slate-700 dark:text-slate-200">
-                {t.no_messages || 'Aún no tienes conversaciones'}
+                {t.no_messages}
               </p>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {t.chat_empty_hint || 'Abre un anuncio y escribe al vendedor desde Mercasto.'}
+                {t.chat_empty_hint}
               </p>
             </div>
           ) : (
@@ -344,7 +345,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
                     )}
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-black text-slate-900 dark:text-white">{item.name || t.seller || 'Vendedor'}</span>
+                        <span className="truncate text-sm font-black text-slate-900 dark:text-white">{item.name || t.seller}</span>
                         {Number(item.unread_count) > 0 && (
                           <span className="flex min-h-5 min-w-5 items-center justify-center rounded-full bg-lime-500 px-1.5 text-[11px] font-black text-slate-950">
                             {item.unread_count}
@@ -352,7 +353,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
                         )}
                       </span>
                       <span className="mt-1 block truncate text-xs text-slate-500 dark:text-slate-400">
-                        {item.last_message || item.ad?.title || t.messages || 'Mensajes'}
+                        {item.last_message || item.ad?.title || t.messages}
                       </span>
                       <span className="mt-1 block text-[11px] text-slate-400">
                         {formatTimestamp(item.created_at, lang)}
@@ -377,16 +378,16 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
                     setSearchParams({}, { replace: true });
                   }}
                   className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden"
-                  aria-label={t.back || 'Volver'}
+                  aria-label={t.back}
                 >
                   <ArrowLeft size={20} />
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-black text-slate-900 dark:text-white">
-                    {threadTarget?.name || t.seller || 'Vendedor'}
+                    {threadTarget?.name || t.seller}
                   </p>
                   <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                    {threadTarget?.ad?.title || requestedTitle || t.messages || 'Mensajes'}
+                    {threadTarget?.ad?.title || requestedTitle || t.messages}
                   </p>
                 </div>
               </div>
@@ -400,10 +401,10 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
                   <div className="mx-auto max-w-sm py-16 text-center">
                     <MessageCircle className="mx-auto mb-3 text-slate-300 dark:text-slate-600" size={42} />
                     <p className="font-bold text-slate-700 dark:text-slate-200">
-                      {t.chat_start || 'Pregunta por disponibilidad, entrega o precio.'}
+                      {t.chat_start}
                     </p>
                     <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                      {t.chat_safety || 'No compartas contraseñas, códigos ni datos bancarios.'}
+                      {t.chat_safety}
                     </p>
                   </div>
                 ) : (
@@ -446,15 +447,15 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
                     }}
                     rows={1}
                     maxLength={1000}
-                    placeholder={t.write_message || 'Escribe un mensaje'}
+                    placeholder={t.write_message}
                     className="mc-control max-h-32 flex-1 resize-y border px-4 py-3 text-sm outline-none focus:border-lime-500 focus:ring-2 focus:ring-lime-500/20"
-                    aria-label={t.write_message || 'Escribe un mensaje'}
+                    aria-label={t.write_message}
                   />
                   <button
                     type="submit"
                     disabled={!draft.trim() || sending}
                     className="mc-primary-action mc-icon-button"
-                    aria-label={t.sendMessage || 'Enviar mensaje'}
+                    aria-label={t.sendMessage}
                   >
                     {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
                   </button>
@@ -465,7 +466,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
             <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
               <MessageCircle className="mb-4 text-slate-300 dark:text-slate-600" size={54} />
               <p className="text-lg font-black text-slate-700 dark:text-slate-200">
-                {t.select_conversation || 'Selecciona una conversación'}
+                {t.select_conversation}
               </p>
             </div>
           )}
