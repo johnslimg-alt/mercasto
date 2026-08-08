@@ -19,6 +19,8 @@ on:
       - 'tests/e2e/notifications-localization.spec.js'
       - 'tests/e2e/catalog-filter-state.spec.js'
       - 'tests/e2e/catalog-map-filter-state.spec.js'
+      - 'tests/e2e/catalog-map-responsive.spec.js'
+      - 'tests/e2e/map-shell-localization.spec.js'
       - 'scripts/i18n-audit.mjs'
       - 'scripts/check-recovery-guards.mjs'
       - 'scripts/public-copy-scan.sh'
@@ -39,6 +41,8 @@ on:
       - 'tests/e2e/notifications-localization.spec.js'
       - 'tests/e2e/catalog-filter-state.spec.js'
       - 'tests/e2e/catalog-map-filter-state.spec.js'
+      - 'tests/e2e/catalog-map-responsive.spec.js'
+      - 'tests/e2e/map-shell-localization.spec.js'
       - 'scripts/i18n-audit.mjs'
       - 'scripts/check-recovery-guards.mjs'
       - 'scripts/public-copy-scan.sh'
@@ -101,4 +105,4 @@ jobs:
             if curl -fsS http://127.0.0.1:4174/ >/dev/null; then break; fi
             sleep 1
           done
-          BASE_URL=http://127.0.0.1:4174 CI=1 npx playwright test tests/e2e/catalog-filter-state.spec.js tests/e2e/catalog-map-filter-state.spec.js --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=1 --reporter=list
+          BASE_URL=http://127.0.0.1:4174 CI=1 npx playwright test tests/e2e/catalog-filter-state.spec.js tests/e2e/catalog-map-filter-state.spec.js tests/e2e/catalog-map-responsive.spec.js tests/e2e/map-shell-localization.spec.js --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=1 --reporter=list

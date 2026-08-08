@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { MapPin, List, LayoutGrid, ChevronDown, Search } from 'lucide-react';
 import { getExactMapCoordinates } from '../../utils/mapCoordinates';
+import { localeFor } from '../../utils/localeFormat';
 
 const MapV3 = React.lazy(() => import('./MapV3'));
 
@@ -39,6 +40,7 @@ export default function SplitViewContainer({
   getImageUrl,
   onSearchArea,
   t = {},
+  lang = 'es',
 }) {
   const [viewLayout, setViewLayout] = useState('grid'); // 'grid' or 'list'
   const [hoveredAdId, setHoveredAdId] = useState(null);
@@ -166,13 +168,13 @@ export default function SplitViewContainer({
         id: ad.id,
         ad,
         coords,
-        label: `$${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}`,
+        label: new Intl.NumberFormat(localeFor(lang), { style: 'currency', currency: 'MXN', notation: 'compact', maximumFractionDigits: 1 }).format(Number(ad.price || 0)),
         tone: index % 2 ? 'dark' : 'lime',
         isHovered: hoveredAdId === ad.id,
         isSelected: selectedAdId === ad.id,
       };
     });
-  }, [hoveredAdId, mapCollapsed, mappableAds, selectedAdId]);
+  }, [hoveredAdId, lang, mapCollapsed, mappableAds, selectedAdId]);
 
   // Рендер карточки в зависимости от viewLayout
   const renderAdItem = (ad, index) => (
