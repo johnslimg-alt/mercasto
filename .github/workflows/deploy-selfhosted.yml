@@ -20,6 +20,10 @@ jobs:
 
     steps:
       - name: Обновить код
+        env:
+          FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+          HUAWEI_PUSH_APP_ID: ${{ secrets.HUAWEI_PUSH_APP_ID }}
+          HUAWEI_PUSH_APP_SECRET: ${{ secrets.HUAWEI_PUSH_APP_SECRET }}
         run: |
           set -euo pipefail
           cd /var/www/mercasto
@@ -35,6 +39,43 @@ jobs:
           # weakening the persistent secret file permissions.
           umask 077
           docker exec mercasto_backend_container cat /var/www/.env > "$RUNNER_TEMP/mercasto-backend.env"
+
+          # Merge optional native-push secrets without printing them. The same
+          # private file becomes both the compose env source and the persistent
+          # Laravel .env mounted by backend/worker/scheduler/reverb containers.
+          python3 - "$RUNNER_TEMP/mercasto-backend.env" <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          values = {
+              key: os.environ.get(key, '').strip()
+              for key in (
+                  'FIREBASE_SERVICE_ACCOUNT_BASE64',
+                  'HUAWEI_PUSH_APP_ID',
+                  'HUAWEI_PUSH_APP_SECRET',
+              )
+          }
+          values = {key: value for key, value in values.items() if value}
+          if values:
+              lines = path.read_text(encoding='utf-8').splitlines()
+              seen = set()
+              output = []
+              for line in lines:
+                  key = line.split('=', 1)[0] if '=' in line else ''
+                  if key in values:
+                      output.append(f'{key}={values[key]}')
+                      seen.add(key)
+                  else:
+                      output.append(line)
+              for key, value in values.items():
+                  if key not in seen:
+                      output.append(f'{key}={value}')
+              path.write_text('\n'.join(output) + '\n', encoding='utf-8')
+          PY
+
+          cat "$RUNNER_TEMP/mercasto-backend.env"             | docker exec -i mercasto_backend_container sh -lc 'umask 077; cat > /var/www/.env'
 
       - name: Миграции
         run: |

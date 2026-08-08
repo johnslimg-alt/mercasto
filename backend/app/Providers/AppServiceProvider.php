@@ -8,6 +8,9 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Lang;
+use App\Events\NewNotification;
+use App\Listeners\DispatchNativePushFromNotification;
+use Illuminate\Support\Facades\Event;
 use App\Models\Ad;
 use App\Models\User;
 use App\Observers\AdObserver;
@@ -132,6 +135,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::define("viewHorizon", function ($user) {
             return $user && $user->role === "admin";
         });
+
+        Event::listen(
+            NewNotification::class,
+            DispatchNativePushFromNotification::class,
+        );
 
         // Register model observers.
         Ad::observe(AdObserver::class);

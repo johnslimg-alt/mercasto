@@ -91,6 +91,15 @@ return [
         'vapid_private_key' => env('VAPID_PRIVATE_KEY'),
     ],
 
+    'firebase' => [
+        'service_account_base64' => env('FIREBASE_SERVICE_ACCOUNT_BASE64'),
+    ],
+
+    'huawei_push' => [
+        'app_id' => env('HUAWEI_PUSH_APP_ID'),
+        'app_secret' => env('HUAWEI_PUSH_APP_SECRET'),
+    ],
+
     'twilio' => [
         'sid' => env('TWILIO_SID'),
         'token' => env('TWILIO_TOKEN'),

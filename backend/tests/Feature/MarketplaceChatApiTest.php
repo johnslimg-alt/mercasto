@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Events\MessageSent;
+use App\Jobs\SendHuaweiPushNotification;
+use App\Jobs\SendMobilePushNotification;
 use App\Jobs\SendTelegramMessageNotification;
 use App\Models\Ad;
 use App\Models\Conversation;
@@ -69,6 +71,18 @@ class MarketplaceChatApiTest extends TestCase
         Event::assertDispatched(MessageSent::class);
         Queue::assertPushed(SendTelegramMessageNotification::class, fn ($job) =>
             $job->recipientId === $seller->id && $job->senderId === $buyer->id
+        );
+        Queue::assertPushed(SendMobilePushNotification::class, fn ($job) =>
+            $job->userId === $seller->id
+            && ($job->data['type'] ?? null) === 'message'
+            && ($job->data['conversation_id'] ?? null) === $conversation->id
+            && ($job->data['listing_id'] ?? null) === $ad->id
+        );
+        Queue::assertPushed(SendHuaweiPushNotification::class, fn ($job) =>
+            $job->userId === $seller->id
+            && ($job->data['type'] ?? null) === 'message'
+            && ($job->data['conversation_id'] ?? null) === $conversation->id
+            && ($job->data['listing_id'] ?? null) === $ad->id
         );
     }
 
