@@ -10,7 +10,9 @@ test('manual server gate uses the trusted self-hosted runner', () => {
   assert.match(workflow, /runs-on: \[self-hosted, linux, docker\]/);
   assert.match(workflow, /cd \/var\/www\/mercasto/);
   assert.match(workflow, /bash scripts\/server-operator\.sh "\$\{OPERATION\}"/);
-  assert.match(workflow, /test -z "\$\(git status --short\)"/);
+  assert.match(workflow, /git status --porcelain=v1 --untracked-files=all/);
+  assert.match(workflow, /Production checkout is dirty/);
+  assert.match(workflow, /Do not edit \/var\/www\/mercasto directly/);
 });
 
 test('manual server gate is read-only and independent of SSH secrets', () => {
