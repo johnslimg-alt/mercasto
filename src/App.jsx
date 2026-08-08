@@ -530,9 +530,22 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // GA4 page-view tracking
+  // Page-view tracking. Keep filtered/catalog/detail states out of homepage conversion metrics.
   useEffect(() => {
     trackPageView(location.pathname + location.search, document.title);
+
+    const params = new URLSearchParams(location.search);
+    const homepageContentKeys = [
+      'q', 'search', 'category', 'cat', 'subcategory', 'state', 'city', 'location',
+      'min_price', 'max_price', 'condition', 'sort', 'page', 'lat', 'lng', 'radius',
+      'radius_km', 'ad', 'store',
+    ];
+    const hasHomepageContentState = homepageContentKeys.some(key => params.has(key))
+      || /^#(?:ad-|company-)/.test(location.hash || '');
+
+    if (location.pathname === '/' && !hasHomepageContentState) {
+      events.homepageViewed({ source: 'route' });
+    }
   }, [location]);
 
   const currentTab = location.pathname.split('/')[1] || 'home';
