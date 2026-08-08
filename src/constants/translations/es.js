@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "Desactivar alertas",
   activate_alerts: "Activar alertas",
   delete_search: "Eliminar búsqueda",
+  trust_score: 'Puntuación de confianza',
+  avg_response_under_2h: '< 2 horas',
+  contact_history_device_desc: 'Anuncios con los que te has puesto en contacto recientemente en este dispositivo.',
+  contact_history_empty: 'Aún no has contactado a ningún vendedor.',
+  contacted_via: 'Contactado vía',
 };

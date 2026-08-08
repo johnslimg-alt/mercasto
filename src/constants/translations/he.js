@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "כבה התראות",
   activate_alerts: "הפעל התראות",
   delete_search: "מחק חיפוש",
+  trust_score: 'ציון אמון',
+  avg_response_under_2h: 'פחות משעתיים',
+  contact_history_device_desc: 'מודעות שבנוגע אליהן יצרת קשר לאחרונה מהמכשיר הזה.',
+  contact_history_empty: 'עדיין לא יצרת קשר עם מוכרים.',
+  contacted_via: 'נוצר קשר דרך',
 };

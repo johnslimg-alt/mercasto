@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "Disattiva notifiche",
   activate_alerts: "Attiva notifiche",
   delete_search: "Elimina ricerca",
+  trust_score: 'Punteggio di affidabilità',
+  avg_response_under_2h: '< 2 ore',
+  contact_history_device_desc: 'Annunci per cui hai contattato recentemente un venditore da questo dispositivo.',
+  contact_history_empty: 'Non hai ancora contattato alcun venditore.',
+  contacted_via: 'Contattato tramite',
 };

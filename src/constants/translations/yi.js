@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "אויסלעשן נאטיפיקאציעס",
   activate_alerts: "אנצינדן נאטיפיקאציעס",
   delete_search: "אויסמעקן זוכן",
+  trust_score: 'צוטרוי־סקאָר',
+  avg_response_under_2h: 'אונטער 2 שעה',
+  contact_history_device_desc: 'אַנאָנסן וועגן וועלכע איר האָט לעצטנס קאָנטאַקטירט פֿון דעם מיטל.',
+  contact_history_empty: 'איר האָט נאָך נישט קאָנטאַקטירט קיין פֿאַרקויפער.',
+  contacted_via: 'קאָנטאַקטירט דורך',
 };

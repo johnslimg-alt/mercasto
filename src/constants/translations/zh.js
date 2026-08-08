@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "关闭通知",
   activate_alerts: "开启通知",
   delete_search: "删除搜索",
+  trust_score: '信任评分',
+  avg_response_under_2h: '< 2 小时',
+  contact_history_device_desc: '您最近在此设备上联系过的广告。',
+  contact_history_empty: '您还没有联系任何卖家。',
+  contacted_via: '联系方式',
 };

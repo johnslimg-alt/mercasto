@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "알림 비활성화",
   activate_alerts: "알림 활성화",
   delete_search: "검색 삭제",
+  trust_score: '신뢰 점수',
+  avg_response_under_2h: '2시간 미만',
+  contact_history_device_desc: '이 기기에서 최근 판매자에게 문의한 광고입니다.',
+  contact_history_empty: '아직 문의한 판매자가 없습니다.',
+  contacted_via: '연락 경로',
 };
