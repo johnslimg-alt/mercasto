@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, MessageCircle, Shield, AlertTriangle } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
+import { getCurrentSiteLanguage, whatsappInterestMessage } from '../../utils/whatsappLocale';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -10,7 +11,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
 
   // Извлечение контактов
   const getSafeTelegramUsername = (ad) => {
-    const raw = ad?.telegram_username || ad?.telegram || ad?.telegram_url 
+    const raw = ad?.telegram_username || ad?.telegram || ad?.telegram_url
       || ad?.user?.telegram_username || ad?.user?.telegram || ad?.user?.telegram_url || '';
     if (!raw) return null;
     return String(raw).trim()
@@ -31,7 +32,8 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
   const telegramUsername = getSafeTelegramUsername(ad);
   const whatsappNumber = getSafeWhatsAppNumber(ad);
 
-  const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${localizedText(ad?.title)}" en Mercasto`);
+  const siteLang = getCurrentSiteLanguage();
+  const whatsappMessage = encodeURIComponent(whatsappInterestMessage(localizedText(ad?.title, siteLang), siteLang));
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
 

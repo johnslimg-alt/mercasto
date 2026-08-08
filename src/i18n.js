@@ -14,7 +14,8 @@ const forceSpanishCampaignLanding =
   typeof window !== 'undefined' &&
   SPANISH_CAMPAIGN_PATHS.has(normalizePathname(window.location.pathname));
 
-const SUPPORTED_LANGUAGES = new Set(['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja']);
+const DISABLED_LANGUAGES = new Set(['he', 'yi']); // intentionally disabled and archived
+const SUPPORTED_LANGUAGES = new Set(['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja']);
 const savedProductLanguage = (() => {
   if (typeof window === 'undefined') return 'es';
   try {
@@ -68,6 +69,7 @@ i18n
 // Dynamic resource loader for other languages to avoid bloating the main bundle
 export async function loadI18nLanguage(lang) {
   const cleanLang = String(lang || '').toLowerCase().split('-')[0];
+  if (DISABLED_LANGUAGES.has(cleanLang) || !SUPPORTED_LANGUAGES.has(cleanLang)) return;
   if (cleanLang === 'es' || i18n.hasResourceBundle(cleanLang, 'translation')) {
     return;
   }
@@ -82,9 +84,10 @@ export async function loadI18nLanguage(lang) {
 // Hook into changeLanguage to load dynamic JSON bundles automatically
 const originalChangeLanguage = i18n.changeLanguage.bind(i18n);
 i18n.changeLanguage = async (lang, callback) => {
-  const cleanLang = String(lang || '').toLowerCase().split('-')[0];
+  const requested = String(lang || '').toLowerCase().split('-')[0];
+  const cleanLang = SUPPORTED_LANGUAGES.has(requested) ? requested : 'es';
   await loadI18nLanguage(cleanLang);
-  return originalChangeLanguage(lang, callback);
+  return originalChangeLanguage(cleanLang, callback);
 };
 
 // Initial load check for detected language

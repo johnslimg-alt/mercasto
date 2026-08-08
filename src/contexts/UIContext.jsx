@@ -11,8 +11,9 @@ export function UIProvider({ children }) {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
-  
-  const [lang, setLang] = useState(() => normalizeLanguage(localStorage.getItem('lang') || localStorage.getItem('mercasto_language') || 'es'));
+
+  const [lang, setLangRaw] = useState(() => normalizeLanguage(localStorage.getItem('lang') || localStorage.getItem('mercasto_language') || 'es'));
+  const setLang = useCallback((value) => setLangRaw(normalizeLanguage(value)), []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
@@ -26,7 +27,7 @@ export function UIProvider({ children }) {
     localStorage.setItem('mercasto_language', lang);
     applyDocumentLanguage(lang);
     if (i18n.language !== lang) i18n.changeLanguage(lang);
-    
+
     if (lang !== 'es') {
       import('../utils/translations').then(({ loadLanguage }) => {
         loadLanguage(lang).then(() => {
@@ -54,7 +55,7 @@ export function UIProvider({ children }) {
 
   // === TOAST УВЕДОМЛЕНИЯ ===
   const [toasts, setToasts] = useState([]);
-  
+
   const showToast = useCallback((message, type = 'info', duration = 4000) => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type, duration }]);
@@ -69,7 +70,7 @@ export function UIProvider({ children }) {
 
   // === ЗАГРУЗКА ===
   const [loadingStates, setLoadingStates] = useState({});
-  
+
   const setLoading = useCallback((key, value) => {
     setLoadingStates(prev => ({ ...prev, [key]: value }));
   }, []);
@@ -82,7 +83,7 @@ export function UIProvider({ children }) {
     lang,
     setLang,
     loadedLangVersion,
-    
+
     // Навигация
     currentTab,
     setCurrentTab,
@@ -92,7 +93,7 @@ export function UIProvider({ children }) {
     setSelectedState,
     selectedCity,
     setSelectedCity,
-    
+
     // Модальные окна
     showOnboarding,
     setShowOnboarding,
@@ -110,12 +111,12 @@ export function UIProvider({ children }) {
     setShowCouponModal,
     showProfileModal,
     setShowProfileModal,
-    
+
     // Toast
     toasts,
     showToast,
     hideToast,
-    
+
     // Загрузка
     loadingStates,
     setLoading,

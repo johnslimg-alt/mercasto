@@ -62,7 +62,7 @@ function LocalizedRouteLoadError({ translationKey }) {
 }
 
 const SUPPORTED_LANGUAGES = new Set([
-  'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
+  'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar',   'ru', 'ja',
 ]);
 const LANGUAGE_OPTIONS = [...SUPPORTED_LANGUAGES];
 const NAV_LABELS = {
@@ -75,8 +75,8 @@ const NAV_LABELS = {
   de: ['Alle', 'Autos', 'Immobilien', 'Dienstleistungen', 'Jobs', 'Shops'],
   it: ['Tutto', 'Auto', 'Immobili', 'Servizi', 'Lavoro', 'Negozi'],
   ar: ['الكل', 'سيارات', 'عقارات', 'خدمات', 'وظائف', 'متاجر'],
-  he: ['הכל', 'רכבים', 'נדל״ן', 'שירותים', 'משרות', 'חנויות'],
-  yi: ['אַלץ', 'אויטאָס', 'גרונטייגנס', 'באַדינונגען', 'אַרבעט', 'קראָמען'],
+
+
   ru: ['Все', 'Авто', 'Недвижимость', 'Услуги', 'Работа', 'Магазины'],
   ja: ['すべて', '自動車', '不動産', 'サービス', '求人', 'ショップ'],
 };
@@ -3528,7 +3528,7 @@ function App() {
       ...(Array.isArray(jobAds) ? jobAds : []),
       ...(Array.isArray(serviceAds) ? serviceAds : [])
     ];
-    
+
     const foundAd = allAdLists.find(ad => ad && ad.id == adId);
     if (foundAd) {
       handleViewAd(foundAd);
@@ -4278,7 +4278,7 @@ function App() {
                 </button>
               </>
             )}
-            
+
             <button onClick={() => { setCurrentTab('post'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
               <PlusCircle size={16} className="text-[#84CC16]" /> {t.post_ad}
             </button>

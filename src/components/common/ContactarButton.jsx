@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Phone, Mail, X, Copy, Check, ExternalLink, Shield, Clock } from 'lucide-react';
+import { whatsappInterestMessage } from '../../utils/whatsappLocale';
 
 /**
  * ContactarButton — Unified contact button with modal showing all communication channels.
@@ -107,7 +108,7 @@ export default function ContactarButton({
   const handleWhatsApp = () => {
     const phone = seller.whatsapp || seller.phone || '';
     const cleanPhone = phone.replace(/\D/g, '');
-    const message = encodeURIComponent(`Hola, me interesa tu anuncio "${adTitle}" en Mercasto.`);
+    const message = encodeURIComponent(whatsappInterestMessage(adTitle));
     window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
     markContacted();
   };

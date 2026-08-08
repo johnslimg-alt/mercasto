@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  CheckCircle2, 
-  MessageSquare, 
-  DollarSign, 
-  PlusCircle, 
-  ArrowRight, 
-  ShieldCheck, 
-  Sparkles, 
+import {
+  CheckCircle2,
+  MessageSquare,
+  DollarSign,
+  PlusCircle,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
   ChevronDown,
   Car,
   Home,
@@ -579,108 +579,8 @@ const TRANSLATIONS = {
     cta_footer_desc: 'آلاف الأشخاص في جميع أنحاء المكسيك يبحثون عما تقدمه. انشر إعلانك الآن مجاناً بالكامل!',
     cta_footer_btn: 'ابدأ الآن'
   },
-  he: {
-    ai_brand_tagline: 'פלטפורמת המודעות המסווגות המתקדמת והחכמה ביותר עם AI',
-    seo_title: 'פרסם מודעות לוח בחינם במקסיקו | Mercasto',
-    badge: 'לוח מודעות 100% חינם במקסיקו',
-    hero_title: 'למכור מהר יותר וללא תשלום עמלות',
-    hero_title_before: "למכור מהר יותר ו",
-    hero_title_highlight: "ללא תשלום עמלות",
-    hero_title_after: "",
-    hero_desc: 'פרסם את הרכבים, הבתים, השירותים או המוצרים שלך בחינם. הקונים יוצרים איתך קשר ישירות בוואטסאפ או בטלגרם ללא מתווכים.',
-    cta_btn: 'פרסם מודעה בחינם',
-    mockup_caption: 'תצוגה מקדימה של לוח הבקרה של המוכר: נהל את המודעות שלך וצפה בסטטיסטיקות בזמן אמת.',
-    categories_title: 'מה ניתן לפרסם ב-Mercasto?',
-    categories_desc: 'בחר קטגוריה והתחל לקבל פניות מקונים מתעניינים בכל רחבי מקסיקו.',
-    cat_motor: 'רכב ותחבורה',
-    cat_motor_desc: 'מכוניות, אופנועים, חלפים ורכבי שטח.',
-    cat_inmuebles: 'נדל"ן',
-    cat_inmuebles_desc: 'בתים, דירות, משרדים ושטחים.',
-    cat_empleos: 'דרושים',
-    cat_empleos_desc: 'משרות פנויות ופרופילי מועמדים.',
-    cat_servicios: 'שירותים',
-    cat_servicios_desc: 'בעלי מקצוע ושירותים לבית.',
-    cat_productos: 'חפצים ומוצרים',
-    cat_productos_desc: 'ציוד אישי, אלקטרוניקה ועוד.',
-    feature1_title: 'פרסום קל ומהיר',
-    feature1_desc: 'העלה תמונות ותיאור בתוך פחות מ-2 דקות. מעוצב להראות מעולה הן בנייד והן במחשב.',
-    feature2_title: '0% עמלות',
-    feature2_desc: 'כל הרווח שלך. Mercasto אינו מתערב בתשלומים שלך ואינו מנכה אחוזים מהמכירות שלך.',
-    feature3_title: 'קשר ישיר',
-    feature3_desc: 'תשכח מצ\'אטים איטיים בפלטפורמות מורכבות. המתעניינים כותבים לך ישירות לוואטסאפ האישי שלך.',
-    how_title: 'איך Mercasto עובד?',
-    step1_title: 'צור חשבון',
-    step1_desc: 'הירשם בבטחה עם הדוא"ל שלך. תהיה מוכן לפרסם באופן מיידי.',
-    step2_title: 'העלה מודעה',
-    step2_desc: 'הוסף כותרת, מחיר, תמונות ופרטים של המוצר, הרכב, השירות או הנכס שלך.',
-    step3_title: 'מכור ישירות',
-    step3_desc: 'קבל הודעות מקונים ישירות לנייד שלך ותאם את מסירת המוצר.',
-    faq_title: 'שאלות נפוצות',
-    faq_q1: 'האם פרסום מודעות ב-Mercasto הוא באמת חינם?',
-    faq_a1: 'כן, פרסום המודעות הוא 100% חינם. איננו גובים עמלות מכירה, דמי מנוי חודשיים או עמלות נסתרות. אתה שומר 100% מכספי המכירה שלך.',
-    faq_q2: 'כיצד יצרו איתי קשר קונים פוטנציאליים?',
-    faq_a2: 'ב-Mercasto הקונים פונים אליך ישירות. באפשרותך להגדיר את הפרופיל שלך לקבלת הודעות ישירות לוואטסאפ, לטלגרם או לקבלת שיחות טלפון רגילות.',
-    faq_q3: 'אילו קטגוריות של מודעות אני יכול לפרסם?',
-    faq_a3: 'ניתן לפרסם כמעט כל סוג מודעה: רכבים ואופנועים (Motor), נדל"ן (מכירה או השכרה), שירותים מקצועיים, פריטים אישיים, טכנולוגיה, הצעות עבודה ועוד.',
-    faq_q4: 'כמה מודעות אוכל לפרסם בחינם?',
-    faq_a4: 'אין מגבלות חונקות למוכרים פרטיים. תוכל לפרסם מספר מודעות פעילות כדי להציג את כל המוצרים או השירותים שלך.',
-    safety_title: 'הבטיחות שלך היא בעדיפות הראשונה שלנו',
-    safety_desc: 'ב-Mercasto אנו מאמתים פרופילים באופן שוטף כדי להבטיח קהילת מכירות אמינה ובטוחה. זכור תמיד לבצע עסקאות במקומות ציבוריים ובטוחים.',
-    cta_footer_title: 'מוכן להתחיל למכור כבר היום?',
-    cta_footer_desc: 'אלפי אנשים ברחבי מקסיקו מחפשים את מה שאתה מציע. פרסם מודעה בחינם לגמרי!',
-    cta_footer_btn: 'להתחיל עכשיו'
-  },
-  yi: {
-    ai_brand_tagline: 'די מאָדערנסטע און קלוגסטע קלאַסיפֿיצירטע מודעות־פּלאַטפֿאָרמע מיט AI',
-    seo_title: 'פרסם פרייע קלאסיפייד מודעות אין מעקסיקא | Mercasto',
-    badge: '100% פרייע קלאסיפיידס אין מעקסיקא',
-    hero_title: 'פאַרקויפֿן פאַסטער און אָן צאָלן קאָמיסיעס',
-    hero_title_before: "פאַרקויפֿן פאַסטער און ",
-    hero_title_highlight: "אָן צאָלן קאָמיסיעס",
-    hero_title_after: "",
-    hero_desc: 'פרסם דיין קאַרס, הייזער, באַדינונגען אָדער פּראָדוקטן פֿאַר פֿרייַ. קויפערס קאָנטאַקט איר גלייך דורך WhatsApp אָדער Telegram אָן אינמיטלערס.',
-    cta_btn: 'פרסם פרייע מודעה',
-    mockup_caption: 'פֿאַרקויפער קאָנטראָל טאַפליע פאָרויסזאָגן: פירן דיין מודעות און זען פאַקטיש-צייט סטאַטיסטיק.',
-    categories_title: 'וואָס קען מען פּובליקירן אויף Mercasto?',
-    categories_desc: 'קלייַבן א קאַטעגאָריע און אָנהייבן באַקומען אָפפערס פון קויפערס איבער מעקסיקא.',
-    cat_motor: 'מאטארן',
-    cat_motor_desc: 'קאַרס, טראַקס, מאָטאָציקלעך און טיילן.',
-    cat_inmuebles: 'גרונטייגנס',
-    cat_inmuebles_desc: 'הייזער, דירות און שטחים.',
-    cat_empleos: 'דזשאָבס',
-    cat_empleos_desc: 'וואַקאַנסיעס און פערזענלעכע פּראָפילעס.',
-    cat_servicios: 'באדינונגען',
-    cat_servicios_desc: 'פאַכמאַן און היים באַדינונגען.',
-    cat_productos: 'סחורה',
-    cat_productos_desc: 'פערזענלעכע זאכן, טעכנאָלאָגיע און מער.',
-    feature1_title: 'גריнгע פּובליקאַציע',
-    feature1_desc: 'לאָדן דיין פאָטאָס און באַשרייבונג אין ווייניקער ווי 2 מינוט. דיזייнд צו קוקן גרויס אויף מאָביל און קאָמפּיוטער.',
-    feature2_title: '0% קאָמיסיעס',
-    feature2_desc: 'דער גאנצער נוץ איז דיינער. Mercasto טוט נישט אריינמישן אין דיינע צאָלונגען אָדער אָפּגעצויגן פראצענטן פון דיינע פאַרקויפן.',
-    feature3_title: 'דירעקטע קאָנטאַקט',
-    feature3_desc: 'פארגעסן פון פּאַמעלעך טשאַץ אויף קאָמפּלעקס פּלאַטפאָרמס. אינטערעסירט קונים שרייבן צו איר דירעקט אויף دיין פערזענלעכע WhatsApp.',
-    how_title: 'ווי אַזוי אַרבעט Mercasto?',
-    step1_title: 'שאַפֿן דיין קאנטע',
-    step1_desc: 'פאַרשרייַבן זיך סיקיורלי מיט דיין בליצפּאָסט. איר וועט זיין גרייט צו פרסם גלייך.',
-    step2_title: 'לאָדן דיין מודעה',
-    step2_desc: 'לייג דעם טיטל, פּרייַז, פאָטאָס און פרטים פון دיין פּראָדוקט, מאַשין, דינסט אָדער פאַרמאָг.',
-    step3_title: 'פאַרקויפן דירעקט',
-    step3_desc: 'באַקומען אַרטיקלען פון קויפערס גלייך אויף דיין מאָביל און קאָאָרדינירן די עקספּרעס.',
-    faq_title: 'אָפט געשטעלטע פראגעס',
-    faq_q1: 'איז עס טאַקע פריי צו פרסם מודעות אויף Mercasto?',
-    faq_a1: 'יאָ, פּובליקירן מודעות איז 100% פריי. מיר טאָן ניט אָפּצאָل פארקויפונг קאָמיסיעס, כוידעשלעך פיז אָדער פאַרבאָרגן רייץ. איר האלט 100% פון דיין פארקויפונג געלט.',
-    faq_q2: 'ווי וועט אינטערעסירט קויפערס קאָנטאַקט מיר?',
-    faq_a2: 'איוו אויף Mercasto קויפערס קאָנטאַקט איר דירעקט. איר קענען שטעלן דיין פּראָפיל צו באַקומען אַרטיקלען גלייך אויף דיין WhatsApp, Telegram אָדער באַקומען טראדיציאנелן טעלעפאָן קאַללס.',
-    faq_q3: 'וואָס קאַטעגאָריעס פון מודעות קען איך פרסם?',
-    faq_a3: 'איר קענען פרסם כּמעט קיין טיפּ פון קלאַסיפייдס: קאַרס און מאָטאָציקלעך (Motor), גרונטייגנס (פאַרקויף אָדער דינגען), פאַכמאַן באַדינונגען, פערזענלעכע זאכן, טעכנאָלאָגיע, אַרבעט אָפפערס און מער.',
-    faq_q4: 'ווי פילע מודעות קען איך פרסם פֿאַר פריי?',
-    faq_a4: 'עס זענען קיין ריסטריקטיוו לימאַץ פֿאַר פּריוואַט פארקויפער. איר קענען פרסם קייפל אַקטיוו מודעות צו וויטרינע אַלע דיין פּראָדוקטן אָדער באַדינונגען.',
-    safety_title: 'דיין זיכערקייַט איז אונדזער בילכערקייַט',
-    safety_desc: 'אין Mercasto מיר קעסיידער וואַלאַדייט פּראָפילעס צו גאַראַנטירן אַ טראַסטיד סעלינג קהл. געדענקט שטענדיק צו מאַכן טראַנזאַקשאַנז אין עפנטלעך און זיכער ערטער.',
-    cta_footer_title: 'גרייט צו אָנהייבן פאַרקויפן היינט?',
-    cta_footer_desc: 'טויזנטער מענטשן איבער מעקסיקא זוכן פֿאַר וואָס איר פאָרשלאָגן. מאַכן דיין פּובליקאַציע גאָר פריי!',
-    cta_footer_btn: 'אָנהייבן איצט'
-  }
+
+
 };
 
 export default function SellerLandingScreen({ lang = 'es' }) {
@@ -694,7 +594,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
     // Dynamic SEO title
     const oldTitle = document.title;
     document.title = t.seo_title;
-    
+
     // Track page view for analytics
     trackPageView('/vendedores', 'Para Vendedores - Publica Gratis');
 
@@ -716,7 +616,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
   const handleFaqToggle = (index) => {
     const nextFaq = activeFaq === index ? null : index;
     setActiveFaq(nextFaq);
-    
+
     if (nextFaq !== null) {
       // Track FAQ expand action as a micro-conversion
       trackEvent('ui_click', {
@@ -862,7 +762,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
       <section className="py-16 md:py-24 bg-white dark:bg-slate-900/50 border-y border-slate-200/60 dark:border-slate-800/60 px-4">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-3xl font-extrabold mb-12">{t.how_title}</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative">
             {/* Step 1 */}
             <div className="flex flex-col items-center">
@@ -952,7 +852,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
       {/* Final CTA */}
       <section className="py-20 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white text-center px-4 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-[#84CC16]/5 rounded-full blur-[100px] pointer-events-none" />
-        
+
         <h2 className="text-3xl md:text-5xl font-extrabold mb-6 leading-tight max-w-2xl mx-auto">
           {t.cta_footer_title}
         </h2>

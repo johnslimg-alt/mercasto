@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 const root = process.cwd();
 const localesDir = path.join(root, 'src/locales');
-const expectedLanguages = ['es', 'en', 'ru', 'pt', 'fr', 'de', 'it', 'zh', 'ko', 'ja', 'ar', 'he', 'yi'];
+const expectedLanguages = ['es', 'en', 'ru', 'pt', 'fr', 'de', 'it', 'zh', 'ko', 'ja', 'ar'];
 const files = fs.readdirSync(localesDir).filter((file) => file.endsWith('.json')).sort();
 
 const flatten = (value, prefix = '', result = {}) => {

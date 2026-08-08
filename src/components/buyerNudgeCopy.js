@@ -8,8 +8,8 @@ export const BUYER_NUDGE_COPY = Object.freeze({
   de: { title: 'Behalte deine Favoriten im Blick', body: 'Speichere Anzeigen und öffne schnell die verfügbaren Kontaktmöglichkeiten des Verkäufers.', cta: 'Konto erstellen', dismiss: 'Nicht jetzt' },
   it: { title: 'Tieni a portata di mano i preferiti', body: 'Salva gli annunci e accedi rapidamente alle opzioni di contatto disponibili del venditore.', cta: 'Crea account', dismiss: 'Non ora' },
   ar: { title: 'احتفظ بإعلاناتك المفضلة', body: 'احفظ الإعلانات واصل بسرعة إلى وسائل الاتصال المتاحة التي يوفّرها كل بائع.', cta: 'إنشاء حساب', dismiss: 'ليس الآن' },
-  he: { title: 'שמרו את המודעות המועדפות', body: 'שמרו מודעות וקבלו גישה מהירה לאפשרויות הקשר שהמוכר מציע.', cta: 'יצירת חשבון', dismiss: 'לא עכשיו' },
-  yi: { title: 'האַלטט אייערע באַליבטע מודעות נאָענט', body: 'היט מודעות און באַקומט שנעלן צוטריט צו די קאָנטאַקט־אָפּציעס וואָס דער פֿאַרקויפער גיט.', cta: 'שאַפֿן אַ חשבון', dismiss: 'נישט איצט' },
+
+
   ru: { title: 'Не теряйте понравившиеся объявления', body: 'Сохраняйте объявления и быстро открывайте доступные способы связи с продавцом.', cta: 'Создать аккаунт', dismiss: 'Не сейчас' },
   ja: { title: '気になる広告をすぐ見つける', body: '広告を保存し、出品者が用意している連絡方法へすばやくアクセスできます。', cta: 'アカウントを作成', dismiss: '今はしない' },
 });

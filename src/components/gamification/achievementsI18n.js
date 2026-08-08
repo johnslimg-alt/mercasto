@@ -71,22 +71,8 @@ export const achievementsTranslations = {
     noActivity: 'لا يوجد نشاط حديث', errorLoading: 'خطأ في تحميل الإنجازات', notAuthenticated: 'غير مصادق عليه',
     fetchFailed: 'تعذر جلب الملف الشخصي', rarityCommon: 'شائع', rarityRare: 'نادر', rarityEpic: 'ملحمي', rarityLegendary: 'أسطوري',
   },
-  he: {
-    title: 'ההישגים שלי', level: 'רמה', totalXp: 'סה"כ נקודות ניסיון', progressToLevel: 'התקדמות לרמה',
-    xpToNext: 'נקודות ניסיון לרמה הבאה', streakDays: 'ימים ברצף', record: 'שיא', achievements: 'הישגים',
-    completed: 'הושלם', unlocked: 'נפתחו', toUnlock: 'לפתיחה', activity: 'פעילות',
-    noUnlocked: 'עדיין לא פתחת הישגים', noUnlockedHint: 'פרסם את המודעה הראשונה שלך כדי להתחיל!',
-    noActivity: 'אין פעילות אחרונה', errorLoading: 'שגיאה בטעינת ההישגים', notAuthenticated: 'לא מאומת',
-    fetchFailed: 'לא ניתן לאחזר את הפרופיל', rarityCommon: 'נפוץ', rarityRare: 'נדיר', rarityEpic: 'אפי', rarityLegendary: 'אגדי',
-  },
-  yi: {
-    title: 'מײַנע דערגרייכונגען', level: 'לעוועל', totalXp: 'גאַנץ XP', progressToLevel: 'פּראָגרעס צום לעוועל',
-    xpToNext: 'XP צום קומענדיקן לעוועל', streakDays: 'טעג אין א ריי', record: 'רעקאָרד', achievements: 'דערגרייכונגען',
-    completed: 'פֿאַרטיק', unlocked: 'אויפֿגעשלאסן', toUnlock: 'צו אויפֿשליסן', activity: 'אַקטיוויטעט',
-    noUnlocked: 'איר האָט נאָך ניט אויפֿגעשלאסן קיין דערגרייכונגען', noUnlockedHint: 'פּאָסטעווט אײַער ערשטן אַנאָנס צו אָנהייבן!',
-    noActivity: 'קיין לעצטע אַקטיוויטעט', errorLoading: 'טעות ביים לאָדן די דערגרייכונגען', notAuthenticated: 'ניט אויטענטיפֿיצירט',
-    fetchFailed: 'קען ניט באַקומען דעם פּראָפֿיל', rarityCommon: 'געוויינטלעך', rarityRare: 'זעלטן', rarityEpic: 'עפּיש', rarityLegendary: 'לעגענדאַר',
-  },
+
+
   ru: {
     title: 'Мои достижения', level: 'Уровень', totalXp: 'Всего XP', progressToLevel: 'Прогресс до уровня',
     xpToNext: 'XP до следующего уровня', streakDays: 'Дней подряд', record: 'Рекорд', achievements: 'Достижения',

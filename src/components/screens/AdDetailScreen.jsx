@@ -1,5 +1,6 @@
 import useDocumentMeta from '../../hooks/useDocumentMeta';
 import { localizedText } from '../../utils/localize';
+import { whatsappInterestMessage } from '../../utils/whatsappLocale';
 import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
 
@@ -414,7 +415,7 @@ export default function AdDetailScreen({
   // Escribir por Telegram
   const telegramUrl = telegramUsername ? `https://t.me/${telegramUsername}` : null;
   const whatsappNumber = getSafeWhatsAppNumber(ad);
-  const whatsappMessage = encodeURIComponent(`Hola, me interesa tu anuncio "${localizedText(ad.title)}" en Mercasto`);
+  const whatsappMessage = encodeURIComponent(whatsappInterestMessage(localizedText(ad.title, lang), lang));
   const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}` : null;
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/#ad-${ad.id}` : '';
   const shareText = `${t.check_this_ad || 'Mira este anuncio en Mercasto'}: ${localizedText(ad.title, lang) || ''}`;

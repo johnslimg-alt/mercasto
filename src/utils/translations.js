@@ -1,7 +1,8 @@
 import esTranslations from '../constants/translations/es.js';
 
-export const SUPPORTED_LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja'];
-export const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
+// Hebrew (he) and Yiddish (yi) are intentionally disabled and archived.
+export const SUPPORTED_LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
+export const RTL_LANGUAGES = new Set(['ar']);
 
 const cache = {
   es: esTranslations,
@@ -22,7 +23,7 @@ export async function loadLanguage(language) {
   if (cache[lang]) {
     return cache[lang];
   }
-  
+
   try {
     const module = await import(`../constants/translations/${lang}.js`);
     cache[lang] = module.default;

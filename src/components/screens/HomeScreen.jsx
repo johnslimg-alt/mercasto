@@ -146,15 +146,15 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
     }, []);
 
     const homeCategories = React.useMemo(() => ([
-      { slug: 'motor', name: { es: 'Motor', en: 'Motor', pt: 'Motor', fr: 'Moteur', zh: '机动车', ko: '모터', de: 'Motor', it: 'Motor', ar: 'محرك', he: 'מנוע', yi: 'מאטאר', ru: 'Мотор', ja: 'モーター' }, icon: 'Car' },
-      { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate', pt: 'Imóveis', fr: 'Immobilier', zh: '房地产', ko: '부동산', de: 'Immobilien', it: 'Immobiliare', ar: 'العقارات', he: 'נדל״ן', yi: 'איממאָביליען', ru: 'Недвижимость', ja: '不動産' }, icon: 'Home' },
-      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs', pt: 'Empregos', fr: 'Emplois', zh: '工作', ko: '채용', de: 'Jobs', it: 'Lavoro', ar: 'وظائف', he: 'משרות', yi: 'דזשאָбс', ru: 'Работа', ja: '求人' }, icon: 'Briefcase' },
-      { slug: 'servicios', name: { es: 'Servicios', en: 'Services', pt: 'Serviços', fr: 'Services', zh: '服务', ko: '서비스', de: 'Dienstleistungen', it: 'Servizi', ar: 'خدمات', he: 'שירותים', yi: 'סערוויסעס', ru: 'Услуги', ja: 'サービス' }, icon: 'Wrench' },
-      { slug: 'productos', name: { es: 'Productos', en: 'Goods', pt: 'Produtos', fr: 'Articles', zh: '商品', ko: '상품', de: 'Waren', it: 'Prodotti', ar: 'سلع', he: 'מוצרים', yi: 'סחורה', ru: 'Товары', ja: '商品' }, icon: 'ShoppingBag' },
-      { slug: 'negocios', name: { es: 'Negocios', en: 'Business', pt: 'Negocios', fr: 'Affaires', zh: '商务', ko: '비즈니스', de: 'Geschäft', it: 'Affari', ar: 'أعمال', he: 'עסקים', yi: 'ביזנעס', ru: 'Бизнес', ja: 'ビジネス' }, icon: 'Store' },
-      { slug: 'turismo', name: { es: 'Turismo', en: 'Tourism', pt: 'Turismo', fr: 'Tourisme', zh: '旅游', ko: '관광', de: 'Tourismus', it: 'Turismo', ar: 'سياحة', he: 'תיירות', yi: 'טוריזם', ru: 'Туризм', ja: '観光' }, icon: 'Compass' },
-      { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets', pt: 'Ingressos', fr: 'Billets', zh: '门票', ko: '티켓', de: 'Tickets', it: 'Biglietti', ar: 'تذاكر', he: 'כרטיסים', yi: 'בילעטן', ru: 'Билеты', ja: 'チケット' }, icon: 'Ticket' },
-      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing', pt: 'Tarifas', fr: 'Tarifs', zh: '资费', ko: '요금', de: 'Tarife', it: 'Tariffe', ar: 'الأسعار', he: 'תעריפים', yi: 'טאַריפֿן', ru: 'Тарифы', ja: '料金' }, icon: 'Crown', action: 'pricing' },
+      { slug: 'motor', name: { es: 'Motor', en: 'Motor', pt: 'Motor', fr: 'Moteur', zh: '机动车', ko: '모터', de: 'Motor', it: 'Motor', ar: 'محرك',   ru: 'Мотор', ja: 'モーター' }, icon: 'Car' },
+      { slug: 'inmobiliaria', name: { es: 'Inmuebles', en: 'Real Estate', pt: 'Imóveis', fr: 'Immobilier', zh: '房地产', ko: '부동산', de: 'Immobilien', it: 'Immobiliare', ar: 'العقارات',   ru: 'Недвижимость', ja: '不動産' }, icon: 'Home' },
+      { slug: 'empleo', name: { es: 'Empleos', en: 'Jobs', pt: 'Empregos', fr: 'Emplois', zh: '工作', ko: '채용', de: 'Jobs', it: 'Lavoro', ar: 'وظائف',   ru: 'Работа', ja: '求人' }, icon: 'Briefcase' },
+      { slug: 'servicios', name: { es: 'Servicios', en: 'Services', pt: 'Serviços', fr: 'Services', zh: '服务', ko: '서비스', de: 'Dienstleistungen', it: 'Servizi', ar: 'خدمات',   ru: 'Услуги', ja: 'サービス' }, icon: 'Wrench' },
+      { slug: 'productos', name: { es: 'Productos', en: 'Goods', pt: 'Produtos', fr: 'Articles', zh: '商品', ko: '상품', de: 'Waren', it: 'Prodotti', ar: 'سلع',   ru: 'Товары', ja: '商品' }, icon: 'ShoppingBag' },
+      { slug: 'negocios', name: { es: 'Negocios', en: 'Business', pt: 'Negocios', fr: 'Affaires', zh: '商务', ko: '비즈니스', de: 'Geschäft', it: 'Affari', ar: 'أعمال',   ru: 'Бизнес', ja: 'ビジネス' }, icon: 'Store' },
+      { slug: 'turismo', name: { es: 'Turismo', en: 'Tourism', pt: 'Turismo', fr: 'Tourisme', zh: '旅游', ko: '관광', de: 'Tourismus', it: 'Turismo', ar: 'سياحة',   ru: 'Туризм', ja: '観光' }, icon: 'Compass' },
+      { slug: 'boletos', name: { es: 'Boletos', en: 'Tickets', pt: 'Ingressos', fr: 'Billets', zh: '门票', ko: '티켓', de: 'Tickets', it: 'Biglietti', ar: 'تذاكر',   ru: 'Билеты', ja: 'チケット' }, icon: 'Ticket' },
+      { slug: 'tarifas', name: { es: 'Tarifas', en: 'Pricing', pt: 'Tarifas', fr: 'Tarifs', zh: '资费', ko: '요금', de: 'Tarife', it: 'Tariffe', ar: 'الأسعار',   ru: 'Тарифы', ja: '料金' }, icon: 'Crown', action: 'pricing' },
     ]), []);
     const trendingAds = React.useMemo(() => {
       const seen = new Set();
@@ -248,7 +248,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
           <div className="grid grid-cols-12 gap-6">
 
-            
+
 
             {/* 2. FEATURED CATEGORIES */}
 

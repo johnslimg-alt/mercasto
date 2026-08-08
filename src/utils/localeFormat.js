@@ -8,8 +8,8 @@ export const LOCALE_BY_LANG = {
   de: 'de-DE',
   it: 'it-IT',
   ar: 'ar-MX',
-  he: 'he-IL',
-  yi: 'yi',
+
+
   ru: 'ru-RU',
   ja: 'ja-JP',
 };
