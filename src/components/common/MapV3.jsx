@@ -266,13 +266,36 @@ export default function MapV3({
     };
   }, []);
 
-  // Sync selectedCategory state when category prop changes
+  // Keep map controls aligned with the catalog's canonical filter state.
   useEffect(() => {
+    setMapQuery(initialFilters.query || '');
+    setMinPrice(initialFilters.minPrice == null ? '' : String(initialFilters.minPrice));
+    setMaxPrice(initialFilters.maxPrice == null ? '' : String(initialFilters.maxPrice));
+    setSelectedState(initialFilters.state || '');
+    setSelectedCity(initialFilters.city || '');
+    setListingType(initialFilters.listingType || '');
+    setConditionFilter(Array.isArray(initialFilters.condition) ? initialFilters.condition : []);
+    setDynamicFilters(initialFilters.dynamic && typeof initialFilters.dynamic === 'object' ? initialFilters.dynamic : {});
     setSelectedCategory(category || '');
-  }, [category]);
+  }, [
+    category,
+    initialFilters.city,
+    initialFilters.condition,
+    initialFilters.dynamic,
+    initialFilters.listingType,
+    initialFilters.maxPrice,
+    initialFilters.minPrice,
+    initialFilters.query,
+    initialFilters.state,
+  ]);
 
-  // Fetch ads if apiUrl or selectedCategory is provided
+  // Fetch ads only when the map is operating independently. Catalog maps receive markers directly.
   useEffect(() => {
+    if (propMarkers) {
+      setFetchedAds([]);
+      setFetchingAds(false);
+      return undefined;
+    }
     const controller = new AbortController();
     // Fetch all ads if selectedCategory is empty, otherwise fetch category specific
     const url = apiUrl || `${API_URL}/ads?${selectedCategory ? `category=${encodeURIComponent(selectedCategory)}&` : ''}per_page=80`;
@@ -290,7 +313,7 @@ export default function MapV3({
       .finally(() => setFetchingAds(false));
 
     return () => controller.abort();
-  }, [apiUrl, selectedCategory]);
+  }, [apiUrl, propMarkers, selectedCategory]);
 
   // Fetch category attributes from DB
   useEffect(() => {
@@ -363,10 +386,22 @@ export default function MapV3({
       if (selectedCity && ad.city && !ad.city.toLowerCase().includes(selectedCity.toLowerCase())) return false;
       if (selectedCategory && ad.category && ad.category !== selectedCategory) return false;
       if (listingType && ad.listing_type && ad.listing_type !== listingType) return false;
-      
+      if (conditionFilter.length && ad.condition && !conditionFilter.includes(ad.condition)) return false;
+
+      const attributes = ad.attributes && typeof ad.attributes === 'object' ? ad.attributes : {};
+      for (const [key, expectedRaw] of Object.entries(dynamicFilters || {})) {
+        if (['sort', 'location_state', 'location_city', 'listing_type'].includes(key)) continue;
+        const expected = Array.isArray(expectedRaw) ? expectedRaw.filter(Boolean) : [expectedRaw].filter(Boolean);
+        if (!expected.length) continue;
+        const actualRaw = attributes[key] ?? ad[key];
+        if (actualRaw == null || actualRaw === '') continue;
+        const actual = Array.isArray(actualRaw) ? actualRaw.map(String) : [String(actualRaw)];
+        if (!expected.some((value) => actual.includes(String(value)))) return false;
+      }
+
       return true;
     });
-  }, [minPrice, maxPrice, normalizedMarkers, mapQuery, onlyWithCoords, selectedState, selectedCity, selectedCategory, listingType]);
+  }, [conditionFilter, dynamicFilters, minPrice, maxPrice, normalizedMarkers, mapQuery, onlyWithCoords, selectedState, selectedCity, selectedCategory, listingType]);
 
   useEffect(() => () => {
     mountedRef.current = false;
@@ -433,6 +468,7 @@ export default function MapV3({
         state: selectedState,
         city: selectedCity,
         listingType,
+        category: selectedCategory,
         condition: conditionFilter,
         dynamic: dynamicFilters,
       });
@@ -1065,6 +1101,7 @@ function createPopupElement(ad, marker) {
       <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2">
         <Search size={15} className="shrink-0 text-[#84CC16]" />
         <input
+          data-testid="map-filter-query"
           value={mapQuery}
           onChange={(e) => setMapQuery(e.target.value)}
           className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
@@ -1076,6 +1113,7 @@ function createPopupElement(ad, marker) {
       <div className="space-y-1">
         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('ads.category')}</label>
         <select
+          data-testid="map-filter-category"
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
@@ -1092,6 +1130,7 @@ function createPopupElement(ad, marker) {
       {/* Location */}
       <div className="grid grid-cols-2 gap-2">
         <select
+          data-testid="map-filter-state"
           value={selectedState}
           onChange={(e) => handleStateChange(e.target.value)}
           className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
@@ -1102,6 +1141,7 @@ function createPopupElement(ad, marker) {
           ))}
         </select>
         <select
+          data-testid="map-filter-city"
           value={selectedCity}
           onChange={(e) => handleCityChange(e.target.value)}
           disabled={!selectedState}
@@ -1117,6 +1157,7 @@ function createPopupElement(ad, marker) {
       {/* Price */}
       <div className="grid grid-cols-2 gap-2">
         <input
+          data-testid="map-filter-min-price"
           value={minPrice}
           onChange={(e) => setMinPrice(e.target.value)}
           type="number"
@@ -1124,6 +1165,7 @@ function createPopupElement(ad, marker) {
           placeholder={t('filters.minPrice')}
         />
         <input
+          data-testid="map-filter-max-price"
           value={maxPrice}
           onChange={(e) => setMaxPrice(e.target.value)}
           type="number"
@@ -1134,6 +1176,7 @@ function createPopupElement(ad, marker) {
 
       {/* Listing Type */}
       <select
+        data-testid="map-filter-listing-type"
         value={listingType}
         onChange={(e) => setListingType(e.target.value)}
         className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
@@ -1183,6 +1226,7 @@ function createPopupElement(ad, marker) {
             <p className="text-xs font-black text-slate-400 capitalize">{field.label}</p>
             {hasOptions ? (
               <select
+                data-testid={`map-filter-dynamic-${field.id}`}
                 value={currentVal}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -1241,6 +1285,7 @@ function createPopupElement(ad, marker) {
 
       {/* Search Area Button */}
       <button
+        data-testid="map-search-area"
         type="button"
         onClick={handleSearchArea}
         className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-[#a3e635] transition-colors"
@@ -1388,6 +1433,7 @@ function createPopupElement(ad, marker) {
 
         {showFullscreen && (
           <button
+            data-testid="map-expand"
             type="button"
             onClick={() => setExpanded(true)}
             className="absolute bottom-3 right-3 z-[2] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg hover:scale-105 active:scale-95 transition-all"
@@ -1420,6 +1466,7 @@ function createPopupElement(ad, marker) {
             </div>
 
             <button
+              data-testid="map-filter-toggle"
               type="button"
               onClick={() => setShowFilters(!showFilters)}
               className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${

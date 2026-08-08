@@ -30,6 +30,8 @@ export default function SplitViewContainer({
   renderAdCard,
   title = 'Todo México',
   selectedState,
+  category = '',
+  initialFilters = {},
   loadingAds = false,
   hasMore = false,
   loadingMore = false,
@@ -216,6 +218,8 @@ export default function SplitViewContainer({
               <MapV3
                 markers={mapMarkers}
                 title={selectedState || title}
+                category={category}
+                initialFilters={initialFilters}
                 onMarkerClick={handleMarkerClick}
                 showFullscreen={true}
                 className="h-full border-0 shadow-none rounded-none"

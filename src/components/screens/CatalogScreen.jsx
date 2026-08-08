@@ -26,6 +26,7 @@ export default function CatalogScreen({
   renderAdCard,
   savingSearchAlert,
   searchQuery,
+  searchLocationInput,
   selectedState,
   serverAds,
   setActiveCat,
@@ -48,6 +49,20 @@ export default function CatalogScreen({
     () => (Array.isArray(serverAds) ? serverAds : []),
     [serverAds],
   );
+  const mapInitialFilters = React.useMemo(() => {
+    const arrayFirst = (value) => Array.isArray(value) ? (value[0] || '') : (value || '');
+    return {
+      query: searchQuery || '',
+      minPrice: minPrice || '',
+      maxPrice: maxPrice || '',
+      state: arrayFirst(dynamicFilters?.location_state) || selectedState || '',
+      city: arrayFirst(dynamicFilters?.location_city) || '',
+      listingType: arrayFirst(dynamicFilters?.listing_type) || '',
+      condition: Array.isArray(conditionFilter) ? conditionFilter : [],
+      dynamic: dynamicFilters || {},
+      locationLabel: searchLocationInput || '',
+    };
+  }, [conditionFilter, dynamicFilters, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
 
   const applySavedSearch = React.useCallback((filters, closeFilters = false) => {
     const {
@@ -236,6 +251,8 @@ export default function CatalogScreen({
             renderAdCard={renderAdCard}
             title={selectedState || t.all_mexico || 'Todo México'}
             selectedState={selectedState}
+            category={activeCat}
+            initialFilters={mapInitialFilters}
             loadingAds={loadingAds}
             hasMore={hasMore}
             loadingMore={loadingMore}
