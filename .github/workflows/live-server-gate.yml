@@ -47,8 +47,18 @@ jobs:
           test -d /var/www/mercasto/.git
           test -f /var/www/mercasto/scripts/server-operator.sh
           cd /var/www/mercasto
-          test "$(git rev-parse --abbrev-ref HEAD)" = main
-          test -z "$(git status --short)"
+          branch="$(git rev-parse --abbrev-ref HEAD)"
+          if [[ "$branch" != main ]]; then
+            echo "::error::Production checkout is on branch '$branch', expected 'main'."
+            exit 1
+          fi
+
+          dirty="$(git status --porcelain=v1 --untracked-files=all)"
+          if [[ -n "$dirty" ]]; then
+            echo "::error::Production checkout is dirty. Do not edit /var/www/mercasto directly; use a separate worktree and keep temporary backups outside the repository."
+            printf '%s\n' "$dirty" | sed -n '1,80p'
+            exit 1
+          fi
 
       - name: Resolve read-only operation
         id: operation

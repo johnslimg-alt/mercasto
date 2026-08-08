@@ -53,4 +53,20 @@ fi
 grep -qF 'Backup or credential artifacts are forbidden' <<< "$agent_backup_output"
 grep -qF '.codex-backups/session/notes.txt' <<< "$agent_backup_output"
 
+git -C "$TMP_DIR" reset --hard -q HEAD
+rm -rf "$TMP_DIR/.codex-backups"
+printf 'temporary nginx backup\n' > "$TMP_DIR/default.conf.bak.mobile-links-20260807-174044"
+
+set +e
+backup_suffix_output="$(bash "$TMP_DIR/scripts/repository-sensitive-artifact-scan.sh" 2>&1)"
+backup_suffix_status=$?
+set -e
+
+if (( backup_suffix_status == 0 )); then
+  echo 'repository artifact scan accepted a timestamped backup suffix' >&2
+  exit 1
+fi
+
+grep -qF 'default.conf.bak.mobile-links-20260807-174044' <<< "$backup_suffix_output"
+
 echo 'repository sensitive artifact regression tests OK'
