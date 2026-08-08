@@ -1,7 +1,16 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { MapPin, List, LayoutGrid, ChevronDown, Search } from 'lucide-react';
+import { getExactMapCoordinates } from '../../utils/mapCoordinates';
 
 const MapV3 = React.lazy(() => import('./MapV3'));
+
+const getIsMobileCatalog = () => {
+  try {
+    return window.matchMedia('(max-width: 767px)').matches;
+  } catch {
+    return true;
+  }
+};
 
 /**
  * SplitViewContainer — Карта сверху, объявления снизу с переключателем Grid/List
@@ -31,26 +40,44 @@ export default function SplitViewContainer({
   const [viewLayout, setViewLayout] = useState('grid'); // 'grid' or 'list'
   const [hoveredAdId, setHoveredAdId] = useState(null);
   const [selectedAdId, setSelectedAdId] = useState(null);
-  const [mapCollapsed, setMapCollapsed] = useState(() => {
-    try {
-      return window.innerWidth < 768;
-    } catch (e) {
-      return true;
-    }
-  });
+  const [isMobileCatalog, setIsMobileCatalog] = useState(getIsMobileCatalog);
+  const [mapCollapsed, setMapCollapsed] = useState(getIsMobileCatalog);
+  const mapPreferenceTouchedRef = useRef(false);
   const listContainerRef = useRef(null);
   const adRefs = useRef({});
   const revealSentinelRef = useRef(null);
-  const isMobileCatalog = useMemo(() => {
-    try {
-      return window.matchMedia('(max-width: 767px)').matches;
-    } catch {
-      return true;
-    }
-  }, []);
   const [visibleCount, setVisibleCount] = useState(() => isMobileCatalog ? 8 : ads.length);
   const genuineAds = useMemo(() => ads.filter(ad => !ad?.is_catalog_filler), [ads]);
+  const mappableAds = useMemo(
+    () => genuineAds.filter(ad => getExactMapCoordinates(ad)),
+    [genuineAds],
+  );
   const catalogReferenceCount = ads.length - genuineAds.length;
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const syncBreakpoint = (event) => {
+      const mobile = Boolean(event.matches);
+      setIsMobileCatalog(mobile);
+      if (!mapPreferenceTouchedRef.current) {
+        setMapCollapsed(mobile);
+      }
+    };
+
+    syncBreakpoint(media);
+    if (media.addEventListener) media.addEventListener('change', syncBreakpoint);
+    else media.addListener?.(syncBreakpoint);
+
+    return () => {
+      if (media.removeEventListener) media.removeEventListener('change', syncBreakpoint);
+      else media.removeListener?.(syncBreakpoint);
+    };
+  }, []);
+
+  const toggleMapCollapsed = useCallback(() => {
+    mapPreferenceTouchedRef.current = true;
+    setMapCollapsed(current => !current);
+  }, []);
 
   // Обработчики для синхронизации
   const handleAdHover = useCallback((adId) => {
@@ -96,7 +123,11 @@ export default function SplitViewContainer({
       setVisibleCount(ads.length);
       return;
     }
-    setVisibleCount(current => Math.min(ads.length, Math.max(current || 0, Math.min(8, ads.length))));
+    setVisibleCount(current => {
+      const mobileBatch = Math.min(8, ads.length);
+      if (current <= 0 || current >= ads.length) return mobileBatch;
+      return Math.min(ads.length, Math.max(current, mobileBatch));
+    });
   }, [ads.length, isMobileCatalog]);
 
   useEffect(() => {
@@ -125,17 +156,8 @@ export default function SplitViewContainer({
   // preparing dozens of marker objects during the mobile catalog's first paint.
   const mapMarkers = useMemo(() => {
     if (mapCollapsed) return [];
-    return genuineAds.slice(0, 80).map((ad, index) => {
-      const lat = Number(ad.latitude ?? ad.lat);
-      const lng = Number(ad.longitude ?? ad.lng);
-      
-      let coords;
-      if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-        coords = [lat, lng];
-      } else {
-        // Fallback координаты по штату
-        coords = [23.6345 + (Math.sin(index * 2.3) * 0.18), -102.5528 + (Math.cos(index * 2.3) * 0.18)];
-      }
+    return mappableAds.slice(0, 80).map((ad, index) => {
+      const coords = getExactMapCoordinates(ad);
 
       return {
         id: ad.id,
@@ -147,7 +169,7 @@ export default function SplitViewContainer({
         isSelected: selectedAdId === ad.id,
       };
     });
-  }, [genuineAds, hoveredAdId, mapCollapsed, selectedAdId]);
+  }, [hoveredAdId, mapCollapsed, mappableAds, selectedAdId]);
 
   // Рендер карточки в зависимости от viewLayout
   const renderAdItem = (ad, index) => (
@@ -187,7 +209,7 @@ export default function SplitViewContainer({
       {/* MAP SECTION — Наверху, полная ширина                           */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <div className="mb-5">
-        <div className={`relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md transition-all duration-300 ${mapCollapsed ? 'h-[60px]' : 'h-[220px] md:h-[320px] lg:h-[360px]'}`}>
+        <div data-testid="catalog-map-shell" className={`relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md transition-all duration-300 ${mapCollapsed ? 'h-[60px]' : 'h-[220px] md:h-[320px] lg:h-[360px]'}`}>
           {!mapCollapsed && (
             <React.Suspense fallback={<div className="h-full bg-slate-800 animate-pulse rounded-xl" />}>
               <MapV3
@@ -209,7 +231,7 @@ export default function SplitViewContainer({
               <div className="rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-2 shadow-lg">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <MapPin size={14} className="text-[#84CC16]" />
-                  <span>{genuineAds.length} anuncio{genuineAds.length !== 1 ? 's' : ''} real{genuineAds.length !== 1 ? 'es' : ''} en el mapa</span>
+                  <span>{mappableAds.length} anuncio{mappableAds.length !== 1 ? 's' : ''} real{mappableAds.length !== 1 ? 'es' : ''} en el mapa</span>
                   {catalogReferenceCount > 0 && <span className="text-slate-500 dark:text-slate-400">· {catalogReferenceCount} referencia{catalogReferenceCount !== 1 ? 's' : ''} de catálogo fuera del mapa</span>}
                 </div>
               </div>
@@ -226,7 +248,8 @@ export default function SplitViewContainer({
 
           {/* Collapse/Expand toggle */}
           <button
-            onClick={() => setMapCollapsed(!mapCollapsed)}
+            data-testid="catalog-map-toggle"
+            onClick={toggleMapCollapsed}
             className="absolute top-3 right-3 z-[10] flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-lg hover:bg-white dark:hover:bg-slate-800 transition-all"
           >
             <MapPin size={13} className="text-[#84CC16]" />
