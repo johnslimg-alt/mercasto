@@ -8,8 +8,10 @@ WORKDIR /app
 # They can still be overridden with Docker build args when needed.
 ARG VITE_ANALYTICS_ENABLED=true
 ARG VITE_META_PIXEL_ID=4595315270748335
+ARG VITE_BUYER_NUDGE_ROLLOUT_PERCENT=0
 ENV VITE_ANALYTICS_ENABLED=${VITE_ANALYTICS_ENABLED}
 ENV VITE_META_PIXEL_ID=${VITE_META_PIXEL_ID}
+ENV VITE_BUYER_NUDGE_ROLLOUT_PERCENT=${VITE_BUYER_NUDGE_ROLLOUT_PERCENT}
 
 # Копируем package.json/package-lock.json и устанавливаем зависимости воспроизводимо.
 COPY package*.json ./

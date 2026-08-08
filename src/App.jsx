@@ -24,6 +24,7 @@ function getSubcategoryOptions(activeCat, lang) {
   return Object.keys(canonical).map((slug) => ({ value: slug, label: localized[slug] || canonical[slug] }));
 }
 import AdSenseBanner from './components/common/AdSenseBanner';
+import BuyerConversionNudge from './components/BuyerConversionNudge';
 const OnboardingModal = React.lazy(() => import('./components/OnboardingModal'));
 import {
   Search, Home, PlusCircle, Plus, User, Users, Settings, Shield, Menu,
@@ -4743,6 +4744,17 @@ function App() {
           <Sparkles className="w-6 h-6 group-hover:animate-pulse" />
         </button>
       )}
+
+      <BuyerConversionNudge
+        user={user}
+        authModalOpen={showAuthModal}
+        pathname={location.pathname}
+        language={lang}
+        onRegister={() => {
+          setAuthMode('register');
+          setShowAuthModal(true);
+        }}
+      />
 
       {/* ONBOARDING MODAL */}
       {showOnboarding && (
