@@ -67,3 +67,14 @@ test('web analytics enforces platform/version and avoids duplicate signup hooks'
   assert.doesNotMatch(app, /event: `\$\{channel\}_click`/);
   assert.doesNotMatch(authContext, /events\.registered/);
 });
+
+test('category selection analytics is wired to primary discovery surfaces', () => {
+  const analytics = read('src/utils/analytics.js');
+  const app = read('src/App.jsx');
+  const home = read('src/components/screens/HomeScreen.jsx');
+
+  assert.match(analytics, /categorySelected: \(category, params = \{\}\) =>/);
+  assert.match(analytics, /trackEvent\('category_selected', \{ category, \.\.\.params \}\)/);
+  assert.match(app, /events\.categorySelected\(slug, \{ source: 'header_category' \}\)/);
+  assert.match(home, /events\.categorySelected\(cat\.slug, \{ source: 'homepage_category_rail' \}\)/);
+});

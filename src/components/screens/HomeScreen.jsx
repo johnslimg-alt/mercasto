@@ -19,6 +19,7 @@ const MapV3 = React.lazy(() => import('../common/MapV3'));
 
 import { sizedImage } from '../../utils/imageHelpers';
 import { localizedText } from '../../utils/localize';
+import { events } from '../../utils/analytics';
 import SkeletonCard from '../common/SkeletonCard';
 const RecommendationsWidget = React.lazy(() => import('../common/RecommendationsWidget'));
 
@@ -256,6 +257,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     <button key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
                         if (cat.action === 'home') { navigate('/'); setActiveCat(''); executeSearch?.('', null, ''); return; }
                         if (cat.action === 'pricing') { setShowPricingModal?.(true); return; }
+                        if (cat.slug) events.categorySelected(cat.slug, { source: 'homepage_category_rail' });
                         const vpath = cat.verticalPath || getVerticalPath(cat.slug);
                         if (vpath) { navigate(vpath); } else { executeSearch?.('', null, cat.slug); }
                       }} className={`category-pill group min-w-[82px] sm:min-w-[96px] max-w-[108px] ${activeCat === cat.slug ? 'ring-2 ring-[#84CC16] bg-[#F7FEE7]' : ''}`}>
