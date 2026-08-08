@@ -3,6 +3,7 @@ import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { getTranslations } from './utils/translations';
 import { localizedText } from './utils/localize';
+import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlState';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
 import { clearPublishDraft } from './utils/publishDraft';
 import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
@@ -821,6 +822,7 @@ function App() {
   const [locCity, setLocCity] = useState('');
   const mobileSearchInputRef = useRef(null);
   const skipFilterUrlSyncRef = useRef(false);
+  const skipCategoryFilterResetRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [debouncedLocInput, setDebouncedLocInput] = useState('');
@@ -833,6 +835,7 @@ function App() {
     const nextMinPrice = overrides.minPrice ?? minPrice;
     const nextMaxPrice = overrides.maxPrice ?? maxPrice;
     const nextCondition = overrides.condition ?? conditionFilter;
+    const nextDynamicFilters = overrides.dynamicFilters ?? dynamicFilters;
     const params = new URLSearchParams();
 
     if (String(nextSearch || '').trim()) params.set('search', String(nextSearch).trim());
@@ -844,10 +847,11 @@ function App() {
     if (String(nextMinPrice || '').trim()) params.set('min_price', String(nextMinPrice).trim());
     if (String(nextMaxPrice || '').trim()) params.set('max_price', String(nextMaxPrice).trim());
     if (Array.isArray(nextCondition) && nextCondition.length > 0) params.set('condition', nextCondition.join(','));
+    appendDynamicFilters(params, nextDynamicFilters);
 
     const query = params.toString();
     return query ? `/?${query}` : '/';
-  }, [activeCat, activeSub, conditionFilter, debouncedLocInput, debouncedSearch, locCity, locState, maxPrice, minPrice, selectedState]);
+  }, [activeCat, activeSub, conditionFilter, debouncedLocInput, debouncedSearch, dynamicFilters, locCity, locState, maxPrice, minPrice, selectedState]);
 
   // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
   const executeSearch = useCallback((
@@ -863,9 +867,13 @@ function App() {
     const nextMinPrice = filters.minPrice ?? minPrice;
     const nextMaxPrice = filters.maxPrice ?? maxPrice;
     const nextCondition = filters.condition ?? conditionFilter;
+    const nextDynamicFilters = filters.dynamicFilters ?? dynamicFilters;
+    skipFilterUrlSyncRef.current = true;
+    skipCategoryFilterResetRef.current = true;
     setDebouncedSearch(nextSearch);
     setDebouncedLocInput(nextLoc);
     if (typeof overrideCategory === 'string') setActiveCat(overrideCategory);
+    if (Object.prototype.hasOwnProperty.call(filters, 'dynamicFilters')) setDynamicFilters(nextDynamicFilters);
     setCurrentTab('home');
     setViewedAd(null);
     setViewedCompany(null);
@@ -876,6 +884,7 @@ function App() {
       minPrice: nextMinPrice,
       maxPrice: nextMaxPrice,
       condition: nextCondition,
+      dynamicFilters: nextDynamicFilters,
     }));
     if (nextSearch && nextSearch.trim()) {
       events.searchPerformed(nextSearch.trim(), nextCategory || '', {
@@ -886,6 +895,7 @@ function App() {
     activeCat,
     buildHomeFilterPath,
     conditionFilter,
+    dynamicFilters,
     maxPrice,
     minPrice,
     navigate,
@@ -957,8 +967,13 @@ function App() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Защита от логических сбоев UI: сбрасываем специфичные для категории фильтры (ОЗУ, двигатель) при смене самой категории
+  // Reset category-specific filters on an intentional category change, but preserve
+  // them while restoring a shareable URL/back-forward state.
   useEffect(() => {
+    if (skipCategoryFilterResetRef.current) {
+      skipCategoryFilterResetRef.current = false;
+      return;
+    }
     setDynamicFilters(current => Object.keys(current).length ? {} : current);
   }, [activeCat]);
 
@@ -1203,6 +1218,7 @@ function App() {
     if (params.has('ad') || params.has('store') || hash.startsWith('#ad-') || hash.startsWith('#company-')) return;
 
     skipFilterUrlSyncRef.current = true;
+    skipCategoryFilterResetRef.current = true;
     const searchParam = params.get('search') || params.get('q');
     const categoryParam = params.get('category') || params.get('cat');
     const stateParam = params.get('state') || '';
@@ -1244,7 +1260,8 @@ function App() {
     } else {
       setConditionFilter(current => current.length ? [] : current);
     }
-    setDynamicFilters(current => Object.keys(current).length ? {} : current);
+    const nextDynamicFilters = parseDynamicFilters(params);
+    setDynamicFilters(current => JSON.stringify(current) === JSON.stringify(nextDynamicFilters) ? current : nextDynamicFilters);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -1262,7 +1279,7 @@ function App() {
     const nextPath = buildHomeFilterPath();
     const currentPath = `${location.pathname}${location.search}`;
     if (nextPath !== currentPath) navigate(nextPath, { replace: true });
-  }, [activeCat, activeSub, buildHomeFilterPath, debouncedLocInput, debouncedSearch, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany]);
+  }, [activeCat, activeSub, buildHomeFilterPath, debouncedLocInput, debouncedSearch, dynamicFilters, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -4037,6 +4054,7 @@ function App() {
     || conditionFilter.length
     || ['q', 'search', 'category', 'cat', 'state', 'city', 'location', 'min_price', 'max_price', 'condition']
       .some(key => catalogQuery.has(key))
+    || [...catalogQuery.keys()].some(key => key.startsWith('filters['))
   );
   const renderHomeRoute = () => (hasCatalogIntent ? renderCatalogScreen() : renderHomeScreen());
 

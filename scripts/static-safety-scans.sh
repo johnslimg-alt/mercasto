@@ -10,6 +10,8 @@ bash scripts/repository-sensitive-artifact-scan.sh
 bash scripts/repository-sensitive-artifact-scan.test.sh
 bash scripts/normalize-route-inventory.test.sh
 bash scripts/route-inventory-doc-gate.sh
+node scripts/frontend-interaction-contract.mjs
+node --test tests/filter-url-state.test.mjs
 node scripts/self-hosted-pr-safety.mjs
 node --test scripts/self-hosted-pr-safety.test.mjs
 bash scripts/official-actions-node24-gate.sh

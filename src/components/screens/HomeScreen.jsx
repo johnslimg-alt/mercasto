@@ -51,6 +51,10 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
     const safeJobAds = React.useMemo(() => (Array.isArray(jobAds) ? jobAds : []), [jobAds]);
     const safeServiceAds = React.useMemo(() => (Array.isArray(serviceAds) ? serviceAds : []), [serviceAds]);
     const safeAutomotiveAds = React.useMemo(() => (Array.isArray(automotiveAds) ? automotiveAds : []), [automotiveAds]);
+    const automotiveQuickYears = React.useMemo(() => {
+      const currentYear = new Date().getFullYear();
+      return Array.from({ length: 12 }, (_, index) => String(currentYear - index));
+    }, []);
 
     // Fetch Destacados on mount — use the pre-fetched promise from index.html if available
     // so the image is ready before React mounts (eliminates ~1s LCP load delay).
@@ -847,9 +851,40 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <span className="w-px h-5 bg-slate-300 mx-1 hidden sm:block"></span>
 
-                  <button className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:block">{t.year || 'Año'}</button>
+                  <select
+                    data-testid="home-auto-year-filter"
+                    aria-label={t.year || 'Año'}
+                    defaultValue=""
+                    onChange={(event) => {
+                      const year = event.target.value;
+                      if (!year) return;
+                      executeSearch?.('', null, 'motor', {
+                        dynamicFilters: { year: { min: year, max: year } },
+                        source: 'home_auto_year',
+                      });
+                    }}
+                    className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:block cursor-pointer"
+                  >
+                    <option value="">{t.year || 'Año'}</option>
+                    {automotiveQuickYears.map(year => <option key={year} value={year}>{year}</option>)}
+                  </select>
 
-                  <button className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:block">{t.price || 'Precio'}</button>
+                  <select
+                    data-testid="home-auto-price-filter"
+                    aria-label={t.price || 'Precio'}
+                    defaultValue=""
+                    onChange={(event) => {
+                      const maxPrice = event.target.value;
+                      if (!maxPrice) return;
+                      executeSearch?.('', null, 'motor', { maxPrice, source: 'home_auto_price' });
+                    }}
+                    className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:block cursor-pointer"
+                  >
+                    <option value="">{t.price || 'Precio'}</option>
+                    {[100000, 200000, 300000, 500000, 1000000].map(value => (
+                      <option key={value} value={value}>≤ ${value.toLocaleString('es-MX')} MXN</option>
+                    ))}
+                  </select>
 
                 </div>
 
