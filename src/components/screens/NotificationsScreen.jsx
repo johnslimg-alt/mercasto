@@ -1,21 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatDateTime, formatMXN } from '../../utils/localeFormat';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
-const LOCALE_BY_LANG = {
-  es: 'es-MX', en: 'en-US', pt: 'pt-BR', fr: 'fr-FR', zh: 'zh-CN', ko: 'ko-KR',
-  de: 'de-DE', it: 'it-IT', ar: 'ar-MX', he: 'he-IL', yi: 'yi', ru: 'ru-RU', ja: 'ja-JP',
-};
-
-function localeFor(lang) {
-  return LOCALE_BY_LANG[lang] || LOCALE_BY_LANG.es;
-}
-
-function formatPrice(value, lang) {
-  return new Intl.NumberFormat(localeFor(lang), {
-    style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2,
-  }).format(Number(value || 0));
-}
 
 function parsePayload(notification) {
   if (notification.type !== 'price_drop' || !notification.data) return null;
@@ -132,7 +119,7 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
                           {t.notifications_price_drop_prefix} {payload.ad_title}
                         </p>
                         <p className="text-[12px] text-slate-500 dark:text-slate-300 mt-1">
-                          {t.notifications_before} <span className="line-through">{formatPrice(payload.old_price, lang)}</span> {t.notifications_now} <span className="text-green-700 dark:text-green-300 font-bold">{formatPrice(payload.new_price, lang)}</span>
+                          {t.notifications_before} <span className="line-through">{formatMXN(payload.old_price, lang)}</span> {t.notifications_now} <span className="text-green-700 dark:text-green-300 font-bold">{formatMXN(payload.new_price, lang)}</span>
                         </p>
                       </>
                     ) : (
@@ -141,7 +128,7 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
                         {notification.message && <p className="text-[12px] text-slate-500 dark:text-slate-300 mt-1">{notification.message}</p>}
                       </>
                     )}
-                    <span className="text-[10px] text-slate-400 mt-1.5 block">{new Date(notification.created_at).toLocaleString(localeFor(lang))}</span>
+                    <span className="text-[10px] text-slate-400 mt-1.5 block">{formatDateTime(notification.created_at, lang)}</span>
                   </div>
                   {!notification.is_read && <span className="w-2 h-2 rounded-full bg-lime-500 flex-shrink-0 mt-1.5" />}
                 </button>

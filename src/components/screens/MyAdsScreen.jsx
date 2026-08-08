@@ -177,7 +177,6 @@ export default function MyAdsScreen({
   const confirmLegacyReactivation = async (ad) => {
     const confirmed = window.confirm(
       t.confirm_reactivation_details
-        || 'Confirma que el anuncio sigue disponible y que el precio, estado y ubicación son correctos.'
     );
     if (!confirmed) return;
 
@@ -200,7 +199,7 @@ export default function MyAdsScreen({
       if (!res.ok) throw new Error(data.message || 'Error');
       setToast({
         type: 'success',
-        text: t.reactivation_success || 'Anuncio reactivado por 7 días.',
+        text: t.reactivation_success,
       });
       onRefreshAds?.();
     } catch (error) {
@@ -251,8 +250,8 @@ export default function MyAdsScreen({
     ['featured', t.featured_status || 'Featured', counts.featured],
     ['draft', t.draft_status || 'Drafts', counts.draft],
     ['pending', t.pending_status || 'Pending review', counts.pending],
-    ['review_ready', t.review_ready_status || 'Listo para reactivar', counts.review_ready],
-    ['needs_correction', t.needs_correction_status || 'Requiere corrección', counts.needs_correction],
+    ['review_ready', t.review_ready_status, counts.review_ready],
+    ['needs_correction', t.needs_correction_status, counts.needs_correction],
     ['sold', t.sold_status || 'Sold', counts.sold],
     ['rejected', t.rejected_status || 'Rejected', counts.rejected],
   ];
@@ -346,15 +345,15 @@ export default function MyAdsScreen({
                        ad.status === 'expired' ? (t.expired_status || 'Expirado') :
                        ad.status === 'draft' ? (t.draft_status || 'Borrador') :
                        ad.status === 'pending' ? (t.pending_status || 'En Moderación') :
-                       ad.status === 'archived' && ad.ai_moderation_status === 'approved' ? (t.review_ready_status || 'Listo para reactivar') :
-                       correction ? (t.needs_correction_status || 'Requiere corrección') :
+                       ad.status === 'archived' && ad.ai_moderation_status === 'approved' ? (t.review_ready_status) :
+                       correction ? (t.needs_correction_status) :
                        ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived' ? (t.sold_status || 'Vendido') :
                        ad.status === 'rejected' ? (t.rejected_status || 'Rechazado') :
                        ad.status}
                     </span>
                   )}
                   {(() => { const d = daysUntilExpiry(ad.expires_at); if (ad.status === 'expired' || d !== null && d <= 0) return <span className="badge bg-red-100 text-red-700 text-[10px] py-0.5">{t.expired_status || 'Expired'}</span>; if (d !== null && d <= 7 && ad.status === 'active') return <span className="badge bg-orange-100 text-orange-700 text-[10px] py-0.5">{t.expires_in || 'Expires in'} {d} {t.days || 'days'}</span>; return null; })()}
-                  {(ad.promoted || ad.is_featured) && !promo && <span className="badge bg-lime-100 text-lime-700 text-[10px] py-0.5">{ad.promoted === 'urgente' ? 'Urgente' : ad.promoted === 'highlight' ? 'Resaltado' : (t.destacado || 'Destacado')}</span>}
+                  {(ad.promoted || ad.is_featured) && !promo && <span className="badge bg-lime-100 text-lime-700 text-[10px] py-0.5">{ad.promoted === 'urgente' ? t.urgent_badge : ad.promoted === 'highlight' ? t.highlighted_badge : (t.destacado || 'Destacado')}</span>}
                 </div>
                 <div className="flex items-center gap-3 flex-wrap mt-0.5">
                   <p className="text-[#65A30D] text-[13.5px] font-bold">
@@ -397,10 +396,10 @@ export default function MyAdsScreen({
               {!selectionMode && (
                 <div className="flex w-full sm:w-auto sm:min-w-0 sm:max-w-[60%] gap-1.5 mt-1 sm:mt-0 flex-wrap justify-end" onClick={e => e.stopPropagation()}>
                   {!correction && <Link to={`/?ad=${ad.id}`} data-testid={`view-ad-${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 text-[11px]"><ExternalLink className="w-3 h-3" /> {t.view || 'Ver'}</Link>}
-                  <Link to={`/anuncio/${ad.id}/editar`} data-testid={`edit-ad-${ad.id}`} className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${correction ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}><Pencil className="w-3 h-3" /> {correction ? (t.correct_and_resubmit || 'Corregir y reenviar') : (t.edit || 'Editar')}</Link>
+                  <Link to={`/anuncio/${ad.id}/editar`} data-testid={`edit-ad-${ad.id}`} className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${correction ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}><Pencil className="w-3 h-3" /> {correction ? (t.correct_and_resubmit) : (t.edit || 'Editar')}</Link>
                   {ad.status === 'active' && <button data-testid={`pause-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.pause || 'Pausar'}</button>}
                   {ad.status === 'paused' && <button data-testid={`reactivate-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}
-                  {ad.status === 'archived' && ad.ai_moderation_status === 'approved' && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate || 'Confirmar y reactivar'}</button>}
+                  {ad.status === 'archived' && ad.ai_moderation_status === 'approved' && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate}</button>}
                   {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1 text-[11px]">{t.renew || 'Renew'}</button> : null; })()}
                   {ad.status === 'expired' && <button data-testid={`republish-ad-${ad.id}`} onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1 text-[11px]">{t.republish || 'Republicar'}</button>}
                   {ad.status === 'active' && PROMO_CATEGORIES.map((key) => {

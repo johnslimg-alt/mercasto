@@ -76,14 +76,14 @@ jobs:
         run: npm run build
       - name: Install Chromium for localized UI regression
         run: npx playwright install --with-deps chromium
-      - name: Run localized notifications UI regression
+      - name: Run localized shell and notifications UI regression
         run: |
           set -euo pipefail
-          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/mercasto-notifications-preview.log 2>&1 &
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/mercasto-localization-preview.log 2>&1 &
           preview_pid=$!
           trap 'kill "$preview_pid" >/dev/null 2>&1 || true' EXIT
           for _ in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
             sleep 1
           done
-          BASE_URL=http://127.0.0.1:4173 CI=1 npx playwright test tests/e2e/notifications-localization.spec.js --project=chromium-desktop --workers=1 --retries=1 --reporter=list
+          BASE_URL=http://127.0.0.1:4173 CI=1 npx playwright test tests/e2e/notifications-localization.spec.js tests/e2e/shell-localization.spec.js --project=chromium-desktop --workers=1 --retries=1 --reporter=list
