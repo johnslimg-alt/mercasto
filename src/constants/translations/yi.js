@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "קאַפּאַציטעט",
   "filter_label_tipo_cobro": "צאָלונג מאָדעל",
   "filter_label_entrega": "לעפֿערונג",
-  "filter_label_accesorios_surf": "אַקסעסאָרן"
+  "filter_label_accesorios_surf": "אַקסעסאָרן",
 
+  notifications_load_error: 'מיר האָבן נישט געקענט לאָדן די נאָטיפיקאַציעס.',
+  notifications_login_required: 'קלאָץ זיך אַרײַן צו זען דיינע נאָטיפיקאַציעס.',
+  notifications_back: 'צוריק',
+  notifications_title: 'נאָטיפיקאַציעס',
+  notifications_mark_all: 'צייכן אַלע ווי געלייענט',
+  notifications_loading: 'לאָדט...',
+  notifications_empty_title: 'דו האָסט נאָך קיין נאָטיפיקאַציעס',
+  notifications_empty_desc: 'ווען דער פּרײַז פון אַ געראטעוועטער מעלדונג פֿאַלט, וועלן מיר דיר דאָ מעלדן.',
+  notifications_price_drop_prefix: 'פּרײַז געפֿאַלן:',
+  notifications_before: 'פֿריִער',
+  notifications_now: 'איצט',
+  notifications_load_more: 'לאָדן מער',
 };

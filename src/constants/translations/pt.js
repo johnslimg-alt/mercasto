@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "Capacidade",
   "filter_label_tipo_cobro": "Cobrança",
   "filter_label_entrega": "Entrega",
-  "filter_label_accesorios_surf": "Acessórios incluídos"
+  "filter_label_accesorios_surf": "Acessórios incluídos",
 
+  notifications_load_error: 'Não foi possível carregar as notificações.',
+  notifications_login_required: 'Faça login para ver suas notificações.',
+  notifications_back: 'Voltar',
+  notifications_title: 'Notificações',
+  notifications_mark_all: 'Marcar todas como lidas',
+  notifications_loading: 'Carregando...',
+  notifications_empty_title: 'Você ainda não tem notificações',
+  notifications_empty_desc: 'Quando o preço de um anúncio salvo baixar, avisaremos você aqui.',
+  notifications_price_drop_prefix: 'O preço baixou:',
+  notifications_before: 'Antes',
+  notifications_now: 'agora',
+  notifications_load_more: 'Carregar mais',
 };

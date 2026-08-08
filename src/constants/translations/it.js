@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "Capienza",
   "filter_label_tipo_cobro": "Fatturazione",
   "filter_label_entrega": "Consegna",
-  "filter_label_accesorios_surf": "Accessori inclusi"
+  "filter_label_accesorios_surf": "Accessori inclusi",
 
+  notifications_load_error: 'Non è stato possibile caricare le notifiche.',
+  notifications_login_required: 'Accedi per vedere le tue notifiche.',
+  notifications_back: 'Indietro',
+  notifications_title: 'Notifiche',
+  notifications_mark_all: 'Segna tutte come lette',
+  notifications_loading: 'Caricamento...',
+  notifications_empty_title: 'Non hai ancora notifiche',
+  notifications_empty_desc: 'Quando il prezzo di un annuncio salvato scende, ti avviseremo qui.',
+  notifications_price_drop_prefix: 'Prezzo diminuito:',
+  notifications_before: 'Prima',
+  notifications_now: 'ora',
+  notifications_load_more: 'Carica altro',
 };

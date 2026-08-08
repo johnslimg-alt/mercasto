@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "정원",
   "filter_label_tipo_cobro": "요금 방식",
   "filter_label_entrega": "배송",
-  "filter_label_accesorios_surf": "포함 액세서리"
+  "filter_label_accesorios_surf": "포함 액세서리",
 
+  notifications_load_error: '알림을 불러오지 못했습니다.',
+  notifications_login_required: '알림을 보려면 로그인하세요.',
+  notifications_back: '뒤로',
+  notifications_title: '알림',
+  notifications_mark_all: '모두 읽음으로 표시',
+  notifications_loading: '불러오는 중...',
+  notifications_empty_title: '아직 알림이 없습니다',
+  notifications_empty_desc: '저장한 광고의 가격이 내려가면 여기에서 알려드립니다.',
+  notifications_price_drop_prefix: '가격 인하:',
+  notifications_before: '이전',
+  notifications_now: '현재',
+  notifications_load_more: '더 보기',
 };

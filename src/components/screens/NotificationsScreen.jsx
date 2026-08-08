@@ -2,9 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const LOCALE_BY_LANG = {
+  es: 'es-MX', en: 'en-US', pt: 'pt-BR', fr: 'fr-FR', zh: 'zh-CN', ko: 'ko-KR',
+  de: 'de-DE', it: 'it-IT', ar: 'ar-MX', he: 'he-IL', yi: 'yi', ru: 'ru-RU', ja: 'ja-JP',
+};
 
-function formatPrice(value) {
-  return Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function localeFor(lang) {
+  return LOCALE_BY_LANG[lang] || LOCALE_BY_LANG.es;
+}
+
+function formatPrice(value, lang) {
+  return new Intl.NumberFormat(localeFor(lang), {
+    style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(Number(value || 0));
 }
 
 function parsePayload(notification) {
@@ -16,7 +26,7 @@ function parsePayload(notification) {
   }
 }
 
-export default function NotificationsScreen({ user }) {
+export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +81,7 @@ export default function NotificationsScreen({ user }) {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-slate-500">Inicia sesión para ver tus notificaciones.</p>
+        <p className="text-slate-500">{t.notifications_login_required}</p>
       </div>
     );
   }
@@ -82,22 +92,22 @@ export default function NotificationsScreen({ user }) {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="text-[13px] font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Volver</button>
-          <h1 className="text-[17px] font-bold text-slate-900 dark:text-white">Notificaciones</h1>
+          <button onClick={() => navigate(-1)} className="text-[13px] font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">{t.notifications_back}</button>
+          <h1 className="text-[17px] font-bold text-slate-900 dark:text-white">{t.notifications_title}</h1>
           {unread > 0 ? (
-            <button onClick={markAllRead} className="text-[12px] text-[#65A30D] hover:underline font-semibold">Marcar todas</button>
+            <button onClick={markAllRead} className="text-[12px] text-[#65A30D] hover:underline font-semibold">{t.notifications_mark_all}</button>
           ) : <span className="w-20" />}
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto">
         {loading && notifications.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-[14px]">Cargando...</div>
+          <div className="p-8 text-center text-slate-400 text-[14px]">{t.notifications_loading}</div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <p className="text-slate-500 dark:text-slate-300 text-[15px] font-medium">No tienes notificaciones todavía</p>
+            <p className="text-slate-500 dark:text-slate-300 text-[15px] font-medium">{t.notifications_empty_title}</p>
             <p className="text-slate-400 dark:text-slate-500 text-[13px] text-center px-8">
-              Cuando baje el precio de un anuncio guardado, te avisaremos aquí.
+              {t.notifications_empty_desc}
             </p>
           </div>
         ) : (
@@ -119,10 +129,10 @@ export default function NotificationsScreen({ user }) {
                     {payload ? (
                       <>
                         <p className={`text-[13px] leading-snug ${!notification.is_read ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-200'}`}>
-                          Bajó de precio: {payload.ad_title}
+                          {t.notifications_price_drop_prefix} {payload.ad_title}
                         </p>
                         <p className="text-[12px] text-slate-500 dark:text-slate-300 mt-1">
-                          Antes <span className="line-through">${formatPrice(payload.old_price)}</span> ahora <span className="text-green-700 dark:text-green-300 font-bold">${formatPrice(payload.new_price)}</span>
+                          {t.notifications_before} <span className="line-through">{formatPrice(payload.old_price, lang)}</span> {t.notifications_now} <span className="text-green-700 dark:text-green-300 font-bold">{formatPrice(payload.new_price, lang)}</span>
                         </p>
                       </>
                     ) : (
@@ -131,7 +141,7 @@ export default function NotificationsScreen({ user }) {
                         {notification.message && <p className="text-[12px] text-slate-500 dark:text-slate-300 mt-1">{notification.message}</p>}
                       </>
                     )}
-                    <span className="text-[10px] text-slate-400 mt-1.5 block">{new Date(notification.created_at).toLocaleString('es-MX')}</span>
+                    <span className="text-[10px] text-slate-400 mt-1.5 block">{new Date(notification.created_at).toLocaleString(localeFor(lang))}</span>
                   </div>
                   {!notification.is_read && <span className="w-2 h-2 rounded-full bg-lime-500 flex-shrink-0 mt-1.5" />}
                 </button>
@@ -141,7 +151,7 @@ export default function NotificationsScreen({ user }) {
             {hasMore && (
               <div className="p-4 text-center">
                 <button onClick={() => load(page + 1)} disabled={loading} className="text-[13px] text-[#65A30D] font-semibold hover:underline disabled:opacity-50">
-                  {loading ? 'Cargando...' : 'Cargar más'}
+                  {loading ? t.notifications_loading : t.notifications_load_more}
                 </button>
               </div>
             )}

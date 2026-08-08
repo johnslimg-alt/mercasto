@@ -995,6 +995,18 @@ export default {
   "filter_label_pasajeros_jetski": "载人数",
   "filter_label_tipo_cobro": "收费方式",
   "filter_label_entrega": "配送",
-  "filter_label_accesorios_surf": "配件"
+  "filter_label_accesorios_surf": "配件",
 
+  notifications_load_error: '无法加载通知。',
+  notifications_login_required: '登录后查看通知。',
+  notifications_back: '返回',
+  notifications_title: '通知',
+  notifications_mark_all: '全部标为已读',
+  notifications_loading: '加载中...',
+  notifications_empty_title: '你还没有通知',
+  notifications_empty_desc: '已保存的广告降价时，我们会在这里通知你。',
+  notifications_price_drop_prefix: '价格已下降：',
+  notifications_before: '之前',
+  notifications_now: '现在',
+  notifications_load_more: '加载更多',
 };
