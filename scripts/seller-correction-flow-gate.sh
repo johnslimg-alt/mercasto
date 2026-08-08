@@ -55,7 +55,10 @@ grep -qF 'ads:notify-seller-corrections --execute --limit=500' "$SCHEDULE"
 
 grep -qF "'needs_correction'" "$MY_ADS"
 grep -qF 'requiresSellerCorrection' "$MY_ADS"
-grep -qF 'Requiere corrección' "$MY_ADS"
-grep -qF 'Corregir y reenviar' "$MY_ADS"
+grep -qF 't.needs_correction_status' "$MY_ADS"
+grep -qF 't.correct_and_resubmit' "$MY_ADS"
+grep -qF 't.confirm_and_reactivate' "$MY_ADS"
+grep -qF 't.confirm_reactivation_details' "$MY_ADS"
+grep -qF 't.reactivation_success' "$MY_ADS"
 
 echo "seller correction flow gate OK"

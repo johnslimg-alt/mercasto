@@ -3,6 +3,7 @@ import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { getTranslations } from './utils/translations';
 import { localizedText } from './utils/localize';
+import { formatDateTime, formatMXN } from './utils/localeFormat';
 import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlState';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
 import { clearPublishDraft } from './utils/publishDraft';
@@ -122,16 +123,17 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       const errorMessage = this.state.error?.message || String(this.state.error || 'Unknown runtime error');
+      const t = this.props.t || getTranslations('es');
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-6 text-center w-full">
-          <h1 className="text-[24px] font-bold text-white mb-2">No pudimos cargar esta sección</h1>
-          <p className="text-slate-300 mb-6 max-w-md">Abre Mercasto como invitado. Si tu sesión estaba dañada, podrás iniciar sesión otra vez.</p>
+          <h1 className="text-[24px] font-bold text-white mb-2">{t.shell_error_title}</h1>
+          <p className="text-slate-300 mb-6 max-w-md">{t.shell_error_desc}</p>
           <div className="text-left bg-slate-900 text-red-300 p-4 rounded-xl mb-6 overflow-x-auto max-w-3xl w-full font-mono text-[12px] border border-red-900/50 shadow-sm whitespace-pre-wrap">
-            <strong>Error code:</strong> {errorMessage}
+            <strong>{t.shell_error_code}:</strong> {errorMessage}
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">Abrir como invitado</button>
-            <button onClick={() => ErrorBoundary.recoverFromStaleApp()} className="px-6 py-3 bg-slate-800 text-white rounded-xl shadow-md hover:bg-slate-700 transition-colors">Recargar</button>
+            <button onClick={() => ErrorBoundary.resetSessionAndReload()} className="px-6 py-3 bg-[#84CC16] text-slate-950 font-bold rounded-xl shadow-md hover:bg-[#65A30D] transition-colors">{t.shell_open_guest}</button>
+            <button onClick={() => ErrorBoundary.recoverFromStaleApp()} className="px-6 py-3 bg-slate-800 text-white rounded-xl shadow-md hover:bg-slate-700 transition-colors">{t.shell_reload}</button>
           </div>
         </div>
       );
@@ -141,6 +143,9 @@ class ErrorBoundary extends React.Component {
 }
 
 function ProtectedRoutePlaceholder({ loading = false }) {
+  const { lang, loadedLangVersion } = useUI();
+  void loadedLangVersion;
+  const t = getTranslations(lang);
   return (
     <section
       className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-12"
@@ -148,13 +153,13 @@ function ProtectedRoutePlaceholder({ loading = false }) {
     >
       <div className="flex min-h-56 w-full max-w-md flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white/90 p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
         {loading ? (
-          <Loader2 className="h-8 w-8 animate-spin text-[#84CC16]" aria-label="Cargando sesión" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#84CC16]" aria-label={t.shell_loading_session} />
         ) : (
           <>
             <ShieldCheck className="mb-4 h-10 w-10 text-[#84CC16]" aria-hidden="true" />
-            <h1 className="text-xl font-black text-slate-900 dark:text-white">Inicia sesión para continuar</h1>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white">{t.shell_login_continue}</h1>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Conservaremos esta página para que puedas continuar justo después de entrar.
+              {t.shell_login_continue_desc}
             </p>
           </>
         )}
@@ -180,6 +185,9 @@ function RequireAuth({ user, authReady, setAuthMode, setShowAuthModal, admin = f
 }
 
 function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, tagline }) {
+  const { lang, loadedLangVersion } = useUI();
+  void loadedLangVersion;
+  const t = getTranslations(lang);
   const hasToken = Boolean(localStorage.getItem('auth_token'));
   const isRegistration = mode === 'register';
 
@@ -198,7 +206,7 @@ function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, 
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <ShieldCheck className="mx-auto mb-4 h-10 w-10 text-[#84CC16]" aria-hidden="true" />
         <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-          {isRegistration ? 'Crea tu cuenta en Mercasto' : 'Inicia sesión en Mercasto'}
+          {isRegistration ? `${t.register} · Mercasto` : `${t.login} · Mercasto`}
         </h1>
         <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
@@ -206,8 +214,8 @@ function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, 
         </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
           {isRegistration
-            ? 'Publica, guarda búsquedas y contacta vendedores desde una cuenta segura.'
-            : 'Accede a tus anuncios, favoritos, mensajes y datos de cuenta.'}
+            ? t.auth_register_desc
+            : t.auth_login_desc}
         </p>
         <button
           type="button"
@@ -217,7 +225,7 @@ function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, 
           }}
           className="btn-lg mt-6 w-full bg-[#84CC16] text-white hover:bg-[#65A30D]"
         >
-          {isRegistration ? 'Crear cuenta' : 'Iniciar sesión'}
+          {isRegistration ? t.register : t.login}
         </button>
       </div>
     </section>
@@ -447,35 +455,35 @@ if (window.location.pathname === '/listings' || (window.location.pathname === '/
 }
 
 const PostScreen = React.lazy(() => import('./components/screens/PostScreen'));
-const SellerLandingScreen = React.lazy(() => import('./components/screens/SellerLandingScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500 font-medium">No pudimos cargar esta página.</div> })));
+const SellerLandingScreen = React.lazy(() => import('./components/screens/SellerLandingScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 
 const UserDashboard = React.lazy(() => import('./components/screens/UserDashboard'));
 
 // Безопасный импорт экранов (если файл не найден, React не выдаст белый экран, а покажет заглушку)
-const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el anuncio. Inténtalo de nuevo más tarde.</div> })));
-const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta tienda. Inténtalo de nuevo más tarde.</div> })));
-const EditAdScreen = React.lazy(() => import('./components/screens/EditAdScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor.</div> })));
-const SellerProfileScreen = React.lazy(() => import('./components/screens/SellerProfileScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar este perfil.</div> })));
-const AutosLanding = React.lazy(() => import('./components/screens/verticals/AutosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const InmueblesLanding = React.lazy(() => import('./components/screens/verticals/InmueblesLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const EmpleosLanding = React.lazy(() => import('./components/screens/verticals/EmpleosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const ServiciosLanding = React.lazy(() => import('./components/screens/verticals/ServiciosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const CategoryLanding = React.lazy(() => import('./components/screens/verticals/CategoryLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta categoría.</div> })));
-const ProductosLanding = React.lazy(() => import('./components/screens/verticals/ProductosLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const TurismoLanding = React.lazy(() => import('./components/screens/verticals/TurismoLanding').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el editor de perfil.</div> })));
-const TerminosScreen = React.lazy(() => import('./components/screens/legal/TerminosScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const PrivacidadScreen = React.lazy(() => import('./components/screens/legal/PrivacidadScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const CookiesScreen = React.lazy(() => import('./components/screens/legal/CookiesScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const NotFoundScreen = React.lazy(() => import('./components/screens/NotFoundScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">Página no encontrada.</div> })));
-const VerificarEmailScreen = React.lazy(() => import('./components/screens/VerificarEmailScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const StoresScreen = React.lazy(() => import('./components/screens/StoresScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar el directorio de tiendas.</div> })));
+const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="error_loading_ad" /> })));
+const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const EditAdScreen = React.lazy(() => import('./components/screens/EditAdScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const SellerProfileScreen = React.lazy(() => import('./components/screens/SellerProfileScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const AutosLanding = React.lazy(() => import('./components/screens/verticals/AutosLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const InmueblesLanding = React.lazy(() => import('./components/screens/verticals/InmueblesLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const EmpleosLanding = React.lazy(() => import('./components/screens/verticals/EmpleosLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const ServiciosLanding = React.lazy(() => import('./components/screens/verticals/ServiciosLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const CategoryLanding = React.lazy(() => import('./components/screens/verticals/CategoryLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const ProductosLanding = React.lazy(() => import('./components/screens/verticals/ProductosLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const TurismoLanding = React.lazy(() => import('./components/screens/verticals/TurismoLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const TerminosScreen = React.lazy(() => import('./components/screens/legal/TerminosScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const PrivacidadScreen = React.lazy(() => import('./components/screens/legal/PrivacidadScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const CookiesScreen = React.lazy(() => import('./components/screens/legal/CookiesScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const NotFoundScreen = React.lazy(() => import('./components/screens/NotFoundScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_not_found" /> })));
+const VerificarEmailScreen = React.lazy(() => import('./components/screens/VerificarEmailScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const StoresScreen = React.lazy(() => import('./components/screens/StoresScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 const NotificationsScreen = React.lazy(() => import('./components/screens/NotificationsScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="notifications_load_error" /> })));
-const ChatScreen = React.lazy(() => import('./components/screens/ChatScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar los mensajes.</div> })));
-const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta página.</div> })));
-const GeoSourcePage = React.lazy(() => import('./components/screens/GeoSourcePage').catch(() => ({ default: () => <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">No pudimos cargar esta guía.</div> })));
-const ReferralScreen = React.lazy(() => import('./components/screens/ReferralScreen').catch(() => ({ default: () => <div className='flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500'>No pudimos cargar esta página.</div> })));
+const ChatScreen = React.lazy(() => import('./components/screens/ChatScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const GeoSourcePage = React.lazy(() => import('./components/screens/GeoSourcePage').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
+const ReferralScreen = React.lazy(() => import('./components/screens/ReferralScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="referral_load_error" /> })));
 
 function ReferralRedirect() {
   const { code } = useParams();
@@ -498,8 +506,11 @@ function useRefQueryParam() {
 }
 
 export default function AppWrapper() {
+  const { lang, loadedLangVersion } = useUI();
+  void loadedLangVersion;
+  const t = getTranslations(lang);
   return (
-    <ErrorBoundary>
+    <ErrorBoundary t={t}>
       <App />
     </ErrorBoundary>
   );
@@ -4164,13 +4175,13 @@ function App() {
               </div>
             ) : (
               <div>
-                <h4 className="text-sm font-black text-slate-800 dark:text-white mb-2">¡Hola! Bienvenido a Mercasto</h4>
+                <h4 className="text-sm font-black text-slate-800 dark:text-white mb-2">{t.menu_welcome}</h4>
                 <div className="flex gap-2">
                   <button onClick={() => { setShowTabBarMenu(false); setAuthMode('login'); setShowAuthModal(true); }} className="flex-1 rounded-xl bg-[#84CC16] py-2 text-center text-xs font-bold text-slate-950 hover:bg-[#65A30D]">
-                    Entrar
+                    {t.login_register}
                   </button>
                   <button onClick={() => { setShowTabBarMenu(false); setAuthMode('register'); setShowAuthModal(true); }} className="flex-1 rounded-xl border border-slate-200 py-2 text-center text-xs font-bold text-slate-800 dark:border-slate-700 dark:text-white hover:bg-slate-50">
-                    Registrarse
+                    {t.register}
                   </button>
                 </div>
               </div>
@@ -4182,26 +4193,26 @@ function App() {
             {user && (
               <>
                 <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
-                  <User size={16} className="text-[#84CC16]" /> Mi cuenta
+                  <User size={16} className="text-[#84CC16]" /> {t.my_account}
                 </button>
                 <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowTabBarMenu(false); navigate('/profile'); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
-                  <Heart size={16} className="text-[#84CC16]" /> Favoritos
+                  <Heart size={16} className="text-[#84CC16]" /> {t.favorites}
                 </button>
                 <button onClick={() => { setShowTabBarMenu(false); navigate('/mensajes'); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
-                  <MessageCircle size={16} className="text-[#84CC16]" /> {t.messages || 'Mensajes'}
+                  <MessageCircle size={16} className="text-[#84CC16]" /> {t.messages}
                 </button>
                 <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
-                  <Settings size={16} className="text-[#84CC16]" /> Ajustes de Perfil
+                  <Settings size={16} className="text-[#84CC16]" /> {t.profile_settings_label}
                 </button>
               </>
             )}
             
             <button onClick={() => { setCurrentTab('post'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
-              <PlusCircle size={16} className="text-[#84CC16]" /> Publicar Anuncio
+              <PlusCircle size={16} className="text-[#84CC16]" /> {t.post_ad}
             </button>
 
             <button onClick={() => { setCurrentTab('help'); setShowTabBarMenu(false); }} className="profile-menu-item flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
-              <Sparkles size={16} className="text-[#84CC16]" /> Ayuda y Soporte
+              <Sparkles size={16} className="text-[#84CC16]" /> {t.help_support}
             </button>
           </div>
 
@@ -4209,7 +4220,7 @@ function App() {
           {user && (
             <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800 flex items-center justify-end">
               <button onClick={() => { setShowTabBarMenu(false); handleLogout(); }} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
-                <LogOut size={14} /> Salir
+                <LogOut size={14} /> {t.logout}
               </button>
             </div>
           )}
@@ -4233,13 +4244,13 @@ function App() {
         <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center justify-between text-sm z-50 relative">
           <span className="text-yellow-800">
             {emailBannerSent
-              ? `✅ Email enviado a ${user.email}. Revisa tu bandeja de entrada.`
-              : <>⚠️ Cuenta no verificada. Confirma tu email o teléfono para aumentar la confianza en Mercasto.{' '}
-                  <button onClick={resendVerificationEmail} className="underline text-yellow-700 font-medium hover:text-yellow-900">Reenviar email</button>
+              ? <>✅ {t.verification_email_sent} {user.email}. {t.verification_check_inbox}</>
+              : <>⚠️ {t.verification_unverified_desc}{' '}
+                  <button type="button" onClick={resendVerificationEmail} className="underline text-yellow-700 font-medium hover:text-yellow-900">{t.verification_resend_email}</button>
                 </>
             }
           </span>
-          <button onClick={() => setEmailBannerDismissed(true)} className="ml-4 text-yellow-600 hover:text-yellow-900 font-bold text-base leading-none">✕</button>
+          <button type="button" aria-label={t.close} onClick={() => setEmailBannerDismissed(true)} className="ml-4 text-yellow-600 hover:text-yellow-900 font-bold text-base leading-none">✕</button>
         </div>
       )}
 
@@ -4278,11 +4289,11 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-1 ml-auto">
-              <div className="mobile-top-controls sm:hidden" aria-label="Theme and language controls">
-                <button type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
+              <div className="mobile-top-controls sm:hidden" aria-label={t.theme_language_controls}>
+                <button type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? t.light_mode : t.dark_mode} aria-pressed={isDarkMode}>
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
-                <div className="mobile-language-select" aria-label="Language switcher">
+                <div className="mobile-language-select" aria-label={t.language_switcher}>
                   <Globe className="w-3.5 h-3.5" />
                   <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
                     {LANGUAGE_OPTIONS.map(l => (
@@ -4291,7 +4302,7 @@ function App() {
                   </select>
                 </div>
                 <div className="relative">
-                  <button type="button" data-testid="mobile-location-button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label="Cambiar ubicación">
+                  <button type="button" data-testid="mobile-location-button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label={t.change_location}>
                     <MapPin className="w-3 h-3 text-[#84CC16]" />
                     <span className="truncate max-w-[45px] text-[10px] font-extrabold uppercase">{searchLocationInput || t.all_mexico || "Todo México"}</span>
                   </button>
@@ -4304,7 +4315,7 @@ function App() {
                       </select>
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad'}</label>
                       <select data-testid="mobile-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
-                        <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
+                        <option value="">{locState ? t.all_cities : t.select_state_first}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
                       <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
@@ -4312,7 +4323,7 @@ function App() {
                   )}
                 </div>
                 <div className="relative">
-                  <button type="button" aria-label={user ? 'Abrir menú de cuenta' : 'Iniciar sesión'} onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
+                  <button type="button" aria-label={user ? t.open_account_menu : t.login} onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
                     {user?.avatar_url ? (
                       <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-7 h-7 rounded-full object-cover" alt=""/>
                     ) : (
@@ -4321,16 +4332,16 @@ function App() {
                   </button>
                   {showProfileMenu && user && (
                     <div className="header-popover profile-menu-popover absolute top-full right-0 mt-2 w-48 rounded-2xl shadow-xl border p-2 z-50">
-                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
-                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); navigate('/profile'); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
-                      <button onClick={() => { setShowProfileMenu(false); navigate('/mensajes'); }} className="profile-menu-item"><MessageCircle size={15} /> {t.messages || 'Mensajes'}</button>
-                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
-                      <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
+                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> {t.my_account}</button>
+                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); navigate('/profile'); }} className="profile-menu-item"><Heart size={15} /> {t.favorites}</button>
+                      <button onClick={() => { setShowProfileMenu(false); navigate('/mensajes'); }} className="profile-menu-item"><MessageCircle size={15} /> {t.messages}</button>
+                      <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> {t.settings}</button>
+                      <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> {t.logout}</button>
                     </div>
                   )}
                 </div>
               </div>
-              <button type="button" onClick={() => setIsDarkMode(v => !v)} className="desktop-header-control header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? 'Light mode' : 'Dark mode'} aria-pressed={isDarkMode}>
+              <button type="button" onClick={() => setIsDarkMode(v => !v)} className="desktop-header-control header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? t.light_mode : t.dark_mode} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               {/* DESKTOP LOCATION SELECTOR */}
@@ -4351,7 +4362,7 @@ function App() {
                     <div className="mb-4">
                       <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad / Municipio'}</label>
                       <select data-testid="desktop-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
-                        <option value="">{locState ? (t.all_cities || 'Todas las ciudades') : 'Primero selecciona un estado'}</option>
+                        <option value="">{locState ? t.all_cities : t.select_state_first}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
                     </div>
@@ -4371,7 +4382,7 @@ function App() {
                 </select>
               </div>
               <div className="relative hidden sm:block">
-              <button type="button" onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.messages || 'Mensajes'}>
+              <button type="button" onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.messages}>
                 <MessageCircle className="w-[22px] h-[22px]" />
               </button>
               <button type="button" onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications || 'Notificaciones'}>
@@ -4386,11 +4397,11 @@ function App() {
                 {showNotifications && user && (
                   <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800 font-bold text-slate-900 dark:text-white flex justify-between items-center">
-                      <span>{t.notifications || "Notificaciones"}</span>
+                      <span>{t.notifications_title || t.notifications}</span>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                     {notifications.length === 0
-                      ? <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-[13px]">{t.no_notifications || "No tienes notificaciones"}</div>
+                      ? <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-[13px]">{t.notifications_empty_title}</div>
                       : notifications.slice(0, 5).map(n => {
                           let notificationData = null;
                           if (n.type === 'price_drop' && n.data) {
@@ -4414,10 +4425,10 @@ function App() {
                               {notificationData ? (
                                 <>
                                   <h4 className={`text-[12px] pr-6 ${!n.is_read ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-200'}`}>
-                                    Bajó de precio: {notificationData.ad_title}
+                                    {t.notifications_price_drop_prefix} {notificationData.ad_title}
                                   </h4>
                                   <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">
-                                    Antes ${Number(notificationData.old_price).toLocaleString("es-MX")} → Ahora ${Number(notificationData.new_price).toLocaleString("es-MX")}
+                                    {t.notifications_before} {formatMXN(notificationData.old_price, lang)} → {t.notifications_now} {formatMXN(notificationData.new_price, lang)}
                                   </p>
                                 </>
                               ) : (
@@ -4426,8 +4437,8 @@ function App() {
                                   <p className="text-[12px] text-slate-600 dark:text-slate-300 mt-1">{n.message}</p>
                                 </>
                               )}
-                              <span className="text-[10px] text-slate-400 block mt-2">{new Date(n.created_at).toLocaleString("es-MX")}</span>
-                              <button onClick={(e) => handleDeleteNotification(e, n.id)} className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-[10px] text-slate-400 block mt-2">{formatDateTime(n.created_at, lang)}</span>
+                              <button type="button" aria-label={t.delete} onClick={(e) => handleDeleteNotification(e, n.id)} className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Trash2 size={14} />
                               </button>
                             </div>
@@ -4436,15 +4447,15 @@ function App() {
                     }
                     </div>
                     <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                      <button onClick={() => { setShowNotifications(false); navigate("/notificaciones"); }} className="text-[12px] text-[#65A30D] hover:underline font-medium">Ver todos</button>
+                      <button onClick={() => { setShowNotifications(false); navigate("/notificaciones"); }} className="text-[12px] text-[#65A30D] hover:underline font-medium">{t.notifications_view_all}</button>
                       {notifications.filter(n => !n.is_read).length > 0 && (
-                        <button onClick={handleMarkAllNotificationsRead} className="text-[11px] text-slate-500 dark:text-slate-300 hover:underline">{t.mark_all_read || "Marcar todas leídas"}</button>
+                        <button onClick={handleMarkAllNotificationsRead} className="text-[11px] text-slate-500 dark:text-slate-300 hover:underline">{t.notifications_mark_all}</button>
                       )}
                     </div>
                   </div>
                 )}
               </div>
-            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title="Directorio de Tiendas">
+            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title={t.footer_store_directory}>
                 <Store className="w-[22px] h-[22px]" />
                 <span className="text-[13px] font-bold hidden md:block">{navLabels[5]}</span>
             </button>
@@ -4463,11 +4474,11 @@ function App() {
               </button>
               {showProfileMenu && user && (
                 <div className="header-popover profile-menu-popover absolute top-full right-0 mt-2 w-52 rounded-2xl shadow-xl border p-2 z-50">
-                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> Mi cuenta</button>
-                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item"><Heart size={15} /> Favoritos</button>
-                  <button onClick={() => { setShowProfileMenu(false); navigate('/mensajes'); }} className="profile-menu-item"><MessageCircle size={15} /> {t.messages || 'Mensajes'}</button>
-                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> Ajustes</button>
-                  <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> Salir</button>
+                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('my_ads'); setShowProfileMenu(false); }} className="profile-menu-item"><User size={15} /> {t.my_account}</button>
+                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('favorites'); setShowProfileMenu(false); }} className="profile-menu-item"><Heart size={15} /> {t.favorites}</button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/mensajes'); }} className="profile-menu-item"><MessageCircle size={15} /> {t.messages}</button>
+                  <button onClick={() => { setCurrentTab('profile'); setDashboardTab('settings'); setShowProfileMenu(false); }} className="profile-menu-item"><Settings size={15} /> {t.settings}</button>
+                  <button onClick={() => { setShowProfileMenu(false); handleLogout(); }} className="profile-menu-item profile-menu-item--danger"><LogOut size={15} /> {t.logout}</button>
                 </div>
               )}
               </div>
@@ -4645,26 +4656,26 @@ function App() {
             </div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda/comprar-y-contactar" onClick={(e) => { e.preventDefault(); navigate('/ayuda/comprar-y-contactar'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/seguridad" onClick={(e) => { e.preventDefault(); navigate('/seguridad'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.sellers || 'Vendedores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/post" onClick={(e) => { e.preventDefault(); navigate('/post'); }} className="hover:text-white cursor-pointer">{t.post_ad || 'Publicar anuncio'}</a></li><li><a href="/tarifas" onClick={(e) => { e.preventDefault(); navigate('/tarifas'); }} className="hover:text-white cursor-pointer">{t.pricing || 'Tarifas'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('my_ads'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.promote_ad || 'Promocionar anuncio'}</button></li></ul></div>
-            <div><div className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</div><ul className="space-y-2 text-[13px]"><li><a href="/tarifas" onClick={(e) => { e.preventDefault(); navigate('/tarifas'); }} className="hover:text-white cursor-pointer">Mercasto Pro</a></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">Directorio de Tiendas</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">Soluciones</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
+            <div><div className="font-semibold text-white mb-3 text-[14px]">{t.business || 'Negocios'}</div><ul className="space-y-2 text-[13px]"><li><a href="/tarifas" onClick={(e) => { e.preventDefault(); navigate('/tarifas'); }} className="hover:text-white cursor-pointer">Mercasto Pro</a></li><li><a href="/tiendas" onClick={(e) => { e.preventDefault(); navigate('/tiendas'); }} className="hover:text-white cursor-pointer">{t.footer_store_directory}</a></li><li><a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer">{t.footer_solutions}</a></li><li><a href="mailto:partners@mercasto.com" className="hover:text-white cursor-pointer">{t.partners || 'Socios'}</a></li></ul></div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.help || 'Ayuda'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer">{t.help_center || 'Centro de Ayuda'}</a></li><li><a href="/seguridad" onClick={(e) => { e.preventDefault(); navigate('/seguridad'); }} className="hover:text-white cursor-pointer">{t.safety_center || 'Centro de Seguridad'}</a></li><li><a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer">{t.privacy_policy || 'Aviso de Privacidad'}</a></li></ul></div>
           </div>
           <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-[12px] text-slate-400">
-              <span>© 2026 Mercasto · Hecho en México</span>
+              <span>© 2026 Mercasto · {t.footer_made_in_mexico}</span>
         <span className="text-slate-600">·</span>
-        <a href="/sobre-mercasto" onClick={(e) => { e.preventDefault(); navigate('/sobre-mercasto'); }} className="hover:text-white cursor-pointer transition-colors">Acerca de</a>
+        <a href="/sobre-mercasto" onClick={(e) => { e.preventDefault(); navigate('/sobre-mercasto'); }} className="hover:text-white cursor-pointer transition-colors">{t.footer_about}</a>
         <span className="text-slate-600">·</span>
-        <a href="/como-funciona" onClick={(e) => { e.preventDefault(); navigate('/como-funciona'); }} className="hover:text-white cursor-pointer transition-colors">Cómo funciona</a>
+        <a href="/como-funciona" onClick={(e) => { e.preventDefault(); navigate('/como-funciona'); }} className="hover:text-white cursor-pointer transition-colors">{t.how_it_works}</a>
         <span className="text-slate-600">·</span>
-        <a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer transition-colors">Contacto</a>
+        <a href="/contacto" onClick={(e) => { e.preventDefault(); navigate('/contacto'); }} className="hover:text-white cursor-pointer transition-colors">{t.footer_contact}</a>
         <span className="text-slate-600">·</span>
-        <a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer transition-colors">Ayuda</a>
+        <a href="/ayuda" onClick={(e) => { e.preventDefault(); navigate('/ayuda'); }} className="hover:text-white cursor-pointer transition-colors">{t.help}</a>
         <span className="text-slate-600">·</span>
-        <a href="/terminos" onClick={(e) => { e.preventDefault(); navigate('/terminos'); }} className="hover:text-white cursor-pointer transition-colors">Términos de uso</a>
+        <a href="/terminos" onClick={(e) => { e.preventDefault(); navigate('/terminos'); }} className="hover:text-white cursor-pointer transition-colors">{t.terms_of_use}</a>
         <span className="text-slate-600">·</span>
-        <a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer transition-colors">Privacidad</a>
+        <a href="/privacidad" onClick={(e) => { e.preventDefault(); navigate('/privacidad'); }} className="hover:text-white cursor-pointer transition-colors">{t.privacy_policy}</a>
         <span className="text-slate-600">·</span>
-        <a href="/cookies" onClick={(e) => { e.preventDefault(); navigate('/cookies'); }} className="hover:text-white cursor-pointer transition-colors">Cookies</a>
+        <a href="/cookies" onClick={(e) => { e.preventDefault(); navigate('/cookies'); }} className="hover:text-white cursor-pointer transition-colors">{t.footer_cookies}</a>
             </div>
           </div>
         </div>
@@ -4714,16 +4725,16 @@ function App() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !authLoading) setShowAuthModal(false); }}>
           {requiresTwoFactor ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
-              <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">Verificación de dos pasos</h2>
+              <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_two_factor_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
                 {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
               </p>
-              <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">Ingresa el código de tu app de autenticación.</p>
+              <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">{t.auth_two_factor_desc}</p>
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
-                <input name="code" required autoFocus placeholder="Código de autenticación o recuperación" maxLength="32" className="w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                <input name="code" required autoFocus placeholder={t.auth_two_factor_placeholder} maxLength="32" className="w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                 <div className="pt-2">
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">
-                    {authLoading ? <Loader2 className="animate-spin" size={20}/> : 'Verificar e Iniciar Sesión'}
+                    {authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_two_factor_verify}
                   </button>
                 </div>
               </form>
@@ -4731,25 +4742,25 @@ function App() {
           ) : authMode === 'phone_request' || authMode === 'phone_verify' ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
               <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-              <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">Acceso con Teléfono</h2>
+              <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_phone_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
                 {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
               </p>
 
               {authMode === 'phone_request' ? (
                 <form onSubmit={handlePhoneRequestSubmit} className="space-y-3.5">
-                  <input name="phone_number" required type="tel" placeholder="Número de teléfono" className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
-                  <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : 'Recibir SMS'}</button>
+                  <input name="phone_number" required type="tel" placeholder={t.auth_phone_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                  <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_sms_receive}</button>
                 </form>
               ) : (
                 <form onSubmit={handlePhoneVerifySubmit} className="space-y-3.5">
-                  <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] -mt-2 mb-4">Código enviado al <br/><strong>{authPhone}</strong></p>
-                  <input name="code" required autoFocus placeholder="Código de 6 dígitos" maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
-                  <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : 'Verificar y Entrar'}</button>
+                  <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] -mt-2 mb-4">{t.auth_code_sent_to} <br/><strong>{authPhone}</strong></p>
+                  <input name="code" required autoFocus placeholder={t.auth_code_placeholder} maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                  <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_phone_verify}</button>
                 </form>
               )}
               <div className="mt-6 text-center">
-                 <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">Volver a iniciar sesión</button>
+                 <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">{t.auth_back_to_login}</button>
               </div>
             </div>
           ) : (
@@ -4764,7 +4775,7 @@ function App() {
                 {authMode === 'register' && localStorage.getItem('pendingReferral') && (
                   <div className="bg-lime-50 border border-lime-200 rounded-2xl px-4 py-3 mb-2 flex items-center gap-2 text-sm text-lime-800 dark:bg-lime-900/20 dark:border-lime-400/30 dark:text-lime-300">
                     <span className="text-lg">🎁</span>
-                    <span><strong>¡Fuiste invitado!</strong> Regístrate y obtén <strong>2 créditos gratis</strong> al publicar tu primer anuncio.</span>
+                    <span><strong>{t.auth_invited_title}</strong> {t.auth_invited_desc}</span>
                   </div>
                 )}
                 <form onSubmit={handleAuthSubmit} className="space-y-3.5">
@@ -4813,7 +4824,7 @@ function App() {
                   <>
                     <div className="relative my-6">
                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700"></div></div>
-                      <div className="relative flex justify-center text-[12px]"><span className="bg-white dark:bg-slate-900 px-2 text-slate-400 font-medium">O</span></div>
+                      <div className="relative flex justify-center text-[12px]"><span className="bg-white dark:bg-slate-900 px-2 text-slate-400 font-medium">{t.auth_or}</span></div>
                     </div>
 
                     <div className="space-y-2.5">
@@ -4831,7 +4842,7 @@ function App() {
                       {availableProviders?.sms && (
                         <button type="button" onClick={handlePhoneAuthStart} className="btn-md w-full bg-[#10B981] text-white hover:bg-[#059669] flex items-center justify-center gap-3">
                             <Phone className="w-4 h-4" />
-                            Teléfono (SMS)
+                            {t.auth_phone_sms}
                         </button>
                       )}
 
@@ -4878,16 +4889,16 @@ function App() {
                                 });
                               }
                               setShowAuthModal(false);
-                              showToast('¡Bienvenido!');
+                              showToast(t.auth_welcome_toast);
                             } else if (data.requires_2fa) {
                               setTwoFactorEmail(data.email);
                               setRequiresTwoFactor(true);
                               setAuthMode('login');
                             } else {
-                              showToast(data.error || 'Error de Telegram', 'error');
+                              showToast(data.error || t.auth_telegram_error, 'error');
                             }
                           } catch (e) {
-                            showToast('Error de conexión con Telegram', 'error');
+                            showToast(t.auth_telegram_connection_error, 'error');
                           }
                         };
                         // Открываем авторизационный popup Telegram
@@ -4935,12 +4946,12 @@ function App() {
                           setAuthMode(nextMode);
                           if (nextMode === 'login') setRegistrationConsentAccepted(false);
                         }} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">
-                            {authMode === 'login' ? "¿No tienes cuenta? Únete" : "Ya tengo cuenta"}
+                            {authMode === 'login' ? t.auth_no_account_join : t.auth_have_account}
                         </button>
                     )}
                     {authMode === 'login' && (
                         <button type="button" onClick={() => setAuthMode('forgot_password')} className="text-[12px] font-medium text-slate-400 hover:text-[#84CC16] transition-colors">
-                            ¿Olvidaste tu contraseña?
+                            {t.forgot_password}
                         </button>
                     )}
                     {(authMode === 'forgot_password' || authMode === 'reset_password' || authMode === 'phone_request' || authMode === 'phone_verify') && (
