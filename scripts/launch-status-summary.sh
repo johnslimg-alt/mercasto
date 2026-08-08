@@ -38,24 +38,21 @@ Security evidence:
   npm run check:static-safety
 EOF
 
-echo "\n== Launch blocker map =="
+echo "\n== Active launch blockers =="
 cat <<'EOF'
-#261 direct nginx 80/443 architecture decision
-#262 production sync after autonomous commits
-#263 auth/account E2E
-#264 ads lifecycle E2E
-#265 payments and webhook recovery
-#266 category attributes seed and fresh DB proof
-#267 ops restore rollback and alerts
-#268 security pass evidence
-#269 legal and business readiness
-#270 SEO and AEO readiness
-#271 Lighthouse and performance baseline
-#272 master launch go/no-go tracker
-#500 true off-host PostgreSQL backup replication
+#12 full-project desktop/tablet/mobile UX/UI + interaction audit before broad scale
+#269 owner legal/business sign-off (technical policy checks are complete)
+#272 master launch go/no-go tracker; DNSSEC stabilization/observation still gates broad paid scale
+#408 DNSSEC + managed CDN/WAF traffic-scale gate; owner plan/risk decision remains after DNSSEC stability
+#147 Ubuntu maintenance is staged and must wait until the DNSSEC stabilization transition is complete
 EOF
 
-echo \"\n== Deferred product features ==\"
+echo "\n== Open security follow-up =="
+cat <<'EOF'
+#536 provider-side revocation evidence remains for any historical non-Google AI/API credential; runtime is local-only
+EOF
+
+echo "\n== Deferred product features =="
 cat <<'EOF'
 - SMS/phone OTP is not planned. Public phone/SMS UI must remain disabled.
 EOF
@@ -70,11 +67,12 @@ cat <<'EOF'
 - Auth/account E2E evidence is missing.
 - Backup restore/rollback evidence is missing.
 - Off-host backup replication or monthly remote restore evidence is stale/failed.
-- Security evidence issue #287 is not completed.
+- Security smoke, public-manifest, route-audit, or static-safety evidence fails.
 - Legal/business readiness is missing.
 - Secrets or stack traces are found in public output.
 - Frontend loses ownership of ports 80/443 under current non-Traefik topology.
-- Broad paid traffic starts before the managed CDN/WAF decision is implemented.
+- Broad paid traffic starts before the DNSSEC stabilization/observation requirements in #272/#408 are complete.
+- Broad paid traffic starts before the managed CDN/WAF plan or explicit owner risk decision in #408 is recorded.
 EOF
 
 echo "\nlaunch status summary OK"

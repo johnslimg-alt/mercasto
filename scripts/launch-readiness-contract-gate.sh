@@ -23,16 +23,22 @@ fi
 grep -qF 'REQUIRE_LEGAL_READY=1 npm run smoke:legal-readiness' "$STATUS"
 grep -qF 'npm run smoke:backup-freshness' "$STATUS"
 grep -qF 'npm run smoke:offsite-backup' "$STATUS"
-grep -qF '#500 true off-host PostgreSQL backup replication' "$STATUS"
-grep -qF 'Broad paid traffic starts before the managed CDN/WAF decision is implemented.' "$STATUS"
-if grep -qF '#260 ' "$STATUS"; then
-  echo "closed SMS issue #260 must not remain in the active blocker map" >&2
-  exit 1
-fi
+grep -qF '#12 full-project desktop/tablet/mobile UX/UI + interaction audit before broad scale' "$STATUS"
+grep -qF '#269 owner legal/business sign-off' "$STATUS"
+grep -qF '#272 master launch go/no-go tracker' "$STATUS"
+grep -qF '#408 DNSSEC + managed CDN/WAF traffic-scale gate' "$STATUS"
+grep -qF '#147 Ubuntu maintenance is staged' "$STATUS"
+grep -qF '#536 provider-side revocation evidence remains' "$STATUS"
+grep -qF 'Broad paid traffic starts before the DNSSEC stabilization/observation requirements in #272/#408 are complete.' "$STATUS"
+grep -qF 'Broad paid traffic starts before the managed CDN/WAF plan or explicit owner risk decision in #408 is recorded.' "$STATUS"
 grep -qF 'SMS/phone OTP is not planned. Public phone/SMS UI must remain disabled.' "$STATUS"
-grep -qF '#268 security pass evidence' "$STATUS"
-grep -qF '#270 SEO and AEO readiness' "$STATUS"
-grep -qF '#271 Lighthouse and performance baseline' "$STATUS"
+
+for closed_issue in 260 261 262 263 264 265 266 267 268 270 271 287 500; do
+  if grep -qE "^#${closed_issue}([[:space:]]|$)" "$STATUS"; then
+    echo "closed issue #${closed_issue} must not remain in the active blocker map" >&2
+    exit 1
+  fi
+done
 
 python3 - "$PACKAGE" <<'PY2'
 import json
