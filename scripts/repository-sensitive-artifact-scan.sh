@@ -18,9 +18,11 @@ workspace_backups="$(find . \
   -path './postgres-data' -prune -o \
   -path './postgres-backups' -prune -o \
   -type f \
-  \( -name '*.dump' -o -name '*.sql' -o -name '*.bak' -o -name '*.old' \
-     -o -name '*.orig' -o -name '*.backup' -o -name '*.save' -o -name '*.swp' \
-     -o -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' -o -name '*~' \) \
+  \( -name '*.dump' -o -name '*.dump.*' -o -name '*.sql' -o -name '*.sql.*' \
+     -o -name '*.bak' -o -name '*.bak.*' -o -name '*.old' -o -name '*.old.*' \
+     -o -name '*.orig' -o -name '*.orig.*' -o -name '*.backup' -o -name '*.backup.*' \
+     -o -name '*.save' -o -name '*.save.*' -o -name '*.swp' -o -name '*.pem' \
+     -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' -o -name '*~' \) \
   -print | sed 's#^./##')"
 blocked_artifacts="$(printf '%s\n%s\n%s\n' "$tracked_backups" "$tracked_agent_backups" "$workspace_backups" | sed '/^$/d' | sort -u)"
 
