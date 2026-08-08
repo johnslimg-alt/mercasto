@@ -36,7 +36,7 @@ class AdminAdModerationController extends Controller
         $ads = Ad::query()
             ->with([
                 'user:id,name,email,is_verified',
-                'moderationDecisions',
+                'moderationDecisions' => fn ($query) => $query->limit(5),
             ])
             ->where(function ($query) {
                 $query->where('status', 'pending')
