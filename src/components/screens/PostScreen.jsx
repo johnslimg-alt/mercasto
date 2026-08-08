@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import { filterConfig, autoModelsByBrand } from '../../constants/filterConfig';
+import { getGlobalFilterDefinitions } from '../../constants/globalFilterOptions';
 import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
 import MapV3 from '../common/MapV3';
 import SortablePhotoGrid from '../SortablePhotoGrid';
@@ -19,26 +20,32 @@ import { isPublishFormEmpty, readPublishDraft, writePublishDraft } from '../../u
 // stable slug as the subcategory value (matching real listing data + the search filter dropdown),
 // while the rest store the canonical Spanish label text as-is. Always posts in Spanish, since ad
 // content itself is not translated per-poster-language.
-function getPostSubcategoryOptions(category) {
+function getPostSubcategoryOptions(category, lang = 'es') {
   const taxonomyCategory = category === 'coches' ? 'motor' : category;
-  const translated = subcategoriesByLang.es[taxonomyCategory];
+  const canonical = subcategoriesByLang.es[taxonomyCategory];
+  const localized = subcategoriesByLang[lang]?.[taxonomyCategory];
 
-  if (translated && !Array.isArray(translated)) {
-    return Object.keys(translated).map((slug) => ({ value: slug, label: translated[slug] }));
+  if (canonical && !Array.isArray(canonical)) {
+    return Object.keys(canonical).map((slug) => ({
+      value: slug,
+      label: (!Array.isArray(localized) && localized?.[slug]) || canonical[slug],
+    }));
   }
 
-  const labels = Array.isArray(translated)
-    ? translated
+  const canonicalLabels = Array.isArray(canonical)
+    ? canonical
     : (subcategoriesMap[taxonomyCategory] || subcategoriesMap[category] || []);
+  const localizedLabels = Array.isArray(localized) ? localized : canonicalLabels;
 
-  return labels.map((label) => ({ value: label, label }));
+  return canonicalLabels.map((value, index) => ({
+    value,
+    label: localizedLabels[index] || value,
+  }));
 }
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
 const MEXICO_STATES = Object.keys(mexicoLocations);
-
-const STEP_LABELS = ['Categoría', 'Detalles', 'Contacto'];
 
 const CATEGORY_ICONS = {
   coches: Car, motor: Car, inmobiliaria: Home, empleo: Briefcase,
@@ -48,53 +55,40 @@ const CATEGORY_ICONS = {
   informatica: Cpu, coleccionismo: Package, productos: ShoppingBag, turismo: Compass,
 };
 
-const PRODUCT_GROUPS = [
-  { slug: 'electronica', label: { es: 'Electrónica', en: 'Electronics', ru: 'Электроника' } },
-  { slug: 'hogar', label: { es: 'Hogar y jardín', en: 'Home & Garden', ru: 'Дом и сад' } },
-  { slug: 'moda', label: { es: 'Moda y belleza', en: 'Fashion & Beauty', ru: 'Мода' } },
-  { slug: 'ocio', label: { es: 'Ocio', en: 'Hobbies', ru: 'Хобби' } },
-  { slug: 'infantil', label: { es: 'Infantil', en: 'Kids', ru: 'Детский мир' } },
-  { slug: 'mascotas', label: { es: 'Mascotas', en: 'Pets', ru: 'Животные' } },
-  { slug: 'formacion', label: { es: 'Libros y Cursos', en: 'Books & Courses', ru: 'Книги и курсы' } },
-];
+const PRODUCT_GROUPS = ['electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'formacion'];
 
 // Фасеты публикации — сохраняются в form.attributes (filterConfig) и используются фильтрами поиска
 // (доставки нет: продажа напрямую покупатель↔продавец).
-const SALE_FACETS = [
-  { key: 'listing_type', label: 'Tipo de anuncio', options: ['Venta', 'Renta', 'Renta con opción a compra', 'Traspaso', 'Gratis', 'Intercambio'] },
-  { key: 'payment_method', label: 'Pago aceptado', options: ['Efectivo', 'Transferencia SPEI', 'Tarjeta de crédito', 'Tarjeta de débito', 'Pago seguro (escrow)', 'PayPal', 'Criptomonedas'] },
-  { key: 'warranty', label: 'Garantía', options: ['Sin garantía', 'Con garantía', 'Garantía de fábrica', '30 días de garantía', '90 días de garantía', '1 año de garantía'] },
-  { key: 'negotiable', label: 'Precio', options: ['Precio fijo', 'Negociable', 'Acepto ofertas'] },
-  { key: 'seller_response', label: 'Respuesta al comprador', options: ['Responde rápido (< 1 hora)', 'Responde hoy', 'Atiende por chat', 'Atiende por teléfono'] },
-];
+function getSaleFacets(t) {
+  const definitions = Object.fromEntries(getGlobalFilterDefinitions(t).map((definition) => [definition.id, definition]));
+  return ['listing_type', 'payment_method', 'warranty', 'negotiable', 'seller_response'].map((key) => {
+    const definition = definitions[key];
+    const options = definition?.options || [];
+    return {
+      key,
+      label: definition?.label || key,
+      options: key === 'warranty'
+        ? [{ value: 'Sin garantía', label: t.gf_no_warranty }, ...options]
+        : options,
+    };
+  });
+}
 
 const CONTACT_METHODS = [
-  { id: 'phone', label: 'Teléfono', icon: Phone, hint: 'Llamadas' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, hint: 'Mensajes' },
-  { id: 'telegram', label: 'Telegram', icon: Send, hint: 'Usuario' },
+  { id: 'phone', labelKey: 'phone', icon: Phone, hintKey: 'post_calls' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, hintKey: 'messages' },
+  { id: 'telegram', label: 'Telegram', icon: Send, hintKey: 'post_username' },
 ];
 
 const fieldClass = 'w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500';
 const selectFieldClass = fieldClass + ' cursor-pointer';
 const labelClass = 'block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2';
 
-function Field({ label, required, optional, children, className = '' }) {
-  return (
-    <div className={className}>
-      {label && (
-        <label className={labelClass}>
-          {label}{required && <span className="text-red-500 ml-1">*</span>}{optional && <span className="opacity-60 font-normal"> (opcional)</span>}
-        </label>
-      )}
-      {children}
-    </div>
-  );
-}
-
-function Stepper({ step }) {
+function Stepper({ step, t }) {
+  const labels = [t.category, t.post_step_details, t.post_step_contact];
   return (
     <div className="flex justify-between items-center mb-8 border-b border-slate-100 dark:border-slate-800 pb-5">
-      {STEP_LABELS.map((label, i) => {
+      {labels.map((label, i) => {
         const n = i + 1;
         const active = step === n;
         const done = step > n;
@@ -103,7 +97,7 @@ function Stepper({ step }) {
             <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${active ? 'bg-[#84CC16] text-white shadow-md' : done ? 'bg-[#84CC16]/25 text-[#65A30D]' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
               {done ? <Check size={14} /> : n}
             </span>
-            <span className={`text-xs md:text-sm font-semibold ${active ? 'text-slate-950 dark:text-white' : 'text-slate-400'}`}>
+            <span data-testid={`publish-step-${n}`} className={`text-xs md:text-sm font-semibold ${active ? 'text-slate-950 dark:text-white' : 'text-slate-400'}`}>
               {label}
             </span>
           </div>
@@ -137,6 +131,7 @@ export default function PostScreen({
   setUser,
 }) {
   const location = useLocation();
+  const saleFacets = useMemo(() => getSaleFacets(t), [t]);
   const preselectedCategory = location.state?.preselectedCategory || '';
   const [recoveredDraft] = useState(() => (
     !editingAd && !preselectedCategory ? readPublishDraft() : null
@@ -197,11 +192,11 @@ export default function PostScreen({
     if (user?.telegram_username) methods.push('telegram');
     return methods.length ? methods : ['whatsapp'];
   });
-  const [waMode, setWaMode] = useState(initialDraftContact.waMode || 'phone');
+  const [waMode, setWaMode] = useState(initialDraftContact.waMode);
   const [phoneValue, setPhoneValue] = useState(
     initialDraftContact.phoneValue || user?.phone_number || user?.whatsapp || '',
   );
-  const [waUsername, setWaUsername] = useState(initialDraftContact.waUsername || '');
+  const [waUsername, setWaUsername] = useState(initialDraftContact.waUsername);
   const [telegramValue, setTelegramValue] = useState(
     initialDraftContact.telegramValue || user?.telegram_username || '',
   );
@@ -276,14 +271,14 @@ export default function PostScreen({
   useEffect(() => {
     if (!form.category || dynamicAttributes.length === 0 || !form.attributes) return;
     const validKeys = new Set(dynamicAttributes.map(f => f.id || f.key));
-    SALE_FACETS.forEach(f => validKeys.add(f.key));
+    saleFacets.forEach(f => validKeys.add(f.key));
     const pruned = Object.fromEntries(
       Object.entries(form.attributes).filter(([k]) => validKeys.has(k))
     );
     if (Object.keys(pruned).length !== Object.keys(form.attributes).length) {
       setForm(prev => ({ ...prev, attributes: pruned }));
     }
-  }, [dynamicAttributes, form.category]);
+  }, [dynamicAttributes, form.category, saleFacets, setForm]);
 
   // Set GPS coords
   const setCoords = (lat, lng) => {
@@ -297,13 +292,13 @@ export default function PostScreen({
 
   const handleGPS = () => {
     if (!navigator.geolocation) {
-      alert('La geolocalización no está soportada por tu navegador.');
+      alert(t.post_gps_unsupported);
       return;
     }
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       pos => { setCoords(pos.coords.latitude, pos.coords.longitude); setGpsLoading(false); },
-      () => { setGpsLoading(false); alert('No se pudo obtener la ubicación. Asegúrate de dar permisos de GPS.'); },
+      () => { setGpsLoading(false); alert(t.post_gps_failed); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
@@ -311,28 +306,28 @@ export default function PostScreen({
   // Step navigation with JS validation
   const goNext = () => {
     if (step === 1) {
-      if (!form.category) { alert('Selecciona una categoría.'); return; }
-      const subs = getPostSubcategoryOptions(form.category);
-      if (subs.length > 0 && !form.subcategory) { alert('Selecciona una subcategoría.'); return; }
+      if (!form.category) { alert(t.select_category); return; }
+      const subs = getPostSubcategoryOptions(form.category, lang);
+      if (subs.length > 0 && !form.subcategory) { alert(t.post_select_subcategory); return; }
       events.publishStep('details', form.category || '', { source: 'publish_flow' });
       setStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (step === 2) {
       const errs = {};
-      if (!form.title?.trim()) errs.title = 'El título es obligatorio.';
-      if (!form.price) errs.price = 'El precio es obligatorio.';
-      if (!form.description?.trim()) errs.description = 'La descripción es obligatoria.';
+      if (!form.title?.trim()) errs.title = t.post_field_required.replace('{field}', t.ad_title);
+      if (!form.price) errs.price = t.post_field_required.replace('{field}', t.ad_price);
+      if (!form.description?.trim()) errs.description = t.post_field_required.replace('{field}', t.ad_desc);
       // Validate required dynamic attributes
       dynamicAttributes.forEach(field => {
         const key = field.id || field.key || '';
         const label = field.label || '';
         if (key === 'subcategory' || /subcategor/i.test(label)) {
           if (field.required && !form.subcategory) {
-            errs[`attr_${key}`] = `${field.label || key} es obligatorio.`;
+            errs[`attr_${key}`] = t.post_field_required.replace('{field}', t[`filter_label_${key}`] || key);
           }
         } else {
           if (field.required && !form.attributes?.[key]) {
-            errs[`attr_${key}`] = `${field.label || key} es obligatorio.`;
+            errs[`attr_${key}`] = t.post_field_required.replace('{field}', t[`filter_label_${key}`] || key);
           }
         }
       });
@@ -407,19 +402,19 @@ export default function PostScreen({
         return (
           <div key={key} className="space-y-2">
             <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
-              {field.label || key}{field.required && <span className="text-red-500 ml-1">*</span>}
+              {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
             <select value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
-              <option value="">Seleccionar...</option>
+              <option value="">{t.select}</option>
               {models.map(m => <option key={m} value={m}>{m}</option>)}
-              <option value="Otro">Otro modelo</option>
+              <option value="Otro">{t.post_other_model}</option>
             </select>
             {val === 'Otro' && (
               <input
                 type="text"
                 value={form.attributes?.modelo_otro || ''}
                 onChange={e => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), modelo_otro: e.target.value, modelo: e.target.value } }))}
-                placeholder="Especifica el modelo"
+                placeholder={t.post_specify_model}
                 className={baseClass + ' mt-2'}
               />
             )}
@@ -433,10 +428,10 @@ export default function PostScreen({
       return (
         <div key={key} className="space-y-2">
           <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
-            {field.label || key}{field.required && <span className="text-red-500 ml-1">*</span>}
+            {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
           </label>
           <select value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
-            <option value="">Seleccionar...</option>
+            <option value="">{t.select}</option>
             {field.options.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
           {hasErr && <p className="text-xs text-red-500">{errors[errKey]}</p>}
@@ -447,7 +442,7 @@ export default function PostScreen({
       return (
         <div key={key} className="space-y-2">
           <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
-            {field.label || key}{field.required && <span className="text-red-500 ml-1">*</span>}
+            {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
           </label>
           <input type="number" value={val} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || ''} className={baseClass} />
           {hasErr && <p className="text-xs text-red-500">{errors[errKey]}</p>}
@@ -457,7 +452,7 @@ export default function PostScreen({
     return (
       <div key={key} className="space-y-2">
         <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
-          {field.label || key}{field.required && <span className="text-red-500 ml-1">*</span>}
+          {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
         </label>
         <input type="text" value={val} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || ''} className={baseClass} />
         {hasErr && <p className="text-xs text-red-500">{errors[errKey]}</p>}
@@ -475,21 +470,21 @@ export default function PostScreen({
           onClick={() => editingAd && setEditingAd(null)}
         >
           <PlusCircle className="text-[#84CC16]" size={26} />
-          {editingAd ? t.edit_ad || 'Editar anuncio' : t.post_title}
+          {editingAd ? t.edit_ad : t.post_title}
         </h2>
         <div className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300" data-testid="publish-ai-brand-message">
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+          {t.ai_brand_tagline}
         </div>
 
-        <Stepper step={step} />
+        <Stepper step={step} t={t} />
 
         {draftRecovered && (
           <div
             className="mb-5 rounded-xl border border-lime-300 bg-lime-50 px-4 py-3 text-[13px] font-semibold text-lime-900 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-lime-200"
             data-testid="publish-draft-restored"
           >
-            Recuperamos tu borrador. Las fotos y el video deben seleccionarse de nuevo.
+            {t.post_draft_restored}
           </div>
         )}
 
@@ -501,7 +496,7 @@ export default function PostScreen({
             <div className="space-y-6 animate-in fade-in duration-300">
               <div>
                 <label className="block text-[14px] font-bold text-slate-700 dark:text-slate-300 mb-3">
-                  Selecciona una Categoría
+                  {t.select_category}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {categoriesData
@@ -523,7 +518,7 @@ export default function PostScreen({
                         >
                           <Icon size={24} className={selected ? 'text-[#65A30D]' : 'text-slate-500'} />
                           <span className="text-[13px] font-bold mt-2 text-slate-800 dark:text-slate-100">
-                            {cat.name?.[lang] || cat.name?.es || cat.slug}
+                            {cat.name?.[lang] || cat.slug}
                           </span>
                         </button>
                       );
@@ -535,19 +530,20 @@ export default function PostScreen({
               {selectedParentCategory === 'productos' && (
                 <div className="animate-in fade-in slide-in-from-top-4 duration-300">
                   <label className="block text-[14px] font-bold text-slate-700 dark:text-slate-300 mb-3">
-                    {lang === 'es' ? 'Selecciona el Tipo de Producto' : 'Select Product Type'}
+                    {t.post_select_product_type}
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {PRODUCT_GROUPS.map(group => {
-                      const selected = form.category === group.slug;
+                    {PRODUCT_GROUPS.map(slug => {
+                      const group = categoriesData.find((cat) => cat.slug === slug);
+                      const selected = form.category === slug;
                       return (
                         <button
-                          key={group.slug}
+                          key={slug}
                           type="button"
-                          onClick={() => handleProductGroupSelect(group.slug)}
+                          onClick={() => handleProductGroupSelect(slug)}
                           className={`p-3 rounded-lg border text-center transition-all text-xs font-semibold ${selected ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16]' : 'border-slate-200 dark:border-slate-800 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                         >
-                          {group.label[lang] || group.label.es}
+                          {group?.name?.[lang] || slug}
                         </button>
                       );
                     })}
@@ -557,13 +553,13 @@ export default function PostScreen({
 
 
               {/* SUBCATEGORY (Level 3) */}
-              {form.category && getPostSubcategoryOptions(form.category).length > 0 && (
+              {form.category && getPostSubcategoryOptions(form.category, lang).length > 0 && (
                 <div className="mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
                   <label className="block text-[14px] font-bold text-slate-700 dark:text-slate-300 mb-3">
-                    Selecciona una Subcategoría
+                    {t.post_select_subcategory}
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {getPostSubcategoryOptions(form.category).map(({ value, label }) => (
+                    {getPostSubcategoryOptions(form.category, lang).map(({ value, label }) => (
                       <button
                         key={value}
                         type="button"
@@ -580,11 +576,11 @@ export default function PostScreen({
               <div className="hidden md:flex justify-end pt-6">
                 <button
                   type="button"
-                  disabled={!form.category || (getPostSubcategoryOptions(form.category).length > 0 && !form.subcategory)}
+                  disabled={!form.category || (getPostSubcategoryOptions(form.category, lang).length > 0 && !form.subcategory)}
                   onClick={goNext}
                   className="btn-lg bg-[#0F172A] text-white hover:bg-black flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Siguiente <ChevronRight size={16} />
+                  {t.next_btn} <ChevronRight size={16} />
                 </button>
               </div>
             </div>
@@ -598,10 +594,11 @@ export default function PostScreen({
               <div>
                 <label className={labelClass}>{t.ad_title}</label>
                 <input
+                  data-testid="publish-title"
                   value={form.title}
                   onChange={e => { setForm({ ...form, title: e.target.value }); if (errors.title) setErrors(p => ({ ...p, title: null })); }}
                   className={`w-full px-3.5 py-2.5 border ${errors.title ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
-                  placeholder="Ej: Honda Civic 2018"
+                  placeholder={t.post_title_placeholder}
                 />
                 {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
               </div>
@@ -609,7 +606,7 @@ export default function PostScreen({
               {/* Photos */}
               <div>
                 <label className={labelClass}>
-                  {t.ad_photos || 'Fotos del anuncio'} <span className="font-normal text-slate-400">({images.length}/10)</span>
+                  {t.ad_photos} <span className="font-normal text-slate-400">({images.length}/10)</span>
                 </label>
                 {images.length > 0 ? (
                   <div className="w-full space-y-3">
@@ -618,7 +615,7 @@ export default function PostScreen({
                       <label className="aspect-square border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-center hover:bg-[#84CC16]/5 hover:border-[#84CC16]/50 transition-all cursor-pointer bg-slate-50 dark:bg-slate-950 w-full py-4">
                         <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleImageChange} className="hidden" />
                         <PlusCircle className="text-slate-400" size={22} />
-                        <span className="text-xs text-slate-400 mt-1">{t.add_more_photos || 'Agregar más fotos'}</span>
+                        <span className="text-xs text-slate-400 mt-1">{t.add_more_photos}</span>
                       </label>
                     )}
                   </div>
@@ -629,16 +626,16 @@ export default function PostScreen({
                       <Camera className="text-slate-400" size={28} />
                     </div>
                     <p className="text-[14px] font-medium text-slate-700 dark:text-slate-200 mb-1">
-                      {t.drag_photos_hint || 'Arrastra tus fotos aquí o'} <span className="text-[#65A30D]">{t.browse_label || 'explora'}</span>
+                      {t.drag_photos_hint} <span className="text-[#65A30D]">{t.browse_label}</span>
                     </p>
-                    <p className="text-[12px] text-slate-500">{t.max_photos_hint || 'Máximo 10 fotos (JPG, PNG)'}</p>
+                    <p className="text-[12px] text-slate-500">{t.max_photos_hint}</p>
                   </label>
                 )}
               </div>
 
               {/* Video */}
               <div>
-                <label className={labelClass}>{t.video_hint || 'Video (Opcional, MP4, max 50MB)'}</label>
+                <label className={labelClass}>{t.video_hint}</label>
                 {videoFile ? (
                   <div className="flex items-center gap-3 p-2 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
                     <Video className="text-slate-500" />
@@ -654,8 +651,8 @@ export default function PostScreen({
                       <Video className="text-[#65A30D]" size={20} />
                     </div>
                     <div>
-                      <p className="text-[13px] font-bold text-slate-700 dark:text-slate-200">{t.video_opt || 'Subir video'}</p>
-                      <p className="text-[11px] text-slate-500">{t.no_file_selected || 'Sin archivo seleccionado'}</p>
+                      <p className="text-[13px] font-bold text-slate-700 dark:text-slate-200">{t.video_opt}</p>
+                      <p className="text-[11px] text-slate-500">{t.no_file_selected}</p>
                     </div>
                   </label>
                 )}
@@ -664,14 +661,14 @@ export default function PostScreen({
               {/* Condition + Price */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className={labelClass}>{t.condition || 'Estado'}</label>
+                  <label className={labelClass}>{t.condition}</label>
                   <select
                     value={form.condition}
                     onChange={e => setForm({ ...form, condition: e.target.value })}
                     className={selectFieldClass}
                   >
-                    <option value="nuevo">{t.new || 'Nuevo'}</option>
-                    <option value="usado">{t.used || 'Usado'}</option>
+                    <option value="nuevo">{t.new}</option>
+                    <option value="usado">{t.used}</option>
                   </select>
                 </div>
                 <div>
@@ -680,6 +677,7 @@ export default function PostScreen({
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">$</span>
                     <input
                       type="number"
+                      data-testid="publish-price"
                       value={form.price}
                       onChange={e => { setForm({ ...form, price: e.target.value }); if (errors.price) setErrors(p => ({ ...p, price: null })); }}
                       className={`w-full px-3.5 py-2.5 pl-7 border ${errors.price ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
@@ -695,7 +693,7 @@ export default function PostScreen({
                 <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-950/50">
                   <h3 className="text-[14px] font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                     <Zap size={16} className="text-[#84CC16]" />
-                    {t.ad_attributes || 'Características del anuncio'}
+                    {t.ad_attributes}
                     {attributesLoading && <Loader2 size={14} className="animate-spin text-slate-400" />}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -712,10 +710,10 @@ export default function PostScreen({
               <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-950/50">
                 <h3 className="text-[14px] font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                   <Zap size={16} className="text-[#84CC16]" />
-                  {t.sale_details || 'Detalles de venta'}
+                  {t.sale_details}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {SALE_FACETS.map(f => (
+                  {saleFacets.map(f => (
                     <div key={f.key} className="space-y-2">
                       <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">{f.label}</label>
                       <select
@@ -723,8 +721,8 @@ export default function PostScreen({
                         onChange={e => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), [f.key]: e.target.value } }))}
                         className={selectFieldClass}
                       >
-                        <option value="">{t.select_optional || 'Seleccionar (opcional)...'}</option>
-                        {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                        <option value="">{t.select_optional}</option>
+                        {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     </div>
                   ))}
@@ -743,11 +741,12 @@ export default function PostScreen({
                       className="flex items-center gap-1.5 text-xs font-semibold text-[#65A30D] hover:text-[#84CC16] disabled:opacity-50 transition-colors"
                     >
                       {aiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                      {t.generate_ai || 'Generar con IA'}
+                      {t.generate_ai}
                     </button>
                   )}
                 </div>
                 <textarea
+                  data-testid="publish-description"
                   value={form.description}
                   onChange={e => { setForm({ ...form, description: e.target.value }); if (errors.description) setErrors(p => ({ ...p, description: null })); }}
                   className={`w-full px-3.5 py-2.5 border ${errors.description ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all min-h-[140px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
@@ -759,10 +758,10 @@ export default function PostScreen({
               {/* Step 2 navigation */}
               <div className="hidden md:flex justify-between items-center pt-6">
                 <button type="button" onClick={goBack} className="btn-lg border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5">
-                  <ChevronLeft size={16} /> Atrás
+                  <ChevronLeft size={16} /> {t.back}
                 </button>
                 <button type="button" onClick={goNext} className="btn-lg bg-[#0F172A] text-white hover:bg-black flex items-center gap-1.5">
-                  Siguiente <ChevronRight size={16} />
+                  {t.next_btn} <ChevronRight size={16} />
                 </button>
               </div>
             </div>
@@ -775,14 +774,15 @@ export default function PostScreen({
               {/* State + City */}
               <div>
                 <h3 className="text-[14px] font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                  <MapPin size={16} className="text-[#84CC16]" /> Ubicación
+                  <MapPin size={16} className="text-[#84CC16]" /> {t.location}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className={labelClass}>
-                      {t.state || 'Estado'} <span className="text-red-500">*</span>
+                      {t.state} <span className="text-red-500">*</span>
                     </label>
                     <select
+                      data-testid="publish-state"
                       value={form.state || ''}
                       onChange={e => {
                         setForm({ ...form, state: e.target.value, city: '', location: e.target.value });
@@ -790,7 +790,7 @@ export default function PostScreen({
                       }}
                       className={selectFieldClass}
                     >
-                      <option value="">{t.select_state || 'Seleccionar estado'}</option>
+                      <option value="">{t.select_state}</option>
                       {MEXICO_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
@@ -798,7 +798,7 @@ export default function PostScreen({
                   {form.state && (
                     <div>
                       <label className={labelClass}>
-                        {t.city || 'Ciudad'} <span className="text-red-500">*</span>
+                        {t.city} <span className="text-red-500">*</span>
                       </label>
                       {customCity ? (
                         <div className="flex gap-2">
@@ -809,7 +809,7 @@ export default function PostScreen({
                               const v = e.target.value;
                               setForm(prev => ({ ...prev, city: v, location: v ? `${v}, ${prev.state}` : prev.state }));
                             }}
-                            placeholder="Escribe el nombre de tu ciudad"
+                            placeholder={t.post_city_manual_placeholder}
                             className={fieldClass}
                           />
                           <button
@@ -817,7 +817,7 @@ export default function PostScreen({
                             onClick={() => { setCustomCity(false); setForm(prev => ({ ...prev, city: '' })); }}
                             className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap"
                           >
-                            Seleccionar de la lista
+                            {t.post_city_select_list}
                           </button>
                         </div>
                       ) : (
@@ -834,9 +834,9 @@ export default function PostScreen({
                           }}
                           className={selectFieldClass}
                         >
-                          <option value="">{t.select_city || 'Seleccionar ciudad'}</option>
+                          <option value="">{t.select_city}</option>
                           {(mexicoLocations[form.state] || []).map(c => <option key={c} value={c}>{c}</option>)}
-                          <option value="otro">Otro (Escribir manualmente)...</option>
+                          <option value="otro">{t.post_city_other_manual}</option>
                         </select>
                       )}
                     </div>
@@ -846,7 +846,7 @@ export default function PostScreen({
                 {/* Location + Map */}
                 <div className="mt-5">
                   <label className={labelClass}>
-                    {t.location || 'Dirección específica / Ubicación'}
+                    {t.location}
                   </label>
                   <div className="relative mb-3">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -854,26 +854,27 @@ export default function PostScreen({
                       value={form.location || ''}
                       onChange={e => setForm({ ...form, location: e.target.value })}
                       className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
-                      placeholder={t.loc_placeholder || 'Escribe tu dirección o haz clic en el mapa'}
+                      placeholder={t.loc_placeholder}
                     />
                   </div>
 
                   <div className="mb-3 flex justify-end">
                     <button
                       type="button"
+                      data-testid="publish-gps"
                       onClick={handleGPS}
                       disabled={gpsLoading}
                       className="px-4 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
                     >
                       {gpsLoading ? <Loader2 size={14} className="animate-spin" /> : <Locate size={14} />}
-                      Usar GPS actual
+                      {t.post_use_current_gps}
                     </button>
                   </div>
 
-                  <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-2">{t.tap_map_hint || 'Toca el mapa para marcar la ubicación exacta de tu anuncio.'}</p>
+                  <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-2">{t.tap_map_hint}</p>
                   {!hasCoordinates && (
                     <p className="mb-2 text-[12px] font-semibold text-amber-700 dark:text-amber-300" data-testid="publish-location-required">
-                      Marca un punto en el mapa o usa tu GPS para habilitar la publicación.
+                      {t.post_location_required}
                     </p>
                   )}
                   <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
@@ -882,7 +883,7 @@ export default function PostScreen({
                       locationPicker
                       showFullscreen={false}
                       locationQuery={mapQuery}
-                      markers={form.latitude && form.longitude ? [{ label: t.selected_label || 'Seleccionado', coords: [Number(form.latitude), Number(form.longitude)], tone: 'lime' }] : []}
+                      markers={form.latitude && form.longitude ? [{ label: t.selected_label, coords: [Number(form.latitude), Number(form.longitude)], tone: 'lime' }] : []}
                       onLocationSelect={({ lat, lng }) => setForm(prev => ({ ...prev, latitude: lat, longitude: lng }))}
                       className="h-full rounded-none border-0 shadow-none"
                     />
@@ -893,7 +894,7 @@ export default function PostScreen({
               {/* Contact methods */}
               <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-950/50">
                 <h3 className="text-[14px] font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                  <MessageCircle size={16} className="text-[#84CC16]" /> ¿Cómo te contactan?
+                  <MessageCircle size={16} className="text-[#84CC16]" /> {t.post_contact_heading}
                 </h3>
                 <div className="grid grid-cols-3 gap-2 md:gap-3">
                   {CONTACT_METHODS.map((m) => {
@@ -903,8 +904,8 @@ export default function PostScreen({
                         onClick={() => setContactMethods(sel ? contactMethods.filter((x) => x !== m.id) : [...contactMethods, m.id])}
                         className={`flex min-h-[80px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-sm font-semibold transition-all ${sel ? 'border-[#84CC16] bg-[#F7FEE7] dark:bg-slate-900/60 ring-2 ring-[#84CC16] text-[#65A30D]' : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-[#84CC16] hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
                         <m.icon size={20} />
-                        {m.label}
-                        <span className="text-[10px] font-normal text-slate-400">{m.hint}</span>
+                        {m.label || t[m.labelKey]}
+                        <span className="text-[10px] font-normal text-slate-400">{t[m.hintKey]}</span>
                       </button>
                     );
                   })}
@@ -912,9 +913,9 @@ export default function PostScreen({
 
                 {contactMethods.includes('whatsapp') && (
                   <div className="mt-4">
-                    <label className={labelClass}>WhatsApp: ¿cómo te escriben?</label>
+                    <label className={labelClass}>{t.post_whatsapp_question}</label>
                     <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 p-1 bg-white dark:bg-slate-950">
-                      {[{ id: 'phone', label: 'Número de teléfono' }, { id: 'username', label: 'Usuario (@usuario)' }].map((opt) => (
+                      {[{ id: 'phone', label: t.post_phone_number }, { id: 'username', label: `${t.post_username} (@usuario)` }].map((opt) => (
                         <button key={opt.id} type="button" onClick={() => setWaMode(opt.id)}
                           className={`min-h-[40px] rounded-lg px-4 text-sm font-semibold transition-colors ${waMode === opt.id ? 'bg-[#84CC16] text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>
                           {opt.label}
@@ -927,33 +928,33 @@ export default function PostScreen({
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   {(contactMethods.includes('phone') || (contactMethods.includes('whatsapp') && waMode === 'phone')) && (
                     <div>
-                      <label className={labelClass}>Teléfono (10 dígitos)</label>
+                      <label className={labelClass}>{t.post_phone_digits}</label>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">+52</span>
                         <input type="tel" value={phoneValue} onChange={(e) => setPhoneValue(e.target.value.replace(/[^\d\s-]/g, ''))}
                           placeholder="55 1234 5678" className="w-full pl-11 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                       {contactMethods.includes('whatsapp') && waMode === 'phone' && (
-                        <p className="mt-1 text-xs text-slate-400">Se usará también para WhatsApp</p>
+                        <p className="mt-1 text-xs text-slate-400">{t.post_phone_whatsapp_hint}</p>
                       )}
                     </div>
                   )}
                   {contactMethods.includes('whatsapp') && waMode === 'username' && (
                     <div>
-                      <label className={labelClass}>Usuario de WhatsApp</label>
+                      <label className={labelClass}>{t.post_whatsapp_username}</label>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">@</span>
-                        <input value={waUsername} onChange={(e) => setWaUsername(e.target.value.replace(/^@/, ''))} placeholder="usuario"
+                        <input value={waUsername} onChange={(e) => setWaUsername(e.target.value.replace(/^@/, ''))} placeholder={t.post_username}
                           className="w-full pl-7 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                     </div>
                   )}
                   {contactMethods.includes('telegram') && (
                     <div>
-                      <label className={labelClass}>Usuario de Telegram</label>
+                      <label className={labelClass}>{t.post_telegram_username}</label>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">@</span>
-                        <input value={telegramValue} onChange={(e) => setTelegramValue(e.target.value.replace(/^@/, ''))} placeholder="usuario"
+                        <input value={telegramValue} onChange={(e) => setTelegramValue(e.target.value.replace(/^@/, ''))} placeholder={t.post_username}
                           className="w-full pl-7 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                     </div>
@@ -964,7 +965,7 @@ export default function PostScreen({
               {/* Step 3 navigation */}
               <div className="hidden md:flex justify-between items-center pt-6">
                 <button type="button" onClick={goBack} className="btn-lg border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5">
-                  <ChevronLeft size={16} /> Atrás
+                  <ChevronLeft size={16} /> {t.back}
                 </button>
                 <button
                   type="submit"
@@ -973,7 +974,7 @@ export default function PostScreen({
                 >
                   {(postLoading || savingContact)
                     ? <Loader2 className="animate-spin" size={20} />
-                    : <><Sparkles size={18} /> {editingAd ? t.save_changes || 'Guardar cambios' : t.publish_btn}</>
+                    : <><Sparkles size={18} /> {editingAd ? t.save_changes : t.publish_btn}</>
                   }
                 </button>
               </div>
@@ -988,17 +989,17 @@ export default function PostScreen({
       <div className="fixed bottom-0 inset-x-0 z-40 flex gap-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 md:hidden">
         {step > 1 ? (
           <button type="button" onClick={goBack} className="btn-lg border border-slate-200 text-slate-700 hover:bg-slate-50 flex-1 flex items-center justify-center gap-1.5">
-            <ChevronLeft size={16} /> Atrás
+            <ChevronLeft size={16} /> {t.back}
           </button>
         ) : <div className="flex-1" />}
         {step < 3 ? (
           <button
             type="button"
-            disabled={step === 1 && (!form.category || (getPostSubcategoryOptions(form.category).length > 0 && !form.subcategory))}
+            disabled={step === 1 && (!form.category || (getPostSubcategoryOptions(form.category, lang).length > 0 && !form.subcategory))}
             onClick={goNext}
             className="btn-lg bg-[#0F172A] text-white hover:bg-black flex-[2] flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            Siguiente <ChevronRight size={16} />
+            {t.next_btn} <ChevronRight size={16} />
           </button>
         ) : (
           <button
@@ -1009,7 +1010,7 @@ export default function PostScreen({
           >
             {(postLoading || savingContact)
               ? <Loader2 className="animate-spin" size={20} />
-              : <><Sparkles size={18} /> {editingAd ? t.save_changes || 'Guardar cambios' : t.publish_btn}</>
+              : <><Sparkles size={18} /> {editingAd ? t.save_changes : t.publish_btn}</>
             }
           </button>
         )}

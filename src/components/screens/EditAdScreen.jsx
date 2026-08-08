@@ -80,7 +80,7 @@ export default function EditAdScreen({ t, lang }) {
         ]);
         if (cancelled) return;
         if (adRes.status === 403) { navigate('/'); return; }
-        if (!adRes.ok) throw new Error(t.error_loading_ad || 'No se pudo cargar el anuncio');
+        if (!adRes.ok) throw new Error('load_failed');
         const adData = await adRes.json();
         const catData = catRes.ok ? await catRes.json() : [];
         if (cancelled) return;
@@ -111,7 +111,7 @@ export default function EditAdScreen({ t, lang }) {
           path: url.replace(`${STORAGE_URL}/`, ''), file: null, preview: url
         })));
       } catch (err) {
-        if (!cancelled && err.name !== 'AbortError') setError(err.message);
+        if (!cancelled && err.name !== 'AbortError') setError(t.error_loading_ad);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -148,7 +148,7 @@ export default function EditAdScreen({ t, lang }) {
   const handleAddImages = (e) => {
     const files = Array.from(e.target.files || []);
     if (images.length + files.length > maxPhotos) {
-      showToast(t.max_images_alert || `Máximo ${maxPhotos} imágenes`, 'error'); return;
+      showToast(t.max_images_alert, 'error'); return;
     }
     const newImgs = files.map(file => ({
       source: 'new', id: crypto.randomUUID(), url: null, path: null, file,
@@ -159,7 +159,7 @@ export default function EditAdScreen({ t, lang }) {
   };
 
   const handleGenerateDescription = async () => {
-    if (!form.title) { setAiError(t.ai_needs_title || 'Agrega un título primero.'); return; }
+    if (!form.title) { setAiError(t.ai_needs_title); return; }
     setAiError(null); setAiLoading(true);
     try {
       const attrs = form.attributes && Object.keys(form.attributes).length > 0 ? form.attributes : undefined;
@@ -171,9 +171,9 @@ export default function EditAdScreen({ t, lang }) {
           price: form.price || undefined, attributes: attrs, locale: lang }),
       });
       const data = await res.json();
-      if (!res.ok) { setAiError(data.error || data.message || 'No se pudo generar la descripción.'); return; }
-      if (data.description) { setForm(prev => ({ ...prev, description: data.description })); showToast('Descripción generada ✨'); }
-    } catch { setAiError('Error de conexión.'); }
+      if (!res.ok) { setAiError(t.ai_description_failed); return; }
+      if (data.description) { setForm(prev => ({ ...prev, description: data.description })); showToast(t.ai_description_generated); }
+    } catch { setAiError(t.connection_error); }
     finally { setAiLoading(false); }
   };
 
@@ -196,9 +196,9 @@ export default function EditAdScreen({ t, lang }) {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
         body: formData
       });
-      if (!res.ok) { const data = await res.json(); throw new Error(data.message || 'Error al guardar'); }
+      if (!res.ok) throw new Error('save_failed');
       navigate(`/?ad=${id}`);
-    } catch (err) { setError(err.message); }
+    } catch { setError(t.save_changes_error); }
     finally { setSaving(false); }
   };
 
@@ -207,11 +207,17 @@ export default function EditAdScreen({ t, lang }) {
     <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 text-center">
       <AlertTriangle className="w-12 h-12 text-red-400" />
       <p className="text-slate-600">{error}</p>
-      <button onClick={() => navigate(-1)} className="btn bg-slate-100 hover:bg-slate-200 text-slate-700">{t.back || 'Volver'}</button>
+      <button onClick={() => navigate(-1)} className="btn bg-slate-100 hover:bg-slate-200 text-slate-700">{t.back}</button>
     </div>
   );
 
-  const CONDITIONS = ['Nuevo', 'Como nuevo', 'Bueno', 'Regular', 'Para piezas'];
+  const CONDITIONS = [
+    { value: 'Nuevo', label: t.new },
+    { value: 'Como nuevo', label: t.condition_like_new },
+    { value: 'Bueno', label: t.condition_good },
+    { value: 'Regular', label: t.condition_fair },
+    { value: 'Para piezas', label: t.condition_for_parts },
+  ];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 pb-24 text-slate-900 dark:text-white">
@@ -222,7 +228,7 @@ export default function EditAdScreen({ t, lang }) {
       )}
 
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-6 font-medium transition-colors">
-        <ChevronLeft size={20} /> {t.back_to_ad || 'Volver al anuncio'}
+        <ChevronLeft size={20} /> {t.back_to_ad}
       </button>
 
       <div className="flex items-center gap-3 mb-8">
@@ -230,8 +236,8 @@ export default function EditAdScreen({ t, lang }) {
           <Pencil className="w-5 h-5 text-[#65A30D]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t.edit_ad || 'Editar anuncio'}</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">{t.edit_ad_review_desc || 'Los cambios importantes se enviarán a revisión'}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t.edit_ad}</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">{t.edit_ad_review_desc}</p>
         </div>
       </div>
 
@@ -239,9 +245,9 @@ export default function EditAdScreen({ t, lang }) {
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3">
           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-red-700 text-sm">{t.ad_rejected || 'Este anuncio fue rechazado'}</p>
+            <p className="font-semibold text-red-700 text-sm">{t.ad_rejected}</p>
             {ad.rejection_reason && <p className="text-red-600 text-sm mt-1">{ad.rejection_reason}</p>}
-            <p className="text-red-600 text-sm mt-1">{t.ad_rejected_edit_desc || 'Edítalo y se enviará a revisión nuevamente.'}</p>
+            <p className="text-red-600 text-sm mt-1">{t.ad_rejected_edit_desc}</p>
           </div>
         </div>
       )}
@@ -250,14 +256,14 @@ export default function EditAdScreen({ t, lang }) {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className={labelClass}>{t.ad_title || 'Título'} *</label>
+          <label className={labelClass}>{t.ad_title} *</label>
           <input type="text" name="title" data-testid="edit-ad-title" value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))}
-            required maxLength={255} placeholder="Ej: iPhone 15 Pro en perfecto estado"
+            required maxLength={255} placeholder={t.post_title_placeholder}
             className={fieldClass} />
         </div>
 
         <div>
-          <label className={labelClass}>{t.ad_price || 'Precio'} *</label>
+          <label className={labelClass}>{t.ad_price} *</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
             <input type="number" name="price" data-testid="edit-ad-price" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))}
@@ -267,12 +273,12 @@ export default function EditAdScreen({ t, lang }) {
         </div>
 
         <div>
-          <label className={labelClass}>{t.category || 'Categoría'} *</label>
+          <label className={labelClass}>{t.category} *</label>
           <select value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value, attributes: {}}))}
             required className={fieldClass}>
-            <option value="">{t.select_category || 'Seleccionar categoría'}</option>
+            <option value="">{t.select_category}</option>
             {categories.map(cat => (
-              <option key={cat.slug} value={cat.slug}>{typeof cat.name === 'object' && cat.name ? (cat.name[lang] || cat.name['es'] || cat.slug) : (cat.name || cat.slug)}</option>
+              <option key={cat.slug} value={cat.slug}>{typeof cat.name === 'object' && cat.name ? (cat.name[lang] || cat.slug) : (cat.name || cat.slug)}</option>
             ))}
           </select>
         </div>
@@ -281,7 +287,7 @@ export default function EditAdScreen({ t, lang }) {
           <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-900">
             <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
               <Settings2 size={16} className="text-[#84CC16]" />
-              {t.ad_attributes || 'Características del anuncio'}
+              {t.ad_attributes}
               {loadingCategoryFields && <Loader2 size={14} className="animate-spin text-slate-400" />}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -289,12 +295,12 @@ export default function EditAdScreen({ t, lang }) {
                 const fieldId = field.id || field.key;
                 return (
                   <div key={fieldId}>
-                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{field.label}</label>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{t[`filter_label_${fieldId}`] || fieldId}</label>
                     {(field.type === 'select' || field.type === 'checkbox') ? (
                       <select value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
                         required={field.required}
                         className={compactFieldClass}>
-                        <option value="">{t.select || 'Seleccionar'}...</option>
+                        <option value="">{t.select}...</option>
                         {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
                     ) : field.type === 'range' ? (
@@ -315,40 +321,40 @@ export default function EditAdScreen({ t, lang }) {
         )}
 
         <div>
-          <label className={labelClass}>{t.state || 'Estado'}</label>
+          <label className={labelClass}>{t.state}</label>
           <select value={form.state || ''} onChange={e => setForm(p => ({...p, state: e.target.value}))}
             className={fieldClass}>
-            <option value="">{t.select_state || 'Seleccionar estado'}</option>
+            <option value="">{t.select_state}</option>
             {MEXICO_STATES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
 
         <div>
-          <label className={labelClass}>{t.city || 'Ciudad'} / {t.location || 'Ubicación'}</label>
+          <label className={labelClass}>{t.city} / {t.location}</label>
           <input type="text" value={form.location} onChange={e => setForm(p => ({...p, location: e.target.value}))}
-            placeholder={t.loc_placeholder || "Ej: Ciudad de México, CDMX"}
+            placeholder={t.loc_placeholder}
             className={fieldClass} />
         </div>
 
         <div>
-          <label className={labelClass}>{t.condition || 'Condición'}</label>
+          <label className={labelClass}>{t.condition}</label>
           <div className="flex flex-wrap gap-2">
             {CONDITIONS.map(c => (
-              <button key={c} type="button" onClick={() => setForm(p => ({...p, condition: c}))}
+              <button key={c.value} type="button" onClick={() => setForm(p => ({...p, condition: c.value}))}
                 className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
-                  form.condition === c ? 'bg-[#25D366] border-[#25D366] text-white' : 'border-gray-300 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:border-[#25D366]'
-                }`}>{c}</button>
+                  form.condition === c.value ? 'bg-[#25D366] border-[#25D366] text-white' : 'border-gray-300 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:border-[#25D366]'
+                }`}>{c.label}</button>
             ))}
           </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">{t.ad_desc || 'Descripción'} *</label>
-            <button type="button" onClick={handleGenerateDescription} disabled={aiLoading}
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">{t.ad_desc} *</label>
+            <button type="button" data-testid="edit-ad-generate-ai" onClick={handleGenerateDescription} disabled={aiLoading}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[#65A30D] hover:bg-[#84CC16]/10 disabled:opacity-50 transition-colors">
               {aiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-              {aiLoading ? (t.generating || 'Generando…') : (t.generate_ai || '✨ Generar con IA')}
+              {aiLoading ? (t.generating) : (t.generate_ai)}
             </button>
           </div>
           {aiError && (
@@ -357,44 +363,44 @@ export default function EditAdScreen({ t, lang }) {
             </div>
           )}
           <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))}
-            required rows={6} placeholder="Describe tu artículo en detalle..."
+            required rows={6} placeholder={t.ad_desc_placeholder}
             className={`${fieldClass} resize-none`} />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t.ad_photos || 'Fotos'}</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t.ad_photos}</span>
             <span className={`text-xs ${images.length >= maxPhotos ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
               {images.length} / {maxPhotos}
             </span>
           </div>
           {images.length >= maxPhotos && (
             <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mb-2">
-              Has alcanzado el límite de fotos.
+              {t.post_photo_limit_reached}
             </div>
           )}
           <SortablePhotoGrid photos={images} onReorder={setImages} onDelete={id => setImages(prev => prev.filter(i => i.id !== id))} />
           {images.length < maxPhotos && (
             <button type="button" onClick={() => fileInputRef.current?.click()}
               className="w-full mt-3 py-3 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-lime-400 flex items-center justify-center gap-2 text-slate-400 hover:text-lime-500 transition-all bg-slate-50 dark:bg-slate-900 hover:bg-lime-50 dark:hover:bg-lime-500/10">
-              <Plus size={20} /><span className="text-xs font-medium">{t.add_photo || 'Agregar foto'}</span>
+              <Plus size={20} /><span className="text-xs font-medium">{t.add_photo}</span>
             </button>
           )}
           <input ref={fileInputRef} type="file" accept="image/jpg,image/jpeg,image/png,image/webp,image/gif"
             multiple className="hidden" onChange={handleAddImages} />
           <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-            <Image size={12} /> {t.first_img_main_hint || 'La primera imagen será la foto principal'}
+            <Image size={12} /> {t.first_img_main_hint}
           </p>
         </div>
 
         <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
           <button type="button" onClick={() => navigate(-1)}
             className="flex-1 py-3 rounded-2xl border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-            {t.cancel || 'Cancelar'}
+            {t.cancel}
           </button>
-          <button type="submit" disabled={saving}
+          <button type="submit" data-testid="edit-ad-save" disabled={saving}
             className="flex-1 py-3 rounded-2xl bg-[#84CC16] hover:bg-[#65A30D] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {t.saving_word || 'Guardando'}...</> : (t.save_changes || 'Guardar cambios')}
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {t.saving_word}...</> : (t.save_changes)}
           </button>
         </div>
       </form>
