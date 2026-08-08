@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
-import { getTranslations, loadLanguage } from './utils/translations';
+import { getTranslations } from './utils/translations';
 import { localizedText } from './utils/localize';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
 import { clearPublishDraft } from './utils/publishDraft';
@@ -46,13 +46,12 @@ async function getEcho() {
 }
 const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
 const SearchSuggestions = React.lazy(() => import('./components/common/SearchSuggestions'));
-import i18n from './i18n';
+import { useUI } from './contexts/UIContext';
 
 const SUPPORTED_LANGUAGES = new Set([
   'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
 ]);
 const LANGUAGE_OPTIONS = [...SUPPORTED_LANGUAGES];
-const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
 const NAV_LABELS = {
   es: ['Todo', 'Autos', 'Inmuebles', 'Servicios', 'Empleo', 'Tiendas'],
   en: ['All', 'Cars', 'Real estate', 'Services', 'Jobs', 'Stores'],
@@ -497,6 +496,7 @@ export default function AppWrapper() {
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { lang, setLang, loadedLangVersion } = useUI();
 
   // Page-view tracking. Keep filtered/catalog/detail states out of homepage conversion metrics.
   useEffect(() => {
@@ -518,22 +518,9 @@ function App() {
 
   const currentTab = location.pathname.split('/')[1] || 'home';
 
-  // Защита от Prototype Pollution (WSOD Crash): проверяем, что язык действительно существует в словаре
-  const [lang, setLang] = useState(() => {
-    const saved = localStorage.getItem('lang');
-    return SUPPORTED_LANGUAGES.has(saved) ? saved : 'es';
-  });
-
-  const [loadedLangVersion, setLoadedLangVersion] = useState(0);
-
-  useEffect(() => {
-    if (lang !== 'es') {
-      loadLanguage(lang).then(() => {
-        setLoadedLangVersion(v => v + 1);
-      });
-    }
-  }, [lang]);
-
+  // UIProvider is the single source of truth for language, storage and document direction.
+  // Reading the version keeps this component reactive when a lazy runtime dictionary finishes loading.
+  void loadedLangVersion;
   const t = getTranslations(lang);
 
   const [serverAds, setServerAds] = useState([]);
@@ -1483,13 +1470,6 @@ function App() {
     }
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('lang', lang);
-    localStorage.setItem('mercasto_language', lang);
-    document.documentElement.lang = lang === 'es' ? 'es-MX' : lang;
-    document.documentElement.dir = RTL_LANGUAGES.has(lang) ? 'rtl' : 'ltr';
-    if (i18n.language !== lang) i18n.changeLanguage(lang);
-  }, [lang]);
   useEffect(() => { setPriceTab(accountType); }, [accountType, showPricingModal]);
   // Для платных/PRO (business) кабинетов принудительно показываем PRO-вид — кнопки "Particular" там нет
   useEffect(() => { if (userRole === 'business') setAccountType('pro'); }, [userRole]);

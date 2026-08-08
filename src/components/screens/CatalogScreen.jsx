@@ -127,10 +127,11 @@ export default function CatalogScreen({
             <span className="ml-1 text-[14px] font-normal text-slate-400">({safeServerAds.length})</span>
           </h1>
           <button
+            data-testid="catalog-mobile-filters"
             onClick={() => setShowMobileFilters(value => !value)}
             className={`btn-sm flex items-center gap-2 border transition-colors ${showMobileFilters ? 'border-slate-900 bg-slate-900 text-white dark:border-[#84CC16] dark:bg-[#84CC16] dark:text-slate-950' : 'border-slate-300 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'}`}
           >
-            <Settings2 size={16} /> Filtros
+            <Settings2 size={16} /> {t.filters || 'Filtros'}
           </button>
         </div>
 
@@ -210,7 +211,7 @@ export default function CatalogScreen({
               className="btn-sm flex items-center gap-2 border border-[#84CC16]/40 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 disabled:opacity-60 dark:text-[#BEF264]"
             >
               {savingSearchAlert ? <Loader2 size={15} className="animate-spin" /> : <Bell size={15} />}
-              Guardar búsqueda
+              {t.save_search || 'Guardar búsqueda'}
             </button>
           </div>
 
@@ -227,8 +228,9 @@ export default function CatalogScreen({
             getImageUrl={getImageUrl}
             onSearchArea={area => {
               onSearchArea?.(area);
-              showCatalogToast('Búsqueda por área aplicada');
+              showCatalogToast(t.search_area_applied || 'Búsqueda por área aplicada');
             }}
+            t={t}
           />
         </div>
       </div>
