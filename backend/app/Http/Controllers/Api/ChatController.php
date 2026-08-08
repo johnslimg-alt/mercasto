@@ -8,6 +8,8 @@ use App\Events\MessageSent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Jobs\SendHuaweiPushNotification;
+use App\Jobs\SendMobilePushNotification;
 use App\Jobs\SendTelegramMessageNotification;
 
 class ChatController extends Controller {
@@ -149,6 +151,11 @@ class ChatController extends Controller {
                 $data['content'],
                 $ad->title
             );
+            $this->dispatchNativeMessagePush(
+                $receiverId,
+                (int) $conversation->id,
+                $adId,
+            );
 
             return response()->json($this->formatMessage($message->load('sender:id,name,avatar_url', 'conversation.ad:id,title,price,image_url'), $userId));
         }
@@ -165,6 +172,32 @@ class ChatController extends Controller {
         );
 
         return response()->json($message->load('sender:id,name,avatar_url'));
+    }
+
+    private function dispatchNativeMessagePush(
+        int $receiverId,
+        int $conversationId,
+        int $adId,
+    ): void {
+        $data = [
+            'type' => 'message',
+            'conversation_id' => $conversationId,
+            'listing_id' => $adId,
+            'ad_id' => $adId,
+        ];
+
+        SendMobilePushNotification::dispatch(
+            $receiverId,
+            'Mercasto',
+            'Tienes un nuevo mensaje.',
+            $data,
+        );
+        SendHuaweiPushNotification::dispatch(
+            $receiverId,
+            'Mercasto',
+            'Tienes un nuevo mensaje.',
+            $data,
+        );
     }
 
     private function authorizeConversation(Conversation $conversation, int $userId): void
