@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: 'Bestätigen und reaktivieren',
   confirm_reactivation_details: 'Bestätige, dass die Anzeige noch verfügbar ist und Preis, Zustand und Standort korrekt sind.',
   reactivation_success: 'Anzeige für 7 Tage reaktiviert.',
+  referral_share_message: 'Komm zu Mercasto, um in ganz Mexiko zu kaufen oder zu verkaufen. Registriere dich über meinen Link: {url}',
+  referral_apply_already_applied: 'Für dein Konto wurde bereits eine Empfehlung angewendet.',
+  referral_apply_invalid: 'Ungültiger Empfehlungscode.',
+  referral_apply_self: 'Du kannst deinen eigenen Code nicht verwenden.',
+  referral_apply_success: 'Code angewendet! Veröffentliche deine erste Anzeige, damit ihr beide Guthaben erhaltet.',
+  referral_apply_error: 'Der Code konnte nicht angewendet werden. Versuche es erneut.',
+  referral_status_completed: 'Abgeschlossen',
+  referral_status_pending: 'Ausstehend',
 };

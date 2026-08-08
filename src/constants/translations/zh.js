@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: '确认并重新激活',
   confirm_reactivation_details: '请确认该广告仍然有效，且价格、状况和位置均正确。',
   reactivation_success: '广告已重新激活 7 天。',
+  referral_share_message: '加入 Mercasto，在墨西哥买卖商品。通过我的链接注册：{url}',
+  referral_apply_already_applied: '您的账户已关联推荐人。',
+  referral_apply_invalid: '推荐码无效。',
+  referral_apply_self: '不能使用自己的推荐码。',
+  referral_apply_success: '推荐码已应用！发布第一条广告后，双方都可获得积分。',
+  referral_apply_error: '无法应用推荐码，请重试。',
+  referral_status_completed: '已完成',
+  referral_status_pending: '待处理',
 };

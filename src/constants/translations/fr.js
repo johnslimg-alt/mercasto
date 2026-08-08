@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: 'Confirmer et réactiver',
   confirm_reactivation_details: 'Confirmez que l’annonce est toujours disponible et que son prix, son état et sa localisation sont corrects.',
   reactivation_success: 'Annonce réactivée pour 7 jours.',
+  referral_share_message: 'Rejoignez Mercasto pour acheter ou vendre au Mexique. Inscrivez-vous avec mon lien : {url}',
+  referral_apply_already_applied: 'Un parrainage est déjà appliqué à votre compte.',
+  referral_apply_invalid: 'Code de parrainage invalide.',
+  referral_apply_self: 'Vous ne pouvez pas utiliser votre propre code.',
+  referral_apply_success: 'Code appliqué ! Publiez votre première annonce pour que vous gagniez tous les deux des crédits.',
+  referral_apply_error: 'Impossible d’appliquer le code. Réessayez.',
+  referral_status_completed: 'Terminé',
+  referral_status_pending: 'En attente',
 };

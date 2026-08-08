@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: 'Подтвердить и активировать снова',
   confirm_reactivation_details: 'Подтвердите, что объявление ещё актуально, а цена, состояние и местоположение указаны верно.',
   reactivation_success: 'Объявление повторно активировано на 7 дней.',
+  referral_share_message: 'Присоединяйтесь к Mercasto, чтобы покупать и продавать по всей Мексике. Зарегистрируйтесь по моей ссылке: {url}',
+  referral_apply_already_applied: 'К вашему аккаунту уже применён реферальный код.',
+  referral_apply_invalid: 'Недействительный реферальный код.',
+  referral_apply_self: 'Нельзя использовать собственный реферальный код.',
+  referral_apply_success: 'Код применён! Опубликуйте первое объявление, чтобы вы оба получили кредиты.',
+  referral_apply_error: 'Не удалось применить код. Попробуйте ещё раз.',
+  referral_status_completed: 'Завершено',
+  referral_status_pending: 'Ожидает',
 };

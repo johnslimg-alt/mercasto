@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: 'Confirm and reactivate',
   confirm_reactivation_details: 'Confirm that the listing is still available and that its price, condition, and location are correct.',
   reactivation_success: 'Listing reactivated for 7 days.',
+  referral_share_message: 'Join Mercasto to buy or sell across Mexico. Sign up with my link: {url}',
+  referral_apply_already_applied: 'A referral has already been applied to your account.',
+  referral_apply_invalid: 'Invalid referral code.',
+  referral_apply_self: 'You cannot use your own referral code.',
+  referral_apply_success: 'Referral code applied! Publish your first listing so you both earn credits.',
+  referral_apply_error: 'Could not apply the code. Please try again.',
+  referral_status_completed: 'Completed',
+  referral_status_pending: 'Pending',
 };

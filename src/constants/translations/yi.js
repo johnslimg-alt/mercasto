@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: 'באַשטעטיקן און ווידער אַקטיווירן',
   confirm_reactivation_details: 'באַשטעטיקט אַז די אַנאָנס איז נאָך בנימצא און אַז פּרײַז, צושטאַנד און אָרט זענען ריכטיק.',
   reactivation_success: 'די אַנאָנס איז ווידער אַקטיווירט פֿאַר 7 טעג.',
+  referral_share_message: 'קומט צו Mercasto צו קויפן אָדער פאַרקויפן איבער מעקסיקע. רעגיסטרירט זיך מיט מײַן לינק: {url}',
+  referral_apply_already_applied: 'אויף אײַער חשבון איז שוין אַ רעפֿעראַל צוגעווענדט.',
+  referral_apply_invalid: 'דער רעפֿעראַל־קאָד איז נישט גילטיק.',
+  referral_apply_self: 'איר קענט נישט ניצן אײַער אייגענעם רעפֿעראַל־קאָד.',
+  referral_apply_success: 'דער קאָד איז צוגעווענדט! פּובליקירט אײַער ערשטע אַנאָנס כּדי איר ביידע זאָלט באַקומען קרעדיטן.',
+  referral_apply_error: 'מען האָט נישט געקענט צולייגן דעם קאָד. פּרוּווט ווידער.',
+  referral_status_completed: 'פֿאַרענדיקט',
+  referral_status_pending: 'וואַרטנדיק',
 };
