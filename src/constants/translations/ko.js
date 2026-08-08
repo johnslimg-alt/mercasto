@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: '확인 후 재활성화',
   confirm_reactivation_details: '광고가 아직 유효하며 가격, 상태 및 위치가 정확한지 확인하세요.',
   reactivation_success: '광고가 7일 동안 재활성화되었습니다.',
+  referral_share_message: 'Mercasto에 가입해 멕시코 전역에서 사고팔아 보세요. 제 링크로 가입하세요: {url}',
+  referral_apply_already_applied: '이미 추천 코드가 적용된 계정입니다.',
+  referral_apply_invalid: '유효하지 않은 추천 코드입니다.',
+  referral_apply_self: '본인의 추천 코드는 사용할 수 없습니다.',
+  referral_apply_success: '추천 코드가 적용되었습니다! 첫 광고를 게시하면 두 사람 모두 크레딧을 받습니다.',
+  referral_apply_error: '코드를 적용할 수 없습니다. 다시 시도하세요.',
+  referral_status_completed: '완료',
+  referral_status_pending: '대기 중',
 };

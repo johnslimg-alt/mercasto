@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: '確認して再有効化',
   confirm_reactivation_details: '出品がまだ有効で、価格・状態・所在地が正しいことを確認してください。',
   reactivation_success: '出品を7日間再有効化しました。',
+  referral_share_message: 'Mercasto に参加して、メキシコ全土で売買しましょう。私のリンクから登録してください: {url}',
+  referral_apply_already_applied: 'このアカウントにはすでに紹介コードが適用されています。',
+  referral_apply_invalid: '紹介コードが無効です。',
+  referral_apply_self: '自分の紹介コードは使用できません。',
+  referral_apply_success: '紹介コードを適用しました！最初の出品を公開すると、双方にクレジットが付与されます。',
+  referral_apply_error: 'コードを適用できませんでした。もう一度お試しください。',
+  referral_status_completed: '完了',
+  referral_status_pending: '保留中',
 };

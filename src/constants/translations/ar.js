@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: 'تأكيد وإعادة التفعيل',
   confirm_reactivation_details: 'أكّد أن الإعلان لا يزال متاحًا وأن السعر والحالة والموقع صحيحة.',
   reactivation_success: 'تمت إعادة تفعيل الإعلان لمدة 7 أيام.',
+  referral_share_message: 'انضم إلى Mercasto للشراء أو البيع في جميع أنحاء المكسيك. سجّل عبر رابط دعوتي: {url}',
+  referral_apply_already_applied: 'تم تطبيق إحالة على حسابك بالفعل.',
+  referral_apply_invalid: 'رمز الإحالة غير صالح.',
+  referral_apply_self: 'لا يمكنك استخدام رمز الإحالة الخاص بك.',
+  referral_apply_success: 'تم تطبيق الرمز! انشر إعلانك الأول ليحصل كلاكما على رصيد.',
+  referral_apply_error: 'تعذّر تطبيق الرمز. حاول مرة أخرى.',
+  referral_status_completed: 'مكتمل',
+  referral_status_pending: 'قيد الانتظار',
 };

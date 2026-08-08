@@ -72,6 +72,7 @@ bash scripts/ad-activation-lifecycle-gate.sh
 bash scripts/moderation-pipeline-gate.sh
 bash scripts/seller-reactivation-reminder-gate.sh
 bash scripts/seller-correction-flow-gate.sh
+bash scripts/referral-localization-contract-gate.sh
 bash scripts/admin-request-changes-gate.sh
 bash scripts/web-push-vapid-gate.sh
 bash scripts/supply-readiness-gate.sh

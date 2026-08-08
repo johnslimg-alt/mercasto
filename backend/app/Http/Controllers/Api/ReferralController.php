@@ -65,17 +65,17 @@ class ReferralController extends Controller
             $currentUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
             if ($currentUser->referred_by !== null) {
-                return ['status' => 400, 'body' => ['success' => false, 'message' => 'Ya tienes un referido aplicado.']];
+                return ['status' => 400, 'body' => ['success' => false, 'code' => 'already_applied', 'message' => 'Ya tienes un referido aplicado.']];
             }
 
             $referrer = User::where('referral_code', $code)->lockForUpdate()->first();
 
             if (!$referrer) {
-                return ['status' => 404, 'body' => ['success' => false, 'message' => 'Código de referido inválido.']];
+                return ['status' => 404, 'body' => ['success' => false, 'code' => 'invalid_code', 'message' => 'Código de referido inválido.']];
             }
 
             if ($referrer->id === $currentUser->id) {
-                return ['status' => 400, 'body' => ['success' => false, 'message' => 'No puedes usar tu propio código.']];
+                return ['status' => 400, 'body' => ['success' => false, 'code' => 'self_referral', 'message' => 'No puedes usar tu propio código.']];
             }
 
             $currentUser->referred_by = $referrer->id;
@@ -88,7 +88,7 @@ class ReferralController extends Controller
                 'created_at'  => now(),
             ]);
 
-            return ['status' => 200, 'body' => ['success' => true, 'message' => '¡Código aplicado! Publica tu primer anuncio para que ambos ganen créditos.']];
+            return ['status' => 200, 'body' => ['success' => true, 'code' => 'applied', 'message' => '¡Código aplicado! Publica tu primer anuncio para que ambos ganen créditos.']];
         });
 
         return response()->json($result['body'], $result['status']);

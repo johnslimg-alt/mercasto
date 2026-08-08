@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: 'Confirmar y reactivar',
   confirm_reactivation_details: 'Confirma que el anuncio sigue disponible y que el precio, estado y ubicación son correctos.',
   reactivation_success: 'Anuncio reactivado por 7 días.',
+  referral_share_message: 'Únete a Mercasto y compra o vende en México. Regístrate con mi enlace: {url}',
+  referral_apply_already_applied: 'Ya tienes un referido aplicado.',
+  referral_apply_invalid: 'Código de referido inválido.',
+  referral_apply_self: 'No puedes usar tu propio código.',
+  referral_apply_success: '¡Código aplicado! Publica tu primer anuncio para que ambos ganen créditos.',
+  referral_apply_error: 'No se pudo aplicar el código. Inténtalo de nuevo.',
+  referral_status_completed: 'Completado',
+  referral_status_pending: 'Pendiente',
 };

@@ -1072,4 +1072,12 @@ export default {
   confirm_and_reactivate: 'לאשר ולהפעיל מחדש',
   confirm_reactivation_details: 'אשר/י שהמודעה עדיין זמינה ושהמחיר, המצב והמיקום נכונים.',
   reactivation_success: 'המודעה הופעלה מחדש ל-7 ימים.',
+  referral_share_message: 'הצטרפו ל‑Mercasto כדי לקנות או למכור ברחבי מקסיקו. הירשמו דרך הקישור שלי: {url}',
+  referral_apply_already_applied: 'כבר הוחלה הפניה על החשבון שלך.',
+  referral_apply_invalid: 'קוד ההפניה אינו תקין.',
+  referral_apply_self: 'אי אפשר להשתמש בקוד ההפניה של עצמך.',
+  referral_apply_success: 'הקוד הוחל! פרסמו את המודעה הראשונה כדי ששניכם תקבלו קרדיטים.',
+  referral_apply_error: 'לא ניתן להחיל את הקוד. נסו שוב.',
+  referral_status_completed: 'הושלם',
+  referral_status_pending: 'בהמתנה',
 };
