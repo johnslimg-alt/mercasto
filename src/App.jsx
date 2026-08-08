@@ -858,6 +858,8 @@ function App() {
     const nextMaxPrice = overrides.maxPrice ?? maxPrice;
     const nextCondition = overrides.condition ?? conditionFilter;
     const nextDynamicFilters = overrides.dynamicFilters ?? dynamicFilters;
+    const nextGeo = Object.prototype.hasOwnProperty.call(overrides, 'geo') ? overrides.geo : searchLocation;
+    const nextRadius = overrides.radius ?? radius;
     const params = new URLSearchParams();
 
     if (String(nextSearch || '').trim()) params.set('search', String(nextSearch).trim());
@@ -868,13 +870,18 @@ function App() {
     if (String(locCity || '').trim()) params.set('city', String(locCity).trim());
     if (String(nextMinPrice || '').trim()) params.set('min_price', String(nextMinPrice).trim());
     if (String(nextMaxPrice || '').trim()) params.set('max_price', String(nextMaxPrice).trim());
+    if (nextGeo?.lat != null && nextGeo?.lng != null) {
+      params.set('lat', String(nextGeo.lat));
+      params.set('lng', String(nextGeo.lng));
+      params.set('radius', String(nextRadius));
+    }
     if (Array.isArray(nextCondition) && nextCondition.length > 0) params.set('condition', nextCondition.join(','));
     appendDynamicFilters(params, nextDynamicFilters);
 
     const query = params.toString();
     const basePath = overrides.pathname ?? (location.pathname === '/listings' ? '/listings' : '/');
     return query ? `${basePath}?${query}` : basePath;
-  }, [activeCat, activeSub, conditionFilter, debouncedLocInput, debouncedSearch, dynamicFilters, locCity, locState, location.pathname, maxPrice, minPrice, selectedState]);
+  }, [activeCat, activeSub, conditionFilter, debouncedLocInput, debouncedSearch, dynamicFilters, locCity, locState, location.pathname, maxPrice, minPrice, radius, searchLocation, selectedState]);
 
   // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
   const executeSearch = useCallback((
@@ -1250,6 +1257,11 @@ function App() {
     const minPriceParam = params.get('min_price');
     const maxPriceParam = params.get('max_price');
     const conditionParam = params.get('condition');
+    const latParam = Number(params.get('lat'));
+    const lngParam = Number(params.get('lng'));
+    const radiusParam = Number(params.get('radius') || params.get('radius_km'));
+    const hasGeoArea = Number.isFinite(latParam) && Number.isFinite(lngParam)
+      && Math.abs(latParam) <= 90 && Math.abs(lngParam) <= 180;
 
     setViewedAd(null);
     setViewedCompany(null);
@@ -1257,7 +1269,15 @@ function App() {
     setDebouncedSearch(searchParam || '');
     setActiveCat(categoryParam || '');
     setActiveSub(params.get('subcategory') || '');
-    if (locationParam) {
+    if (hasGeoArea) {
+      setSearchLocation({ lat: latParam, lng: lngParam });
+      setRadius(Number.isFinite(radiusParam) && radiusParam > 0 ? radiusParam : 50);
+      setSearchLocationInput(locationParam || '');
+      setSelectedState(stateParam || '');
+      setLocState(stateParam);
+      setLocCity(cityParam);
+      setDebouncedLocInput(locationParam || '');
+    } else if (locationParam) {
       setSearchLocation(null);
       setSearchLocationInput(locationParam);
       setSelectedState(stateParam || '');
@@ -1302,7 +1322,7 @@ function App() {
     const nextPath = buildHomeFilterPath();
     const currentPath = `${location.pathname}${location.search}`;
     if (nextPath !== currentPath) navigate(nextPath, { replace: true });
-  }, [activeCat, activeSub, buildHomeFilterPath, debouncedLocInput, debouncedSearch, dynamicFilters, location.pathname, location.search, maxPrice, minPrice, conditionFilter, selectedState, navigate, viewedAd, viewedCompany]);
+  }, [activeCat, activeSub, buildHomeFilterPath, debouncedLocInput, debouncedSearch, dynamicFilters, location.pathname, location.search, maxPrice, minPrice, conditionFilter, radius, searchLocation, selectedState, navigate, viewedAd, viewedCompany]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -3985,10 +4005,52 @@ function App() {
 
   const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} setUser={setUser} userAds={userAds} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
-  const handleSearchArea = useCallback(({ lat, lng, radius }) => {
-    setSearchLocation({ lat, lng });
-    setRadius(radius);
-  }, []);
+  const handleSearchArea = useCallback((area = {}) => {
+    const { lat, lng, radius: nextRadius } = area;
+    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return;
+
+    const nextQuery = typeof area.query === 'string' ? area.query : searchQuery;
+    const nextCategory = typeof area.category === 'string' ? area.category : activeCat;
+    const nextMinPrice = area.minPrice == null ? minPrice : String(area.minPrice || '');
+    const nextMaxPrice = area.maxPrice == null ? maxPrice : String(area.maxPrice || '');
+    const nextCondition = Array.isArray(area.condition) ? area.condition : conditionFilter;
+    const nextDynamicFilters = { ...(area.dynamic || dynamicFilters) };
+    if (area.listingType) nextDynamicFilters.listing_type = [area.listingType];
+    else if (Object.prototype.hasOwnProperty.call(area, 'listingType')) delete nextDynamicFilters.listing_type;
+    const nextState = typeof area.state === 'string' ? area.state : selectedState;
+    const nextCity = typeof area.city === 'string' ? area.city : '';
+    const locationLabel = nextCity || nextState || searchLocationInput;
+    const geo = { lat: Number(lat), lng: Number(lng) };
+    const normalizedRadius = Number.isFinite(Number(nextRadius)) && Number(nextRadius) > 0 ? Number(nextRadius) : radius;
+
+    skipFilterUrlSyncRef.current = true;
+    setSearchQuery(nextQuery);
+    setDebouncedSearch(nextQuery);
+    setActiveCat(nextCategory);
+    setMinPrice(nextMinPrice);
+    setMaxPrice(nextMaxPrice);
+    setConditionFilter(nextCondition);
+    setDynamicFilters(nextDynamicFilters);
+    setSelectedState(nextState);
+    setLocState(nextState);
+    setLocCity(nextCity);
+    setSearchLocationInput(locationLabel);
+    setDebouncedLocInput(locationLabel);
+    setSearchLocation(geo);
+    setRadius(normalizedRadius);
+    navigate(buildHomeFilterPath({
+      pathname: '/listings',
+      search: nextQuery,
+      location: locationLabel,
+      category: nextCategory,
+      minPrice: nextMinPrice,
+      maxPrice: nextMaxPrice,
+      condition: nextCondition,
+      dynamicFilters: nextDynamicFilters,
+      geo,
+      radius: normalizedRadius,
+    }), { replace: true });
+  }, [activeCat, buildHomeFilterPath, conditionFilter, dynamicFilters, maxPrice, minPrice, navigate, radius, searchLocationInput, searchQuery, selectedState]);
 
   // Keep the homepage and hydrated catalog in separate chunks. Catalog routes no
   // longer parse or execute the long marketing homepage before showing results.
@@ -4043,6 +4105,7 @@ function App() {
       renderAdCard={renderAdCard}
       savingSearchAlert={savingSearchAlert}
       searchQuery={searchQuery}
+      searchLocationInput={searchLocationInput}
       selectedState={selectedState}
       serverAds={serverAds}
       setActiveCat={setActiveCat}
