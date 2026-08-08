@@ -11,6 +11,7 @@ export default function PushNotificationManager({ user, compact = false }) {
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vapidKey, setVapidKey] = useState(null);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     checkPermission();
@@ -94,7 +95,7 @@ export default function PushNotificationManager({ user, compact = false }) {
     finally { setLoading(false); }
   };
 
-  if (permission === 'unsupported') return null;
+  if (permission === 'unsupported' || (dismissed && !compact)) return null;
 
   if (compact) {
     return (
@@ -159,7 +160,7 @@ export default function PushNotificationManager({ user, compact = false }) {
             {loading ? (<><Loader2 className="w-4 h-4 animate-spin" />Activando...</>) : (<><Bell className="w-4 h-4" />Activar notificaciones</>)}
           </button>
         </div>
-        <button className="text-blue-400 hover:text-blue-600"><X className="w-5 h-5" /></button>
+        <button type="button" onClick={() => setDismissed(true)} aria-label="Cerrar" className="text-blue-400 hover:text-blue-600"><X className="w-5 h-5" /></button>
       </div>
     </div>
   );
