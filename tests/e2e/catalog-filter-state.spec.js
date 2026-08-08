@@ -48,6 +48,8 @@ for (const lang of localeCases) {
     await expect(page).toHaveURL(/filters%5Blocation_state%5D=Jalisco/);
     await expect(page).toHaveURL(/filters%5Blocation_city%5D=Guadalajara/);
     await expect(page).toHaveURL(/min_price=100/);
+    expect(new URL(page.url()).searchParams.has('lat')).toBeFalsy();
+    expect(new URL(page.url()).searchParams.has('lng')).toBeFalsy();
     await expect.poll(() => adRequests.some((url) =>
       url.includes('filters%5Blisting_type%5D%5B%5D=Venta')
       && url.includes('filters%5Bsort%5D=price_asc')

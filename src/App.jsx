@@ -1257,10 +1257,15 @@ function App() {
     const minPriceParam = params.get('min_price');
     const maxPriceParam = params.get('max_price');
     const conditionParam = params.get('condition');
-    const latParam = Number(params.get('lat'));
-    const lngParam = Number(params.get('lng'));
-    const radiusParam = Number(params.get('radius') || params.get('radius_km'));
-    const hasGeoArea = Number.isFinite(latParam) && Number.isFinite(lngParam)
+    const hasLatParam = params.has('lat');
+    const hasLngParam = params.has('lng');
+    const latParam = hasLatParam ? Number(params.get('lat')) : Number.NaN;
+    const lngParam = hasLngParam ? Number(params.get('lng')) : Number.NaN;
+    const radiusRaw = params.get('radius') || params.get('radius_km');
+    const radiusParam = radiusRaw ? Number(radiusRaw) : Number.NaN;
+    const hasGeoArea = hasLatParam && hasLngParam
+      && Number.isFinite(latParam) && Number.isFinite(lngParam)
+      && latParam !== 0 && lngParam !== 0
       && Math.abs(latParam) <= 90 && Math.abs(lngParam) <= 180;
 
     setViewedAd(null);
