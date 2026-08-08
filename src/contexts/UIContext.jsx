@@ -12,7 +12,7 @@ export function UIProvider({ children }) {
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
   
-  const [lang, setLang] = useState(() => normalizeLanguage(localStorage.getItem('mercasto_language') || localStorage.getItem('lang') || 'es'));
+  const [lang, setLang] = useState(() => normalizeLanguage(localStorage.getItem('lang') || localStorage.getItem('mercasto_language') || 'es'));
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);

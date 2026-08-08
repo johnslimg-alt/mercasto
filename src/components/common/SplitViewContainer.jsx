@@ -36,6 +36,7 @@ export default function SplitViewContainer({
   lastAdElementRef,
   getImageUrl,
   onSearchArea,
+  t = {},
 }) {
   const [viewLayout, setViewLayout] = useState('grid'); // 'grid' or 'list'
   const [hoveredAdId, setHoveredAdId] = useState(null);
@@ -231,15 +232,15 @@ export default function SplitViewContainer({
               <div className="rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-2 shadow-lg">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <MapPin size={14} className="text-[#84CC16]" />
-                  <span>{mappableAds.length} anuncio{mappableAds.length !== 1 ? 's' : ''} real{mappableAds.length !== 1 ? 'es' : ''} en el mapa</span>
-                  {catalogReferenceCount > 0 && <span className="text-slate-500 dark:text-slate-400">· {catalogReferenceCount} referencia{catalogReferenceCount !== 1 ? 's' : ''} de catálogo fuera del mapa</span>}
+                  <span data-testid="catalog-map-real-count">{mappableAds.length} {t.map_real_listings || 'Anuncios reales en el mapa'}</span>
+                  {catalogReferenceCount > 0 && <span data-testid="catalog-map-reference-count" className="text-slate-500 dark:text-slate-400">· {catalogReferenceCount} {t.map_catalog_references || 'Referencias de catálogo fuera del mapa'}</span>}
                 </div>
               </div>
               {hoveredAdId && (
                 <div className="rounded-xl bg-[#84CC16]/95 backdrop-blur-sm px-3 py-2 shadow-lg">
                   <span className="text-xs font-bold text-slate-950 animate-pulse flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
-                    Destacado en mapa
+                    {t.map_highlighted || 'Destacado en mapa'}
                   </span>
                 </div>
               )}
@@ -253,7 +254,7 @@ export default function SplitViewContainer({
             className="absolute top-3 right-3 z-[10] flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-lg hover:bg-white dark:hover:bg-slate-800 transition-all"
           >
             <MapPin size={13} className="text-[#84CC16]" />
-            {mapCollapsed ? 'Mostrar mapa' : 'Ocultar mapa'}
+            {mapCollapsed ? (t.open_map || 'Abrir mapa') : (t.hide_map || 'Ocultar mapa')}
             <ChevronDown size={13} className={`transition-transform ${mapCollapsed ? 'rotate-180' : ''}`} />
           </button>
         </div>
@@ -264,39 +265,41 @@ export default function SplitViewContainer({
       {/* ═══════════════════════════════════════════════════════════════ */}
       <div className="sticky top-[64px] z-30 mb-4 flex items-center justify-between gap-3 bg-white dark:bg-slate-900 px-4 py-3 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-3">
-          <h2 className="text-[16px] md:text-[18px] font-bold text-slate-900 dark:text-white">
-            Resultados
+          <h2 data-testid="catalog-results-title" className="text-[16px] md:text-[18px] font-bold text-slate-900 dark:text-white">
+            {t.search_results || 'Resultados'}
           </h2>
           <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-[12px] font-bold text-slate-600 dark:text-slate-400">
-            {genuineAds.length} reales{catalogReferenceCount > 0 ? ` · ${catalogReferenceCount} catálogo` : ''}
+            {genuineAds.length} {t.real_listings || 'anuncios reales'}{catalogReferenceCount > 0 ? ` · ${catalogReferenceCount} ${t.catalog_references || 'referencias de catálogo'}` : ''}
           </span>
         </div>
 
         {/* Grid / List Toggle */}
         <div className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
           <button
+            data-testid="catalog-grid-view"
             onClick={() => setViewLayout('grid')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
               viewLayout === 'grid'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
-            title="Vista cuadrícula"
+            title={t.grid_view || 'Vista cuadrícula'}
           >
             <LayoutGrid size={15} />
-            <span className="text-[11px] font-black">Cuadrícula</span>
+            <span className="text-[11px] font-black">{t.grid || 'Cuadrícula'}</span>
           </button>
           <button
+            data-testid="catalog-list-view"
             onClick={() => setViewLayout('list')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
               viewLayout === 'list'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
-            title="Vista lista"
+            title={t.list_view || 'Vista lista'}
           >
             <List size={15} />
-            <span className="text-[11px] font-black">Lista</span>
+            <span className="text-[11px] font-black">{t.list || 'Lista'}</span>
           </button>
         </div>
       </div>
@@ -312,8 +315,8 @@ export default function SplitViewContainer({
         ) : ads.length === 0 ? (
           <div className="py-20 text-center flex flex-col items-center">
             <Search size={48} className="text-slate-300 mb-4" />
-            <span className="text-slate-400 font-bold uppercase tracking-widest text-sm">No se encontraron resultados</span>
-            <p className="text-slate-400 text-sm mt-2">Intenta cambiar los filtros o la búsqueda</p>
+            <span className="text-slate-400 font-bold uppercase tracking-widest text-sm">{t.no_results_found || 'No se encontraron resultados'}</span>
+            <p className="text-slate-400 text-sm mt-2">{t.change_filters_or_search || 'Intenta cambiar los filtros o la búsqueda'}</p>
           </div>
         ) : viewLayout === 'grid' ? (
           /* ═══ GRID VIEW ═══ */
@@ -329,7 +332,7 @@ export default function SplitViewContainer({
             
             {!loadingMore && !hasMore && ads.length > 0 && (
               <div className="col-span-full text-center text-slate-400 font-bold uppercase tracking-widest text-xs py-10 mt-6">
-                Has llegado al final
+                {t.end_of_results || 'Has llegado al final'}
               </div>
             )}
           </div>
@@ -347,7 +350,7 @@ export default function SplitViewContainer({
             
             {!loadingMore && !hasMore && ads.length > 0 && (
               <div className="text-center text-slate-400 font-bold uppercase tracking-widest text-xs py-10 mt-6">
-                Has llegado al final
+                {t.end_of_results || 'Has llegado al final'}
               </div>
             )}
           </div>

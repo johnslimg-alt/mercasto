@@ -14,6 +14,19 @@ const forceSpanishCampaignLanding =
   typeof window !== 'undefined' &&
   SPANISH_CAMPAIGN_PATHS.has(normalizePathname(window.location.pathname));
 
+const SUPPORTED_LANGUAGES = new Set(['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja']);
+const savedProductLanguage = (() => {
+  if (typeof window === 'undefined') return 'es';
+  try {
+    const saved = localStorage.getItem('lang') || localStorage.getItem('mercasto_language');
+    const normalized = String(saved || '').toLowerCase().split('-')[0];
+    return SUPPORTED_LANGUAGES.has(normalized) ? normalized : 'es';
+  } catch {
+    return 'es';
+  }
+})();
+const initialLanguage = forceSpanishCampaignLanding ? 'es' : savedProductLanguage;
+
 // Paid traffic to the seller landing must always start in Spanish, regardless
 // of a previously saved language or the browser/device language.
 if (forceSpanishCampaignLanding) {
@@ -32,7 +45,7 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    ...(forceSpanishCampaignLanding ? { lng: 'es' } : {}),
+    lng: initialLanguage,
     resources: {
       es: { translation: es }
     },

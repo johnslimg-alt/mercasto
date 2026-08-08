@@ -10,7 +10,7 @@ grep -qF "ref={isCatalogFiller ? null : observeRef}" src/components/common/AdCar
 grep -qF "observeAdImpression?.(node, ad.id);" src/components/common/AdCard.jsx
 grep -qF "Precio de referencia" src/components/common/AdCard.jsx
 grep -qF "const genuineAds = useMemo" src/components/common/SplitViewContainer.jsx
-grep -qF "referencia{catalogReferenceCount" src/components/common/SplitViewContainer.jsx
+grep -qF "t.map_catalog_references" src/components/common/SplitViewContainer.jsx
 grep -qF -- "->where('is_catalog_filler', false)" backend/app/Http/Controllers/Api/ContactController.php
 test "$(grep -cF -- "->where('is_catalog_filler', false)" backend/app/Http/Controllers/Api/AdController.php)" -ge 3
 grep -qF "CatalogReferenceAnalyticsTest" backend/tests/Feature/CatalogReferenceAnalyticsTest.php
