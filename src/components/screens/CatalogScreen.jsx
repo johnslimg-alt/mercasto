@@ -54,20 +54,28 @@ export default function CatalogScreen({
       query,
       category,
       state,
+      city,
       minPrice: nextMinPrice,
       maxPrice: nextMaxPrice,
+      condition,
+      dynamicFilters: nextDynamicFilters,
     } = normalizeSavedSearchSelection(filters);
+    const locationLabel = city || state;
 
     setSearchQuery(query);
     setActiveCat(category);
     setSelectedState(state);
     setSearchLocation?.(null);
-    setSearchLocationInput?.(state);
+    setSearchLocationInput?.(locationLabel);
     setMinPrice(nextMinPrice);
     setMaxPrice(nextMaxPrice);
-    executeSearch?.(query, state, category, {
+    setConditionFilter(condition);
+    setDynamicFilters(nextDynamicFilters);
+    executeSearch?.(query, locationLabel, category, {
       minPrice: nextMinPrice,
       maxPrice: nextMaxPrice,
+      condition,
+      dynamicFilters: nextDynamicFilters,
       source: 'saved_search',
     });
     if (closeFilters) setShowMobileFilters(false);
@@ -76,6 +84,8 @@ export default function CatalogScreen({
     setActiveCat,
     setMaxPrice,
     setMinPrice,
+    setConditionFilter,
+    setDynamicFilters,
     setSearchLocation,
     setSearchLocationInput,
     setSearchQuery,
@@ -96,7 +106,11 @@ export default function CatalogScreen({
     state: selectedState,
     min_price: minPrice,
     max_price: maxPrice,
-  }), [activeCat, maxPrice, minPrice, searchQuery, selectedState]);
+    filters: {
+      ...dynamicFilters,
+      ...(conditionFilter.length ? { condition: conditionFilter } : {}),
+    },
+  }), [activeCat, conditionFilter, dynamicFilters, maxPrice, minPrice, searchQuery, selectedState]);
 
   const filterProps = {
     activeCat,
@@ -206,6 +220,7 @@ export default function CatalogScreen({
         <div className="min-w-0 flex-1">
           <div className="mb-6 hidden min-h-9 items-center justify-between gap-3 lg:flex">
             <button
+              data-testid="catalog-save-search"
               onClick={handleSaveSearchAlert}
               disabled={savingSearchAlert}
               className="btn-sm flex items-center gap-2 border border-[#84CC16]/40 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 disabled:opacity-60 dark:text-[#BEF264]"
