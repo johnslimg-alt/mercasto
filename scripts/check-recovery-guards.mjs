@@ -198,7 +198,7 @@ assertContains(
   'the registration handoff is installed with the existing Meta bridge'
 );
 
-for (const path of ['src/App.jsx', 'src/components/common/AdCard.jsx']) {
+for (const path of ['src/App.jsx', 'src/components/common/AdCard.jsx', 'src/components/screens/HomeScreen.jsx']) {
   assertNotContains(
     path,
     '4 + (((Number(ad.id) || 1) % 10) / 10)',
@@ -215,6 +215,12 @@ assertContains(
   'src/components/common/AdCard.jsx',
   'if (!hasReviews) return null;',
   'rating social proof renders only when real review data exists'
+);
+
+assertContains(
+  'src/components/screens/HomeScreen.jsx',
+  'rating.hasReviews &&',
+  'homepage rating social proof renders only when real review data exists'
 );
 
 // Catalog-reference integrity: keep the marketplace full without fabricating seller activity.
