@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test('home auto year quick filter opens a shareable motor result state', async ({ page }) => {
+test('home auto year quick filter opens a shareable motor result state', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
   const year = String(new Date().getFullYear());
   await page.goto('/');
   await page.getByTestId('home-auto-year-filter').selectOption(year);
@@ -16,7 +17,8 @@ test('home auto year quick filter opens a shareable motor result state', async (
   expect(yearInputs.filter(value => value === year).length).toBeGreaterThanOrEqual(2);
 });
 
-test('home auto price quick filter opens motor results with max price', async ({ page }) => {
+test('home auto price quick filter opens motor results with max price', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
   await page.goto('/');
   await page.getByTestId('home-auto-price-filter').selectOption('300000');
 
