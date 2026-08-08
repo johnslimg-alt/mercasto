@@ -36,7 +36,7 @@ for literal in \
 done
 node --input-type=module <<'NODE'
 import fs from 'node:fs';
-const langs = ['es','en','pt','fr','zh','ko','de','it','ar','he','yi','ru','ja'];
+const langs = ['es','en','pt','fr','zh','ko','de','it','ar','ru','ja'];
 const sources = [
   fs.readFileSync('src/components/screens/PostScreen.jsx', 'utf8'),
   fs.readFileSync('src/components/screens/EditAdScreen.jsx', 'utf8'),

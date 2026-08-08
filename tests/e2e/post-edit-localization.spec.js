@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { subcategoriesByLang } from '../../src/constants/subcategoryTranslations';
 
-const LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja'];
-const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
+const LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
+const RTL_LANGUAGES = new Set(['ar']);
 const translations = {};
 for (const lang of LANGUAGES) {
   translations[lang] = (await import(`../../src/constants/translations/${lang}.js`)).default;

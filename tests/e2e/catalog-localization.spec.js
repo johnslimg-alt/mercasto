@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-const LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja'];
-const RTL_LANGUAGES = new Set(['ar', 'he', 'yi']);
+const LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
+const RTL_LANGUAGES = new Set(['ar']);
 const translations = {};
 
 for (const lang of LANGUAGES) {

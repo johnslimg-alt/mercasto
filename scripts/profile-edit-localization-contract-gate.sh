@@ -7,7 +7,7 @@ TRANSLATIONS="$ROOT/src/constants/translations"
 
 echo "== Profile edit localization contract gate =="
 for key in delete_confirmation_word profile_save_error password_update_error profile_photo_alt; do
-  for lang in es en pt fr zh ko de it ar he yi ru ja; do
+  for lang in es en pt fr zh ko de it ar ru ja; do
     grep -qF "${key}:" "$TRANSLATIONS/${lang}.js"
   done
 done

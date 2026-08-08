@@ -272,7 +272,7 @@ const newKeys = {
   filter_label_accesorios_surf:   { es:'Accesorios incluidos', en:'Included accessories', pt:'Acessórios incluídos', de:'Enthaltenes Zubehör', fr:'Accessoires inclus', ar:'الملحقات المشمولة', he:'אביזרים כלולים', it:'Accessori inclusi', ja:'付属品', ko:'포함 액세서리', ru:'Включённые аксессуары', yi:'אַקסעסאָרן', zh:'配件' },
 };
 
-const langs = ['es','en','pt','de','fr','ar','he','it','ja','ko','ru','yi','zh'];
+const langs = ['es','en','pt','de','fr','ar','it','ja','ko','ru','zh'];
 
 // ─────────────────────────────────────────────────────────────
 // READ / PATCH / WRITE each language file

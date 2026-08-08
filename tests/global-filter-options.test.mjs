@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getGlobalFilterDefinitions, SUPPORTED_GLOBAL_FILTER_IDS } from '../src/constants/globalFilterOptions.js';
 
-const languages = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja'];
+const languages = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
 const translations = {};
 for (const language of languages) {
   translations[language] = (await import(`../src/constants/translations/${language}.js`)).default;

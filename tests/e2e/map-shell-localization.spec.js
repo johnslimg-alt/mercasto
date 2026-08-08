@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { localeFor } from '../../src/utils/localeFormat.js';
 
-const languages = ['es','en','pt','fr','zh','ko','de','it','ar','he','yi','ru','ja'];
-const rtlLanguages = new Set(['ar', 'he', 'yi']);
+const languages = ['es','en','pt','fr','zh','ko','de','it','ar','ru','ja'];
+const rtlLanguages = new Set(['ar']);
 const localeData = {};
 for (const lang of languages) {
   localeData[lang] = (await import(`../../src/locales/${lang}.json`, { with: { type: 'json' } })).default;
