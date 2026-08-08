@@ -23,6 +23,7 @@ required_files=(
   "scripts/otp-abuse-control-gate.sh"
   "scripts/port-ownership-smoke.sh"
   "tests/e2e/public-smoke.spec.js"
+  "tests/e2e/public-link-integrity.spec.js"
   "playwright.config.mjs"
   ".github/workflows/e2e-public-smoke.yml"
   ".github/workflows/deploy-selfhosted.yml"
