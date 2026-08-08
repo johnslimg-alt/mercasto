@@ -2183,6 +2183,10 @@ function App() {
     }
     setSavingSearchAlert(true);
     try {
+      const searchAlertFilters = { ...(dynamicFilters || {}) };
+      delete searchAlertFilters.condition;
+      if (conditionFilter.length) searchAlertFilters.condition = [...conditionFilter];
+
       const res = await fetch(`${API_URL}/user/search-alerts`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -2193,7 +2197,7 @@ function App() {
           max_price: maxPrice || null,
           city: searchLocationInput || debouncedLocInput || '',
           state: selectedState || '',
-          filters: dynamicFilters || {},
+          filters: searchAlertFilters,
         }),
       });
       if (!res.ok) throw new Error('save-search-alert-failed');
@@ -2207,7 +2211,7 @@ function App() {
     } finally {
       setSavingSearchAlert(false);
     }
-  }, [activeCat, debouncedLocInput, debouncedSearch, dynamicFilters, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
+  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, dynamicFilters, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
 
   const handleToggleSearchAlert = useCallback(async (alert) => {
     const token = localStorage.getItem('auth_token');

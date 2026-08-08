@@ -179,7 +179,7 @@ export default function SidebarFilters({
           <div className="space-y-2.5">
             {['nuevo', 'usado', 'reacondicionado', 'para_piezas'].map(cond => (
               <label key={cond} className={labelClass}>
-                <input type="checkbox" checked={conditionFilter.includes(cond)} onChange={() => handleConditionToggle(cond)} className="w-4 h-4 rounded text-[#84CC16] focus:ring-[#84CC16] accent-[#84CC16] border-slate-300" />
+                <input data-testid={`sidebar-filter-condition-${cond}`} type="checkbox" checked={conditionFilter.includes(cond)} onChange={() => handleConditionToggle(cond)} className="w-4 h-4 rounded text-[#84CC16] focus:ring-[#84CC16] accent-[#84CC16] border-slate-300" />
                 <span>{conditionLabels[cond] || cond}</span>
               </label>
             ))}
