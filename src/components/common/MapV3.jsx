@@ -4,6 +4,7 @@ import { filterConfig } from '../../constants/filterConfig';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
+import { localeFor } from '../../utils/localeFormat';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -87,9 +88,12 @@ const coordsToPoint = ([lat, lon]) => {
   };
 };
 
-const markerAccuracyLabel = (marker = {}) => (
-  marker.accuracyLabel || (marker.approximate ? 'Approx' : 'GPS real')
-);
+const markerAccuracyLabel = (marker = {}, t) => {
+  if (marker.accuracyLabel && !['GPS real', 'Approx ciudad', 'Approx estado'].includes(marker.accuracyLabel)) return marker.accuracyLabel;
+  if (marker.accuracy === 'real' || !marker.approximate) return t('map.realGps');
+  if (marker.accuracy === 'city') return t('map.approxCity');
+  return t('map.approxState');
+};
 
 const markerAccuracyClass = (marker = {}) => (
   marker.approximate
@@ -169,7 +173,7 @@ function adCoords(ad, index) {
   const lat = Number(ad?.latitude ?? ad?.lat);
   const lng = Number(ad?.longitude ?? ad?.lng);
   if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-    return { coords: [lat, lng], approximate: false, accuracy: 'real', accuracyLabel: 'GPS real' };
+    return { coords: [lat, lng], approximate: false, accuracy: 'real' };
   }
 
   const locationText = normalizeLocationText(`${ad?.city || ''} ${ad?.municipality || ''} ${ad?.location || ''} ${ad?.state || ''}`);
@@ -185,18 +189,35 @@ function adCoords(ad, index) {
     ],
     approximate: true,
     accuracy: cityKey ? 'city' : 'approx',
-    accuracyLabel: cityKey ? 'Approx ciudad' : 'Approx estado',
   };
 }
 
-function markerLabel(ad) {
+function markerLabel(ad, lang, t) {
   const price = Number(ad?.price || 0);
-  if (price > 0) return `$${price.toLocaleString('es-MX', { notation: 'compact' })}`;
-  return ad?.category ? String(ad.category).slice(0, 10) : 'Ver';
+  if (price > 0) {
+    return new Intl.NumberFormat(localeFor(lang), { style: 'currency', currency: 'MXN', notation: 'compact', maximumFractionDigits: 1 }).format(price);
+  }
+  return ad?.category ? String(ad.category).slice(0, 10) : t('map.viewMap');
 }
 
+const CONDITION_OPTIONS = ['nuevo', 'usado', 'reacondicionado', 'para_piezas'];
+
+const LISTING_TYPE_OPTIONS = [
+  ['Venta', 'listingSale'], ['Renta', 'listingRent'], ['Renta con opción a compra', 'listingRentToOwn'],
+  ['Traspaso', 'listingTransfer'], ['Gratis', 'listingFree'], ['Intercambio', 'listingExchange'],
+  ['Compro', 'listingWanted'], ['Subasta', 'listingAuction'],
+];
+
+const conditionLabel = (value, t) => ({
+  nuevo: t('map.conditionNew'), Nuevo: t('map.conditionNew'),
+  'como_nuevo': t('map.conditionLikeNew'), 'Como nuevo': t('map.conditionLikeNew'),
+  usado: t('map.conditionUsed'), Usado: t('map.conditionUsed'),
+  reacondicionado: t('map.conditionRefurbished'), Reacondicionado: t('map.conditionRefurbished'),
+  para_piezas: t('map.conditionParts'), 'Para piezas': t('map.conditionParts'),
+}[value] || value);
+
 export default function MapV3({
-  title = 'Todo México',
+  title = '',
   markers: propMarkers,
   ads: propAds,
   apiUrl,
@@ -355,8 +376,7 @@ export default function MapV3({
         coords: location.coords,
         approximate: location.approximate,
         accuracy: location.accuracy,
-        accuracyLabel: location.accuracyLabel,
-        label: markerLabel(ad),
+        label: markerLabel(ad, lang, t),
         tone: location.approximate ? 'dark' : 'lime',
         title: localizedText(ad.title),
         price: ad.price,
@@ -364,7 +384,7 @@ export default function MapV3({
         category: ad.category,
       };
     });
-  }, [propAds, fetchedAds]);
+  }, [propAds, fetchedAds, lang, t]);
 
   const normalizedMarkers = propMarkers || (adsMarkers.length > 0 ? adsMarkers : DEFAULT_MARKERS);
   
@@ -550,12 +570,12 @@ export default function MapV3({
 // Factory function — creates a fresh popup DOM element each time
 // Called by Leaflet every time the popup opens, so content is never stale
 function createPopupElement(ad, marker) {
-  const rawTitle = localizedText(ad.title) || 'Anuncio';
-  const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+  const rawTitle = localizedText(ad.title) || t('map.listing');
+  const price = new Intl.NumberFormat(localeFor(lang), { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(Number(ad.price || 0));
   const rawImg = getAdImageUrl(ad);
   const FALLBACK_IMG = `https://placehold.co/300x200/84cc16/020617/png?text=${encodeURIComponent(rawTitle.slice(0, 15))}`;
   const imgUrl = rawImg || FALLBACK_IMG;
-  const accuracy = markerAccuracyLabel(marker);
+  const accuracy = markerAccuracyLabel(marker, t);
   const adId = ad.id;
 
   const popupWrapper = document.createElement('div');
@@ -612,7 +632,7 @@ function createPopupElement(ad, marker) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'leaflet-popup-card__btn';
-  btn.textContent = 'Ver anuncio';
+  btn.textContent = t('map.viewListing');
   btn.setAttribute('onclick', `window.__onMapAdClick?.(${adId})`);
   body.appendChild(btn);
 
@@ -624,7 +644,7 @@ function createPopupElement(ad, marker) {
   // Геолокация пользователя - "Buscar cerca de mí"
   const getUserLocation = () => {
     if (!navigator.geolocation) {
-      setLocationError('Geolocalización no disponible en este navegador');
+      setLocationError(t('map.locationUnavailable'));
       return;
     }
     
@@ -672,7 +692,7 @@ function createPopupElement(ad, marker) {
             
             userMarkerRef.current = leaflet.marker([latitude, longitude], { icon: userIcon, zIndexOffset: 1000 })
               .addTo(activeMap)
-              .bindPopup('<strong>📍 Estás aquí</strong>');
+              .bindPopup(`<strong>📍 ${escapeHtml(t('map.youAreHere'))}</strong>`);
           }
         }
       },
@@ -680,16 +700,16 @@ function createPopupElement(ad, marker) {
         setLocating(false);
         switch(error.code) {
           case error.PERMISSION_DENIED:
-            setLocationError('Permiso de ubicación denegado. Activa la ubicación en tu navegador.');
+            setLocationError(t('map.locationDenied'));
             break;
           case error.POSITION_UNAVAILABLE:
-            setLocationError('Ubicación no disponible');
+            setLocationError(t('map.locationUnavailable'));
             break;
           case error.TIMEOUT:
-            setLocationError('Tiempo de espera agotado');
+            setLocationError(t('map.locationTimeout'));
             break;
           default:
-            setLocationError('Error desconocido al obtener ubicación');
+            setLocationError(t('map.locationUnavailable'));
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -833,7 +853,7 @@ function createPopupElement(ad, marker) {
             ${symbol}
           </div>
           <div class="custom-leaflet-marker-accuracy ${marker.approximate ? 'custom-leaflet-marker-accuracy--approx' : 'custom-leaflet-marker-accuracy--real'}">
-            ${escapeHtml(markerAccuracyLabel(marker))}
+            ${escapeHtml(markerAccuracyLabel(marker, t))}
           </div>
         </div>
       `;
@@ -1181,39 +1201,33 @@ function createPopupElement(ad, marker) {
         onChange={(e) => setListingType(e.target.value)}
         className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
       >
-        <option value="">Tipo de anuncio</option>
-        <option value="Venta">Venta</option>
-        <option value="Renta">Renta</option>
-        <option value="Renta con opción a compra">Renta con opción a compra</option>
-        <option value="Traspaso">Traspaso</option>
-        <option value="Gratis">Gratis</option>
-        <option value="Intercambio">Intercambio</option>
-        <option value="Compro">Compro</option>
-        <option value="Subasta">Subasta</option>
+        <option value="">{t('map.listingType')}</option>
+        {LISTING_TYPE_OPTIONS.map(([value, key]) => (
+          <option key={value} value={value}>{t(`map.${key}`)}</option>
+        ))}
       </select>
 
       {/* Condition */}
-      {config?.condition && (
-        <div className="space-y-2">
-          <p className="text-xs font-black text-slate-400">{t('ads.condition', { defaultValue: 'Condition' })}</p>
-          <div className="flex flex-wrap gap-2">
-            {config.condition.map(opt => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => handleConditionToggle(opt)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
-                  conditionFilter.includes(opt)
-                    ? 'bg-[#84CC16] text-slate-950'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
+      <div className="space-y-2">
+        <p className="text-xs font-black text-slate-400">{t('map.condition')}</p>
+        <div className="flex flex-wrap gap-2">
+          {CONDITION_OPTIONS.map(opt => (
+            <button
+              key={opt}
+              data-testid={`map-condition-${opt}`}
+              type="button"
+              onClick={() => handleConditionToggle(opt)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                conditionFilter.includes(opt)
+                  ? 'bg-[#84CC16] text-slate-950'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              {conditionLabel(opt, t)}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Dynamic Filters */}
       {normalizedConfig.map(field => {
@@ -1237,7 +1251,7 @@ function createPopupElement(ad, marker) {
                 }}
                 className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
               >
-                <option value="">{`Cualquier ${field.label.toLowerCase()}`}</option>
+                <option value="">{t('map.anyValue', { label: field.label })}</option>
                 {field.options.map(opt => (
                   <option key={opt} value={opt}>{opt}</option>
                 ))}
@@ -1272,7 +1286,7 @@ function createPopupElement(ad, marker) {
               : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
           }`}
         >
-          <MapPin size={14} /> {t('map.realGpsOnly', { defaultValue: 'Real GPS only' })}
+          <MapPin size={14} /> {t('map.realGpsOnly')}
         </button>
         <button
           type="button"
@@ -1290,7 +1304,7 @@ function createPopupElement(ad, marker) {
         onClick={handleSearchArea}
         className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-[#a3e635] transition-colors"
       >
-        <Crosshair size={16} /> {t('map.searchArea', { defaultValue: 'Search this area' })}
+        <Crosshair size={16} /> {t('map.searchArea')}
       </button>
     </div>
   ) : null;
@@ -1378,39 +1392,40 @@ function createPopupElement(ad, marker) {
                     {marker.label || '$'}
                   </span>
                   <span className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-black shadow ${markerAccuracyClass(marker)}`}>
-                    {markerAccuracyLabel(marker)}
+                    {markerAccuracyLabel(marker, t)}
                   </span>
                 </button>
               );
             })}
             <div className="absolute bottom-3 left-3 rounded-full bg-slate-950/80 px-3 py-1.5 text-[11px] font-bold text-white dark:bg-white/10">
-              Mapa
+              {t('map.label')}
             </div>
           </div>
         )}
         
         <div className="absolute left-3 top-3 z-[2] rounded-full bg-white/92 px-3 py-1.5 text-xs font-black text-slate-800 shadow-md dark:bg-slate-950/88 dark:text-white pointer-events-none">
-          {title}
+          {title || t('map.allMexico')}
         </div>
         <div className="absolute right-3 top-3 z-[2] rounded-full bg-slate-950/90 px-3 py-1.5 text-xs font-black text-white shadow-md dark:bg-[#84CC16] dark:text-slate-950 pointer-events-none">
-          {loadFailed ? 'Vista previa' : 'Mapa'}
+          {loadFailed ? t('map.preview') : t('map.label')}
         </div>
 
         {/* Geolocation Button - Buscar cerca de mí */}
         {showFullscreen && leaflet && !loadFailed && (
           <button
+            data-testid="map-near-me"
             type="button"
             onClick={getUserLocation}
             disabled={locating}
             className="absolute bottom-3 left-3 z-[2] inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-2.5 text-xs font-black text-white shadow-lg hover:bg-blue-500 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Buscar cerca de mí"
+            title={t('map.nearMe')}
           >
             {locating ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
               <Locate size={13} />
             )}
-            <span className="hidden sm:inline">Cerca de mí</span>
+            <span className="hidden sm:inline">{t('map.nearMe')}</span>
           </button>
         )}
 
@@ -1424,10 +1439,10 @@ function createPopupElement(ad, marker) {
                 ? 'bg-[#84CC16] text-slate-950'
                 : 'bg-slate-800 text-white hover:bg-slate-700'
             }`}
-            title="Dibujar área de búsqueda"
+            title={t('map.drawArea')}
           >
             <Pencil size={13} />
-            <span className="hidden sm:inline">Dibujar área</span>
+            <span className="hidden sm:inline">{t('map.drawArea')}</span>
           </button>
         )}
 
@@ -1438,7 +1453,7 @@ function createPopupElement(ad, marker) {
             onClick={() => setExpanded(true)}
             className="absolute bottom-3 right-3 z-[2] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg hover:scale-105 active:scale-95 transition-all"
           >
-            <Maximize2 size={13} /> Ampliar
+            <Maximize2 size={13} /> {t('map.fullscreen')}
           </button>
         )}
       </div>
@@ -1449,7 +1464,7 @@ function createPopupElement(ad, marker) {
           className="fixed inset-0 z-[9999] flex flex-col bg-slate-950"
           role="dialog"
           aria-modal="true"
-          aria-label="Mapa interactivo"
+          aria-label={t('map.interactive')}
         >
           {/* ── Header bar ── */}
           <div className="relative z-[10] flex items-center gap-3 border-b border-slate-800 bg-slate-900/98 px-4 py-3 shadow-lg backdrop-blur sm:px-6">
@@ -1458,9 +1473,9 @@ function createPopupElement(ad, marker) {
                 <MapPin size={18} className="text-slate-950" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-sm font-black text-white truncate">Mapa interactivo</h2>
+                <h2 className="text-sm font-black text-white truncate">{t('map.interactive')}</h2>
                 <p className="text-[11px] font-semibold text-slate-400">
-                  {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}
+                  {visibleMarkers.length} {t('map.listings')}
                 </p>
               </div>
             </div>
@@ -1475,7 +1490,7 @@ function createPopupElement(ad, marker) {
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <Filter size={14} /> Filtros
+              <Filter size={14} /> {t('map.filters')}
             </button>
 
             <button
@@ -1483,14 +1498,14 @@ function createPopupElement(ad, marker) {
               onClick={getUserLocation}
               disabled={locating}
               className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed h-10 w-10 shrink-0 sm:w-auto sm:px-4 text-xs font-black transition-colors"
-              title="Buscar cerca de mí"
+              title={t('map.nearMe')}
             >
               {locating ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
                 <Locate size={18} />
               )}
-              <span className="hidden sm:inline">Cerca de mí</span>
+              <span className="hidden sm:inline">{t('map.nearMe')}</span>
             </button>
 
             {/* Draw Area Button (fullscreen header) */}
@@ -1502,21 +1517,22 @@ function createPopupElement(ad, marker) {
                   ? 'bg-[#84CC16] text-slate-950'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
-              title="Dibujar área de búsqueda"
+              title={t('map.drawArea')}
             >
               <Pencil size={18} />
-              <span className="hidden sm:inline">Dibujar área</span>
+              <span className="hidden sm:inline">{t('map.drawArea')}</span>
             </button>
 
             <button
+              data-testid="map-close"
               type="button"
               onClick={() => setExpanded(false)}
               className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-colors sm:h-10 sm:w-auto sm:gap-2 sm:px-4"
-              aria-label="Cerrar mapa"
-              title="Cerrar (Esc)"
+              aria-label={t('map.closeMap')}
+              title={t('map.closeEsc')}
             >
               <X size={20} />
-              <span className="hidden text-sm font-black sm:inline">Cerrar</span>
+              <span className="hidden text-sm font-black sm:inline">{t('common.close')}</span>
             </button>
           </div>
 
@@ -1534,7 +1550,7 @@ function createPopupElement(ad, marker) {
                   return (
                     <button key={marker.id || index} type="button" onClick={() => onMarkerClick?.(marker.ad || marker)} className="absolute z-[2] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={pos}>
                       <span className="rounded-full bg-[#84CC16] px-3 py-1.5 text-xs font-black text-slate-950 shadow-xl ring-2 ring-white/70">{marker.label || '$'}</span>
-                      <span className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-black shadow ${markerAccuracyClass(marker)}`}>{markerAccuracyLabel(marker)}</span>
+                      <span className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-black shadow ${markerAccuracyClass(marker)}`}>{markerAccuracyLabel(marker, t)}</span>
                     </button>
                   );
                 })}
@@ -1547,7 +1563,7 @@ function createPopupElement(ad, marker) {
                 <div className="flex items-center gap-3 text-xs font-bold">
                   <span className="flex items-center gap-1.5">
                     <Layers size={14} className="text-[#84CC16]" />
-                    {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}
+                    {visibleMarkers.length} {t('map.listings')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1556,7 +1572,7 @@ function createPopupElement(ad, marker) {
                     onClick={clearAllFilters}
                     className="rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 transition-colors"
                   >
-                    Limpiar filtros
+                    {t('map.clearFilters')}
                   </button>
                   <button
                     type="button"
@@ -1564,13 +1580,13 @@ function createPopupElement(ad, marker) {
                     className="rounded-lg bg-red-500/20 px-3 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-500/30 transition-colors"
                   >
                     <X size={14} className="inline mr-1" />
-                    Cerrar
+                    {t('common.close')}
                   </button>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black">
-                <span className="rounded-full bg-[#84CC16] px-2 py-1 text-slate-950">● GPS real</span>
-                <span className="rounded-full bg-amber-300 px-2 py-1 text-slate-950">● Approx ciudad/estado</span>
+                <span className="rounded-full bg-[#84CC16] px-2 py-1 text-slate-950">● {t('map.realGps')}</span>
+                <span className="rounded-full bg-amber-300 px-2 py-1 text-slate-950">● {t('map.approxCityState')}</span>
               </div>
               {visibleMarkers.length > 0 && (
                 <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar pb-1">
