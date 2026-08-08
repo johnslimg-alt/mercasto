@@ -11,13 +11,16 @@ echo "== Backend AI provider boundary gate =="
 test ! -e "$DEAD_CONTROLLER"
 test -f "$DESCRIPTION"
 grep -qF 'AiDescriptionController::class' "$ROUTES"
-if grep -RInE --include='*.php' 'api[.]anthropic[.]com|ANTHROPIC_API_KEY|services[.]anthropic' backend/app backend/config backend/routes; then
-  echo "FAIL: Anthropic runtime execution/config returned to the backend" >&2
+EXTERNAL_AI_PATTERN='generativelanguage[.]googleapis[.]com|api[.]deepseek[.]com|api[.]anthropic[.]com|api[.]groq[.]com|api[.]openai[.]com|GEMINI_API_KEY|DEEPSEEK_API_KEY|ANTHROPIC_API_KEY|GROQ_API_KEY|OPENAI_API_KEY|services[.](gemini|deepseek|anthropic|groq|openai)'
+if grep -RInE --include='*.php' --include='*.js' --include='*.mjs' --include='*.py' "$EXTERNAL_AI_PATTERN" backend/app backend/config backend/routes server ops/agents 2>/dev/null; then
+  echo "FAIL: external generative-AI runtime/config returned; production must remain local Ollama/Qwen only" >&2
   exit 1
 fi
-if grep -qF "'anthropic' =>" "$SERVICES"; then
-  echo "FAIL: unused Anthropic backend service config returned" >&2
-  exit 1
-fi
+for provider in gemini deepseek anthropic groq openai; do
+  if grep -qF "'$provider' =>" "$SERVICES"; then
+    echo "FAIL: external AI service config returned for $provider" >&2
+    exit 1
+  fi
+done
 
 echo "backend AI provider boundary gate OK"
