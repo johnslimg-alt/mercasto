@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "تعطيل التنبيهات",
   activate_alerts: "تفعيل التنبيهات",
   delete_search: "حذف البحث",
+  trust_score: 'درجة الثقة',
+  avg_response_under_2h: 'أقل من ساعتين',
+  contact_history_device_desc: 'الإعلانات التي تواصلت بشأنها مؤخرًا من هذا الجهاز.',
+  contact_history_empty: 'لم تتواصل مع أي بائع بعد.',
+  contacted_via: 'تم التواصل عبر',
 };

@@ -76,6 +76,7 @@ bash scripts/referral-localization-contract-gate.sh
 bash scripts/profile-edit-localization-contract-gate.sh
 bash scripts/chat-localization-contract-gate.sh
 bash scripts/saved-searches-localization-contract-gate.sh
+bash scripts/dashboard-locale-format-contract-gate.sh
 bash scripts/admin-request-changes-gate.sh
 bash scripts/web-push-vapid-gate.sh
 bash scripts/supply-readiness-gate.sh

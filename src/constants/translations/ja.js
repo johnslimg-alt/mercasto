@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "通知をオフにする",
   activate_alerts: "通知をオンにする",
   delete_search: "検索を削除",
+  trust_score: '信頼スコア',
+  avg_response_under_2h: '2時間未満',
+  contact_history_device_desc: 'この端末から最近出品者に連絡した広告です。',
+  contact_history_empty: 'まだ出品者に連絡していません。',
+  contacted_via: '連絡方法',
 };

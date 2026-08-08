@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "Deactivate alerts",
   activate_alerts: "Activate alerts",
   delete_search: "Delete search",
+  trust_score: 'Trust score',
+  avg_response_under_2h: '< 2 hours',
+  contact_history_device_desc: 'Listings you recently contacted from this device.',
+  contact_history_empty: 'You have not contacted any sellers yet.',
+  contacted_via: 'Contacted via',
 };

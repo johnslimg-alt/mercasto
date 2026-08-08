@@ -3,6 +3,7 @@ import { TrendingUp, Eye, Heart, CreditCard, BarChart3, ArrowUp, ArrowDown, Minu
 import { useUI } from '../../contexts/UIContext';
 import { getTranslations } from '../../utils/translations';
 import { localizedText } from '../../utils/localize';
+import { formatMXN, formatNumber } from '../../utils/localeFormat';
 
 const API = (window.VITE_API_URL || import.meta.env?.VITE_API_URL || 'https://mercasto.com/api');
 
@@ -124,9 +125,8 @@ export default function SellerStatsScreen({ token }) {
     </div>
   );
 
-  const formatLocale = lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : lang === 'ru' ? 'ru-RU' : 'en-US';
-  const fmt = n => typeof n === 'number' ? n.toLocaleString(formatLocale) : '—';
-  const fmtPrice = n => n != null ? `$${Number(n).toLocaleString(formatLocale)}` : '—';
+  const fmt = n => typeof n === 'number' ? formatNumber(n, lang) : '—';
+  const fmtPrice = n => n != null ? formatMXN(n, lang) : '—';
 
   return (
     <div className="space-y-6 text-slate-900 dark:text-white">

@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "Отключить уведомления",
   activate_alerts: "Включить уведомления",
   delete_search: "Удалить поиск",
+  trust_score: 'Рейтинг доверия',
+  avg_response_under_2h: '< 2 часов',
+  contact_history_device_desc: 'Объявления, по которым вы недавно связывались с продавцами с этого устройства.',
+  contact_history_empty: 'Вы пока не связывались ни с одним продавцом.',
+  contacted_via: 'Связались через',
 };

@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "Désactiver les alertes",
   activate_alerts: "Activer les alertes",
   delete_search: "Supprimer la recherche",
+  trust_score: 'Score de confiance',
+  avg_response_under_2h: '< 2 heures',
+  contact_history_device_desc: 'Annonces pour lesquelles vous avez récemment contacté un vendeur sur cet appareil.',
+  contact_history_empty: 'Vous n’avez encore contacté aucun vendeur.',
+  contacted_via: 'Contact via',
 };

@@ -32,3 +32,17 @@ export function formatDateTime(value, lang, options = {}) {
   const date = value instanceof Date ? value : new Date(value);
   return date.toLocaleString(localeFor(lang), options);
 }
+
+export function formatNumber(value, lang, options = {}) {
+  return new Intl.NumberFormat(localeFor(lang), options).format(Number(value || 0));
+}
+
+export function formatDate(value, lang, options = {}) {
+  if (!value) return '';
+  const raw = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T00:00:00`
+    : value;
+  const date = value instanceof Date ? value : new Date(raw);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(localeFor(lang), options);
+}

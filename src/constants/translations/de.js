@@ -1112,4 +1112,9 @@ export default {
   deactivate_alerts: "Benachrichtigungen deaktivieren",
   activate_alerts: "Benachrichtigungen aktivieren",
   delete_search: "Suche löschen",
+  trust_score: 'Vertrauensbewertung',
+  avg_response_under_2h: '< 2 Stunden',
+  contact_history_device_desc: 'Anzeigen, zu denen du auf diesem Gerät kürzlich Kontakt aufgenommen hast.',
+  contact_history_empty: 'Du hast noch keinen Verkäufer kontaktiert.',
+  contacted_via: 'Kontaktiert über',
 };

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { localizedText } from '../../utils/localize';
+import { formatDate, formatMXN, formatNumber } from '../../utils/localeFormat';
 import PushNotificationManager from '../ui/PushNotificationManager';
 import AchievementsModal from '../gamification/AchievementsModal';
 
@@ -93,7 +94,7 @@ const TabButton = ({ icon: Icon, label, active, onClick, count, color = 'lime', 
   );
 };
 
-// Trust Score Widget Component
+// Trust metric widget component
 const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerified, hasTrustBadge, t }) => {
   const scoreColor = trustScore > 75 ? 'emerald' : trustScore >= 50 ? 'amber' : 'red';
   const colorMap = {
@@ -166,7 +167,7 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
               <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">/ 100</span>
             </div>
           </div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-2">Trust Score</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-2">{t.trust_score}</p>
         </div>
 
         {/* Metrics Rows */}
@@ -284,7 +285,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
   const totalContactClicks = userAds.reduce((sum, ad) => sum + (ad.whatsapp_clicks || 0), 0);
 
   // Trust metrics
-  const avgResponseTime = '< 2 horas';
+  const avgResponseTime = t.avg_response_under_2h;
   const responseRate = userAds.length > 0 ? Math.min(98, 75 + userAds.filter(a => a.whatsapp_clicks > 0).length * 5) : 0;
   
   const conversionRate = (() => {
@@ -476,7 +477,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               <span>{activePlan.name || user?.plan_name || (t.free_plan || 'Plan Gratis')}</span>
               <span className="text-lime-700/70 dark:text-lime-200/70">· {planLimit} {t.ads_per_month || 'anuncios/mes'}</span>
               {planExpires && (
-                <span className="text-lime-700/70 dark:text-lime-200/70">· {t.expires_word || 'vence'} {new Date(planExpires).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : lang === 'ru' ? 'ru-RU' : 'en-US')}</span>
+                <span data-testid="dashboard-plan-expiry" className="text-lime-700/70 dark:text-lime-200/70">· {t.expires_word || 'vence'} {formatDate(planExpires, lang)}</span>
               )}
             </div>
           </div>
@@ -525,7 +526,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             <StatCard 
               icon={Eye}
               label={t.total_views_count || 'Vistas totales'}
-              value={totalViews.toLocaleString()}
+              value={formatNumber(totalViews, lang)}
               change="+12%"
               trend="up"
               color="green"
@@ -725,16 +726,16 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                   </span>
                                 </div>
                                 <p className="text-lg font-bold text-lime-600 dark:text-lime-400 mb-2">
-                                  ${ad.price?.toLocaleString()}
+                                  {formatMXN(ad.price, lang)}
                                 </p>
                                 <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                                   <span className="flex items-center gap-1">
                                     <Eye className="w-3 h-3" />
-                                    {ad.views || 0}
+                                    {formatNumber(ad.views || 0, lang)}
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <MousePointer className="w-3 h-3" />
-                                    {ad.whatsapp_clicks || 0}
+                                    {formatNumber(ad.whatsapp_clicks || 0, lang)}
                                   </span>
                                 </div>
                               </div>
@@ -838,7 +839,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                 style={{ width: `${(cat.value / userAds.length) * 100}%` }}
                               />
                             </div>
-                            <span className="text-sm font-bold text-slate-900 dark:text-white w-8 text-right">{cat.value}</span>
+                            <span className="text-sm font-bold text-slate-900 dark:text-white w-8 text-right">{formatNumber(cat.value, lang)}</span>
                           </div>
                         </div>
                       ))}
@@ -856,15 +857,15 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 ) : userPayments?.length > 0 ? (
                   <div className="space-y-3">
                     {userPayments.map((payment) => (
-                      <div key={payment.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div key={payment.id} data-testid={`dashboard-transaction-${payment.id}`} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-white">{payment.description}</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            {new Date(payment.created_at).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : lang === 'ru' ? 'ru-RU' : 'en-US')}
+                            {formatDate(payment.created_at, lang)}
                           </p>
                         </div>
                         <span className={`font-bold ${payment.amount > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {payment.amount > 0 ? '+' : ''}${payment.amount}
+                          {payment.amount > 0 ? '+' : ''}{formatMXN(payment.amount, lang)}
                         </span>
                       </div>
                     ))}
@@ -879,7 +880,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   {t.contact_history || 'Historial de contactos'}
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                  Lista de anuncios con los que te has puesto en contacto recientemente en este dispositivo.
+                  {t.contact_history_device_desc}
                 </p>
                 {(() => {
                   const contactedRaw = localStorage.getItem('mercasto_contact_history') || '[]';
@@ -889,7 +890,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   if (contacted.length === 0) {
                     return (
                       <div className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px] bg-slate-50 dark:bg-slate-900/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                        No has contactado a ningún vendedor todavía.
+                        {t.contact_history_empty}
                       </div>
                     );
                   }
@@ -897,7 +898,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                   return (
                     <div className="divide-y divide-slate-100 dark:divide-slate-700">
                       {contacted.map((item, idx) => (
-                        <div key={idx} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+                        <div key={idx} data-testid={`contact-history-${item.adId}`} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 overflow-hidden flex-shrink-0">
                               {item.image ? (
@@ -909,12 +910,12 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                             <div>
                               <h4 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1">{localizedText(item.title)}</h4>
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Contactado vía <span className="font-semibold text-lime-600 dark:text-lime-400 capitalize">{item.channel}</span> · {new Date(item.contactedAt).toLocaleDateString()}
+                                {t.contacted_via} <span className="font-semibold text-lime-600 dark:text-lime-400 capitalize">{item.channel}</span> · {formatDate(item.contactedAt, lang)}
                               </p>
                             </div>
                           </div>
                           <Link to={`/?ad=${item.adId}`} className="btn-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                            Ver <ExternalLink size={14} />
+                            {t.view} <ExternalLink size={14} />
                           </Link>
                         </div>
                       ))}
@@ -1017,7 +1018,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                           <Star className="w-8 h-8 text-purple-400" />
                         </div>
                         <p className="text-slate-500 dark:text-slate-400">
-                          {t.no_contacts_to_review || 'No has contactado a ningún vendedor todavía. ¡Cuando lo hagas, podrás dejar tu valoración aquí!'}
+                          {t.no_contacts_to_review}
                         </p>
                       </div>
                     );
@@ -1082,7 +1083,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-1 mb-0.5">{localizedText(item.title)}</h4>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                                  {t.contacted_on || 'Contactado el'} {new Date(item.contactedAt).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : lang === 'ru' ? 'ru-RU' : 'en-US')}
+                                  {t.contacted_on} {formatDate(item.contactedAt, lang)}
                                 </p>
 
                                 {submitted ? (

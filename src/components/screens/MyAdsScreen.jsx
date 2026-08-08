@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AlertTriangle, BarChart3, CheckSquare, ExternalLink, Loader2, Pencil, PlusCircle, Square, Trash2, TrendingUp, X, Zap } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
+import { formatMXN, formatNumber } from '../../utils/localeFormat';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -357,9 +358,9 @@ export default function MyAdsScreen({
                 </div>
                 <div className="flex items-center gap-3 flex-wrap mt-0.5">
                   <p className="text-[#65A30D] text-[13.5px] font-bold">
-                    ${Number(ad.price).toLocaleString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US')}
+                    {formatMXN(ad.price, lang)}
                   </p>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> {ad.views || 0} {t.views}</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> {formatNumber(ad.views || 0, lang)} {t.views}</p>
                   {promo && (
                     <span className="text-[11px] font-semibold text-[#65A30D] flex items-center gap-1"><Zap className="w-3 h-3" /> {promo.remainingLabel}</span>
                   )}
