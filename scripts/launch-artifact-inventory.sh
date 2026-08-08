@@ -24,6 +24,7 @@ required_files=(
   "scripts/port-ownership-smoke.sh"
   "tests/e2e/public-smoke.spec.js"
   "tests/e2e/public-link-integrity.spec.js"
+  "tests/e2e/catalog-filter-state.spec.js"
   "playwright.config.mjs"
   ".github/workflows/e2e-public-smoke.yml"
   ".github/workflows/deploy-selfhosted.yml"

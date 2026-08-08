@@ -78,34 +78,38 @@ class AdQueryFilters
         }
 
         $sellerTypes = self::lowerValues(self::filterValues($filters, 'seller_type_global'));
-        if ($sellerTypes !== []) {
-            $query->whereHas('user', static function (Builder $userQuery) use ($sellerTypes): void {
-                $userQuery->where(function (Builder $inner) use ($sellerTypes): void {
-                    foreach ($sellerTypes as $index => $type) {
-                        $method = $index === 0 ? 'where' : 'orWhere';
-                        if (str_contains($type, 'tienda') || str_contains($type, 'distribuidor')) {
-                            $inner->{$method}('role', 'business');
-                        } elseif (str_contains($type, 'particular')) {
-                            $inner->{$method}('role', 'individual');
-                        } elseif (str_contains($type, 'verificado')) {
-                            $inner->{$method}('is_verified', true);
-                        }
-                    }
-                });
-            });
+        $sellerRoles = collect($sellerTypes)
+            ->map(static fn (string $type): ?string => match (true) {
+                $type === 'business', str_contains($type, 'tienda'), str_contains($type, 'distribuidor') => 'business',
+                $type === 'individual', str_contains($type, 'particular') => 'individual',
+                default => null,
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        if ($sellerRoles !== []) {
+            $query->whereHas('user', static fn (Builder $userQuery) => $userQuery->whereIn('role', $sellerRoles));
         }
 
         $verification = self::lowerValues(self::filterValues($filters, 'seller_verified'));
-        if ($verification !== []) {
-            $query->whereHas('user', static function (Builder $userQuery) use ($verification): void {
-                $userQuery->where(function (Builder $inner) use ($verification): void {
-                    foreach ($verification as $index => $item) {
-                        $method = $index === 0 ? 'where' : 'orWhere';
-                        if (str_contains($item, 'vendedor') || str_contains($item, 'rese')) {
-                            $inner->{$method}('is_verified', true);
-                        } elseif (str_contains($item, 'tel')) {
-                            $inner->{$method}('phone_verified', true);
-                        }
+        $requiresVerifiedSeller = collect($verification)->contains(
+            static fn (string $item): bool => $item === 'verified' || str_contains($item, 'vendedor') || str_contains($item, 'rese')
+        );
+        $requiresVerifiedPhone = collect($verification)->contains(
+            static fn (string $item): bool => $item === 'phone_verified' || str_contains($item, 'tel')
+        );
+        if ($requiresVerifiedSeller || $requiresVerifiedPhone) {
+            $query->whereHas('user', static function (Builder $userQuery) use ($requiresVerifiedSeller, $requiresVerifiedPhone): void {
+                $userQuery->where(static function (Builder $inner) use ($requiresVerifiedSeller, $requiresVerifiedPhone): void {
+                    $hasCondition = false;
+                    if ($requiresVerifiedSeller) {
+                        $inner->where('is_verified', true);
+                        $hasCondition = true;
+                    }
+                    if ($requiresVerifiedPhone) {
+                        $method = $hasCondition ? 'orWhere' : 'where';
+                        $inner->{$method}('phone_verified', true);
                     }
                 });
             });
@@ -113,30 +117,30 @@ class AdQueryFilters
 
         $media = self::lowerValues(self::filterValues($filters, 'media'));
         foreach ($media as $item) {
-            if (str_contains($item, 'foto')) {
+            if ($item === 'photos' || str_contains($item, 'foto')) {
                 $query->whereNotNull('image_url')->where('image_url', '!=', '');
-            } elseif (str_contains($item, 'video')) {
+            } elseif ($item === 'video' || str_contains($item, 'video')) {
                 $query->whereNotNull('video_url')->where('video_url', '!=', '');
-            } elseif (str_contains($item, 'mapa') || str_contains($item, 'tour')) {
+            } elseif ($item === 'map' || str_contains($item, 'mapa') || str_contains($item, 'tour')) {
                 $query->whereNotNull('latitude')->whereNotNull('longitude');
             }
         }
 
         // Локация из сайдбара: фронт шлёт filters[location_state] / filters[location_city].
-        // Город/штат у объявлений лежат в полях location/state/city, поэтому матчим ILIKE по ним.
+        // Город/штат у объявлений лежат в полях location/state/city, поэтому матчим регистронезависимо по ним.
         $locationStates = self::filterValues($filters, 'location_state');
         if ($locationStates !== []) {
             $query->where(function (Builder $inner) use ($locationStates): void {
                 foreach ($locationStates as $st) {
                     $name = trim((string) $st);
                     $like = '%' . $name . '%';
-                    $inner->orWhereRaw('state ILIKE ?', [$like])
-                          ->orWhereRaw('location ILIKE ?', [$like]);
+                    $inner->orWhereRaw('LOWER(state) LIKE LOWER(?)', [$like])
+                          ->orWhereRaw('LOWER(location) LIKE LOWER(?)', [$like]);
                     // Часть объявлений хранит штат сокращением в location ("Guadalajara, JAL"),
                     // поэтому матчим и по аббревиатуре штата.
                     $abbr = self::STATE_ABBR[$name] ?? null;
                     if ($abbr) {
-                        $inner->orWhereRaw('location ILIKE ?', ['%, ' . $abbr]);
+                        $inner->orWhereRaw('LOWER(location) LIKE LOWER(?)', ['%, ' . $abbr]);
                     }
                 }
             });
@@ -147,8 +151,8 @@ class AdQueryFilters
             $query->where(function (Builder $inner) use ($locationCities): void {
                 foreach ($locationCities as $city) {
                     $like = '%' . trim((string) $city) . '%';
-                    $inner->orWhereRaw('location ILIKE ?', [$like])
-                          ->orWhereRaw('city ILIKE ?', [$like]);
+                    $inner->orWhereRaw('LOWER(location) LIKE LOWER(?)', [$like])
+                          ->orWhereRaw('LOWER(city) LIKE LOWER(?)', [$like]);
                 }
             });
         }
@@ -163,8 +167,8 @@ class AdQueryFilters
                 $inner->whereIn('attributes->listing_type', $listingTypes);
                 foreach ($listingTypes as $val) {
                     $like = '%' . trim((string) $val) . '%';
-                    $inner->orWhereRaw('title ILIKE ?', [$like])
-                          ->orWhereRaw('description ILIKE ?', [$like]);
+                    $inner->orWhereRaw('LOWER(title) LIKE LOWER(?)', [$like])
+                          ->orWhereRaw('LOWER(description) LIKE LOWER(?)', [$like]);
                 }
                 if ($hasVenta) {
                     $inner->orWhereRaw("(attributes->>'listing_type') IS NULL");
@@ -462,10 +466,10 @@ class AdQueryFilters
         $value = self::normalizeKey($value);
 
         return match (true) {
-            str_contains($value, 'precio_menor') => 'price_asc',
-            str_contains($value, 'precio_mayor') => 'price_desc',
-            str_contains($value, 'popular') => 'popular',
-            str_contains($value, 'reciente') => 'latest',
+            $value === 'price_asc', str_contains($value, 'precio_menor') => 'price_asc',
+            $value === 'price_desc', str_contains($value, 'precio_mayor') => 'price_desc',
+            $value === 'popular', str_contains($value, 'popular') => 'popular',
+            $value === 'latest', str_contains($value, 'reciente') => 'latest',
             default => null,
         };
     }
@@ -505,11 +509,12 @@ class AdQueryFilters
 
         foreach (self::lowerValues($values) as $value) {
             $candidate = match (true) {
-                str_contains($value, 'hoy') => 1,
-                str_contains($value, 'ayer') => 2,
-                str_contains($value, '3') => 3,
-                str_contains($value, 'semana') => 7,
-                str_contains($value, 'mes') => 31,
+                $value === 'today', str_contains($value, 'hoy') => 1,
+                $value === 'yesterday', str_contains($value, 'ayer') => 2,
+                $value === 'last_3_days', str_contains($value, '3') => 3,
+                $value === 'last_week', str_contains($value, 'semana') => 7,
+                $value === 'last_month', str_contains($value, 'mes') => 31,
+                $value === 'last_3_months' => 93,
                 default => null,
             };
 

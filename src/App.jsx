@@ -850,8 +850,9 @@ function App() {
     appendDynamicFilters(params, nextDynamicFilters);
 
     const query = params.toString();
-    return query ? `/?${query}` : '/';
-  }, [activeCat, activeSub, conditionFilter, debouncedLocInput, debouncedSearch, dynamicFilters, locCity, locState, maxPrice, minPrice, selectedState]);
+    const basePath = overrides.pathname ?? (location.pathname === '/listings' ? '/listings' : '/');
+    return query ? `${basePath}?${query}` : basePath;
+  }, [activeCat, activeSub, conditionFilter, debouncedLocInput, debouncedSearch, dynamicFilters, locCity, locState, location.pathname, maxPrice, minPrice, selectedState]);
 
   // Keep search/filter state shareable and prevent mobile location from being cleared on navigation.
   const executeSearch = useCallback((
@@ -1265,7 +1266,7 @@ function App() {
   }, [location.pathname, location.search]);
 
   useEffect(() => {
-    if (location.pathname !== '/') return;
+    if (!['/', '/listings'].includes(location.pathname)) return;
     if (viewedAd || viewedCompany) return;
     const params = new URLSearchParams(location.search);
     const hash = location.hash || window.location.hash;
@@ -1983,18 +1984,7 @@ function App() {
         if (minPrice) params.append('min_price', minPrice);
         if (maxPrice) params.append('max_price', maxPrice);
         if (conditionFilter.length > 0) params.append('condition', conditionFilter.join(','));
-        Object.keys(dynamicFilters).forEach(key => {
-            const value = dynamicFilters[key];
-
-            if (Array.isArray(value) && value.length > 0) {
-                value.forEach(v => params.append(`filters[${key}][]`, v));
-            } else if (value && typeof value === 'object') {
-                if (value.min !== undefined && value.min !== '') params.append(`filters[${key}][min]`, value.min);
-                if (value.max !== undefined && value.max !== '') params.append(`filters[${key}][max]`, value.max);
-            } else if (typeof value === 'string' && value) {
-                params.append(`filters[${key}]`, value);
-            }
-        });
+        appendDynamicFilters(params, dynamicFilters);
 
     try {
       const res = await fetch(`${API_URL}/ads?${params.toString()}`);

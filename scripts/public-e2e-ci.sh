@@ -28,6 +28,7 @@ fi
 npx --no-install playwright test \
   tests/e2e/public-smoke.spec.js \
   tests/e2e/public-link-integrity.spec.js \
+  tests/e2e/catalog-filter-state.spec.js \
   --output="$results_dir"
 
 printf 'public E2E artifact root: %s\n' "$artifact_root"

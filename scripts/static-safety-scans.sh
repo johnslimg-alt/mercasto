@@ -45,6 +45,8 @@ node --test scripts/search-query-plan-contract.test.mjs
 node --test scripts/vector-storage-contract.test.mjs
 node --test scripts/category-filter-smoke.test.mjs
 node --test scripts/catalog-map-contract.test.mjs
+node --test tests/filter-url-state.test.mjs
+node --test tests/global-filter-options.test.mjs
 node --test scripts/server-operator-deploy-cache.test.mjs
 node --test scripts/manual-server-gate-self-hosted.test.mjs
 node --test scripts/automerge-workflow-guard.test.mjs
