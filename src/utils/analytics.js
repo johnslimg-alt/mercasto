@@ -862,6 +862,9 @@ export const events = {
   categorySelected: (category, params = {}) =>
     trackEvent('category_selected', { category, ...params }),
 
+  homepageViewed: (params = {}) =>
+    trackEvent('homepage_viewed', params),
+
   searchPerformed: (query, category, params = {}) =>
     trackEvent(FUNNEL_EVENTS.SEARCH, { search_term: query, category, ...params }),
 

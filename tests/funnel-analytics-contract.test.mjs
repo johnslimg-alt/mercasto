@@ -78,3 +78,16 @@ test('category selection analytics is wired to primary discovery surfaces', () =
   assert.match(app, /events\.categorySelected\(slug, \{ source: 'header_category' \}\)/);
   assert.match(home, /events\.categorySelected\(cat\.slug, \{ source: 'homepage_category_rail' \}\)/);
 });
+
+test('homepage analytics uses the active pipeline and excludes catalog/detail states', () => {
+  const analytics = read('src/utils/analytics.js');
+  const app = read('src/App.jsx');
+
+  assert.match(analytics, /homepageViewed: \(params = \{\}\) =>/);
+  assert.match(analytics, /trackEvent\('homepage_viewed', params\)/);
+  assert.match(app, /events\.homepageViewed\(\{ source: 'route' \}\)/);
+  for (const key of ['search', 'category', 'subcategory', 'page', 'ad', 'store']) {
+    assert.match(app, new RegExp(`['"]${key}['"]`));
+  }
+  assert.match(app, /\^#\(\?:ad-\|company-\)/);
+});
