@@ -22,6 +22,11 @@ class NewNotification implements ShouldBroadcast
         $this->notification = $notification;
     }
 
+    public function userId(): int
+    {
+        return $this->userId;
+    }
+
     public function broadcastOn(): array
     {
         return [
