@@ -216,7 +216,7 @@ export default function AdvertisingHub() {
           <aside className="min-w-0 rounded-3xl bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
             <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:block lg:space-y-1">
               {sections.map(({ id, label, icon: Icon }) => (
-                <button key={id} type="button" onClick={() => setSection(id)} className={`flex min-w-0 w-full items-center gap-2 rounded-2xl px-3 py-3 text-left text-xs font-extrabold transition sm:text-sm ${activeSection === id ? 'bg-lime-400 text-slate-950' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}>
+                <button key={id} type="button" aria-pressed={activeSection === id} data-testid={`marketing-section-${id}`} onClick={() => setSection(id)} className={`flex min-w-0 w-full items-center gap-2 rounded-2xl px-3 py-3 text-left text-xs font-extrabold transition sm:text-sm ${activeSection === id ? 'bg-lime-400 text-slate-950' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}>
                   <Icon className="h-5 w-5 shrink-0" />
                   <span className="truncate">{label}</span>
                 </button>

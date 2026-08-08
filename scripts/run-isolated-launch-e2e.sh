@@ -237,6 +237,11 @@ if suite_enabled visual; then
     node scripts/capture-authenticated-ui-visual-evidence.mjs
 fi
 
+if suite_enabled cabinets; then
+  echo "== Authenticated cabinet navigation matrix =="
+  env "${base_env[@]}" npx playwright test tests/e2e/authenticated-cabinet-matrix.spec.js --project=chromium-desktop --workers=1 --retries=0 --reporter=list
+fi
+
 if suite_enabled auth; then
   echo "== Auth/account E2E =="
   env "${base_env[@]}" npx playwright test tests/e2e/auth-flow.spec.js --workers=1 --retries=0
