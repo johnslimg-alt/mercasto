@@ -1080,4 +1080,8 @@ export default {
   referral_apply_error: 'מען האָט נישט געקענט צולייגן דעם קאָד. פּרוּווט ווידער.',
   referral_status_completed: 'פֿאַרענדיקט',
   referral_status_pending: 'וואַרטנדיק',
+  delete_confirmation_word: 'אויסמעקן',
+  profile_save_error: 'מען האָט נישט געקענט ראַטעווען די ענדערונגען.',
+  password_update_error: 'מען האָט נישט געקענט טוישן דאָס פּאַראָל.',
+  profile_photo_alt: 'פּראָפֿיל־בילד',
 };

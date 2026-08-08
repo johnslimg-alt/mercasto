@@ -1080,4 +1080,8 @@ export default {
   referral_apply_error: 'לא ניתן להחיל את הקוד. נסו שוב.',
   referral_status_completed: 'הושלם',
   referral_status_pending: 'בהמתנה',
+  delete_confirmation_word: 'מחק',
+  profile_save_error: 'לא ניתן לשמור את השינויים.',
+  password_update_error: 'לא ניתן לשנות את הסיסמה.',
+  profile_photo_alt: 'תמונת פרופיל',
 };

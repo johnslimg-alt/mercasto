@@ -1080,4 +1080,8 @@ export default {
   referral_apply_error: '코드를 적용할 수 없습니다. 다시 시도하세요.',
   referral_status_completed: '완료',
   referral_status_pending: '대기 중',
+  delete_confirmation_word: '삭제',
+  profile_save_error: '변경 사항을 저장할 수 없습니다.',
+  password_update_error: '비밀번호를 변경할 수 없습니다.',
+  profile_photo_alt: '프로필 사진',
 };

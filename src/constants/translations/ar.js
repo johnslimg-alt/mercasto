@@ -1080,4 +1080,8 @@ export default {
   referral_apply_error: 'تعذّر تطبيق الرمز. حاول مرة أخرى.',
   referral_status_completed: 'مكتمل',
   referral_status_pending: 'قيد الانتظار',
+  delete_confirmation_word: 'حذف',
+  profile_save_error: 'تعذّر حفظ التغييرات.',
+  password_update_error: 'تعذّر تغيير كلمة المرور.',
+  profile_photo_alt: 'صورة الملف الشخصي',
 };
