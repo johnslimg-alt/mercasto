@@ -175,6 +175,7 @@ export default function AutosLanding({ lang = 'es' }) {
             viewAllUrl="/?category=motor"
             viewAllLabel={copy.labels.viewAll}
             cols={4}
+            variant="autos"
           />
         </section>
 

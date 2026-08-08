@@ -104,6 +104,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
             viewAllUrl="/?category=servicios"
             viewAllLabel={copy.labels.viewAll}
             cols={3}
+            variant="services"
           />
         </section>
 

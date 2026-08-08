@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
+import { getVerticalCardMeta } from '../../utils/verticalCardMeta';
 
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
 
@@ -51,7 +52,7 @@ function AdSkeleton() {
   );
 }
 
-export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver todos →', cols = 4 }) {
+export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver todos →', cols = 4, variant = '' }) {
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -77,7 +78,9 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
       <div className={gridClass}>
         {loading
           ? Array.from({ length: skeletonCount }).map((_, i) => <AdSkeleton key={i} />)
-          : ads.map(ad => (
+          : ads.map(ad => {
+            const meta = getVerticalCardMeta(ad, variant);
+            return (
             <div key={ad.id}
               onClick={() => navigate(`/?ad=${ad.id}`)}
               className="rounded-2xl bg-white border border-slate-100 overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group">
@@ -97,6 +100,12 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
               </div>
               <div className="p-3">
                 <h3 className="font-semibold text-[13px] text-slate-800 line-clamp-2 leading-snug mb-1">{localizedText(ad.title)}</h3>
+                {meta.primary.length > 0 && (
+                  <p className="text-[11px] font-semibold text-slate-600 line-clamp-1">{meta.primary.join(' · ')}</p>
+                )}
+                {meta.secondary.length > 0 && (
+                  <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-1">{meta.secondary.join(' · ')}</p>
+                )}
                 {ad.location && (
                   <p className="text-[11px] text-slate-400 flex items-center gap-1">
                     <MapPin size={10} />{ad.location}
@@ -104,7 +113,8 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
                 )}
               </div>
             </div>
-          ))
+            );
+          })
         }
       </div>
       {viewAllUrl && (
