@@ -28,13 +28,13 @@ function normalizeHours(hours) {
 
 const getLocalizedDayName = (day, t) => {
   const mapping = {
-    'Lunes': t.monday || 'Lunes',
-    'Martes': t.tuesday || 'Martes',
-    'Miércoles': t.wednesday || 'Miércoles',
-    'Jueves': t.thursday || 'Jueves',
-    'Viernes': t.friday || 'Viernes',
-    'Sábado': t.saturday || 'Sábado',
-    'Domingo': t.sunday || 'Domingo',
+    'Lunes': t.monday,
+    'Martes': t.tuesday,
+    'Miércoles': t.wednesday,
+    'Jueves': t.thursday,
+    'Viernes': t.friday,
+    'Sábado': t.saturday,
+    'Domingo': t.sunday,
   };
   return mapping[day] || day;
 };
@@ -86,7 +86,7 @@ export default function BusinessProfileEditor({ showToast }) {
           business_hours: normalizeHours(data.business_hours),
         }));
       } catch {
-        if (!cancelled) showToast?.(t.load_business_failed || 'No se pudo cargar el perfil de negocio', 'error');
+        if (!cancelled) showToast?.(t.load_business_failed, 'error');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -116,12 +116,12 @@ export default function BusinessProfileEditor({ showToast }) {
       const data = await response.json();
       if (response.ok) {
         updateField('business_logo_url', data.business_logo_url);
-        showToast?.(t.logo_updated || 'Logo de negocio actualizado');
+        showToast?.(t.logo_updated);
       } else {
-        showToast?.(data.message || (t.logo_upload_failed || 'Error al subir el logo'), 'error');
+        showToast?.(t.logo_upload_failed, 'error');
       }
     } catch {
-      showToast?.(t.connection_error || 'Error al conectar con el servidor', 'error');
+      showToast?.(t.connection_error, 'error');
     } finally {
       setLogoUploading(false);
     }
@@ -142,12 +142,12 @@ export default function BusinessProfileEditor({ showToast }) {
       const data = await response.json();
       if (response.ok) {
         updateField('business_banner_url', data.business_banner_url);
-        showToast?.(t.banner_updated || 'Banner de portada de negocio actualizado');
+        showToast?.(t.banner_updated);
       } else {
-        showToast?.(data.message || (t.banner_upload_failed || 'Error al subir la portada'), 'error');
+        showToast?.(t.banner_upload_failed, 'error');
       }
     } catch {
-      showToast?.(t.connection_error || 'Error al conectar con el servidor', 'error');
+      showToast?.(t.connection_error, 'error');
     } finally {
       setBannerUploading(false);
     }
@@ -164,13 +164,12 @@ export default function BusinessProfileEditor({ showToast }) {
       });
       const data = await response.json();
       if (!response.ok) {
-        const message = data.errors ? Object.values(data.errors).flat().join(' ') : data.message;
-        showToast?.(message || (t.business_save_failed || 'Error al guardar el perfil de negocio'), 'error');
+        showToast?.(t.business_save_failed, 'error');
         return;
       }
-      showToast?.(t.business_saved || 'Perfil de negocio guardado');
+      showToast?.(t.business_saved);
     } catch {
-      showToast?.(t.connection_error || 'Error de red al guardar el perfil de negocio', 'error');
+      showToast?.(t.connection_error, 'error');
     } finally {
       setSaving(false);
     }
@@ -180,7 +179,7 @@ export default function BusinessProfileEditor({ showToast }) {
     return (
       <div className="business-profile-dark-scope bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
         <Loader2 className="w-4 h-4 inline animate-spin mr-2" />
-        {t.loading_business || 'Cargando perfil de negocio...'}
+        {t.loading_business}
       </div>
     );
   }
@@ -193,15 +192,15 @@ export default function BusinessProfileEditor({ showToast }) {
         <div>
           <h2 className="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
             <Building2 size={16} className="text-lime-500" />
-            {t.business_profile || 'Perfil de negocio'}
+            {t.business_profile}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            {t.business_profile_desc || 'Activa una vitrina profesional con horario, dirección y datos de contacto.'}
+            {t.business_profile_desc}
           </p>
         </div>
         <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
           <input type="checkbox" checked={form.business_profile_enabled} onChange={event => updateField('business_profile_enabled', event.target.checked)} />
-          {t.activate || 'Activar'}
+          {t.activate}
         </label>
       </div>
 
@@ -209,13 +208,13 @@ export default function BusinessProfileEditor({ showToast }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800">
           {/* Logo Upload Block */}
           <div className="flex flex-col items-center justify-center p-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900">
-            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">{t.business_logo || 'Logo Comercial (PRO)'}</label>
+            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">{t.business_logo}</label>
             <div className="w-20 h-20 bg-slate-100 dark:bg-slate-950 rounded-2xl overflow-hidden relative group flex items-center justify-center border border-slate-200 dark:border-slate-700">
               {form.business_logo_url ? (
                 <img
                   src={form.business_logo_url.startsWith('http') ? form.business_logo_url : `${STORAGE_URL}/${form.business_logo_url}`}
                   className="w-full h-full object-cover"
-                  alt="Logo"
+                  alt={t.business_logo}
                 />
               ) : (
                 <Building2 className="w-8 h-8 text-slate-300" />
@@ -238,22 +237,22 @@ export default function BusinessProfileEditor({ showToast }) {
               onClick={() => document.getElementById('business-logo-file').click()}
               className="mt-3 text-xs font-bold text-lime-600 hover:text-lime-700 hover:underline"
             >
-              {t.change_logo || 'Cambiar Logo'}
+              {t.change_logo}
             </button>
           </div>
 
           {/* Banner Upload Block */}
           <div className="md:col-span-2 flex flex-col items-center justify-center p-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900">
-            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">{t.business_banner || 'Banner de Portada (PRO)'}</label>
+            <label className="block text-xs font-bold text-slate-500 mb-3 text-center">{t.business_banner}</label>
             <div className="w-full h-20 bg-slate-100 dark:bg-slate-950 rounded-xl overflow-hidden relative group flex items-center justify-center border border-slate-200 dark:border-slate-700">
               {form.business_banner_url ? (
                 <img
                   src={form.business_banner_url.startsWith('http') ? form.business_banner_url : `${STORAGE_URL}/${form.business_banner_url}`}
                   className="w-full h-full object-cover"
-                  alt="Banner"
+                  alt={t.business_banner}
                 />
               ) : (
-                <span className="text-xs text-slate-400 font-medium">{t.banner_dimensions_hint || '1200 x 400 píxeles recomendados'}</span>
+                <span className="text-xs text-slate-400 font-medium">{t.banner_dimensions_hint}</span>
               )}
               {bannerUploading && (
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
@@ -273,7 +272,7 @@ export default function BusinessProfileEditor({ showToast }) {
               onClick={() => document.getElementById('business-banner-file').click()}
               className="mt-3 text-xs font-bold text-lime-600 hover:text-lime-700 hover:underline"
             >
-              {t.change_banner || 'Cambiar Portada'}
+              {t.change_banner}
             </button>
           </div>
         </div>
@@ -281,31 +280,31 @@ export default function BusinessProfileEditor({ showToast }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_name_label || 'Nombre comercial *'}</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_name_label}</label>
           <input value={form.business_name} onChange={event => updateField('business_name', event.target.value)} maxLength={120} className={`w-full ${inputClass}`} placeholder="Mercasto Autos Veracruz" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_rfc_label || 'RFC'}</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_rfc_label}</label>
           <input value={form.business_rfc} onChange={event => updateField('business_rfc', event.target.value.toUpperCase())} maxLength={13} className={`w-full uppercase ${inputClass}`} placeholder="XAXX010101000" />
-          <p className="text-[11px] text-slate-400 mt-1">{t.business_rfc_hint || 'No se muestra públicamente; solo se muestra el estado de verificación.'}</p>
+          <p className="text-[11px] text-slate-400 mt-1">{t.business_rfc_hint}</p>
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_desc_label || 'Descripción del negocio'}</label>
-        <textarea value={form.business_description} onChange={event => updateField('business_description', event.target.value)} maxLength={1200} rows={4} className={`w-full resize-none ${inputClass}`} placeholder={t.business_desc_placeholder || 'Describe qué vendes, zonas de atención y por qué confiar en tu negocio.'} />
+        <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_desc_label}</label>
+        <textarea value={form.business_description} onChange={event => updateField('business_description', event.target.value)} maxLength={1200} rows={4} className={`w-full resize-none ${inputClass}`} placeholder={t.business_desc_placeholder} />
         <p className="text-right text-xs text-slate-400 mt-0.5">{form.business_description.length}/1200</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input type="url" value={form.business_website} onChange={event => updateField('business_website', event.target.value)} className={inputClass} placeholder={t.website || 'Sitio web'} />
-        <input value={form.business_address} onChange={event => updateField('business_address', event.target.value)} maxLength={255} className={inputClass} placeholder={t.address || 'Dirección'} />
-        <input type="tel" value={form.business_phone} onChange={event => updateField('business_phone', event.target.value)} maxLength={20} className={inputClass} placeholder={t.phone || 'Teléfono negocio'} />
-        <input type="tel" value={form.business_whatsapp} onChange={event => updateField('business_whatsapp', event.target.value)} maxLength={20} className={inputClass} placeholder={t.whatsapp || 'WhatsApp negocio'} />
+        <input type="url" value={form.business_website} onChange={event => updateField('business_website', event.target.value)} className={inputClass} placeholder={t.website} />
+        <input value={form.business_address} onChange={event => updateField('business_address', event.target.value)} maxLength={255} className={inputClass} placeholder={t.address} />
+        <input type="tel" value={form.business_phone} onChange={event => updateField('business_phone', event.target.value)} maxLength={20} className={inputClass} placeholder={t.phone} />
+        <input type="tel" value={form.business_whatsapp} onChange={event => updateField('business_whatsapp', event.target.value)} maxLength={20} className={inputClass} placeholder={t.whatsapp} />
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-slate-500">{t.business_hours_label || 'Horario'}</h3>
+        <h3 className="text-xs font-semibold text-slate-500">{t.business_hours_label}</h3>
         {form.business_hours.map((item, index) => (
           <div key={item.day} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center text-sm">
             <span className="text-slate-600 dark:text-slate-300">{getLocalizedDayName(item.day, t)}</span>
@@ -313,7 +312,7 @@ export default function BusinessProfileEditor({ showToast }) {
             <input type="time" disabled={item.closed} value={item.close || ''} onChange={event => updateHour(index, 'close', event.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-800" />
             <label className="flex items-center gap-1 text-xs text-slate-500">
               <input type="checkbox" checked={Boolean(item.closed)} onChange={event => updateHour(index, 'closed', event.target.checked)} />
-              {t.closed || 'Cerrado'}
+              {t.closed}
             </label>
           </div>
         ))}
@@ -321,13 +320,13 @@ export default function BusinessProfileEditor({ showToast }) {
 
       <button type="submit" disabled={saving} className="w-full bg-slate-900 hover:bg-black text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={15} />}
-        {t.save_business_profile_btn || 'Guardar perfil de negocio'}
+        {t.save_business_profile_btn}
       </button>
 
       {form.business_profile_enabled && form.business_name && (
         <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 border border-emerald-100">
           <CheckCircle size={14} />
-          {t.business_profile_visible_hint || 'Tu vitrina profesional estará visible en tu perfil público.'}
+          {t.business_profile_visible_hint}
         </div>
       )}
     </form>

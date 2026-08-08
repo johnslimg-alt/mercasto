@@ -1080,4 +1080,8 @@ export default {
   referral_apply_error: '无法应用推荐码，请重试。',
   referral_status_completed: '已完成',
   referral_status_pending: '待处理',
+  delete_confirmation_word: '删除',
+  profile_save_error: '无法保存更改。',
+  password_update_error: '无法更改密码。',
+  profile_photo_alt: '个人资料照片',
 };

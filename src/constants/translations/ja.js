@@ -1080,4 +1080,8 @@ export default {
   referral_apply_error: 'コードを適用できませんでした。もう一度お試しください。',
   referral_status_completed: '完了',
   referral_status_pending: '保留中',
+  delete_confirmation_word: '削除',
+  profile_save_error: '変更を保存できませんでした。',
+  password_update_error: 'パスワードを変更できませんでした。',
+  profile_photo_alt: 'プロフィール写真',
 };

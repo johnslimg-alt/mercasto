@@ -1080,4 +1080,8 @@ export default {
   referral_apply_error: 'No se pudo aplicar el código. Inténtalo de nuevo.',
   referral_status_completed: 'Completado',
   referral_status_pending: 'Pendiente',
+  delete_confirmation_word: 'ELIMINAR',
+  profile_save_error: 'No se pudieron guardar los cambios.',
+  password_update_error: 'No se pudo cambiar la contraseña.',
+  profile_photo_alt: 'Foto de perfil',
 };

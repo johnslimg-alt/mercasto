@@ -1080,4 +1080,8 @@ export default {
   referral_apply_error: 'Не удалось применить код. Попробуйте ещё раз.',
   referral_status_completed: 'Завершено',
   referral_status_pending: 'Ожидает',
+  delete_confirmation_word: 'УДАЛИТЬ',
+  profile_save_error: 'Не удалось сохранить изменения.',
+  password_update_error: 'Не удалось изменить пароль.',
+  profile_photo_alt: 'Фото профиля',
 };
