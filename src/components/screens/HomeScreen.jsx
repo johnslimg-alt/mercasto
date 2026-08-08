@@ -164,10 +164,13 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
     }, [safeServerAds]);
     const getHomeRating = React.useCallback((ad = {}) => {
       const rawRating = Number(ad.rating_average ?? ad.average_rating ?? ad.rating ?? 0);
-      const rating = rawRating > 0 ? rawRating : 4 + (((Number(ad.id) || 1) % 10) / 10);
       const rawCount = Number(ad.reviews_count ?? ad.comments_count ?? ad.review_count ?? 0);
-      const count = rawCount > 0 ? rawCount : ((Number(ad.id) || 1) % 7) + 1;
-      return { rating: Math.min(5, Math.max(1, rating)), count };
+      const hasReviews = Number.isFinite(rawRating) && rawRating > 0 && Number.isFinite(rawCount) && rawCount > 0;
+      return {
+        rating: hasReviews ? Math.min(5, Math.max(1, rawRating)) : 0,
+        count: hasReviews ? Math.floor(rawCount) : 0,
+        hasReviews,
+      };
     }, []);
     const applyCityFilter = React.useCallback((cityName) => {
       setSearchLocation?.(null);
@@ -371,11 +374,13 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                             <div className="p-3">
                               <p className="mb-1 line-clamp-2 text-[13px] font-semibold leading-tight text-slate-800 dark:text-white">{localizedText(ad.title, lang)}</p>
                               <p className="text-[15px] font-bold text-amber-800 dark:text-amber-400">{price}</p>
-                              <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                <span className="tracking-tight text-amber-400">★★★★★</span>
-                                <span>{rating.rating.toFixed(1)}</span>
-                                <span>({rating.count})</span>
-                              </div>
+                              {rating.hasReviews && (
+                                <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                  <span className="tracking-tight text-amber-400">★★★★★</span>
+                                  <span>{rating.rating.toFixed(1)}</span>
+                                  <span>({rating.count})</span>
+                                </div>
+                              )}
                               {ad.location && (
                                 <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
                                   <MapPin size={10} />
@@ -783,7 +788,9 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                           <img src={imgSrc} loading="lazy" className="w-12 h-12 rounded-xl object-cover" alt={srv.title}/>
                           <div className="flex-1">
                             <h3 className="font-semibold text-[15px] leading-tight line-clamp-1">{srv.title}</h3>
-                            <div className="flex items-center gap-1 mt-1"><div className="flex text-amber-400 text-[13px]">★★★★★</div><span className="text-[12px] text-slate-600 dark:text-slate-300">{rating.rating.toFixed(1)} ({rating.count})</span></div>
+                            {rating.hasReviews && (
+                              <div className="flex items-center gap-1 mt-1"><div className="flex text-amber-400 text-[13px]">★★★★★</div><span className="text-[12px] text-slate-600 dark:text-slate-300">{rating.rating.toFixed(1)} ({rating.count})</span></div>
+                            )}
                           </div>
                         </div>
                         <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.description}</p>
@@ -862,10 +869,12 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                         <div className="p-3 flex flex-col flex-1 min-h-[112px]">
                           <div className="font-bold leading-tight line-clamp-1">${Number(car.price || 0).toLocaleString()} MXN</div>
                           <div className="text-[13px] font-medium line-clamp-1 mt-0.5">{car.title}</div>
-                          <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                            <span className="text-amber-400">★★★★★</span>
-                            <span>{rating.rating.toFixed(1)} ({rating.count})</span>
-                          </div>
+                          {rating.hasReviews && (
+                            <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                              <span className="text-amber-400">★★★★★</span>
+                              <span>{rating.rating.toFixed(1)} ({rating.count})</span>
+                            </div>
+                          )}
                           <div className="text-[12px] text-slate-500 mt-1 line-clamp-1">{car.state || car.location || 'México'}</div>
                           <div className="mt-auto pt-2 flex gap-1 min-h-[24px]">
                             <span className="badge bg-emerald-100 text-emerald-700">Verificado</span>
