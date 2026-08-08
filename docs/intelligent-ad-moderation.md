@@ -30,7 +30,7 @@ The scheduler dispatches up to 100 pending ads every five minutes:
 php artisan ads:moderate-pending --limit=100
 ```
 
-Jobs use the existing default Laravel queue worker and the configured `GEMINI_API_KEY`.
+Jobs use the existing default Laravel queue worker and the local Ollama runtime. Generative moderation is handled by `qwen3-vl:4b-instruct`; no external generative-AI API key is required.
 
 ## Admin UI
 

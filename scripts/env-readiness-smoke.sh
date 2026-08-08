@@ -40,8 +40,10 @@ $checks = [
     "google_client_id" => (string) config("services.google.client_id"),
     "google_client_secret" => (string) config("services.google.client_secret"),
     "google_maps_api_key" => (string) config("services.google.maps_api_key"),
-    "deepseek_api_key" => (string) config("services.deepseek.api_key"),
+    "ollama_url" => (string) config("services.ollama.url"),
+    "ollama_model" => (string) config("services.ollama.model"),
     "ollama_base_url" => (string) config("services.ollama.base_url"),
+    "ollama_chat_model" => (string) config("services.ollama.chat_model"),
 ];
 $placeholderPattern = "/^(|test|changeme|change_me|placeholder|dummy|null|none|your_|xxx|example)$/i";
 foreach ($checks as $name => $value) {
