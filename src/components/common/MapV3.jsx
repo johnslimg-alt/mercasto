@@ -5,6 +5,7 @@ import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterO
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
+import { markerMatchesMapFilters } from '../../utils/mapMarkerFilters';
 import { localeFor } from '../../utils/localeFormat';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -391,40 +392,18 @@ export default function MapV3({
 
   const normalizedMarkers = propMarkers || (adsMarkers.length > 0 ? adsMarkers : DEFAULT_MARKERS);
   
-  const visibleMarkers = useMemo(() => {
-    const query = mapQuery.trim().toLowerCase();
-    const priceLimitMin = Number(minPrice);
-    const priceLimitMax = Number(maxPrice);
-
-    return normalizedMarkers.filter(marker => {
-      const ad = marker.ad || {};
-      const text = `${marker.label || ''} ${localizedText(ad.title) || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
-      const price = Number(ad.price || String(marker.label || '').replace(/[^\d.]/g, '') || 0);
-
-      if (query && !text.includes(query)) return false;
-      if (priceLimitMin > 0 && price < priceLimitMin) return false;
-      if (priceLimitMax > 0 && price > priceLimitMax) return false;
-      if (onlyWithCoords && (!(marker.coords && marker.coords.length >= 2) || marker.approximate)) return false;
-      if (selectedState && ad.state && !ad.state.toLowerCase().includes(selectedState.toLowerCase())) return false;
-      if (selectedCity && ad.city && !ad.city.toLowerCase().includes(selectedCity.toLowerCase())) return false;
-      if (selectedCategory && ad.category && ad.category !== selectedCategory) return false;
-      if (listingType && ad.listing_type && ad.listing_type !== listingType) return false;
-      if (conditionFilter.length && ad.condition && !conditionFilter.includes(ad.condition)) return false;
-
-      const attributes = ad.attributes && typeof ad.attributes === 'object' ? ad.attributes : {};
-      for (const [key, expectedRaw] of Object.entries(dynamicFilters || {})) {
-        if (['sort', 'location_state', 'location_city', 'listing_type'].includes(key)) continue;
-        const expected = Array.isArray(expectedRaw) ? expectedRaw.filter(Boolean) : [expectedRaw].filter(Boolean);
-        if (!expected.length) continue;
-        const actualRaw = attributes[key] ?? ad[key];
-        if (actualRaw == null || actualRaw === '') continue;
-        const actual = Array.isArray(actualRaw) ? actualRaw.map(String) : [String(actualRaw)];
-        if (!expected.some((value) => actual.includes(String(value)))) return false;
-      }
-
-      return true;
-    });
-  }, [conditionFilter, dynamicFilters, minPrice, maxPrice, normalizedMarkers, mapQuery, onlyWithCoords, selectedState, selectedCity, selectedCategory, listingType]);
+  const visibleMarkers = useMemo(() => normalizedMarkers.filter((marker) => markerMatchesMapFilters(marker, {
+    query: mapQuery,
+    minPrice,
+    maxPrice,
+    onlyWithCoords,
+    state: selectedState,
+    city: selectedCity,
+    category: selectedCategory,
+    listingType,
+    condition: conditionFilter,
+    dynamic: dynamicFilters,
+  })), [conditionFilter, dynamicFilters, minPrice, maxPrice, normalizedMarkers, mapQuery, onlyWithCoords, selectedState, selectedCity, selectedCategory, listingType]);
 
   useEffect(() => () => {
     mountedRef.current = false;

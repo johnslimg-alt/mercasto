@@ -80,6 +80,7 @@ bash scripts/dashboard-locale-format-contract-gate.sh
 bash scripts/post-edit-localization-contract-gate.sh
 bash scripts/catalog-saved-search-state-gate.sh
 bash scripts/catalog-map-state-gate.sh
+node --test tests/map-marker-filters.test.mjs
 bash scripts/map-shell-localization-contract-gate.sh
 bash scripts/active-language-contract-gate.sh
 bash scripts/category-filter-option-i18n-gate.sh
