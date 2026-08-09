@@ -66,6 +66,7 @@ visit(sourceRoot);
 
 let interactiveCount = 0;
 let nonSemanticClickTargets = 0;
+let pointerDismissClickTargets = 0;
 const violations = [];
 for (const filePath of sourceFiles) {
   const source = fs.readFileSync(filePath, 'utf8');
@@ -103,22 +104,37 @@ for (const filePath of sourceFiles) {
     }
 
     const nativeHtmlTag = /^[a-z]/.test(tag);
-    if (nativeHtmlTag && tag !== 'button' && tag !== 'a' && hasOnClick) nonSemanticClickTargets += 1;
+    const pointerDismissSurface = hasAttribute(text, 'data-pointer-dismiss-surface');
+    if (nativeHtmlTag && tag !== 'button' && tag !== 'a' && hasOnClick) {
+      if (pointerDismissSurface) {
+        pointerDismissClickTargets += 1;
+        if (staticAttribute(text, 'aria-hidden') !== 'true') {
+          violations.push(`${label}: pointer-dismiss surface must be aria-hidden=true and have a separate accessible close control`);
+        }
+      } else {
+        nonSemanticClickTargets += 1;
+      }
+    }
     if (nativeHtmlTag && tag !== 'button' && role === 'button' && !hasOnClick && !hasSpread) {
       violations.push(`${label}: role=button has no click handler`);
     }
   }
 }
 
-console.log(`frontend interaction inventory: files=${sourceFiles.length}, interactive=${interactiveCount}, nonsemantic_click_targets=${nonSemanticClickTargets}`);
+console.log(`frontend interaction inventory: files=${sourceFiles.length}, interactive=${interactiveCount}, nonsemantic_click_targets=${nonSemanticClickTargets}, pointer_dismiss_targets=${pointerDismissClickTargets}`);
 
 if (sourceFiles.length < 100 || interactiveCount < 500) {
   console.error(`frontend interaction inventory unexpectedly small: files=${sourceFiles.length}, interactive=${interactiveCount}`);
   process.exit(1);
 }
 
-if (nonSemanticClickTargets > 18) {
-  console.error(`frontend interaction semantic debt regressed: nonsemantic_click_targets=${nonSemanticClickTargets}, maximum=18`);
+if (nonSemanticClickTargets > 0) {
+  console.error(`frontend interaction semantic debt regressed: nonsemantic_click_targets=${nonSemanticClickTargets}, maximum=0`);
+  process.exit(1);
+}
+
+if (pointerDismissClickTargets > 9) {
+  console.error(`frontend pointer-dismiss surface count regressed: pointer_dismiss_targets=${pointerDismissClickTargets}, maximum=9`);
   process.exit(1);
 }
 

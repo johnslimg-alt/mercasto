@@ -32,7 +32,7 @@ const LanguageSwitcher = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" onKeyDown={(e) => { if (e.key === 'Escape') setIsOpen(false); }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
@@ -56,6 +56,8 @@ const LanguageSwitcher = () => {
       {isOpen && (
         <>
           <div
+            data-pointer-dismiss-surface
+            aria-hidden="true"
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />

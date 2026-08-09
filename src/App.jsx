@@ -3616,11 +3616,12 @@ function App() {
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrModalData)}`;
 
     return (
-      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setQrModalData(null)}>
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95 flex flex-col items-center max-w-sm w-full" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setQrModalData(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setQrModalData(null); }}>
+        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setQrModalData(null)} />
+        <div role="dialog" aria-modal="true" aria-labelledby="qr-contact-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95 flex flex-col items-center max-w-sm w-full">
+          <button type="button" aria-label={t.close_btn || t.close || 'Cerrar'} onClick={() => setQrModalData(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
           <div className="w-12 h-12 bg-lime-100 dark:bg-lime-500/10 text-[#65A30D] dark:text-[#84CC16] rounded-2xl flex items-center justify-center mb-4"><QrCode size={28}/></div>
-          <h2 className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Escanea para contactar</h2>
+          <h2 id="qr-contact-title" className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Escanea para contactar</h2>
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6 text-center">Abre la cámara de tu celular y escanea este código para enviar un mensaje al vendedor.</p>
           <div className="p-4 bg-white border-2 border-slate-100 rounded-3xl shadow-sm mb-6">
             <img src={qrUrl} alt="QR Code" className="w-48 h-48" />
@@ -3635,10 +3636,11 @@ function App() {
   const renderReportModal = () => {
     if (!showReportModal) return null;
     return (
-      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowReportModal(false)}>
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setShowReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <h2 className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Reportar Anuncio</h2>
+      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowReportModal(false); }}>
+        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowReportModal(false)} />
+        <div role="dialog" aria-modal="true" aria-labelledby="report-ad-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md">
+          <button type="button" aria-label={t.close_btn || t.close || 'Cerrar'} onClick={() => setShowReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+          <h2 id="report-ad-title" className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Reportar Anuncio</h2>
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">Ayúdanos a entender el problema con este anuncio.</p>
           <form onSubmit={handleReportAd} className="space-y-4">
             <div>
@@ -3667,10 +3669,11 @@ function App() {
   const renderUserReportModal = () => {
     if (!showUserReportModal) return null;
     return (
-      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowUserReportModal(false)}>
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setShowUserReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <h2 className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Reportar Vendedor</h2>
+      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowUserReportModal(false); }}>
+        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowUserReportModal(false)} />
+        <div role="dialog" aria-modal="true" aria-labelledby="report-user-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md">
+          <button type="button" aria-label={t.close_btn || t.close || 'Cerrar'} onClick={() => setShowUserReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+          <h2 id="report-user-title" className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">Reportar Vendedor</h2>
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">Ayúdanos a mantener una comunidad segura.</p>
           <form onSubmit={handleUserReportSubmit} className="space-y-4">
             <div>
@@ -3699,13 +3702,14 @@ function App() {
   const renderAiModal = () => {
     if (!showAiModal || user?.role !== 'admin') return null;
     return (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAiModal(false)}>
-        <div className="bg-slate-900 w-full max-w-3xl rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95 border border-slate-700 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setShowAiModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><XCircle size={24}/></button>
+      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowAiModal(false); }}>
+        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAiModal(false)} />
+        <div role="dialog" aria-modal="true" aria-labelledby="ai-command-title" className="bg-slate-900 w-full max-w-3xl rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95 border border-slate-700 flex flex-col max-h-[90vh]">
+          <button type="button" aria-label={t.close_btn || t.close || 'Cerrar'} onClick={() => setShowAiModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><XCircle size={24}/></button>
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center"><Sparkles className="text-indigo-400 w-6 h-6"/></div>
             <div>
-              <h2 className="text-[20px] font-bold text-white leading-none">Centro de Comando IA</h2>
+              <h2 id="ai-command-title" className="text-[20px] font-bold text-white leading-none">Centro de Comando IA</h2>
               <span className="text-[12px] text-slate-400">Agentes autónomos Mercasto</span>
             </div>
           </div>
@@ -4799,10 +4803,12 @@ function App() {
       )}
 
       {showAuthModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !authLoading) setShowAuthModal(false); }}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape' && !authLoading) setShowAuthModal(false); }}>
+          <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { if (!authLoading) setShowAuthModal(false); }} />
           {requiresTwoFactor ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
-              <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_two_factor_title}</h2>
+            <div role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+              <button type="button" aria-label={t.close_btn || 'Cerrar'} disabled={authLoading} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"><XCircle size={24}/></button>
+              <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_two_factor_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
                 {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
               </p>
@@ -4817,9 +4823,9 @@ function App() {
               </form>
             </div>
           ) : authMode === 'phone_request' || authMode === 'phone_verify' ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
               <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-              <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_phone_title}</h2>
+              <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_phone_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
                 {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
               </p>
@@ -4841,9 +4847,9 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
                 <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-                <h2 className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">
+                <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}
                 </h2>
                 <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
