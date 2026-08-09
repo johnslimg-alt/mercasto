@@ -184,8 +184,7 @@ export default function SplitViewContainer({
         data-catalog-card
         onMouseEnter={() => handleAdHover(ad.id)}
         onMouseLeave={handleAdLeave}
-        onClick={() => handleAdClick(ad)}
-        className={`cursor-pointer transition-all duration-200 rounded-2xl ${
+        className={`transition-all duration-200 rounded-2xl ${
           hoveredAdId === ad.id 
             ? 'ring-2 ring-[#84CC16] shadow-lg scale-[1.01]' 
             : selectedAdId === ad.id
@@ -199,6 +198,7 @@ export default function SplitViewContainer({
           layout: viewLayout,
           priority: index < (isMobileCatalog ? 2 : 4),
           imageWidth: isMobileCatalog ? 400 : 520,
+          onActivate: () => handleAdClick(ad),
         })}
       </div>
       
