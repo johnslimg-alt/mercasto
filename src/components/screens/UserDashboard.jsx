@@ -433,7 +433,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
           </div>
 
           {/* Avatar */}
-          <div 
+          <button
+            type="button"
+            aria-label={t.edit_profile || 'Editar Perfil'}
             onClick={openProfileModal} 
             className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center text-white ${
               accountType === 'pro' ? 'bg-gradient-to-br from-slate-700 to-slate-900' : 'bg-gradient-to-br from-slate-100 to-slate-200'
@@ -446,7 +448,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center transition-all rounded-2xl">
               <Camera className="w-8 h-8 text-white" />
             </div>
-          </div>
+          </button>
 
           {/* User Info */}
           <div className="flex-1">

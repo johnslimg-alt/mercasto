@@ -195,7 +195,7 @@ export default function AyudaScreen() {
             <ChevronLeft className="w-4 h-4" /> Volver
           </button>
           <span className="text-slate-300 mx-1">|</span>
-          <span className="text-slate-400 cursor-pointer hover:text-lime-600" onClick={() => navigate('/')}>Mercasto</span>
+          <button type="button" className="text-slate-400 cursor-pointer hover:text-lime-600" onClick={() => navigate('/')}>Mercasto</button>
           <span className="text-slate-300">›</span>
           <span className="text-slate-600 font-medium">Centro de Ayuda</span>
         </div>

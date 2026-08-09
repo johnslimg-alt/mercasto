@@ -53,7 +53,7 @@ export default function PrivacidadScreen() {
             <ChevronLeft className="w-4 h-4" /> Volver
           </button>
           <span className="text-slate-300 mx-1">|</span>
-          <span className="text-slate-400 cursor-pointer hover:text-lime-600" onClick={() => navigate('/')}>Mercasto</span>
+          <button type="button" className="text-slate-400 cursor-pointer hover:text-lime-600" onClick={() => navigate('/')}>Mercasto</button>
           <ChevronLeft className="w-3 h-3 text-slate-300 rotate-180" />
           <span className="text-slate-700 font-medium">Política de Privacidad</span>
         </div>

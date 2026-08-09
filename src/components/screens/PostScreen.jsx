@@ -466,13 +466,17 @@ export default function PostScreen({
       <div className="w-full max-w-3xl bg-white dark:bg-slate-950 rounded-2xl md:rounded-3xl border border-slate-200 dark:border-slate-800 p-6 md:p-10 shadow-sm">
 
         {/* Header */}
-        <h2
-          className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-white mb-6 flex items-center gap-2 cursor-pointer"
-          onClick={() => editingAd && setEditingAd(null)}
-        >
-          <PlusCircle className="text-[#84CC16]" size={26} />
-          {editingAd ? t.edit_ad : t.post_title}
-        </h2>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <h2 className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <PlusCircle className="text-[#84CC16]" size={26} />
+            {editingAd ? t.edit_ad : t.post_title}
+          </h2>
+          {editingAd && (
+            <button type="button" onClick={() => setEditingAd(null)} className="shrink-0 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
+              {t.cancel}
+            </button>
+          )}
+        </div>
         <div className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300" data-testid="publish-ai-brand-message">
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           {t.ai_brand_tagline}
