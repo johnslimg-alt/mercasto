@@ -69,3 +69,63 @@ for (const [lang, copy] of Object.entries(AUTOCOMPLETE_COPY)) {
     await expect(desktopHeader.getByRole('button', { name: new RegExp(`${copy.didYouMean}\\s+ipad`, 'i') })).toBeVisible();
   });
 }
+
+
+async function mockSingleSuggestion(page, suggestion = 'iPad Pro') {
+  await page.route('**/api/search/suggestions?**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([suggestion]) });
+  });
+}
+
+async function expectSearchParam(page, expected) {
+  await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe(expected);
+}
+
+test('desktop autocomplete chooses the highlighted suggestion with Enter', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await mockSingleSuggestion(page);
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+  const input = page.getByTestId('desktop-search-input');
+  await input.fill('ipd');
+  await expect(page.getByTestId('desktop-header-row').getByRole('button', { name: /iPad Pro/i })).toBeVisible();
+  await input.press('ArrowDown');
+  await input.press('Enter');
+
+  await expectSearchParam(page, 'iPad Pro');
+  await expect(input).toHaveValue('iPad Pro');
+});
+
+test('mobile autocomplete chooses the highlighted suggestion with Enter', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockSingleSuggestion(page);
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+  const input = page.getByTestId('mobile-search-input');
+  await input.fill('ipd');
+  await expect(page.getByTestId('mobile-header-search').locator('..').getByRole('button', { name: /iPad Pro/i })).toBeVisible();
+  await input.press('ArrowDown');
+  await input.press('Enter');
+
+  await expectSearchParam(page, 'iPad Pro');
+  await expect(input).toHaveValue('iPad Pro');
+});
+
+test('autocomplete chooses a highlighted recent search with Enter', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.addInitScript(() => {
+    localStorage.setItem('mercasto_recent_searches', JSON.stringify(['Toyota Corolla']));
+    localStorage.setItem('cookiesAccepted', 'true');
+  });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+  const input = page.getByTestId('desktop-search-input');
+  await input.focus();
+  await expect(page.getByTestId('desktop-header-row').getByRole('button', { name: /Toyota Corolla/i })).toBeVisible();
+  await input.press('ArrowDown');
+  await input.press('Enter');
+
+  await expectSearchParam(page, 'Toyota Corolla');
+  await expect(input).toHaveValue('Toyota Corolla');
+});

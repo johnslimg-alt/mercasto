@@ -1013,6 +1013,33 @@ function App() {
     executeSearch(suggestion);
   }, [executeSearch, saveRecentSearch, setSearchQuery]);
 
+  const handleSearchInputKeyDown = useCallback((event) => {
+    const items = suggestions.length > 0 ? suggestions : recentSearches;
+
+    if (event.key === 'Escape') {
+      setShowSuggestions(false);
+      setHighlightedIndex(-1);
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setHighlightedIndex(index => Math.min(index + 1, items.length - 1));
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setHighlightedIndex(index => Math.max(index - 1, -1));
+      return;
+    }
+
+    if (event.key === 'Enter' && highlightedIndex >= 0 && highlightedIndex < items.length) {
+      event.preventDefault();
+      handleSuggestionSelect(items[highlightedIndex]);
+    }
+  }, [handleSuggestionSelect, highlightedIndex, recentSearches, suggestions]);
+
   useEffect(() => {
     const handler = (e) => {
       if ((!desktopSearchRef.current || !desktopSearchRef.current.contains(e.target)) &&
@@ -4373,7 +4400,7 @@ function App() {
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
               <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="desktop-header-control desktop-header-search-control header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-              <input data-testid="desktop-search-input" value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
+              <input data-testid="desktop-search-input" value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
                 {searchLocation?.lat && (
                   <>
                     <div className="h-7 w-px bg-slate-200"></div>
@@ -4605,7 +4632,7 @@ function App() {
             <div ref={mobileSearchRef} className="relative min-w-0">
               <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-full focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input data-testid="mobile-search-input" ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={e => { if (e.key === 'Escape') { setShowSuggestions(false); setHighlightedIndex(-1); } else if (e.key === 'ArrowDown') { e.preventDefault(); const items = suggestions.length > 0 ? suggestions : recentSearches; setHighlightedIndex(i => Math.min(i + 1, items.length - 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(i => Math.max(i - 1, -1)); } }} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
+                <input data-testid="mobile-search-input" ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
                 <button type="submit" data-testid="mobile-search-submit" aria-label={t.search_btn || 'Buscar'} className="mobile-search-submit mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#84CC16] text-slate-950">
                   <Search className="h-4 w-4" />
                 </button>
