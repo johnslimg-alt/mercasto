@@ -192,6 +192,7 @@
   "search": {
     "recentSearches": "عمليات البحث الأخيرة",
     "suggestions": "المقترحات",
+    "didYouMean": "هل تقصد:",
     "clearHistory": "مسح السجل",
     "saveSearch": "حفظ البحث",
     "savedSearches": "عمليات البحث المحفوظة",

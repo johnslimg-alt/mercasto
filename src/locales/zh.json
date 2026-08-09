@@ -192,6 +192,7 @@
   "search": {
     "recentSearches": "最近搜索",
     "suggestions": "建议",
+    "didYouMean": "您是不是想找：",
     "clearHistory": "清除历史",
     "saveSearch": "保存搜索",
     "savedSearches": "已保存搜索",

@@ -192,6 +192,7 @@
   "search": {
     "recentSearches": "Buscas recentes",
     "suggestions": "Sugestões",
+    "didYouMean": "Você quis dizer:",
     "clearHistory": "Limpar histórico",
     "saveSearch": "Salvar busca",
     "savedSearches": "Buscas salvas",

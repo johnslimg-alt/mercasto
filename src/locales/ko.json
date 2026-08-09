@@ -192,6 +192,7 @@
   "search": {
     "recentSearches": "최근 검색어",
     "suggestions": "추천 검색어",
+    "didYouMean": "혹시 다음을 찾으셨나요:",
     "clearHistory": "기록 삭제",
     "saveSearch": "검색 저장",
     "savedSearches": "저장된 검색",

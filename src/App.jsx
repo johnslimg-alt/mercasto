@@ -571,6 +571,8 @@ function App() {
     }
   });
   const suggestionDebounceRef = useRef(null);
+  const suggestionAbortRef = useRef(null);
+  const suggestionSequenceRef = useRef(0);
   const desktopSearchRef = useRef(null);
   const mobileSearchRef = useRef(null);
   const [selectedState, setSelectedState] = useState('');
@@ -948,14 +950,38 @@ function App() {
   }, [executeSearch, locCity, locState]);
 
   const fetchSuggestions = useCallback((q) => {
-    if (!q || q.length < 2) { setSuggestions([]); return; }
     clearTimeout(suggestionDebounceRef.current);
-    suggestionDebounceRef.current = setTimeout(() => {
-      fetch('/api/search/suggestions?q=' + encodeURIComponent(q))
-        .then(r => r.json())
-        .then(data => setSuggestions(Array.isArray(data) ? data : []))
-        .catch(() => setSuggestions([]));
+    suggestionSequenceRef.current += 1;
+    const requestSequence = suggestionSequenceRef.current;
+    suggestionAbortRef.current?.abort();
+    suggestionAbortRef.current = null;
+
+    if (!q || q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    suggestionDebounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      suggestionAbortRef.current = controller;
+      try {
+        const response = await fetch('/api/search/suggestions?q=' + encodeURIComponent(q), { signal: controller.signal });
+        if (!response.ok) throw new Error(`Suggestions request failed: ${response.status}`);
+        const data = await response.json();
+        if (requestSequence !== suggestionSequenceRef.current) return;
+        setSuggestions(Array.isArray(data) ? data : []);
+      } catch (error) {
+        if (error?.name === 'AbortError' || requestSequence !== suggestionSequenceRef.current) return;
+        setSuggestions([]);
+      } finally {
+        if (suggestionAbortRef.current === controller) suggestionAbortRef.current = null;
+      }
     }, 250);
+  }, []);
+
+  useEffect(() => () => {
+    clearTimeout(suggestionDebounceRef.current);
+    suggestionAbortRef.current?.abort();
   }, []);
 
   const saveRecentSearch = useCallback((q) => {

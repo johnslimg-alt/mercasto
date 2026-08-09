@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * SearchSuggestions — autocomplete dropdown for the global search bar.
@@ -14,6 +15,7 @@ export default function SearchSuggestions({
   onClearRecent,
   highlightedIndex = -1,
 }) {
+  const { t } = useTranslation();
   const showRecent = query.length === 0 && recentSearches.length > 0;
   const hasSuggestions = suggestions.length > 0;
 
@@ -42,11 +44,11 @@ export default function SearchSuggestions({
     },
       showRecent && React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'flex items-center justify-between px-4 pt-3 pb-1.5' },
-          React.createElement('span', { className: 'text-[11px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Búsquedas recientes'),
+          React.createElement('span', { className: 'text-[11px] font-semibold text-slate-400 uppercase tracking-wider' }, t('search.recentSearches')),
           React.createElement('button', {
             onMouseDown: (e) => { e.preventDefault(); onClearRecent?.(); },
             className: 'text-[11px] text-red-400 hover:text-red-600 font-medium transition-colors'
-          }, 'Borrar')
+          }, t('search.clearHistory'))
         ),
         recentItems.map((item, i) =>
           React.createElement('button', {
@@ -62,7 +64,7 @@ export default function SearchSuggestions({
       showRecent && hasSuggestions && React.createElement('div', { className: 'border-t border-slate-100 dark:border-slate-700 mx-3 my-1' }),
       hasSuggestions && React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'px-4 pt-3 pb-1.5' },
-          React.createElement('span', { className: 'text-[11px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Sugerencias')
+          React.createElement('span', { className: 'text-[11px] font-semibold text-slate-400 uppercase tracking-wider' }, t('search.suggestions'))
         ),
         suggItems.map((item, i) => {
           const flatIdx = recentItems.length + i;
@@ -77,7 +79,7 @@ export default function SearchSuggestions({
             ),
             isFuzzy
               ? React.createElement('span', { className: 'truncate' },
-                  React.createElement('span', { className: 'text-slate-400 italic' }, 'Quizás: '),
+                  React.createElement('span', { className: 'text-slate-400 italic' }, t('search.didYouMean') + ' '),
                   React.createElement('span', { className: 'text-slate-500 dark:text-slate-400 italic' }, item)
                 )
               : React.createElement('span', { className: 'text-slate-700 dark:text-slate-200 truncate' }, highlight(item))

@@ -192,6 +192,7 @@
   "search": {
     "recentSearches": "История поиска",
     "suggestions": "Рекомендации",
+    "didYouMean": "Возможно, вы имели в виду:",
     "clearHistory": "Очистить историю",
     "saveSearch": "Сохранить поиск",
     "savedSearches": "Сохраненные поиски",
