@@ -169,7 +169,7 @@ export default function InmueblesLanding({ lang = 'es' }) {
         {/* CTA */}
         <section className="bg-gradient-to-r from-emerald-700 to-emerald-500 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 text-white">
           <div>
-            <h2 className="text-2xl font-bold mb-2">¿Tienes una propiedad para vender o rentar?</h2>
+            <h2 className="text-2xl font-bold mb-2">Tienes una propiedad para vender o rentar?</h2>
             <p className="text-emerald-100">Llega a miles de compradores e inquilinos en toda la República.</p>
           </div>
           <button onClick={() => navigate('/post')}

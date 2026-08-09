@@ -268,7 +268,7 @@ assertContains(
 
 assertContains(
   'src/components/screens/AdDetailScreen.jsx',
-  '¿Vendes este producto o uno parecido?',
+  'Vendes este producto o uno parecido?',
   'catalog references convert owners into genuine sellers instead of exposing a placeholder contact'
 );
 

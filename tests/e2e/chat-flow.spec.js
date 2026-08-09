@@ -49,7 +49,7 @@ test.describe('marketplace internal chat', () => {
           avatar_url: null,
           ad_id: 42,
           ad: { id: 42, title: 'Bicicleta urbana', price: 3500, image_url: null },
-          last_message: '¿Sigue disponible?',
+          last_message: 'Sigue disponible?',
           created_at: '2026-08-03T20:00:00Z',
           unread_count: 0,
           is_read: true,
@@ -102,8 +102,8 @@ test.describe('marketplace internal chat', () => {
               sender_id: currentUser.id,
               receiver_id: seller.id,
               ad_id: 42,
-              content: '¿Sigue disponible?',
-              body: '¿Sigue disponible?',
+              content: 'Sigue disponible?',
+              body: 'Sigue disponible?',
               type: 'text',
               created_at: '2026-08-03T20:00:00Z',
               sender: currentUser,
@@ -139,16 +139,16 @@ test.describe('marketplace internal chat', () => {
     await expect(page.getByText('Bicicleta urbana').last()).toBeVisible();
 
     const composer = page.getByRole('textbox', { name: 'Escribe un mensaje' });
-    await composer.fill('¿Sigue disponible?');
+    await composer.fill('Sigue disponible?');
     await page.getByRole('button', { name: 'Enviar mensaje' }).click();
 
     await expect.poll(() => sentPayload).toEqual({
       receiver_id: seller.id,
       ad_id: 42,
-      content: '¿Sigue disponible?',
+      content: 'Sigue disponible?',
     });
     await expect(page).toHaveURL(/\/mensajes\?conversation=77$/);
-    await expect(page.getByText('¿Sigue disponible?').last()).toBeVisible();
+    await expect(page.getByText('Sigue disponible?').last()).toBeVisible();
     await expect(page.getByText(seller.name).last()).toBeVisible();
   });
 });

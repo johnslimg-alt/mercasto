@@ -77,7 +77,7 @@ class EmailVerificationController extends Controller
 
         return response()->json([
             'ok'      => true,
-            'message' => '¡Email verificado correctamente!',
+            'message' => 'Email verificado correctamente!',
         ]);
     }
 }

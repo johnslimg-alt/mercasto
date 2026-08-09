@@ -105,6 +105,6 @@ class PhoneVerificationController extends Controller
         }
 
         Cache::forget("public_profile_{$user->id}");
-        return response()->json(["ok" => true, "message" => "¡Teléfono verificado correctamente!"]);
+        return response()->json(["ok" => true, "message" => "Teléfono verificado correctamente!"]);
     }
 }

@@ -56,7 +56,7 @@ class ClipWebhookTest extends TestCase
         ]);
         $this->assertDatabaseHas('user_notifications', [
             'user_id' => $user->id,
-            'title' => '¡Pago exitoso!',
+            'title' => 'Pago exitoso!',
         ]);
         $this->assertDatabaseCount('user_notifications', 1);
         Event::assertDispatchedTimes(NewNotification::class, 1);

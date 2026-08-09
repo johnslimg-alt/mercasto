@@ -173,7 +173,7 @@ async function assertPostFlow(page, lang) {
 
   if (lang !== 'es') {
     const body = await page.locator('body').innerText();
-    for (const literal of ['Selecciona una Categoría', 'Usar GPS actual', '¿Cómo te contactan?', 'Teléfono (10 dígitos)']) {
+    for (const literal of ['Selecciona una Categoría', 'Usar GPS actual', 'Cómo te contactan?', 'Teléfono (10 dígitos)']) {
       expect(body).not.toContain(literal);
     }
   }

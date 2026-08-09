@@ -3,7 +3,7 @@ export const achievementsTranslations = {
     title: 'Mis Logros', level: 'Nivel', totalXp: 'Total XP', progressToLevel: 'Progreso al nivel',
     xpToNext: 'XP para el siguiente nivel', streakDays: 'Días seguidos', record: 'Récord', achievements: 'Logros',
     completed: 'Completado', unlocked: 'Desbloqueados', toUnlock: 'Por desbloquear', activity: 'Actividad',
-    noUnlocked: 'Aún no has desbloqueado logros', noUnlockedHint: '¡Publica tu primer anuncio para empezar!',
+    noUnlocked: 'Aún no has desbloqueado logros', noUnlockedHint: 'Publica tu primer anuncio para empezar!',
     noActivity: 'Sin actividad reciente', errorLoading: 'Error al cargar los logros', notAuthenticated: 'No autenticado',
     fetchFailed: 'No se pudo obtener el perfil', rarityCommon: 'Común', rarityRare: 'Raro', rarityEpic: 'Épico', rarityLegendary: 'Legendario',
   },

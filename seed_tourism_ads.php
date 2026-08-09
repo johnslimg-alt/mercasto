@@ -108,7 +108,7 @@ $ads = [
     // 7. Гиды / guias_servicios
     [
         'title' => 'Guía Certificado bilingüe en Teotihuacán',
-        'description' => '¿Visitas las pirámides de Teotihuacán? Ofrezco servicio de guía arqueológico certificado oficial de la SECTUR. Recorrido personalizado de 3 horas lleno de historia de la cultura teotihuacana. Hablo español e inglés.',
+        'description' => 'Visitas las pirámides de Teotihuacán? Ofrezco servicio de guía arqueológico certificado oficial de la SECTUR. Recorrido personalizado de 3 horas lleno de historia de la cultura teotihuacana. Hablo español e inglés.',
         'price' => 600.00,
         'category' => 'guias_servicios',
         'subcategory' => 'Guías',

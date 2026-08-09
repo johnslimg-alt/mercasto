@@ -15,7 +15,7 @@
         </div>
     @endif
 
-    <p><strong>¿Cómo corregirlo?</strong> Aquí algunos consejos:</p>
+    <p><strong>Cómo corregirlo?</strong> Aquí algunos consejos:</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 12px 0;">
         <tr>
@@ -44,7 +44,7 @@
     </div>
 
     <p style="font-size: 13px; color: #94A3B8; text-align: center;">
-        ¿Crees que es un error? Escríbenos a
+        Crees que es un error? Escríbenos a
         <a href="mailto:soporte@mercasto.com" style="color: #84CC16;">soporte@mercasto.com</a>
     </p>
 @endsection

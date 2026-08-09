@@ -56,7 +56,7 @@ export default function PushNotificationManager({ user, compact = false }) {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
         body: JSON.stringify(subscription.toJSON()),
       });
-      if (response.ok) { setSubscribed(true); toast.success('¡Notificaciones activadas!'); }
+      if (response.ok) { setSubscribed(true); toast.success('Notificaciones activadas!'); }
       else { toast.error('Error al guardar suscripción'); }
     } catch (error) { console.error('Subscribe error:', error); toast.error('Error al activar notificaciones'); }
     finally { setLoading(false); }

@@ -1,9 +1,9 @@
 @extends('emails.layout')
 
-@section('subject', "¡Tu anuncio fue aprobado! '{$ad->title}'")
+@section('subject', "Tu anuncio fue aprobado! '{$ad->title}'")
 
 @section('content')
-    <h1>¡Tu anuncio fue aprobado! ✅</h1>
+    <h1>Tu anuncio fue aprobado! ✅</h1>
 
     <p>Buenas noticias, <strong>{{ $ad->user->name ?? 'vendedor' }}</strong>. Tu anuncio ha sido revisado y aprobado por nuestro equipo de moderación. Ya está visible para todos los compradores en Mercasto.</p>
 

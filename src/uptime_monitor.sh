@@ -16,13 +16,13 @@ STATE_FILE="/tmp/mercasto_status.txt"
 
 if [ "$STATUS" -ne 200 ]; then
     if [ ! -f "$STATE_FILE" ]; then
-        MESSAGE="🚨 <b>¡ALERTA DE CAÍDA!</b> 🚨%0A%0AEl sitio <b>$URL</b> no responde.%0ACódigo HTTP: $STATUS%0AHora: $(date '+%Y-%m-%d %H:%M:%S')"
+        MESSAGE="🚨 <b>ALERTA DE CAÍDA!</b> 🚨%0A%0AEl sitio <b>$URL</b> no responde.%0ACódigo HTTP: $STATUS%0AHora: $(date '+%Y-%m-%d %H:%M:%S')"
         curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" -d chat_id=$CHAT_ID -d text="$MESSAGE" -d parse_mode="HTML" > /dev/null
         touch "$STATE_FILE"
     fi
 else
     if [ -f "$STATE_FILE" ]; then
-        MESSAGE="✅ <b>¡SITIO RECUPERADO!</b> ✅%0A%0AEl sitio <b>$URL</b> vuelve a funcionar correctamente.%0ACódigo HTTP: $STATUS%0AHora: $(date '+%Y-%m-%d %H:%M:%S')"
+        MESSAGE="✅ <b>SITIO RECUPERADO!</b> ✅%0A%0AEl sitio <b>$URL</b> vuelve a funcionar correctamente.%0ACódigo HTTP: $STATUS%0AHora: $(date '+%Y-%m-%d %H:%M:%S')"
         curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" -d chat_id=$CHAT_ID -d text="$MESSAGE" -d parse_mode="HTML" > /dev/null
         rm "$STATE_FILE"
     fi

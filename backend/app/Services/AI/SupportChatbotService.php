@@ -78,7 +78,7 @@ class SupportChatbotService
         $message = strtolower($message);
         
         $faqs = [
-            'cómo me registro' => 'Para registrarte en Mercasto:\n\n1. Haz clic en "Registrarse" en la esquina superior derecha\n2. Ingresa tu email y crea una contraseña\n3. Confirma tu email\n4. ¡Listo! Ya puedes publicar anuncios',
+            'cómo me registro' => 'Para registrarte en Mercasto:\n\n1. Haz clic en "Registrarse" en la esquina superior derecha\n2. Ingresa tu email y crea una contraseña\n3. Confirma tu email\n4. Listo! Ya puedes publicar anuncios',
             
             'cómo publico un anuncio' => 'Para publicar un anuncio:\n\n1. Inicia sesión en tu cuenta\n2. Haz clic en "Publicar anuncio"\n3. Selecciona la categoría\n4. Agrega título, descripción, fotos y precio\n5. Haz clic en "Publicar"\n\nEl anuncio se enviará a moderación y puede permanecer pendiente mientras se revisa.',
             
@@ -94,7 +94,7 @@ class SupportChatbotService
             
             'qué es mercasto pro' => 'Las opciones comerciales y promociones vigentes se muestran en https://mercasto.com/tarifas. Revisa el importe, la duración y el producto antes de iniciar el pago.',
             
-            'cómo recupero mi contraseña' => 'Para recuperar tu contraseña:\n\n1. Haz clic en "Iniciar sesión"\n2. Selecciona "¿Olvidaste tu contraseña?"\n3. Ingresa tu email\n4. Recibirás un enlace para crear una nueva contraseña\n5. Sigue las instrucciones del email\n\nSi no recibes el email, revisa tu carpeta de spam.',
+            'cómo recupero mi contraseña' => 'Para recuperar tu contraseña:\n\n1. Haz clic en "Iniciar sesión"\n2. Selecciona "Olvidaste tu contraseña?"\n3. Ingresa tu email\n4. Recibirás un enlace para crear una nueva contraseña\n5. Sigue las instrucciones del email\n\nSi no recibes el email, revisa tu carpeta de spam.',
             
             'puedo vender mi empresa' => 'Mercasto ofrece opciones para negocios. Consulta https://mercasto.com/tarifas y contacta a soporte para confirmar funciones, precio y disponibilidad antes de contratar.',
         ];
@@ -164,7 +164,8 @@ class SupportChatbotService
         $prompt .= "4. Si no sabes algo, di 'No tengo esa información, pero puedo ayudarte a contactar con soporte humano'\n";
         $prompt .= "5. Nunca inventes información sobre precios o políticas\n";
         $prompt .= "6. Si detectas frustración, ofrece escalar a soporte humano\n";
-        $prompt .= "7. No uses emojis excesivos (máximo 2-3 por mensaje)\n\n";
+        $prompt .= "7. No uses emojis excesivos (máximo 2-3 por mensaje)\n";
+        $prompt .= "8. En español mexicano, usa ? y ! solo al final; no uses signos invertidos de apertura\n\n";
         
         $prompt .= "FUNCIONES DISPONIBLES:\n";
         $prompt .= "- Generación asistida de descripciones\n";
@@ -185,6 +186,7 @@ class SupportChatbotService
     {
         // Remove markdown if excessive
         $response = preg_replace('/\*\*(.+?)\*\*/', '$1', $response);
+        $response = preg_replace('/[\x{00BF}\x{00A1}]/u', '', $response);
         
         // Limit length
         if (strlen($response) > 800) {

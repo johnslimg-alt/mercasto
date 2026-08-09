@@ -75,7 +75,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
 
         {/* Service category grid */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-5">¿Qué servicio necesitas?</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-5">Qué servicio necesitas?</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {SERVICE_CATS.map(s => {
               const Icon = s.Icon;
@@ -110,7 +110,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
 
         {/* Trust section */}
         <section className="bg-orange-50 rounded-3xl p-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">¿Por qué Mercasto?</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">Por qué Mercasto?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {TRUST.map(item => {
               const Icon = item.Icon;
@@ -129,7 +129,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
         {/* Provider CTA */}
         <section className="bg-gradient-to-r from-orange-600 to-orange-400 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 text-white">
           <div>
-            <h2 className="text-2xl font-bold mb-2">¿Eres profesional independiente?</h2>
+            <h2 className="text-2xl font-bold mb-2">Eres profesional independiente?</h2>
             <p className="text-orange-100">Publica tus servicios gratis y conecta con clientes en tu ciudad.</p>
           </div>
           <button onClick={() => navigate('/post')}

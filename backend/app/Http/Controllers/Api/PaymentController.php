@@ -379,7 +379,7 @@ class PaymentController extends Controller
 
                 $notificationData = [
                     'user_id' => $fulfilledPayment->user_id,
-                    'title' => '¡Pago exitoso!',
+                    'title' => 'Pago exitoso!',
                     'message' => 'Tu pago de $' . number_format($fulfilledPayment->amount, 2) . ' MXN por "' . $fulfilledPayment->description . '" se procesó correctamente.',
                     'is_read' => false,
                     'created_at' => now(),
@@ -806,7 +806,7 @@ class PaymentController extends Controller
 
             $notificationData = [
                 'user_id' => $payment->user_id,
-                'title' => '¡Pago exitoso!',
+                'title' => 'Pago exitoso!',
                 'message' => 'Se descontaron $' . number_format($amount, 2) . ' de tu saldo por "' . $description . '".',
                 'is_read' => false,
                 'created_at' => now(),
@@ -965,7 +965,7 @@ class PaymentController extends Controller
             Cache::put($fraudKey, true, now()->addDays(365));
             
             $newBalance = DB::table('users')->where('id', $user->id)->value('balance');
-            return response()->json(['success' => true, 'message' => "¡Has recibido {$coupon->credits} créditos!", 'balance' => $newBalance]);
+            return response()->json(['success' => true, 'message' => "Has recibido {$coupon->credits} créditos!", 'balance' => $newBalance]);
         });
     }
 

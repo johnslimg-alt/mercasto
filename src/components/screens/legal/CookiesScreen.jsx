@@ -5,7 +5,7 @@ import { ChevronLeft, Cookie, ExternalLink } from 'lucide-react';
 const LAST_UPDATED = '17 de mayo de 2026';
 
 const SECTIONS = [
-  { id: 'que-son', title: '1. ¿Qué son las Cookies?' },
+  { id: 'que-son', title: '1. Qué son las Cookies?' },
   { id: 'tipos', title: '2. Tipos de Cookies que Usamos' },
   { id: 'control', title: '3. Cómo Controlarlas' },
   { id: 'terceros', title: '4. Cookies de Terceros' },
@@ -131,7 +131,7 @@ export default function CookiesScreen() {
               <div className="space-y-8 text-[15px] text-slate-700 leading-relaxed">
 
                 <section id="que-son">
-                  <SectionTitle n="1">¿Qué son las Cookies?</SectionTitle>
+                  <SectionTitle n="1">Qué son las Cookies?</SectionTitle>
                   <p>Las cookies son pequeños archivos de texto que los sitios web almacenan en tu dispositivo (computadora, teléfono o tableta) cuando los visitas. Se utilizan ampliamente para hacer que los sitios web funcionen correctamente, de forma más eficiente, y para proporcionar información a los propietarios del sitio.</p>
                   <p className="mt-3">Las cookies pueden ser de <strong>sesión</strong> (se eliminan al cerrar el navegador) o <strong>persistentes</strong> (permanecen en tu dispositivo por un período determinado). También pueden ser <strong>propias</strong> (establecidas por Mercasto) o de <strong>terceros</strong> (establecidas por otros servicios).</p>
                 </section>

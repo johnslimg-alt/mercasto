@@ -235,7 +235,7 @@ class AdRenewalService
 
             $notification = [
                 'user_id' => $ad->user_id,
-                'title' => '¡Anuncio renovado!',
+                'title' => 'Anuncio renovado!',
                 'message' => "Tu anuncio fue renovado por {$days} días después de confirmar el pago de $" . number_format($amount, 0) . ' MXN.',
                 'is_read' => false,
                 'created_at' => now(),

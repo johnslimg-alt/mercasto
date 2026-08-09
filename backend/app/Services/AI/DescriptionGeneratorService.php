@@ -153,6 +153,7 @@ class DescriptionGeneratorService
         $prompt .= "3. Sea honesta sobre el estado del producto\n";
         $prompt .= "4. Incluya un call-to-action al final\n";
         $prompt .= "5. Use español mexicano natural\n";
+        $prompt .= "6. Use ? y ! solo al final; no use signos invertidos de apertura\n";
 
         return $prompt;
     }
@@ -165,6 +166,7 @@ class DescriptionGeneratorService
         // Remove markdown formatting if present
         $response = preg_replace('/\*\*(.+?)\*\*/', '$1', $response);
         $response = preg_replace('/\*(.+?)\*/', '$1', $response);
+        $response = preg_replace('/[\x{00BF}\x{00A1}]/u', '', $response);
         
         // Remove excessive line breaks
         $response = preg_replace("/\n{3,}/", "\n\n", $response);
@@ -198,7 +200,7 @@ class DescriptionGeneratorService
             $description .= "\n";
         }
 
-        $description .= "¡Contáctame para más información!";
+        $description .= "Contáctame para más información!";
 
         return [
             'success' => true,

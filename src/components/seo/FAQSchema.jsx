@@ -5,27 +5,27 @@ import { getTranslations } from '../../utils/translations';
 
 const HOME_FAQS_ES = [
   {
-    question: '¿Qué es Mercasto?',
+    question: 'Qué es Mercasto?',
     answer: 'Mercasto es la plataforma de anuncios clasificados más moderna e inteligente con AI para México. Organiza publicaciones y facilita el contacto directo entre compradores y vendedores.',
   },
   {
-    question: '¿Cómo usa Mercasto la AI?',
+    question: 'Cómo usa Mercasto la AI?',
     answer: 'Mercasto usa AI para asistir la publicación, mejorar descripciones, ofrecer recomendaciones y apoyar la moderación de anuncios.',
   },
   {
-    question: '¿Cuánto cuesta publicar?',
+    question: 'Cuánto cuesta publicar?',
     answer: 'La activación inicial de un anuncio elegible es gratuita durante siete días. Renovarlo por otros siete días cuesta 49 MXN.',
   },
   {
-    question: '¿Cómo contacto al vendedor?',
+    question: 'Cómo contacto al vendedor?',
     answer: 'Según los datos habilitados en el anuncio, puedes usar WhatsApp, Telegram, correo, teléfono o el flujo interno de mensajes.',
   },
   {
-    question: '¿Mercasto garantiza las transacciones?',
+    question: 'Mercasto garantiza las transacciones?',
     answer: 'No. Mercasto facilita la publicación y el contacto, pero comprador y vendedor deben verificar el producto, la identidad, la entrega y el pago.',
   },
   {
-    question: '¿Qué significa una cuenta verificada?',
+    question: 'Qué significa una cuenta verificada?',
     answer: 'Indica que Mercasto registró una verificación disponible para esa cuenta. No constituye una garantía sobre sus anuncios o transacciones.',
   },
 ];
@@ -55,25 +55,25 @@ export const FAQ_DATA = {
   home: HOME_FAQS,
   category: (categoryName) => [
     {
-      question: `¿Cómo comprar ${categoryName} en Mercasto?`,
+      question: `Cómo comprar ${categoryName} en Mercasto?`,
       answer: `Busca en la categoría, compara precio, condición, ubicación y fotos, y contacta al vendedor por los canales habilitados. Verifica el artículo antes de pagar.`,
     },
     {
-      question: `¿Cómo vender ${categoryName} en Mercasto?`,
+      question: `Cómo vender ${categoryName} en Mercasto?`,
       answer: `Publica información real, fotografías actuales, precio y ubicación. El anuncio puede pasar por revisión antes de quedar activo.`,
     },
     {
-      question: `¿Cuánto cuesta publicar ${categoryName}?`,
+      question: `Cuánto cuesta publicar ${categoryName}?`,
       answer: `La activación inicial de un anuncio elegible es gratuita durante siete días. La renovación por otros siete días cuesta 49 MXN.`,
     },
   ],
   state: (stateName) => [
     {
-      question: `¿Hay anuncios disponibles en ${stateName}?`,
+      question: `Hay anuncios disponibles en ${stateName}?`,
       answer: `La oferta cambia constantemente. Usa los filtros de ubicación y confirma la disponibilidad directamente con el vendedor.`,
     },
     {
-      question: `¿Cómo buscar anuncios en ${stateName}?`,
+      question: `Cómo buscar anuncios en ${stateName}?`,
       answer: `Usa la búsqueda y los filtros de categoría, estado, ciudad, precio y características. Las páginas locales solo se publican cuando existe inventario real suficiente.`,
     },
   ],

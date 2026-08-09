@@ -126,7 +126,7 @@ class PushController extends Controller
                 $report = $webPush->sendOneNotification(
                     $subscription,
                     json_encode([
-                        'title' => '🎉 ¡Mercasto funciona!',
+                        'title' => '🎉 Mercasto funciona!',
                         'body' => 'Las notificaciones push están activas',
                         'icon' => '/icon-192x192.png',
                         'badge' => '/icon-192x192.png',

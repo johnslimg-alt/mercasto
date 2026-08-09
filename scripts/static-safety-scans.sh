@@ -83,6 +83,7 @@ bash scripts/catalog-map-state-gate.sh
 bash scripts/map-shell-localization-contract-gate.sh
 bash scripts/active-language-contract-gate.sh
 bash scripts/category-filter-option-i18n-gate.sh
+node scripts/mx-spanish-punctuation-gate.mjs
 bash scripts/admin-request-changes-gate.sh
 bash scripts/web-push-vapid-gate.sh
 bash scripts/supply-readiness-gate.sh

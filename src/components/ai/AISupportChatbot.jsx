@@ -26,10 +26,10 @@ export default function AISupportChatbot() {
   };
 
   const quickQuestions = [
-    '¿Cómo publico un anuncio?',
-    '¿Es seguro comprar?',
-    '¿Cuánto cuesta?',
-    '¿Cómo contacto al vendedor?',
+    'Cómo publico un anuncio?',
+    'Es seguro comprar?',
+    'Cuánto cuesta?',
+    'Cómo contacto al vendedor?',
   ];
 
   return (
@@ -72,10 +72,10 @@ export default function AISupportChatbot() {
               <div className="text-center py-8">
                 <Bot size={48} className="mx-auto text-lime-500 mb-3" />
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  ¡Hola! Soy MercastoBot
+                  Hola! Soy MercastoBot
                 </h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  ¿En qué puedo ayudarte hoy?
+                  En qué puedo ayudarte hoy?
                 </p>
                 <div className="space-y-2">
                   {quickQuestions.map((q, i) => (

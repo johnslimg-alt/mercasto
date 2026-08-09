@@ -14,19 +14,19 @@ const SECTIONS = [
     bg: 'bg-lime-50',
     faqs: [
       {
-        q: '¿Cómo publico un anuncio?',
+        q: 'Cómo publico un anuncio?',
         a: 'Haz clic en "Publicar", completa categoría, título, descripción, precio, condición, ubicación y fotografías cuando correspondan. El anuncio puede quedar pendiente mientras pasa por moderación.',
       },
       {
-        q: '¿Cuántos anuncios puedo publicar?',
+        q: 'Cuántos anuncios puedo publicar?',
         a: 'El límite vigente depende de las condiciones mostradas en tu cuenta y del producto contratado. La sección "Mis anuncios" muestra cuántos anuncios puedes gestionar.',
       },
       {
-        q: '¿Cuánto tiempo dura mi anuncio?',
+        q: 'Cuánto tiempo dura mi anuncio?',
         a: 'Los anuncios gratuitos están activos durante 7 días. Después puedes renovarlos por $49 MXN por otros 7 días o eliminarlos sin costo desde la sección "Mis anuncios" de tu perfil.',
       },
       {
-        q: '¿Puedo editar mi anuncio después de publicarlo?',
+        q: 'Puedo editar mi anuncio después de publicarlo?',
         a: 'Sí. Ve a tu perfil → "Mis anuncios", selecciona el anuncio que deseas modificar y haz clic en "Editar". Puedes cambiar título, descripción, precio, fotos y ubicación en cualquier momento.',
       },
     ],
@@ -39,15 +39,15 @@ const SECTIONS = [
     bg: 'bg-sky-50',
     faqs: [
       {
-        q: '¿Cómo contacto al vendedor?',
+        q: 'Cómo contacto al vendedor?',
         a: 'Puedes contactar al vendedor por los canales públicos que haya habilitado, como WhatsApp, Telegram o correo electrónico.',
       },
       {
-        q: '¿Puedo hacer una oferta al vendedor?',
+        q: 'Puedo hacer una oferta al vendedor?',
         a: 'Sí. Puedes proponer un precio por el canal público del vendedor y coordinar la entrega con seguridad.',
       },
       {
-        q: '¿Mercasto garantiza las transacciones?',
+        q: 'Mercasto garantiza las transacciones?',
         a: 'Mercasto es una plataforma intermediaria: conectamos compradores y vendedores pero no participamos directamente en las transacciones. Te recomendamos acordar el lugar de entrega en sitio público, verificar el artículo antes de pagar y nunca realizar transferencias anticipadas a desconocidos.',
       },
     ],
@@ -60,15 +60,15 @@ const SECTIONS = [
     bg: 'bg-violet-50',
     faqs: [
       {
-        q: '¿Cómo verifico mi número de teléfono?',
+        q: 'Cómo verifico mi número de teléfono?',
         a: 'La verificación por SMS se encuentra temporalmente deshabilitada. Puedes usar email, Google o Telegram para acceder a tu cuenta; Mercasto mostrará la opción telefónica cuando el proveedor esté disponible.',
       },
       {
-        q: '¿Cómo cambio mi contraseña?',
-        a: 'Ve a tu Perfil → "Seguridad" → "Cambiar contraseña". También puedes restablecer tu contraseña desde la pantalla de inicio de sesión usando la opción "¿Olvidaste tu contraseña?".',
+        q: 'Cómo cambio mi contraseña?',
+        a: 'Ve a tu Perfil → "Seguridad" → "Cambiar contraseña". También puedes restablecer tu contraseña desde la pantalla de inicio de sesión usando la opción "Olvidaste tu contraseña?".',
       },
       {
-        q: '¿Puedo iniciar sesión con Google?',
+        q: 'Puedo iniciar sesión con Google?',
         a: 'Sí. En la pantalla de inicio de sesión o registro encontrarás el botón "Continuar con Google". Esta opción es rápida y segura; no necesitas recordar una contraseña adicional.',
       },
     ],
@@ -81,15 +81,15 @@ const SECTIONS = [
     bg: 'bg-red-50',
     faqs: [
       {
-        q: '¿Cómo reporto un anuncio sospechoso?',
+        q: 'Cómo reporto un anuncio sospechoso?',
         a: 'En cada anuncio puedes usar la opción de reporte y explicar el motivo. Mercasto prioriza los casos según el riesgo y no promete un plazo fijo de resolución.',
       },
       {
-        q: '¿Cómo evito fraudes al comprar?',
+        q: 'Cómo evito fraudes al comprar?',
         a: 'Nunca compartas datos bancarios, números de tarjeta ni contraseñas. Desconfía de precios extremadamente bajos. Siempre acuerda la entrega en un lugar público y verifica el producto antes de pagar. Si algo parece demasiado bueno para ser verdad, probablemente lo es.',
       },
       {
-        q: '¿Mercasto me pedirá mi contraseña alguna vez?',
+        q: 'Mercasto me pedirá mi contraseña alguna vez?',
         a: 'Nunca. Mercasto jamás te solicitará tu contraseña por ningún medio: ni por correo electrónico, ni por WhatsApp, ni por Telegram. Si alguien que dice ser Mercasto te la pide, es un intento de fraude. Repórtalo inmediatamente.',
       },
     ],
@@ -102,15 +102,15 @@ const SECTIONS = [
     bg: 'bg-amber-50',
     faqs: [
       {
-        q: '¿Qué es un anuncio Destacado?',
+        q: 'Qué es un anuncio Destacado?',
         a: 'Un producto de promoción puede cambiar la posición o presentación del anuncio durante el periodo indicado. No garantiza impresiones, contactos ni una venta.',
       },
       {
-        q: '¿Cuánto cuesta destacar un anuncio?',
+        q: 'Cuánto cuesta destacar un anuncio?',
         a: 'Las opciones vigentes son: Subir 3 días por $49 MXN, Resaltar 7 días por $79 MXN, Destacado 7 días por $149 MXN y Top de categoría 7 días por $399 MXN.',
       },
       {
-        q: '¿Cómo se realiza el pago para destacar?',
+        q: 'Cómo se realiza el pago para destacar?',
         a: 'El checkout muestra el proveedor, el concepto, el importe y los medios de pago disponibles. Revisa esos datos antes de confirmar y conserva el comprobante del proveedor.',
       },
     ],
@@ -204,7 +204,7 @@ export default function AyudaScreen() {
       {/* Hero */}
       <div className="bg-white border-b border-slate-100">
         <div className="max-w-3xl mx-auto px-4 py-10 md:py-14">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">¿Cómo podemos ayudarte?</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Cómo podemos ayudarte?</h1>
           <p className="text-slate-500 mb-7">Encuentra respuestas rápidas a las preguntas más frecuentes.</p>
           {/* Search */}
           <div className="relative">
@@ -278,7 +278,7 @@ export default function AyudaScreen() {
         {/* Contact teaser */}
         {!query && (
           <div className="bg-gradient-to-br from-lime-50 to-teal-50 border border-lime-200 rounded-2xl p-6 text-center mt-6">
-            <p className="font-semibold text-slate-800 mb-1">¿No encontraste lo que buscabas?</p>
+            <p className="font-semibold text-slate-800 mb-1">No encontraste lo que buscabas?</p>
             <p className="text-sm text-slate-500 mb-4">Nuestro equipo de soporte está listo para ayudarte.</p>
             <button
               onClick={() => navigate('/contacto')}

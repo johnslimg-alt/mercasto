@@ -685,7 +685,7 @@ export default function AdDetailScreen({
           <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[90px]">
 {isCatalogFiller ? (
   <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
-    <h3 className="text-[16px] font-black text-slate-900 dark:text-white">¿Vendes este producto o uno parecido?</h3>
+    <h3 className="text-[16px] font-black text-slate-900 dark:text-white">Vendes este producto o uno parecido?</h3>
     <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
       Publica tus propias fotos, precio, ubicación y datos de contacto para recibir compradores reales.
     </p>

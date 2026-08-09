@@ -58,16 +58,16 @@ async function prepareOrganicRegistration(page, options = {}) {
   });
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: /¡Bienvenido/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Bienvenido/ })).toBeVisible();
   return payloads;
 }
 
 test('seller onboarding persists completion and opens the real publication route', async ({ page }) => {
   const payloads = await prepareOrganicRegistration(page);
 
-  let onboarding = page.getByRole('dialog', { name: /¡Bienvenido/ });
+  let onboarding = page.getByRole('dialog', { name: /Bienvenido/ });
   await onboarding.getByRole('button', { name: /Siguiente/ }).click();
-  onboarding = page.getByRole('dialog', { name: /¿Qué quieres hacer/ });
+  onboarding = page.getByRole('dialog', { name: /Qué quieres hacer/ });
   await onboarding.getByRole('button', { name: /^Vender/ }).click();
   await page.getByRole('button', { name: /Siguiente/ }).click();
 
@@ -89,9 +89,9 @@ test('seller onboarding persists completion and opens the real publication route
 test('closing onboarding persists a server-side skipped state', async ({ page }) => {
   const payloads = await prepareOrganicRegistration(page);
 
-  await page.getByRole('dialog', { name: /¡Bienvenido/ }).getByRole('button', { name: 'Cerrar' }).click();
+  await page.getByRole('dialog', { name: /Bienvenido/ }).getByRole('button', { name: 'Cerrar' }).click();
 
-  await expect(page.getByRole('heading', { name: /¡Bienvenido/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /Bienvenido/ })).toHaveCount(0);
   expect(payloads).toHaveLength(1);
   expect(payloads[0].onboarding_resolution).toBe('skipped');
   await expect.poll(() => page.evaluate(() => ({
@@ -128,7 +128,7 @@ test('server-resolved onboarding is not shown again', async ({ page }) => {
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
-  await expect(page.getByRole('heading', { name: /¡Bienvenido/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /Bienvenido/ })).toHaveCount(0);
 });
 
 
@@ -155,13 +155,13 @@ test('a local completion marker from another account does not suppress onboardin
   });
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('dialog', { name: /¡Bienvenido/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /Bienvenido/ })).toBeVisible();
 });
 
 test('failed persistence stores a user-scoped retry payload', async ({ page }) => {
   await prepareOrganicRegistration(page, { preferenceStatus: 503 });
 
-  const onboarding = page.getByRole('dialog', { name: /¡Bienvenido/ });
+  const onboarding = page.getByRole('dialog', { name: /Bienvenido/ });
   await onboarding.getByRole('button', { name: 'Cerrar' }).click();
   await expect(onboarding).toHaveCount(0);
 
