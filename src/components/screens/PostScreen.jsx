@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import { filterConfig, autoModelsByBrand } from '../../constants/filterConfig';
+import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { getGlobalFilterDefinitions } from '../../constants/globalFilterOptions';
 import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
 import MapV3 from '../common/MapV3';
@@ -404,7 +405,7 @@ export default function PostScreen({
             <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
               {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
-            <select value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
+            <select data-testid={`post-attribute-${key}`} value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
               <option value="">{t.select}</option>
               {models.map(m => <option key={m} value={m}>{m}</option>)}
               <option value="Otro">{t.post_other_model}</option>
@@ -424,15 +425,15 @@ export default function PostScreen({
       }
     }
 
-    if (field.type === 'select' && field.options?.length > 0) {
+    if ((field.type === 'select' || field.type === 'checkbox') && field.options?.length > 0) {
       return (
         <div key={key} className="space-y-2">
           <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
             {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
           </label>
-          <select value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
+          <select data-testid={`post-attribute-${key}`} value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
             <option value="">{t.select}</option>
-            {field.options.map(o => <option key={o} value={o}>{o}</option>)}
+            {field.options.map(o => { const value = filterOptionValue(o); return <option key={value} value={value}>{filterOptionDisplayLabel(key, o, lang)}</option>; })}
           </select>
           {hasErr && <p className="text-xs text-red-500">{errors[errKey]}</p>}
         </div>

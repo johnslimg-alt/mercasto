@@ -82,6 +82,7 @@ bash scripts/catalog-saved-search-state-gate.sh
 bash scripts/catalog-map-state-gate.sh
 bash scripts/map-shell-localization-contract-gate.sh
 bash scripts/active-language-contract-gate.sh
+bash scripts/category-filter-option-i18n-gate.sh
 bash scripts/admin-request-changes-gate.sh
 bash scripts/web-push-vapid-gate.sh
 bash scripts/supply-readiness-gate.sh

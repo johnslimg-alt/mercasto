@@ -228,6 +228,8 @@ export default function SplitViewContainer({
                 highlightedAdId={hoveredAdId}
                 selectedAdId={selectedAdId}
                 onSearchArea={onSearchArea}
+                copy={t}
+                productLang={lang}
               />
             </React.Suspense>
           )}

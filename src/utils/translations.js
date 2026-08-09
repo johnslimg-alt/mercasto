@@ -1,4 +1,5 @@
 import esTranslations from '../constants/translations/es.js';
+import { loadFilterOptionLanguage } from './filterOptionTranslations.js';
 
 // Hebrew (he) and Yiddish (yi) are intentionally disabled and archived.
 export const SUPPORTED_LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
@@ -21,12 +22,14 @@ export function getTranslations(language = 'es') {
 export async function loadLanguage(language) {
   const lang = normalizeLanguage(language);
   if (cache[lang]) {
+    await loadFilterOptionLanguage(lang);
     return cache[lang];
   }
 
   try {
     const module = await import(`../constants/translations/${lang}.js`);
     cache[lang] = module.default;
+    await loadFilterOptionLanguage(lang);
     return cache[lang];
   } catch (error) {
     console.error(`Failed to load translations for language: ${lang}`, error);
