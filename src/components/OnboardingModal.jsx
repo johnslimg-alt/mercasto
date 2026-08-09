@@ -261,7 +261,6 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
         aria-modal="true"
         aria-labelledby="onboarding-title"
         className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[90vh] flex flex-col"
-        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className={`bg-gradient-to-br ${currentStep.id === 'role' && selectedRole

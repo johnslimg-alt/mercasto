@@ -203,12 +203,14 @@ export default function CatalogScreen({
         </BottomSheet>
 
         {showMobileFilters && (
-          <div className="fixed inset-0 z-[9999] hidden items-stretch justify-start bg-slate-900/60 backdrop-blur-sm md:flex lg:hidden">
-            <div className="absolute inset-0 -z-10" onClick={() => setShowMobileFilters(false)} />
-            <div className="h-full w-[360px] overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-2xl animate-slideRight dark:border-slate-800 dark:bg-slate-900">
+          <div className="fixed inset-0 z-[9999] hidden items-stretch justify-start bg-slate-900/60 backdrop-blur-sm md:flex lg:hidden" onKeyDown={(e) => { if (e.key === 'Escape') setShowMobileFilters(false); }}>
+            <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 -z-10" onClick={() => setShowMobileFilters(false)} />
+            <div role="dialog" aria-modal="true" aria-labelledby="tablet-filters-title" className="h-full w-[360px] overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-2xl animate-slideRight dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">{t.filters || 'Filtros'}</h2>
+                <h2 id="tablet-filters-title" className="text-base font-bold text-slate-900 dark:text-white">{t.filters || 'Filtros'}</h2>
                 <button
+                  type="button"
+                  aria-label={t.close || 'Cerrar'}
                   onClick={() => setShowMobileFilters(false)}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:text-slate-900 dark:bg-slate-800 dark:hover:text-white"
                 >

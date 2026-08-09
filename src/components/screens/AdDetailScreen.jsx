@@ -908,14 +908,19 @@ export default function AdDetailScreen({
 
       {/* QR Code Modal */}
       {showQR && (
-        <div
-          className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-          onClick={() => setShowQR(false)}
-        >
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowQR(false); }}>
           <div
+            data-pointer-dismiss-surface
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+            onClick={() => setShowQR(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ad-qr-title"
             className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center gap-5 max-w-xs w-full"
-            onClick={e => e.stopPropagation()}
           >
             <button
               onClick={() => setShowQR(false)}
@@ -924,7 +929,7 @@ export default function AdDetailScreen({
             >
               <X size={22} />
             </button>
-            <h2 className="text-[15px] font-bold text-slate-900 dark:text-white text-center leading-snug">
+            <h2 id="ad-qr-title" className="text-[15px] font-bold text-slate-900 dark:text-white text-center leading-snug">
               {localizedText(ad.title)}
             </h2>
             {qrDataUrl && (
