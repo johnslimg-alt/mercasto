@@ -35,7 +35,8 @@ async function setLanguage(page, lang) {
 }
 
 async function expectDocumentLanguage(page, lang) {
-  await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe(lang);
+  const expectedLang = lang === 'es' ? 'es-MX' : lang;
+  await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe(expectedLang);
   await expect.poll(() => page.evaluate(() => document.documentElement.dir)).toBe(lang === 'ar' ? 'rtl' : 'ltr');
 }
 
