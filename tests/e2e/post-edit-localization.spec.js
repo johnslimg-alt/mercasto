@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { subcategoriesByLang } from '../../src/constants/subcategoryTranslations';
+import { filterOptionLabel, loadFilterOptionLanguage } from '../../src/utils/filterOptionTranslations.js';
 
 const LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
 const RTL_LANGUAGES = new Set(['ar']);
@@ -86,7 +87,7 @@ async function mockApi(page) {
           title: 'Toyota Corolla QA',
           description: 'QA description',
           price: 325000,
-          category: 'qa-test',
+          category: 'coches',
           condition: 'nuevo',
           state: 'Aguascalientes',
           city: 'Aguascalientes',
@@ -94,7 +95,7 @@ async function mockApi(page) {
           latitude: 21.88,
           longitude: -102.29,
           image_url: null,
-          attributes: {},
+          attributes: { carroceria: 'Sedán' },
           status: 'active',
         }),
       });
@@ -139,14 +140,21 @@ async function assertPostFlow(page, lang) {
   await page.getByRole('main').getByRole('button', { name: `Cars-${lang}` }).click();
   await expect(page.getByText(t.post_select_subcategory, { exact: true })).toBeVisible();
   const motorLabel = firstMotorLabel(lang);
-  if (motorLabel) await expect(page.getByRole('button', { name: motorLabel }).first()).toBeVisible();
+  if (motorLabel) {
+    const motorButton = page.getByRole('button', { name: motorLabel }).first();
+    await expect(motorButton).toBeVisible();
+    await motorButton.click();
+  }
 
-  await page.getByRole('main').getByRole('button', { name: `QA-${lang}` }).click();
   await page.getByRole('button', { name: t.next_btn }).filter({ visible: true }).click();
   await expect(page.getByTestId('publish-title')).toBeVisible();
   await expect(page.getByText(t.sale_details, { exact: true })).toBeVisible();
   await expect(page.locator('option').filter({ hasText: t.gf_venta }).first()).toHaveText(t.gf_venta);
   await expect(page.locator('option').filter({ hasText: t.gf_no_warranty }).first()).toHaveText(t.gf_no_warranty);
+  const postBodyType = page.getByTestId('post-attribute-carroceria');
+  await expect(postBodyType.locator('option[value="Sedán"]')).toHaveText(filterOptionLabel('carroceria', 'Sedán', lang));
+  await postBodyType.selectOption('Sedán');
+  await expect(postBodyType).toHaveValue('Sedán');
   await page.getByTestId('publish-title').fill('QA listing');
   await page.getByTestId('publish-price').fill('1250');
   await page.getByTestId('publish-description').fill('QA description');
@@ -180,6 +188,10 @@ async function assertEditFlow(page, lang) {
   await expect(page.getByRole('button', { name: t.condition_fair })).toBeVisible();
   await expect(page.getByRole('button', { name: t.condition_for_parts })).toBeVisible();
 
+  const editBodyType = page.getByTestId('edit-attribute-carroceria');
+  await expect(editBodyType).toHaveValue('Sedán');
+  await expect(editBodyType.locator('option[value="Sedán"]')).toHaveText(filterOptionLabel('carroceria', 'Sedán', lang));
+
   await page.getByTestId('edit-ad-generate-ai').click();
   await expect(page.getByText(t.ai_description_failed, { exact: true })).toBeVisible();
   await expect(page.getByText('ERROR ESPAÑOL DEL SERVIDOR', { exact: true })).toHaveCount(0);
@@ -193,6 +205,7 @@ async function assertEditFlow(page, lang) {
   await expectNoOverflow(page);
 }
 async function runScenario(page, lang, viewport) {
+  await loadFilterOptionLanguage(lang);
   await page.setViewportSize(viewport);
   await mockApi(page);
   await installSession(page, lang);

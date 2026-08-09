@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { localeFor } from '../../src/utils/localeFormat.js';
+import { filterOptionLabel, loadFilterOptionLanguage } from '../../src/utils/filterOptionTranslations.js';
 
 const languages = ['es','en','pt','fr','zh','ko','de','it','ar','ru','ja'];
 const rtlLanguages = new Set(['ar']);
@@ -41,12 +42,13 @@ async function mockMapApi(page) {
 for (const lang of languages) {
   test(`map shell is localized in ${lang}`, async ({ page }, testInfo) => {
     const tr = localeData[lang];
+    await loadFilterOptionLanguage(lang);
     await page.addInitScript(savedLang => {
       localStorage.setItem('lang', savedLang);
       localStorage.setItem('mercasto_language', savedLang);
     }, lang);
     await mockMapApi(page);
-    await page.goto('/listings');
+    await page.goto('/listings?category=motor');
 
     if (testInfo.project.name === 'chromium-mobile') {
       await page.getByTestId('catalog-map-toggle').click();
@@ -75,6 +77,11 @@ for (const lang of languages) {
     await expect(dialog.getByTestId('map-condition-usado')).toHaveText(tr.map.conditionUsed);
     await expect(dialog.getByTestId('map-condition-reacondicionado')).toHaveText(tr.map.conditionRefurbished);
     await expect(dialog.getByTestId('map-condition-para_piezas')).toHaveText(tr.map.conditionParts);
+
+    const mapBodyType = dialog.getByTestId('map-filter-dynamic-carroceria');
+    await expect(mapBodyType.locator('option[value="Sedán"]')).toHaveText(filterOptionLabel('carroceria', 'Sedán', lang));
+    await mapBodyType.selectOption('Sedán');
+    await expect(mapBodyType).toHaveValue('Sedán');
 
     const expectedPrice = new Intl.NumberFormat(localeFor(lang), {
       style: 'currency', currency: 'MXN', notation: 'compact', maximumFractionDigits: 1,

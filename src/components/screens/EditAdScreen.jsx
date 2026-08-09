@@ -4,6 +4,7 @@ import { ChevronLeft, AlertTriangle, Loader2, X, Plus, Image, Pencil, Sparkles, 
 import SortablePhotoGrid from '../SortablePhotoGrid';
 import MEXICO_STATES from '../../utils/mexicoStates';
 import { filterConfig } from '../../constants/filterConfig';
+import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { localizedText } from '../../utils/localize';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -297,11 +298,11 @@ export default function EditAdScreen({ t, lang }) {
                   <div key={fieldId}>
                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{t[`filter_label_${fieldId}`] || fieldId}</label>
                     {(field.type === 'select' || field.type === 'checkbox') ? (
-                      <select value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
+                      <select data-testid={`edit-attribute-${fieldId}`} value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
                         required={field.required}
                         className={compactFieldClass}>
                         <option value="">{t.select}...</option>
-                        {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        {(field.options || []).map(opt => { const value = filterOptionValue(opt); return <option key={value} value={value}>{filterOptionDisplayLabel(fieldId, opt, lang)}</option>; })}
                       </select>
                     ) : field.type === 'range' ? (
                       <input type="number" value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}

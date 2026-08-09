@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Pencil, Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter, Navigation, Locate } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
+import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
@@ -231,9 +232,11 @@ export default function MapV3({
   className = '',
   showFullscreen = true,
   initialFilters = {},
+  copy = {},
+  productLang = '',
 }) {
   const { t, i18n } = useTranslation();
-  const lang = i18n.resolvedLanguage || i18n.language || 'es';
+  const lang = productLang || i18n.resolvedLanguage || i18n.language || 'es';
   const [expanded, setExpanded] = useState(false);
   const [drawMode, setDrawMode] = useState(false);
   const [leaflet, setLeaflet] = useState(null);
@@ -1231,30 +1234,33 @@ function createPopupElement(ad, marker) {
 
       {/* Dynamic Filters */}
       {normalizedConfig.map(field => {
+        const fieldId = field.id || field.key;
+        const fieldLabel = copy[`filter_label_${fieldId}`] || field.label || fieldId;
         const hasOptions = Array.isArray(field.options) && field.options.length > 0;
-        const currentVals = dynamicFilters[field.id] || [];
+        const currentVals = dynamicFilters[fieldId] || [];
         const currentVal = Array.isArray(currentVals) ? (currentVals[0] || '') : (currentVals || '');
 
         return (
-          <div key={field.id} className="space-y-2">
-            <p className="text-xs font-black text-slate-400 capitalize">{field.label}</p>
+          <div key={fieldId} className="space-y-2">
+            <p className="text-xs font-black text-slate-400 capitalize">{fieldLabel}</p>
             {hasOptions ? (
               <select
-                data-testid={`map-filter-dynamic-${field.id}`}
+                data-testid={`map-filter-dynamic-${fieldId}`}
                 value={currentVal}
                 onChange={(e) => {
                   const val = e.target.value;
                   setDynamicFilters(prev => ({
                     ...prev,
-                    [field.id]: val ? [val] : []
+                    [fieldId]: val ? [val] : []
                   }));
                 }}
                 className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none"
               >
-                <option value="">{t('map.anyValue', { label: field.label })}</option>
-                {field.options.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
+                <option value="">{t('map.anyValue', { label: fieldLabel })}</option>
+                {field.options.map(opt => {
+                  const value = filterOptionValue(opt);
+                  return <option key={value} value={value}>{filterOptionDisplayLabel(fieldId, opt, lang)}</option>;
+                })}
               </select>
             ) : (
               <input
@@ -1264,11 +1270,11 @@ function createPopupElement(ad, marker) {
                   const val = e.target.value;
                   setDynamicFilters(prev => ({
                     ...prev,
-                    [field.id]: val
+                    [fieldId]: val
                   }));
                 }}
                 className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-                placeholder={field.placeholder || field.label}
+                placeholder={field.placeholder || fieldLabel}
               />
             )}
           </div>

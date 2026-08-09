@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { filterConfig } from '../../constants/filterConfig';
+import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { getGlobalFilterDefinitions } from '../../constants/globalFilterOptions';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 import { Filter, MapPin } from 'lucide-react';
@@ -234,34 +235,36 @@ export default function SidebarFilters({
           </h4>
           {config.map(field => {
             // Translate field label using filter_label_<id> key, fallback to original label
-            const fieldLabel = tr(`filter_label_${field.id}`, field.label);
+            const fieldId = field.id || field.key;
+            const fieldLabel = tr(`filter_label_${fieldId}`, field.label || fieldId);
             const anyLabel = tr('any', 'Cualquiera');
             return (
-              <div key={field.id} className="mb-6">
+              <div key={fieldId} className="mb-6">
                 <h4 className={sectionTitleClass}>{fieldLabel}</h4>
 
                 {field.type === 'checkbox' && Array.isArray(field.options) && (
                   isMobile ? (
                     <div className="relative">
                       <select
-                        value={dynamicFilters[field.id]?.[0] || ''}
+                        data-testid={`sidebar-category-filter-${fieldId}`}
+                        value={dynamicFilters[fieldId]?.[0] || ''}
                         onChange={e => {
                           const val = e.target.value;
-                          handleDynamicChange(field.id, val ? [val] : []);
+                          handleDynamicChange(fieldId, val ? [val] : []);
                         }}
                         className={`${selectClass} appearance-none`}
                       >
                         <option value="">{anyLabel}</option>
-                        {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        {field.options.map(opt => { const value = filterOptionValue(opt); return <option key={value} value={value}>{filterOptionDisplayLabel(fieldId, opt, lang)}</option>; })}
                       </select>
                       <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">▼</div>
                     </div>
                   ) : (
                     <div className="space-y-2.5 max-h-[200px] overflow-y-auto no-scrollbar">
                       {field.options.map(opt => (
-                        <label key={opt} className={labelClass}>
-                          <input type="checkbox" checked={(dynamicFilters[field.id] || []).includes(opt)} onChange={() => handleDynamicToggle(field.id, opt)} className="w-4 h-4 rounded text-[#84CC16] focus:ring-[#84CC16] accent-[#84CC16] border-slate-300" />
-                          <span>{opt}</span>
+                        <label key={filterOptionValue(opt)} className={labelClass}>
+                          <input data-testid={`sidebar-category-filter-${fieldId}-${filterOptionValue(opt)}`} type="checkbox" checked={(dynamicFilters[fieldId] || []).includes(filterOptionValue(opt))} onChange={() => handleDynamicToggle(fieldId, filterOptionValue(opt))} className="w-4 h-4 rounded text-[#84CC16] focus:ring-[#84CC16] accent-[#84CC16] border-slate-300" />
+                          <span>{filterOptionDisplayLabel(fieldId, opt, lang)}</span>
                         </label>
                       ))}
                     </div>
@@ -270,23 +273,23 @@ export default function SidebarFilters({
 
                 {field.type === 'select' && Array.isArray(field.options) && (
                   <div className="relative">
-                    <select value={dynamicFilters[field.id] || ''} onChange={e => handleDynamicChange(field.id, e.target.value)} className={`${selectClass} appearance-none`}>
+                    <select data-testid={`sidebar-category-filter-${fieldId}`} value={dynamicFilters[fieldId] || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} className={`${selectClass} appearance-none`}>
                       <option value="">{anyLabel}</option>
-                      {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      {field.options.map(opt => { const value = filterOptionValue(opt); return <option key={value} value={value}>{filterOptionDisplayLabel(fieldId, opt, lang)}</option>; })}
                     </select>
                     <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">▼</div>
                   </div>
                 )}
 
                 {field.type === 'text' && (
-                  <input type="text" value={dynamicFilters[field.id] || ''} onChange={e => handleDynamicChange(field.id, e.target.value)} placeholder={field.placeholder || ''} className={inputClass} />
+                  <input type="text" value={dynamicFilters[fieldId] || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} placeholder={field.placeholder || ''} className={inputClass} />
                 )}
 
                 {field.type === 'range' && (
                   <div className="flex items-center gap-2">
-                    <input type="number" placeholder={field.minPlaceholder || tr('from', 'Desde')} value={(dynamicFilters[field.id] || {}).min || ''} onChange={e => handleDynamicChange(field.id, { ...(dynamicFilters[field.id] || {}), min: e.target.value })} className={inputClass} />
+                    <input type="number" placeholder={field.minPlaceholder || tr('from', 'Desde')} value={(dynamicFilters[fieldId] || {}).min || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), min: e.target.value })} className={inputClass} />
                     <span className="text-slate-400">-</span>
-                    <input type="number" placeholder={field.maxPlaceholder || tr('to', 'Hasta')} value={(dynamicFilters[field.id] || {}).max || ''} onChange={e => handleDynamicChange(field.id, { ...(dynamicFilters[field.id] || {}), max: e.target.value })} className={inputClass} />
+                    <input type="number" placeholder={field.maxPlaceholder || tr('to', 'Hasta')} value={(dynamicFilters[fieldId] || {}).max || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), max: e.target.value })} className={inputClass} />
                   </div>
                 )}
               </div>
