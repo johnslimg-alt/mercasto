@@ -21,6 +21,7 @@ const mapAd = {
   city: 'Monterrey',
   listing_type: 'Venta',
   condition: 'nuevo',
+  attributes: { carroceria: 'Sedán' },
 };
 
 async function mockMapApi(page) {
