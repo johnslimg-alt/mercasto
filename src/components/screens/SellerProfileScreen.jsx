@@ -217,10 +217,11 @@ export default function SellerProfileScreen({ currentUser }) {
                 {ads.map(ad => {
                   const imageSrc = getAdImageSrc(ad);
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={ad.id}
                       onClick={() => navigate(`/?ad=${ad.id}`)}
-                      className="bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow group"
+                      className="w-full text-left bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow group"
                     >
                       <div className="aspect-square bg-slate-100 overflow-hidden">
                         {imageSrc ? (
@@ -242,7 +243,7 @@ export default function SellerProfileScreen({ currentUser }) {
                           {ad.price ? `$${Number(ad.price).toLocaleString('es-MX')}` : 'Precio a tratar'}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

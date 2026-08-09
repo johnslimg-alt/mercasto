@@ -81,9 +81,9 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
           : ads.map(ad => {
             const meta = getVerticalCardMeta(ad, variant);
             return (
-            <div key={ad.id}
+            <button type="button" key={ad.id}
               onClick={() => navigate(`/?ad=${ad.id}`)}
-              className="rounded-2xl bg-white border border-slate-100 overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group">
+              className="w-full text-left rounded-2xl bg-white border border-slate-100 overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group">
               <div className="relative h-44 bg-slate-100 overflow-hidden">
                 <img
                   src={getImg(ad.images || ad.image_url || ad.image)}
@@ -112,7 +112,7 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
                   </p>
                 )}
               </div>
-            </div>
+            </button>
             );
           })
         }

@@ -246,10 +246,11 @@ export default function StoresScreen() {
               const displayName = store.business_name || store.name;
               
               return (
-                <div 
+                <button
+                  type="button"
                   key={store.id}
                   onClick={() => handleStoreClick(store.id)}
-                  className="group bg-white rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl hover:border-lime-500/30 transition-all cursor-pointer flex flex-col h-[360px]"
+                  className="w-full text-left group bg-white rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl hover:border-lime-500/30 transition-all cursor-pointer flex flex-col h-[360px]"
                 >
                   {/* Store Banner */}
                   <div className="h-28 relative bg-slate-100 overflow-hidden shrink-0">
@@ -312,7 +313,7 @@ export default function StoresScreen() {
                       </span>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

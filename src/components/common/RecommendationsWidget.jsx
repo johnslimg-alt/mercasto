@@ -163,10 +163,11 @@ const RecommendationsWidget = memo(({
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {recommendations.map((ad) => (
-          <div
+          <button
+            type="button"
             key={ad.id}
             onClick={() => handleAdClick(ad)}
-            className="flex-shrink-0 w-72 bg-white dark:bg-slate-700 rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer group overflow-hidden"
+            className="flex-shrink-0 w-72 text-left bg-white dark:bg-slate-700 rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer group overflow-hidden"
           >
             {/* Image */}
             <div className="relative h-48 bg-gray-200 dark:bg-slate-600 overflow-hidden">
@@ -224,7 +225,7 @@ const RecommendationsWidget = memo(({
                 <span className="truncate">{ad.city}, {ad.state}</span>
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
