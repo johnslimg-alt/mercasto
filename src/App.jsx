@@ -4684,7 +4684,7 @@ function App() {
                     backgroundSize: '16px'
                   }}
                 >
-                  <option value="">{lang === 'es' ? 'Todas las subcategorías' : 'All subcategories'}</option>
+                  <option value="">{t.all_subcategories}</option>
                   {getSubcategoryOptions(activeCat, lang).map(({ value, label }) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
@@ -4716,7 +4716,7 @@ function App() {
                     }}
                     className="h-[32px] px-3 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-[12px] font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:ring-2 focus:ring-[#84CC16]/30"
                   >
-                    <option value="">{lang === 'es' ? 'Todas las subcategorías' : 'All subcategories'}</option>
+                    <option value="">{t.all_subcategories}</option>
                     {getSubcategoryOptions(activeCat, lang).map(({ value, label }) => (
                       <option key={value} value={value}>{label}</option>
                     ))}
