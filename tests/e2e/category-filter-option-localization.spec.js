@@ -3,6 +3,11 @@ import { filterOptionLabel, loadFilterOptionLanguage } from '../../src/utils/fil
 
 const languages = ['es','en','pt','fr','zh','ko','de','it','ar','ru','ja'];
 
+const shellTranslations = {};
+for (const lang of languages) {
+  shellTranslations[lang] = (await import(`../../src/constants/translations/${lang}.js`)).default;
+}
+
 async function mockCatalogApi(page) {
   await page.route('**/api/**', async route => {
     const url = new URL(route.request().url());
@@ -56,5 +61,21 @@ for (const lang of languages) {
     await expect.poll(() => decodeURIComponent(page.url())).toContain('filters[carroceria][]=Sedán');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(1);
+  });
+}
+
+
+for (const lang of languages) {
+  test(`header subcategory placeholder localizes in ${lang}`, async ({ page }) => {
+    await page.addInitScript(savedLang => {
+      localStorage.setItem('lang', savedLang);
+      localStorage.setItem('mercasto_language', savedLang);
+    }, lang);
+    await mockCatalogApi(page);
+    await page.goto('/?category=motor');
+
+    const subcategory = page.locator('select:visible').filter({ has: page.locator('option[value="SUV"]') }).first();
+    await expect(subcategory).toBeVisible();
+    await expect(subcategory.locator('option[value=""]')).toHaveText(shellTranslations[lang].all_subcategories);
   });
 }
