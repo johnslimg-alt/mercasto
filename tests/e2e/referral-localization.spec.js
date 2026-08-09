@@ -40,7 +40,7 @@ async function mockReferralApi(page) {
         status: success ? 200 : 404,
         contentType: 'application/json',
         body: JSON.stringify(success
-          ? { success: true, code: 'applied', message: '¡Código aplicado!' }
+          ? { success: true, code: 'applied', message: 'Código aplicado!' }
           : { success: false, code: 'invalid_code', message: 'Código de referido inválido.' }),
       });
     }

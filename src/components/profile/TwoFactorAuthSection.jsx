@@ -66,7 +66,7 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
   };
 
   const disable2fa = async () => {
-    if (!window.confirm(t.twofa_disable_confirm || '¿Desactivar la autenticación en dos pasos?')) return;
+    if (!window.confirm(t.twofa_disable_confirm || 'Desactivar la autenticación en dos pasos?')) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/user/two-factor-authentication`, {

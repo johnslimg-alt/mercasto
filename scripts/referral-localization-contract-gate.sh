@@ -22,7 +22,7 @@ if grep -qF 'setApplyStatus(json.message' "$SCREEN"; then
   echo "Referral UI must not render backend-localized message directly" >&2
   exit 1
 fi
-if grep -qF "includes('¡')" "$SCREEN"; then
+if grep -qF "includes('')" "$SCREEN"; then
   echo "Referral success state must not depend on Spanish punctuation" >&2
   exit 1
 fi

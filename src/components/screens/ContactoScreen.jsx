@@ -130,7 +130,7 @@ export default function ContactoScreen() {
               <div className="flex items-start gap-3 bg-lime-50 border border-lime-200 rounded-xl p-4 mb-6">
                 <CheckCircle className="w-5 h-5 text-lime-600 mt-0.5 shrink-0" />
                 <div>
-                  <p className="font-medium text-lime-800">¡Mensaje enviado!</p>
+                  <p className="font-medium text-lime-800">Mensaje enviado!</p>
                   <p className="text-sm text-lime-700 mt-0.5">{serverMsg}</p>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export default function ContactoScreen() {
             <div className="flex items-start gap-3">
               <HelpCircle className="w-5 h-5 text-lime-600 mt-0.5 shrink-0" />
               <div>
-                <p className="font-semibold text-lime-800 text-sm">¿Tienes preguntas?</p>
+                <p className="font-semibold text-lime-800 text-sm">Tienes preguntas?</p>
                 <p className="text-xs text-lime-700 mt-0.5">Visita nuestro Centro de Ayuda con respuestas a las preguntas más frecuentes.</p>
                 <p className="text-xs font-medium text-lime-600 mt-2 flex items-center gap-1 group-hover:gap-2 transition-all">
                   Ir al Centro de Ayuda <ChevronLeft className="w-3 h-3 rotate-180" />

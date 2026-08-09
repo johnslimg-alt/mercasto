@@ -7,7 +7,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra televisores, audífonos, consolas de videojuegos y más. Compara anuncios de electrónica nueva y usada publicados en México.",
       "seoTitle": "Electrónica en México — Compra y Venta | Mercasto",
       "seoDesc": "Explora anuncios de electrónica en México: TV, audífonos, consolas, cámaras, computadoras y accesorios.",
-      "cta": "¿Tienes electrónica para vender?",
+      "cta": "Tienes electrónica para vender?",
       "ctaDesc": "Publica tu anuncio gratis y permite que compradores en México lo encuentren.",
       "ctaBtn": "Vender electrónica →",
       "trust": [
@@ -31,7 +31,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra prendas de diseñador, ropa de segunda mano, calzado y accesorios. Compra y vende moda en México con Mercasto.",
       "seoTitle": "Moda en México — Ropa, Calzado y Accesorios | Mercasto",
       "seoDesc": "Compra y vende ropa, calzado y accesorios en México. Moda nueva y usada para hombre, mujer y niños en Mercasto.",
-      "cta": "¿Tienes ropa o accesorios para vender?",
+      "cta": "Tienes ropa o accesorios para vender?",
       "ctaDesc": "Publica tu anuncio gratis y permite que compradores en México encuentren tu ropa.",
       "ctaBtn": "Vender moda →",
       "trust": [
@@ -55,7 +55,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra muebles, electrodomésticos, decoración y todo lo que necesitas para tu casa. Compra y vende artículos del hogar en Mercasto.",
       "seoTitle": "Artículos para el Hogar en México — Muebles y Decoración | Mercasto",
       "seoDesc": "Compra y vende muebles, decoración y electrodomésticos en México. Todo para tu hogar en Mercasto.",
-      "cta": "¿Tienes artículos del hogar para vender?",
+      "cta": "Tienes artículos del hogar para vender?",
       "ctaDesc": "Publica tu anuncio gratis y llega a compradores en tu ciudad.",
       "ctaBtn": "Vender artículos →",
       "trust": [
@@ -79,7 +79,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra laptops, componentes de PC, servidores, gadgets y todo lo relacionado con tecnología. Compra y vende tech en Mercasto.",
       "seoTitle": "Tecnología en México — Computadoras y Componentes | Mercasto",
       "seoDesc": "Compra y vende tecnología en México. Laptops, PCs, servidores, componentes y gadgets en Mercasto.",
-      "cta": "¿Tienes equipo de tecnología para vender?",
+      "cta": "Tienes equipo de tecnología para vender?",
       "ctaDesc": "Publica tu anuncio gratis y permite que compradores de tecnología lo encuentren.",
       "ctaBtn": "Vender tecnología →",
       "trust": [
@@ -103,7 +103,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra los últimos smartphones, teléfonos usados, accesorios y planes de telefonía. Compra y vende teléfonos en Mercasto.",
       "seoTitle": "Teléfonos en México — Smartphones y Accesorios | Mercasto",
       "seoDesc": "Compra y vende smartphones y teléfonos en México. Nuevos, usados y reacondicionados con garantía en Mercasto.",
-      "cta": "¿Tienes un teléfono para vender?",
+      "cta": "Tienes un teléfono para vender?",
       "ctaDesc": "Publica tu anuncio gratis y vende tu smartphone a compradores en México.",
       "ctaBtn": "Vender teléfono →",
       "trust": [
@@ -127,7 +127,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra mascotas en adopción, alimentos, accesorios y servicios veterinarios. Todo lo que tu mascota necesita en Mercasto.",
       "seoTitle": "Mascotas en México — Adopción, Accesorios y Veterinarios | Mercasto",
       "seoDesc": "Adopta mascotas y encuentra accesorios, alimento y veterinarios en México. Todo para tu mascota en Mercasto.",
-      "cta": "¿Ofreces servicios para mascotas?",
+      "cta": "Ofreces servicios para mascotas?",
       "ctaDesc": "Publica tus servicios veterinarios, peluquería o productos y llega a dueños de mascotas en tu ciudad.",
       "ctaBtn": "Publicar anuncio →",
       "trust": [
@@ -151,7 +151,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra juguetes, ropa infantil, carriolas, cunas y artículos para bebés. Compra y vende productos para niños en Mercasto.",
       "seoTitle": "Infantil y Bebés en México — Juguetes, Carriolas y Ropa | Mercasto",
       "seoDesc": "Compra y vende artículos para niños y bebés en México. Juguetes, carriolas, cunas, ropa infantil y más en Mercasto.",
-      "cta": "¿Tienes artículos infantiles o de bebé para vender?",
+      "cta": "Tienes artículos infantiles o de bebé para vender?",
       "ctaDesc": "Publica tu anuncio gratis y encuentra a quien lo necesite en tu ciudad.",
       "ctaBtn": "Vender artículo →",
       "trust": [
@@ -175,7 +175,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra negocios en venta, franquicias, oportunidades de inversión y servicios empresariales. Tu próximo negocio está en Mercasto.",
       "seoTitle": "Negocios en Venta en México — Franquicias e Inversiones | Mercasto",
       "seoDesc": "Compra y vende negocios en México. Franquicias, empresas en venta y oportunidades de inversión en Mercasto.",
-      "cta": "¿Tienes un negocio para vender?",
+      "cta": "Tienes un negocio para vender?",
       "ctaDesc": "Publica la información del negocio y recibe contacto directo de personas interesadas.",
       "ctaBtn": "Publicar negocio →",
       "trust": [
@@ -199,7 +199,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra bicicletas, instrumentos musicales, antigüedades, cómics, libros y todo lo necesario para tu tiempo libre. Compra y vende en Mercasto.",
       "seoTitle": "Ocio, Deportes y Coleccionismo en México | Mercasto",
       "seoDesc": "Compra y vende artículos deportivos, instrumentos musicales, libros, cómics y pasatiempos en México con Mercasto.",
-      "cta": "¿Tienes artículos de deporte u ocio para vender?",
+      "cta": "Tienes artículos de deporte u ocio para vender?",
       "ctaDesc": "Publica tu anuncio gratis para mostrar instrumentos, bicicletas o cómics a personas interesadas.",
       "ctaBtn": "Vender artículos →",
       "trust": [
@@ -223,7 +223,7 @@ export const categoryLandingTranslations = {
       "description": "Encuentra entradas para tus eventos favoritos. Compra y vende boletos para conciertos, partidos de fútbol, obras de teatro y más.",
       "seoTitle": "Compra y Venta de Boletos en México — Conciertos y Eventos | Mercasto",
       "seoDesc": "Compra y vende boletos y entradas en México. Conciertos, festivales, eventos deportivos y obras de teatro en Mercasto.",
-      "cta": "¿Tienes boletos que no vas a usar?",
+      "cta": "Tienes boletos que no vas a usar?",
       "ctaDesc": "Publícalos gratis en Mercasto y recupera tu dinero de forma segura.",
       "ctaBtn": "Vender boletos →",
       "trust": [

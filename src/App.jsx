@@ -271,17 +271,17 @@ const API_URL = getEnvVar('VITE_API_BASE_URL', 'https://mercasto.com/api');
 const STORAGE_URL = getEnvVar('VITE_STORAGE_URL', 'https://mercasto.com/storage');
 const ENABLE_AI_PANEL = import.meta.env.VITE_ENABLE_AI_PANEL === 'true';
 const AI_PLACEHOLDERS = {
-  postgresql: 'Ej: ¿Cuántos anuncios activos tenemos ahora?',
+  postgresql: 'Ej: Cuántos anuncios activos tenemos ahora?',
   react: 'Ej: Crea un botón de acceso animado con Tailwind 4...',
   lawyer: 'Ej: Redacta nuevas reglas de reembolso...',
-  notary: 'Ej: ¿Qué requisitos aplican para documentos KYC?',
-  advocate: 'Ej: ¿Cómo responder a una denuncia por fraude?',
-  marketing: 'Ej: ¿Cómo aumentar la conversión en la portada?',
-  seo: 'Ej: ¿Qué meta tags faltan para una ficha de producto?',
-  ceo_ui: 'Ej: ¿Qué colores usar para productos premium?',
-  ceo_ux: 'Ej: ¿Cómo mejorar el flujo de compra?',
+  notary: 'Ej: Qué requisitos aplican para documentos KYC?',
+  advocate: 'Ej: Cómo responder a una denuncia por fraude?',
+  marketing: 'Ej: Cómo aumentar la conversión en la portada?',
+  seo: 'Ej: Qué meta tags faltan para una ficha de producto?',
+  ceo_ui: 'Ej: Qué colores usar para productos premium?',
+  ceo_ux: 'Ej: Cómo mejorar el flujo de compra?',
   ui: 'Ej: Escribe clases Tailwind para un header elegante...',
-  ceo: 'Ej: Alex, ¿cuál es nuestra estrategia para Q3?',
+  ceo: 'Ej: Alex, cuál es nuestra estrategia para Q3?',
 };
 
 const getImageUrl = (path, fallback = null) => {
@@ -2141,7 +2141,7 @@ function App() {
   };
 
   const handleAdminDeleteUser = async (id) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) return;
+    if (!window.confirm('Estás seguro de que deseas eliminar este usuario?')) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/users/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -2151,7 +2151,7 @@ function App() {
   };
 
   const handleAdminChangeRole = async (id, newRole) => {
-    if (!window.confirm(`¿Cambiar rol a ${newRole}?`)) return;
+    if (!window.confirm(`Cambiar rol a ${newRole}?`)) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/users/${id}/role`, {
@@ -2317,7 +2317,7 @@ function App() {
   }, []);
 
   const handleDeleteReport = async (id) => {
-    if (!window.confirm('¿Eliminar este reporte?')) return;
+    if (!window.confirm('Eliminar este reporte?')) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/reports/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -2326,7 +2326,7 @@ function App() {
   };
 
   const handleDeleteUserReport = async (id) => {
-    if (!window.confirm('¿Eliminar este reporte de usuario?')) return;
+    if (!window.confirm('Eliminar este reporte de usuario?')) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/user-reports/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -2426,7 +2426,7 @@ function App() {
   };
 
   const handleDeleteCoupon = async (id) => {
-    if (!window.confirm('¿Eliminar cupón?')) return;
+    if (!window.confirm('Eliminar cupón?')) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/coupons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -2873,7 +2873,7 @@ function App() {
   };
 
   const handleDeleteAccount = async () => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar tu cuenta? Esta acción eliminará todos tus anuncios permanentemente y no se puede deshacer.')) return;
+    if (!window.confirm('Estás seguro de que deseas eliminar tu cuenta? Esta acción eliminará todos tus anuncios permanentemente y no se puede deshacer.')) return;
 
     try {
       const token = localStorage.getItem('auth_token');
@@ -3235,7 +3235,7 @@ function App() {
       if (res.ok) {
         setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, republish_count: data.republish_count } : a));
         setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active' } : a));
-        showToast('¡Anuncio republicado exitosamente! Estará activo 7 días más.');
+        showToast('Anuncio republicado exitosamente! Estará activo 7 días más.');
       } else {
         showToast(data.message || 'No se pudo republicar el anuncio.', 'error');
       }
@@ -3258,7 +3258,7 @@ function App() {
       if (res.ok) {
         const newExpiry = data.expires_at ? new Date(data.expires_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
         setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, reminder_sent_at: null } : a));
-        showToast(`¡Anuncio renovado hasta ${newExpiry}!`);
+        showToast(`Anuncio renovado hasta ${newExpiry}!`);
       } else if (res.status === 402 && data.payment_required) {
         showToast(data.message || 'Redirigiendo al pago seguro para renovar el anuncio.');
       } else if (res.status === 402) {
@@ -3323,7 +3323,7 @@ function App() {
       navigator.share({ title: adTitle, text: `Mira este anuncio en Mercasto: ${adTitle}`, url: window.location.href }).catch(console.error);
     } else {
       navigator.clipboard.writeText(window.location.href);
-      showToast('¡Enlace copiado al portapapeles!');
+      showToast('Enlace copiado al portapapeles!');
     }
   };
 
@@ -3336,7 +3336,7 @@ function App() {
     const balance = parseFloat(user?.balance || 0);
     if (!isCreditsTopUp && (user?.unlimited_balance || balance >= amount) && amount > 0) {
       const balanceLabel = user?.unlimited_balance ? '∞ (saldo ilimitado)' : `$${balance.toLocaleString('es-MX')}`;
-      const useBalance = window.confirm(`¿Pagar $${amount} con tu saldo? (Saldo actual: ${balanceLabel})\n\nCancelar para pagar con tarjeta/OXXO en su lugar.`);
+      const useBalance = window.confirm(`Pagar $${amount} con tu saldo? (Saldo actual: ${balanceLabel})\n\nCancelar para pagar con tarjeta/OXXO en su lugar.`);
       if (useBalance) {
         try {
           const token = localStorage.getItem('auth_token');
@@ -3347,7 +3347,7 @@ function App() {
           });
           const data = await res.json();
           if (res.ok && data.success) {
-            showToast('¡Pago realizado con tu saldo!');
+            showToast('Pago realizado con tu saldo!');
             const updatedUser = { ...user, balance: data.balance };
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -3448,7 +3448,7 @@ function App() {
     if (user?.unlimited_balance || balance >= 50) {
       const typeLabel = type === 'boost' ? 'Subir' : type === 'top' ? 'Destacar arriba' : 'Resaltar';
       const balanceLabel = user?.unlimited_balance ? '∞ (ilimitado)' : `${balance} Créditos`;
-      if (window.confirm(`¿Deseas usar 50 créditos de tu saldo para "${typeLabel}" este anuncio? (Saldo actual: ${balanceLabel})`)) {
+      if (window.confirm(`Deseas usar 50 créditos de tu saldo para "${typeLabel}" este anuncio? (Saldo actual: ${balanceLabel})`)) {
         try {
           const token = localStorage.getItem('auth_token');
           const res = await fetch(`${API_URL}/ads/${ad.id}/promote/credits`, {
@@ -3458,7 +3458,7 @@ function App() {
           });
           const data = await res.json();
           if (res.ok) {
-            showToast('¡Anuncio promocionado con éxito!');
+            showToast('Anuncio promocionado con éxito!');
             const updatedUser = { ...user, balance: data.balance };
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));

@@ -27,7 +27,7 @@ for literal in \
   "Selecciona una Categoría" \
   "Selecciona una Subcategoría" \
   "Usar GPS actual" \
-  "¿Cómo te contactan?" \
+  "Cómo te contactan?" \
   "Descripción generada ✨"; do
   if grep -qF "$literal" "$POST" "$EDIT"; then
     echo "Fixed-language UI literal remains: $literal" >&2

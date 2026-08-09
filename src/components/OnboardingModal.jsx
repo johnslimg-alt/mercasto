@@ -132,21 +132,21 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
     {
       id: 'welcome',
       emoji: '🎉',
-      title: dictionary.onboarding_welcome_title || `¡Bienvenido${user?.name ? `, ${user.name.split(' ')[0]}` : ''}!`,
+      title: dictionary.onboarding_welcome_title || `Bienvenido${user?.name ? `, ${user.name.split(' ')[0]}` : ''}!`,
       subtitle: dictionary.onboarding_welcome_subtitle || 'La plataforma de clasificados más moderna e inteligente con AI',
     },
     // Step 1: Role selection
     {
       id: 'role',
       emoji: '🎯',
-      title: '¿Qué quieres hacer?',
+      title: 'Qué quieres hacer?',
       subtitle: 'Personalizaremos tu experiencia',
     },
     // Step 2: Interests
     {
       id: 'interests',
       emoji: '✨',
-      title: '¿Qué te interesa?',
+      title: 'Qué te interesa?',
       subtitle: 'Elige categorías si quieres personalizar tu inicio',
     },
     // Step 3: How it works (personalized)
@@ -154,10 +154,10 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
       id: 'how',
       emoji: selectedRole === 'buyer' ? '🛍️' : selectedRole === 'seller' ? '💰' : '🤝',
       title: selectedRole === 'buyer'
-        ? '¿Cómo comprar en Mercasto?'
+        ? 'Cómo comprar en Mercasto?'
         : selectedRole === 'seller'
-        ? '¿Cómo vender en Mercasto?'
-        : '¿Cómo funciona Mercasto?',
+        ? 'Cómo vender en Mercasto?'
+        : 'Cómo funciona Mercasto?',
       subtitle: 'En 3 simples pasos',
     },
     // Step 4: Profile checklist

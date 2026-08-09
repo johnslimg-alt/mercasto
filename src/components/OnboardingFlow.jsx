@@ -7,7 +7,7 @@ const OnboardingFlow = ({ onComplete, userName }) => {
   const steps = [
     {
       icon: <Sparkles className="w-16 h-16 text-primary-600" />,
-      title: `¡Bienvenido a Mercasto, ${userName || 'usuario'}!`,
+      title: `Bienvenido a Mercasto, ${userName || 'usuario'}!`,
       description: 'Te guiaré en 4 pasos simples para que empieces a vender con IA.',
       action: 'Comenzar',
     },
@@ -27,7 +27,7 @@ const OnboardingFlow = ({ onComplete, userName }) => {
       icon: <Users className="w-16 h-16 text-primary-600" />,
       title: 'Invita a tus amigos',
       description: 'Mercasto es mejor con más vendedores y compradores. Comparte con amigos y familiares.',
-      action: '¡Empezar!',
+      action: 'Empezar!',
     },
   ];
 

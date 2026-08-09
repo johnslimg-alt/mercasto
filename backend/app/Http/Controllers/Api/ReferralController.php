@@ -88,7 +88,7 @@ class ReferralController extends Controller
                 'created_at'  => now(),
             ]);
 
-            return ['status' => 200, 'body' => ['success' => true, 'code' => 'applied', 'message' => '¡Código aplicado! Publica tu primer anuncio para que ambos ganen créditos.']];
+            return ['status' => 200, 'body' => ['success' => true, 'code' => 'applied', 'message' => 'Código aplicado! Publica tu primer anuncio para que ambos ganen créditos.']];
         });
 
         return response()->json($result['body'], $result['status']);

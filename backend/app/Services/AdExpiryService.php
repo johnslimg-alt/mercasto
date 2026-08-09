@@ -32,7 +32,7 @@ class AdExpiryService
             DB::table('user_notifications')->insert([
                 'user_id'    => $ad->user_id,
                 'title'      => 'Tu anuncio expiró',
-                'message'    => "Tu anuncio \"{$ad->title}\" expiró. ¡Renuévalo para seguir recibiendo compradores!",
+                'message'    => "Tu anuncio \"{$ad->title}\" expiró. Renuévalo para seguir recibiendo compradores!",
                 'is_read'    => false,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -41,7 +41,7 @@ class AdExpiryService
             if ($ad->user && $ad->user->email) {
                 try {
                     Mail::raw(
-                        "Hola {$ad->user->name},\n\nTu anuncio \"{$ad->title}\" en Mercasto ha expirado.\n\nRenuévalo desde tu perfil para volver a recibir compradores.\n\n¡Gracias por vender en Mercasto!\nhttps://mercasto.com",
+                        "Hola {$ad->user->name},\n\nTu anuncio \"{$ad->title}\" en Mercasto ha expirado.\n\nRenuévalo desde tu perfil para volver a recibir compradores.\n\nGracias por vender en Mercasto!\nhttps://mercasto.com",
                         function ($message) use ($ad) {
                             $message->to($ad->user->email)
                                     ->subject("Tu anuncio \"{$ad->title}\" expiró — renuévalo ahora");
@@ -85,7 +85,7 @@ class AdExpiryService
             DB::table('user_notifications')->insert([
                 'user_id'    => $ad->user_id,
                 'title'      => 'Tu anuncio está por expirar',
-                'message'    => "Tu anuncio '{$ad->title}' expira en {$daysLeft} {$dayWord}. ¡Renuévalo para seguir recibiendo compradores!",
+                'message'    => "Tu anuncio '{$ad->title}' expira en {$daysLeft} {$dayWord}. Renuévalo para seguir recibiendo compradores!",
                 'is_read'    => false,
                 'created_at' => now(),
                 'updated_at' => now(),

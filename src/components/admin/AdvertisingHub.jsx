@@ -156,7 +156,7 @@ export default function AdvertisingHub() {
     const nextStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
     const action = nextStatus === 'ACTIVE' ? 'activar' : 'pausar';
 
-    if (!window.confirm(`¿Confirmas ${action} la campaña “${campaign.name}”?`)) return;
+    if (!window.confirm(`Confirmas ${action} la campaña “${campaign.name}”?`)) return;
 
     mutateCampaign(campaign.id, 'status', { status: nextStatus }, `Campaña ${nextStatus === 'ACTIVE' ? 'activada' : 'pausada'}.`);
   };
@@ -169,7 +169,7 @@ export default function AdvertisingHub() {
       return;
     }
 
-    if (!window.confirm(`¿Cambiar el presupuesto diario de “${campaign.name}” a ${money(value)}?`)) return;
+    if (!window.confirm(`Cambiar el presupuesto diario de “${campaign.name}” a ${money(value)}?`)) return;
 
     mutateCampaign(campaign.id, 'budget', { daily_budget: value }, `Presupuesto actualizado a ${money(value)}.`);
   };

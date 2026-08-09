@@ -161,7 +161,7 @@ export default function EmpleosLanding({ lang = 'es' }) {
         {/* Employer CTA */}
         <section className="bg-gradient-to-r from-purple-700 to-purple-500 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 text-white">
           <div>
-            <h2 className="text-2xl font-bold mb-2">¿Buscas talento para tu empresa?</h2>
+            <h2 className="text-2xl font-bold mb-2">Buscas talento para tu empresa?</h2>
             <p className="text-purple-100">Publica tu oferta de trabajo y conecta con los mejores candidatos en México.</p>
           </div>
           <button onClick={() => navigate('/post')}

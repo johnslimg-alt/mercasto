@@ -56,7 +56,7 @@ elif new_pattern not in scan_text:
 app = Path('src/App.jsx')
 app_text = app.read_text()
 replacements = {
-    '¡Error Crítico en la Interfaz!': 'No pudimos cargar la página',
+    'Error Crítico en la Interfaz!': 'No pudimos cargar la página',
     'Ad Detail Screen - En construcción': 'Detalle del anuncio no disponible temporalmente',
     'Storefront - En construcción': 'Tienda no disponible temporalmente',
     '{currentTab} - Página en construcción': '{currentTab} - Página no disponible temporalmente',

@@ -20,8 +20,8 @@ const spanishLeakage = [
   'Reenviar email',
   'Directorio de Tiendas',
   'Hecho en México',
-  '¿No tienes cuenta? Únete',
-  '¿Olvidaste tu contraseña?',
+  'No tienes cuenta? Únete',
+  'Olvidaste tu contraseña?',
 ];
 async function mockShellApi(page) {
   await page.route('**/api/**', async (route) => {

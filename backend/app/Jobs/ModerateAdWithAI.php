@@ -300,7 +300,7 @@ PROMPT;
         try {
             $notification = [
                 'user_id' => $ad->user_id,
-                'title' => '¡Anuncio aprobado!',
+                'title' => 'Anuncio aprobado!',
                 'message' => 'Tu anuncio "' . $ad->title . '" fue revisado y ya está visible.',
                 'is_read' => false,
                 'created_at' => now(),

@@ -66,7 +66,7 @@ export default function WaitlistLanding() {
 
   const shareReferral = (platform) => {
     const referralLink = `${window.location.origin}/waitlist?ref=${referralCode}`;
-    const message = `🚀 Únete a Mercasto - La plataforma de clasificados más moderna e inteligente con AI. Estoy en la posición #${position}, ¡ayúdame a subir!\n\n${referralLink}`;
+    const message = `🚀 Únete a Mercasto - La plataforma de clasificados más moderna e inteligente con AI. Estoy en la posición #${position}, ayúdame a subir!\n\n${referralLink}`;
     
     let url = '';
     switch(platform) {
@@ -89,7 +89,7 @@ export default function WaitlistLanding() {
       case 'copy':
         events.waitlistReferralShared('copy_link');
         navigator.clipboard.writeText(referralLink);
-        toast.success('¡Link copiado al portapapeles!');
+        toast.success('Link copiado al portapapeles!');
         return;
     }
     
@@ -107,7 +107,7 @@ export default function WaitlistLanding() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">¡Estás en la lista!</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Estás en la lista!</h1>
           <p className="text-gray-600 mb-6">
             Gracias por tu interés en Mercasto. Te notificaremos cuando esté disponible.
           </p>

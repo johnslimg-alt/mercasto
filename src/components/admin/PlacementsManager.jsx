@@ -63,7 +63,7 @@ export default function PlacementsManager({ user }) {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar esta posición?')) return;
+    if (!confirm('Eliminar esta posición?')) return;
     try {
       const res = await fetch(`${API_URL}/admin/placements/${id}`, { method: 'DELETE', headers });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Error'); return; }

@@ -29,9 +29,9 @@
     "password": "Contraseña",
     "confirmPassword": "Confirmar contraseña",
     "name": "Nombre",
-    "forgotPassword": "¿Olvidaste tu contraseña?",
-    "noAccount": "¿No tienes cuenta?",
-    "hasAccount": "¿Ya tienes cuenta?",
+    "forgotPassword": "Olvidaste tu contraseña?",
+    "noAccount": "No tienes cuenta?",
+    "hasAccount": "Ya tienes cuenta?",
     "loginWithGoogle": "Iniciar sesión con Google",
     "registerWithGoogle": "Registrarse con Google"
   },

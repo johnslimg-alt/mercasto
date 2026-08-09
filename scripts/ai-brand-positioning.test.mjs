@@ -61,7 +61,7 @@ test('public metadata and official source copy use the AI positioning', () => {
   assert.match(geo, /plataforma de clasificados más moderna e inteligente con AI/);
   assert.match(geo, /publicación asistida por AI/);
   assert.match(manifest, /clasificados más moderna e inteligente con AI/);
-  assert.match(faq, /¿Cómo usa Mercasto la AI\?/);
+  assert.match(faq, /Cómo usa Mercasto la AI\?/);
   assert.match(faq, /most modern and intelligent AI-powered classifieds platform/);
   assert.match(refunds, /plataforma de clasificados más moderna e inteligente con AI/);
   assert.match(moderation, /plataforma de clasificados más moderna e inteligente con AI/);

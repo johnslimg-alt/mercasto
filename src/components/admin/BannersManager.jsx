@@ -132,7 +132,7 @@ export default function BannersManager({ user }) {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este banner?')) return;
+    if (!confirm('Eliminar este banner?')) return;
     try {
       await fetch(`${API_URL}/admin/banners/${id}`, { method: 'DELETE', headers });
       loadBanners(); loadStats();

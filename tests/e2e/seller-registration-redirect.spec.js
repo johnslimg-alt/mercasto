@@ -44,8 +44,8 @@ test.describe('seller campaign registration return', () => {
 
     await page.goto('/post', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('button', { name: '¿No tienes cuenta? Únete' })).toBeVisible();
-    await page.getByRole('button', { name: '¿No tienes cuenta? Únete' }).click();
+    await expect(page.getByRole('button', { name: 'No tienes cuenta? Únete' })).toBeVisible();
+    await page.getByRole('button', { name: 'No tienes cuenta? Únete' }).click();
 
     const registrationForm = page.locator('form').filter({
       has: page.locator('input[name="name"]'),
@@ -59,7 +59,7 @@ test.describe('seller campaign registration return', () => {
 
     await expect(page).toHaveURL(/\/post$/);
     await expect(page.getByRole('heading', { name: 'Pon tu anuncio' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /¡Bienvenido/ })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /Bienvenido/ })).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => ({
       intent: sessionStorage.getItem('mercasto.protected_route_intent.v1'),
       justRegistered: localStorage.getItem('just_registered'),
