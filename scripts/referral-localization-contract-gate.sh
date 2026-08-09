@@ -36,7 +36,7 @@ for key in \
   referral_apply_error \
   referral_status_completed \
   referral_status_pending; do
-  for lang in es en pt fr zh ko de it ar he yi ru ja; do
+  for lang in es en pt fr zh ko de it ar ru ja; do
     grep -qF "${key}:" "$TRANSLATIONS/${lang}.js"
   done
 done

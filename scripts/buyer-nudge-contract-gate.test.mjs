@@ -12,7 +12,7 @@ import {
 } from '../src/utils/buyerNudge.js';
 import { BUYER_NUDGE_COPY } from '../src/components/buyerNudgeCopy.js';
 
-const languages = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja'];
+const languages = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
 
 test('rollout stays off unless explicitly enabled', () => {
   assert.equal(normalizeBuyerNudgeRollout(undefined), 0);

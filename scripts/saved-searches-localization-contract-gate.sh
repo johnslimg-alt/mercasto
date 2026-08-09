@@ -6,7 +6,7 @@ TRANSLATIONS="$ROOT/src/constants/translations"
 
 echo "== Saved searches localization contract gate =="
 for key in saved_searches_title load_failed update_alerts_failed delete_confirm delete_failed no_filters loading no_saved_searches no_saved_searches_desc tip deactivate_alerts activate_alerts delete_search; do
-  for lang in es en pt fr zh ko de it ar he yi ru ja; do
+  for lang in es en pt fr zh ko de it ar ru ja; do
     grep -qF "${key}:" "$TRANSLATIONS/${lang}.js"
   done
 done

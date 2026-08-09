@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 
-const languages = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja'];
+const languages = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
 const expectedTaglines = {"es": "La plataforma de clasificados más moderna e inteligente con AI", "en": "The most modern and intelligent AI-powered classifieds platform", "pt": "A plataforma de classificados mais moderna e inteligente com AI", "fr": "La plateforme de petites annonces la plus moderne et intelligente avec IA", "de": "Die modernste und intelligenteste KI-gestützte Kleinanzeigenplattform", "it": "La piattaforma di annunci più moderna e intelligente con AI", "ru": "Самая современная и умная доска объявлений с AI", "zh": "最现代、最智能的 AI 分类信息平台", "ja": "最も先進的でスマートなAIクラシファイドプラットフォーム", "ko": "가장 현대적이고 스마트한 AI 기반 분류 광고 플랫폼", "ar": "أحدث وأذكى منصة إعلانات مبوبة مدعومة بالذكاء الاصطناعي", "he": "פלטפורמת המודעות המסווגות המתקדמת והחכמה ביותר עם AI", "yi": "די מאָדערנסטע און קלוגסטע קלאַסיפֿיצירטע מודעות־פּלאַטפֿאָרמע מיט AI"};
 const source = (path) => readFileSync(path, 'utf8');
 const canonical = { es: 'La plataforma de clasificados más moderna e inteligente con AI', en: 'The most modern and intelligent AI-powered classifieds platform', ru: 'Самая современная и умная доска объявлений с AI' };

@@ -4367,7 +4367,7 @@ function App() {
                 </button>
                 <div className="mobile-language-select" aria-label={t.language_switcher}>
                   <Globe className="w-3.5 h-3.5" />
-                  <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
+                  <select data-testid="mobile-language-select" aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
                     {LANGUAGE_OPTIONS.map(l => (
                       <option key={l} value={l}>{l.toUpperCase()}</option>
                     ))}
@@ -4447,7 +4447,7 @@ function App() {
               </div>
               <div className="desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
-                <select aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
+                <select data-testid="desktop-language-select" aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
                   {LANGUAGE_OPTIONS.map(l => (
                     <option key={l} value={l}>{l.toUpperCase()}</option>
                   ))}

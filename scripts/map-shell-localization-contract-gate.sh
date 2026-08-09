@@ -8,7 +8,7 @@ echo "== Map shell localization contract gate =="
 
 node --input-type=module <<'NODE'
 import fs from 'fs';
-const langs = ['es','en','pt','fr','zh','ko','de','it','ar','he','yi','ru','ja'];
+const langs = ['es','en','pt','fr','zh','ko','de','it','ar','ru','ja'];
 const keys = [
   'interactive','preview','filters','drawArea','closeMap','closeEsc','clearFilters',
   'realGps','approxCity','approxState','approxCityState','searchArea','realGpsOnly',

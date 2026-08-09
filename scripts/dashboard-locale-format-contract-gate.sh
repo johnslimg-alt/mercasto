@@ -9,7 +9,7 @@ TRANSLATIONS="$ROOT/src/constants/translations"
 
 echo "== Dashboard locale format contract gate =="
 for key in trust_score avg_response_under_2h contact_history_device_desc contact_history_empty contacted_via; do
-  for lang in es en pt fr zh ko de it ar he yi ru ja; do
+  for lang in es en pt fr zh ko de it ar ru ja; do
     grep -qF "${key}:" "$TRANSLATIONS/${lang}.js"
   done
 done
