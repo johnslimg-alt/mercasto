@@ -18,6 +18,7 @@ on:
       - '.github/workflows/frontend-quality.yml'
       - 'tests/e2e/notifications-localization.spec.js'
       - 'tests/e2e/catalog-filter-state.spec.js'
+      - 'tests/e2e/catalog-request-race.spec.js'
       - 'tests/e2e/catalog-map-filter-state.spec.js'
       - 'tests/e2e/catalog-map-responsive.spec.js'
       - 'tests/e2e/map-shell-localization.spec.js'
@@ -42,6 +43,7 @@ on:
       - '.github/workflows/frontend-quality.yml'
       - 'tests/e2e/notifications-localization.spec.js'
       - 'tests/e2e/catalog-filter-state.spec.js'
+      - 'tests/e2e/catalog-request-race.spec.js'
       - 'tests/e2e/catalog-map-filter-state.spec.js'
       - 'tests/e2e/catalog-map-responsive.spec.js'
       - 'tests/e2e/map-shell-localization.spec.js'
@@ -109,4 +111,4 @@ jobs:
             if curl -fsS http://127.0.0.1:4174/ >/dev/null; then break; fi
             sleep 1
           done
-          BASE_URL=http://127.0.0.1:4174 CI=1 npx playwright test tests/e2e/catalog-filter-state.spec.js tests/e2e/catalog-map-filter-state.spec.js tests/e2e/catalog-map-responsive.spec.js tests/e2e/map-shell-localization.spec.js tests/e2e/archived-language-fallback.spec.js tests/e2e/category-filter-option-localization.spec.js --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=1 --reporter=list
+          BASE_URL=http://127.0.0.1:4174 CI=1 npx playwright test tests/e2e/catalog-filter-state.spec.js tests/e2e/catalog-request-race.spec.js tests/e2e/catalog-map-filter-state.spec.js tests/e2e/catalog-map-responsive.spec.js tests/e2e/map-shell-localization.spec.js tests/e2e/archived-language-fallback.spec.js tests/e2e/category-filter-option-localization.spec.js --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=1 --reporter=list
