@@ -192,6 +192,7 @@
   "search": {
     "recentSearches": "最近の検索履歴",
     "suggestions": "おすすめの検索",
+    "didYouMean": "もしかして:",
     "clearHistory": "履歴を削除",
     "saveSearch": "検索条件を保存",
     "savedSearches": "保存した検索",
