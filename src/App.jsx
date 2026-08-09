@@ -848,6 +848,8 @@ function App() {
   const skipFilterUrlSyncRef = useRef(false);
   const skipCategoryFilterResetRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const adsAbortRef = useRef(null);
+  const adsRequestSequenceRef = useRef(0);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [debouncedLocInput, setDebouncedLocInput] = useState('');
 
@@ -2061,6 +2063,11 @@ function App() {
   }, [form.location]);
 
   const loadAds = useCallback(async (page = 1) => {
+    const requestSequence = ++adsRequestSequenceRef.current;
+    adsAbortRef.current?.abort();
+    const controller = new AbortController();
+    adsAbortRef.current = controller;
+
     if (page > 1) {
       setLoadingMore(true);
     } else {
@@ -2089,21 +2096,36 @@ function App() {
         appendDynamicFilters(params, dynamicFilters);
 
     try {
-      const res = await fetch(`${API_URL}/ads?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        const items = Array.isArray(data) ? data : (data.data || []);
-        const nextTotal = Number(data.total);
-        setServerAds(prev => page === 1 ? items : [...prev, ...items]);
-        if (page === 1 || Number.isFinite(nextTotal)) {
-          setAdsTotal(Number.isFinite(nextTotal) ? nextTotal : items.length);
-        }
-        setCurrentPage(data.current_page || 1);
-        setHasMore(data.last_page ? data.current_page < data.last_page : false);
+      const res = await fetch(`${API_URL}/ads?${params.toString()}`, { signal: controller.signal });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (requestSequence !== adsRequestSequenceRef.current) return;
+
+      const items = Array.isArray(data) ? data : (data.data || []);
+      const nextTotal = Number(data.total);
+      setServerAds(prev => page === 1 ? items : [...prev, ...items]);
+      if (page === 1 || Number.isFinite(nextTotal)) {
+        setAdsTotal(Number.isFinite(nextTotal) ? nextTotal : items.length);
       }
-    } catch (err) { console.error("Error fetching ads", err); }
-    finally { setLoadingAds(false); setLoadingMore(false); }
+      setCurrentPage(data.current_page || 1);
+      setHasMore(data.last_page ? data.current_page < data.last_page : false);
+    } catch (err) {
+      if (err?.name !== 'AbortError' && requestSequence === adsRequestSequenceRef.current) {
+        console.error("Error fetching ads", err);
+      }
+    } finally {
+      if (requestSequence === adsRequestSequenceRef.current) {
+        if (adsAbortRef.current === controller) adsAbortRef.current = null;
+        setLoadingAds(false);
+        setLoadingMore(false);
+      }
+    }
   }, [debouncedSearch, debouncedLocInput, activeCat, activeSub, selectedState, searchLocation, radius, minPrice, maxPrice, conditionFilter, dynamicFilters]); // Защита от бага Stale Closure в React
+
+  useEffect(() => () => {
+    adsRequestSequenceRef.current += 1;
+    adsAbortRef.current?.abort();
+  }, []);
 
   const loadFavorites = useCallback(async () => {
     if (!user) return;
@@ -2123,7 +2145,7 @@ function App() {
   useEffect(() => {
     setServerAds([]); // Сбрасываем объявления при смене фильтров
     loadAds(1);
-  }, [debouncedSearch, activeCat, selectedState, searchLocation, debouncedLocInput, radius, minPrice, maxPrice, conditionFilter, dynamicFilters]);
+  }, [debouncedSearch, activeCat, activeSub, selectedState, searchLocation, debouncedLocInput, radius, minPrice, maxPrice, conditionFilter, dynamicFilters]);
   useEffect(() => { loadFavorites(); }, [loadFavorites]);
 
   useEffect(() => {
