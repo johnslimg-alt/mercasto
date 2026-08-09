@@ -485,6 +485,7 @@ export default function MapV3({
   };
 
   const clearAllFilters = () => {
+    const mapArea = updateMapArea(expanded ? largeMapInstanceRef.current : mapInstanceRef.current);
     setMapQuery('');
     setMinPrice('');
     setMaxPrice('');
@@ -495,6 +496,23 @@ export default function MapV3({
     setListingType('');
     setConditionFilter([]);
     setDynamicFilters({});
+
+    if (onSearchArea && mapArea) {
+      onSearchArea({
+        ...mapArea,
+        query: '',
+        minPrice: null,
+        maxPrice: null,
+        onlyWithCoords: false,
+        state: '',
+        city: '',
+        listingType: '',
+        category: '',
+        condition: [],
+        dynamic: {},
+        suppressToast: true,
+      });
+    }
   };
 
   const handleStateChange = (state) => {
@@ -1274,6 +1292,7 @@ function createPopupElement(ad, marker) {
           <MapPin size={14} /> {t('map.realGpsOnly')}
         </button>
         <button
+          data-testid="map-clear-filters"
           type="button"
           onClick={clearAllFilters}
           className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/30 transition-colors"

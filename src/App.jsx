@@ -854,6 +854,8 @@ function App() {
     const nextCategory = overrides.category ?? activeCat;
     const nextSubcategory = overrides.subcategory ?? activeSub;
     const nextLocation = overrides.location ?? (debouncedLocInput || selectedState);
+    const nextState = overrides.state ?? locState;
+    const nextCity = overrides.city ?? locCity;
     const nextMinPrice = overrides.minPrice ?? minPrice;
     const nextMaxPrice = overrides.maxPrice ?? maxPrice;
     const nextCondition = overrides.condition ?? conditionFilter;
@@ -866,8 +868,8 @@ function App() {
     if (String(nextCategory || '').trim()) params.set('category', String(nextCategory).trim());
     if (String(nextSubcategory || '').trim()) params.set('subcategory', String(nextSubcategory).trim());
     if (String(nextLocation || '').trim()) params.set('location', String(nextLocation).trim());
-    if (String(locState || '').trim()) params.set('state', String(locState).trim());
-    if (String(locCity || '').trim()) params.set('city', String(locCity).trim());
+    if (String(nextState || '').trim()) params.set('state', String(nextState).trim());
+    if (String(nextCity || '').trim()) params.set('city', String(nextCity).trim());
     if (String(nextMinPrice || '').trim()) params.set('min_price', String(nextMinPrice).trim());
     if (String(nextMaxPrice || '').trim()) params.set('max_price', String(nextMaxPrice).trim());
     if (nextGeo?.lat != null && nextGeo?.lng != null) {
@@ -4018,17 +4020,19 @@ function App() {
     const { lat, lng, radius: nextRadius } = area;
     if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return;
 
+    const hasAreaField = (key) => Object.prototype.hasOwnProperty.call(area, key);
     const nextQuery = typeof area.query === 'string' ? area.query : searchQuery;
     const nextCategory = typeof area.category === 'string' ? area.category : activeCat;
-    const nextMinPrice = area.minPrice == null ? minPrice : String(area.minPrice || '');
-    const nextMaxPrice = area.maxPrice == null ? maxPrice : String(area.maxPrice || '');
+    const nextMinPrice = hasAreaField('minPrice') ? String(area.minPrice ?? '') : minPrice;
+    const nextMaxPrice = hasAreaField('maxPrice') ? String(area.maxPrice ?? '') : maxPrice;
     const nextCondition = Array.isArray(area.condition) ? area.condition : conditionFilter;
-    const nextDynamicFilters = { ...(area.dynamic || dynamicFilters) };
+    const nextDynamicFilters = { ...(hasAreaField('dynamic') ? (area.dynamic || {}) : dynamicFilters) };
     if (area.listingType) nextDynamicFilters.listing_type = [area.listingType];
-    else if (Object.prototype.hasOwnProperty.call(area, 'listingType')) delete nextDynamicFilters.listing_type;
+    else if (hasAreaField('listingType')) delete nextDynamicFilters.listing_type;
     const nextState = typeof area.state === 'string' ? area.state : selectedState;
     const nextCity = typeof area.city === 'string' ? area.city : '';
-    const locationLabel = nextCity || nextState || searchLocationInput;
+    const hasAreaLocationOverride = typeof area.state === 'string' || typeof area.city === 'string';
+    const locationLabel = hasAreaLocationOverride ? (nextCity || nextState) : searchLocationInput;
     const geo = { lat: Number(lat), lng: Number(lng) };
     const normalizedRadius = Number.isFinite(Number(nextRadius)) && Number(nextRadius) > 0 ? Number(nextRadius) : radius;
 
@@ -4051,6 +4055,8 @@ function App() {
       pathname: '/listings',
       search: nextQuery,
       location: locationLabel,
+      state: nextState,
+      city: nextCity,
       category: nextCategory,
       minPrice: nextMinPrice,
       maxPrice: nextMaxPrice,

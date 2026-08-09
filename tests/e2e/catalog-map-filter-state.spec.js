@@ -148,3 +148,101 @@ test('map controls hydrate from catalog state and search-area preserves canonica
   await expect(page.getByTestId('map-filter-state')).toHaveValue('Nuevo León');
   await expect(page.getByTestId('map-filter-city')).toHaveValue('Monterrey');
 });
+
+test('map search-area clears price bounds when the map inputs are emptied', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  const adRequests = [];
+  await installCatalogSession(page);
+  await mockCatalogApi(page, adRequests);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(buildMapStateUrl());
+
+  await page.getByTestId('map-expand').click();
+  await expect(page.getByRole('dialog').locator('.custom-leaflet-marker')).toHaveCount(1)
+  await page.getByTestId('map-filter-toggle').click();
+  await page.getByTestId('map-filter-min-price').fill('');
+  await page.getByTestId('map-filter-max-price').fill('');
+  const requestCountBeforeAreaSearch = adRequests.length;
+  await page.getByTestId('map-search-area').click();
+
+  await expect.poll(() => {
+    const params = new URL(page.url()).searchParams;
+    return [params.has('min_price'), params.has('max_price')];
+  }).toEqual([false, false]);
+
+  await expect.poll(() => adRequests.slice(requestCountBeforeAreaSearch).some((requestUrl) => {
+    const params = new URL(requestUrl).searchParams;
+    return params.has('lat') && params.has('lng') && params.has('radius')
+      && !params.has('min_price') && !params.has('max_price');
+  })).toBe(true);
+});
+
+test('map reset immediately clears catalog filters while preserving the current geo area', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  const adRequests = [];
+  await installCatalogSession(page);
+  await mockCatalogApi(page, adRequests);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(buildMapStateUrl());
+
+  await page.getByTestId('map-expand').click();
+  await expect(page.getByRole('dialog').locator('.custom-leaflet-marker')).toHaveCount(1)
+  await page.getByTestId('map-filter-toggle').click();
+  const requestCountBeforeReset = adRequests.length;
+  await page.getByTestId('map-clear-filters').click();
+
+  await expect(page.getByTestId('map-filter-query')).toHaveValue('');
+  await expect(page.getByTestId('map-filter-category')).toHaveValue('');
+  await expect(page.getByTestId('map-filter-state')).toHaveValue('');
+  await expect(page.getByTestId('map-filter-min-price')).toHaveValue('');
+  await expect(page.getByTestId('map-filter-max-price')).toHaveValue('');
+  await expect(page.getByTestId('map-filter-listing-type')).toHaveValue('');
+
+  await expect.poll(() => {
+    const params = new URL(page.url()).searchParams;
+    return {
+      search: params.has('search'),
+      category: params.has('category'),
+      location: params.has('location'),
+      state: params.has('state'),
+      city: params.has('city'),
+      minPrice: params.has('min_price'),
+      maxPrice: params.has('max_price'),
+      condition: params.has('condition'),
+      listingType: params.has('filters[listing_type][]'),
+      sort: params.has('filters[sort]'),
+      locationState: params.has('filters[location_state]'),
+      locationCity: params.has('filters[location_city]'),
+      lat: params.has('lat'),
+      lng: params.has('lng'),
+      radius: params.has('radius'),
+    };
+  }).toEqual({
+    search: false,
+    category: false,
+    location: false,
+    state: false,
+    city: false,
+    minPrice: false,
+    maxPrice: false,
+    condition: false,
+    listingType: false,
+    sort: false,
+    locationState: false,
+    locationCity: false,
+    lat: true,
+    lng: true,
+    radius: true,
+  });
+
+  await expect.poll(() => adRequests.slice(requestCountBeforeReset).some((requestUrl) => {
+    const params = new URL(requestUrl).searchParams;
+    return params.has('lat') && params.has('lng') && params.has('radius')
+      && !params.has('search')
+      && !params.has('category')
+      && !params.has('min_price')
+      && !params.has('max_price')
+      && !params.has('condition')
+      && !params.has('filters[listing_type][]');
+  })).toBe(true);
+});
