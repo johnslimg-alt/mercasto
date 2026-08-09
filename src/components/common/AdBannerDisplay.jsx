@@ -110,9 +110,11 @@ function AdBannerDisplay({
       )}
 
       {/* Баннер */}
-      <div
+      <button
+        type="button"
         onClick={() => handleBannerClick(currentBanner)}
-        className="cursor-pointer overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-shadow"
+        aria-label={currentBanner.alt_text || currentBanner.title || placement}
+        className="block w-full cursor-pointer overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-shadow"
       >
         <img
           src={currentBanner.image_url}
@@ -120,7 +122,7 @@ function AdBannerDisplay({
           className="w-full h-full object-cover"
           loading="lazy"
         />
-      </div>
+      </button>
 
       {/* Индикаторы (если несколько баннеров) */}
       {banners.length > 1 && (

@@ -699,7 +699,7 @@ export default function AdDetailScreen({
   </div>
 ) : (
   <>
-    <div className="flex items-center gap-4 mb-6 cursor-pointer group" onClick={() => handleViewCompany(ad.user)}>
+    <button type="button" className="w-full text-left flex items-center gap-4 mb-6 cursor-pointer group" onClick={() => handleViewCompany(ad.user)}>
       {ad.user?.avatar_url ? (
         <img src={getImageUrl(ad.user.avatar_url)} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 group-hover:border-[#84CC16] transition-colors" alt=""/>
       ) : (
@@ -712,7 +712,7 @@ export default function AdDetailScreen({
         </h3>
         <p className="text-[13px] text-slate-500 mt-0.5">En Mercasto desde {new Date(ad.user?.created_at || ad.created_at).getFullYear()}</p>
       </div>
-    </div>
+    </button>
 
     {(!currentUser || !currentUser.id) ? (
       <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">

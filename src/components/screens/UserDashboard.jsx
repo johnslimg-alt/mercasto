@@ -18,7 +18,7 @@ const DashboardCharts = React.lazy(() => import('./dashboard/DashboardCharts'));
 import SavedSearchesPanel from '../common/SavedSearchesPanel';
 
 // Stat Card Component
-const StatCard = ({ icon: Icon, label, value, change, trend, color = 'blue', onClick }) => {
+const StatCard = ({ icon: Icon, label, value, change, trend, color = 'blue' }) => {
   const colorClasses = {
     blue: 'from-blue-500 to-blue-600',
     green: 'from-emerald-500 to-emerald-600',
@@ -28,10 +28,7 @@ const StatCard = ({ icon: Icon, label, value, change, trend, color = 'blue', onC
   };
 
   return (
-    <div 
-      onClick={onClick}
-      className={`bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all cursor-pointer group`}
-    >
+    <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 transition-all group">
       <div className="flex items-start justify-between mb-3">
         <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colorClasses[color]} flex items-center justify-center shadow-lg`}>
           <Icon className="w-5 h-5 text-white" />
