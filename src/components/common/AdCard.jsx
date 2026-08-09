@@ -72,10 +72,16 @@ const AdCard = memo(({
   }, [onImageError]);
 
   return (
-    <article ref={isCatalogFiller ? null : observeRef} onClick={() => handleViewAd(ad)} className={`market-card ad-result-card overflow-hidden cursor-pointer group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
+    <article ref={isCatalogFiller ? null : observeRef} className={`relative market-card ad-result-card overflow-hidden group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
+      <button
+        type="button"
+        aria-label={localizedText(ad.title, lang)}
+        onClick={() => { options.onActivate?.(ad); handleViewAd(ad); }}
+        className="absolute inset-0 z-10 cursor-pointer rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#84CC16] focus-visible:ring-inset"
+      />
+      <div className="relative z-0 pointer-events-none aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
         <img src={safeImage} width={imageWidth} height={Math.round(imageWidth * 0.75)} loading={options.priority ? 'eager' : 'lazy'} fetchPriority={options.priority ? 'high' : 'auto'} decoding="async" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleImageError} alt={localizedText(ad.title, lang)} />
-        <button type="button" aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'} aria-pressed={isFav} onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-10">
+        <button type="button" aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'} aria-pressed={isFav} onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart pointer-events-auto absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-20">
           <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
         </button>
         {isCatalogFiller && <span className="badge absolute top-2.5 left-2.5 bg-slate-900/90 text-white z-10">Catálogo Mercasto</span>}
@@ -84,7 +90,7 @@ const AdCard = memo(({
         {!isCatalogFiller && !isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">Resaltado</span>}
         {!isCatalogFiller && !isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
       </div>
-      <div className="ad-result-body p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-10 text-[#0F172A] dark:text-white">
+      <div className="ad-result-body pointer-events-none p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-0 text-[#0F172A] dark:text-white">
         <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">
           {isCatalogFiller && <span className="mr-1 text-[10px] font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Precio de referencia</span>}
           ${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span>
@@ -95,11 +101,11 @@ const AdCard = memo(({
           <span className="truncate pr-2">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || 'México')}</span>
         </div>
         {isCatalogFiller ? (
-          <button className="w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white" onClick={(e) => { e.stopPropagation(); navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } }); }}>
+          <button className="pointer-events-auto relative z-20 w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white" onClick={(e) => { e.stopPropagation(); navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } }); }}>
             Vende uno similar
           </button>
         ) : ad.user?.role !== 'business' && (
-          <button className="w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
+          <button className="pointer-events-auto relative z-20 w-full mt-3 btn-md bg-[#0F172A] dark:bg-slate-800 text-white hover:bg-black dark:hover:bg-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAd(ad); }}>Contact</button>
         )}
       </div>
     </article>

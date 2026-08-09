@@ -254,7 +254,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
             <section className="col-span-12 -mt-2">
 
-              <div className="category-rail rail-fade -mx-4 px-6 lg:-mx-6 lg:px-6">
+              <div data-testid="home-category-rail" className="category-rail rail-fade -mx-4 px-6 lg:-mx-6 lg:px-6">
 
                 {homeCategories.map(cat => {
 
@@ -262,7 +262,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   return (
 
-                    <button key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
+                    <button data-testid={`home-category-${cat.slug || cat.action}`} key={cat.slug || cat.action} aria-label={cat.name?.[lang] || cat.name?.['es'] || cat.name} onClick={() => {
                         if (cat.action === 'home') { navigate('/'); setActiveCat(''); executeSearch?.('', null, ''); return; }
                         if (cat.action === 'pricing') { setShowPricingModal?.(true); return; }
                         if (cat.slug) events.categorySelected(cat.slug, { source: 'homepage_category_rail' });
@@ -346,9 +346,10 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                       const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
                       const rating = getHomeRating(ad);
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={ad.id}
-                          className="snap-start shrink-0 w-[240px] lg:w-auto cursor-pointer group"
+                          className="snap-start shrink-0 w-[240px] lg:w-auto text-left cursor-pointer group"
                           onClick={() => handleViewAd?.(ad)}
                         >
                           {/* Gold-border premium card */}
@@ -400,7 +401,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                               )}
                             </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })
                     )}
@@ -591,13 +592,13 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                       const isReal = Boolean(item.id);
                       if (isReal) {
                         return (
-                          <div key={item.id} className="cursor-pointer" onClick={() => handleViewAd(item)}>
+                          <div key={item.id}>
                             {renderAdCard(item)}
                           </div>
                         );
                       }
                       return (
-                        <article key={idx} className="market-card overflow-hidden cursor-pointer" onClick={() => { runSearch(item.specs, 'inmobiliaria'); }}>
+                        <button type="button" key={idx} className="market-card w-full text-left overflow-hidden cursor-pointer" onClick={() => { runSearch(item.specs, 'inmobiliaria'); }}>
                           <div className="relative">
                             <img src={item.img} loading="lazy" className="w-full h-[160px] object-cover" alt=""/>
                             <span className={`badge absolute left-2 top-2 ${item.color} text-white`}>{item.type}</span>
@@ -610,7 +611,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                               <span className="text-slate-500">{item.location}</span>
                             </div>
                           </div>
-                        </article>
+                        </button>
                       );
                     })}
                   </div>
@@ -694,7 +695,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                         const isReal = Boolean(job.id);
                         if (isReal) {
                           return (
-                            <tr key={job.id} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 cursor-pointer transition-all duration-200 last:border-0" onClick={() => handleViewAd(job)}>
+                            <tr key={job.id} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 transition-all duration-200 last:border-0">
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-3">
                                   <div className="w-10 h-10 rounded-xl bg-lime-50 dark:bg-lime-950 flex items-center justify-center font-bold text-lime-600 border border-lime-100">💼</div>
@@ -714,7 +715,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                           );
                         }
                         return (
-                          <tr key={idx} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 cursor-pointer transition-all duration-200 last:border-0" onClick={() => { runSearch(job.role, 'empleo'); }}>
+                          <tr key={idx} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/90 transition-all duration-200 last:border-0">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
                                 <div className={`job-logo-badge ${job.logo}`}>
@@ -737,7 +738,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                               {job.loc === 'Remote' ? <span className="badge bg-slate-900 text-white">Remote</span> : job.loc}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button onClick={(e) => { e.stopPropagation(); setCurrentTab('post'); }} className={`btn-sm text-white ${idx === 0 ? 'bg-[#84CC16] hover:bg-[#65A30D]' : 'bg-slate-900 hover:bg-black'}`}>{t.apply || 'Aplicar'}</button>
+                              <button type="button" onClick={() => { runSearch(job.role, 'empleo'); }} className={`btn-sm text-white ${idx === 0 ? 'bg-[#84CC16] hover:bg-[#65A30D]' : 'bg-slate-900 hover:bg-black'}`}>{t.view || 'Ver'}</button>
                             </td>
                           </tr>
                         );
@@ -787,7 +788,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     const imgSrc = srv.image_url ? getImageUrl(srv.image_url) : '/placeholder-ad.svg';
                     const rating = getHomeRating(srv);
                     return (
-                      <div key={srv.id} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => handleViewAd(srv)}>
+                      <div key={srv.id} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
                         <div className="flex items-start gap-3">
                           <img src={imgSrc} loading="lazy" className="w-12 h-12 rounded-xl object-cover" alt={srv.title}/>
                           <div className="flex-1">
@@ -800,13 +801,13 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                         <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.description}</p>
                         <div className="flex items-center justify-between mt-3">
                           <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>${Number(srv.price || 0).toLocaleString()} MXN</strong></span>
-                          <button onClick={(e) => { e.stopPropagation(); handleViewAd(srv); }} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.view || 'Ver'}</button>
+                          <button type="button" onClick={() => handleViewAd(srv)} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.view || 'Ver'}</button>
                         </div>
                       </div>
                     );
                   }
                   return (
-                    <div key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 cursor-pointer" onClick={() => { runSearch(srv.title, 'servicios'); }}>
+                    <div key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
                       <div className="flex items-start gap-3">
                         <img src={srv.img} loading="lazy" className="w-12 h-12 rounded-xl object-cover" alt=""/>
                         <div className="flex-1">
@@ -818,7 +819,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                       <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.desc}</p>
                       <div className="flex items-center justify-between mt-3">
                         <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>{srv.price}</strong></span>
-                        <button onClick={(e) => { e.stopPropagation(); setActiveCat('servicios'); }} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.book_now || 'Reservar'}</button>
+                        <button type="button" onClick={() => { runSearch(srv.title, 'servicios'); }} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.view || 'Ver'}</button>
                       </div>
                     </div>
                   );
@@ -897,7 +898,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     const imgSrc = car.image_url ? getImageUrl(car.image_url) : '/placeholder-ad.svg';
                     const rating = getHomeRating(car);
                     return (
-                      <article key={car.id} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => handleViewAd(car)}>
+                      <button type="button" key={car.id} className="card w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => handleViewAd(car)}>
                         <div className="aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-900">
                           <img src={imgSrc} loading="lazy" className="w-full h-full object-cover" alt={car.title}/>
                         </div>
@@ -915,11 +916,11 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                             <span className="badge bg-emerald-100 text-emerald-700">Verificado</span>
                           </div>
                         </div>
-                      </article>
+                      </button>
                     );
                   }
                   return (
-                    <article key={idx} className="card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => { runSearch(car.title, 'motor'); }}>
+                    <button type="button" key={idx} className="card w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" onClick={() => { runSearch(car.title, 'motor'); }}>
                       <div className="aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-900">
                         <img src={car.img} loading="lazy" className="w-full h-full object-cover" alt={car.title || ''}/>
                       </div>
@@ -931,7 +932,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                           {car.badge && <span className={`badge ${car.badge.color}`}>{car.badge.label}</span>}
                         </div>
                       </div>
-                    </article>
+                    </button>
                   );
                 })}
               </div>
@@ -958,7 +959,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                         : '/placeholder-ad.svg';
                       const locationStr = ad.state || ad.location?.split(',')[0] || 'México';
                       return (
-                        <div key={ad.id} onClick={() => { runSearch(localizedText(ad.title)); }} className="shrink-0 w-[160px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md dark:hover:shadow-black/50 transition-shadow cursor-pointer group">
+                        <button type="button" key={ad.id} onClick={() => { runSearch(localizedText(ad.title)); }} className="shrink-0 w-[160px] text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md dark:hover:shadow-black/50 transition-shadow cursor-pointer group">
                           <div className="w-full h-[100px] bg-slate-100 dark:bg-slate-850 overflow-hidden">
                             <img src={imgSrc} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { if (!e.currentTarget.src.endsWith('/placeholder-ad.svg')) e.currentTarget.src='/placeholder-ad.svg'; }} alt={localizedText(ad.title)}/>
                           </div>
@@ -967,7 +968,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                             <div className="text-[13px] font-semibold text-[#65A30D] dark:text-[#BEF264] mt-0.5">${Number(ad.price || 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">MXN</span></div>
                             <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{locationStr}</div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>

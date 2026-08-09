@@ -882,7 +882,7 @@ export default function AdDetailScreen({
                 <h2 className="text-[20px] font-bold text-slate-900 mb-5">{t.similar_ads || 'You may also like'}</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {similarAds.map(simAd => (
-                    <div key={simAd.id} className="cursor-pointer" onClick={() => setViewedAd(simAd)}>
+                    <div key={simAd.id}>
                       {renderAdCard(simAd)}
                     </div>
                   ))}

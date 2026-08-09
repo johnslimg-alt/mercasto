@@ -117,8 +117,8 @@ if (sourceFiles.length < 100 || interactiveCount < 500) {
   process.exit(1);
 }
 
-if (nonSemanticClickTargets > 34) {
-  console.error(`frontend interaction semantic debt regressed: nonsemantic_click_targets=${nonSemanticClickTargets}, maximum=34`);
+if (nonSemanticClickTargets > 18) {
+  console.error(`frontend interaction semantic debt regressed: nonsemantic_click_targets=${nonSemanticClickTargets}, maximum=18`);
   process.exit(1);
 }
 

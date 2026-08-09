@@ -4487,13 +4487,17 @@ function App() {
                           return (
                             <div
                               key={n.id}
-                              onClick={() => {
-                                handleMarkNotificationRead(n.id);
-                                const dest = notificationData?.ad_url || n.link;
-                                if (dest) { setShowNotifications(false); navigate(dest); }
-                              }}
-                              className={`p-4 border-b border-slate-50 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors relative group ${!n.is_read ? 'bg-[#84CC16]/5 dark:bg-[#84CC16]/10' : ''}`}
+                              className={`border-b border-slate-50 dark:border-slate-800 relative group ${!n.is_read ? 'bg-[#84CC16]/5 dark:bg-[#84CC16]/10' : ''}`}
                             >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleMarkNotificationRead(n.id);
+                                  const dest = notificationData?.ad_url || n.link;
+                                  if (dest) { setShowNotifications(false); navigate(dest); }
+                                }}
+                                className="w-full p-4 pr-10 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                              >
                               {notificationData ? (
                                 <>
                                   <h4 className={`text-[12px] pr-6 ${!n.is_read ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-200'}`}>
@@ -4510,7 +4514,8 @@ function App() {
                                 </>
                               )}
                               <span className="text-[10px] text-slate-400 block mt-2">{formatDateTime(n.created_at, lang)}</span>
-                              <button type="button" aria-label={t.delete} onClick={(e) => handleDeleteNotification(e, n.id)} className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                              </button>
+                              <button type="button" aria-label={t.delete} onClick={(e) => handleDeleteNotification(e, n.id)} className="absolute z-20 top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                                 <Trash2 size={14} />
                               </button>
                             </div>
