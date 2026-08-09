@@ -458,8 +458,12 @@ export default function MapV3({
     }
   };
 
+  const activeMapInstance = () => expanded
+    ? (largeMapInstanceRef.current || mapInstanceRef.current)
+    : mapInstanceRef.current;
+
   const handleSearchArea = () => {
-    const mapArea = updateMapArea(expanded ? largeMapInstanceRef.current : mapInstanceRef.current);
+    const mapArea = updateMapArea(activeMapInstance());
     if (onSearchArea && mapArea) {
       onSearchArea({
         ...mapArea,
@@ -485,7 +489,7 @@ export default function MapV3({
   };
 
   const clearAllFilters = () => {
-    const mapArea = updateMapArea(expanded ? largeMapInstanceRef.current : mapInstanceRef.current);
+    const mapArea = updateMapArea(activeMapInstance());
     setMapQuery('');
     setMinPrice('');
     setMaxPrice('');

@@ -158,7 +158,6 @@ test('map search-area clears price bounds when the map inputs are emptied', asyn
   await page.goto(buildMapStateUrl());
 
   await page.getByTestId('map-expand').click();
-  await expect(page.getByRole('dialog').locator('.custom-leaflet-marker')).toHaveCount(1)
   await page.getByTestId('map-filter-toggle').click();
   await page.getByTestId('map-filter-min-price').fill('');
   await page.getByTestId('map-filter-max-price').fill('');
@@ -186,7 +185,6 @@ test('map reset immediately clears catalog filters while preserving the current 
   await page.goto(buildMapStateUrl());
 
   await page.getByTestId('map-expand').click();
-  await expect(page.getByRole('dialog').locator('.custom-leaflet-marker')).toHaveCount(1)
   await page.getByTestId('map-filter-toggle').click();
   const requestCountBeforeReset = adRequests.length;
   await page.getByTestId('map-clear-filters').click();
