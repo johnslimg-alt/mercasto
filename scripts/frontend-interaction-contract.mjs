@@ -102,8 +102,9 @@ for (const filePath of sourceFiles) {
       }
     }
 
-    if (tag !== 'button' && tag !== 'a' && hasOnClick) nonSemanticClickTargets += 1;
-    if (tag !== 'button' && role === 'button' && !hasOnClick && !hasSpread) {
+    const nativeHtmlTag = /^[a-z]/.test(tag);
+    if (nativeHtmlTag && tag !== 'button' && tag !== 'a' && hasOnClick) nonSemanticClickTargets += 1;
+    if (nativeHtmlTag && tag !== 'button' && role === 'button' && !hasOnClick && !hasSpread) {
       violations.push(`${label}: role=button has no click handler`);
     }
   }
@@ -113,6 +114,11 @@ console.log(`frontend interaction inventory: files=${sourceFiles.length}, intera
 
 if (sourceFiles.length < 100 || interactiveCount < 500) {
   console.error(`frontend interaction inventory unexpectedly small: files=${sourceFiles.length}, interactive=${interactiveCount}`);
+  process.exit(1);
+}
+
+if (nonSemanticClickTargets > 41) {
+  console.error(`frontend interaction semantic debt regressed: nonsemantic_click_targets=${nonSemanticClickTargets}, maximum=41`);
   process.exit(1);
 }
 

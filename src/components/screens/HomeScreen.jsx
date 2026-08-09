@@ -644,7 +644,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     <div className="absolute inset-x-4 bottom-4 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-medium text-slate-800 dark:text-white">{selectedState ? `Propiedades en ${selectedState}` : 'Propiedades en todo México'}</span>
-                        <span onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-lime-800 dark:text-lime-400 hover:underline">{t.view_all_mexico || 'Ver todo México'} →</span>
+                        <button type="button" onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-lime-800 dark:text-lime-400 hover:underline">{t.view_all_mexico || 'Ver todo México'} →</button>
                       </div>
                     </div>
                   </div>

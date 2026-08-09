@@ -192,7 +192,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                       {adminReports.map(r => (
                         <tr key={r.id} className="hover:bg-slate-50 transition-colors text-[13px]">
                           <td className="p-3 font-medium text-slate-900">
-                            ID: {r.ad_id} - <span className="line-clamp-1 cursor-pointer hover:text-[#65A30D] transition-colors" onClick={() => { const ad = allAds.find(a => a.id === r.ad_id); if(ad) handleViewAd(ad); }}>{r.ad_title}</span>
+                            ID: {r.ad_id} - <button type="button" className="line-clamp-1 text-left cursor-pointer hover:text-[#65A30D] transition-colors" onClick={() => { const ad = allAds.find(a => a.id === r.ad_id); if(ad) handleViewAd(ad); }}>{r.ad_title}</button>
                             <span className={`badge mt-1 ${r.ad_status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{r.ad_status}</span>
                           </td>
                           <td className="p-3 font-semibold text-red-600">{r.reason}</td>

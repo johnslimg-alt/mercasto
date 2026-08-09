@@ -4721,9 +4721,9 @@ function App() {
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div>
-              <div className="footer-logo flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); }}>
+              <button type="button" aria-label={t.home || 'Inicio'} className="footer-logo flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }}>
                 <MercastoLogo className="h-8" isFooter={true} tagline={t.ai_brand_short || 'Clasificados con IA'} />
-              </div>
+              </button>
               <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'La plataforma de clasificados más moderna e inteligente con AI para México.'}</p>
             </div>
             <div><div className="font-semibold text-white mb-3 text-[14px]">{t.buyers || 'Compradores'}</div><ul className="space-y-2 text-[13px]"><li><a href="/ayuda/comprar-y-contactar" onClick={(e) => { e.preventDefault(); navigate('/ayuda/comprar-y-contactar'); }} className="hover:text-white cursor-pointer">{t.how_to_buy || 'Cómo comprar'}</a></li><li><a href="/seguridad" onClick={(e) => { e.preventDefault(); navigate('/seguridad'); }} className="hover:text-white cursor-pointer">{t.safety_tips || 'Consejos de seguridad'}</a></li><li><button type="button" onClick={() => { if(user){setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile');} else {setShowAuthModal(true);}}} className="hover:text-white cursor-pointer text-left">{t.favorites || 'Favoritos'}</button></li></ul></div>
