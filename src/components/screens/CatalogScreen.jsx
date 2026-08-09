@@ -262,7 +262,7 @@ export default function CatalogScreen({
             getImageUrl={getImageUrl}
             onSearchArea={area => {
               onSearchArea?.(area);
-              showCatalogToast(t.search_area_applied || 'Búsqueda por área aplicada');
+              if (!area?.suppressToast) showCatalogToast(t.search_area_applied || 'Búsqueda por área aplicada');
             }}
             t={t}
             lang={lang}
