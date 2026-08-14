@@ -8,7 +8,7 @@ echo "== Catalog reference integrity gate =="
 grep -qF "if (ad.is_catalog_filler) return;" src/App.jsx
 grep -qF "ref={isCatalogFiller ? null : observeRef}" src/components/common/AdCard.jsx
 grep -qF "observeAdImpression?.(node, ad.id);" src/components/common/AdCard.jsx
-grep -qF "Precio de referencia" src/components/common/AdCard.jsx
+grep -qF "detailCopy.catalogTitle" src/components/common/AdCard.jsx
 grep -qF "const genuineAds = useMemo" src/components/common/SplitViewContainer.jsx
 grep -qF "t.map_catalog_references" src/components/common/SplitViewContainer.jsx
 grep -qF -- "->where('is_catalog_filler', false)" backend/app/Http/Controllers/Api/ContactController.php

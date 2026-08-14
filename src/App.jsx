@@ -846,6 +846,7 @@ function App() {
   const [locCity, setLocCity] = useState('');
   const mobileSearchInputRef = useRef(null);
   const skipFilterUrlSyncRef = useRef(false);
+  const lastInternalFilterPathRef = useRef('');
   const skipCategoryFilterResetRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
   const adsAbortRef = useRef(null);
@@ -1300,6 +1301,11 @@ function App() {
 
   useEffect(() => {
     if (!['/', '/listings'].includes(location.pathname)) return;
+    const currentPath = `${location.pathname}${location.search}`;
+    if (lastInternalFilterPathRef.current === currentPath) {
+      lastInternalFilterPathRef.current = '';
+      return;
+    }
     const params = new URLSearchParams(location.search);
     const hash = location.hash || window.location.hash;
     if (params.has('ad') || params.has('store') || hash.startsWith('#ad-') || hash.startsWith('#company-')) return;
@@ -1383,7 +1389,10 @@ function App() {
 
     const nextPath = buildHomeFilterPath();
     const currentPath = `${location.pathname}${location.search}`;
-    if (nextPath !== currentPath) navigate(nextPath, { replace: true });
+    if (nextPath !== currentPath) {
+      lastInternalFilterPathRef.current = nextPath;
+      navigate(nextPath, { replace: true });
+    }
   }, [activeCat, activeSub, buildHomeFilterPath, debouncedLocInput, debouncedSearch, dynamicFilters, location.pathname, location.search, maxPrice, minPrice, conditionFilter, radius, searchLocation, selectedState, navigate, viewedAd, viewedCompany]);
 
   useEffect(() => {
@@ -1626,7 +1635,7 @@ function App() {
 
   // --- ДИНАМИЧЕСКОЕ SEO & GOOGLE TAG MANAGER ---
   useEffect(() => {
-    const verticalSeo = getVerticalSeo(location.pathname);
+    const verticalSeo = getVerticalSeo(location.pathname, lang);
     const publicSeo = getPublicSeo(location.pathname, lang);
     const verticalCanonicalAlias = getVerticalCanonicalAlias(location.pathname);
     let title = `Mercasto | ${t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}`;
@@ -1646,25 +1655,22 @@ function App() {
     );
 
     if (viewedAd) {
-      title = isViewedCatalogFiller
-        ? `${localizedText(viewedAd.title, lang)} | Catálogo Mercasto`
-        : !isViewedListingIndexable
-          ? `${localizedText(viewedAd.title, lang)} | Anuncio no disponible`
-          : `${localizedText(viewedAd.title, lang)} - ${viewedAd.location?.split(',')[0]} | Mercasto`;
-      desc = viewedAd.description ? localizedText(viewedAd.description, lang).substring(0, 160) : desc;
+      title = `${localizedText(viewedAd.title, lang)} | Mercasto`;
+      desc = viewedAd.description
+        ? localizedText(viewedAd.description, lang).substring(0, 160)
+        : (t.ai_brand_description || desc);
       ogImage = getImageUrl(viewedAd.image_url);
       ogType = isViewedListingIndexable ? "product" : "website";
     } else if (viewedCompany) {
-      const isBusiness = viewedCompany.role === 'business';
-      title = `${viewedCompany.name} - ${isBusiness ? 'Tienda Oficial' : 'Vendedor'} en Mercasto`;
+      title = `${viewedCompany.name} | Mercasto`;
       desc = viewedCompany.bio
         ? viewedCompany.bio.substring(0, 160)
-        : `${viewedCompany.name} en ${viewedCompany.city || 'México'}. ${isBusiness ? 'Mira sus anuncios clasificados activos, opiniones de clientes y contáctalos de forma segura en Mercasto.' : 'Mira sus anuncios clasificados en Mercasto.'}`;
+        : (t.ai_brand_description || desc);
       ogImage = getImageUrl(viewedCompany.avatar_url, "https://mercasto.com/icon-512x512.png");
       ogType = "profile";
     } else if (window.location.pathname === '/listings') {
-      title = `Anuncios clasificados con IA en México | Mercasto`;
-      desc = t.ai_brand_description || 'La plataforma de clasificados más moderna e inteligente con AI para México.';
+      title = `Mercasto | ${t.ai_brand_short || t.ai_brand_tagline || 'AI classifieds'}`;
+      desc = t.ai_brand_description || desc;
     } else if (verticalSeo) {
       title = verticalSeo.title;
       desc = verticalSeo.description;
@@ -1673,16 +1679,19 @@ function App() {
       desc = publicSeo.description;
     } else if (activeCat) {
       const catName = getCatName(categoriesData.find(c => c.slug === activeCat), lang) || activeCat;
-      title = `${catName} en México | Anuncios Clasificados Mercasto`;
+      title = `${catName} | Mercasto`;
     }
 
-    document.title = title;
-    document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
-    document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
-    document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+    const sellerProfileOwnsSeo = /^\/vendedor\/\d+\/?$/.test(location.pathname);
+    if (!sellerProfileOwnsSeo) {
+      document.title = title;
+      document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+      document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', title);
+      document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', desc);
+    }
     document.querySelector('meta[property="og:image"]')?.setAttribute('content', ogImage);
-    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', title);
-    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', desc);
     document.querySelector('meta[name="twitter:image"]')?.setAttribute('content', ogImage);
     const canonicalHref = viewedAd
       ? `https://mercasto.com/ads/${viewedAd.id}`

@@ -1,3 +1,7 @@
+import { categoryLandingTranslations } from './categoryLandingTranslations.js';
+import { getVerticalCopy } from '../utils/verticalCopy.js';
+import { normalizeLanguage } from '../utils/translations.js';
+
 export const VERTICAL_SEO_ROUTES = Object.freeze({
   '/ocio': {
     name: 'Ocio y Deportes',
@@ -71,7 +75,48 @@ export const VERTICAL_SEO_ROUTES = Object.freeze({
   },
 });
 
-export function getVerticalSeo(pathname = '') {
+const CATEGORY_LANDING_SEO_KEYS = Object.freeze({
+  '/ocio': 'ocio',
+  '/boletos': 'boletos',
+  '/moda': 'moda',
+  '/hogar': 'hogar',
+  '/electronica': 'electronica',
+  '/infantil': 'infantil',
+  '/mascotas': 'mascotas',
+  '/negocios': 'negocios',
+});
+
+const CUSTOM_VERTICAL_SEO_KEYS = Object.freeze({
+  '/empleos': 'empleos',
+  '/servicios': 'servicios',
+  '/autos': 'motor',
+  '/motor': 'motor',
+  '/inmuebles': 'inmuebles',
+  '/productos': 'productos',
+  '/turismo': 'turismo',
+});
+
+export function getVerticalSeo(pathname = '', language = 'es') {
+  const lang = normalizeLanguage(language);
+  const categoryKey = CATEGORY_LANDING_SEO_KEYS[pathname];
+  if (categoryKey && lang !== 'es') {
+    const localized = categoryLandingTranslations[lang]?.[categoryKey];
+    if (localized?.seoTitle && localized?.seoDesc) {
+      return { name: localized.title, title: localized.seoTitle, description: localized.seoDesc };
+    }
+  }
+
+  const verticalKey = CUSTOM_VERTICAL_SEO_KEYS[pathname];
+  if (lang === 'es' && pathname === '/autos') {
+    return VERTICAL_SEO_ROUTES['/motor'];
+  }
+  if (verticalKey && (lang !== 'es' || !VERTICAL_SEO_ROUTES[pathname])) {
+    const localized = getVerticalCopy(lang, verticalKey);
+    if (localized?.title && localized?.subtitle) {
+      return { name: localized.title, title: `${localized.title} | Mercasto`, description: localized.subtitle };
+    }
+  }
+
   return VERTICAL_SEO_ROUTES[pathname] || null;
 }
 
