@@ -123,7 +123,7 @@ grep -qF "login/two-factor" "$APP"
 grep -qF "forgot-password" "$APP"
 grep -qF "reset-password" "$APP"
 grep -qF "handleLogout" "$APP"
-grep -qF "delete account" "$APP" || grep -qF "eliminar tu cuenta" "$APP" || grep -qF "eliminar cuenta" "$APP"
+grep -qF "window.confirm(t.account_action_delete_confirm)" "$APP"
 
 # Browser auth/account deep links must resolve to real screens rather than the SPA 404 fallback.
 grep -qF 'function AuthEntryRoute' "$APP"
