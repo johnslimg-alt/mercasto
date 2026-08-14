@@ -8,6 +8,7 @@ ROUTES="backend/routes/api.php"
 CONTROLLER="backend/app/Http/Controllers/Api/AdController.php"
 POST_SCREEN="src/components/screens/PostScreen.jsx"
 DETAIL_SCREEN="src/components/screens/AdDetailScreen.jsx"
+HELP_COPY="src/utils/helpCenterCopy.js"
 
 echo "== Listing lifecycle launch gate =="
 
@@ -15,6 +16,7 @@ test -f "$ROUTES"
 test -f "$CONTROLLER"
 test -f "$POST_SCREEN"
 test -f "$DETAIL_SCREEN"
+test -f "$HELP_COPY"
 
 # Route coverage: create, edit data, update, delete, status, report, moderation, owner dashboard.
 grep -qF "Route::middleware('throttle:ads')->post('/ads', [AdController::class, 'store'])" "$ROUTES"
@@ -51,7 +53,7 @@ if grep -qF 'now()->addDays(30)' "$CONTROLLER"; then
   exit 1
 fi
 grep -qF 'Estará activo 7 días más.' src/App.jsx
-grep -qF 'Los anuncios gratuitos están activos durante 7 días.' src/components/screens/AyudaScreen.jsx
+grep -qF 'Los anuncios gratuitos están activos durante 7 días.' "$HELP_COPY"
 grep -qF '$needsReModeration ? '\''pending'\'' : $ad->status' "$CONTROLLER"
 grep -qF "'status' => 'required|in:paused,inactive,archived'" "$CONTROLLER"
 
