@@ -243,9 +243,9 @@ assertNotContains(
 );
 
 assertContains(
-  'src/App.jsx',
-  'Catálogo Mercasto',
-  'catalog references are visibly distinguished on result cards'
+  'src/components/common/AdCard.jsx',
+  'detailCopy.catalogTitle',
+  'catalog references are visibly distinguished on result cards with localized copy'
 );
 
 assertContains(

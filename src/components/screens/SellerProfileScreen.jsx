@@ -4,7 +4,7 @@ import { MapPin, Globe, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, P
 import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
 import { formatNumber } from '../../utils/localeFormat';
-import { normalizeLanguage } from '../../utils/translations';
+import { loadLanguage, normalizeLanguage } from '../../utils/translations';
 import { formatSellerProfileCopy, getSellerProfileCopy, sellerReviewLabel } from '../../utils/sellerProfileCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -66,6 +66,23 @@ export default function SellerProfileScreen({ currentUser }) {
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!seller) return undefined;
+    let cancelled = false;
+    const seoTitle = `${seller.name} | Mercasto`;
+    loadLanguage(lang).then(translations => {
+      if (cancelled) return;
+      const seoDescription = translations.ai_brand_description;
+      document.title = seoTitle;
+      document.querySelector('meta[name="description"]')?.setAttribute('content', seoDescription);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', seoTitle);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', seoDescription);
+      document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', seoTitle);
+      document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', seoDescription);
+    });
+    return () => { cancelled = true; };
+  }, [seller, lang]);
 
   useEffect(() => {
     if (!id) return;

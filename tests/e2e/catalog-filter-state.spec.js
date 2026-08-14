@@ -39,8 +39,13 @@ for (const lang of localeCases) {
     await expect(venta.locator('xpath=..')).toContainText(translations[lang].gf_venta);
     await venta.check();
     await page.getByTestId('sidebar-filter-sort').selectOption('price_asc');
-    await page.getByTestId('sidebar-filter-state').selectOption('Jalisco');
-    await page.getByTestId('sidebar-filter-city').selectOption('Guadalajara');
+    const stateSelect = page.getByTestId('sidebar-filter-state');
+    const citySelect = page.getByTestId('sidebar-filter-city');
+    await stateSelect.selectOption('Jalisco');
+    await expect(stateSelect).toHaveValue('Jalisco');
+    await expect(citySelect).toBeEnabled();
+    await expect(citySelect.locator('option[value="Guadalajara"]')).toBeAttached();
+    await citySelect.selectOption('Guadalajara');
     await page.getByTestId('sidebar-filter-min-price').fill('100');
 
     await expect.poll(() => page.url()).toContain('filters%5Blisting_type%5D%5B%5D=Venta');
