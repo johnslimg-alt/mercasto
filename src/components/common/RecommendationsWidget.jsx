@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
+import { localeFor } from '../../utils/localeFormat';
+import { getRecommendationCopy } from '../../utils/recommendationCopy';
 
 const RecommendationsWidget = memo(({ 
   userId, 
   excludeAdId = null, 
   limit = 12,
-  onAdClick 
+  onAdClick,
+  lang = 'es',
+  t = {},
 }) => {
-  const { t } = useTranslation();
+  const copy = getRecommendationCopy(lang);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -84,7 +87,7 @@ const RecommendationsWidget = memo(({
   };
 
   const formatPrice = (price, currency = 'MXN') => {
-    return new Intl.NumberFormat('es-MX', {
+    return new Intl.NumberFormat(localeFor(lang), {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 0,
@@ -96,7 +99,7 @@ const RecommendationsWidget = memo(({
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {userId ? '🎯 Para ti' : '🔥 Trending'}
+            {userId ? `🎯 ${copy.forYou}` : `🔥 ${t.trending_now || 'Trending'}`}
           </h2>
         </div>
         <div className="flex gap-4 overflow-hidden">
@@ -124,12 +127,12 @@ const RecommendationsWidget = memo(({
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {userId ? '🎯 Para ti' : '🔥 Trending'}
+            {userId ? `🎯 ${copy.forYou}` : `🔥 ${t.trending_now || 'Trending'}`}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             {userId 
-              ? 'Recomendaciones personalizadas basadas en tus intereses'
-              : 'Los anuncios más populares en tu zona'}
+              ? copy.personalized
+              : copy.popularNearby}
           </p>
         </div>
         
@@ -138,7 +141,7 @@ const RecommendationsWidget = memo(({
           <button
             onClick={() => scroll('left')}
             className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-            aria-label="Scroll left"
+            aria-label={copy.previous}
           >
             <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -147,7 +150,7 @@ const RecommendationsWidget = memo(({
           <button
             onClick={() => scroll('right')}
             className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-            aria-label="Scroll right"
+            aria-label={copy.next}
           >
             <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -174,7 +177,7 @@ const RecommendationsWidget = memo(({
               {ad.images && ad.images.length > 0 ? (
                 <img
                   src={ad.images[0]}
-                  alt={localizedText(ad.title)}
+                  alt={localizedText(ad.title, lang)}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   loading="lazy"
                 />
@@ -208,7 +211,7 @@ const RecommendationsWidget = memo(({
             {/* Content */}
             <div className="p-4">
               <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors">
-                {localizedText(ad.title)}
+                {localizedText(ad.title, lang)}
               </h3>
               
               <div className="flex items-center justify-between">

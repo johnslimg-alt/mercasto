@@ -353,7 +353,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
         subtitle={cfg.subtitle}
         searchPlaceholder={`${t.search_btn} ${cfg.title.toLowerCase()}…`}
         color={cfg.color}
-        mapQuery={`${cfg.title} en México`}
+        mapQuery={`${cfg.title} México`}
         onSearch={handleSearch}
         subsections={heroSubsections}
         onSubsectionSelect={(item) => navigate(`/?category=${categoryParam}&search=${encodeURIComponent(item.query)}`)}
@@ -364,6 +364,13 @@ export default function CategoryLanding({ category, lang = 'es' }) {
           allMexico: t.all_mexico,
           allCity: t.all_city || t.city,
           city: t.city,
+          mapAds: t.search_map || t.view_map,
+          radius: t.radius,
+          mapActive: t.map,
+          nearby: t.near_you,
+          mapHelp: t.map_help,
+          apply: t.apply_filters || t.search_btn,
+          openMap: t.open_map || t.map,
         }}
       />
 

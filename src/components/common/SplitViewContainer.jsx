@@ -29,7 +29,7 @@ export default function SplitViewContainer({
   ads = [],
   onAdClick,
   renderAdCard,
-  title = 'Todo México',
+  title = '',
   selectedState,
   category = '',
   initialFilters = {},
@@ -262,7 +262,7 @@ export default function SplitViewContainer({
             className="absolute top-3 right-3 z-[10] flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-lg hover:bg-white dark:hover:bg-slate-800 transition-all"
           >
             <MapPin size={13} className="text-[#84CC16]" />
-            {mapCollapsed ? (t.open_map || 'Abrir mapa') : (t.hide_map || 'Ocultar mapa')}
+            {mapCollapsed ? t.open_map : t.hide_map}
             <ChevronDown size={13} className={`transition-transform ${mapCollapsed ? 'rotate-180' : ''}`} />
           </button>
         </div>

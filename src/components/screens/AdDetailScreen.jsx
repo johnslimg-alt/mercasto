@@ -905,6 +905,8 @@ export default function AdDetailScreen({
                   excludeAdId={ad?.id}
                   limit={12}
                   onAdClick={(recAd) => setViewedAd(recAd)}
+                  lang={lang}
+                  t={t}
                 />
               </React.Suspense>
             </div>

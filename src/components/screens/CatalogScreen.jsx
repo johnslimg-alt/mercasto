@@ -243,7 +243,7 @@ export default function CatalogScreen({
               className="btn-sm flex items-center gap-2 border border-[#84CC16]/40 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 disabled:opacity-60 dark:text-[#BEF264]"
             >
               {savingSearchAlert ? <Loader2 size={15} className="animate-spin" /> : <Bell size={15} />}
-              {t.save_search || 'Guardar búsqueda'}
+              {t.save_search}
             </button>
           </div>
 
@@ -251,7 +251,7 @@ export default function CatalogScreen({
             ads={safeServerAds}
             onAdClick={handleViewAd}
             renderAdCard={renderAdCard}
-            title={selectedState || t.all_mexico || 'Todo México'}
+            title={selectedState || t.all_mexico}
             selectedState={selectedState}
             category={activeCat}
             initialFilters={mapInitialFilters}
@@ -262,7 +262,7 @@ export default function CatalogScreen({
             getImageUrl={getImageUrl}
             onSearchArea={area => {
               onSearchArea?.(area);
-              if (!area?.suppressToast) showCatalogToast(t.search_area_applied || 'Búsqueda por área aplicada');
+              if (!area?.suppressToast) showCatalogToast(t.search_area_applied);
             }}
             t={t}
             lang={lang}
