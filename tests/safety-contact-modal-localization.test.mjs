@@ -43,15 +43,18 @@ test('Mexico Spanish safety copy follows closing-only punctuation policy', async
   assert.equal(serialized.includes(String.fromCharCode(0xa1)), false);
 });
 
-test('App renders QR and report modal UI from active-language copy', () => {
-  const source = fs.readFileSync('src/App.jsx', 'utf8');
+test('lazy QR and report modals render active-language copy', () => {
+  const qrSource = fs.readFileSync('src/components/modals/QRModal.jsx', 'utf8');
+  const reportSource = fs.readFileSync('src/components/modals/ReportModal.jsx', 'utf8');
+  const userReportSource = fs.readFileSync('src/components/modals/UserReportModal.jsx', 'utf8');
+  const combined = `${qrSource}\n${reportSource}\n${userReportSource}`;
   for (const token of [
     't.qr_contact_title', 't.qr_contact_desc', 't.report_ad_help', 't.report_select_reason',
     't.report_reason_fraud', 't.report_reason_inappropriate', 't.report_reason_counterfeit',
     't.report_reason_abusive', 't.report_reason_suspected_fraud',
     't.report_reason_prohibited_products', 't.report_reason_impersonation',
     't.report_additional_details', 't.report_send',
-  ]) assert.ok(source.includes(token), token);
+  ]) assert.ok(combined.includes(token), token);
 
   for (const formerLiteral of [
     '>Escanea para contactar</h2>',
@@ -63,17 +66,20 @@ test('App renders QR and report modal UI from active-language copy', () => {
     'placeholder="Proporciona más detalles..."',
     'placeholder="Explica la situación..."',
     '>Enviar Reporte</button>',
-  ]) assert.equal(source.includes(formerLiteral), false, formerLiteral);
+  ]) assert.equal(combined.includes(formerLiteral), false, formerLiteral);
 });
 
 test('report reason codes and request payload contracts stay unchanged', () => {
-  const source = fs.readFileSync('src/App.jsx', 'utf8');
+  const appSource = fs.readFileSync('src/App.jsx', 'utf8');
+  const reportSource = fs.readFileSync('src/components/modals/ReportModal.jsx', 'utf8');
+  const userReportSource = fs.readFileSync('src/components/modals/UserReportModal.jsx', 'utf8');
+  const modalSource = `${reportSource}\n${userReportSource}`;
   for (const value of [
     'Fraude o estafa', 'Contenido inapropiado', 'Artículo falso o falsificado',
     'Ya se vendió', 'Otro', 'Comportamiento abusivo', 'Sospecha de fraude',
     'Vende productos ilegales', 'Suplantación de identidad',
-  ]) assert.ok(source.includes(`value="${value}"`), value);
+  ]) assert.ok(modalSource.includes(`value="${value}"`), value);
 
-  assert.match(source, /fetch\(`\$\{API_URL\}\/ads\/\$\{reportingAd\.id\}\/report`,[\s\S]*?method: 'POST',[\s\S]*?body: JSON\.stringify\(reportForm\)/);
-  assert.match(source, /fetch\(`\$\{API_URL\}\/users\/\$\{viewedCompany\.id\}\/report`,[\s\S]*?method: 'POST',[\s\S]*?body: JSON\.stringify\(userReportForm\)/);
+  assert.match(appSource, /fetch\(`\$\{API_URL\}\/ads\/\$\{reportingAd\.id\}\/report`,[\s\S]*?method: 'POST',[\s\S]*?body: JSON\.stringify\(reportForm\)/);
+  assert.match(appSource, /fetch\(`\$\{API_URL\}\/users\/\$\{viewedCompany\.id\}\/report`,[\s\S]*?method: 'POST',[\s\S]*?body: JSON\.stringify\(userReportForm\)/);
 });

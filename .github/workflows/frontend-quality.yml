@@ -42,6 +42,8 @@ on:
       - 'tests/final-public-localization.test.mjs'
       - 'tests/admin-operational-localization.test.mjs'
       - 'tests/common-widget-localization.test.mjs'
+      - 'tests/app-modal-code-splitting.test.mjs'
+      - 'tests/e2e/app-modal-code-splitting.spec.js'
       - 'tests/e2e/admin-operational-localization.spec.js'
       - 'tests/user-feedback-localization.test.mjs'
       - 'tests/admin-surface-localization.test.mjs'
@@ -119,6 +121,8 @@ on:
       - 'tests/final-public-localization.test.mjs'
       - 'tests/admin-operational-localization.test.mjs'
       - 'tests/common-widget-localization.test.mjs'
+      - 'tests/app-modal-code-splitting.test.mjs'
+      - 'tests/e2e/app-modal-code-splitting.spec.js'
       - 'tests/e2e/admin-operational-localization.spec.js'
       - 'tests/user-feedback-localization.test.mjs'
       - 'tests/admin-surface-localization.test.mjs'
@@ -187,7 +191,7 @@ jobs:
       - name: Audit translations
         run: npm run i18n:audit
       - name: Check vertical localization coverage
-        run: node --test tests/vertical-copy-localization.test.mjs tests/autos-landing-copy.test.mjs tests/empleos-landing-copy.test.mjs tests/inmuebles-landing-copy.test.mjs tests/servicios-landing-copy.test.mjs tests/category-landing-subcategory-localization.test.mjs tests/storefront-review-locale.test.mjs tests/ad-detail-localization.test.mjs tests/seller-profile-localization.test.mjs tests/storefront-public-copy.test.mjs tests/stores-directory-localization.test.mjs tests/runtime-seo-localization.test.mjs tests/runtime-schema-localization.test.mjs tests/contact-page-localization.test.mjs tests/help-center-localization.test.mjs tests/email-verification-localization.test.mjs tests/not-found-localization.test.mjs tests/geo-source-localization.test.mjs tests/payment-action-localization.test.mjs tests/account-action-localization.test.mjs tests/listing-action-localization.test.mjs tests/safety-contact-modal-localization.test.mjs tests/admin-ai-modal-localization.test.mjs tests/final-public-localization.test.mjs tests/admin-operational-localization.test.mjs tests/common-widget-localization.test.mjs tests/user-feedback-localization.test.mjs tests/admin-surface-localization.test.mjs tests/onboarding-experience-localization.test.mjs
+        run: node --test tests/vertical-copy-localization.test.mjs tests/autos-landing-copy.test.mjs tests/empleos-landing-copy.test.mjs tests/inmuebles-landing-copy.test.mjs tests/servicios-landing-copy.test.mjs tests/category-landing-subcategory-localization.test.mjs tests/storefront-review-locale.test.mjs tests/ad-detail-localization.test.mjs tests/seller-profile-localization.test.mjs tests/storefront-public-copy.test.mjs tests/stores-directory-localization.test.mjs tests/runtime-seo-localization.test.mjs tests/runtime-schema-localization.test.mjs tests/contact-page-localization.test.mjs tests/help-center-localization.test.mjs tests/email-verification-localization.test.mjs tests/not-found-localization.test.mjs tests/geo-source-localization.test.mjs tests/payment-action-localization.test.mjs tests/account-action-localization.test.mjs tests/listing-action-localization.test.mjs tests/safety-contact-modal-localization.test.mjs tests/admin-ai-modal-localization.test.mjs tests/final-public-localization.test.mjs tests/admin-operational-localization.test.mjs tests/common-widget-localization.test.mjs tests/app-modal-code-splitting.test.mjs tests/user-feedback-localization.test.mjs tests/admin-surface-localization.test.mjs tests/onboarding-experience-localization.test.mjs
       - name: Run frontend lint gate
         run: npm run lint:ci
       - name: Run public copy scan
@@ -206,7 +210,7 @@ jobs:
             if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
             sleep 1
           done
-          BASE_URL=http://127.0.0.1:4173 CI=1 npx playwright test tests/e2e/notifications-localization.spec.js tests/e2e/shell-localization.spec.js tests/e2e/referral-localization.spec.js tests/e2e/profile-edit-localization.spec.js tests/e2e/chat-localization.spec.js tests/e2e/saved-searches-localization.spec.js tests/e2e/dashboard-locale-format.spec.js tests/e2e/post-edit-localization.spec.js tests/e2e/onboarding-experience-localization.spec.js tests/e2e/onboarding-first-publication.spec.js tests/e2e/admin-operational-localization.spec.js --project=chromium-desktop --workers=1 --retries=1 --reporter=list
+          BASE_URL=http://127.0.0.1:4173 CI=1 npx playwright test tests/e2e/notifications-localization.spec.js tests/e2e/shell-localization.spec.js tests/e2e/referral-localization.spec.js tests/e2e/profile-edit-localization.spec.js tests/e2e/chat-localization.spec.js tests/e2e/saved-searches-localization.spec.js tests/e2e/dashboard-locale-format.spec.js tests/e2e/post-edit-localization.spec.js tests/e2e/onboarding-experience-localization.spec.js tests/e2e/onboarding-first-publication.spec.js tests/e2e/admin-operational-localization.spec.js tests/e2e/app-modal-code-splitting.spec.js --project=chromium-desktop --workers=1 --retries=1 --reporter=list
           BASE_URL=http://127.0.0.1:4173 CI=1 npx playwright test tests/e2e/vertical-landing-localization.spec.js tests/e2e/autos-landing-localization.spec.js tests/e2e/empleos-landing-localization.spec.js tests/e2e/inmuebles-landing-localization.spec.js tests/e2e/servicios-landing-localization.spec.js tests/e2e/category-landing-subcategory-localization.spec.js tests/e2e/ad-detail-localization.spec.js tests/e2e/seller-profile-localization.spec.js tests/e2e/storefront-public-copy.spec.js tests/e2e/stores-directory-localization.spec.js tests/e2e/runtime-seo-localization.spec.js tests/e2e/runtime-schema-localization.spec.js tests/e2e/contact-page-localization.spec.js tests/e2e/help-center-localization.spec.js tests/e2e/email-verification-localization.spec.js tests/e2e/not-found-localization.spec.js tests/e2e/geo-source-localization.spec.js tests/e2e/payment-action-localization.spec.js tests/e2e/account-action-localization.spec.js tests/e2e/listing-action-localization.spec.js --project=chromium-desktop --project=chromium-mobile --workers=2 --retries=1 --reporter=list
       - name: Run catalog filter state regression
         run: |
