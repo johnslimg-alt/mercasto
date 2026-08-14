@@ -16,6 +16,10 @@ import { getPublicSeo } from './constants/publicSeo';
 // Subcategory data is either an array of Spanish labels (canonical value == display label)
 // or an object keyed by a stable slug (canonical value == slug, label is translated).
 // Always returns [{ value, label }] pairs so the dropdown can render either shape uniformly.
+function localizeAccountServerMessage(lang, serverMessage, fallback) {
+  return lang === 'es' && serverMessage ? serverMessage : fallback;
+}
+
 function getSubcategoryOptions(activeCat, lang) {
   const canonical = subcategoriesByLang.es[activeCat];
   if (!canonical) return null;
@@ -1511,13 +1515,13 @@ function App() {
           if (data.user) {
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
-            showToast(data.message || 'Correo actualizado con éxito.');
-          } else showToast(data.message || 'Error al confirmar el correo.', 'error');
+            showToast(localizeAccountServerMessage(lang, data.message, t.email_verified));
+          } else showToast(localizeAccountServerMessage(lang, data.message, t.account_action_email_confirm_error), 'error');
         })
         .catch(err => console.error(err))
         .finally(() => window.history.replaceState({}, document.title, window.location.pathname));
       } else {
-        showToast('Debes iniciar sesión primero para confirmar tu correo.', 'error');
+        showToast(t.account_action_login_to_confirm_email, 'error');
         window.history.replaceState({}, document.title, window.location.pathname);
         setShowAuthModal(true);
       }
@@ -1565,7 +1569,7 @@ function App() {
         })
         .catch(err => {
           console.error(err);
-          showToast('Error de autenticación con Google', 'error');
+          showToast(t.account_action_google_auth_error, 'error');
         });
     } else if (params.get('token')) {
       const token = params.get('token');
@@ -1585,7 +1589,7 @@ function App() {
       })
       .catch(err => {
         console.error(err);
-        showToast('Error al cargar el perfil. Inicia sesión de nuevo.', 'error');
+        showToast(t.account_action_profile_load_error, 'error');
       });
     } else if (error) {
       if (error === 'registration_consent_required') {
@@ -1597,7 +1601,7 @@ function App() {
           'error',
         );
       } else {
-        showToast('Error de autenticación social. Inténtalo de nuevo.', 'error');
+        showToast(t.account_action_social_auth_error, 'error');
       }
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -2690,7 +2694,10 @@ function App() {
 
       if (res.ok) {
         if (authMode === 'forgot_password' || authMode === 'reset_password') {
-          showToast(result.message, result.message.toLowerCase().includes('error') ? 'error' : 'success');
+          const successMessage = authMode === 'forgot_password'
+            ? t.account_action_recovery_email_sent
+            : t.password_updated;
+          showToast(localizeAccountServerMessage(lang, result.message, successMessage));
           setAuthMode('login');
         } else if (result.two_factor) {
           setTwoFactorEmail(result.email || data.email || '');
@@ -2698,7 +2705,7 @@ function App() {
           setRequiresTwoFactor(true);
         } else {
           if (!result.user) {
-            showToast('Error de servidor: respuesta inesperada.', 'error');
+            showToast(t.account_action_server_unexpected, 'error');
             return;
           }
           setUser(result.user);
@@ -2715,11 +2722,19 @@ function App() {
           setShowAuthModal(false);
         }
       } else {
-        showToast(result.message || result.error || "Credenciales incorrectas", 'error');
+        const serverMessage = result.message || result.error;
+        const fallbackMessage = authMode === 'login'
+          ? t.account_action_invalid_credentials
+          : authMode === 'forgot_password'
+            ? t.account_action_recovery_email_error
+            : authMode === 'reset_password'
+              ? t.account_action_password_reset_error
+              : t.account_action_request_error;
+        showToast(localizeAccountServerMessage(lang, serverMessage, fallbackMessage), 'error');
       }
     } catch (err) {
       console.error("Auth error", err);
-      showToast("Error de conexión", 'error');
+      showToast(t.connection_error, 'error');
     } finally {
       setAuthLoading(false);
     }
@@ -2752,9 +2767,9 @@ function App() {
         setTwoFactorChallengeToken('');
         setTwoFactorEmail('');
       } else {
-        showToast(result.message || 'Código 2FA inválido.', 'error');
+        showToast(localizeAccountServerMessage(lang, result.message, t.account_action_invalid_two_factor), 'error');
       }
-    } catch (err) { showToast('Error de conexión.', 'error'); }
+    } catch (err) { showToast(t.connection_error, 'error'); }
     finally { setAuthLoading(false); }
   };
 
@@ -2772,10 +2787,10 @@ function App() {
       });
       const result = await res.json();
       if (res.ok) {
-        showToast(result.message || 'SMS enviado');
+        showToast(localizeAccountServerMessage(lang, result.message, t.account_action_sms_sent));
         setAuthMode('phone_verify');
-      } else showToast(result.message || 'Error al enviar SMS', 'error');
-    } catch (err) { showToast('Error de conexión', 'error'); }
+      } else showToast(localizeAccountServerMessage(lang, result.message, t.account_action_sms_unavailable), 'error');
+    } catch (err) { showToast(t.connection_error, 'error'); }
     finally { setAuthLoading(false); }
   };
 
@@ -2808,8 +2823,8 @@ function App() {
         }
         setPendingPhoneRegistrationConsent(null);
         setShowAuthModal(false);
-      } else showToast(result.message || 'Código SMS inválido', 'error');
-    } catch (err) { showToast('Error de conexión', 'error'); }
+      } else showToast(localizeAccountServerMessage(lang, result.message, t.account_action_sms_invalid), 'error');
+    } catch (err) { showToast(t.connection_error, 'error'); }
     finally { setAuthLoading(false); }
   };
 
@@ -2886,7 +2901,7 @@ function App() {
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
         setShowProfileModal(false);
-      } else showToast('Error al actualizar el perfil', 'error');
+      } else showToast(t.profile_save_error, 'error');
     } catch (err) { console.error("Profile update error", err); }
     finally { setProfileLoading(false); }
   };
@@ -2894,7 +2909,7 @@ function App() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      showToast('Las contraseñas nuevas no coinciden.', 'error');
+      showToast(t.passwords_mismatch, 'error');
       return;
     }
     setPasswordLoading(true);
@@ -2910,12 +2925,12 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || 'Contraseña actualizada exitosamente.');
+        showToast(localizeAccountServerMessage(lang, data.message, t.password_updated));
         setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       } else {
-        showToast(`Error: ${data.message || 'No se pudo actualizar la contraseña.'}`, 'error');
+        showToast(localizeAccountServerMessage(lang, data.message, t.password_update_error), 'error');
       }
-    } catch (err) { console.error("Password update error", err); showToast('Error de conexión', 'error'); }
+    } catch (err) { console.error("Password update error", err); showToast(t.connection_error, 'error'); }
     finally { setPasswordLoading(false); }
   };
 
@@ -2931,12 +2946,12 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || 'Se ha enviado un enlace de confirmación a tu nuevo correo.');
+        showToast(localizeAccountServerMessage(lang, data.message, t.email_verification_sent));
         setEmailForm({ new_email: '', password: '' });
       } else {
-        showToast(`Error: ${data.message || 'No se pudo procesar la solicitud.'}`, 'error');
+        showToast(localizeAccountServerMessage(lang, data.message, t.account_action_email_request_error), 'error');
       }
-    } catch (err) { console.error("Email update error", err); showToast('Error de conexión', 'error'); }
+    } catch (err) { console.error("Email update error", err); showToast(t.connection_error, 'error'); }
     finally { setEmailLoading(false); }
   };
 
@@ -2960,14 +2975,14 @@ function App() {
         } else {
            unsubscribeFromPush();
         }
-        showToast('Preferencias de notificación guardadas.');
-      } else showToast('Error al guardar preferencias.', 'error');
-    } catch (err) { console.error("Notifications update error", err); showToast('Error de conexión', 'error'); }
+        showToast(t.account_action_notifications_saved);
+      } else showToast(t.account_action_notifications_error, 'error');
+    } catch (err) { console.error("Notifications update error", err); showToast(t.connection_error, 'error'); }
     finally { setNotificationsLoading(false); }
   };
 
   const handleDeleteAccount = async () => {
-    if (!window.confirm('Estás seguro de que deseas eliminar tu cuenta? Esta acción eliminará todos tus anuncios permanentemente y no se puede deshacer.')) return;
+    if (!window.confirm(t.account_action_delete_confirm)) return;
 
     try {
       const token = localStorage.getItem('auth_token');
@@ -2976,12 +2991,15 @@ function App() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
-        showToast('Cuenta eliminada exitosamente.');
+        showToast(t.account_action_delete_success);
         handleLogout();
       } else {
-        showToast('Error al eliminar la cuenta.', 'error');
+        showToast(t.delete_account_error, 'error');
       }
-    } catch (err) { console.error("Account deletion error", err); }
+    } catch (err) {
+      console.error("Account deletion error", err);
+      showToast(t.connection_error, 'error');
+    }
   };
 
   const handleImageChange = (e) => {
