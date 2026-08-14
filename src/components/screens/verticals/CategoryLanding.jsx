@@ -6,6 +6,7 @@ import MapV3 from '../../common/MapV3';
 import { subcategoriesMap } from '../../../constants/locationsAndCategories';
 import { categorySchema } from '../../../constants/categorySchema';
 import { categoryLandingTranslations } from '../../../constants/categoryLandingTranslations';
+import { getCategoryLandingSubsections } from '../../../utils/categoryLandingSubsections';
 import { getTranslations, normalizeLanguage } from '../../../utils/translations';
 import {
   BadgeCheck, ShieldCheck, Star, Zap, MessageCircle, BarChart3,
@@ -322,6 +323,10 @@ export default function CategoryLanding({ category, lang = 'es' }) {
   // Resolve subcategories from the shared constants map (same source as the rest of the app)
   const subcats = subcategoriesMap[cfg?.slug] || subcategoriesMap[category] || [];
   const iconMap = SUBCAT_ICONS[category] || {};
+  const localizedSubsections = getCategoryLandingSubsections(activeLang, category, subcats).map((item, idx) => ({
+    ...item,
+    Icon: iconMap[item.query] || FALLBACK_ICONS[idx % FALLBACK_ICONS.length],
+  }));
 
   if (!cfg) {
     return <div className="flex h-screen items-center justify-center text-slate-500">{t.noAds}</div>;
@@ -338,12 +343,8 @@ export default function CategoryLanding({ category, lang = 'es' }) {
     navigate(`/?${params.toString()}`);
   };
 
-  // Build subsections for VerticalHero from the subcategoriesMap
-  const heroSubsections = subcats.map((name, idx) => ({
-    name,
-    query: name,
-    Icon: iconMap[name] || FALLBACK_ICONS[idx % FALLBACK_ICONS.length],
-  }));
+  // Display localized labels while retaining canonical query values.
+  const heroSubsections = localizedSubsections;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -394,11 +395,10 @@ export default function CategoryLanding({ category, lang = 'es' }) {
           <section>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-5">{t.search_placeholder}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {subcats.map((name, idx) => {
-                const Icon = iconMap[name] || FALLBACK_ICONS[idx % FALLBACK_ICONS.length];
+              {localizedSubsections.map(({ name, query, Icon }) => {
                 return (
-                  <button key={name}
-                    onClick={() => navigate(`/?category=${categoryParam}&search=${encodeURIComponent(name)}`)}
+                  <button key={query}
+                    onClick={() => navigate(`/?category=${categoryParam}&search=${encodeURIComponent(query)}`)}
                     className={`bg-white border border-slate-200 rounded-2xl p-5 flex flex-col items-center gap-3 ${c.hover} hover:shadow-md transition-all group text-center`}>
                     <span className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${c.iconBase} ${c.iconHover} transition-colors`}>
                       <Icon size={23} strokeWidth={2.2} />
