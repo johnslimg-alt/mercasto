@@ -1,60 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, CheckCircle, ArrowRight, ArrowLeft, Camera, Phone, FileText, ShoppingBag, Store, Users, MapPin, Bell, Heart, Star, Sparkles, MessageCircle } from 'lucide-react';
+import { getOnboardingExperienceCopy } from '../utils/onboardingExperienceCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const ONBOARDING_DONE_USER_KEY = 'onboarding_done_user_id';
 const ONBOARDING_PENDING_SYNC_KEY = 'onboarding_pending_sync';
 
 const ROLES = [
-  {
-    id: 'buyer',
-    icon: ShoppingBag,
-    emoji: '🛍️',
-    title: 'Comprar',
-    subtitle: 'Encuentra lo que necesitas',
-    desc: 'Autos, casas, empleos, servicios y más cerca de ti',
-    color: 'from-blue-500 to-blue-600',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    text: 'text-blue-700',
-  },
-  {
-    id: 'seller',
-    icon: Store,
-    emoji: '💰',
-    title: 'Vender',
-    subtitle: 'Publica y gana dinero',
-    desc: 'Vende lo que ya no usas o ofrece tus servicios',
-    color: 'from-[#84CC16] to-[#65A30D]',
-    bg: 'bg-lime-50',
-    border: 'border-lime-200',
-    text: 'text-lime-700',
-  },
-  {
-    id: 'both',
-    icon: Users,
-    emoji: '🤝',
-    title: 'Ambos',
-    subtitle: 'Comprar y vender',
-    desc: 'Aprovecha todo lo que Mercasto tiene para ti',
-    color: 'from-purple-500 to-purple-600',
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    text: 'text-purple-700',
-  },
+  { id: 'buyer', icon: ShoppingBag, emoji: '🛍️', color: 'from-blue-500 to-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+  { id: 'seller', icon: Store, emoji: '💰', color: 'from-[#84CC16] to-[#65A30D]', bg: 'bg-lime-50', border: 'border-lime-200', text: 'text-lime-700' },
+  { id: 'both', icon: Users, emoji: '🤝', color: 'from-purple-500 to-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
 ];
 
 const INTERESTS = [
-  { slug: 'motor', emoji: '🚗', label: 'Autos y Motos' },
-  { slug: 'inmobiliaria', emoji: '🏠', label: 'Inmuebles' },
-  { slug: 'empleo', emoji: '💼', label: 'Empleo' },
-  { slug: 'servicios', emoji: '🔧', label: 'Servicios' },
-  { slug: 'tecnologia', emoji: '📱', label: 'Tecnología' },
-  { slug: 'hogar', emoji: '🛋️', label: 'Hogar' },
-  { slug: 'moda', emoji: '👗', label: 'Moda' },
-  { slug: 'deportes', emoji: '⚽', label: 'Deportes' },
-  { slug: 'mascotas', emoji: '🐕', label: 'Mascotas' },
+  { slug: 'motor', emoji: '🚗' }, { slug: 'inmobiliaria', emoji: '🏠' }, { slug: 'empleo', emoji: '💼' },
+  { slug: 'servicios', emoji: '🔧' }, { slug: 'tecnologia', emoji: '📱' }, { slug: 'hogar', emoji: '🛋️' },
+  { slug: 'moda', emoji: '👗' }, { slug: 'deportes', emoji: '⚽' }, { slug: 'mascotas', emoji: '🐕' },
 ];
 
 export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = false }) {
@@ -65,6 +27,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
   const navigate = useNavigate();
 
   const dictionary = t || {};
+  const experience = getOnboardingExperienceCopy(lang);
 
   useEffect(() => {
     if (user?.preferred_role) setSelectedRole(user.preferred_role);
@@ -132,40 +95,36 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
     {
       id: 'welcome',
       emoji: '🎉',
-      title: dictionary.onboarding_welcome_title || `Bienvenido${user?.name ? `, ${user.name.split(' ')[0]}` : ''}!`,
-      subtitle: dictionary.onboarding_welcome_subtitle || 'La plataforma de clasificados más moderna e inteligente con AI',
+      title: dictionary.onboarding_welcome_title,
+      subtitle: dictionary.onboarding_welcome_subtitle,
     },
     // Step 1: Role selection
     {
       id: 'role',
       emoji: '🎯',
-      title: 'Qué quieres hacer?',
-      subtitle: 'Personalizaremos tu experiencia',
+      title: experience.roleTitle,
+      subtitle: experience.roleSubtitle,
     },
     // Step 2: Interests
     {
       id: 'interests',
       emoji: '✨',
-      title: 'Qué te interesa?',
-      subtitle: 'Elige categorías si quieres personalizar tu inicio',
+      title: experience.interestsTitle,
+      subtitle: experience.interestsSubtitle,
     },
     // Step 3: How it works (personalized)
     {
       id: 'how',
       emoji: selectedRole === 'buyer' ? '🛍️' : selectedRole === 'seller' ? '💰' : '🤝',
-      title: selectedRole === 'buyer'
-        ? 'Cómo comprar en Mercasto?'
-        : selectedRole === 'seller'
-        ? 'Cómo vender en Mercasto?'
-        : 'Cómo funciona Mercasto?',
-      subtitle: 'En 3 simples pasos',
+      title: experience.howTitle[selectedRole] || experience.howTitle.both,
+      subtitle: dictionary.onboarding_how_subtitle,
     },
     // Step 4: Profile checklist
     {
       id: 'profile',
       emoji: '✅',
-      title: dictionary.onboarding_profile_title || 'Completa tu perfil',
-      subtitle: dictionary.onboarding_profile_subtitle || 'Los perfiles completos generan más confianza',
+      title: dictionary.onboarding_profile_title,
+      subtitle: dictionary.onboarding_profile_subtitle,
     },
   ];
 
@@ -199,53 +158,25 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
   };
 
   const checklist = [
-    { icon: Camera, label: dictionary.onboarding_checklist_photo || 'Agrega una foto de perfil', done: !!(user?.avatar_url || user?.profile_photo_path || user?.avatar) },
-    ...(smsEnabled ? [{ icon: Phone, label: dictionary.onboarding_checklist_phone || 'Verifica tu teléfono', done: !!(user?.phone_verified) }] : []),
-    { icon: FileText, label: dictionary.onboarding_checklist_bio || 'Escribe una descripción', done: !!(user?.bio && user.bio.trim()) },
+    { icon: Camera, label: dictionary.onboarding_checklist_photo, done: !!(user?.avatar_url || user?.profile_photo_path || user?.avatar) },
+    ...(smsEnabled ? [{ icon: Phone, label: dictionary.onboarding_checklist_phone, done: !!(user?.phone_verified) }] : []),
+    { icon: FileText, label: dictionary.onboarding_checklist_bio, done: !!(user?.bio && user.bio.trim()) },
   ];
 
   const getHowItWorksSteps = () => {
-    if (selectedRole === 'buyer') {
-      return [
-        { step: '1', icon: '🔍', label: 'Busca', desc: 'Encuentra lo que necesitas por categoría, ciudad o precio' },
-        { step: '2', icon: '💬', label: 'Contacta', desc: 'Habla directo con el vendedor por sus canales públicos' },
-        { step: '3', icon: '✅', label: 'Compra', desc: 'Coordina la entrega y recibe tu producto' },
-      ];
-    }
-    if (selectedRole === 'seller') {
-      return [
-        { step: '1', icon: '📝', label: 'Crea tu anuncio', desc: 'Sube fotos y describe lo que vendes en minutos' },
-        { step: '2', icon: '🤝', label: 'Coordina', desc: 'Responde a interesados y acuerda la entrega' },
-        { step: '3', icon: '💰', label: 'Vende', desc: 'Acuerda la entrega y el pago directamente con la persona interesada' },
-      ];
-    }
-    return [
-      { step: '1', icon: '📝', label: 'Crea tu anuncio', desc: 'Sube fotos y describe lo que vendes en minutos' },
-      { step: '2', icon: '🤝', label: 'Coordina con confianza', desc: 'Usa los canales públicos y revisa la reputación' },
-      { step: '3', icon: '✅', label: 'Compra o vende', desc: 'Acuerda la entrega y el pago directamente con la otra persona' },
-    ];
+    const roleKey = selectedRole === 'buyer' || selectedRole === 'seller' ? selectedRole : 'both';
+    return experience.how[roleKey].map(([label, desc], index) => ({
+      step: String(index + 1),
+      icon: roleKey === 'buyer' ? ['🔍', '💬', '✅'][index] : roleKey === 'seller' ? ['📝', '🤝', '💰'][index] : ['📝', '🤝', '✅'][index],
+      label,
+      desc,
+    }));
   };
 
   const getFinalCTA = () => {
-    if (selectedRole === 'seller') {
-      return {
-        primary: 'Crear mi primer anuncio',
-        secondary: 'Explorar clasificados',
-        icon: Store,
-      };
-    }
-    if (selectedRole === 'buyer') {
-      return {
-        primary: 'Explorar anuncios',
-        secondary: 'Completar mi perfil',
-        icon: ShoppingBag,
-      };
-    }
-    return {
-      primary: 'Crear mi primer anuncio',
-      secondary: 'Explorar clasificados',
-      icon: Users,
-    };
+    const roleKey = selectedRole === 'buyer' || selectedRole === 'seller' ? selectedRole : 'both';
+    const [primary, secondary] = experience.cta[roleKey];
+    return { primary, secondary, icon: roleKey === 'buyer' ? ShoppingBag : roleKey === 'seller' ? Store : Users };
   };
 
   const canProceed = () => {
@@ -270,7 +201,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
           <button
             onClick={handleSkip}
             className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
-            aria-label="Cerrar"
+            aria-label={dictionary.close_btn}
           >
             <X size={20} />
           </button>
@@ -299,10 +230,10 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                 🛒
               </div>
               <p className="text-slate-600 dark:text-slate-400 text-center text-[15px] leading-relaxed max-w-xs">
-                Explora clasificados por categoría y publica lo que quieres vender en México.
+                {experience.welcomeBody}
               </p>
               <div className="flex gap-2 flex-wrap justify-center">
-                {['🚗 Autos', '🏠 Casas', '💼 Empleos', '📱 Tech', '🔧 Servicios'].map(tag => (
+                {experience.welcomeChips.map(tag => (
                   <span key={tag} className="px-3 py-1 bg-lime-50 text-lime-700 rounded-full text-[12px] font-medium border border-lime-100">
                     {tag}
                   </span>
@@ -312,8 +243,8 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                 <div className="flex items-start gap-3">
                   <Sparkles size={20} className="text-[#84CC16] flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[13px] font-semibold text-slate-800 dark:text-white">Primera activación elegible: 0 MXN por 7 días</p>
-                    <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Después puedes renovar por 49 MXN por 7 días adicionales.</p>
+                    <p className="text-[13px] font-semibold text-slate-800 dark:text-white">{experience.pricingFree}</p>
+                    <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">{experience.pricingRenew}</p>
                   </div>
                 </div>
               </div>
@@ -340,10 +271,10 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-[15px]">{role.title}</span>
+                        <span className="font-bold text-slate-900 dark:text-white text-[15px]">{experience.roles[role.id][0]}</span>
                         <span className="text-lg">{role.emoji}</span>
                       </div>
-                      <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">{role.desc}</p>
+                      <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">{experience.roles[role.id][1]}</p>
                     </div>
                     {isSelected && (
                       <CheckCircle size={20} className={role.text} />
@@ -357,7 +288,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
           {currentStep.id === 'interests' && (
             <div className="flex flex-col gap-3 py-1 animate-in slide-in-from-right-4 duration-300">
               <p className="text-[13px] text-slate-500 dark:text-slate-400 text-center mb-1">
-                Esta selección es opcional y puedes cambiarla después
+                {experience.interestsOptional}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {INTERESTS.map(interest => {
@@ -374,14 +305,14 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                     >
                       <span className="text-2xl">{interest.emoji}</span>
                       <span className={`text-[12px] font-medium ${isSelected ? 'text-lime-700 dark:text-lime-300' : 'text-slate-700 dark:text-slate-300'}`}>
-                        {interest.label}
+                        {experience.interests[interest.slug]}
                       </span>
                     </button>
                   );
                 })}
               </div>
               <p className="text-[12px] text-center text-slate-400 dark:text-slate-500">
-                {selectedInterests.length}/9 seleccionadas
+                {experience.selectedCount.replace('{count}', selectedInterests.length)}
               </p>
             </div>
           )}
@@ -405,13 +336,13 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
               {selectedRole === 'buyer' && (
                 <div className="flex items-center gap-2 mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-400/30">
                   <MapPin size={18} className="text-blue-600 flex-shrink-0" />
-                  <p className="text-[12px] text-blue-800 dark:text-blue-300">Usa el mapa para encontrar anuncios cerca de ti</p>
+                  <p className="text-[12px] text-blue-800 dark:text-blue-300">{experience.buyerMapTip}</p>
                 </div>
               )}
               {selectedRole === 'seller' && (
                 <div className="flex items-center gap-2 mt-2 p-3 bg-lime-50 dark:bg-lime-900/20 rounded-2xl border border-lime-100 dark:border-lime-400/30">
                   <Star size={18} className="text-[#84CC16] flex-shrink-0" />
-                  <p className="text-[12px] text-lime-800 dark:text-lime-300">La IA te ayuda a escribir descripciones atractivas</p>
+                  <p className="text-[12px] text-lime-800 dark:text-lime-300">{experience.sellerAiTip}</p>
                 </div>
               )}
             </div>
@@ -420,7 +351,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
           {currentStep.id === 'profile' && (
             <div className="flex flex-col gap-3 py-2 animate-in slide-in-from-right-4 duration-300">
               <p className="text-slate-500 dark:text-slate-400 text-[13px] text-center mb-1">
-                {dictionary.onboarding_checklist_desc || 'Completa estos pasos para generar más confianza:'}
+                {dictionary.onboarding_checklist_desc}
               </p>
               {checklist.map(({ icon: Icon, label, done }) => (
                 <div key={label} className={`flex items-center gap-3 p-3 rounded-2xl border ${done ? 'bg-lime-50 dark:bg-lime-900/20 border-lime-100 dark:border-lime-400/30' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
@@ -433,7 +364,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
               {selectedRole === 'buyer' && (
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-400/30 mt-1">
                   <Bell size={18} className="text-blue-600 flex-shrink-0" />
-                  <span className="text-[13px] text-blue-700 dark:text-blue-300 font-medium">Activa notificaciones para nuevos anuncios</span>
+                  <span className="text-[13px] text-blue-700 dark:text-blue-300 font-medium">{experience.profileNotificationsTip}</span>
                 </div>
               )}
             </div>
@@ -449,14 +380,14 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                 disabled={saving}
                 className="w-full bg-gradient-to-r from-[#84CC16] to-[#65A30D] hover:from-[#65A30D] hover:to-[#84CC16] text-white font-semibold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
               >
-                {saving ? 'Guardando…' : getFinalCTA().primary} <ArrowRight size={16} />
+                {saving ? `${dictionary.saving_word}…` : getFinalCTA().primary} <ArrowRight size={16} />
               </button>
               <button
                 onClick={handleSkip}
                 disabled={saving}
                 className="w-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[13px] py-1.5 transition-colors"
               >
-                {dictionary.onboarding_skip_btn || 'Omitir por ahora'}
+                {dictionary.onboarding_skip_btn}
               </button>
             </>
           ) : (
@@ -466,7 +397,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                   onClick={() => setStep(s => s - 1)}
                   className="flex-1 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium py-3 rounded-2xl transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <ArrowLeft size={16} /> Anterior
+                  <ArrowLeft size={16} /> {dictionary.back}
                 </button>
               )}
               <button
@@ -474,7 +405,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
                 disabled={!canProceed()}
                 className="flex-1 bg-gradient-to-r from-[#84CC16] to-[#65A30D] hover:from-[#65A30D] hover:to-[#84CC16] disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-2xl transition-all flex items-center justify-center gap-1.5 shadow-sm"
               >
-                {step === STEPS.length - 2 ? 'Finalizar' : 'Siguiente'} <ArrowRight size={16} />
+                {dictionary.next_btn} <ArrowRight size={16} />
               </button>
             </div>
           )}
