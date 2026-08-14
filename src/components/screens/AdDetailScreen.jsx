@@ -1,6 +1,9 @@
 import useDocumentMeta from '../../hooks/useDocumentMeta';
 import { localizedText } from '../../utils/localize';
 import { whatsappInterestMessage } from '../../utils/whatsappLocale';
+import { formatDate, formatNumber } from '../../utils/localeFormat';
+import { filterOptionLabel } from '../../utils/filterOptionTranslations';
+import { canonicalAdCondition, formatAdDetailCopy, getAdDetailCopy } from '../../utils/adDetailCopy';
 import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
 
@@ -302,7 +305,7 @@ const getAdRatingStats = (ad = {}) => {
 
 function RatingStars({ rating }) {
   return (
-    <span className="inline-flex items-center gap-0.5 text-amber-400" role="img" aria-label={`${rating.toFixed(1)} de 5`}>
+    <span className="inline-flex items-center gap-0.5 text-amber-400" role="img" aria-label={`${rating.toFixed(1)} / 5`}>
       {[1, 2, 3, 4, 5].map(i => (
         <Star
           key={i}
@@ -322,6 +325,7 @@ export default function AdDetailScreen({
   handleRenewAd
 }) {
   const navigate = useNavigate();
+  const detailCopy = getAdDetailCopy(lang);
   const [similarAds, setSimilarAds] = useState([]);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
@@ -339,7 +343,7 @@ export default function AdDetailScreen({
         id: ad.id,
         ad,
         coords: [parseFloat(ad.latitude), parseFloat(ad.longitude)],
-        label: `$${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}`,
+        label: `$${formatNumber(ad.price || 0, lang, { notation: 'compact' })}`,
         tone: 'lime'
       }];
     }
@@ -353,10 +357,10 @@ export default function AdDetailScreen({
       id: ad.id,
       ad,
       coords: base,
-      label: `$${Number(ad.price || 0).toLocaleString('es-MX', { notation: 'compact' })}`,
+      label: `$${formatNumber(ad.price || 0, lang, { notation: 'compact' })}`,
       tone: 'lime'
     }];
-  }, [ad]);
+  }, [ad, lang]);
 
   // Track recently viewed
   React.useEffect(() => {
@@ -390,7 +394,7 @@ export default function AdDetailScreen({
   // Dynamic OG tags for social sharing
   useDocumentMeta({
     title: localizedText(ad?.title, lang) || 'Mercasto',
-    description: ad ? `$${Number(ad.price || 0).toLocaleString('es-MX')} - ${ad.state || ad.location || 'México'}` : '',
+    description: ad ? `$${formatNumber(ad.price || 0, lang)} - ${ad.state || ad.location || detailCopy.mexico}` : '',
     image: ad ? getImageUrl(ad.image_url || ad.image?.[0]) : '',
     url: typeof window !== 'undefined' ? window.location.href : ''
   });
@@ -536,7 +540,7 @@ export default function AdDetailScreen({
               to={`/anuncio/${ad.id}/editar`}
               className="flex items-center gap-1.5 px-4 py-2 bg-lime-500 hover:bg-[#65A30D] text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-lime-500/20"
             >
-              <Pencil size={15} /> Editar
+              <Pencil size={15} /> {t.edit_ad || detailCopy.edit}
             </Link>
           </div>
         )}
@@ -549,20 +553,20 @@ export default function AdDetailScreen({
         const expired = ad.status === 'expired' || daysLeft <= 0;
         const expiring = !expired && daysLeft <= 7;
         if (!expired && !expiring) return null;
-        const formattedDate = exp.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+        const formattedDate = formatDate(exp, lang, { day: 'numeric', month: 'long', year: 'numeric' });
         return (
           <div className={`mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl px-5 py-4 border ${expired ? 'bg-red-50 border-red-200 text-red-800' : 'bg-orange-50 border-orange-200 text-orange-800'}`}>
             <div className="text-sm font-medium">
               {expired
-                ? 'Este anuncio ha expirado y no es visible para otros usuarios.'
-                : `Este anuncio expira el ${formattedDate} (en ${daysLeft <= 1 ? '1 día' : daysLeft + ' días'}).`}
+                ? detailCopy.expired
+                : formatAdDetailCopy(daysLeft <= 1 ? detailCopy.expiringOne : detailCopy.expiringMany, { date: formattedDate, days: daysLeft })}
             </div>
             {handleRenewAd && (
               <button
                 onClick={() => handleRenewAd(ad)}
                 className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${expired ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
               >
-                Renovar anuncio
+                {t.renew || detailCopy.renew}
               </button>
             )}
           </div>
@@ -572,7 +576,7 @@ export default function AdDetailScreen({
         <div className="lg:col-span-2">
           {/* MEDIA SLIDER */}
           <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm h-[300px] md:h-[500px]">
-            <MediaSlider media={images} autoplay={sliderAutoplay} alt={localizedText(ad.title, lang) || 'Imagen del anuncio'} priority />
+            <MediaSlider media={images} autoplay={sliderAutoplay} alt={localizedText(ad.title, lang) || detailCopy.imageAlt} priority />
           </div>
 
           {/* AD DETAILS */}
@@ -580,43 +584,43 @@ export default function AdDetailScreen({
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-tight">{localizedText(ad.title, lang)}</h1>
 {isCatalogFiller && (
   <div className="mb-5 rounded-2xl border border-lime-300 bg-lime-50 p-4 text-slate-800 dark:border-lime-500/30 dark:bg-lime-500/10 dark:text-slate-100" data-catalog-reference>
-    <div className="text-[14px] font-black">Referencia de catálogo Mercasto</div>
+    <div className="text-[14px] font-black">{detailCopy.catalogTitle}</div>
     <p className="mt-1 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
-      Este producto se muestra como referencia. La disponibilidad, el precio y el vendedor deben confirmarse en una publicación real.
+      {detailCopy.catalogBody}
     </p>
     <button
       type="button"
       onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
       className="mt-3 inline-flex items-center rounded-xl bg-[#84CC16] px-4 py-2 text-[13px] font-bold text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
     >
-      Publicar uno similar
+      {detailCopy.publishSimilar}
     </button>
   </div>
 )}
-            <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${Number(ad.price).toLocaleString()} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>
+            <p className="text-3xl md:text-4xl font-black text-[#65A30D] mb-2">${formatNumber(ad.price, lang)} <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">MXN</span></p>
 {ratingStats.hasReviews && !isCatalogFiller && (
   <div className="mb-5 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
     <RatingStars rating={ratingStats.rating} />
     <span className="text-slate-900 dark:text-white">{ratingStats.rating.toFixed(1)}</span>
-    <span className="text-slate-400">({ratingStats.count} comentarios)</span>
+    <span className="text-slate-400">({ratingStats.count} {t.comments || detailCopy.comments})</span>
   </div>
 )}
             {ad.old_price && ad.price_dropped_at && Number(ad.old_price) > Number(ad.price) && (
               <div className="inline-flex flex-wrap items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-xl px-3 py-1.5 mb-5 text-[13px] font-semibold dark:bg-green-950/30 dark:border-green-500/30 dark:text-green-200">
-                <span>Bajó de precio</span>
-                <span>Antes: <span className="line-through text-green-600 dark:text-green-300">${Number(ad.old_price).toLocaleString("es-MX")}</span></span>
+                <span>{detailCopy.priceDropped}</span>
+                <span>{detailCopy.before}: <span className="line-through text-green-600 dark:text-green-300">${formatNumber(ad.old_price, lang)}</span></span>
                 <span className="bg-green-200 text-green-900 rounded-full px-1.5 py-0.5 text-[11px] font-bold dark:bg-green-500/20 dark:text-green-100">
-                  {Math.round(((Number(ad.old_price) - Number(ad.price)) / Number(ad.old_price)) * 100)}% menos
+                  {Math.round(((Number(ad.old_price) - Number(ad.price)) / Number(ad.old_price)) * 100)}% {detailCopy.less}
                 </span>
               </div>
             )}
             {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} label={t.price_history || 'Price history'} />}
 
             <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 dark:text-slate-300 font-medium">
-              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || 'México'}</span>
-              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {new Date(ad.created_at).toLocaleDateString()}</span>}
-              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {ad.views || 0} vistas</span>}
-              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {ad.condition || 'Usado'}</span>
+              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || detailCopy.mexico}</span>
+              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><Calendar size={16}/> {formatDate(ad.created_at, lang)}</span>}
+              {!isCatalogFiller && <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><BarChart3 size={16}/> {formatNumber(ad.views || 0, lang)} {t.views || detailCopy.views}</span>}
+              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl capitalize"><Tag size={16}/> {filterOptionLabel('condicion', canonicalAdCondition(ad.condition), lang)}</span>
             </div>
 
             {locationLabel && (
@@ -628,21 +632,21 @@ export default function AdDetailScreen({
                   <div>
                     <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">{t.location || 'Location'}</h3>
                     <p className="mt-1 text-[14px] font-medium text-slate-600 dark:text-slate-300">{locationLabel}</p>
-                    <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">La ubicación es aproximada y se muestra solo con datos públicos del anuncio.</p>
+                    <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">{detailCopy.approximateLocation}</p>
                   </div>
                 </div>
                 <div ref={mapMountRef} data-ad-detail-map-shell className="h-[220px] w-full border-t border-slate-200 dark:border-slate-700 md:h-[280px]">
                   {mapReady ? (
                     <React.Suspense fallback={<div className="h-full w-full animate-pulse bg-slate-200 dark:bg-slate-800" data-ad-detail-map-placeholder />}>
                       <MapV3
-                        title={locationLabel || 'Todo México'}
+                        title={locationLabel || detailCopy.allMexico}
                         markers={adMarker}
                         className="h-full w-full rounded-none border-0 shadow-none"
                       />
                     </React.Suspense>
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm font-medium text-slate-500 dark:bg-slate-900 dark:text-slate-400" data-ad-detail-map-placeholder>
-                      Mapa de ubicación
+                      {detailCopy.mapPlaceholder}
                     </div>
                   )}
                 </div>
@@ -656,8 +660,10 @@ export default function AdDetailScreen({
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {Object.entries(attributes).map(([key, val]) => {
                     const fieldDef = catConfig.find(f => f.id === key);
-                    const label = fieldDef ? fieldDef.label : key;
-                    const displayVal = Array.isArray(val) ? val.join(', ') : val;
+                    const label = t[`filter_label_${key}`] || (fieldDef ? fieldDef.label : key);
+                    const displayVal = Array.isArray(val)
+                      ? val.map(item => filterOptionLabel(key, item, lang)).join(', ')
+                      : filterOptionLabel(key, val, lang);
                     return (
                       <div key={key} className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
                         <p className="text-[12px] text-slate-500 font-medium mb-1">{label}</p>
@@ -685,16 +691,16 @@ export default function AdDetailScreen({
           <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[90px]">
 {isCatalogFiller ? (
   <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
-    <h3 className="text-[16px] font-black text-slate-900 dark:text-white">Vendes este producto o uno parecido?</h3>
+    <h3 className="text-[16px] font-black text-slate-900 dark:text-white">{detailCopy.sellTitle}</h3>
     <p className="mt-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
-      Publica tus propias fotos, precio, ubicación y datos de contacto para recibir compradores reales.
+      {detailCopy.sellBody}
     </p>
     <button
       type="button"
       onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
       className="mt-4 w-full rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
     >
-      Publicar gratis
+      {detailCopy.publishFree}
     </button>
   </div>
 ) : (
@@ -707,17 +713,17 @@ export default function AdDetailScreen({
       )}
       <div>
         <h3 className="font-bold text-slate-900 text-[16px] group-hover:text-[#65A30D] transition-colors flex items-center gap-1.5">
-          {ad.user?.name || 'Usuario'}
-          {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title="Vendedor Verificado" />}
+          {ad.user?.name || detailCopy.user}
+          {ad.user?.is_verified && <CheckCircle className="w-4 h-4 text-[#84CC16]" title={detailCopy.verifiedSeller} />}
         </h3>
-        <p className="text-[13px] text-slate-500 mt-0.5">En Mercasto desde {new Date(ad.user?.created_at || ad.created_at).getFullYear()}</p>
+        <p className="text-[13px] text-slate-500 mt-0.5">{formatAdDetailCopy(detailCopy.memberSince, { year: new Date(ad.user?.created_at || ad.created_at).getFullYear() })}</p>
       </div>
     </button>
 
     {(!currentUser || !currentUser.id) ? (
       <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 text-center">
         <p className="text-[14px] font-semibold text-amber-800 dark:text-amber-300 leading-normal">
-          {t.login_to_message_hint || 'Inicia sesión para escribir al vendedor sin perder este anuncio.'}
+          {t.login_to_message_hint || detailCopy.loginToMessageHint}
         </p>
         <button
           type="button"
@@ -726,7 +732,7 @@ export default function AdDetailScreen({
           data-testid="guest-contact-auth"
         >
           <MessageCircle size={18} />
-          {t.login_to_message || 'Iniciar sesión para enviar mensaje'}
+          {t.login_to_message || detailCopy.loginToMessage}
         </button>
       </div>
     ) : (

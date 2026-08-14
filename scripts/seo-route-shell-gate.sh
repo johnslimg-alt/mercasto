@@ -20,7 +20,7 @@ grep -qF 'id="schema-ld-json"' index.html
 grep -qF "window.location.pathname === '/listings'" src/App.jsx
 grep -qF '<Route path="/listings" element={renderCatalogScreen()} />' src/App.jsx
 grep -qF 'alt={alt}' src/App.jsx
-grep -qF "alt={localizedText(ad.title, lang) || 'Imagen del anuncio'}" src/components/screens/AdDetailScreen.jsx
+grep -qF "alt={localizedText(ad.title, lang) || detailCopy.imageAlt}" src/components/screens/AdDetailScreen.jsx
 grep -qF 'meta[name="twitter:title"]' src/App.jsx
 grep -qF '<html lang="es-MX">' index.html
 grep -qF "'noindex,nofollow,noarchive'" src/App.jsx

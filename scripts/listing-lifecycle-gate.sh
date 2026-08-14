@@ -81,7 +81,7 @@ grep -qF "handleGenerateDescription" "$POST_SCREEN"
 grep -qF "category-attributes" "$POST_SCREEN"
 grep -qF "MapV3" "$POST_SCREEN"
 grep -qF "setShowReportModal" "$DETAIL_SCREEN"
-grep -qF "La ubicación es aproximada" "$DETAIL_SCREEN"
+grep -qF "detailCopy.approximateLocation" "$DETAIL_SCREEN"
 # Contact channels may be inline (legacy) or encapsulated in ContactButton
 grep -qE "Escribir por Telegram|ContactButton" "$DETAIL_SCREEN"
 
