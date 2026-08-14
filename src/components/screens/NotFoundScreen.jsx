@@ -8,9 +8,11 @@ export default function NotFoundScreen() {
   const { t } = useTranslation();
 
   useEffect(() => {
+    document.documentElement.dataset.mercastoSeoOwner = 'not-found';
     document.title = `${t('errors.notFound')} | Mercasto`;
     let meta = document.querySelector('meta[name="robots"]');
     let created = false;
+    const previousRobotsContent = meta?.getAttribute('content') || '';
     if (!meta) {
       meta = document.createElement('meta');
       meta.name = 'robots';
@@ -19,10 +21,17 @@ export default function NotFoundScreen() {
     }
     meta.content = 'noindex, nofollow';
     window.scrollTo(0, 0);
+    return () => {
+      if (document.documentElement.dataset.mercastoSeoOwner === 'not-found') {
+        delete document.documentElement.dataset.mercastoSeoOwner;
+      }
+      if (created) meta.remove();
+      else meta.setAttribute('content', previousRobotsContent);
+    };
   }, [t]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-16">
+    <div data-testid="not-found-screen" className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-16">
       {/* Illustration */}
       <div className="relative mb-8 select-none">
         <div className="text-[100px] leading-none text-center filter drop-shadow-sm">🌵</div>
@@ -59,7 +68,7 @@ export default function NotFoundScreen() {
           className="flex items-center gap-2 px-5 py-2.5 bg-lime-500 text-white rounded-xl text-sm font-medium hover:bg-lime-600 transition-colors shadow-sm"
         >
           <Home className="w-4 h-4" />
-          {t('home.home', { defaultValue: 'Home' })}
+          {t('home.home')}
         </button>
         <button
           onClick={() => { navigate('/'); setTimeout(() => { const el = document.querySelector('input[type="search"], input[placeholder*="busca"], input[placeholder*="Busca"]'); if (el) el.focus(); }, 300); }}
@@ -75,10 +84,10 @@ export default function NotFoundScreen() {
         <p className="text-sm text-slate-400 mb-4">{t('home.trending')}</p>
         <div className="flex flex-wrap gap-2 justify-center">
           {[
-            { label: '🚗 Autos', path: '/autos' },
-            { label: '🏠 Inmuebles', path: '/inmuebles' },
-            { label: '💼 Empleos', path: '/empleos' },
-            { label: '🔧 Servicios', path: '/servicios' },
+            { label: `🚗 ${t('home.motor')}`, path: '/autos' },
+            { label: `🏠 ${t('home.realEstate')}`, path: '/inmuebles' },
+            { label: `💼 ${t('home.jobs')}`, path: '/empleos' },
+            { label: `🔧 ${t('home.services')}`, path: '/servicios' },
           ].map((cat) => (
             <button
               key={cat.path}

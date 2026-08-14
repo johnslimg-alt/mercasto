@@ -43,7 +43,12 @@
     "dealsOfTheDay": "Ofertas del Día",
     "viewAll": "Ver todo",
     "noResults": "No se encontraron resultados",
-    "tryDifferentFilters": "Intenta con diferentes filtros"
+    "tryDifferentFilters": "Intenta con diferentes filtros",
+    "home": "Inicio",
+    "motor": "Motor",
+    "realEstate": "Inmuebles",
+    "jobs": "Empleos",
+    "services": "Servicios"
   },
   "ads": {
     "postAd": "Publicar anuncio",

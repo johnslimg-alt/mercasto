@@ -43,7 +43,12 @@
     "dealsOfTheDay": "今日特惠",
     "viewAll": "查看全部",
     "noResults": "未找到结果",
-    "tryDifferentFilters": "尝试不同的筛选条件"
+    "tryDifferentFilters": "尝试不同的筛选条件",
+    "home": "首页",
+    "motor": "汽车",
+    "realEstate": "房产",
+    "jobs": "工作",
+    "services": "服务"
   },
   "ads": {
     "postAd": "发布广告",

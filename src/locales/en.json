@@ -43,7 +43,12 @@
     "dealsOfTheDay": "Deals of the Day",
     "viewAll": "View all",
     "noResults": "No results found",
-    "tryDifferentFilters": "Try different filters"
+    "tryDifferentFilters": "Try different filters",
+    "home": "Home",
+    "motor": "Motors",
+    "realEstate": "Real estate",
+    "jobs": "Jobs",
+    "services": "Services"
   },
   "ads": {
     "postAd": "Post ad",

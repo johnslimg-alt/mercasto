@@ -43,7 +43,12 @@
     "dealsOfTheDay": "عروض اليوم",
     "viewAll": "عرض الكل",
     "noResults": "لم يتم العثور على نتائج",
-    "tryDifferentFilters": "جرّب فلاتر أخرى"
+    "tryDifferentFilters": "جرّب فلاتر أخرى",
+    "home": "الرئيسية",
+    "motor": "المركبات",
+    "realEstate": "العقارات",
+    "jobs": "الوظائف",
+    "services": "الخدمات"
   },
   "ads": {
     "postAd": "أنشئ إعلانًا",
