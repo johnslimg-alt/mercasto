@@ -21,6 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          git fetch origin main
-          git reset --hard origin/main
+          # /var/www/mercasto is intentionally root-owned; the self-hosted runner uses passwordless sudo for git refreshes.
+          sudo -n git fetch origin main --prune
+          sudo -n git reset --hard origin/main
           REQUIRE_ENV_READY=1 bash scripts/env-readiness-smoke.sh

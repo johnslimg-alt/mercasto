@@ -23,8 +23,9 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          git fetch origin main
-          git reset --hard origin/main
+          # /var/www/mercasto is intentionally root-owned; the self-hosted runner uses passwordless sudo for git refreshes.
+          sudo -n git fetch origin main --prune
+          sudo -n git reset --hard origin/main
           docker exec mercasto_backend_container php artisan migrate --force
 
           # This check only executes inside an already-running container.
