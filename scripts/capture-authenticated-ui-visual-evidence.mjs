@@ -96,14 +96,25 @@ for (const viewport of viewports) {
     const consoleErrors = [];
     const pageErrors = [];
     const sameOriginFailures = [];
+    const expectedNetworkAborts = [];
     page.on('console', message => {
       if (message.type() === 'error') consoleErrors.push(message.text());
     });
     page.on('pageerror', error => pageErrors.push(String(error)));
     page.on('requestfailed', request => {
-      if (request.url().startsWith(baseUrl) || request.url().startsWith(apiBaseUrl)) {
-        sameOriginFailures.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`);
-      }
+      if (!(request.url().startsWith(baseUrl) || request.url().startsWith(apiBaseUrl))) return;
+
+      const errorText = request.failure()?.errorText || 'failed';
+      const requestUrl = new URL(request.url());
+      const apiUrl = new URL(apiBaseUrl);
+      const expectedAdsAbort = request.method() === 'GET'
+        && errorText === 'net::ERR_ABORTED'
+        && requestUrl.origin === apiUrl.origin
+        && requestUrl.pathname === `${apiUrl.pathname.replace(/\/$/, '')}/ads`;
+      const failure = `${request.method()} ${request.url()} :: ${errorText}`;
+
+      if (expectedAdsAbort) expectedNetworkAborts.push(failure);
+      else sameOriginFailures.push(failure);
     });
 
     const response = await page.goto(new URL(screen.path, baseUrl).toString(), {
@@ -149,6 +160,7 @@ for (const viewport of viewports) {
       consoleErrors,
       pageErrors,
       sameOriginFailures,
+      expectedNetworkAborts,
     });
     await context.close();
   }

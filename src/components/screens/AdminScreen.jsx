@@ -4,6 +4,8 @@ import React from 'react';
 import { Shield, Pencil, PlusCircle, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, Users, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Loader2, Settings2, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, Bell, CreditCard, Megaphone, MousePointerClick } from "lucide-react";
 import { IconMap } from '../../constants/iconMap';
 import { localizedText } from '../../utils/localize';
+import { formatDate, formatDateTime, formatMXN, formatNumber } from '../../utils/localeFormat';
+import { getAdminSurfaceCopy } from '../../utils/adminSurfaceCopy';
 import AdminBusinessVerifications from './AdminBusinessVerifications';
 import AdminSeoMeasurement from '../admin/AdminSeoMeasurement';
 export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons, adminLoading, adminPendingAds, adminReportTab, adminReports, adminTab, adminUserReports, adminUserSearch, adminUsers, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments, token }) {
@@ -14,6 +16,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
             loadAdminAnalytics?.();
         }
     }, [adminTab, loadAdminAnalytics, loadAdminPayments]);
+    const adminCopy = getAdminSurfaceCopy(lang);
     const filteredAdminUsers = adminUsers.filter(u => 
       (u.name && u.name.toLowerCase().includes(adminUserSearch.toLowerCase())) ||
       (u.email && u.email.toLowerCase().includes(adminUserSearch.toLowerCase())) ||
@@ -42,7 +45,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
               {editingCatId ? <Pencil className="text-[#84CC16]" size={20}/> : <PlusCircle className="text-[#84CC16]" size={20}/>} 
               {editingCatId ? t.edit_cat : t.add_cat}
             </h3>
-            <form onSubmit={handleSaveCategory} className="space-y-5">
+            <form onSubmit={(e) => handleSaveCategory(e, adminCopy)} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.slug}</label>
@@ -120,12 +123,12 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                           )}
                           <div className="flex-1">
                              <h4 className="font-semibold text-slate-900 text-[15px] line-clamp-1">{localizedText(ad.title, lang)}</h4>
-                             <p className="text-[14px] font-bold text-[#65A30D] mt-1">${Number(ad.price).toLocaleString()}</p>
-                             <p className="text-[12px] text-slate-500 mt-1">Por: {ad.user?.name} ({ad.user?.email})</p>
+                             <p className="text-[14px] font-bold text-[#65A30D] mt-1">{formatMXN(ad.price, lang, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                             <p className="text-[12px] text-slate-500 mt-1">{adminCopy.admin_by} {ad.user?.name} ({ad.user?.email})</p>
                           </div>
                           <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                             <button onClick={() => handleModerateAd(ad.id, 'active')} className="btn-sm bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100 flex items-center justify-center gap-1.5 flex-1 sm:flex-none"><CheckCircle size={16}/> {t.approve}</button>
-                             <button onClick={() => handleModerateAd(ad.id, 'rejected')} className="btn-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 flex items-center justify-center gap-1.5 flex-1 sm:flex-none"><XCircle size={16}/> {t.reject}</button>
+                             <button onClick={() => handleModerateAd(ad.id, 'active', adminCopy)} className="btn-sm bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100 flex items-center justify-center gap-1.5 flex-1 sm:flex-none"><CheckCircle size={16}/> {t.approve}</button>
+                             <button onClick={() => handleModerateAd(ad.id, 'rejected', adminCopy)} className="btn-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 flex items-center justify-center gap-1.5 flex-1 sm:flex-none"><XCircle size={16}/> {t.reject}</button>
                           </div>
                        </div>
                     ))}
@@ -135,7 +138,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
           ) : adminTab === 'coupons' ? (
             <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
               <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><Ticket className="text-[#84CC16]" size={20}/> {t.coupon_gen}</h3>
-              <form onSubmit={handleCreateCoupon} className="flex flex-col sm:flex-row items-end gap-3 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <form onSubmit={(e) => handleCreateCoupon(e, adminCopy)} className="flex flex-col sm:flex-row items-end gap-3 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div className="w-full sm:flex-1">
                   <label className="block text-[12px] font-semibold text-slate-600 mb-1">{t.code}</label>
                   <input type="text" value={couponForm.code} onChange={e => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})} required className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px] uppercase" />
@@ -157,9 +160,9 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#84CC16]"></div>
                       <div>
                         <div className="font-black text-slate-900 tracking-wider text-[15px]">{c.code}</div>
-                        <div className="text-[12px] text-slate-500 mt-1"><span className="font-bold text-[#65A30D]">{c.credits} cr.</span> • Usado: {c.used_count}/{c.max_uses}</div>
+                        <div className="text-[12px] text-slate-500 mt-1"><span className="font-bold text-[#65A30D]">{c.credits} {t.credits_unit}</span> • {t.used}: {c.used_count}/{c.max_uses}</div>
                       </div>
-                      <button onClick={() => handleDeleteCoupon(c.id)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><Trash2 size={16}/></button>
+                      <button onClick={() => handleDeleteCoupon(c.id, adminCopy)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><Trash2 size={16}/></button>
                     </div>
                   ))}
                   {adminCoupons.length === 0 && <p className="text-slate-400 text-[13px] col-span-full">{t.no_coupons}</p>}
@@ -197,9 +200,9 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                           </td>
                           <td className="p-3 font-semibold text-red-600">{r.reason}</td>
                           <td className="p-3 text-slate-600 max-w-[200px] truncate hidden md:table-cell" title={r.comments}>{r.comments || '-'}</td>
-                          <td className="p-3 text-slate-500 hidden sm:table-cell">{r.reporter_name ? `${r.reporter_name}` : 'Anónimo'}</td>
+                          <td className="p-3 text-slate-500 hidden sm:table-cell">{r.reporter_name ? `${r.reporter_name}` : adminCopy.admin_anonymous}</td>
                           <td className="p-3 text-right">
-                            <button onClick={() => handleDeleteReport(r.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title="Descartar reporte"><Trash2 size={16}/></button>
+                            <button onClick={() => handleDeleteReport(r.id, adminCopy)} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title={adminCopy.admin_discard_report}><Trash2 size={16}/></button>
                           </td>
                         </tr>
                       ))}
@@ -223,9 +226,9 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                           <td className="p-3 font-medium text-slate-900">ID: {r.reported_user_id} - <span className="text-[#65A30D]">{r.reported_name}</span></td>
                           <td className="p-3 font-semibold text-red-600">{r.reason}</td>
                           <td className="p-3 text-slate-600 max-w-[200px] truncate hidden md:table-cell" title={r.comments}>{r.comments || '-'}</td>
-                          <td className="p-3 text-slate-500 hidden sm:table-cell">{r.reporter_name ? `${r.reporter_name}` : 'Anónimo'}</td>
+                          <td className="p-3 text-slate-500 hidden sm:table-cell">{r.reporter_name ? `${r.reporter_name}` : adminCopy.admin_anonymous}</td>
                           <td className="p-3 text-right">
-                            <button onClick={() => handleDeleteUserReport(r.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title="Descartar reporte"><Trash2 size={16}/></button>
+                            <button onClick={() => handleDeleteUserReport(r.id, adminCopy)} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title={adminCopy.admin_discard_report}><Trash2 size={16}/></button>
                           </td>
                         </tr>
                       ))}
@@ -246,7 +249,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                       {t.admin_transactions_registered || 'Transacciones Registradas'}
                     </span>
                     <span className="text-3xl font-black text-slate-900 dark:text-white mt-1 block">
-                      {adminPaymentsTotal}
+                      {formatNumber(adminPaymentsTotal, lang)}
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
                       {t.admin_volume_desc || 'Volumen total de transacciones de pago'}
@@ -262,7 +265,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                       {t.admin_approved_revenue || 'Ingresos Aprobados (Pág. Actual)'}
                     </span>
                     <span className="text-3xl font-black text-[#84CC16] mt-1 block">
-                      ${Number(adminAnalytics?.revenue_period ?? adminPayments.filter(p => ['paid', 'succeeded', 'approved'].includes(p.status?.toLowerCase())).reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)).toFixed(2)} MXN
+                      {formatMXN(adminAnalytics?.revenue_period ?? adminPayments.filter(p => ['paid', 'succeeded', 'approved'].includes(p.status?.toLowerCase())).reduce((sum, p) => sum + parseFloat(p.amount || 0), 0), lang)}
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
                       {t.admin_approved_revenue_desc || 'Monto de pagos exitosos mostrados'}
@@ -274,11 +277,11 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
-                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Revenue promo 30d</span>
+                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{adminCopy.admin_promotion_revenue_30d}</span>
                     <span className="text-3xl font-black text-amber-500 mt-1 block">
-                      ${Number(adminAnalytics?.promotion_revenue_period || 0).toFixed(2)}
+                      {formatMXN(adminAnalytics?.promotion_revenue_period || 0, lang)}
                     </span>
-                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">Boost / Highlight / Featured</span>
+                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">{adminCopy.admin_promotion_products}</span>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center text-amber-500 shadow-sm border border-amber-100/55 dark:border-amber-900/30">
                     <Megaphone size={24} />
@@ -286,10 +289,10 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
-                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">CTR global</span>
-                    <span className="text-3xl font-black text-blue-500 mt-1 block">{adminAnalytics?.ctr || 0}%</span>
+                    <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{adminCopy.admin_global_ctr}</span>
+                    <span className="text-3xl font-black text-blue-500 mt-1 block">{formatNumber(adminAnalytics?.ctr || 0, lang, { maximumFractionDigits: 2 })}%</span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
-                      {Number(adminAnalytics?.total_clicks || 0).toLocaleString('es-MX')} clics / {Number(adminAnalytics?.total_impressions || 0).toLocaleString('es-MX')} imp.
+                      {formatNumber(adminAnalytics?.total_clicks || 0, lang)} {t.clicks} / {formatNumber(adminAnalytics?.total_impressions || 0, lang)} {t.impressions}
                     </span>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-500 shadow-sm border border-blue-100/55 dark:border-blue-900/30">
@@ -401,13 +404,10 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                                 )}
                               </td>
                               <td className="py-4 px-5 text-slate-500 dark:text-slate-400">
-                                {payment.created_at ? new Date(payment.created_at).toLocaleString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US', {
-                                  year: 'numeric', month: 'short', day: 'numeric',
-                                  hour: '2-digit', minute: '2-digit'
-                                }) : 'N/A'}
+                                {payment.created_at ? formatDateTime(payment.created_at, lang, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                               </td>
                               <td className="py-4 px-5 font-black text-slate-900 dark:text-white">
-                                ${parseFloat(payment.amount).toFixed(2)} MXN
+                                {formatMXN(payment.amount, lang)}
                               </td>
                               <td className="py-4 px-5 text-right">
                                 {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
@@ -471,11 +471,9 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                               <span className="font-mono text-slate-700 dark:text-slate-300 select-all">{payment.clip_checkout_id ? (payment.clip_checkout_id.length > 12 ? `${payment.clip_checkout_id.substring(0, 12)}...` : payment.clip_checkout_id) : 'N/A'}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>{payment.created_at ? new Date(payment.created_at).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US', {
-                                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                              }) : 'N/A'}</span>
+                              <span>{payment.created_at ? formatDateTime(payment.created_at, lang, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
                               <span className="font-bold text-slate-900 dark:text-white">
-                                ${parseFloat(payment.amount).toFixed(2)} MXN
+                                {formatMXN(payment.amount, lang)}
                               </span>
                             </div>
                           </div>
@@ -486,7 +484,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                     {adminPaymentsLastPage > 1 && (
                       <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50 -mx-6 -mb-6 md:-mx-8 md:-mb-8 px-6 py-4 md:px-8">
                         <span className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">
-                          {t.page_word || 'Página'} {adminPaymentsPage} {t.of_word || 'de'} {adminPaymentsLastPage} ({adminPaymentsTotal} {t.total_word || 'total'})
+                          {t.page_word || 'Página'} {adminPaymentsPage} {t.of_word || 'de'} {adminPaymentsLastPage} ({formatNumber(adminPaymentsTotal, lang)} {t.total_word || 'total'})
                         </span>
                         <div className="flex items-center gap-2">
                           <button 
@@ -517,8 +515,8 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
           ) : adminTab === 'business_verifications' ? (
             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="p-5 border-b border-slate-100 dark:border-slate-700">
-                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">Verificaciones de RFC / CSF pendientes</h3>
-                <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1">Casos que la IA marcó para revisión manual (dudosos o rechazados).</p>
+                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">{adminCopy.admin_business_verifications_pending}</h3>
+                <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1">{adminCopy.admin_business_verifications_desc}</p>
               </div>
               <AdminBusinessVerifications token={token} />
             </div>
@@ -540,9 +538,9 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                        <tr className="border-b border-slate-200 text-[12px] uppercase tracking-wide text-slate-500">
                          <th className="p-3">{t.users_tab}</th>
                          <th className="p-3">{t.status || 'Status'}</th>
-                         <th className="p-3">Email / IP</th>
+                         <th className="p-3">{adminCopy.admin_email_ip}</th>
                          <th className="p-3">{t.role}</th>
-                         <th className="p-3">Plan</th>
+                         <th className="p-3">{adminCopy.admin_plan}</th>
                          <th className="p-3 text-right">{t.action}</th>
                        </tr>
                      </thead>
@@ -552,8 +550,8 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                          const methods = u.account_verification_methods || [];
                          const methodLabels = [
                            (u.email_verified || u.email_verified_at || methods.includes('email')) ? 'Email' : null,
-                           (u.phone_verified || methods.includes('phone')) ? 'Teléfono' : null,
-                           (u.is_verified || methods.includes('admin')) ? 'Admin' : null,
+                           (u.phone_verified || methods.includes('phone')) ? t.gf_verified_phone : null,
+                           (u.is_verified || methods.includes('admin')) ? adminCopy.roleAdmin : null,
                            (u.kyc_status === 'approved' || methods.includes('kyc')) ? 'KYC' : null,
                          ].filter(Boolean);
                          return (
@@ -581,7 +579,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                                {accountVerified ? <CheckCircle size={13}/> : <AlertTriangle size={13}/>}
                                {accountVerified ? (t.verified_account || 'Verified') : (t.unverified_account || 'Unverified')}
                              </div>
-                             <p className="text-[11px] text-slate-500 mt-1">{methodLabels.length ? methodLabels.join(' · ') : 'Email/teléfono pendiente'}</p>
+                             <p className="text-[11px] text-slate-500 mt-1">{methodLabels.length ? methodLabels.join(' · ') : adminCopy.admin_email_phone_pending}</p>
                            </td>
                            <td className="p-3">
                              <p className="font-medium text-[14px] text-slate-900">{u.email}</p>
@@ -590,29 +588,29 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                            <td className="p-3">
                              <select 
                                value={u.role} 
-                               onChange={(e) => handleAdminChangeRole(u.id, e.target.value)}
+                               onChange={(e) => handleAdminChangeRole(u.id, e.target.value, adminCopy)}
                                className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest outline-none cursor-pointer ${u.role === 'admin' ? 'bg-red-100 text-red-700' : u.role === 'business' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}
                              >
-                               <option value="individual">Individual</option>
-                               <option value="business">Business (PRO)</option>
-                               <option value="admin">Admin</option>
+                               <option value="individual">{adminCopy.roleIndividual}</option>
+                               <option value="business">{adminCopy.roleBusiness}</option>
+                               <option value="admin">{adminCopy.roleAdmin}</option>
                              </select>
                            </td>
                            <td className="p-3">
                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-lime-50 text-lime-700 border border-lime-100">
                                <Crown size={13}/>
-                               {u.active_plan?.name || u.plan_name || 'Plan Gratis'}
+                               {u.active_plan?.name || u.plan_name || t.free_plan}
                              </div>
                              <p className="text-[11px] text-slate-500 mt-1">
-                               {u.active_plan?.monthly_ad_limit || u.monthly_ad_limit || 3} anuncios/mes
-                               {(u.active_plan?.expires_at || u.plan_expires_at) ? ` · vence ${new Date(u.active_plan?.expires_at || u.plan_expires_at).toLocaleDateString('es-MX')}` : ''}
+                               {u.active_plan?.monthly_ad_limit || u.monthly_ad_limit || 3} {t.ads_per_month}
+                               {(u.active_plan?.expires_at || u.plan_expires_at) ? ` · ${t.expires_word} ${formatDate(u.active_plan?.expires_at || u.plan_expires_at, lang)}` : ''}
                              </p>
                            </td>
                            <td className="p-3 text-right flex items-center justify-end gap-2">
                              <button onClick={() => handleAdminVerifyUser(u.id)} className={`p-2 rounded-lg transition-colors ${u.is_verified ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-blue-500'}`} title={t.verify || 'Verify'}>
                                <BadgeCheck size={18}/>
                              </button>
-                             <button onClick={() => handleAdminDeleteUser(u.id)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title={t.delete || 'Delete'}>
+                             <button onClick={() => handleAdminDeleteUser(u.id, adminCopy)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title={t.delete || 'Delete'}>
                                <Trash2 size={18}/>
                              </button>
                            </td>

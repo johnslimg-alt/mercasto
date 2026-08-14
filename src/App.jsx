@@ -2238,18 +2238,19 @@ function App() {
     } catch (err) { console.error("Error verifying user", err); }
   };
 
-  const handleAdminDeleteUser = async (id) => {
-    if (!window.confirm('Estás seguro de que deseas eliminar este usuario?')) return;
+  const handleAdminDeleteUser = async (id, adminCopy) => {
+    if (!window.confirm(adminCopy.deleteUserConfirm)) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/users/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setAdminUsers(prev => prev.filter(u => u.id !== id));
-      else showToast('Error al eliminar usuario', 'error');
-    } catch (err) { console.error("Error deleting user", err); }
+      else showToast(adminCopy.deleteUserError, 'error');
+    } catch (err) { console.error("Error deleting user", err); showToast(t.connection_error, 'error'); }
   };
 
-  const handleAdminChangeRole = async (id, newRole) => {
-    if (!window.confirm(`Cambiar rol a ${newRole}?`)) return;
+  const handleAdminChangeRole = async (id, newRole, adminCopy) => {
+    const roleLabel = ({ individual: adminCopy.roleIndividual, business: adminCopy.roleBusiness, admin: adminCopy.roleAdmin })[newRole] || newRole;
+    if (!window.confirm(adminCopy.changeRoleConfirm.replace('{role}', roleLabel))) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/users/${id}/role`, {
@@ -2258,8 +2259,8 @@ function App() {
         body: JSON.stringify({ role: newRole })
       });
       if (res.ok) setAdminUsers(prev => prev.map(u => u.id === id ? { ...u, role: newRole } : u));
-      else showToast('Error al cambiar rol', 'error');
-    } catch (err) { console.error("Error changing role", err); }
+      else showToast(adminCopy.changeRoleError, 'error');
+    } catch (err) { console.error("Error changing role", err); showToast(t.connection_error, 'error'); }
   };
 
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: МОДЕРАЦИЯ ---
@@ -2376,10 +2377,10 @@ function App() {
     if (user) loadSearchAlerts();
   }, [user, loadSearchAlerts]);
 
-  const handleModerateAd = async (id, status) => {
+  const handleModerateAd = async (id, status, adminCopy) => {
     const decision = status === 'active' ? 'approved' : 'rejected';
     const reason = decision === 'rejected'
-      ? window.prompt('Indica el motivo del rechazo:')
+      ? window.prompt(adminCopy.rejectReasonPrompt)
       : '';
     if (decision === 'rejected' && !reason?.trim()) return;
 
@@ -2415,17 +2416,17 @@ function App() {
     finally { setLoadingReports(false); }
   }, []);
 
-  const handleDeleteReport = async (id) => {
-    if (!window.confirm('Eliminar este reporte?')) return;
+  const handleDeleteReport = async (id, adminCopy) => {
+    if (!window.confirm(adminCopy.deleteReportConfirm)) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/reports/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setAdminReports(prev => prev.filter(r => r.id !== id));
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); showToast(t.connection_error, 'error'); }
   };
 
-  const handleDeleteUserReport = async (id) => {
-    if (!window.confirm('Eliminar este reporte de usuario?')) return;
+  const handleDeleteUserReport = async (id, adminCopy) => {
+    if (!window.confirm(adminCopy.deleteUserReportConfirm)) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/user-reports/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -2504,7 +2505,7 @@ function App() {
     finally { setLoadingCoupons(false); }
   }, []);
 
-  const handleCreateCoupon = async (e) => {
+  const handleCreateCoupon = async (e, adminCopy) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('auth_token');
@@ -2516,16 +2517,16 @@ function App() {
       if (res.ok) {
         setCouponForm({ code: '', credits: 100, max_uses: 10 });
         loadCoupons();
-        showToast('Cupón creado exitosamente');
+        showToast(adminCopy.couponCreated);
       } else {
         const errData = await res.json();
-        showToast(errData.message || 'Error al crear cupón', 'error');
+        showToast(localizeServerMessage(lang, errData.message, adminCopy.couponCreateError), 'error');
       }
-    } catch (err) { console.error(err); showToast('Error de conexión', 'error'); }
+    } catch (err) { console.error(err); showToast(t.connection_error, 'error'); }
   };
 
-  const handleDeleteCoupon = async (id) => {
-    if (!window.confirm('Eliminar cupón?')) return;
+  const handleDeleteCoupon = async (id, adminCopy) => {
+    if (!window.confirm(adminCopy.couponDeleteConfirm)) return;
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/coupons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -2564,7 +2565,7 @@ function App() {
   }, []);
 
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: КАТЕГОРИИ ---
-  const handleSaveCategory = async (e) => {
+  const handleSaveCategory = async (e, adminCopy) => {
     e.preventDefault();
     setAdminLoading(true);
     try {
@@ -2587,9 +2588,9 @@ function App() {
             : (Array.isArray(categoryPayload?.data) ? categoryPayload.data : [])
         );
         cancelCatEdit();
-        showToast('Categoría guardada exitosamente');
-      } else showToast('Error al guardar la categoría', 'error');
-    } catch (err) { console.error(err); showToast('Error de conexión', 'error'); }
+        showToast(adminCopy.categorySaved);
+      } else showToast(adminCopy.categorySaveError, 'error');
+    } catch (err) { console.error(err); showToast(t.connection_error, 'error'); }
     finally { setAdminLoading(false); }
   };
 
