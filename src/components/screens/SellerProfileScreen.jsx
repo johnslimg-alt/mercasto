@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MapPin, Globe, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
+import { formatNumber } from '../../utils/localeFormat';
+import { normalizeLanguage } from '../../utils/translations';
+import { formatSellerProfileCopy, getSellerProfileCopy, sellerReviewLabel } from '../../utils/sellerProfileCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -41,20 +44,22 @@ function InstagramIcon() {
   );
 }
 
-function StarRating({ avg, count }) {
+function StarRating({ avg, count, lang }) {
   return (
     <div className="flex items-center gap-1.5">
       {[1,2,3,4,5].map(s => (
         <Star key={s} size={14} className={s <= Math.round(avg) ? 'text-amber-400 fill-amber-400' : 'text-slate-300 fill-slate-300'} />
       ))}
       <span className="text-sm text-slate-600 ml-0.5">{avg > 0 ? avg.toFixed(1) : '—'}</span>
-      {count > 0 && <span className="text-xs text-slate-400">({count} reseña{count !== 1 ? 's' : ''})</span>}
+      {count > 0 && <span className="text-xs text-slate-400">({count} {sellerReviewLabel(lang, count)})</span>}
     </div>
   );
 }
 
 export default function SellerProfileScreen({ currentUser }) {
-  const { t } = useTranslation();
+  const { i18n } = useTranslation();
+  const lang = normalizeLanguage(i18n.resolvedLanguage || i18n.language);
+  const copy = getSellerProfileCopy(lang);
   const { id } = useParams();
   const navigate = useNavigate();
   const [seller, setSeller] = useState(null);
@@ -65,6 +70,7 @@ export default function SellerProfileScreen({ currentUser }) {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
+    setError(null);
     Promise.all([
       fetch(`${API_URL}/users/${id}/profile`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
       fetch(`${API_URL}/ads?user_id=${id}&status=active&per_page=12`).then(r => r.ok ? r.json() : { data: [] }),
@@ -74,8 +80,8 @@ export default function SellerProfileScreen({ currentUser }) {
         setAds(adsResp.data || []);
       })
       .catch(err => {
-        if (err === 404) setError('Este vendedor no existe.');
-        else setError('Error al cargar el perfil.');
+        if (err === 404) setError('not_found');
+        else setError('load_error');
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -88,8 +94,8 @@ export default function SellerProfileScreen({ currentUser }) {
 
   if (error) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 p-10 text-center">
-      <p className="text-slate-500 text-lg">{error}</p>
-      <button onClick={() => navigate(-1)} className="text-sm text-lime-600 hover:underline">Volver</button>
+      <p className="text-slate-500 text-lg">{error === 'not_found' ? copy.sellerNotFound : copy.loadError}</p>
+      <button onClick={() => navigate(-1)} className="text-sm text-lime-600 hover:underline">{copy.back}</button>
     </div>
   );
 
@@ -106,14 +112,14 @@ export default function SellerProfileScreen({ currentUser }) {
           </button>
           <span className="font-semibold text-slate-900 truncate">{seller?.name}</span>
           {seller?.phone_verified && (
-            <span title="Teléfono verificado" className="text-green-500 text-base leading-none flex-shrink-0">📱</span>
+            <span title={copy.phoneVerified} className="text-green-500 text-base leading-none flex-shrink-0">📱</span>
           )}
           {seller?.email_verified && (
-            <span title="Email verificado" className="text-blue-400 text-base leading-none flex-shrink-0">✉️</span>
+            <span title={copy.emailVerified} className="text-blue-400 text-base leading-none flex-shrink-0">✉️</span>
           )}
           {isOwner && (
             <Link to="/perfil/editar" className="ml-auto flex items-center gap-1.5 text-sm text-lime-600 hover:underline font-medium">
-              <Pencil size={14} /> Editar perfil
+              <Pencil size={14} /> {copy.editProfile}
             </Link>
           )}
         </div>
@@ -138,13 +144,13 @@ export default function SellerProfileScreen({ currentUser }) {
                 <div className="flex items-center justify-center gap-1.5">
                   <h1 className="text-lg font-bold text-slate-900">{seller?.name}</h1>
                   {seller?.is_verified && (
-                    <ShieldCheck size={16} className="text-blue-500 flex-shrink-0" title="Verificado" />
+                    <ShieldCheck size={16} className="text-blue-500 flex-shrink-0" title={copy.verified} />
                   )}
                   {seller?.phone_verified && (
-                    <span title="Teléfono verificado" className="text-green-500 flex-shrink-0 text-base leading-none">📱</span>
+                    <span title={copy.phoneVerified} className="text-green-500 flex-shrink-0 text-base leading-none">📱</span>
                   )}
                   {seller?.email_verified && (
-                    <span title="Email verificado" className="text-blue-400 flex-shrink-0 text-base leading-none">✉️</span>
+                    <span title={copy.emailVerified} className="text-blue-400 flex-shrink-0 text-base leading-none">✉️</span>
                   )}
                 </div>
                 {seller?.city && (
@@ -153,20 +159,20 @@ export default function SellerProfileScreen({ currentUser }) {
                   </p>
                 )}
                 {memberYear && (
-                  <p className="text-xs text-slate-400 mt-1">Miembro desde {memberYear}</p>
+                  <p className="text-xs text-slate-400 mt-1">{formatSellerProfileCopy(copy.memberSince, { year: memberYear })}</p>
                 )}
               </div>
 
-              <StarRating avg={seller?.rating_avg || 0} count={seller?.rating_count || 0} />
+              <StarRating avg={seller?.rating_avg || 0} count={seller?.rating_count || 0} lang={lang} />
 
               <div className="flex justify-center gap-6 pt-1 border-t border-slate-100">
                 <div className="text-center">
                   <p className="text-lg font-bold text-slate-900">{seller?.active_ads ?? 0}</p>
-                  <p className="text-xs text-slate-500">{t('ads.activeAds')}</p>
+                  <p className="text-xs text-slate-500">{copy.activeAds}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-bold text-slate-900">{seller?.rating_count ?? 0}</p>
-                  <p className="text-xs text-slate-500">{t('ads.reviews', { defaultValue: 'Reviews' })}</p>
+                  <p className="text-xs text-slate-500">{copy.reviews}</p>
                 </div>
               </div>
             </div>
@@ -174,7 +180,7 @@ export default function SellerProfileScreen({ currentUser }) {
             {/* Bio */}
             {seller?.bio && (
               <div className="bg-white rounded-2xl p-5 shadow-sm">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Sobre mí</h3>
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{copy.about}</h3>
                 <p className="text-sm text-slate-700 leading-relaxed">{seller.bio}</p>
               </div>
             )}
@@ -182,7 +188,7 @@ export default function SellerProfileScreen({ currentUser }) {
             {/* Links & contact */}
             {(seller?.website || seller?.social_instagram) && (
               <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contacto</h3>
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{copy.contact}</h3>
                 {seller?.website && (
                   <a href={seller.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-slate-700 hover:text-lime-600 truncate">
                     <Globe size={14} className="text-slate-400 flex-shrink-0" />
@@ -203,14 +209,14 @@ export default function SellerProfileScreen({ currentUser }) {
           <div className="md:col-span-2">
             <h2 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
               <Package size={16} className="text-lime-500" />
-              Anuncios activos
+              {copy.activeAds}
               {ads.length > 0 && <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{ads.length}</span>}
             </h2>
 
             {ads.length === 0 ? (
               <div className="bg-white rounded-2xl p-10 shadow-sm text-center">
                 <Package size={40} className="mx-auto text-slate-300 mb-3" />
-                <p className="text-slate-500 text-sm">Este vendedor no tiene anuncios activos.</p>
+                <p className="text-slate-500 text-sm">{copy.noActiveAds}</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -227,7 +233,7 @@ export default function SellerProfileScreen({ currentUser }) {
                         {imageSrc ? (
                           <img
                             src={imageSrc}
-                            alt={localizedText(ad.title)}
+                            alt={localizedText(ad.title, lang)}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"
                           />
@@ -238,9 +244,9 @@ export default function SellerProfileScreen({ currentUser }) {
                         )}
                       </div>
                       <div className="p-2.5">
-                        <p className="text-xs font-semibold text-slate-900 line-clamp-1">{localizedText(ad.title)}</p>
+                        <p className="text-xs font-semibold text-slate-900 line-clamp-1">{localizedText(ad.title, lang)}</p>
                         <p className="text-xs text-lime-600 font-bold mt-0.5">
-                          {ad.price ? `$${Number(ad.price).toLocaleString('es-MX')}` : 'Precio a tratar'}
+                          {ad.price ? `$${formatNumber(ad.price, lang)}` : copy.priceOnRequest}
                         </p>
                       </div>
                     </button>
