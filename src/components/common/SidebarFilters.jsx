@@ -67,14 +67,14 @@ export default function SidebarFilters({
   };
 
   // i18n helpers
-  const tr = (key, fallback) => (t && t[key]) ? t[key] : fallback;
+  const tr = (key) => t?.[key] || '';
 
   // Condition labels
   const conditionLabels = {
-    nuevo:          tr('cond_new',           'Nuevo'),
-    usado:          tr('cond_used',          'Usado'),
-    reacondicionado: tr('cond_refurb',       'Reacondicionado'),
-    para_piezas:    tr('cond_parts',         'Para piezas'),
+    nuevo:          tr('cond_new'),
+    usado:          tr('cond_used'),
+    reacondicionado: tr('cond_refurb'),
+    para_piezas:    tr('cond_parts'),
   };
 
   const globalFilters = getGlobalFilterDefinitions(t);
@@ -95,10 +95,10 @@ export default function SidebarFilters({
     <div className={panelClass}>
       <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
         <h3 className="font-bold flex items-center gap-2 text-slate-950 dark:text-white">
-          <Filter size={18} /> {tr('filter', 'Filtros')}
+          <Filter size={18} /> {tr('filter')}
         </h3>
         <button type="button" data-testid="sidebar-clear-filters" onClick={clearAll} className="text-[12px] text-slate-500 dark:text-slate-400 hover:text-[#84CC16] font-medium transition-colors">
-          {tr('clear_filters', 'Limpiar')}
+          {tr('clear_filters')}
         </button>
       </div>
 
@@ -106,12 +106,12 @@ export default function SidebarFilters({
       <div className="mb-6 border-b border-slate-100 dark:border-slate-800 pb-6">
         <h4 className={sectionTitleClass}>
           <MapPin size={14} className="inline mr-2 text-[#84CC16]" />
-          {tr('location', 'Ubicación')}
+          {tr('location')}
         </h4>
         <div className="space-y-3">
           <div>
             <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-              {tr('state_label', 'Estado')}
+              {tr('state_label')}
             </label>
             <select
               data-testid="sidebar-filter-state"
@@ -119,7 +119,7 @@ export default function SidebarFilters({
               onChange={e => handleStateChange(e.target.value)}
               className={selectClass}
             >
-              <option value="">{tr('all_mexico', 'Todo México')}</option>
+              <option value="">{tr('all_mexico')}</option>
               {MEXICO_STATES.map(state => (
                 <option key={state} value={state}>{state}</option>
               ))}
@@ -127,7 +127,7 @@ export default function SidebarFilters({
           </div>
           <div>
             <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-              {tr('city_label', 'Ciudad / Municipio')}
+              {tr('city_label')}
             </label>
             <select
               data-testid="sidebar-filter-city"
@@ -136,7 +136,7 @@ export default function SidebarFilters({
               disabled={!selectedState}
               className={`${selectClass} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <option value="">{selectedState ? tr('all_cities', 'Todas las ciudades') : tr('select_state_first', 'Selecciona un estado')}</option>
+              <option value="">{selectedState ? tr('all_cities') : tr('select_state_first')}</option>
               {availableCities.map(city => (
                 <option key={city} value={city}>{city}</option>
               ))}
@@ -147,17 +147,17 @@ export default function SidebarFilters({
 
       {/* Глобальный фильтр: Цена */}
       <div className="mb-6">
-        <h4 className={sectionTitleClass}>{tr('price_mxn', 'Precio (MXN)')}</h4>
+        <h4 className={sectionTitleClass}>{tr('price_mxn')}</h4>
         <div className="flex items-center gap-2">
-          <input data-testid="sidebar-filter-min-price" type="number" placeholder={tr('min', 'Min')} value={minPrice} onChange={e => setMinPrice(e.target.value)} className={inputClass} />
+          <input data-testid="sidebar-filter-min-price" type="number" placeholder={tr('min')} value={minPrice} onChange={e => setMinPrice(e.target.value)} className={inputClass} />
           <span className="text-slate-400">-</span>
-          <input data-testid="sidebar-filter-max-price" type="number" placeholder={tr('max', 'Max')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className={inputClass} />
+          <input data-testid="sidebar-filter-max-price" type="number" placeholder={tr('max')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className={inputClass} />
         </div>
       </div>
 
       {/* Глобальный фильтр: Состояние товара */}
       <div className="mb-6 border-b border-slate-100 dark:border-slate-800 pb-6">
-        <h4 className={sectionTitleClass}>{tr('condition', 'Condición')}</h4>
+        <h4 className={sectionTitleClass}>{tr('condition')}</h4>
         {isMobile ? (
           <div className="relative">
             <select
@@ -169,7 +169,7 @@ export default function SidebarFilters({
               }}
               className={`${selectClass} appearance-none`}
             >
-              <option value="">{tr('any', 'Cualquiera')}</option>
+              <option value="">{tr('any')}</option>
               {['nuevo', 'usado', 'reacondicionado', 'para_piezas'].map(cond => (
                 <option key={cond} value={cond}>{conditionLabels[cond] || cond}</option>
               ))}
@@ -193,7 +193,7 @@ export default function SidebarFilters({
           <h4 className={sectionTitleClass}>{field.label}</h4>
           {field.type === 'select' ? (
             <select data-testid={`sidebar-filter-${field.id}`} value={dynamicFilters[field.id] || ''} onChange={e => handleDynamicChange(field.id, e.target.value)} className={selectClass}>
-              <option value="">{tr('any', 'Cualquiera')}</option>
+              <option value="">{tr('any')}</option>
               {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
           ) : (
@@ -208,7 +208,7 @@ export default function SidebarFilters({
                   }}
                   className={`${selectClass} appearance-none`}
                 >
-                  <option value="">{tr('any', 'Cualquiera')}</option>
+                  <option value="">{tr('any')}</option>
                   {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
                 <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">▼</div>
@@ -231,13 +231,13 @@ export default function SidebarFilters({
       {config && config.length > 0 && (
         <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
           <h4 className="text-[13px] font-bold text-[#84CC16] mb-4 uppercase tracking-wide">
-            {tr('category_filters', 'Filtros específicos de categoría')}
+            {tr('category_filters')}
           </h4>
           {config.map(field => {
             // Translate field label using filter_label_<id> key, fallback to original label
             const fieldId = field.id || field.key;
             const fieldLabel = tr(`filter_label_${fieldId}`, field.label || fieldId);
-            const anyLabel = tr('any', 'Cualquiera');
+            const anyLabel = tr('any');
             return (
               <div key={fieldId} className="mb-6">
                 <h4 className={sectionTitleClass}>{fieldLabel}</h4>
@@ -287,9 +287,9 @@ export default function SidebarFilters({
 
                 {field.type === 'range' && (
                   <div className="flex items-center gap-2">
-                    <input type="number" placeholder={field.minPlaceholder || tr('from', 'Desde')} value={(dynamicFilters[fieldId] || {}).min || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), min: e.target.value })} className={inputClass} />
+                    <input type="number" placeholder={field.minPlaceholder || tr('from')} value={(dynamicFilters[fieldId] || {}).min || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), min: e.target.value })} className={inputClass} />
                     <span className="text-slate-400">-</span>
-                    <input type="number" placeholder={field.maxPlaceholder || tr('to', 'Hasta')} value={(dynamicFilters[fieldId] || {}).max || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), max: e.target.value })} className={inputClass} />
+                    <input type="number" placeholder={field.maxPlaceholder || tr('to')} value={(dynamicFilters[fieldId] || {}).max || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), max: e.target.value })} className={inputClass} />
                   </div>
                 )}
               </div>

@@ -556,6 +556,8 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                   userId={user?.id}
                   limit={12}
                   onAdClick={handleViewAd}
+                  lang={lang}
+                  t={t}
                 />
               </React.Suspense>
             </section>

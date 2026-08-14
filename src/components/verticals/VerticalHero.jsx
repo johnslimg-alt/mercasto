@@ -59,18 +59,17 @@ export default function VerticalHero({
   const states = React.useMemo(() => Object.keys(MEXICO_STATES_CITIES).sort((a, b) => a.localeCompare(b, 'es')), []);
   const cities = React.useMemo(() => (state ? [...(MEXICO_STATES_CITIES[state] || [])].sort((a, b) => a.localeCompare(b, 'es')) : []), [state]);
   const copy = {
-    allMexico: 'Todo México',
-    allCity: 'Toda la ciudad',
-    city: 'Ciudad',
-    search: 'Buscar',
-    mapAds: 'Ver anuncios en mapa',
-    radius: 'radio',
-    mapActive: 'Mapa activo',
-    nearby: 'Anuncios cerca de',
-    mapHelp: 'Filtra por estado, ciudad y radio para encontrar resultados cercanos.',
-    apply: 'Aplicar búsqueda',
-    openMap: 'Abrir mapa',
-    ...labels,
+    allMexico: labels.allMexico || '',
+    allCity: labels.allCity || '',
+    city: labels.city || '',
+    search: labels.search || '',
+    mapAds: labels.mapAds || '',
+    radius: labels.radius || '',
+    mapActive: labels.mapActive || '',
+    nearby: labels.nearby || '',
+    mapHelp: labels.mapHelp || '',
+    apply: labels.apply || '',
+    openMap: labels.openMap || '',
   };
   const locationLabel = city || state || copy.allMexico;
   const mapTerm = [query || mapQuery, city, state].filter(Boolean).join(' ');
@@ -78,7 +77,7 @@ export default function VerticalHero({
   const osmUrl = `https://www.openstreetmap.org/search?query=${osmQuery}`;
   const markerPoint = MAP_POINTS[city || state];
   const mapMarkers = markerPoint
-    ? [{ label: 'Aquí', coords: [markerPoint[1], markerPoint[0]], tone: 'lime' }]
+    ? [{ label: city || state || copy.allMexico, coords: [markerPoint[1], markerPoint[0]], tone: 'lime' }]
     : [];
 
   const handleSubmit = (e) => {
@@ -131,7 +130,7 @@ export default function VerticalHero({
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder={searchPlaceholder || 'Buscar…'}
+              placeholder={searchPlaceholder || `${copy.search}…`}
               className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder-slate-400"
             />
           </label>
