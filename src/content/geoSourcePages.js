@@ -1,5 +1,6 @@
+import { GEO_SOURCE_PAGE_LOCALES, GEO_SOURCE_SHELL_LOCALES } from './geoSourcePageLocales.js';
+
 export const GEO_SOURCE_UPDATED_ISO = '2026-08-05';
-export const GEO_SOURCE_UPDATED_LABEL = '5 de agosto de 2026';
 
 const related = {
   how: { label: 'Cómo funciona Mercasto', href: '/como-funciona' },
@@ -203,6 +204,33 @@ export const GEO_SOURCE_PAGES = {
   },
 };
 
-export function getGeoSourcePage(slug) {
-  return GEO_SOURCE_PAGES[slug] || null;
+const GEO_SOURCE_SHELL_ES = Object.freeze({
+  updatedLabel: 'Última actualización',
+  faqTitle: 'Preguntas frecuentes',
+  relatedTitle: 'Fuentes relacionadas de Mercasto',
+  relatedBody: 'Estas páginas describen el comportamiento actual de la plataforma y sus políticas públicas.',
+  home: 'Inicio',
+});
+
+export const GEO_SOURCE_LANGUAGES = Object.freeze(['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja']);
+
+function normalizeGeoSourceLanguage(language = 'es') {
+  const normalized = String(language || 'es').toLowerCase().split('-')[0];
+  return GEO_SOURCE_LANGUAGES.includes(normalized) ? normalized : 'es';
+}
+
+export function hasGeoSourcePageLanguage(language) {
+  const normalized = String(language || '').toLowerCase().split('-')[0];
+  return GEO_SOURCE_LANGUAGES.includes(normalized);
+}
+
+export function getGeoSourcePage(slug, language = 'es') {
+  const normalized = normalizeGeoSourceLanguage(language);
+  const pages = normalized === 'es' ? GEO_SOURCE_PAGES : GEO_SOURCE_PAGE_LOCALES[normalized];
+  return pages?.[slug] || null;
+}
+
+export function getGeoSourceShellCopy(language = 'es') {
+  const normalized = normalizeGeoSourceLanguage(language);
+  return normalized === 'es' ? GEO_SOURCE_SHELL_ES : GEO_SOURCE_SHELL_LOCALES[normalized];
 }
