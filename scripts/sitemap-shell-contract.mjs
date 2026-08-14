@@ -49,7 +49,7 @@ for (const [route, meta] of Object.entries(PUBLIC_SEO_ROUTES)) {
   }
 }
 assert(app.includes("import { getPublicSeo } from './constants/publicSeo';"));
-assert(app.includes('const publicSeo = getPublicSeo(location.pathname);'));
+assert(app.includes('const publicSeo = getPublicSeo(location.pathname, lang);'));
 assert(app.includes('} else if (publicSeo) {'));
 
 assert(sitemap.includes("'reembolsos/' => ['monthly', '0.5']"));

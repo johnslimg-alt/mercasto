@@ -1,3 +1,5 @@
+import { getStoresDirectoryCopy } from '../utils/storesDirectoryCopy.js';
+
 export const PUBLIC_SEO_ROUTES = Object.freeze({
   '/tiendas': {
     title: 'Tiendas y Negocios en México | Mercasto',
@@ -25,6 +27,10 @@ export const PUBLIC_SEO_ROUTES = Object.freeze({
   },
 });
 
-export function getPublicSeo(pathname = '') {
+export function getPublicSeo(pathname = '', language = 'es') {
+  if (pathname === '/tiendas') {
+    const copy = getStoresDirectoryCopy(language);
+    return { title: copy.seoTitle, description: copy.seoDescription };
+  }
   return PUBLIC_SEO_ROUTES[pathname] || null;
 }
