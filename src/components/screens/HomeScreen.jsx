@@ -434,7 +434,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     disabled={savingSearchAlert}
                     className="btn-sm hidden border border-[#84CC16]/40 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 disabled:opacity-60 sm:block dark:text-[#BEF264]"
                   >
-                    {savingSearchAlert ? 'Guardando...' : (t.save_search || 'Guardar búsqueda')}
+                    {savingSearchAlert ? `${t.saving_word}...` : (t.save_search || 'Guardar búsqueda')}
                   </button>
 
                   <button onClick={() => { setActiveCat(''); document.querySelector('.md\\:hidden button')?.click(); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter || 'Filtros'}</button>

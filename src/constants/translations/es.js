@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Mira este anuncio en Mercasto: {title}",
   listing_action_existing_video: "Video adjunto (usa la papelera para eliminarlo)",
   listing_action_renewed: "Anuncio renovado.",
+  coupon_redeem_success: 'Cupón canjeado. Los créditos se añadieron a tu saldo.',
+  coupon_redeem_error: 'No se pudo canjear el cupón.',
 };

@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Découvrez cette annonce sur Mercasto : {title}",
   listing_action_existing_video: "Vidéo jointe (utilisez la corbeille pour la supprimer)",
   listing_action_renewed: "Annonce renouvelée.",
+  coupon_redeem_success: 'Coupon utilisé. Les crédits ont été ajoutés à votre solde.',
+  coupon_redeem_error: "Impossible d'utiliser le coupon.",
 };

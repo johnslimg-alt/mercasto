@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "شاهد هذا الإعلان على Mercasto: {title}",
   listing_action_existing_video: "فيديو مرفق (استخدم سلة المهملات لإزالته)",
   listing_action_renewed: "تم تجديد الإعلان.",
+  coupon_redeem_success: 'تم استرداد القسيمة. أُضيفت الأرصدة إلى رصيدك.',
+  coupon_redeem_error: 'تعذر استرداد القسيمة.',
 };

@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "在 Mercasto 上查看此广告：{title}",
   listing_action_existing_video: "已附加视频（使用垃圾桶图标删除）",
   listing_action_renewed: "广告已续期。",
+  coupon_redeem_success: '优惠券已兑换，积分已加入你的余额。',
+  coupon_redeem_error: '无法兑换该优惠券。',
 };

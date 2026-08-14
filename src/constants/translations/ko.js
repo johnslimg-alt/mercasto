@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Mercasto에서 이 광고를 확인하세요: {title}",
   listing_action_existing_video: "첨부된 동영상(휴지통 아이콘으로 삭제)",
   listing_action_renewed: "광고가 연장되었습니다.",
+  coupon_redeem_success: '쿠폰을 사용했습니다. 크레딧이 잔액에 추가되었습니다.',
+  coupon_redeem_error: '쿠폰을 사용할 수 없습니다.',
 };

@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Check out this ad on Mercasto: {title}",
   listing_action_existing_video: "Attached video (use the trash icon to remove it)",
   listing_action_renewed: "Listing renewed.",
+  coupon_redeem_success: 'Coupon redeemed. Credits were added to your balance.',
+  coupon_redeem_error: 'The coupon could not be redeemed.',
 };
