@@ -131,3 +131,23 @@ for (const lang of ['es', 'zh', 'ar', 'ru']) {
     await expectNoOverflow(page);
   });
 }
+
+for (const lang of SUPPORTED_LANGUAGES) {
+  test(`report modal follows active language in ${lang}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    const { t } = await expected(lang);
+    await setLanguage(page, lang);
+    await mockApi(page);
+    await page.goto('/ads/43', { waitUntil: 'domcontentloaded' });
+    await expectDocumentLanguage(page, lang);
+
+    await page.getByRole('button', { name: t.report_ad, exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: t.report_ad, exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(t.report_ad_help, { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('option', { name: t.report_reason_fraud, exact: true })).toBeAttached();
+    await expect(dialog.getByRole('option', { name: t.report_reason_counterfeit, exact: true })).toBeAttached();
+    await expect(dialog.getByRole('button', { name: t.report_send, exact: true })).toBeVisible();
+    await expectNoOverflow(page);
+  });
+}
