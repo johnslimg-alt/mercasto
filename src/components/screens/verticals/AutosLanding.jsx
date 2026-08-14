@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { Bike, Car, CarFront, Gauge, PackageSearch, Truck, Wrench } from 'lucide-react';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
+import { getAutosLandingCopy } from '../../../utils/autosLandingCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -62,21 +63,26 @@ const PRICE_RANGES = [
   { label: '> $300k', min: 300000 },
 ];
 const SUBSECTIONS = [
-  { name: 'Autos', query: 'autos', Icon: CarFront },
-  { name: 'Motos', query: 'motos', Icon: Bike },
-  { name: 'Camionetas', query: 'camionetas', Icon: Car },
-  { name: 'Camiones', query: 'camiones', Icon: Truck },
-  { name: 'Refacciones', query: 'refacciones', Icon: Wrench },
-  { name: 'Segunda mano', query: 'usado', Icon: Gauge },
-  { name: 'Autopartes', query: 'autopartes', Icon: PackageSearch },
+  { query: 'autos', Icon: CarFront },
+  { query: 'motos', Icon: Bike },
+  { query: 'camionetas', Icon: Car },
+  { query: 'camiones', Icon: Truck },
+  { query: 'refacciones', Icon: Wrench },
+  { query: 'usado', Icon: Gauge },
+  { query: 'autopartes', Icon: PackageSearch },
 ];
 
 export default function AutosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'motor');
+  const landingCopy = getAutosLandingCopy(lang);
   const [condition, setCondition] = useState('');
   const [priceRange, setPriceRange] = useState(null);
   const [brand, setBrand] = useState('');
+  const localizedSubsections = useMemo(() => SUBSECTIONS.map((sub, index) => ({
+    ...sub,
+    name: landingCopy.subsections[index],
+  })), [landingCopy.subsections]);
 
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'motor' });
@@ -107,18 +113,17 @@ export default function AutosLanding({ lang = 'es' }) {
         color="blue"
         mapQuery="autos en México"
         onSearch={handleSearch}
-        subsections={SUBSECTIONS}
+        subsections={localizedSubsections}
         onSubsectionSelect={(item) => navigate(`/?category=motor&search=${encodeURIComponent(item.query)}`)}
       />
 
-      {/* Quick Filters bar */}
       <div className="bg-white border-b border-slate-100 sticky top-[148px] sm:top-[104px] z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-2 items-center">
           {['nuevo', 'usado'].map(c => (
             <button key={c}
               onClick={() => setCondition(prev => prev === c ? '' : c)}
               className={`px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${condition === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
-              {c.charAt(0).toUpperCase() + c.slice(1)}
+              {landingCopy.conditions[c]}
             </button>
           ))}
           <div className="w-px h-5 bg-slate-200 mx-1" />
@@ -140,7 +145,7 @@ export default function AutosLanding({ lang = 'es' }) {
           {(condition || priceRange || brand) && (
             <button onClick={applyFilters}
               className="ml-auto px-4 py-1.5 bg-blue-600 text-white rounded-full text-[13px] font-bold hover:bg-blue-700 transition-colors">
-              Aplicar filtros →
+              {landingCopy.applyFilters}
             </button>
           )}
         </div>
@@ -150,18 +155,17 @@ export default function AutosLanding({ lang = 'es' }) {
         <section>
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Autos en el mapa</h2>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Explora vehículos por ubicación, precio y coordenadas GPS.</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{landingCopy.mapTitle}</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{landingCopy.mapDescription}</p>
             </div>
             <button onClick={() => navigate('/?category=motor')}
               className="hidden rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 sm:inline-flex">
               {copy.labels.viewList}
             </button>
           </div>
-          <MapV3 category="motor" title="Autos en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="motor" title={landingCopy.mapMarkerTitle} className="h-[260px] md:h-[420px]" />
         </section>
 
-        {/* Featured Listings */}
         <section>
           <div className="flex items-baseline justify-between mb-5">
             <h2 className="text-2xl font-bold text-slate-900">{copy.featured}</h2>
@@ -179,25 +183,17 @@ export default function AutosLanding({ lang = 'es' }) {
           />
         </section>
 
-        {/* Stats bar */}
         <section className="bg-blue-600 rounded-3xl p-8 text-white text-center grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { n: 'Todo México', label: 'Busca por estado y ciudad' },
-            { n: 'Directo', label: 'Contacto con el vendedor' },
-            { n: '32 estados', label: 'Cobertura de búsqueda' },
-            { n: 'Gratis', label: 'Publicar anuncio' },
-          ].map(s => (
-            <div key={s.label}>
-              <div className="text-3xl font-black mb-1">{s.n}</div>
-              <div className="text-sm text-blue-100">{s.label}</div>
+          {landingCopy.stats.map(([n, label]) => (
+            <div key={label}>
+              <div className="text-3xl font-black mb-1">{n}</div>
+              <div className="text-sm text-blue-100">{label}</div>
             </div>
           ))}
         </section>
 
-
-        {/* Popular brands */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-5">Marcas populares</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-5">{landingCopy.brandsTitle}</h2>
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
             {BRANDS.map(b => (
               <button key={b}
@@ -212,19 +208,17 @@ export default function AutosLanding({ lang = 'es' }) {
           </div>
         </section>
 
-        {/* Sell CTA */}
         <section className="bg-gradient-to-r from-slate-900 to-slate-700 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 text-white">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Quieres vender tu auto?</h2>
-            <p className="text-slate-300">Publica gratis en minutos y llega a miles de compradores en México.</p>
+            <h2 className="text-2xl font-bold mb-2">{landingCopy.sellTitle}</h2>
+            <p className="text-slate-300">{landingCopy.sellBody}</p>
           </div>
           <button
             onClick={() => navigate('/post')}
             className="shrink-0 px-8 py-3 bg-blue-500 hover:bg-blue-400 text-white font-bold rounded-xl transition-colors text-[15px]">
-            Publicar anuncio gratis →
+            {landingCopy.sellButton}
           </button>
         </section>
-
       </div>
     </div>
   );
