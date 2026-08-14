@@ -213,5 +213,16 @@
     "help": "帮助",
     "blog": "博客",
     "allRightsReserved": "保留所有权利"
+  },
+  "verification": {
+    "invalidLink": "验证链接无效。",
+    "success": "邮箱验证成功。",
+    "expired": "验证链接无效或已过期。",
+    "checking": "正在验证邮箱...",
+    "verified": "邮箱已验证",
+    "badge": "你的个人资料现在会显示邮箱已验证标记。",
+    "failed": "邮箱验证失败",
+    "retry": "请登录并申请新的验证链接。",
+    "home": "前往 Mercasto"
   }
 }

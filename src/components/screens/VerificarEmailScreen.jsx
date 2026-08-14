@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Loader2, CheckCircle, XCircle, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { loadI18nLanguage } from '../../i18n';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -9,38 +10,50 @@ export default function VerificarEmailScreen() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'error'
   const [message, setMessage] = useState('');
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const token = searchParams.get('token');
+  const email = searchParams.get('email');
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const email = searchParams.get('email');
+    let cancelled = false;
 
-    if (!token || !email) {
-      setStatus('error');
-      setMessage(t('verification.invalidLink', { defaultValue: 'The verification link is invalid.' }));
-      return;
-    }
+    const verifyEmail = async () => {
+      const language = String(i18n.language || 'es').toLowerCase().split('-')[0];
+      await loadI18nLanguage(language);
+      if (cancelled) return;
+      const localT = i18n.getFixedT(language);
 
-    fetch(`${API_URL}/email/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, email }),
-    })
-      .then(async (res) => {
+      if (!token || !email) {
+        setStatus('error');
+        setMessage(localT('verification.invalidLink'));
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/email/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, email }),
+        });
         const data = await res.json();
+        if (cancelled) return;
         if (res.ok && data.ok) {
           setStatus('success');
-          setMessage(data.message || t('verification.success', { defaultValue: 'Email verified successfully.' }));
+          setMessage(localT('verification.success'));
         } else {
           setStatus('error');
-          setMessage(data.error || t('verification.expired', { defaultValue: 'The token is invalid or expired.' }));
+          setMessage(localT('verification.expired'));
         }
-      })
-      .catch(() => {
+      } catch {
+        if (cancelled) return;
         setStatus('error');
-        setMessage(t('errors.networkError'));
-      });
-  }, [searchParams]);
+        setMessage(localT('errors.networkError'));
+      }
+    };
+
+    verifyEmail();
+    return () => { cancelled = true; };
+  }, [email, i18n, token]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
@@ -55,7 +68,7 @@ export default function VerificarEmailScreen() {
         {status === 'loading' && (
           <>
             <Loader2 className="w-10 h-10 text-lime-500 animate-spin mx-auto" />
-            <h1 className="text-xl font-bold text-slate-900">{t('verification.checking', { defaultValue: 'Verifying your email...' })}</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('verification.checking')}</h1>
             <p className="text-slate-500 text-sm">{t('common.loading')}</p>
           </>
         )}
@@ -63,16 +76,16 @@ export default function VerificarEmailScreen() {
         {status === 'success' && (
           <>
             <CheckCircle className="w-12 h-12 text-lime-500 mx-auto" />
-            <h1 className="text-xl font-bold text-slate-900">{t('verification.verified', { defaultValue: 'Email verified' })}</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('verification.verified')}</h1>
             <p className="text-slate-600 text-sm">{message}</p>
             <p className="text-slate-500 text-sm">
-              {t('verification.badge', { defaultValue: 'Your profile now displays the verified email badge.' })}
+              {t('verification.badge')}
             </p>
             <Link
               to="/"
               className="inline-block mt-2 px-6 py-2.5 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl transition-colors text-sm"
             >
-              {t('home.home', { defaultValue: 'Go to Mercasto' })}
+              {t('verification.home')}
             </Link>
           </>
         )}
@@ -80,10 +93,10 @@ export default function VerificarEmailScreen() {
         {status === 'error' && (
           <>
             <XCircle className="w-12 h-12 text-red-400 mx-auto" />
-            <h1 className="text-xl font-bold text-slate-900">{t('verification.failed', { defaultValue: 'Verification failed' })}</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t('verification.failed')}</h1>
             <p className="text-slate-600 text-sm">{message}</p>
             <p className="text-slate-500 text-sm">
-              {t('verification.retry', { defaultValue: 'Log in and request a new verification link.' })}
+              {t('verification.retry')}
             </p>
             <Link
               to="/"

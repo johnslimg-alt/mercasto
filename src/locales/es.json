@@ -213,5 +213,16 @@
     "help": "Ayuda",
     "blog": "Blog",
     "allRightsReserved": "Todos los derechos reservados"
+  },
+  "verification": {
+    "invalidLink": "El enlace de verificación no es válido.",
+    "success": "Email verificado correctamente.",
+    "expired": "El enlace de verificación no es válido o ha expirado.",
+    "checking": "Verificando tu email...",
+    "verified": "Email verificado",
+    "badge": "Tu perfil ahora muestra la insignia de email verificado.",
+    "failed": "No se pudo verificar el email",
+    "retry": "Inicia sesión y solicita un nuevo enlace de verificación.",
+    "home": "Ir a Mercasto"
   }
 }

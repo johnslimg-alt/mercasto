@@ -213,5 +213,16 @@
     "help": "Aide",
     "blog": "Blog",
     "allRightsReserved": "Tous droits réservés"
+  },
+  "verification": {
+    "invalidLink": "Le lien de vérification n’est pas valide.",
+    "success": "Adresse e-mail vérifiée avec succès.",
+    "expired": "Le lien de vérification n’est pas valide ou a expiré.",
+    "checking": "Vérification de votre adresse e-mail...",
+    "verified": "Adresse e-mail vérifiée",
+    "badge": "Votre profil affiche désormais le badge d’adresse e-mail vérifiée.",
+    "failed": "Échec de la vérification",
+    "retry": "Connectez-vous et demandez un nouveau lien de vérification.",
+    "home": "Aller sur Mercasto"
   }
 }
