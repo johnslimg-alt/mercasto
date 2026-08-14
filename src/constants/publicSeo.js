@@ -1,4 +1,5 @@
 import { getStoresDirectoryCopy } from '../utils/storesDirectoryCopy.js';
+import { getContactPageCopy } from '../utils/contactPageCopy.js';
 
 export const PUBLIC_SEO_ROUTES = Object.freeze({
   '/tiendas': {
@@ -30,6 +31,10 @@ export const PUBLIC_SEO_ROUTES = Object.freeze({
 export function getPublicSeo(pathname = '', language = 'es') {
   if (pathname === '/tiendas') {
     const copy = getStoresDirectoryCopy(language);
+    return { title: copy.seoTitle, description: copy.seoDescription };
+  }
+  if (pathname === '/contacto') {
+    const copy = getContactPageCopy(language);
     return { title: copy.seoTitle, description: copy.seoDescription };
   }
   return PUBLIC_SEO_ROUTES[pathname] || null;
