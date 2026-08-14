@@ -16,9 +16,9 @@ function formatHours(hours = [], t = {}) {
   return hours
     .filter(item => item && item.day)
     .map(item => {
-      if (item.closed) return `${item.day}: ${t.closed_hours || 'Cerrado'}`;
+      if (item.closed) return `${item.day}: ${t.closed_hours}`;
       if (item.open && item.close) return `${item.day}: ${item.open}–${item.close}`;
-      return `${item.day}: ${t.check_hours || 'Consultar horario'}`;
+      return `${item.day}: ${t.check_hours}`;
     });
 }
 
@@ -56,7 +56,7 @@ export default function StorefrontScreen({
   if (!company) return null;
 
   const isBusinessEnabled = businessProfile?.enabled || businessProfile?.is_business || company.role === 'business';
-  const displayName = isBusinessEnabled && businessProfile?.business_name ? businessProfile.business_name : (company.name || (t.seller_role || 'Vendedor'));
+  const displayName = isBusinessEnabled && businessProfile?.business_name ? businessProfile.business_name : (company.name || t.seller_role);
   const logoUrl = businessProfile?.business_logo_url ? businessAssetUrl(businessProfile.business_logo_url) : null;
   const whatsAppForQr = businessProfile?.business_whatsapp || company.whatsapp;
   const businessHours = formatHours(businessProfile?.business_hours, t);
@@ -84,11 +84,11 @@ export default function StorefrontScreen({
       if (response.ok) {
         setBusinessProfile(prev => prev ? { ...prev, business_banner_url: data.business_banner_url } : null);
       } else {
-        alert(data.message || 'Error al subir la portada');
+        alert(t.banner_upload_failed);
       }
     } catch (err) {
       console.error('Error uploading banner cover:', err);
-      alert('Error de red al subir la portada');
+      alert(t.banner_upload_failed);
     } finally {
       setBannerUploading(false);
       event.target.value = '';
@@ -108,7 +108,7 @@ export default function StorefrontScreen({
     <div className="max-w-[1000px] mx-auto md:py-8 pt-4 px-4">
       <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm mb-8">
         <div className="h-32 md:h-48 bg-slate-200 relative group/banner">
-            <img src={bannerUrl} className="w-full h-full object-cover" alt="Cover" />
+            <img src={bannerUrl} className="w-full h-full object-cover" alt={t.cover_photo} />
 
             {bannerUploading && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-20">
@@ -122,7 +122,7 @@ export default function StorefrontScreen({
                   onClick={() => bannerInputRef.current?.click()}
                   className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-900 font-bold px-4 py-2.5 rounded-full flex items-center gap-2 shadow text-xs transition-all transform hover:scale-105"
                 >
-                  <Camera size={14} /> Actualizar Portada
+                  <Camera size={14} /> {t.change_banner}
                 </button>
                 <input
                   type="file"
@@ -145,18 +145,18 @@ export default function StorefrontScreen({
                {isBusinessEnabled && <span className="badge bg-slate-900 text-white ml-1">PRO</span>}
                {businessProfile?.business_rfc_verified && (
                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 border border-emerald-100">
-                   <CheckCircle className="w-3 h-3" /> {t.rfc_verified || 'RFC verificado'}
+                   <CheckCircle className="w-3 h-3" /> {t.rfc_verified}
                  </span>
                )}
              </h1>
-             <p className="text-[14px] text-slate-500 mt-1 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {businessProfile?.business_address || 'México'}</p>
+             <p className="text-[14px] text-slate-500 mt-1 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {businessProfile?.business_address || t.all_mexico}</p>
              {businessProfile?.business_description && (
                <p className="text-[14px] text-slate-600 mt-3 max-w-2xl leading-relaxed">{businessProfile.business_description}</p>
              )}
              <div className="flex items-center gap-1 mt-2">
                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
                <span className="font-bold text-slate-900 text-[14px]">{Number(companyRatingStats.average || 0).toFixed(1)}</span>
-               <span className="text-slate-500 text-[13px]">({companyRatingStats.total} {t.reviews_count || 'reseñas'})</span>
+               <span className="text-slate-500 text-[13px]">({companyRatingStats.total} {t.reviews_count})</span>
              </div>
 
              <div className="flex flex-wrap gap-2 mt-4">
@@ -167,7 +167,7 @@ export default function StorefrontScreen({
                )}
                {isBusinessEnabled && (
                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 border-slate-200 text-slate-700 text-[12px] font-semibold">
-                   <Building2 className="w-3.5 h-3.5"/> {t.business_profile_tag || 'Perfil de negocio'}
+                   <Building2 className="w-3.5 h-3.5"/> {t.business_profile_tag}
                  </div>
                )}
                {companyAds.length >= 10 && (
@@ -185,7 +185,7 @@ export default function StorefrontScreen({
                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px] text-slate-600">
                  {businessProfile?.business_website && (
                    <a href={businessProfile.business_website} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
-                     <Globe className="w-4 h-4 text-slate-400" /> {t.website || 'Sitio web'}
+                     <Globe className="w-4 h-4 text-slate-400" /> {t.website}
                    </a>
                  )}
                  {businessHours.slice(0, 4).map(line => (
@@ -239,7 +239,7 @@ export default function StorefrontScreen({
                 </button>
               ))}
             </div>
-            <textarea value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} placeholder={t.review_placeholder || 'Cómo fue tu experiencia con este vendedor?'} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[14px] mb-3 min-h-[80px]"></textarea>
+            <textarea value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} placeholder={t.review_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[14px] mb-3 min-h-[80px]"></textarea>
             <button type="submit" disabled={submittingReview} className="btn-sm bg-[#0F172A] text-white hover:bg-black flex items-center gap-2">
               {submittingReview ? <Loader2 className="w-4 h-4 animate-spin"/> : t.publish_review}
             </button>
