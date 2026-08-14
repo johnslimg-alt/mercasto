@@ -3,7 +3,7 @@ import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { getTranslations } from './utils/translations';
 import { localizedText } from './utils/localize';
-import { formatDateTime, formatMXN, formatNumber } from './utils/localeFormat';
+import { formatDate, formatDateTime, formatMXN, formatNumber } from './utils/localeFormat';
 import { formatPaymentActionCopy, getPaymentActionCopy } from './utils/paymentActionCopy';
 import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlState';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
@@ -16,7 +16,7 @@ import { getPublicSeo } from './constants/publicSeo';
 // Subcategory data is either an array of Spanish labels (canonical value == display label)
 // or an object keyed by a stable slug (canonical value == slug, label is translated).
 // Always returns [{ value, label }] pairs so the dropdown can render either shape uniformly.
-function localizeAccountServerMessage(lang, serverMessage, fallback) {
+function localizeServerMessage(lang, serverMessage, fallback) {
   return lang === 'es' && serverMessage ? serverMessage : fallback;
 }
 
@@ -1302,7 +1302,7 @@ function App() {
         const a = document.createElement('a'); a.href = url; a.download = `mercasto_company_${userData.id}.json`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
       } else showToast('Error al obtener datos del backend', 'error');
-    } catch (err) { console.error("Export error", err); showToast('Error de conexión', 'error'); }
+    } catch (err) { console.error("Export error", err); showToast(t.connection_error, 'error'); }
   };
 
   useEffect(() => {
@@ -1515,8 +1515,8 @@ function App() {
           if (data.user) {
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
-            showToast(localizeAccountServerMessage(lang, data.message, t.email_verified));
-          } else showToast(localizeAccountServerMessage(lang, data.message, t.account_action_email_confirm_error), 'error');
+            showToast(localizeServerMessage(lang, data.message, t.email_verified));
+          } else showToast(localizeServerMessage(lang, data.message, t.account_action_email_confirm_error), 'error');
         })
         .catch(err => console.error(err))
         .finally(() => window.history.replaceState({}, document.title, window.location.pathname));
@@ -2304,6 +2304,7 @@ function App() {
       setShowAuthModal(true);
       return;
     }
+    const actionT = getTranslations(lang);
     setSavingSearchAlert(true);
     try {
       const searchAlertFilters = { ...(dynamicFilters || {}) };
@@ -2327,14 +2328,14 @@ function App() {
       const created = await res.json();
       setSearchAlerts(prev => [created, ...prev.filter(item => item.id !== created.id)]);
       window.dispatchEvent(new CustomEvent('mercasto:search-alert-saved', { detail: created }));
-      showToast('Búsqueda guardada. Te avisaremos de nuevos anuncios.', 'success');
+      showToast(actionT.listing_action_search_saved);
     } catch (err) {
       console.error('Error saving search alert', err);
-      showToast('No se pudo guardar la búsqueda', 'error');
+      showToast(actionT.listing_action_search_save_error, 'error');
     } finally {
       setSavingSearchAlert(false);
     }
-  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, dynamicFilters, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
+  }, [activeCat, conditionFilter, debouncedLocInput, debouncedSearch, dynamicFilters, lang, maxPrice, minPrice, searchLocationInput, searchQuery, selectedState]);
 
   const handleToggleSearchAlert = useCallback(async (alert) => {
     const token = localStorage.getItem('auth_token');
@@ -2697,7 +2698,7 @@ function App() {
           const successMessage = authMode === 'forgot_password'
             ? t.account_action_recovery_email_sent
             : t.password_updated;
-          showToast(localizeAccountServerMessage(lang, result.message, successMessage));
+          showToast(localizeServerMessage(lang, result.message, successMessage));
           setAuthMode('login');
         } else if (result.two_factor) {
           setTwoFactorEmail(result.email || data.email || '');
@@ -2730,7 +2731,7 @@ function App() {
             : authMode === 'reset_password'
               ? t.account_action_password_reset_error
               : t.account_action_request_error;
-        showToast(localizeAccountServerMessage(lang, serverMessage, fallbackMessage), 'error');
+        showToast(localizeServerMessage(lang, serverMessage, fallbackMessage), 'error');
       }
     } catch (err) {
       console.error("Auth error", err);
@@ -2767,7 +2768,7 @@ function App() {
         setTwoFactorChallengeToken('');
         setTwoFactorEmail('');
       } else {
-        showToast(localizeAccountServerMessage(lang, result.message, t.account_action_invalid_two_factor), 'error');
+        showToast(localizeServerMessage(lang, result.message, t.account_action_invalid_two_factor), 'error');
       }
     } catch (err) { showToast(t.connection_error, 'error'); }
     finally { setAuthLoading(false); }
@@ -2787,9 +2788,9 @@ function App() {
       });
       const result = await res.json();
       if (res.ok) {
-        showToast(localizeAccountServerMessage(lang, result.message, t.account_action_sms_sent));
+        showToast(localizeServerMessage(lang, result.message, t.account_action_sms_sent));
         setAuthMode('phone_verify');
-      } else showToast(localizeAccountServerMessage(lang, result.message, t.account_action_sms_unavailable), 'error');
+      } else showToast(localizeServerMessage(lang, result.message, t.account_action_sms_unavailable), 'error');
     } catch (err) { showToast(t.connection_error, 'error'); }
     finally { setAuthLoading(false); }
   };
@@ -2823,7 +2824,7 @@ function App() {
         }
         setPendingPhoneRegistrationConsent(null);
         setShowAuthModal(false);
-      } else showToast(localizeAccountServerMessage(lang, result.message, t.account_action_sms_invalid), 'error');
+      } else showToast(localizeServerMessage(lang, result.message, t.account_action_sms_invalid), 'error');
     } catch (err) { showToast(t.connection_error, 'error'); }
     finally { setAuthLoading(false); }
   };
@@ -2925,10 +2926,10 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(localizeAccountServerMessage(lang, data.message, t.password_updated));
+        showToast(localizeServerMessage(lang, data.message, t.password_updated));
         setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       } else {
-        showToast(localizeAccountServerMessage(lang, data.message, t.password_update_error), 'error');
+        showToast(localizeServerMessage(lang, data.message, t.password_update_error), 'error');
       }
     } catch (err) { console.error("Password update error", err); showToast(t.connection_error, 'error'); }
     finally { setPasswordLoading(false); }
@@ -2946,10 +2947,10 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(localizeAccountServerMessage(lang, data.message, t.email_verification_sent));
+        showToast(localizeServerMessage(lang, data.message, t.email_verification_sent));
         setEmailForm({ new_email: '', password: '' });
       } else {
-        showToast(localizeAccountServerMessage(lang, data.message, t.account_action_email_request_error), 'error');
+        showToast(localizeServerMessage(lang, data.message, t.account_action_email_request_error), 'error');
       }
     } catch (err) { console.error("Email update error", err); showToast(t.connection_error, 'error'); }
     finally { setEmailLoading(false); }
@@ -3036,7 +3037,7 @@ function App() {
       return;
     }
     if (!form.title) {
-      showToast('Agrega un título primero para generar la descripción con IA.', 'error');
+      showToast(t.listing_action_ai_title_required, 'error');
       return;
     }
 
@@ -3066,7 +3067,7 @@ function App() {
 
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || data.message || 'No se pudo generar la descripción.', 'error');
+        showToast(localizeServerMessage(lang, data.error || data.message, t.ai_description_failed), 'error');
         return;
       }
 
@@ -3075,7 +3076,7 @@ function App() {
       }
     } catch (err) {
       console.error('AI description error', err);
-      showToast('Error de conexión al generar la descripción.', 'error');
+      showToast(t.connection_error, 'error');
     } finally {
       setAiLoading(false);
     }
@@ -3088,7 +3089,7 @@ function App() {
       return;
     }
     if (form.latitude === '' || form.longitude === '') {
-      showToast('Selecciona la ubicación exacta tocando el mapa.', 'error');
+      showToast(t.post_location_required, 'error');
       return;
     }
 
@@ -3183,7 +3184,7 @@ function App() {
       } else {
         const errorData = await res.json();
         const validationError = Object.values(errorData.errors || {}).flat().find(Boolean);
-        showToast(`Error: ${validationError || errorData.message || 'No se pudo guardar el anuncio.'}`, 'error');
+        showToast(localizeServerMessage(lang, validationError || errorData.message, t.listing_action_save_error), 'error');
       }
     } catch (err) { console.error("Post error"); }
     finally { setPostLoading(false); }
@@ -3202,7 +3203,7 @@ function App() {
         loadAds(1); // Reload after delete
         loadUserAds(); // Обновляем список моих объявлений
       } else {
-        showToast("Error al eliminar el anuncio.", 'error');
+        showToast(t.listing_action_delete_error, 'error');
       }
     } catch (err) {
       console.error("Delete error", err);
@@ -3237,7 +3238,7 @@ function App() {
       url: url,
       preview: url
     })));
-    setVideoFile(ad.video_url ? { name: 'Video adjunto (Haz clic en la papelera para eliminar)', isExisting: true } : null); // Исправляем баг потери видео при редактировании
+    setVideoFile(ad.video_url ? { name: t.listing_action_existing_video, isExisting: true } : null); // Исправляем баг потери видео при редактировании
     setCurrentTab('post');
     navigate('/post');
   };
@@ -3270,7 +3271,7 @@ function App() {
         handleViewCompany(viewedCompany); // Перезагружаем профиль продавца для обновления отзывов
       } else {
         const errData = await res.json();
-        showToast(`Error: ${errData.message}`, 'error');
+        showToast(localizeServerMessage(lang, errData.message, t.review_error), 'error');
       }
     } catch (err) { console.error("Review error", err); showToast('Error de conexión', 'error'); }
     finally { setSubmittingReview(false); }
@@ -3295,14 +3296,14 @@ function App() {
 
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || 'Subida masiva completada');
+        showToast(localizeServerMessage(lang, data.message, t.listing_action_bulk_success));
         window.location.reload(); // Recargar para mostrar los nuevos anuncios en el dashboard
       } else {
-        showToast(`Error: ${data.message || 'No se pudo procesar el archivo.'}`, 'error');
+        showToast(localizeServerMessage(lang, data.message, t.listing_action_bulk_error), 'error');
       }
     } catch (err) {
       console.error("Bulk upload error", err);
-      showToast('Error de conexión al subir el archivo.', 'error');
+      showToast(t.connection_error, 'error');
     } finally {
       setIsUploadingBulk(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -3312,7 +3313,7 @@ function App() {
   // --- ПЕРЕКЛЮЧЕНИЕ СТАТУСА ОБЪЯВЛЕНИЯ (АКТИВНО/НЕАКТИВНО) ---
   const handleToggleAdStatus = async (ad) => {
     if (ad.status === 'pending' || ad.status === 'rejected') {
-      showToast('Este anuncio está en revisión o fue rechazado y no puede ser activado manualmente.', 'error');
+      showToast(t.listing_action_activation_blocked, 'error');
       return;
     }
     const newStatus = ad.status === 'active' ? 'paused' : (ad.status === 'paused' ? 'active' : (ad.status === 'inactive' ? 'active' : 'paused'));
@@ -3347,13 +3348,13 @@ function App() {
       if (res.ok) {
         setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, republish_count: data.republish_count } : a));
         setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active' } : a));
-        showToast('Anuncio republicado exitosamente! Estará activo 7 días más.');
+        showToast(t.listing_action_republish_success);
       } else {
-        showToast(data.message || 'No se pudo republicar el anuncio.', 'error');
+        showToast(localizeServerMessage(lang, data.message, t.listing_action_republish_error), 'error');
       }
     } catch (err) {
       console.error("Republish error", err);
-      showToast('Error de conexión al republicar.', 'error');
+      showToast(t.connection_error, 'error');
     }
   };
 
@@ -3368,19 +3369,19 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        const newExpiry = data.expires_at ? new Date(data.expires_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+        const newExpiry = formatDate(data.expires_at, lang, { day: 'numeric', month: 'long', year: 'numeric' });
         setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, status: 'active', expires_at: data.expires_at, reminder_sent_at: null } : a));
-        showToast(`Anuncio renovado hasta ${newExpiry}!`);
+        showToast(newExpiry ? t.listing_action_renew_success.replace('{date}', newExpiry) : t.listing_action_renewed);
       } else if (res.status === 402 && data.payment_required) {
-        showToast(data.message || 'Redirigiendo al pago seguro para renovar el anuncio.');
+        showToast(localizeServerMessage(lang, data.message, t.listing_action_renew_payment));
       } else if (res.status === 402) {
-        showToast(data.message || 'No se pudo iniciar la renovación.', 'error');
+        showToast(localizeServerMessage(lang, data.message, t.listing_action_renew_start_error), 'error');
       } else {
-        showToast(data.message || 'No se pudo renovar el anuncio.', 'error');
+        showToast(localizeServerMessage(lang, data.message, t.listing_action_renew_error), 'error');
       }
     } catch (err) {
       console.error('Renew error', err);
-      showToast('Error de conexión al renovar.', 'error');
+      showToast(t.connection_error, 'error');
     }
   };
 
@@ -3399,13 +3400,14 @@ function App() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.message || 'No pudimos enviar el reporte.');
+        showToast(localizeServerMessage(lang, data.message, t.listing_action_report_error), 'error');
+        return;
       }
-      showToast(data.message || 'Reporte enviado.');
+      showToast(localizeServerMessage(lang, data.message, t.listing_action_report_sent));
       setShowReportModal(false);
       setReportForm({ reason: '', comments: '' });
       setReportingAd(null);
-    } catch (err) { console.error("Report error", err); showToast(err.message || 'Error de conexión', 'error'); }
+    } catch (err) { console.error("Report error", err); showToast(t.connection_error, 'error'); }
   };
 
   // --- ПОЖАЛОВАТЬСЯ НА ПОЛЬЗОВАТЕЛЯ ---
@@ -3421,21 +3423,25 @@ function App() {
         },
         body: JSON.stringify(userReportForm)
       });
-      const data = await res.json();
-      showToast(data.message || 'Reporte de usuario enviado.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(localizeServerMessage(lang, data.message, t.listing_action_report_error), 'error');
+        return;
+      }
+      showToast(localizeServerMessage(lang, data.message, t.listing_action_user_report_sent));
       setShowUserReportModal(false);
       setUserReportForm({ reason: '', comments: '' });
-    } catch (err) { console.error("Report error", err); showToast('Error de conexión', 'error'); }
+    } catch (err) { console.error("Report error", err); showToast(t.connection_error, 'error'); }
   };
 
   // --- ПОДЕЛИТЬСЯ ОБЪЯВЛЕНИЕМ ---
   const handleShareAd = (ad) => {
     const adTitle = localizedText(ad.title, lang);
     if (navigator.share) {
-      navigator.share({ title: adTitle, text: `Mira este anuncio en Mercasto: ${adTitle}`, url: window.location.href }).catch(console.error);
+      navigator.share({ title: adTitle, text: t.listing_action_share_text.replace('{title}', adTitle), url: window.location.href }).catch(console.error);
     } else {
       navigator.clipboard.writeText(window.location.href);
-      showToast('Enlace copiado al portapapeles!');
+      showToast(t.copied);
     }
   };
 

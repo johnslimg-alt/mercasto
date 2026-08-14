@@ -68,7 +68,7 @@ test('Mexico Spanish account actions follow closing-only punctuation policy', as
 test('App localizes auth/account actions and does not expose former Spanish fallbacks', () => {
   const source = fs.readFileSync('src/App.jsx', 'utf8');
   assert.match(source, /t\.account_action_invalid_credentials/);
-  assert.match(source, /localizeAccountServerMessage\(lang, serverMessage, fallbackMessage\)/);
+  assert.match(source, /localizeServerMessage\(lang, serverMessage, fallbackMessage\)/);
   assert.match(source, /t\.account_action_invalid_two_factor/);
   assert.match(source, /t\.email_verification_sent/);
   assert.match(source, /t\.account_action_notifications_saved/);
