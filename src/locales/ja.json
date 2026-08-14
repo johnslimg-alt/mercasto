@@ -43,7 +43,12 @@
     "dealsOfTheDay": "本日のセール",
     "viewAll": "すべて見る",
     "noResults": "結果が見つかりませんでした",
-    "tryDifferentFilters": "別のフィルターをお試しください"
+    "tryDifferentFilters": "別のフィルターをお試しください",
+    "home": "ホーム",
+    "motor": "自動車",
+    "realEstate": "不動産",
+    "jobs": "求人",
+    "services": "サービス"
   },
   "ads": {
     "postAd": "広告を出品する",

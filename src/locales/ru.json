@@ -43,7 +43,12 @@
     "dealsOfTheDay": "Сделки дня",
     "viewAll": "Посмотреть все",
     "noResults": "Ничего не найдено",
-    "tryDifferentFilters": "Попробуйте другие фильтры"
+    "tryDifferentFilters": "Попробуйте другие фильтры",
+    "home": "Главная",
+    "motor": "Авто",
+    "realEstate": "Недвижимость",
+    "jobs": "Работа",
+    "services": "Услуги"
   },
   "ads": {
     "postAd": "Подать объявление",

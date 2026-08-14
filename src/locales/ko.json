@@ -43,7 +43,12 @@
     "dealsOfTheDay": "오늘의 딜",
     "viewAll": "전체 보기",
     "noResults": "검색 결과가 없습니다",
-    "tryDifferentFilters": "다른 필터를 적용해 보세요"
+    "tryDifferentFilters": "다른 필터를 적용해 보세요",
+    "home": "홈",
+    "motor": "자동차",
+    "realEstate": "부동산",
+    "jobs": "채용",
+    "services": "서비스"
   },
   "ads": {
     "postAd": "광고 등록",

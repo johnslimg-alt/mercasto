@@ -1683,7 +1683,9 @@ function App() {
     }
 
     const sellerProfileOwnsSeo = /^\/vendedor\/\d+\/?$/.test(location.pathname);
-    if (!sellerProfileOwnsSeo) {
+    const routeSeoOwner = document.documentElement.dataset.mercastoSeoOwner;
+    const routeOwnsSeo = sellerProfileOwnsSeo || routeSeoOwner === 'not-found';
+    if (!routeOwnsSeo) {
       document.title = title;
       document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
       document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
@@ -1732,7 +1734,9 @@ function App() {
       robotsEl.setAttribute('name', 'robots');
       document.head.appendChild(robotsEl);
     }
-    robotsEl.setAttribute('content', robotsContent);
+    if (routeSeoOwner !== 'not-found') {
+      robotsEl.setAttribute('content', robotsContent);
+    }
 
     let canonicalEl = document.querySelector('link[rel="canonical"]');
     if (!canonicalEl) {
