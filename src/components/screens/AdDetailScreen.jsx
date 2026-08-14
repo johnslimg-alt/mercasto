@@ -394,7 +394,9 @@ export default function AdDetailScreen({
   // Dynamic OG tags for social sharing
   useDocumentMeta({
     title: localizedText(ad?.title, lang) || 'Mercasto',
-    description: ad ? `$${formatNumber(ad.price || 0, lang)} - ${ad.state || ad.location || detailCopy.mexico}` : '',
+    description: ad?.description
+      ? localizedText(ad.description, lang).substring(0, 160)
+      : (t.ai_brand_description || ''),
     image: ad ? getImageUrl(ad.image_url || ad.image?.[0]) : '',
     url: typeof window !== 'undefined' ? window.location.href : ''
   });
