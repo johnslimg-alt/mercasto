@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Mercastoでこの広告を見る: {title}",
   listing_action_existing_video: "添付済み動画（ゴミ箱アイコンで削除）",
   listing_action_renewed: "広告を延長しました。",
+  coupon_redeem_success: 'クーポンを利用しました。クレジットを残高に追加しました。',
+  coupon_redeem_error: 'クーポンを利用できませんでした。',
 };

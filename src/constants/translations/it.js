@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Dai un'occhiata a questo annuncio su Mercasto: {title}",
   listing_action_existing_video: "Video allegato (usa il cestino per rimuoverlo)",
   listing_action_renewed: "Annuncio rinnovato.",
+  coupon_redeem_success: 'Coupon riscattato. I crediti sono stati aggiunti al saldo.',
+  coupon_redeem_error: 'Impossibile riscattare il coupon.',
 };

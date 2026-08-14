@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Confira este anúncio em Mercasto: {title}",
   listing_action_existing_video: "Vídeo anexado (use a lixeira para removê-lo)",
   listing_action_renewed: "Anúncio renovado.",
+  coupon_redeem_success: 'Cupom resgatado. Os créditos foram adicionados ao seu saldo.',
+  coupon_redeem_error: 'Não foi possível resgatar o cupom.',
 };

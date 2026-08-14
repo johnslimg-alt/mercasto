@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Schauen Sie sich diese Anzeige auf Mercasto an: {title}",
   listing_action_existing_video: "Angehängtes Video (zum Entfernen Papierkorb verwenden)",
   listing_action_renewed: "Anzeige verlängert.",
+  coupon_redeem_success: 'Coupon eingelöst. Die Credits wurden Ihrem Guthaben hinzugefügt.',
+  coupon_redeem_error: 'Der Coupon konnte nicht eingelöst werden.',
 };

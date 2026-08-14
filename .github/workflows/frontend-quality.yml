@@ -37,6 +37,7 @@ on:
       - 'tests/payment-action-localization.test.mjs'
       - 'tests/account-action-localization.test.mjs'
       - 'tests/listing-action-localization.test.mjs'
+      - 'tests/user-feedback-localization.test.mjs'
       - 'tests/e2e/vertical-landing-localization.spec.js'
       - 'tests/e2e/autos-landing-localization.spec.js'
       - 'tests/e2e/empleos-landing-localization.spec.js'
@@ -103,6 +104,7 @@ on:
       - 'tests/payment-action-localization.test.mjs'
       - 'tests/account-action-localization.test.mjs'
       - 'tests/listing-action-localization.test.mjs'
+      - 'tests/user-feedback-localization.test.mjs'
       - 'tests/e2e/vertical-landing-localization.spec.js'
       - 'tests/e2e/autos-landing-localization.spec.js'
       - 'tests/e2e/empleos-landing-localization.spec.js'
@@ -165,7 +167,7 @@ jobs:
       - name: Audit translations
         run: npm run i18n:audit
       - name: Check vertical localization coverage
-        run: node --test tests/vertical-copy-localization.test.mjs tests/autos-landing-copy.test.mjs tests/empleos-landing-copy.test.mjs tests/inmuebles-landing-copy.test.mjs tests/servicios-landing-copy.test.mjs tests/category-landing-subcategory-localization.test.mjs tests/storefront-review-locale.test.mjs tests/ad-detail-localization.test.mjs tests/seller-profile-localization.test.mjs tests/storefront-public-copy.test.mjs tests/stores-directory-localization.test.mjs tests/runtime-seo-localization.test.mjs tests/runtime-schema-localization.test.mjs tests/contact-page-localization.test.mjs tests/help-center-localization.test.mjs tests/email-verification-localization.test.mjs tests/not-found-localization.test.mjs tests/geo-source-localization.test.mjs tests/payment-action-localization.test.mjs tests/account-action-localization.test.mjs tests/listing-action-localization.test.mjs
+        run: node --test tests/vertical-copy-localization.test.mjs tests/autos-landing-copy.test.mjs tests/empleos-landing-copy.test.mjs tests/inmuebles-landing-copy.test.mjs tests/servicios-landing-copy.test.mjs tests/category-landing-subcategory-localization.test.mjs tests/storefront-review-locale.test.mjs tests/ad-detail-localization.test.mjs tests/seller-profile-localization.test.mjs tests/storefront-public-copy.test.mjs tests/stores-directory-localization.test.mjs tests/runtime-seo-localization.test.mjs tests/runtime-schema-localization.test.mjs tests/contact-page-localization.test.mjs tests/help-center-localization.test.mjs tests/email-verification-localization.test.mjs tests/not-found-localization.test.mjs tests/geo-source-localization.test.mjs tests/payment-action-localization.test.mjs tests/account-action-localization.test.mjs tests/listing-action-localization.test.mjs tests/user-feedback-localization.test.mjs
       - name: Run frontend lint gate
         run: npm run lint:ci
       - name: Run public copy scan

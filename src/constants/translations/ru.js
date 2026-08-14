@@ -1192,4 +1192,6 @@ export default {
   listing_action_share_text: "Посмотрите это объявление на Mercasto: {title}",
   listing_action_existing_video: "Прикреплённое видео (удалите через значок корзины)",
   listing_action_renewed: "Объявление продлено.",
+  coupon_redeem_success: 'Купон применён. Кредиты добавлены на баланс.',
+  coupon_redeem_error: 'Не удалось применить купон.',
 };

@@ -3273,7 +3273,7 @@ function App() {
         const errData = await res.json();
         showToast(localizeServerMessage(lang, errData.message, t.review_error), 'error');
       }
-    } catch (err) { console.error("Review error", err); showToast('Error de conexión', 'error'); }
+    } catch (err) { console.error("Review error", err); showToast(t.connection_error, 'error'); }
     finally { setSubmittingReview(false); }
   };
 
@@ -3616,15 +3616,17 @@ function App() {
         body: JSON.stringify({ code: couponInput.trim() })
       });
       const data = await res.json();
-      showToast(data.message, 'error');
       if (res.ok && data.balance !== undefined) {
+        showToast(localizeServerMessage(lang, data.message, t.coupon_redeem_success));
         setShowCouponModal(false);
         setCouponInput('');
         const updatedUser = { ...user, balance: data.balance };
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
+      } else {
+        showToast(localizeServerMessage(lang, data.message, t.coupon_redeem_error), 'error');
       }
-    } catch (e) { console.error(e); showToast('Error de conexión', 'error'); }
+    } catch (e) { console.error(e); showToast(t.connection_error, 'error'); }
   };
 
   // --- ПРОСМОТР ОБЪЯВЛЕНИЯ И АНАЛИТИКА ---
