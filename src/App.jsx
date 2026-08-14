@@ -1683,8 +1683,9 @@ function App() {
     }
 
     const sellerProfileOwnsSeo = /^\/vendedor\/\d+\/?$/.test(location.pathname);
+    const geoSourceOwnsSeo = /^\/(?:como-funciona|seguridad|tarifas|sobre-mercasto|ayuda\/(?:publicar-anuncio|comprar-y-contactar))\/?$/.test(location.pathname);
     const routeSeoOwner = document.documentElement.dataset.mercastoSeoOwner;
-    const routeOwnsSeo = sellerProfileOwnsSeo || routeSeoOwner === 'not-found';
+    const routeOwnsSeo = sellerProfileOwnsSeo || geoSourceOwnsSeo || routeSeoOwner === 'not-found';
     if (!routeOwnsSeo) {
       document.title = title;
       document.querySelector('meta[name="description"]')?.setAttribute('content', desc);

@@ -2,17 +2,20 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Clock3, ShieldCheck } from 'lucide-react';
 import SEO from '../SEO';
+import { useUI } from '../../contexts/UIContext';
+import { localeFor } from '../../utils/localeFormat';
 import {
   GEO_SOURCE_UPDATED_ISO,
-  GEO_SOURCE_UPDATED_LABEL,
   getGeoSourcePage,
+  getGeoSourceShellCopy,
 } from '../../content/geoSourcePages';
 
 const SITE_URL = 'https://mercasto.com';
 
-function SourceSchema({ page }) {
+function SourceSchema({ page, lang, homeLabel }) {
   useEffect(() => {
     const canonical = `${SITE_URL}${page.path}`;
+    const schemaLanguage = lang === 'es' ? 'es-MX' : lang;
     const graph = [
       {
         '@type': page.schemaType,
@@ -20,7 +23,7 @@ function SourceSchema({ page }) {
         url: canonical,
         name: page.title,
         description: page.description,
-        inLanguage: 'es-MX',
+        inLanguage: schemaLanguage,
         dateModified: GEO_SOURCE_UPDATED_ISO,
         isPartOf: { '@id': `${SITE_URL}/#website` },
         publisher: { '@id': `${SITE_URL}/#organization` },
@@ -29,7 +32,7 @@ function SourceSchema({ page }) {
         '@type': 'BreadcrumbList',
         '@id': `${canonical}#breadcrumb`,
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Inicio', item: `${SITE_URL}/` },
+          { '@type': 'ListItem', position: 1, name: homeLabel, item: `${SITE_URL}/` },
           { '@type': 'ListItem', position: 2, name: page.heading, item: canonical },
         ],
       },
@@ -43,7 +46,7 @@ function SourceSchema({ page }) {
           '@type': 'ContactPoint',
           contactType: 'customer support',
           url: `${SITE_URL}/contacto`,
-          availableLanguage: ['es'],
+          availableLanguage: [schemaLanguage],
         },
       },
       {
@@ -51,7 +54,7 @@ function SourceSchema({ page }) {
         '@id': `${SITE_URL}/#website`,
         name: 'Mercasto',
         url: `${SITE_URL}/`,
-        inLanguage: 'es-MX',
+        inLanguage: schemaLanguage,
         publisher: { '@id': `${SITE_URL}/#organization` },
       },
     ];
@@ -60,6 +63,7 @@ function SourceSchema({ page }) {
       graph.push({
         '@type': 'FAQPage',
         '@id': `${canonical}#faq`,
+        inLanguage: schemaLanguage,
         mainEntity: page.faqs.map((faq) => ({
           '@type': 'Question',
           name: faq.question,
@@ -75,12 +79,25 @@ function SourceSchema({ page }) {
     document.head.appendChild(script);
 
     return () => document.getElementById('geo-source-schema')?.remove();
-  }, [page]);
+  }, [homeLabel, lang, page]);
 
   return null;
 }
+
+function formatUpdatedDate(lang) {
+  return new Intl.DateTimeFormat(localeFor(lang), {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${GEO_SOURCE_UPDATED_ISO}T00:00:00Z`));
+}
+
 export default function GeoSourcePage({ slug }) {
-  const page = getGeoSourcePage(slug);
+  const { lang, loadedLangVersion } = useUI();
+  void loadedLangVersion;
+  const page = getGeoSourcePage(slug, lang);
+  const shell = getGeoSourceShellCopy(lang);
 
   if (!page) {
     return null;
@@ -94,7 +111,7 @@ export default function GeoSourcePage({ slug }) {
         url={page.path}
         image="https://mercasto.com/icon-512x512.png"
       />
-      <SourceSchema page={page} />
+      <SourceSchema page={page} lang={lang} homeLabel={shell.home} />
 
       <main>
         <section className="border-b border-slate-200 bg-slate-950 text-white">
@@ -111,8 +128,8 @@ export default function GeoSourcePage({ slug }) {
             </p>
             <div className="mt-7 inline-flex items-center gap-2 text-sm text-slate-400">
               <Clock3 className="h-4 w-4" />
-              Última actualización:{' '}
-              <time dateTime={GEO_SOURCE_UPDATED_ISO}>{GEO_SOURCE_UPDATED_LABEL}</time>
+              {shell.updatedLabel}:{' '}
+              <time dateTime={GEO_SOURCE_UPDATED_ISO}>{formatUpdatedDate(lang)}</time>
             </div>
           </div>
         </section>
@@ -136,7 +153,7 @@ export default function GeoSourcePage({ slug }) {
           </div>
           {page.faqs?.length > 0 && (
             <section className="mt-12 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
-              <h2 className="text-2xl font-black tracking-tight">Preguntas frecuentes</h2>
+              <h2 className="text-2xl font-black tracking-tight">{shell.faqTitle}</h2>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 {page.faqs.map((faq) => (
                   <article key={faq.question} className="rounded-2xl bg-slate-50 p-5">
@@ -149,9 +166,9 @@ export default function GeoSourcePage({ slug }) {
           )}
 
           <section className="mt-12 rounded-3xl bg-lime-100 p-6 sm:p-8">
-            <h2 className="text-2xl font-black tracking-tight">Fuentes relacionadas de Mercasto</h2>
+            <h2 className="text-2xl font-black tracking-tight">{shell.relatedTitle}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
-              Estas páginas describen el comportamiento actual de la plataforma y sus políticas públicas.
+              {shell.relatedBody}
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {page.related.map((item) => (
@@ -161,7 +178,7 @@ export default function GeoSourcePage({ slug }) {
                   className="flex items-center justify-between rounded-2xl border border-lime-300 bg-white px-5 py-4 font-bold text-slate-900 transition hover:border-lime-500 hover:shadow-sm"
                 >
                   <span>{item.label}</span>
-                  <ArrowRight className="h-5 w-5 text-lime-700" />
+                  <ArrowRight className="h-5 w-5 text-lime-700 rtl:rotate-180" />
                 </Link>
               ))}
             </div>
