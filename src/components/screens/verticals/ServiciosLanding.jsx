@@ -100,6 +100,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
             apiUrl={`${API_URL}/ads?category=servicios&per_page=6`}
             viewAllUrl="/?category=servicios"
             viewAllLabel={copy.labels.viewAll}
+            lang={lang}
             cols={3}
             variant="services"
           />

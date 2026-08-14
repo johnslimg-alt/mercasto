@@ -426,7 +426,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 md:p-8 border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center gap-4 md:gap-6 mb-6 shadow-sm">
           {/* Push Notifications */}
           <div className="mb-6 md:mb-0 md:hidden">
-            <PushNotificationManager user={user} compact={false} />
+            <PushNotificationManager user={user} compact={false} lang={lang} />
           </div>
 
           {/* Avatar */}

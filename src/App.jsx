@@ -1290,7 +1290,7 @@ function App() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = `mercasto_company_${userData.id}.json`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-      } else showToast('Error al obtener datos del backend', 'error');
+      } else showToast(t.connection_error, 'error');
     } catch (err) { console.error("Export error", err); showToast(t.connection_error, 'error'); }
   };
 
@@ -3485,7 +3485,7 @@ function App() {
       const data = await res.json();
       if (res.ok && data.payment_url) {
         window.location.href = data.payment_url;
-      } else showToast(data.message || t.payment_error_generating, 'error');
+      } else showToast(localizeServerMessage(lang, data.message, t.payment_error_generating), 'error');
     } catch (err) { console.error("Payment error", err); showToast(t.connection_error, 'error'); }
   };
 
@@ -3511,7 +3511,7 @@ function App() {
       }), 'error');
       return;
     }
-    handleClipPayment(numericAmount, `${numericAmount.toLocaleString('es-MX')} Créditos Mercasto`, null, productCode);
+    handleClipPayment(numericAmount, `${formatNumber(numericAmount, lang)} ${t.pm_credits_unit} · Mercasto`, null, productCode);
   };
 
   // --- AI COMMAND CENTER LOGIC ---
