@@ -1,39 +1,36 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import VerticalAdGrid from '../../verticals/VerticalAdGrid';
 import MapV3 from '../../common/MapV3';
 import { BadgeCheck, Brush, Camera, Car, GraduationCap, Hammer, HeartHandshake, Leaf, PawPrint, Plug, ShieldCheck, Sparkles, Wrench } from 'lucide-react';
 import { getVerticalCopy } from '../../../utils/verticalCopy';
+import { getServiciosLandingCopy } from '../../../utils/serviciosLandingCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const SERVICE_CATS = [
-  { name: 'Hogar', query: 'plomería electricidad carpintería', Icon: Wrench },
-  { name: 'Reparaciones', query: 'reparaciones mantenimiento', Icon: Hammer },
-  { name: 'Limpieza', query: 'limpieza', Icon: Sparkles },
-  { name: 'Clases', query: 'clases cursos', Icon: GraduationCap },
-  { name: 'Diseño', query: 'diseño marketing', Icon: Brush },
-  { name: 'Eventos', query: 'fotografía eventos', Icon: Camera },
-  { name: 'Jardinería', query: 'jardinería', Icon: Leaf },
-  { name: 'Transporte', query: 'mudanza transporte', Icon: Car },
-  { name: 'Mascotas', query: 'mascotas veterinario', Icon: PawPrint },
-  { name: 'Cuidado', query: 'cuidado enfermería', Icon: HeartHandshake },
-  { name: 'Electricidad', query: 'electricidad', Icon: Plug },
+  { query: 'plomería electricidad carpintería', Icon: Wrench },
+  { query: 'reparaciones mantenimiento', Icon: Hammer },
+  { query: 'limpieza', Icon: Sparkles },
+  { query: 'clases cursos', Icon: GraduationCap },
+  { query: 'diseño marketing', Icon: Brush },
+  { query: 'fotografía eventos', Icon: Camera },
+  { query: 'jardinería', Icon: Leaf },
+  { query: 'mudanza transporte', Icon: Car },
+  { query: 'mascotas veterinario', Icon: PawPrint },
+  { query: 'cuidado enfermería', Icon: HeartHandshake },
+  { query: 'electricidad', Icon: Plug },
 ];
 
-const TRUST = [
-  { Icon: BadgeCheck, title: 'Revisa el perfil',
-    body: 'Consulta la información del anunciante, experiencia declarada y detalles del servicio.' },
-  { Icon: ShieldCheck, title: 'Opiniones cuando existen',
-    body: 'Consulta las valoraciones disponibles y confirma referencias antes de contratar.' },
-  { Icon: Wrench, title: 'Sin intermediarios',
-    body: 'Contacta directamente al profesional y negocia el precio sin comisiones.' },
-];
+const TRUST_ICONS = [BadgeCheck, ShieldCheck, Wrench];
 
 export default function ServiciosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'servicios');
+  const landingCopy = getServiciosLandingCopy(lang);
+  const localizedCategories = useMemo(() => SERVICE_CATS.map((item, index) => ({ ...item, name: landingCopy.categories[index] })), [landingCopy.categories]);
+  const localizedTrust = useMemo(() => TRUST_ICONS.map((Icon, index) => ({ Icon, title: landingCopy.trust[index][0], body: landingCopy.trust[index][1] })), [landingCopy.trust]);
 
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams({ category: 'servicios' });
@@ -54,7 +51,7 @@ export default function ServiciosLanding({ lang = 'es' }) {
         color="orange"
         mapQuery="servicios profesionales en México"
         onSearch={handleSearch}
-        subsections={SERVICE_CATS}
+        subsections={localizedCategories}
         onSubsectionSelect={(item) => navigate(`/?category=servicios&search=${encodeURIComponent(item.query)}`)}
       />
 
@@ -62,22 +59,22 @@ export default function ServiciosLanding({ lang = 'es' }) {
         <section>
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Servicios en el mapa</h2>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Encuentra profesionales cerca de ti con búsqueda y filtros fullscreen.</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{landingCopy.mapTitle}</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{landingCopy.mapDescription}</p>
             </div>
             <button onClick={() => navigate('/?category=servicios')}
               className="hidden rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600 sm:inline-flex">
               {copy.labels.viewList}
             </button>
           </div>
-          <MapV3 category="servicios" title="Servicios en México" className="h-[260px] md:h-[420px]" />
+          <MapV3 category="servicios" title={landingCopy.mapMarkerTitle} className="h-[260px] md:h-[420px]" />
         </section>
 
         {/* Service category grid */}
         <section>
-          <h2 className="text-2xl font-bold text-slate-900 mb-5">Qué servicio necesitas?</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-5">{landingCopy.needsTitle}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {SERVICE_CATS.map(s => {
+            {localizedCategories.map(s => {
               const Icon = s.Icon;
               return (
               <button key={s.name}
@@ -110,9 +107,9 @@ export default function ServiciosLanding({ lang = 'es' }) {
 
         {/* Trust section */}
         <section className="bg-orange-50 rounded-3xl p-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">Por qué Mercasto?</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">{landingCopy.trustTitle}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TRUST.map(item => {
+            {localizedTrust.map(item => {
               const Icon = item.Icon;
               return (
               <div key={item.title} className="bg-white rounded-2xl p-6 shadow-sm text-center">
@@ -129,12 +126,12 @@ export default function ServiciosLanding({ lang = 'es' }) {
         {/* Provider CTA */}
         <section className="bg-gradient-to-r from-orange-600 to-orange-400 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 text-white">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Eres profesional independiente?</h2>
-            <p className="text-orange-100">Publica tus servicios gratis y conecta con clientes en tu ciudad.</p>
+            <h2 className="text-2xl font-bold mb-2">{landingCopy.ctaTitle}</h2>
+            <p className="text-orange-100">{landingCopy.ctaBody}</p>
           </div>
           <button onClick={() => navigate('/post')}
             className="shrink-0 px-8 py-3 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition-colors text-[15px]">
-            Ofrecer mi servicio →
+            {landingCopy.ctaButton}
           </button>
         </section>
 

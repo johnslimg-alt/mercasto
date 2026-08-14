@@ -20,10 +20,12 @@ on:
       - 'tests/autos-landing-copy.test.mjs'
       - 'tests/empleos-landing-copy.test.mjs'
       - 'tests/inmuebles-landing-copy.test.mjs'
+      - 'tests/servicios-landing-copy.test.mjs'
       - 'tests/e2e/vertical-landing-localization.spec.js'
       - 'tests/e2e/autos-landing-localization.spec.js'
       - 'tests/e2e/empleos-landing-localization.spec.js'
       - 'tests/e2e/inmuebles-landing-localization.spec.js'
+      - 'tests/e2e/servicios-landing-localization.spec.js'
       - 'tests/e2e/notifications-localization.spec.js'
       - 'tests/e2e/catalog-filter-state.spec.js'
       - 'tests/e2e/catalog-request-race.spec.js'
@@ -53,10 +55,12 @@ on:
       - 'tests/autos-landing-copy.test.mjs'
       - 'tests/empleos-landing-copy.test.mjs'
       - 'tests/inmuebles-landing-copy.test.mjs'
+      - 'tests/servicios-landing-copy.test.mjs'
       - 'tests/e2e/vertical-landing-localization.spec.js'
       - 'tests/e2e/autos-landing-localization.spec.js'
       - 'tests/e2e/empleos-landing-localization.spec.js'
       - 'tests/e2e/inmuebles-landing-localization.spec.js'
+      - 'tests/e2e/servicios-landing-localization.spec.js'
       - 'tests/e2e/notifications-localization.spec.js'
       - 'tests/e2e/catalog-filter-state.spec.js'
       - 'tests/e2e/catalog-request-race.spec.js'
@@ -99,7 +103,7 @@ jobs:
       - name: Audit translations
         run: npm run i18n:audit
       - name: Check vertical localization coverage
-        run: node --test tests/vertical-copy-localization.test.mjs tests/autos-landing-copy.test.mjs tests/empleos-landing-copy.test.mjs tests/inmuebles-landing-copy.test.mjs
+        run: node --test tests/vertical-copy-localization.test.mjs tests/autos-landing-copy.test.mjs tests/empleos-landing-copy.test.mjs tests/inmuebles-landing-copy.test.mjs tests/servicios-landing-copy.test.mjs
       - name: Run frontend lint gate
         run: npm run lint:ci
       - name: Run public copy scan
@@ -119,7 +123,7 @@ jobs:
             sleep 1
           done
           BASE_URL=http://127.0.0.1:4173 CI=1 npx playwright test tests/e2e/notifications-localization.spec.js tests/e2e/shell-localization.spec.js tests/e2e/referral-localization.spec.js tests/e2e/profile-edit-localization.spec.js tests/e2e/chat-localization.spec.js tests/e2e/saved-searches-localization.spec.js tests/e2e/dashboard-locale-format.spec.js tests/e2e/post-edit-localization.spec.js --project=chromium-desktop --workers=1 --retries=1 --reporter=list
-          BASE_URL=http://127.0.0.1:4173 CI=1 npx playwright test tests/e2e/vertical-landing-localization.spec.js tests/e2e/autos-landing-localization.spec.js tests/e2e/empleos-landing-localization.spec.js tests/e2e/inmuebles-landing-localization.spec.js --project=chromium-desktop --project=chromium-mobile --workers=2 --retries=1 --reporter=list
+          BASE_URL=http://127.0.0.1:4173 CI=1 npx playwright test tests/e2e/vertical-landing-localization.spec.js tests/e2e/autos-landing-localization.spec.js tests/e2e/empleos-landing-localization.spec.js tests/e2e/inmuebles-landing-localization.spec.js tests/e2e/servicios-landing-localization.spec.js --project=chromium-desktop --project=chromium-mobile --workers=2 --retries=1 --reporter=list
       - name: Run catalog filter state regression
         run: |
           set -euo pipefail
