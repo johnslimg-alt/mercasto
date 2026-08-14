@@ -42,7 +42,7 @@ else
   grep -qF 'export default function ProfileEditScreen({ smsEnabled = false })' src/components/screens/ProfileEditScreen.jsx
   grep -qF '{smsEnabled && (' src/components/screens/ProfileEditScreen.jsx
   grep -qF '...(smsEnabled ? [' src/components/OnboardingModal.jsx
-  grep -qF 'La verificación por SMS se encuentra temporalmente deshabilitada.' src/components/screens/AyudaScreen.jsx
+  grep -qF 'La verificación por SMS se encuentra temporalmente deshabilitada.' src/utils/helpCenterCopy.js
   grep -qF 'La autenticación por SMS no está disponible en este momento.' backend/app/Http/Controllers/Api/AuthController.php
   grep -qF 'La verificación por SMS no está disponible en este momento.' backend/app/Http/Controllers/Api/PhoneVerificationController.php
 fi
