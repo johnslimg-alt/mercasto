@@ -73,7 +73,9 @@ test('App localizes payment actions without changing backend purchase contracts'
   assert.match(source, /formatPaymentActionCopy\(lang, 'invalidCreditsAmount'/);
   assert.match(source, /body: JSON\.stringify\(\{ description, ad_id: adId, product_code: productCode \}\)/);
   assert.match(source, /body: JSON\.stringify\(\{ type \}\)/);
-  assert.match(source, /`\$\{numericAmount\.toLocaleString\('es-MX'\)\} Créditos Mercasto`/);
+  assert.match(source, /`\$\{formatNumber\(numericAmount, lang\)\} \$\{t\.pm_credits_unit\} · Mercasto`/);
+  assert.doesNotMatch(source, /numericAmount\.toLocaleString\('es-MX'\)/);
+  assert.doesNotMatch(source, /Créditos Mercasto/);
   assert.doesNotMatch(source, /showToast\('Pago realizado con tu saldo!'/);
   assert.doesNotMatch(source, /showToast\('Selecciona un anuncio activo para promocionar\.'/);
   assert.doesNotMatch(source, /showToast\('Ingresa un monto entre \$50 y \$5,000\.'/);
