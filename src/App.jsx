@@ -33,6 +33,7 @@ import AdSenseBanner from './components/common/AdSenseBanner';
 import AdCard from './components/common/AdCard';
 import BuyerConversionNudge from './components/BuyerConversionNudge';
 const OnboardingModal = React.lazy(() => import('./components/OnboardingModal'));
+const AiCommandModal = React.lazy(() => import('./components/admin/AiCommandModal'));
 import {
   Search, Home, PlusCircle, Plus, User, Users, Settings, Shield, Menu,
   MapPin, ChevronRight, ChevronLeft, Heart, SlidersHorizontal,
@@ -275,19 +276,7 @@ const getEnvVar = (key, prodFallback) => {
 const API_URL = getEnvVar('VITE_API_BASE_URL', 'https://mercasto.com/api');
 const STORAGE_URL = getEnvVar('VITE_STORAGE_URL', 'https://mercasto.com/storage');
 const ENABLE_AI_PANEL = import.meta.env.VITE_ENABLE_AI_PANEL === 'true';
-const AI_PLACEHOLDERS = {
-  postgresql: 'Ej: Cuántos anuncios activos tenemos ahora?',
-  react: 'Ej: Crea un botón de acceso animado con Tailwind 4...',
-  lawyer: 'Ej: Redacta nuevas reglas de reembolso...',
-  notary: 'Ej: Qué requisitos aplican para documentos KYC?',
-  advocate: 'Ej: Cómo responder a una denuncia por fraude?',
-  marketing: 'Ej: Cómo aumentar la conversión en la portada?',
-  seo: 'Ej: Qué meta tags faltan para una ficha de producto?',
-  ceo_ui: 'Ej: Qué colores usar para productos premium?',
-  ceo_ux: 'Ej: Cómo mejorar el flujo de compra?',
-  ui: 'Ej: Escribe clases Tailwind para un header elegante...',
-  ceo: 'Ej: Alex, cuál es nuestra estrategia para Q3?',
-};
+
 
 const getImageUrl = (path, fallback = null) => {
   const defaultFallback = fallback || '/placeholder-ad.svg';
@@ -3534,7 +3523,7 @@ function App() {
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        setAiResult({ error: 'Error del sistema: token de autorización no encontrado. Cierra sesión e inicia sesión de nuevo.' });
+        setAiResult({ error: t.shell_login_continue });
         setIsAiProcessing(false);
         return;
       }
@@ -3561,7 +3550,7 @@ function App() {
       }
       setAiResult(data);
     } catch (err) {
-      setAiResult({ error: `Error de red: ${err.message}` });
+      setAiResult({ error: t.connection_error });
     } finally {
       setIsAiProcessing(false);
     }
@@ -3822,64 +3811,6 @@ function App() {
               <textarea value={userReportForm.comments} onChange={e => setUserReportForm({...userReportForm, comments: e.target.value})} placeholder={t.report_user_details_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
             </div>
             <button type="submit" className="btn-md w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] mt-2 shadow-sm">{t.report_send}</button>
-          </form>
-        </div>
-      </div>
-    );
-  };
-
-  // --- РЕНДЕР AI COMMAND CENTER (ТОЛЬКО ДЛЯ АДМИНА) ---
-  const renderAiModal = () => {
-    if (!showAiModal || user?.role !== 'admin') return null;
-    return (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowAiModal(false); }}>
-        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAiModal(false)} />
-        <div role="dialog" aria-modal="true" aria-labelledby="ai-command-title" className="bg-slate-900 w-full max-w-3xl rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95 border border-slate-700 flex flex-col max-h-[90vh]">
-          <button type="button" aria-label={t.close_btn || t.close || 'Cerrar'} onClick={() => setShowAiModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"><XCircle size={24}/></button>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center"><Sparkles className="text-indigo-400 w-6 h-6"/></div>
-            <div>
-              <h2 id="ai-command-title" className="text-[20px] font-bold text-white leading-none">Centro de Comando IA</h2>
-              <span className="text-[12px] text-slate-400">Agentes autónomos Mercasto</span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2 mb-4 bg-slate-800 p-1 rounded-xl w-fit">
-            <button type="button" onClick={() => {setAiAgentType('postgresql'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'postgresql' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🐘 Base de datos</button>
-            <button type="button" onClick={() => {setAiAgentType('react'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'react' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚛️ UX Builder</button>
-            <button type="button" onClick={() => {setAiAgentType('ceo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>👔 CEO Alex</button>
-            <button type="button" onClick={() => {setAiAgentType('lawyer'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'lawyer' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>⚖️ Legal</button>
-            <button type="button" onClick={() => {setAiAgentType('notary'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'notary' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📝 Notaría</button>
-            <button type="button" onClick={() => {setAiAgentType('advocate'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'advocate' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🛡️ Defensa</button>
-            <button type="button" onClick={() => {setAiAgentType('marketing'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'marketing' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>📈 Marketing</button>
-            <button type="button" onClick={() => {setAiAgentType('seo'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'seo' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🔍 SEO</button>
-            <button type="button" onClick={() => {setAiAgentType('ceo_ui'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo_ui' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🎨 CEO UI</button>
-            <button type="button" onClick={() => {setAiAgentType('ceo_ux'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ceo_ux' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>🧠 CEO UX</button>
-            <button type="button" onClick={() => {setAiAgentType('ui'); setAiResult(null);}} className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${aiAgentType === 'ui' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>✨ UI Builder</button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto mb-4 bg-slate-950 rounded-xl p-4 border border-slate-800 font-mono text-[13px] text-slate-300">
-            {isAiProcessing ? (
-              <div className="flex items-center gap-3 text-indigo-400"><Loader2 className="animate-spin w-5 h-5"/> El agente analiza tu solicitud...</div>
-            ) : aiResult ? (
-              <pre className="overflow-x-auto whitespace-pre-wrap">
-                {aiResult.error
-                  ? <code className="text-red-400">{aiResult.error}</code>
-                  : aiResult.data
-                  ? <code className="text-blue-300">{JSON.stringify(aiResult.data, null, 2)}</code>
-                  : <code className="text-amber-300">{aiResult.response}</code>
-                }
-              </pre>
-            ) : (
-              <div className="text-slate-600 italic">Listo para ayudar. Escribe tu solicitud abajo.</div>
-            )}
-          </div>
-
-          <form onSubmit={handleAiSubmit} className="flex gap-2">
-            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={AI_PLACEHOLDERS[aiAgentType] || AI_PLACEHOLDERS.ceo} className="flex-1 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-indigo-500 text-[14px]" />
-            <button type="submit" disabled={isAiProcessing || !aiPrompt.trim()} className="px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center min-w-[100px]">
-              {isAiProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : 'Ejecutar'}
-            </button>
           </form>
         </div>
       </div>
@@ -4903,7 +4834,23 @@ function App() {
       {renderQRModal()}
       {renderReportModal()}
       {renderUserReportModal()}
-      {renderAiModal()}
+      {showAiModal && user?.role === 'admin' && (
+        <Suspense fallback={null}>
+          <AiCommandModal
+            lang={lang}
+            closeLabel={t.close_btn || t.close}
+            aiAgentType={aiAgentType}
+            setAiAgentType={setAiAgentType}
+            aiPrompt={aiPrompt}
+            setAiPrompt={setAiPrompt}
+            aiResult={aiResult}
+            setAiResult={setAiResult}
+            isAiProcessing={isAiProcessing}
+            onSubmit={handleAiSubmit}
+            onClose={() => setShowAiModal(false)}
+          />
+        </Suspense>
+      )}
 
       {/* AI COMMAND CENTER FLOATING BUTTON (ADMIN ONLY) */}
       {ENABLE_AI_PANEL && user?.role === 'admin' && !viewedAd && !viewedCompany && (
