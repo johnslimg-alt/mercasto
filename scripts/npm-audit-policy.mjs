@@ -13,7 +13,6 @@ const expected = {
 
 const allowedAdvisories = new Set([
   'GHSA-4x5r-pxfx-6jf8', // Babel 7 build-time sourceMappingURL file read.
-  'GHSA-qwww-vcr4-c8h2', // React Router RSC action CSRF; Mercasto is a browser-only SPA.
 ]);
 const allowedVulnerablePackages = new Set([
   '@babel/core',
