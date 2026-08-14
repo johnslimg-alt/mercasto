@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, Pencil, PlusCircle, Activity, Heart, MapPin, Search, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trash2, Camera, User, BadgeCheck, ShieldCheck, Building2, Zap, Ticket, Crown, Store, UploadCloud, LogOut, Settings, BarChart3, QrCode, Download, Globe, Sparkles, Play, Video, Phone, AlertTriangle, ArrowRight, ExternalLink, MessageCircle, Share2, Star, Info, HelpCircle, Menu, X, LayoutGrid, List, Layers, SlidersHorizontal, Crosshair, Car, Briefcase, Wrench, Cpu, Sofa, Shirt, Bike, Baby, PawPrint, ShoppingBag, Compass, Home as HomeIcon } from "lucide-react";
 
 // SEO Components for AEO
-import FAQSchema, { FAQ_DATA } from '../seo/FAQSchema';
+import FAQSchema from '../seo/FAQSchema';
 import ItemListSchema from '../seo/ItemListSchema';
 
 const LOCAL_ICON_MAP = {
@@ -19,6 +19,8 @@ const MapV3 = React.lazy(() => import('../common/MapV3'));
 
 import { sizedImage } from '../../utils/imageHelpers';
 import { localizedText } from '../../utils/localize';
+import { formatNumber } from '../../utils/localeFormat';
+import { formatHomePropertiesLabel, getHomeMapCopy } from '../../utils/homeMapCopy';
 import { events } from '../../utils/analytics';
 import SkeletonCard from '../common/SkeletonCard';
 import { PopularSearchesSection, CitiesSection, NewsletterSection } from '../home/HomeDiscoverySections';
@@ -46,6 +48,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
       return true;
     });
     const navigate = useNavigate();
+  const homeMapCopy = getHomeMapCopy(lang);
     const safeServerAds = React.useMemo(() => (Array.isArray(serverAds) ? serverAds : []), [serverAds]);
     const safeRealEstateAds = React.useMemo(() => (Array.isArray(realEstateAds) ? realEstateAds : []), [realEstateAds]);
     const safeJobAds = React.useMemo(() => (Array.isArray(jobAds) ? jobAds : []), [jobAds]);
@@ -213,7 +216,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[13px] text-slate-700">
 
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] dark:text-white font-semibold">{Number(adsTotal || safeServerAds.length || 0).toLocaleString('es-MX')}</strong> {t.active_listings || 'anuncios disponibles'}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] dark:text-white font-semibold">{formatNumber(adsTotal || safeServerAds.length || 0, lang)}</strong> {t.active_listings || 'anuncios disponibles'}</span>
 
               <span className="text-slate-300 hidden sm:block">•</span>
 
@@ -630,7 +633,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                         <MapV3
                           ads={safeRealEstateAds}
                           category="inmobiliaria"
-                          title={selectedState || t.all_mexico || 'Todo México'}
+                          title={selectedState || t.all_mexico}
                           onMarkerClick={handleViewAd}
                           className="absolute inset-0 h-full rounded-none border-0 shadow-none"
                         />
@@ -638,14 +641,14 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-2 cursor-pointer bg-slate-50 dark:bg-slate-900">
                         <MapPin size={24} className="animate-bounce text-[#84CC16]" />
-                        <span className="text-xs font-semibold">Cargando mapa de propiedades...</span>
+                        <span className="text-xs font-semibold">{homeMapCopy.loading}</span>
                       </div>
                     )}
 
                     <div className="absolute inset-x-4 bottom-4 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="font-medium text-slate-800 dark:text-white">{selectedState ? `Propiedades en ${selectedState}` : 'Propiedades en todo México'}</span>
-                        <button type="button" onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-lime-800 dark:text-lime-400 hover:underline">{t.view_all_mexico || 'Ver todo México'} →</button>
+                        <span className="font-medium text-slate-800 dark:text-white">{formatHomePropertiesLabel(lang, selectedState)}</span>
+                        <button type="button" onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-lime-800 dark:text-lime-400 hover:underline">{t.view_all_mexico} →</button>
                       </div>
                     </div>
                   </div>
@@ -883,7 +886,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                   >
                     <option value="">{t.price || 'Precio'}</option>
                     {[100000, 200000, 300000, 500000, 1000000].map(value => (
-                      <option key={value} value={value}>≤ ${value.toLocaleString('es-MX')} MXN</option>
+                      <option key={value} value={value}>≤ ${formatNumber(value, lang)} MXN</option>
                     ))}
                   </select>
 
@@ -1191,12 +1194,12 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
           {/* SEO: ItemList Schema for ads */}
           {safeServerAds.length > 0 && (
-            <ItemListSchema items={safeServerAds} listName="Anuncios destacados en Mercasto" />
+            <ItemListSchema items={safeServerAds} listName={`${t.featured || 'Mercasto'} · Mercasto`} lang={lang} />
           )}
 
           {/* SEO: FAQ Section for AEO */}
           <div className="container mx-auto px-4 py-8">
-            <FAQSchema faqs={FAQ_DATA.home} pageType="home" lang={lang} />
+            <FAQSchema pageType="home" lang={lang} />
           </div>
 
         </main>

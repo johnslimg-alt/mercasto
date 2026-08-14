@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import { Bell, BellOff, Check, X, Loader2 } from 'lucide-react';
 import { useToast } from './Toast';
 import { ensurePushSubscription, fetchVapidPublicKey } from '../../utils/webPush';
+import { getTranslations } from '../../utils/translations';
+import { getPushNotificationCopy } from '../../utils/pushNotificationCopy';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-export default function PushNotificationManager({ user, compact = false }) {
+export default function PushNotificationManager({ user, compact = false, lang = 'es' }) {
   const toast = useToast();
+  const t = getTranslations(lang);
+  const copy = getPushNotificationCopy(lang);
   const [permission, setPermission] = useState('default');
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,13 +46,13 @@ export default function PushNotificationManager({ user, compact = false }) {
   };
 
   const subscribe = async () => {
-    if (!vapidKey) { toast.error('VAPID key not loaded'); return; }
+    if (!vapidKey) { toast.error(copy.notReady); return; }
     setLoading(true);
     try {
       const permission = await Notification.requestPermission();
       setPermission(permission);
-      if (permission !== 'granted') { toast.warning('Permiso denegado'); setLoading(false); return; }
-      if (!('serviceWorker' in navigator)) { toast.error('Service Worker no soportado'); setLoading(false); return; }
+      if (permission !== 'granted') { toast.warning(copy.permissionDenied); setLoading(false); return; }
+      if (!('serviceWorker' in navigator)) { toast.error(copy.unsupported); setLoading(false); return; }
       const registration = await navigator.serviceWorker.ready;
       const subscription = await ensurePushSubscription(registration, vapidKey);
       const response = await fetch(`${API_BASE}/push/subscribe`, {
@@ -56,9 +60,9 @@ export default function PushNotificationManager({ user, compact = false }) {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
         body: JSON.stringify(subscription.toJSON()),
       });
-      if (response.ok) { setSubscribed(true); toast.success('Notificaciones activadas!'); }
-      else { toast.error('Error al guardar suscripción'); }
-    } catch (error) { console.error('Subscribe error:', error); toast.error('Error al activar notificaciones'); }
+      if (response.ok) { setSubscribed(true); toast.success(copy.enabled); }
+      else { toast.error(copy.saveError); }
+    } catch (error) { console.error('Subscribe error:', error); toast.error(copy.enableError); }
     finally { setLoading(false); }
   };
 
@@ -75,9 +79,9 @@ export default function PushNotificationManager({ user, compact = false }) {
           body: JSON.stringify({ endpoint: subscription.endpoint }),
         });
         setSubscribed(false);
-        toast.success('Notificaciones desactivadas');
+        toast.success(copy.disabled);
       }
-    } catch (error) { console.error('Unsubscribe error:', error); toast.error('Error al desactivar'); }
+    } catch (error) { console.error('Unsubscribe error:', error); toast.error(copy.disableError); }
     finally { setLoading(false); }
   };
 
@@ -89,9 +93,9 @@ export default function PushNotificationManager({ user, compact = false }) {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
       });
       const data = await response.json();
-      if (data.success) { toast.success(`Notificación enviada (${data.sent})`); }
-      else { toast.error(data.message || 'Error'); }
-    } catch (error) { toast.error('Error al enviar prueba'); }
+      if (data.success) { toast.success(copy.testSent.replace('{count}', data.sent)); }
+      else { toast.error(lang === 'es' && data.message ? data.message : copy.testError); }
+    } catch (error) { toast.error(copy.testError); }
     finally { setLoading(false); }
   };
 
@@ -103,13 +107,13 @@ export default function PushNotificationManager({ user, compact = false }) {
         <div className="flex items-center gap-3">
           <Bell className="w-5 h-5 text-slate-600 dark:text-slate-400" />
           <div>
-            <p className="font-medium text-slate-900 dark:text-white">Notificaciones Push</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{subscribed ? 'Activadas' : 'Desactivadas'}</p>
+            <p className="font-medium text-slate-900 dark:text-white">{t.push_notifications}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{subscribed ? t.active_status : t.inactive_status}</p>
           </div>
         </div>
         <button onClick={subscribed ? unsubscribe : subscribe} disabled={loading}
           className={`px-4 py-2 rounded-lg font-medium transition ${subscribed ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400' : 'bg-lime-500 text-white hover:bg-lime-600'} disabled:opacity-50`}>
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : subscribed ? 'Desactivar' : 'Activar'}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : subscribed ? t.deactivate_alerts : t.activate}
         </button>
       </div>
     );
@@ -121,8 +125,8 @@ export default function PushNotificationManager({ user, compact = false }) {
         <div className="flex items-start gap-3">
           <BellOff className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
           <div className="flex-1">
-            <p className="font-medium text-amber-900 dark:text-amber-100">Notificaciones bloqueadas</p>
-            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">Permite las notificaciones en la configuración de tu navegador</p>
+            <p className="font-medium text-amber-900 dark:text-amber-100">{copy.blockedTitle}</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">{copy.blockedDesc}</p>
           </div>
         </div>
       </div>
@@ -135,13 +139,13 @@ export default function PushNotificationManager({ user, compact = false }) {
         <div className="flex items-start gap-3">
           <Check className="w-5 h-5 text-lime-600 dark:text-lime-400 mt-0.5" />
           <div className="flex-1">
-            <p className="font-medium text-lime-900 dark:text-lime-100">Notificaciones activadas</p>
-            <p className="text-sm text-lime-700 dark:text-lime-300 mt-1">Recibirás alertas de nuevos mensajes y actualizaciones</p>
+            <p className="font-medium text-lime-900 dark:text-lime-100">{copy.enabledTitle}</p>
+            <p className="text-sm text-lime-700 dark:text-lime-300 mt-1">{copy.enabledDesc}</p>
             <div className="flex gap-2 mt-3">
               <button onClick={sendTest} disabled={loading} className="px-3 py-1.5 text-sm bg-lime-500 text-white rounded-lg hover:bg-lime-600 disabled:opacity-50">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar prueba'}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : copy.sendTest}
               </button>
-              <button onClick={unsubscribe} disabled={loading} className="px-3 py-1.5 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600">Desactivar</button>
+              <button onClick={unsubscribe} disabled={loading} className="px-3 py-1.5 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600">{t.deactivate_alerts}</button>
             </div>
           </div>
         </div>
@@ -154,13 +158,13 @@ export default function PushNotificationManager({ user, compact = false }) {
       <div className="flex items-start gap-3">
         <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
         <div className="flex-1">
-          <p className="font-medium text-blue-900 dark:text-blue-100">Activa las notificaciones</p>
-          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">Recibe alertas de nuevos mensajes, ofertas y actualizaciones importantes</p>
+          <p className="font-medium text-blue-900 dark:text-blue-100">{copy.enableTitle}</p>
+          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">{copy.enableDesc}</p>
           <button onClick={subscribe} disabled={loading} className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2">
-            {loading ? (<><Loader2 className="w-4 h-4 animate-spin" />Activando...</>) : (<><Bell className="w-4 h-4" />Activar notificaciones</>)}
+            {loading ? (<><Loader2 className="w-4 h-4 animate-spin" />{copy.enabling}</>) : (<><Bell className="w-4 h-4" />{t.activate}</>)}
           </button>
         </div>
-        <button type="button" onClick={() => setDismissed(true)} aria-label="Cerrar" className="text-blue-400 hover:text-blue-600"><X className="w-5 h-5" /></button>
+        <button type="button" onClick={() => setDismissed(true)} aria-label={t.close_btn || t.close} className="text-blue-400 hover:text-blue-600"><X className="w-5 h-5" /></button>
       </div>
     </div>
   );

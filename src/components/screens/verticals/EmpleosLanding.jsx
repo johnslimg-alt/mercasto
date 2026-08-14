@@ -125,6 +125,7 @@ export default function EmpleosLanding({ lang = 'es' }) {
             apiUrl={`${API_URL}/ads?category=empleo&per_page=6`}
             viewAllUrl="/?category=empleo"
             viewAllLabel={copy.labels.viewAll}
+            lang={lang}
             cols={3}
           />
         </section>

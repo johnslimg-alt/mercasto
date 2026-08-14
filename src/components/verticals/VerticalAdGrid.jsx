@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
 import { getVerticalCardMeta } from '../../utils/verticalCardMeta';
+import { formatNumber } from '../../utils/localeFormat';
+import { getTranslations } from '../../utils/translations';
 
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
 
@@ -52,10 +54,12 @@ function AdSkeleton() {
   );
 }
 
-export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver todos →', cols = 4, variant = '' }) {
+export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = '', cols = 4, variant = '', lang = 'es' }) {
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const t = getTranslations(lang);
+  const resolvedViewAllLabel = viewAllLabel || t.view_all || 'View all';
 
   useEffect(() => {
     setLoading(true);
@@ -79,7 +83,7 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
         {loading
           ? Array.from({ length: skeletonCount }).map((_, i) => <AdSkeleton key={i} />)
           : ads.map(ad => {
-            const meta = getVerticalCardMeta(ad, variant);
+            const meta = getVerticalCardMeta(ad, variant, lang);
             return (
             <button type="button" key={ad.id}
               onClick={() => navigate(`/?ad=${ad.id}`)}
@@ -87,19 +91,19 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
               <div className="relative h-44 bg-slate-100 overflow-hidden">
                 <img
                   src={getImg(ad.images || ad.image_url || ad.image)}
-                  alt={localizedText(ad.title)}
+                  alt={localizedText(ad.title, lang)}
                   loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   onError={e => { if (!e.currentTarget.src.endsWith('placeholder-ad.svg')) e.currentTarget.src = '/placeholder-ad.svg'; }}
                 />
                 {ad.price && (
                   <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
-                    ${Number(ad.price).toLocaleString('es-MX')}
+                    ${formatNumber(ad.price, lang)}
                   </div>
                 )}
               </div>
               <div className="p-3">
-                <h3 className="font-semibold text-[13px] text-slate-800 line-clamp-2 leading-snug mb-1">{localizedText(ad.title)}</h3>
+                <h3 className="font-semibold text-[13px] text-slate-800 line-clamp-2 leading-snug mb-1">{localizedText(ad.title, lang)}</h3>
                 {meta.primary.length > 0 && (
                   <p className="text-[11px] font-semibold text-slate-600 line-clamp-1">{meta.primary.join(' · ')}</p>
                 )}
@@ -108,7 +112,7 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
                 )}
                 {ad.location && (
                   <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                    <MapPin size={10} />{ad.location}
+                    <MapPin size={10} />{localizedText(ad.location, lang)}
                   </p>
                 )}
               </div>
@@ -122,7 +126,7 @@ export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = 'Ver
           <button
             onClick={() => navigate(viewAllUrl)}
             className="inline-flex items-center gap-2 px-6 py-3 border-2 border-slate-200 hover:border-slate-400 rounded-xl font-semibold text-[14px] text-slate-700 hover:text-slate-900 transition-all">
-            {viewAllLabel}
+            {resolvedViewAllLabel}
           </button>
         </div>
       )}

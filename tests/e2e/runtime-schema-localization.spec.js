@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { getVerticalSeo } from '../../src/constants/verticalSeo.js';
-import { getTranslations, loadLanguage } from '../../src/utils/translations.js';
+import { getTranslations, loadLanguage, SUPPORTED_LANGUAGES } from '../../src/utils/translations.js';
+import { getHomeFaqCopy } from '../../src/utils/homeFaqCopy.js';
+import { getHomeMapCopy } from '../../src/utils/homeMapCopy.js';
 
 async function setLanguage(page, lang) {
   await page.addInitScript(savedLang => {
@@ -20,7 +22,7 @@ const seller = {
   avatar_url: null, website: null,
 };
 
-async function mockApi(page) {
+async function mockApi(page, ads = []) {
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/users/77/profile')) {
@@ -33,7 +35,7 @@ async function mockApi(page) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reviews: [], average: 0, total: 0 }) });
     }
     if (path.endsWith('/ads')) {
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], total: 0 }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ads, total: ads.length }) });
     }
     if (path.endsWith('/categories') || path.endsWith('/category-attributes')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -85,3 +87,40 @@ test('company JSON-LD uses localized fallback and canonical identity', async ({ 
   expect(data.address.addressLocality).toBeUndefined();
   expect(data.url).toBe('https://mercasto.com/vendedor/77');
 });
+
+
+const homeSchemaAd = {
+  id: 501,
+  title: 'QA schema listing',
+  description: 'QA schema description',
+  price: 123456,
+  status: 'active',
+  category: 'electronica',
+  images: [],
+};
+
+for (const lang of SUPPORTED_LANGUAGES) {
+  test(`home FAQ and ItemList schemas follow ${lang}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await setLanguage(page, lang);
+    await mockApi(page, [homeSchemaAd]);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const faqCopy = getHomeFaqCopy(lang);
+    const t = await loadLanguage(lang);
+    await expect(page.getByText(faqCopy[0].question, { exact: true })).toBeVisible();
+    await expect(page.getByText(getHomeMapCopy(lang).propertiesAll, { exact: true })).toBeVisible();
+    await expect.poll(async () => {
+      const text = await page.locator('#faq-schema').textContent().catch(() => null);
+      return text ? JSON.parse(text)?.mainEntity?.[0]?.name : null;
+    }).toBe(faqCopy[0].question);
+
+    await expect.poll(async () => {
+      const text = await page.locator('#itemlist-schema').textContent().catch(() => null);
+      return text ? JSON.parse(text)?.name : null;
+    }).toBe(`${t.featured || 'Mercasto'} · Mercasto`);
+
+    const itemListText = await page.locator('#itemlist-schema').textContent();
+    expect(JSON.parse(itemListText).itemListElement[0].item.name).toBe('QA schema listing');
+  });
+}

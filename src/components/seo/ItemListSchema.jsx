@@ -5,7 +5,7 @@ import { localizedText } from '../../utils/localize';
  * ItemList Schema for ad listings
  * Helps search engines understand list structure
  */
-export default function ItemListSchema({ items, listName = "Anuncios" }) {
+export default function ItemListSchema({ items, listName = 'Mercasto', lang = 'es' }) {
   useEffect(() => {
     if (!items || items.length === 0) return;
 
@@ -18,10 +18,10 @@ export default function ItemListSchema({ items, listName = "Anuncios" }) {
         "position": index + 1,
         "item": {
           "@type": "Product",
-          "name": localizedText(item.title),
+          "name": localizedText(item.title, lang),
           "url": `https://mercasto.com/ad/${item.id}`,
           "image": item.images?.[0] || 'https://mercasto.com/icon-512x512.png',
-          "description": localizedText(item.description)?.substring(0, 200),
+          "description": localizedText(item.description, lang)?.substring(0, 200),
           "offers": {
             "@type": "Offer",
             "price": item.price,
@@ -42,7 +42,7 @@ export default function ItemListSchema({ items, listName = "Anuncios" }) {
       const existing = document.getElementById('itemlist-schema');
       if (existing) existing.remove();
     };
-  }, [items, listName]);
+  }, [items, listName, lang]);
 
   return null; // No visible output, only schema
 }

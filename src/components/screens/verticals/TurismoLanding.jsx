@@ -91,6 +91,7 @@ export default function TurismoLanding({ lang = 'es' }) {
             apiUrl={`${API_URL}/ads?category=turismo&per_page=6`}
             viewAllUrl="/listings?category=turismo"
             viewAllLabel={landingCopy.viewAll}
+            lang={lang}
             cols={3}
           />
         </div>

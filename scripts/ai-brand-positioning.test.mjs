@@ -53,7 +53,7 @@ test('public metadata and official source copy use the AI positioning', () => {
   const index = source('index.html');
   const geo = source('src/content/geoSourcePages.js');
   const manifest = source('public/manifest.json');
-  const faq = source('src/components/seo/FAQSchema.jsx');
+  const faq = source('src/utils/homeFaqCopy.js');
   const refunds = source('public/reembolsos/index.html');
   const moderation = source('public/moderacion/index.html');
   assert.match(index, /La plataforma de clasificados más moderna e inteligente con AI/);

@@ -125,6 +125,7 @@ export default function InmueblesLanding({ lang = 'es' }) {
             apiUrl={`${API_URL}/ads?category=inmobiliaria&per_page=8`}
             viewAllUrl="/?category=inmobiliaria"
             viewAllLabel={copy.labels.viewAll}
+            lang={lang}
             cols={4}
           />
         </section>

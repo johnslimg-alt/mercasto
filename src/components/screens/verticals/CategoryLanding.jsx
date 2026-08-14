@@ -433,6 +433,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
             apiUrl={`${API_URL}/ads?category=${categoryParam}&per_page=6`}
             viewAllUrl={`/?category=${categoryParam}`}
             viewAllLabel={`${t.view_all} · ${cfg.title} →`}
+            lang={lang}
             cols={3}
           />
         </section>

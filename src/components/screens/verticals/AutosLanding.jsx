@@ -178,6 +178,7 @@ export default function AutosLanding({ lang = 'es' }) {
             apiUrl={`${API_URL}/ads?category=motor&per_page=8`}
             viewAllUrl="/?category=motor"
             viewAllLabel={copy.labels.viewAll}
+            lang={lang}
             cols={4}
             variant="autos"
           />

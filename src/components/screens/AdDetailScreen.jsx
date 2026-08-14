@@ -114,7 +114,7 @@ const STATE_COORDS = {
   "ZAC": [22.7709, -102.5832]
 };
 
-function OwnerControls({ ad, API_URL, setViewedAd }) {
+function OwnerControls({ ad, API_URL, setViewedAd, t, lang }) {
   const [status, setStatus] = useState(ad.status);
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState(null);
@@ -131,8 +131,8 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
         setStatus('paused');
         setViewedAd?.(prev => prev && prev.id === ad.id ? { ...prev, status: 'paused' } : prev);
       }
-      else { const d = await res.json(); setErrMsg(d.message || 'Error al pausar'); }
-    } catch (e) { console.error(e); }
+      else { const d = await res.json(); setErrMsg(lang === 'es' && d.message ? d.message : t.connection_error); }
+    } catch (e) { console.error(e); setErrMsg(t.connection_error); }
     finally { setLoading(false); }
   };
 
@@ -147,8 +147,8 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
         setStatus('active');
         setViewedAd?.(prev => prev && prev.id === ad.id ? { ...prev, status: 'active' } : prev);
       }
-      else { const d = await res.json(); setErrMsg(d.message || 'Error al reactivar'); }
-    } catch (e) { console.error(e); }
+      else { const d = await res.json(); setErrMsg(lang === 'es' && d.message ? d.message : t.connection_error); }
+    } catch (e) { console.error(e); setErrMsg(t.connection_error); }
     finally { setLoading(false); }
   };
 
@@ -157,12 +157,12 @@ function OwnerControls({ ad, API_URL, setViewedAd }) {
       {errMsg && <p className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">{errMsg}</p>}
       {status === 'active' && (
         <button onClick={pause} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
-          {loading ? <Loader2 size={15} className="animate-spin" /> : <Pause size={15} />} Pausar
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Pause size={15} />} {t.pause}
         </button>
       )}
       {status === 'paused' && (
         <button onClick={activate} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 bg-lime-100 hover:bg-[#65A30D]/20 text-[#65A30D] rounded-xl text-sm font-semibold transition-colors disabled:opacity-60">
-          {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} Reactivar
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} {t.reactivate}
         </button>
       )}
     </div>
@@ -224,7 +224,7 @@ const getSafeWhatsAppNumber = (ad) => {
 };
 
 // ── Price Sparkline ──────────────────────────────────────────────────────────
-function PriceSparkline({ history, label = 'Price history' }) {
+function PriceSparkline({ history, label = 'Price history', lang = 'es' }) {
   const [tooltip, setTooltip] = React.useState(null);
   const W = 280, H = 64, PAD = 8;
   const prices = history.map(h => Number(h.new_price));
@@ -276,7 +276,7 @@ function PriceSparkline({ history, label = 'Price history' }) {
               textAnchor="middle" fill="white"
               fontSize="10" fontWeight="600"
             >
-              ${Number(tooltip.price).toLocaleString('es-MX')}
+              ${formatNumber(tooltip.price, lang)}
             </text>
             <text
               x={Math.min(tooltip.x - 48, W - 100) + 48}
@@ -284,7 +284,7 @@ function PriceSparkline({ history, label = 'Price history' }) {
               textAnchor="middle" fill="#94a3b8"
               fontSize="9"
             >
-              {new Date(tooltip.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+              {formatDate(tooltip.date, lang, { day: '2-digit', month: 'short' })}
             </text>
           </g>
         )}
@@ -516,8 +516,8 @@ export default function AdDetailScreen({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Product",
-          "name": localizedText(ad.title, lang) || "Anuncio en Mercasto",
-          "description": localizedText(ad.description, lang) || "Anuncio clasificado en Mercasto",
+          "name": localizedText(ad.title, lang) || t.ai_brand_short || 'Mercasto',
+          "description": localizedText(ad.description, lang) || t.ai_brand_description || 'Mercasto',
           "image": getImageUrl(ad.image_url || ad.image?.[0]) || "https://mercasto.com/icon-512x512.png",
           "brand": { "@type": "Brand", "name": ad.category_name || "Mercasto" },
           "offers": {
@@ -537,7 +537,7 @@ export default function AdDetailScreen({
         </button>
         {isOwner && (
           <div className="flex items-center gap-2">
-            <OwnerControls ad={ad} API_URL={API_URL} setViewedAd={setViewedAd} />
+            <OwnerControls ad={ad} API_URL={API_URL} setViewedAd={setViewedAd} t={t} lang={lang} />
             <Link
               to={`/anuncio/${ad.id}/editar`}
               className="flex items-center gap-1.5 px-4 py-2 bg-lime-500 hover:bg-[#65A30D] text-white rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-lime-500/20"
@@ -616,7 +616,7 @@ export default function AdDetailScreen({
                 </span>
               </div>
             )}
-            {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} label={t.price_history || 'Price history'} />}
+            {priceHistory.length >= 2 && <PriceSparkline history={priceHistory} label={t.price_history || 'Price history'} lang={lang} />}
 
             <div className="flex flex-wrap items-center gap-3 mb-8 text-[13px] text-slate-600 dark:text-slate-300 font-medium">
               <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-2 rounded-xl"><MapPin size={16}/> {locationLabel || detailCopy.mexico}</span>
