@@ -250,8 +250,8 @@ assertContains(
 
 assertContains(
   'src/components/screens/AdDetailScreen.jsx',
-  'Referencia de catálogo Mercasto',
-  'catalog detail pages disclose that availability and seller must be confirmed'
+  'detailCopy.catalogBody',
+  'catalog detail pages disclose that availability and seller must be confirmed through localized copy'
 );
 
 assertContains(
@@ -268,8 +268,8 @@ assertContains(
 
 assertContains(
   'src/components/screens/AdDetailScreen.jsx',
-  'Vendes este producto o uno parecido?',
-  'catalog references convert owners into genuine sellers instead of exposing a placeholder contact'
+  'detailCopy.sellTitle',
+  'catalog references convert owners into genuine sellers through localized CTA copy instead of exposing a placeholder contact'
 );
 
 assertContains(
