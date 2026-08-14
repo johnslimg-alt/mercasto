@@ -1,5 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useUI } from '../../contexts/UIContext';
+import { getTranslations } from '../../utils/translations';
+import { formatDate, formatNumber, localeFor } from '../../utils/localeFormat';
+import { getAdminOperationalCopy } from '../../utils/adminOperationalCopy';
 import {
   BarChart3,
   Bot,
@@ -24,26 +28,26 @@ const readAdmin = () => {
   }
 };
 
-const sections = [
-  { id: 'dashboard', label: 'Dashboard', icon: BarChart3, description: 'Resultados de todas las plataformas.' },
-  { id: 'connections', label: 'Connections', icon: PlugZap, description: 'Meta, TikTok, Google, X y Microsoft.' },
-  { id: 'campaigns', label: 'Campaigns', icon: Megaphone, description: 'Campañas, conjuntos y anuncios.' },
-  { id: 'creatives', label: 'Creatives', icon: Image, description: 'Imágenes, videos, textos y variantes.' },
-  { id: 'audiences', label: 'Audiences', icon: Users, description: 'Segmentos y públicos sincronizados.' },
-  { id: 'tracking', label: 'Pixels', icon: RadioTower, description: 'Píxeles, CAPI, eventos y UTM.' },
-  { id: 'budgets', label: 'Budgets', icon: CircleDollarSign, description: 'Presupuestos y reglas de distribución.' },
-  { id: 'tests', label: 'A/B Tests', icon: FlaskConical, description: 'Pruebas entre creativos y audiencias.' },
-  { id: 'automations', label: 'Automations', icon: Settings2, description: 'Pausas, escalado y alertas automáticas.' },
-  { id: 'ai', label: 'AI Analyst', icon: Bot, description: 'Análisis diario y recomendaciones.' },
+const sectionDefs = [
+  { id: 'dashboard', icon: BarChart3 },
+  { id: 'connections', icon: PlugZap },
+  { id: 'campaigns', icon: Megaphone },
+  { id: 'creatives', icon: Image },
+  { id: 'audiences', icon: Users },
+  { id: 'tracking', icon: RadioTower },
+  { id: 'budgets', icon: CircleDollarSign },
+  { id: 'tests', icon: FlaskConical },
+  { id: 'automations', icon: Settings2 },
+  { id: 'ai', icon: Bot },
 ];
 
-const staticPlatforms = [
-  { name: 'TikTok Ads', status: 'attention', detail: 'Reconnect advertiser account' },
-  { name: 'Google Ads', status: 'planned', detail: 'API adapter planned' },
-  { name: 'Merchant Center', status: 'planned', detail: 'Product feed planned' },
-  { name: 'GA4 + GTM', status: 'planned', detail: 'Measurement adapter planned' },
-  { name: 'X Ads', status: 'planned', detail: 'API access required' },
-  { name: 'Microsoft Ads', status: 'planned', detail: 'API adapter planned' },
+const staticPlatformDefs = [
+  { name: 'TikTok Ads', status: 'attention', detailIndex: 0 },
+  { name: 'Google Ads', status: 'planned', detailIndex: 1 },
+  { name: 'Merchant Center', status: 'planned', detailIndex: 2 },
+  { name: 'GA4 + GTM', status: 'planned', detailIndex: 3 },
+  { name: 'X Ads', status: 'planned', detailIndex: 4 },
+  { name: 'Microsoft Ads', status: 'planned', detailIndex: 5 },
 ];
 
 const statusClass = {
@@ -52,15 +56,16 @@ const statusClass = {
   planned: 'bg-slate-100 text-slate-600',
 };
 
-const money = (value, currency = 'MXN') => new Intl.NumberFormat('es-MX', {
-  style: 'currency',
-  currency,
-  maximumFractionDigits: 2,
-}).format(Number(value || 0));
-
-const number = (value) => new Intl.NumberFormat('es-MX').format(Number(value || 0));
-
 export default function AdvertisingHub() {
+  const { lang, loadedLangVersion } = useUI();
+  void loadedLangVersion;
+  const t = getTranslations(lang);
+  const copy = getAdminOperationalCopy(lang).marketing;
+  const sections = useMemo(() => sectionDefs.map((item) => ({ ...item, ...copy.sections[item.id] })), [copy]);
+  const staticPlatforms = useMemo(() => staticPlatformDefs.map((item) => ({ ...item, detail: copy.platformDetails[item.detailIndex] })), [copy]);
+  const money = (value, currency = 'MXN') => new Intl.NumberFormat(localeFor(lang), { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(value || 0));
+  const number = (value) => formatNumber(value, lang);
+  const serverMessage = useCallback((payload, fallback) => (lang === 'es' && (payload?.message || payload?.error) ? (payload.message || payload.error) : fallback), [lang]);
   const location = useLocation();
   const navigate = useNavigate();
   const [isAdmin] = useState(readAdmin);
@@ -79,14 +84,14 @@ export default function AdvertisingHub() {
 
   const authHeaders = useCallback(() => {
     const token = localStorage.getItem('auth_token');
-    if (!token) throw new Error('No hay una sesión administrativa activa.');
+    if (!token) throw new Error(copy.authMissing);
 
     return {
       Accept: 'application/json',
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     };
-  }, []);
+  }, [copy.authMissing]);
 
   const loadMeta = useCallback(async () => {
     setLoading(true);
@@ -97,7 +102,7 @@ export default function AdvertisingHub() {
       const statusResponse = await fetch(`${API_URL}/admin/marketing/meta/status`, { headers });
       const statusPayload = await statusResponse.json();
 
-      if (!statusResponse.ok) throw new Error(statusPayload.message || statusPayload.error || 'No se pudo comprobar Meta Ads.');
+      if (!statusResponse.ok) throw new Error(serverMessage(statusPayload, copy.metaStatusError));
 
       setMetaStatus(statusPayload);
 
@@ -110,18 +115,18 @@ export default function AdvertisingHub() {
       const campaignsResponse = await fetch(`${API_URL}/admin/marketing/meta/campaigns?days=7&limit=50`, { headers });
       const campaignsPayload = await campaignsResponse.json();
 
-      if (!campaignsResponse.ok) throw new Error(campaignsPayload.message || campaignsPayload.error || 'No se pudieron cargar las campañas de Meta.');
+      if (!campaignsResponse.ok) throw new Error(serverMessage(campaignsPayload, copy.campaignsLoadError));
 
       const data = campaignsPayload.data || [];
       setCampaigns(data);
       setPeriod(campaignsPayload.period || null);
       setBudgetDrafts(Object.fromEntries(data.map((campaign) => [campaign.id, campaign.daily_budget ?? ''])));
     } catch (requestError) {
-      setError(requestError.message || 'Error al cargar Meta Ads.');
+      setError(requestError.message || copy.loadError);
     } finally {
       setLoading(false);
     }
-  }, [authHeaders]);
+  }, [authHeaders, copy.campaignsLoadError, copy.loadError, copy.metaStatusError, serverMessage]);
 
   useEffect(() => {
     if (visible) loadMeta();
@@ -140,12 +145,12 @@ export default function AdvertisingHub() {
       });
       const result = await response.json();
 
-      if (!response.ok) throw new Error(result.message || result.error || 'Meta rechazó la operación.');
+      if (!response.ok) throw new Error(serverMessage(result, copy.metaRejected));
 
       setNotice(successMessage);
       await loadMeta();
     } catch (requestError) {
-      setError(requestError.message || 'No se pudo actualizar la campaña.');
+      setError(requestError.message || copy.updateError);
     } finally {
       setSavingCampaignId('');
     }
@@ -154,24 +159,24 @@ export default function AdvertisingHub() {
   const toggleCampaign = (campaign) => {
     const currentStatus = campaign.status || campaign.effective_status;
     const nextStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-    const action = nextStatus === 'ACTIVE' ? 'activar' : 'pausar';
+    const action = nextStatus === 'ACTIVE' ? copy.activateVerb : copy.pauseVerb;
 
-    if (!window.confirm(`Confirmas ${action} la campaña “${campaign.name}”?`)) return;
+    if (!window.confirm(copy.confirmToggle.replace('{action}', action).replace('{name}', campaign.name))) return;
 
-    mutateCampaign(campaign.id, 'status', { status: nextStatus }, `Campaña ${nextStatus === 'ACTIVE' ? 'activada' : 'pausada'}.`);
+    mutateCampaign(campaign.id, 'status', { status: nextStatus }, nextStatus === 'ACTIVE' ? copy.activated : copy.paused);
   };
 
   const saveBudget = (campaign) => {
     const value = Number(budgetDrafts[campaign.id]);
 
     if (!Number.isFinite(value) || value < 1) {
-      setError('El presupuesto diario debe ser de al menos 1 MXN.');
+      setError(copy.budgetMin);
       return;
     }
 
-    if (!window.confirm(`Cambiar el presupuesto diario de “${campaign.name}” a ${money(value)}?`)) return;
+    if (!window.confirm(copy.confirmBudget.replace('{name}', campaign.name).replace('{amount}', money(value)))) return;
 
-    mutateCampaign(campaign.id, 'budget', { daily_budget: value }, `Presupuesto actualizado a ${money(value)}.`);
+    mutateCampaign(campaign.id, 'budget', { daily_budget: value }, copy.budgetUpdated.replace('{amount}', money(value)));
   };
 
   const totals = useMemo(() => campaigns.reduce((accumulator, campaign) => {
@@ -187,7 +192,7 @@ export default function AdvertisingHub() {
   const metaPlatform = {
     name: 'Meta Ads',
     status: metaStatus?.configured ? 'ready' : 'attention',
-    detail: metaStatus?.configured ? `${metaStatus.ad_account_id} · ${metaStatus.graph_version}` : 'Faltan credenciales del servidor',
+    detail: metaStatus?.configured ? `${metaStatus.ad_account_id} · ${metaStatus.graph_version}` : copy.missingCredentials,
   };
 
   if (!visible) return null;
@@ -201,14 +206,14 @@ export default function AdvertisingHub() {
           <div className="min-w-0 flex-1">
             <p className="break-words text-xs font-black uppercase tracking-[0.18em] text-lime-400 sm:tracking-[0.24em]">Mercasto Marketing</p>
             <h1 className="mt-1 break-words text-2xl font-black md:text-3xl">Advertising Hub</h1>
-            <p className="mt-1 max-w-2xl break-words text-sm text-slate-300">Una sola consola para campañas, medición, presupuestos y automatización multiplataforma.</p>
+            <p className="mt-1 max-w-2xl break-words text-sm text-slate-300">{copy.headerDesc}</p>
           </div>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <button type="button" onClick={loadMeta} disabled={loading} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold hover:bg-slate-800 disabled:opacity-50 sm:flex-none sm:px-4">
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Actualizar
+              {t.refresh_btn}
             </button>
-            <button type="button" onClick={() => navigate('/admin')} className="flex-1 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold hover:bg-slate-800 sm:flex-none sm:px-4">Volver al admin</button>
+            <button type="button" onClick={() => navigate('/admin')} className="flex-1 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold hover:bg-slate-800 sm:flex-none sm:px-4">{copy.backAdmin}</button>
           </div>
         </header>
 
@@ -230,10 +235,10 @@ export default function AdvertisingHub() {
 
             <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
-                ['Spend · 7 días', money(totals.spend), period ? `${period.since} — ${period.until}` : 'Meta Ads'],
-                ['Registrations', number(totals.registrations), `${number(totals.clicks)} clicks`],
-                ['Impressions', number(totals.impressions), `${campaigns.length} campañas`],
-                ['Purchases', number(totals.purchases), 'Meta attribution'],
+                [copy.spend7, money(totals.spend), period ? `${formatDate(period.since, lang)} — ${formatDate(period.until, lang)}` : 'Meta Ads'],
+                [copy.registrations, number(totals.registrations), `${number(totals.clicks)} ${t.clicks}`],
+                [t.impressions, number(totals.impressions), `${campaigns.length} ${copy.campaigns}`],
+                [copy.purchases, number(totals.purchases), copy.metaAttribution],
               ].map(([label, value, detail]) => (
                 <article key={label} className="min-w-0 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
                   <p className="break-words text-xs font-black uppercase tracking-wider text-slate-500">{label}</p>
@@ -245,8 +250,8 @@ export default function AdvertisingHub() {
 
             <section className="min-w-0 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
               <div className="mb-4 min-w-0">
-                <h2 className="break-words text-xl font-black text-slate-950 dark:text-white">Platform connections</h2>
-                <p className="break-words text-sm text-slate-500">Adapters share one internal campaign and metrics model.</p>
+                <h2 className="break-words text-xl font-black text-slate-950 dark:text-white">{copy.connectionsTitle}</h2>
+                <p className="break-words text-sm text-slate-500">{copy.adaptersDesc}</p>
               </div>
               <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {[metaPlatform, ...staticPlatforms].map((platform) => (
@@ -256,7 +261,7 @@ export default function AdvertisingHub() {
                         <h3 className="break-words font-black text-slate-900 dark:text-white">{platform.name}</h3>
                         <p className="mt-1 break-all text-xs text-slate-500">{platform.detail}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${statusClass[platform.status]}`}>{platform.status}</span>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${statusClass[platform.status]}`}>{copy[platform.status] || platform.status}</span>
                     </div>
                   </article>
                 ))}
@@ -266,14 +271,14 @@ export default function AdvertisingHub() {
             {(activeSection === 'dashboard' || activeSection === 'campaigns') && (
               <section className="min-w-0 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
                 <div className="border-b border-slate-200 p-5 dark:border-slate-800">
-                  <h2 className="break-words text-xl font-black text-slate-950 dark:text-white">Meta campaigns</h2>
-                  <p className="break-words text-sm text-slate-500">Resultados y control de campañas. Los cambios requieren confirmación.</p>
+                  <h2 className="break-words text-xl font-black text-slate-950 dark:text-white">{copy.campaignsTitle}</h2>
+                  <p className="break-words text-sm text-slate-500">{copy.campaignsDesc}</p>
                 </div>
                 <div className="max-w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
                   <table className="min-w-[980px] text-sm">
                     <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-950">
                       <tr>
-                        <th className="px-5 py-3">Campaign</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Daily budget</th><th className="px-5 py-3">Spend</th><th className="px-5 py-3">Clicks</th><th className="px-5 py-3">CTR</th><th className="px-5 py-3">Registrations</th><th className="px-5 py-3">Actions</th>
+                        <th className="px-5 py-3">{copy.campaign}</th><th className="px-5 py-3">{t.status}</th><th className="px-5 py-3">{copy.dailyBudget}</th><th className="px-5 py-3">{copy.spend}</th><th className="px-5 py-3">{t.clicks}</th><th className="px-5 py-3">CTR</th><th className="px-5 py-3">{copy.registrations}</th><th className="px-5 py-3">{copy.actions}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -284,28 +289,28 @@ export default function AdvertisingHub() {
                         return (
                           <tr key={campaign.id}>
                             <td className="max-w-[260px] px-5 py-4"><p className="break-words font-bold text-slate-900 dark:text-white">{campaign.name}</p><p className="break-all text-xs text-slate-500">{campaign.objective || campaign.id}</p></td>
-                            <td className="whitespace-nowrap px-5 py-4 text-xs font-bold">{campaign.effective_status || campaign.status || '—'}</td>
+                            <td className="whitespace-nowrap px-5 py-4 text-xs font-bold">{(campaign.effective_status || campaign.status) === 'ACTIVE' ? t.active_status : (campaign.effective_status || campaign.status) === 'PAUSED' ? t.paused_status : (campaign.effective_status || campaign.status || '—')}</td>
                             <td className="px-5 py-4">
-                              {campaign.daily_budget == null ? <span className="text-xs text-slate-500">Ad set budget</span> : (
+                              {campaign.daily_budget == null ? <span className="text-xs text-slate-500">{copy.adSetBudget}</span> : (
                                 <div className="flex min-w-[180px] items-center gap-2">
                                   <input type="number" min="1" step="1" value={budgetDrafts[campaign.id] ?? ''} onChange={(event) => setBudgetDrafts((current) => ({ ...current, [campaign.id]: event.target.value }))} className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-950" />
-                                  <button type="button" disabled={busy} onClick={() => saveBudget(campaign)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">Guardar</button>
+                                  <button type="button" disabled={busy} onClick={() => saveBudget(campaign)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">{t.save_changes}</button>
                                 </div>
                               )}
                             </td>
                             <td className="whitespace-nowrap px-5 py-4 font-semibold">{money(campaign.metrics?.spend, campaign.currency || 'MXN')}</td>
                             <td className="whitespace-nowrap px-5 py-4">{number(campaign.metrics?.clicks)}</td>
-                            <td className="whitespace-nowrap px-5 py-4">{Number(campaign.metrics?.ctr || 0).toFixed(2)}%</td>
+                            <td className="whitespace-nowrap px-5 py-4">{formatNumber(campaign.metrics?.ctr || 0, lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</td>
                             <td className="whitespace-nowrap px-5 py-4">{number(campaign.metrics?.registrations)}</td>
                             <td className="whitespace-nowrap px-5 py-4">
                               <button type="button" disabled={busy} onClick={() => toggleCampaign(campaign)} className={`rounded-lg px-3 py-2 text-xs font-black text-white disabled:opacity-50 ${active ? 'bg-amber-600' : 'bg-lime-700'}`}>
-                                {busy ? 'Guardando…' : active ? 'Pausar' : 'Activar'}
+                                {busy ? t.saving_word : active ? t.pause : t.activate}
                               </button>
                             </td>
                           </tr>
                         );
                       })}
-                      {!loading && campaigns.length === 0 && <tr><td colSpan="8" className="px-5 py-10 text-center text-slate-500">No hay campañas disponibles o Meta todavía no está configurado.</td></tr>}
+                      {!loading && campaigns.length === 0 && <tr><td colSpan="8" className="px-5 py-10 text-center text-slate-500">{copy.noCampaigns}</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -315,7 +320,7 @@ export default function AdvertisingHub() {
             {activeSection !== 'dashboard' && activeSection !== 'campaigns' && (
               <section className="min-w-0 rounded-3xl border border-dashed border-slate-300 bg-white/60 p-8 text-center dark:border-slate-700 dark:bg-slate-900/60">
                 <h2 className="break-words text-xl font-black text-slate-900 dark:text-white">{activeSectionInfo.label}</h2>
-                <p className="mx-auto mt-2 max-w-xl break-words text-sm text-slate-500">{activeSectionInfo.description} Este módulo se conectará al mismo modelo interno de campañas y métricas.</p>
+                <p className="mx-auto mt-2 max-w-xl break-words text-sm text-slate-500">{activeSectionInfo.description} {copy.moduleSuffix}</p>
               </section>
             )}
           </main>

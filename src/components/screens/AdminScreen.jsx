@@ -511,7 +511,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
               </div>
             </div>
           ) : adminTab === 'seo_geo' ? (
-            <AdminSeoMeasurement token={token} />
+            <AdminSeoMeasurement token={token} lang={lang} t={t} />
           ) : adminTab === 'business_verifications' ? (
             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="p-5 border-b border-slate-100 dark:border-slate-700">
