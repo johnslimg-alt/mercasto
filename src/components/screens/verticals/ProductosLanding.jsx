@@ -2,8 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import { Laptop, Home, Shirt, Gamepad2, Baby, Dog, BookOpen } from 'lucide-react';
-import { getVerticalCopy } from '../../../utils/verticalCopy';
-
+import { getVerticalCopy, getVerticalLandingCopy } from '../../../utils/verticalCopy';
 
 const SUBSECTIONS = [
   { name: 'Electrónica', query: 'electronica', Icon: Laptop },
@@ -18,6 +17,7 @@ const SUBSECTIONS = [
 export default function ProductosLanding({ lang = 'es' }) {
   const navigate = useNavigate();
   const copy = getVerticalCopy(lang, 'productos');
+  const landingCopy = getVerticalLandingCopy(lang, 'productos');
   const handleSearch = (q, location = {}) => {
     const params = new URLSearchParams();
     if (q) params.set('search', q);
@@ -37,27 +37,26 @@ export default function ProductosLanding({ lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
-
-      <VerticalHero 
+      <VerticalHero
         title={copy.title}
         subtitle={copy.subtitle}
         searchPlaceholder={copy.placeholder}
+        labels={copy.labels}
         onSearch={handleSearch}
         color="purple"
       />
 
-      {/* SUBSECTIONS GRID */}
       <div className="max-w-[1440px] mx-auto px-4 lg:px-6 -mt-8 relative z-10">
         <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-xl">
           <h2 className="text-[18px] font-bold text-slate-800 dark:text-slate-100 mb-6 text-center lg:text-left">
-            {lang === 'es' ? 'Explora por Categorías' : 'Explore by Categories'}
+            {landingCopy.exploreTitle}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
             {SUBSECTIONS.map((sub, idx) => {
               const Icon = sub.Icon;
               return (
                 <button
-                  key={idx}
+                  key={sub.query}
                   onClick={() => applySubcategory(sub.query)}
                   className="flex flex-col items-center justify-center p-5 rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 hover:border-slate-200 hover:shadow-md dark:hover:bg-slate-900 transition-all group"
                 >
@@ -65,7 +64,7 @@ export default function ProductosLanding({ lang = 'es' }) {
                     <Icon size={24} />
                   </div>
                   <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200 text-center">
-                    {sub.name}
+                    {landingCopy.sectionLabels[idx]}
                   </span>
                 </button>
               );
@@ -76,9 +75,9 @@ export default function ProductosLanding({ lang = 'es' }) {
 
       <section className="max-w-[1440px] mx-auto px-4 lg:px-6 mt-12">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-          <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Cómo explorar productos en Mercasto</h2>
+          <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">{landingCopy.guideTitle}</h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-            Elige una categoría para consultar anuncios publicados, filtrar por ubicación y contactar directamente al anunciante. Los resultados con filtros usan páginas de búsqueda no indexables para evitar duplicados.
+            {landingCopy.guideBody}
           </p>
         </div>
       </section>
