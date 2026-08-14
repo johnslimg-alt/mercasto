@@ -52,7 +52,8 @@ if grep -qF 'now()->addDays(30)' "$CONTROLLER"; then
   echo "Legacy 30-day listing expiry remains in AdController" >&2
   exit 1
 fi
-grep -qF 'Estará activo 7 días más.' src/App.jsx
+grep -qF 't.listing_action_republish_success' src/App.jsx
+grep -qF 'listing_action_republish_success: "Anuncio republicado. Estará activo 7 días más."' src/constants/translations/es.js
 grep -qF 'Los anuncios gratuitos están activos durante 7 días.' "$HELP_COPY"
 grep -qF '$needsReModeration ? '\''pending'\'' : $ad->status' "$CONTROLLER"
 grep -qF "'status' => 'required|in:paused,inactive,archived'" "$CONTROLLER"
