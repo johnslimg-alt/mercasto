@@ -1772,13 +1772,14 @@ function App() {
         "@context": "https://schema.org",
         "@type": isBusiness ? "Store" : "Person",
         "name": viewedCompany.name,
-        "description": viewedCompany.bio || (isBusiness ? `Tienda oficial de ${viewedCompany.name} en Mercasto` : `Perfil de ${viewedCompany.name} en Mercasto`),
+        "description": viewedCompany.bio || t.ai_brand_description || '',
         "image": getImageUrl(viewedCompany.avatar_url),
         "address": {
           "@type": "PostalAddress",
-          "addressLocality": viewedCompany.city || "México"
+          ...(viewedCompany.city ? { "addressLocality": viewedCompany.city } : {}),
+          "addressCountry": "MX"
         },
-        "url": window.location.href
+        "url": canonicalHref
       };
       if (viewedCompany.website) {
         schemaData.sameAs = viewedCompany.website;
@@ -1793,7 +1794,7 @@ function App() {
             "url": canonicalHref,
             "name": verticalSeo.title,
             "description": verticalSeo.description,
-            "inLanguage": "es-MX",
+            "inLanguage": lang === 'es' ? 'es-MX' : lang,
             "isPartOf": {
               "@type": "WebSite",
               "@id": "https://mercasto.com/#website",
@@ -1811,7 +1812,7 @@ function App() {
               {
                 "@type": "ListItem",
                 "position": 1,
-                "name": "Inicio",
+                "name": t.home || 'Inicio',
                 "item": "https://mercasto.com/"
               },
               {
