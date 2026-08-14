@@ -1627,7 +1627,7 @@ function App() {
   // --- ДИНАМИЧЕСКОЕ SEO & GOOGLE TAG MANAGER ---
   useEffect(() => {
     const verticalSeo = getVerticalSeo(location.pathname);
-    const publicSeo = getPublicSeo(location.pathname);
+    const publicSeo = getPublicSeo(location.pathname, lang);
     const verticalCanonicalAlias = getVerticalCanonicalAlias(location.pathname);
     let title = `Mercasto | ${t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}`;
     let desc = t.ai_brand_description || 'Mercasto combina publicación asistida, descripciones, recomendaciones y moderación con IA para comprar y vender más rápido en México.';

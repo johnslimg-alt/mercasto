@@ -1,35 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Building2, Search, MapPin, Star, CheckCircle, ArrowRight, 
+import {
+  Building2, Search, MapPin, Star, CheckCircle, ArrowRight,
   ChevronRight, Sparkles, Store, Loader2, Globe, Heart, ShieldCheck, Briefcase
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { normalizeLanguage } from '../../utils/translations';
+import { getStoresDirectoryCategories, getStoresDirectoryCopy } from '../../utils/storesDirectoryCopy';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
 
 const MEXICO_STATES = [
-  "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas", 
-  "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México", 
-  "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "Michoacán", "Morelos", "Nayarit", 
-  "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí", 
+  "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
+  "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México",
+  "Guanajuato", "Guerrero", "Hidalgo", "Jalisco", "Michoacán", "Morelos", "Nayarit",
+  "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí",
   "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"
-];
-
-const CATEGORIES = [
-  { slug: 'motor', name: 'Automotriz', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
-  { slug: 'inmobiliaria', name: 'Bienes Raíces', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-  { slug: 'empleo', name: 'Empleos', color: 'text-amber-600 bg-amber-50 border-amber-100' },
-  { slug: 'servicios', name: 'Servicios Profesionales', color: 'text-sky-600 bg-sky-50 border-sky-100' },
-  { slug: 'informatica', name: 'Informática y Electrónica', color: 'text-violet-600 bg-violet-50 border-violet-100' },
-  { slug: 'telefonos', name: 'Telefonía', color: 'text-rose-600 bg-rose-50 border-rose-100' },
-  { slug: 'hogar', name: 'Hogar y Muebles', color: 'text-teal-600 bg-teal-50 border-teal-100' }
 ];
 
 export default function StoresScreen() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = normalizeLanguage(i18n.resolvedLanguage || i18n.language);
+  const copy = getStoresDirectoryCopy(lang);
+  const categories = getStoresDirectoryCategories(lang);
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -38,14 +33,6 @@ export default function StoresScreen() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalStores, setTotalStores] = useState(0);
-
-  useEffect(() => {
-    document.title = 'Directorio de Tiendas Oficiales y Negocios PRO | Mercasto México';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) {
-      meta.setAttribute('content', 'Encuentra y compra con total seguridad en el Directorio Oficial de Tiendas y Vendedores PRO verificados de Mercasto en todo México.');
-    }
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,13 +104,13 @@ export default function StoresScreen() {
         />
         <div className="relative max-w-5xl mx-auto px-4 z-10">
           <div className="inline-flex items-center gap-2 bg-lime-500/20 text-lime-400 border border-lime-500/30 rounded-full px-4.5 py-1.5 text-xs font-bold uppercase tracking-widest mb-6">
-            <Sparkles className="w-3.5 h-3.5" /> {t('stores.directory', { defaultValue: 'Mexico PRO Directory' })}
+            <Sparkles className="w-3.5 h-3.5" /> {copy.directory}
           </div>
           <h1 className="text-4xl md:text-5.5xl font-black mb-4 leading-tight tracking-tight">
-            {t('stores.title', { defaultValue: 'Official stores and businesses' })}
+            {copy.title}
           </h1>
           <p className="text-slate-300 text-base md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
-            {t('stores.subtitle', { defaultValue: 'Buy directly from professional, verified sellers throughout Mexico.' })}
+            {copy.subtitle}
           </p>
         </div>
       </section>
@@ -136,7 +123,7 @@ export default function StoresScreen() {
             <Search className="absolute left-4 top-3.5 text-slate-400 w-5 h-5" />
             <input
               type="text"
-              placeholder={t('stores.search', { defaultValue: 'Search stores by name or description...' })}
+              placeholder={copy.search}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500 text-sm font-medium transition-all"
@@ -167,8 +154,8 @@ export default function StoresScreen() {
               className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500 text-sm font-medium transition-all appearance-none cursor-pointer bg-white"
             >
               <option value="">{t('filters.allCategories')}</option>
-              {CATEGORIES.map(cat => (
-                <option key={cat.slug} value={cat.name}>{cat.name}</option>
+              {categories.map(cat => (
+                <option key={cat.slug} value={cat.query}>{cat.label}</option>
               ))}
             </select>
           </div>
@@ -179,24 +166,24 @@ export default function StoresScreen() {
           <button
             onClick={() => { setSelectedCategory(''); setPage(1); }}
             className={`px-4 py-2 text-xs font-bold rounded-full border transition-all ${
-              selectedCategory === '' 
-                ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10' 
+              selectedCategory === ''
+                ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
             {t('filters.allCategories')}
           </button>
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button
               key={cat.slug}
-              onClick={() => { setSelectedCategory(cat.name); setPage(1); }}
+              onClick={() => { setSelectedCategory(cat.query); setPage(1); }}
               className={`px-4 py-2 text-xs font-bold rounded-full border transition-all ${
-                selectedCategory === cat.name 
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10' 
+                selectedCategory === cat.query
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10'
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
               }`}
             >
-              {cat.name}
+              {cat.label}
             </button>
           ))}
         </div>
@@ -206,8 +193,8 @@ export default function StoresScreen() {
       <main className="max-w-7xl mx-auto px-4 mt-12">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-2">
-            <Store className="w-6 h-6 text-lime-500" /> {t('stores.active', { defaultValue: 'Active businesses' })}
-            <span className="text-xs font-bold bg-slate-200 text-slate-700 px-3 py-1 rounded-full">{totalStores} {t('stores.total', { defaultValue: 'total' })}</span>
+            <Store className="w-6 h-6 text-lime-500" /> {copy.active}
+            <span className="text-xs font-bold bg-slate-200 text-slate-700 px-3 py-1 rounded-full">{totalStores} {copy.total}</span>
           </h2>
         </div>
 
@@ -229,7 +216,7 @@ export default function StoresScreen() {
         ) : stores.length === 0 ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center max-w-xl mx-auto shadow-sm">
             <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-slate-900 mb-1">{t('stores.empty', { defaultValue: 'No stores found' })}</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">{copy.empty}</h3>
             <p className="text-slate-500 text-sm mb-6">{t('home.tryDifferentFilters')}</p>
             <button
               onClick={() => { setSearch(''); setSelectedState(''); setSelectedCategory(''); setPage(1); }}
@@ -244,7 +231,7 @@ export default function StoresScreen() {
               const logo = getStoreLogo(store);
               const banner = getStoreBanner(store);
               const displayName = store.business_name || store.name;
-              
+
               return (
                 <button
                   type="button"
@@ -254,10 +241,10 @@ export default function StoresScreen() {
                 >
                   {/* Store Banner */}
                   <div className="h-28 relative bg-slate-100 overflow-hidden shrink-0">
-                    <img 
-                      src={banner} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                      alt="Banner" 
+                    <img
+                      src={banner}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      alt={`${copy.bannerAlt}: ${displayName}`}
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -273,7 +260,7 @@ export default function StoresScreen() {
                     {/* Store Logo */}
                     <div className="w-16 h-16 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center font-black text-2xl shadow-lg border-4 border-white -mt-8 z-10 shrink-0 overflow-hidden relative">
                       {logo ? (
-                        <img src={logo} className="w-full h-full object-cover" alt="Logo" />
+                        <img src={logo} className="w-full h-full object-cover" alt={`${copy.logoAlt}: ${displayName}`} />
                       ) : (
                         displayName[0].toUpperCase()
                       )}
@@ -288,7 +275,7 @@ export default function StoresScreen() {
                     {/* Address / Location */}
                     <p className="text-xs text-slate-400 mt-1 flex items-center gap-1 justify-center max-w-full truncate px-2">
                       <MapPin className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                      <span className="truncate">{store.business_address || 'México'}</span>
+                      <span className="truncate">{store.business_address || copy.mexico}</span>
                     </p>
 
                     {/* Review Rating Stars */}
@@ -300,7 +287,7 @@ export default function StoresScreen() {
 
                     {/* Store Short Description */}
                     <p className="text-xs text-slate-500 text-center mt-3 line-clamp-2 leading-relaxed flex-1 px-1">
-                      {store.business_description || 'Tienda oficial con un catálogo de productos de alta calidad y atención profesional.'}
+                      {store.business_description || copy.defaultDescription}
                     </p>
 
                     {/* Stats Footer Bar */}
@@ -309,7 +296,7 @@ export default function StoresScreen() {
                         {store.active_ads_count || 0} {t('ads.activeAds')}
                       </span>
                       <span className="text-xs font-bold text-lime-600 flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
-                        {t('stores.view', { defaultValue: 'View store' })} <ChevronRight className="w-3.5 h-3.5" />
+                        {copy.view} <ChevronRight className="w-3.5 h-3.5" />
                       </span>
                     </div>
                   </div>
@@ -336,8 +323,8 @@ export default function StoresScreen() {
                   key={p}
                   onClick={() => setPage(p)}
                   className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all border ${
-                    page === p 
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-md' 
+                    page === p
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-md'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -361,23 +348,23 @@ export default function StoresScreen() {
         <div className="bg-gradient-to-br from-lime-600 to-emerald-700 rounded-3.5xl p-8 md:p-12 text-white relative overflow-hidden shadow-lg">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_30%_30%,white_1px,transparent_1px)] bg-[size:20px_20px]" />
           <div className="relative z-10 max-w-2xl">
-            <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 border border-white/30 rounded-full px-3 py-1 mb-4 inline-block">{t('stores.trust', { defaultValue: 'MORE TRUST' })}</span>
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight leading-tight">{t('stores.proTitle', { defaultValue: 'Do you run a business or sell frequently?' })}</h2>
+            <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 border border-white/30 rounded-full px-3 py-1 mb-4 inline-block">{copy.trust}</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight leading-tight">{copy.proTitle}</h2>
             <p className="text-white/90 text-sm md:text-base leading-relaxed mb-6 font-light">
-              {t('stores.proDescription', { defaultValue: 'Join Mercasto PRO to create a professional storefront and promote your products nationwide.' })}
+              {copy.proDescription}
             </p>
             <div className="flex flex-wrap gap-4">
               <button
                 onClick={() => navigate('/profile')}
                 className="bg-white text-emerald-700 font-extrabold text-sm px-6 py-3 rounded-full hover:bg-slate-50 transition-colors shadow-lg"
               >
-                {t('stores.activatePro', { defaultValue: 'Activate PRO profile' })}
+                {copy.activatePro}
               </button>
               <button
                 onClick={() => navigate('/ayuda')}
                 className="bg-emerald-800/40 border border-white/20 text-white font-extrabold text-sm px-6 py-3 rounded-full hover:bg-emerald-800/60 transition-colors"
               >
-                {t('stores.viewPlans', { defaultValue: 'View plans' })}
+                {copy.viewPlans}
               </button>
             </div>
           </div>
