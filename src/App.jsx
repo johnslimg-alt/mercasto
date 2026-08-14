@@ -3,7 +3,8 @@ import { trackPageView, events } from './utils/analytics';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { getTranslations } from './utils/translations';
 import { localizedText } from './utils/localize';
-import { formatDateTime, formatMXN } from './utils/localeFormat';
+import { formatDateTime, formatMXN, formatNumber } from './utils/localeFormat';
+import { formatPaymentActionCopy, getPaymentActionCopy } from './utils/paymentActionCopy';
 import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlState';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
 import { clearPublishDraft } from './utils/publishDraft';
@@ -545,6 +546,7 @@ function App() {
   // Reading the version keeps this component reactive when a lazy runtime dictionary finishes loading.
   void loadedLangVersion;
   const t = getTranslations(lang);
+  const paymentCopy = getPaymentActionCopy(lang);
 
   const [serverAds, setServerAds] = useState([]);
   const [realEstateAds, setRealEstateAds] = useState([]);
@@ -3427,8 +3429,11 @@ function App() {
     const isCreditsTopUp = typeof productCode === 'string' && productCode.startsWith('credits_');
     const balance = parseFloat(user?.balance || 0);
     if (!isCreditsTopUp && (user?.unlimited_balance || balance >= amount) && amount > 0) {
-      const balanceLabel = user?.unlimited_balance ? '∞ (saldo ilimitado)' : `$${balance.toLocaleString('es-MX')}`;
-      const useBalance = window.confirm(`Pagar $${amount} con tu saldo? (Saldo actual: ${balanceLabel})\n\nCancelar para pagar con tarjeta/OXXO en su lugar.`);
+      const balanceLabel = user?.unlimited_balance
+        ? t.unlimited_balance_label
+        : formatMXN(balance, lang, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      const amountLabel = formatMXN(amount, lang, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      const useBalance = window.confirm(formatPaymentActionCopy(lang, 'payWithBalance', { amount: amountLabel, balance: balanceLabel }));
       if (useBalance) {
         try {
           const token = localStorage.getItem('auth_token');
@@ -3439,18 +3444,18 @@ function App() {
           });
           const data = await res.json();
           if (res.ok && data.success) {
-            showToast('Pago realizado con tu saldo!');
+            showToast(paymentCopy.balancePaid);
             const updatedUser = { ...user, balance: data.balance };
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
             loadUserAds?.();
             return;
           }
-          showToast(data.message || t.payment_error_generating || 'Error al pagar con saldo', 'error');
+          showToast(data.message || t.payment_error_generating, 'error');
           return;
         } catch (err) {
           console.error('Balance payment error', err);
-          showToast(t.connection_error || 'Error de conexión', 'error');
+          showToast(t.connection_error, 'error');
           return;
         }
       }
@@ -3466,8 +3471,8 @@ function App() {
       const data = await res.json();
       if (res.ok && data.payment_url) {
         window.location.href = data.payment_url;
-      } else showToast(data.message || t.payment_error_generating || 'Error al generar el pago', 'error');
-    } catch (err) { console.error("Payment error", err); showToast(t.connection_error || 'Error de conexión', 'error'); }
+      } else showToast(data.message || t.payment_error_generating, 'error');
+    } catch (err) { console.error("Payment error", err); showToast(t.connection_error, 'error'); }
   };
 
   const handlePromotionProductPayment = (amount, description, productCode) => {
@@ -3475,7 +3480,7 @@ function App() {
 
     const adId = Number(promotionTargetAdId);
     if (!adId) {
-      showToast('Selecciona un anuncio activo para promocionar.', 'error');
+      showToast(paymentCopy.selectActiveAd, 'error');
       return;
     }
 
@@ -3486,7 +3491,10 @@ function App() {
     if (!user) { setShowAuthModal(true); return; }
     const numericAmount = Number(amount);
     if (!numericAmount || numericAmount < 50 || numericAmount > 5000) {
-      showToast('Ingresa un monto entre $50 y $5,000.', 'error');
+      showToast(formatPaymentActionCopy(lang, 'invalidCreditsAmount', {
+        min: formatMXN(50, lang, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+        max: formatMXN(5000, lang, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+      }), 'error');
       return;
     }
     handleClipPayment(numericAmount, `${numericAmount.toLocaleString('es-MX')} Créditos Mercasto`, null, productCode);
@@ -3538,9 +3546,12 @@ function App() {
   const handlePromoteAd = async (ad, type = 'highlight') => {
     const balance = parseFloat(user?.balance || 0);
     if (user?.unlimited_balance || balance >= 50) {
-      const typeLabel = type === 'boost' ? 'Subir' : type === 'top' ? 'Destacar arriba' : 'Resaltar';
-      const balanceLabel = user?.unlimited_balance ? '∞ (ilimitado)' : `${balance} Créditos`;
-      if (window.confirm(`Deseas usar 50 créditos de tu saldo para "${typeLabel}" este anuncio? (Saldo actual: ${balanceLabel})`)) {
+      const typeLabel = type === 'boost' ? t.pm_boost_section : type === 'top' ? t.pm_top_category_name : t.pm_highlight_section;
+      const balanceLabel = user?.unlimited_balance
+        ? t.unlimited_balance_label
+        : `${formatNumber(balance, lang)} ${t.pm_credits_unit}`;
+      const creditsLabel = formatNumber(50, lang);
+      if (window.confirm(formatPaymentActionCopy(lang, 'promotionConfirm', { credits: creditsLabel, type: typeLabel, balance: balanceLabel }))) {
         try {
           const token = localStorage.getItem('auth_token');
           const res = await fetch(`${API_URL}/ads/${ad.id}/promote/credits`, {
@@ -3550,7 +3561,7 @@ function App() {
           });
           const data = await res.json();
           if (res.ok) {
-            showToast('Anuncio promocionado con éxito!');
+            showToast(paymentCopy.promotionSuccess);
             const updatedUser = { ...user, balance: data.balance };
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -3558,14 +3569,14 @@ function App() {
             setUserAds(prev => prev.map(a => a.id === ad.id ? { ...a, ...patch } : a));
             setServerAds(prev => prev.map(a => a.id === ad.id ? { ...a, ...patch } : a));
             loadUserAds?.();
-          } else showToast(data.message || 'Error al promocionar', 'error');
-        } catch (e) { console.error(e); showToast('Error de conexión', 'error'); }
+          } else showToast(data.message || paymentCopy.promotionError, 'error');
+        } catch (e) { console.error(e); showToast(t.connection_error, 'error'); }
       }
     } else {
       setPromotionTargetAdId(String(ad.id));
       setPriceTab('pro');
       setShowPricingModal(true);
-      showToast('Elige un paquete para promocionar este anuncio.');
+      showToast(paymentCopy.choosePackage);
     }
   };
 
