@@ -21,6 +21,11 @@ grep -qF 'suite_enabled cabinets' scripts/run-isolated-launch-e2e.sh
 grep -qF 'tests/e2e/authenticated-cabinet-matrix.spec.js' scripts/run-isolated-launch-e2e.sh
 grep -qF 'capture-authenticated-ui-visual-evidence.mjs' scripts/run-isolated-launch-e2e.sh
 grep -qF 'never mutate production payments' tests/e2e/payments.spec.js
+grep -qF 'const expectedNetworkAborts = [];' scripts/capture-authenticated-ui-visual-evidence.mjs
+grep -qF "errorText === 'net::ERR_ABORTED'" scripts/capture-authenticated-ui-visual-evidence.mjs
+grep -qF 'requestUrl.pathname ===' scripts/capture-authenticated-ui-visual-evidence.mjs
+grep -qF '}/ads`;' scripts/capture-authenticated-ui-visual-evidence.mjs
+grep -qF 'else sameOriginFailures.push(failure);' scripts/capture-authenticated-ui-visual-evidence.mjs
 node --check scripts/capture-authenticated-ui-visual-evidence.mjs
 node --check scripts/clip-e2e-mock.mjs
 node --check scripts/ollama-e2e-mock.mjs
