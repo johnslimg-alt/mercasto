@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ChevronLeft, MapPin, Star, CheckCircle, TrendingUp, AlertTriangle, QrCode, User, Loader2, Globe, MessageCircle, Clock, Building2, Camera } from 'lucide-react';
+import { formatDate } from '../../utils/localeFormat';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -263,7 +264,7 @@ export default function StorefrontScreen({
                       </div>
                     </div>
                   </div>
-                  <span className="text-[11px] text-slate-400">{new Date(rev.created_at).toLocaleDateString(lang === 'es' ? 'es-MX' : lang === 'pt' ? 'pt-BR' : 'en-US')}</span>
+                  <span className="text-[11px] text-slate-400">{formatDate(rev.created_at, lang)}</span>
                 </div>
                 {rev.comment && <p className="text-[13px] text-slate-600 mt-2">{rev.comment}</p>}
               </div>
