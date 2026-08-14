@@ -74,7 +74,7 @@ test('seller onboarding persists completion and opens the real publication route
   // Interests are optional; onboarding must not block the first publication.
   await expect(page.getByRole('button', { name: /Siguiente/ })).toBeEnabled();
   await page.getByRole('button', { name: /Siguiente/ }).click();
-  await page.getByRole('button', { name: /Finalizar/ }).click();
+  await page.getByRole('button', { name: /Siguiente/ }).click();
   await page.getByRole('button', { name: /Crear mi primer anuncio/ }).click();
 
   await expect(page).toHaveURL(/\/post$/);
