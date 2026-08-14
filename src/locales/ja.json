@@ -213,5 +213,16 @@
     "help": "ヘルプ",
     "blog": "ブログ",
     "allRightsReserved": "All Rights Reserved"
+  },
+  "verification": {
+    "invalidLink": "確認リンクが無効です。",
+    "success": "メールアドレスを確認しました。",
+    "expired": "確認リンクが無効か、有効期限が切れています。",
+    "checking": "メールアドレスを確認しています...",
+    "verified": "メール確認済み",
+    "badge": "プロフィールにメール確認済みバッジが表示されるようになりました。",
+    "failed": "メールアドレスを確認できませんでした",
+    "retry": "ログインして新しい確認リンクをリクエストしてください。",
+    "home": "Mercastoへ"
   }
 }

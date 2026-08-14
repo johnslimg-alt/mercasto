@@ -213,5 +213,16 @@
     "help": "Help",
     "blog": "Blog",
     "allRightsReserved": "All rights reserved"
+  },
+  "verification": {
+    "invalidLink": "The verification link is invalid.",
+    "success": "Email verified successfully.",
+    "expired": "The verification link is invalid or has expired.",
+    "checking": "Verifying your email...",
+    "verified": "Email verified",
+    "badge": "Your profile now displays the verified email badge.",
+    "failed": "Email verification failed",
+    "retry": "Sign in and request a new verification link.",
+    "home": "Go to Mercasto"
   }
 }

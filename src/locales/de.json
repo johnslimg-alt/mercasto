@@ -213,5 +213,16 @@
     "help": "Hilfe",
     "blog": "Blog",
     "allRightsReserved": "Alle Rechte vorbehalten"
+  },
+  "verification": {
+    "invalidLink": "Der Bestätigungslink ist ungültig.",
+    "success": "E-Mail erfolgreich bestätigt.",
+    "expired": "Der Bestätigungslink ist ungültig oder abgelaufen.",
+    "checking": "E-Mail wird bestätigt...",
+    "verified": "E-Mail bestätigt",
+    "badge": "In deinem Profil wird jetzt das Abzeichen für eine bestätigte E-Mail angezeigt.",
+    "failed": "E-Mail-Bestätigung fehlgeschlagen",
+    "retry": "Melde dich an und fordere einen neuen Bestätigungslink an.",
+    "home": "Zu Mercasto"
   }
 }

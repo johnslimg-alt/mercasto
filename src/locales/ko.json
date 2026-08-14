@@ -213,5 +213,16 @@
     "help": "도움말",
     "blog": "블로그",
     "allRightsReserved": "모든 권리 보유"
+  },
+  "verification": {
+    "invalidLink": "인증 링크가 올바르지 않습니다.",
+    "success": "이메일 인증이 완료되었습니다.",
+    "expired": "인증 링크가 올바르지 않거나 만료되었습니다.",
+    "checking": "이메일을 인증하는 중...",
+    "verified": "이메일 인증 완료",
+    "badge": "프로필에 이메일 인증 배지가 표시됩니다.",
+    "failed": "이메일 인증에 실패했습니다",
+    "retry": "로그인한 후 새 인증 링크를 요청해 주세요.",
+    "home": "Mercasto로 이동"
   }
 }
