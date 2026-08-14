@@ -33,6 +33,12 @@ import AdSenseBanner from './components/common/AdSenseBanner';
 import AdCard from './components/common/AdCard';
 import BuyerConversionNudge from './components/BuyerConversionNudge';
 const OnboardingModal = React.lazy(() => import('./components/OnboardingModal'));
+const QRModal = React.lazy(() => import('./components/modals/QRModal'));
+const ReportModal = React.lazy(() => import('./components/modals/ReportModal'));
+const UserReportModal = React.lazy(() => import('./components/modals/UserReportModal'));
+const PricingModal = React.lazy(() => import('./components/modals/PricingModal'));
+const CouponModal = React.lazy(() => import('./components/modals/CouponModal'));
+const ProfileModal = React.lazy(() => import('./components/modals/ProfileModal'));
 const AiCommandModal = React.lazy(() => import('./components/admin/AiCommandModal'));
 import {
   Search, Home, PlusCircle, Plus, User, Users, Settings, Shield, Menu,
@@ -3730,325 +3736,16 @@ function App() {
   const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} lang={lang} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
 
   // --- РЕНДЕР МОДАЛКИ С QR-КОДОМ ---
-  const renderQRModal = () => {
-    if (!qrModalData) return null;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrModalData)}`;
 
-    return (
-      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setQrModalData(null); }}>
-        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setQrModalData(null)} />
-        <div role="dialog" aria-modal="true" aria-labelledby="qr-contact-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95 flex flex-col items-center max-w-sm w-full">
-          <button type="button" aria-label={t.close_btn || t.close} onClick={() => setQrModalData(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <div className="w-12 h-12 bg-lime-100 dark:bg-lime-500/10 text-[#65A30D] dark:text-[#84CC16] rounded-2xl flex items-center justify-center mb-4"><QrCode size={28}/></div>
-          <h2 id="qr-contact-title" className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">{t.qr_contact_title}</h2>
-          <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6 text-center">{t.qr_contact_desc}</p>
-          <div className="p-4 bg-white border-2 border-slate-100 rounded-3xl shadow-sm mb-6">
-            <img src={qrUrl} alt={t.qr_code_alt || t.qr_code} className="w-48 h-48" />
-          </div>
-          <button onClick={() => setQrModalData(null)} className="btn-md w-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700">{t.close_btn || t.close}</button>
-        </div>
-      </div>
-    );
-  };
 
   // --- РЕНДЕР МОДАЛКИ ЖАЛОБЫ (REPORT) ---
-  const renderReportModal = () => {
-    if (!showReportModal) return null;
-    return (
-      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowReportModal(false); }}>
-        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowReportModal(false)} />
-        <div role="dialog" aria-modal="true" aria-labelledby="report-ad-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md">
-          <button type="button" aria-label={t.close_btn || t.close} onClick={() => setShowReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <h2 id="report-ad-title" className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">{t.report_ad}</h2>
-          <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">{t.report_ad_help}</p>
-          <form onSubmit={handleReportAd} className="space-y-4">
-            <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.reason}</label>
-              <select required value={reportForm.reason} onChange={e => setReportForm({...reportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-                <option value="">{t.report_select_reason}</option>
-                <option value="Fraude o estafa">{t.report_reason_fraud}</option>
-                <option value="Contenido inapropiado">{t.report_reason_inappropriate}</option>
-                <option value="Artículo falso o falsificado">{t.report_reason_counterfeit}</option>
-                <option value="Ya se vendió">{t.sold_status}</option>
-                <option value="Otro">{t.report_reason_other}</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.comments}</label>
-              <textarea value={reportForm.comments} onChange={e => setReportForm({...reportForm, comments: e.target.value})} placeholder={t.report_details_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
-            </div>
-            <button type="submit" className="btn-md w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] mt-2 shadow-sm">{t.report_send}</button>
-          </form>
-        </div>
-      </div>
-    );
-  };
+
 
   // --- РЕНДЕР МОДАЛКИ ЖАЛОБЫ НА ПОЛЬЗОВАТЕЛЯ ---
-  const renderUserReportModal = () => {
-    if (!showUserReportModal) return null;
-    return (
-      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowUserReportModal(false); }}>
-        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowUserReportModal(false)} />
-        <div role="dialog" aria-modal="true" aria-labelledby="report-user-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md">
-          <button type="button" aria-label={t.close_btn || t.close} onClick={() => setShowUserReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <h2 id="report-user-title" className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">{t.report_seller}</h2>
-          <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">{t.report_user_help}</p>
-          <form onSubmit={handleUserReportSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.reason}</label>
-              <select required value={userReportForm.reason} onChange={e => setUserReportForm({...userReportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-                <option value="">{t.report_select_reason}</option>
-                <option value="Comportamiento abusivo">{t.report_reason_abusive}</option>
-                <option value="Sospecha de fraude">{t.report_reason_suspected_fraud}</option>
-                <option value="Vende productos ilegales">{t.report_reason_prohibited_products}</option>
-                <option value="Suplantación de identidad">{t.report_reason_impersonation}</option>
-                <option value="Otro">{t.report_reason_other}</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.report_additional_details}</label>
-              <textarea value={userReportForm.comments} onChange={e => setUserReportForm({...userReportForm, comments: e.target.value})} placeholder={t.report_user_details_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
-            </div>
-            <button type="submit" className="btn-md w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] mt-2 shadow-sm">{t.report_send}</button>
-          </form>
-        </div>
-      </div>
-    );
-  };
+
 
   // --- РЕНДЕР ЦЕНОВОЙ МОДЕЛИ ---
-  const renderPricingModal = () => {
-    if (!showPricingModal) return null;
 
-    // Текущий активный план пользователя (если оплачен и не истёк)
-    const planActive = user?.plan_code && (!user?.plan_expires_at || new Date(user.plan_expires_at) > new Date());
-    const currentPlanCode = planActive ? user.plan_code : 'package_free';
-    // Кнопка плана: если это текущий активный план — показываем "активен", иначе "Adquirir plan"
-    const renderPlanBtn = (code, onBuy, buyClass, buyLabel = t.pm_buy_plan || 'Adquirir plan') => (
-      currentPlanCode === code
-        ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#65A30D] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan || 'Plan activo'}</button>
-        : <button onClick={onBuy} className={buyClass}>{buyLabel}</button>
-    );
-
-    return (
-      <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-end md:items-center justify-center p-0 md:p-6 backdrop-blur-sm">
-        <div className="bg-slate-50 dark:bg-slate-950 w-full max-w-5xl md:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0">
-          <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
-            <div className="p-5 flex justify-between items-center">
-              <h3 className="font-bold text-[22px] text-slate-900 dark:text-white flex items-center gap-2"><Crown className="w-6 h-6 text-[#84CC16]"/> {t.pricing_title || 'Planes y Promociones'}</h3>
-              <button onClick={() => setShowPricingModal(false)} className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"><XCircle size={26}/></button>
-            </div>
-            <div className="flex px-5 gap-6 border-t border-slate-100 dark:border-slate-800">
-              <button onClick={() => setPriceTab('particular')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'particular' ? 'border-[#84CC16] text-[#65A30D] dark:text-[#84CC16]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>{t.pm_tab_plans || 'Planes mensuales'}</button>
-              <button onClick={() => setPriceTab('pro')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'pro' ? 'border-[#84CC16] text-[#65A30D] dark:text-[#84CC16]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>{t.pm_tab_promos || 'Promociones únicas'}</button>
-            </div>
-          </div>
-          <div className="p-4 md:p-6 overflow-y-auto">
-            {priceTab === 'particular' ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {/* Gratis */}
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_free || 'Gratis'}</h4>
-                    <p className="text-2xl font-black text-slate-950 dark:text-white mb-3">$0 <span className="text-[12px] font-normal text-slate-400 dark:text-slate-500">{t.pm_per_month || '/mes'}</span></p>
-                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600 dark:text-slate-300">
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_3 || '3 anuncios activos'}</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_contact_whatsapp || 'Contacto por Whatsapp/Telegram'}</li>
-                    </ul>
-                    {currentPlanCode === 'package_free'
-                      ? <button disabled className="py-2.5 w-full border border-[#84CC16] bg-[#84CC16]/10 text-[#65A30D] dark:text-[#84CC16] rounded-xl text-xs font-bold cursor-default flex items-center justify-center gap-1.5"><CheckCircle className="w-3.5 h-3.5"/> {t.current_plan || 'Plan activo'}</button>
-                      : <button disabled className="py-2.5 w-full border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 rounded-xl text-xs font-bold cursor-default">{t.pm_plan_free || 'Gratis'}</button>}
-                  </div>
-                  {/* Impulso */}
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-[#65A30D] dark:text-[#84CC16] uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_impulso || 'Impulso'}</h4>
-                    <p className="text-2xl font-black text-slate-950 dark:text-white mb-3">$99 <span className="text-[12px] font-normal text-slate-400 dark:text-slate-500">{t.pm_per_month || '/mes'}</span></p>
-                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600 dark:text-slate-300">
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_10 || '10 anuncios activos'}</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_more_visibility || 'Más visibilidad'}</li>
-                    </ul>
-                    {renderPlanBtn('package_impulso', () => handleClipPayment(99, 'Plan Impulso', null, 'package_impulso'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
-                  </div>
-                  {/* Negocio */}
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-[#65A30D] dark:text-[#84CC16] uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_negocio || 'Negocio'}</h4>
-                    <p className="text-2xl font-black text-slate-950 dark:text-white mb-3">$249 <span className="text-[12px] font-normal text-slate-400 dark:text-slate-500">{t.pm_per_month || '/mes'}</span></p>
-                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600 dark:text-slate-300">
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_30 || '30 anuncios activos'}</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_business_badge || 'Insignia de negocio'}</li>
-                    </ul>
-                    {renderPlanBtn('package_negocio', () => handleClipPayment(249, 'Plan Negocio', null, 'package_negocio'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
-                  </div>
-                  {/* Pro */}
-                  <div className="bg-slate-900 dark:bg-slate-900 rounded-2xl p-5 border border-slate-800 flex flex-col shadow-lg relative ring-2 ring-[#84CC16]">
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#84CC16] text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">{t.pm_popular || 'POPULAR'}</div>
-                    <h4 className="font-bold text-lime-400 uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_pro || 'Pro'}</h4>
-                    <p className="text-2xl font-black text-white mb-3">$599 <span className="text-[12px] font-normal text-slate-300 dark:text-slate-400">{t.pm_per_month || '/mes'}</span></p>
-                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-300 dark:text-slate-300">
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_100 || '100 anuncios activos'}</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_company_page || 'Página de empresa'}</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_priority_support || 'Soporte preferente'}</li>
-                    </ul>
-                    {renderPlanBtn('package_pro', () => handleClipPayment(599, 'Plan Pro', null, 'package_pro'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
-                  </div>
-                  {/* Agencia */}
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_agencia || 'Agencia'}</h4>
-                    <p className="text-2xl font-black text-slate-950 dark:text-white mb-3"><span className="text-[12px] font-normal text-slate-400 dark:text-slate-500">{t.pm_from || 'Desde'}</span> $1,499 <span className="text-[12px] font-normal text-slate-400 dark:text-slate-500">{t.pm_per_month || '/mes'}</span></p>
-                    <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-600 dark:text-slate-300">
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_300_500 || '300-500 anuncios'}</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_bulk_upload || 'Carga masiva XML/CSV'}</li>
-                      <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_api_access || 'API acceso'}</li>
-                    </ul>
-                    {renderPlanBtn('package_agencia', () => handleClipPayment(1499, 'Plan Agencia', null, 'package_agencia'), "py-2.5 w-full bg-slate-900 dark:bg-slate-950 hover:bg-black dark:hover:bg-slate-800 text-white dark:text-slate-300 rounded-xl text-xs font-bold transition-colors shadow-sm")}
-                  </div>
-                </div>
-
-                <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-4 text-center border border-slate-200 dark:border-slate-800">
-                  <p className="text-[14px] font-semibold text-slate-700 dark:text-slate-300">{t.pm_pay_note || 'Paga con tarjeta o efectivo en OXXO'}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
-                  <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
-                    <div>
-                      <p className="text-[13px] font-bold text-slate-900 dark:text-white">{t.pm_promote_ad_label || 'Anuncio a promocionar'}</p>
-                      <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_promote_ad_hint || 'El paquete se aplicará solo al anuncio seleccionado.'}</p>
-                    </div>
-                    <select
-                      value={promotionTargetAdId}
-                      onChange={(e) => setPromotionTargetAdId(e.target.value)}
-                      className="w-full md:w-[360px] px-3.5 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-[14px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16]"
-                    >
-                      <option value="">{t.pm_select_active_ad || 'Selecciona un anuncio activo...'}</option>
-                      {promotableAds.map(ad => (
-                        <option key={ad.id} value={ad.id}>{localizedText(ad.title, lang)}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {promotableAds.length === 0 && (
-                    <p className="mt-3 text-[12px] text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl px-3 py-2">
-                      {t.pm_no_active_ads || 'No tienes anuncios activos. Publica o activa un anuncio antes de comprar promoción.'}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                  {/* Subir anuncios */}
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[12px] mb-4">{t.pm_boost_section || 'Subir de posición'}</h4>
-                    <div className="space-y-4 flex-1">
-                      <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_boost_1d_name || 'Subir 24 horas'}</p>
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_boost_1d_desc || 'Reposiciona tu anuncio al inicio por 1 día'}</p>
-                        </div>
-                        <button onClick={() => handlePromotionProductPayment(19, t.pm_boost_1d_name || 'Subir 24 horas', 'boost_1_day')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$19</button>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_boost_3d_name || 'Subir 3 días'}</p>
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_boost_3d_desc || 'Reposiciona al inicio cada día por 3 días'}</p>
-                        </div>
-                        <button onClick={() => handlePromotionProductPayment(49, t.pm_boost_3d_name || 'Subir 3 días', 'boost_3_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$49</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Resaltar / Destacar 7 días */}
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-[#84CC16]/50 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-[#65A30D] dark:text-[#84CC16] uppercase tracking-wider text-[12px] mb-4">{t.pm_highlight_section || 'Destacar Anuncio'}</h4>
-                    <div className="space-y-4 flex-1">
-                      <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_highlight_7d_name || 'Resaltar 7 días'}</p>
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_highlight_7d_desc || 'Fondo llamativo en los resultados'}</p>
-                        </div>
-                        <button onClick={() => handlePromotionProductPayment(79, t.pm_highlight_7d_name || 'Resaltar 7 días', 'highlight_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$79</button>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_featured_7d_name || 'Destacado 7 días'}</p>
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_featured_7d_desc || 'Etiqueta dorada y mayor exposición'}</p>
-                        </div>
-                        <button onClick={() => handlePromotionProductPayment(149, t.pm_featured_7d_name || 'Destacado 7 días', 'featured_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$149</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Destacar 30 días / Top categoría */}
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-                    <h4 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[12px] mb-4">{t.pm_premium_section || 'Promoción Premium'}</h4>
-                    <div className="space-y-4 flex-1">
-                      <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_featured_30d_name || 'Destacado 30 días'}</p>
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_featured_30d_desc || 'Súper exposición por un mes completo'}</p>
-                        </div>
-                        <button onClick={() => handlePromotionProductPayment(399, t.pm_featured_30d_name || 'Destacado 30 días', 'featured_30_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_top_category_name || 'Top categoría 7 días'}</p>
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_top_category_desc || 'Anuncio fijo al inicio de su categoría'}</p>
-                        </div>
-                        <button onClick={() => handlePromotionProductPayment(399, t.pm_top_category_name || 'Top categoría 7 días', 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h4 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[12px] mb-1">{t.pm_buy_credits_title || 'Comprar créditos'}</h4>
-                  <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-4">{t.pm_buy_credits_desc || '1 crédito = $1 MXN. Úsalos para promocionar cualquiera de tus anuncios desde tu saldo.'}</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                    {[100, 200, 300, 500].map(v => (
-                      <button
-                        key={v}
-                        onClick={() => handleCreditsPayment(v, `credits_${v}`)}
-                        className="p-3 bg-slate-50 dark:bg-slate-800 hover:bg-lime-50 dark:hover:bg-lime-500/10 border border-slate-200 dark:border-slate-700 hover:border-[#84CC16] rounded-xl text-center transition-colors"
-                      >
-                        <p className="font-bold text-slate-900 dark:text-white text-[16px]">{v}</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.pm_credits_unit || 'créditos'} · ${v}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-                    <div className="flex-1">
-                      <label className="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-1 block">{t.pm_custom_amount || 'Monto personalizado'}</label>
-                      <input
-                        type="number"
-                        min="50"
-                        max="5000"
-                        step="10"
-                        placeholder="Ej. 250"
-                        value={customCreditsAmount}
-                        onChange={(e) => setCustomCreditsAmount(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-[14px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16]"
-                      />
-                      <p className="text-[11px] text-slate-400 mt-1">{t.pm_custom_amount_hint || 'Mínimo $50, máximo $5,000'}</p>
-                    </div>
-                    <button
-                      onClick={() => handleCreditsPayment(customCreditsAmount, 'credits_custom')}
-                      className="px-5 py-2.5 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors whitespace-nowrap"
-                    >
-                      {t.pm_buy_credits_title || 'Comprar créditos'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-4 text-center border border-slate-200 dark:border-slate-800">
-                  <p className="text-[14px] font-semibold text-slate-700 dark:text-slate-300">{t.pm_pay_note || 'Paga con tarjeta o efectivo en OXXO'}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // --- РЕНДЕР ДАШБОРДА ПОЛЬЗОВАТЕЛЯ ---
   const safeUserAds = useMemo(() => (Array.isArray(userAds) ? userAds : []), [userAds]);
@@ -4214,65 +3911,10 @@ function App() {
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
   const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} user={user} setUser={setUser} />;
 
-  const renderCouponModal = () => {
-    if (!showCouponModal) return null;
-    return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-6 relative shadow-2xl animate-in fade-in zoom-in-95">
-          <button onClick={() => setShowCouponModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <div className="flex justify-center mb-4"><Ticket className="text-[#84CC16] w-12 h-12" /></div>
-          <h2 className="text-[20px] font-bold tracking-tight mb-2 text-center text-slate-900 dark:text-white">{t.redeem_coupon_title || 'Canjear Cupón'}</h2>
-          <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] mb-6">{t.redeem_coupon_desc || 'Introduce tu código promocional para recibir créditos gratis.'}</p>
-          <form onSubmit={handleRedeemCoupon} className="space-y-4">
-            <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} required placeholder={t.coupon_code_placeholder || 'CÓDIGO'} className="w-full px-3.5 py-3 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 uppercase text-center font-bold tracking-widest bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
-            <button type="submit" className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D]">{t.redeem || 'Canjear'}</button>
-          </form>
-        </div>
-      </div>
-    );
-  };
+
 
   // --- РЕНДЕР МОДАЛКИ ПРОФИЛЯ ---
-  const renderProfileModal = () => {
-    if (!showProfileModal) return null;
-    return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-          <button onClick={() => setShowProfileModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">{t.edit_profile_title || 'Editar Perfil'}</h2>
 
-          <form onSubmit={handleProfileSubmit} className="space-y-5">
-            <div className="flex flex-col items-center mb-6">
-              <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-950 mb-3 overflow-hidden relative group border border-slate-200 dark:border-slate-700">
-                {profileForm.avatarPreview ? (
-                  <img src={profileForm.avatarPreview} className="w-full h-full object-cover" alt="Avatar" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400"><User size={40} /></div>
-                )}
-                <label className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer transition-colors">
-                  <Camera className="w-8 h-8 text-white" />
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) setProfileForm({ ...profileForm, avatarFile: file, avatarPreview: URL.createObjectURL(file) });
-                  }}/>
-                </label>
-              </div>
-              <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">{t.change_photo || 'Cambiar Foto'}</span>
-            </div>
-
-            <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.name_label || 'Nombre'}</label>
-              <input value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
-            </div>
-
-            <button type="submit" disabled={profileLoading} className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] flex justify-center mt-2">
-              {profileLoading ? <Loader2 className="animate-spin" size={20}/> : (t.save_changes || 'Guardar Cambios')}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  };
 
   // --- РЕНДЕР ПАНЕЛИ АДМИНИСТРАТОРА ---
   const renderAdminScreen = () => <AdminScreen adminAnalytics={adminAnalytics} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminAnalytics={loadAdminAnalytics} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} adminPayments={adminPayments} loadingAdminPayments={loadingAdminPayments} adminPaymentsPage={adminPaymentsPage} adminPaymentsLastPage={adminPaymentsLastPage} adminPaymentsTotal={adminPaymentsTotal} loadAdminPayments={loadAdminPayments} token={localStorage.getItem('auth_token')} />;
@@ -4828,12 +4470,12 @@ function App() {
       </footer>
 
       {!viewedAd && currentTab !== 'post' && renderTabBar()}
-      {renderPricingModal()}
-      {renderProfileModal()}
-      {renderCouponModal()}
-      {renderQRModal()}
-      {renderReportModal()}
-      {renderUserReportModal()}
+      {showPricingModal && <React.Suspense fallback={null}><PricingModal customCreditsAmount={customCreditsAmount} handleClipPayment={handleClipPayment} handleCreditsPayment={handleCreditsPayment} handlePromotionProductPayment={handlePromotionProductPayment} lang={lang} localizedText={localizedText} priceTab={priceTab} promotableAds={promotableAds} promotionTargetAdId={promotionTargetAdId} setCustomCreditsAmount={setCustomCreditsAmount} setPriceTab={setPriceTab} setPromotionTargetAdId={setPromotionTargetAdId} setShowPricingModal={setShowPricingModal} showPricingModal={showPricingModal} t={t} user={user} /></React.Suspense>}
+      {showProfileModal && <React.Suspense fallback={null}><ProfileModal handleProfileSubmit={handleProfileSubmit} profileForm={profileForm} profileLoading={profileLoading} setProfileForm={setProfileForm} setShowProfileModal={setShowProfileModal} showProfileModal={showProfileModal} t={t} /></React.Suspense>}
+      {showCouponModal && <React.Suspense fallback={null}><CouponModal couponInput={couponInput} handleRedeemCoupon={handleRedeemCoupon} setCouponInput={setCouponInput} setShowCouponModal={setShowCouponModal} showCouponModal={showCouponModal} t={t} /></React.Suspense>}
+      {qrModalData && <React.Suspense fallback={null}><QRModal qrModalData={qrModalData} setQrModalData={setQrModalData} t={t} /></React.Suspense>}
+      {showReportModal && <React.Suspense fallback={null}><ReportModal handleReportAd={handleReportAd} reportForm={reportForm} setReportForm={setReportForm} setShowReportModal={setShowReportModal} showReportModal={showReportModal} t={t} /></React.Suspense>}
+      {showUserReportModal && <React.Suspense fallback={null}><UserReportModal handleUserReportSubmit={handleUserReportSubmit} setShowUserReportModal={setShowUserReportModal} setUserReportForm={setUserReportForm} showUserReportModal={showUserReportModal} t={t} userReportForm={userReportForm} /></React.Suspense>}
       {showAiModal && user?.role === 'admin' && (
         <Suspense fallback={null}>
           <AiCommandModal
