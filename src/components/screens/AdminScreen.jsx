@@ -8,7 +8,16 @@ import { formatDate, formatDateTime, formatMXN, formatNumber } from '../../utils
 import { getAdminSurfaceCopy } from '../../utils/adminSurfaceCopy';
 import AdminBusinessVerifications from './AdminBusinessVerifications';
 import AdminSeoMeasurement from '../admin/AdminSeoMeasurement';
-export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons, adminLoading, adminPendingAds, adminReportTab, adminReports, adminTab, adminUserReports, adminUserSearch, adminUsers, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments, token }) {
+
+const AdminDataLoadError = ({ testId, onRetry, t }) => (
+  <div data-testid={`${testId}-load-error`} role="alert" className="flex flex-col items-center justify-center gap-4 p-10 text-center">
+    <p className="text-[13px] font-medium text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
+    <button type="button" data-testid={`${testId}-retry`} onClick={onRetry} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+      {t.retry_btn || 'Reintentar'}
+    </button>
+  </div>
+);
+export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons, adminCouponsLoadError = false, adminLoading, adminPendingAds, adminPendingAdsLoadError = false, adminReportTab, adminReports, adminReportsLoadError = false, adminTab, adminUserReports, adminUserSearch, adminUsers, adminUsersLoadError = false, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsLoadError = false, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments, token }) {
     if (userRole !== 'admin') return <div className="p-10 text-center font-bold text-red-500">{t.access_denied || 'Access denied'}</div>;
     React.useEffect(() => {
         if (adminTab === 'payments') {
@@ -109,9 +118,11 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
             <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
               <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><ShieldCheck className="text-[#84CC16]" size={20}/> {t.pending_ads} ({adminPendingAds.length})</h3>
               {loadingPendingAds ? (
-                 <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#84CC16]" size={32}/></div>
+                 <div data-testid="admin-moderation-loading" role="status" className="flex justify-center py-10"><Loader2 className="animate-spin text-[#84CC16]" size={32}/></div>
+              ) : adminPendingAdsLoadError && adminPendingAds.length === 0 ? (
+                 <AdminDataLoadError testId="admin-moderation" onRetry={loadPendingAds} t={t} />
               ) : adminPendingAds.length === 0 ? (
-                 <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px]">{t.no_pending}</div>
+                 <div data-testid="admin-moderation-empty" className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px]">{t.no_pending}</div>
               ) : (
                  <div className="space-y-4">
                     {adminPendingAds.map(ad => (
@@ -153,7 +164,11 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                 </div>
                 <button type="submit" className="btn-sm bg-[#0F172A] text-white hover:bg-black h-[38px] w-full sm:w-auto">{t.create}</button>
               </form>
-              {loadingCoupons ? <div className="flex justify-center py-5"><Loader2 className="animate-spin text-slate-400"/></div> : (
+              {loadingCoupons ? (
+                <div data-testid="admin-coupons-loading" role="status" className="flex justify-center py-5"><Loader2 className="animate-spin text-slate-400"/></div>
+              ) : adminCouponsLoadError && adminCoupons.length === 0 ? (
+                <AdminDataLoadError testId="admin-coupons" onRetry={loadCoupons} t={t} />
+              ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {adminCoupons.map(c => (
                     <div key={c.id} className="border border-slate-200 rounded-xl p-4 flex justify-between items-center relative overflow-hidden bg-white">
@@ -165,7 +180,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                       <button onClick={() => handleDeleteCoupon(c.id, adminCopy)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><Trash2 size={16}/></button>
                     </div>
                   ))}
-                  {adminCoupons.length === 0 && <p className="text-slate-400 text-[13px] col-span-full">{t.no_coupons}</p>}
+                  {adminCoupons.length === 0 && <p data-testid="admin-coupons-empty" className="text-slate-400 text-[13px] col-span-full">{t.no_coupons}</p>}
                 </div>
               )}
             </div>
@@ -178,7 +193,11 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                   <button onClick={() => setAdminReportTab('users')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${adminReportTab === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.users_tab || 'Users'}</button>
                 </div>
               </div>
-              {loadingReports ? <div className="flex justify-center py-5"><Loader2 className="animate-spin text-slate-400"/></div> : (
+              {loadingReports ? (
+                <div data-testid="admin-reports-loading" role="status" className="flex justify-center py-5"><Loader2 className="animate-spin text-slate-400"/></div>
+              ) : adminReportsLoadError && adminReports.length === 0 && adminUserReports.length === 0 ? (
+                <AdminDataLoadError testId="admin-reports" onRetry={loadAdminReports} t={t} />
+              ) : (
                 <div className="overflow-x-auto">
                   {adminReportTab === 'ads' ? (
                   <table className="w-full text-left border-collapse">
@@ -206,7 +225,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                           </td>
                         </tr>
                       ))}
-                      {adminReports.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-slate-400 font-medium">{t.no_reports}</td></tr>}
+                      {adminReports.length === 0 && <tr><td data-testid="admin-reports-ads-empty" colSpan="5" className="p-8 text-center text-slate-400 font-medium">{t.no_reports}</td></tr>}
                     </tbody>
                   </table>
                   ) : (
@@ -232,7 +251,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                           </td>
                         </tr>
                       ))}
-                      {adminUserReports.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-slate-400 font-medium">{t.no_reports}</td></tr>}
+                      {adminUserReports.length === 0 && <tr><td data-testid="admin-reports-users-empty" colSpan="5" className="p-8 text-center text-slate-400 font-medium">{t.no_reports}</td></tr>}
                     </tbody>
                   </table>
                   )}
@@ -325,7 +344,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                   </button>
                 </div>
                 {loadingAdminPayments ? (
-                  <div className="space-y-4 py-4">
+                  <div data-testid="admin-payments-loading" role="status" className="space-y-4 py-4">
                     {[1, 2, 3, 4].map((n) => (
                       <div key={n} className="border border-slate-100 dark:border-slate-700/60 rounded-2xl p-4 animate-pulse flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -344,8 +363,10 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                       </div>
                     ))}
                   </div>
+                ) : adminPaymentsLoadError && adminPayments.length === 0 ? (
+                  <AdminDataLoadError testId="admin-payments" onRetry={() => loadAdminPayments(adminPaymentsPage)} t={t} />
                 ) : adminPayments.length === 0 ? (
-                  <div className="py-16 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center p-6 bg-slate-50/30 dark:bg-slate-900/10">
+                  <div data-testid="admin-payments-empty" className="py-16 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center p-6 bg-slate-50/30 dark:bg-slate-900/10">
                     <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center text-amber-500 mb-4 shadow-sm">
                       <CreditCard className="w-8 h-8" />
                     </div>
@@ -530,7 +551,9 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                 </div>
               </div>
               {loadingAdminUsers ? (
-                 <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#84CC16]" size={32}/></div>
+                 <div data-testid="admin-users-loading" role="status" className="flex justify-center py-10"><Loader2 className="animate-spin text-[#84CC16]" size={32}/></div>
+              ) : adminUsersLoadError && adminUsers.length === 0 ? (
+                 <AdminDataLoadError testId="admin-users" onRetry={loadAdminUsers} t={t} />
               ) : (
                  <div className="overflow-x-auto">
                    <table className="w-full text-left border-collapse">
@@ -619,7 +642,7 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                        })}
                        {filteredAdminUsers.length === 0 && (
                          <tr>
-                           <td colSpan="6" className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">{t.no_users}</td>
+                           <td data-testid="admin-users-empty" colSpan="6" className="p-10 text-center text-gray-400 font-bold uppercase tracking-widest text-xs">{t.no_users}</td>
                          </tr>
                        )}
                      </tbody>
