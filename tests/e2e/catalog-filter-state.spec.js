@@ -77,9 +77,24 @@ test('mobile filter sheet persists canonical state and clear-all resets it', asy
   await page.addInitScript(() => localStorage.setItem('lang', 'en'));
   await mockPublicCatalogApi(page);
   await page.goto('/listings');
-  await page.getByTestId('catalog-mobile-filters').click();
+  const filterTrigger = page.getByTestId('catalog-mobile-filters');
+  await filterTrigger.focus();
+  await expect(filterTrigger).toBeFocused();
+  await filterTrigger.press('Enter');
 
-  const sheet = page.getByRole('dialog');
+  let sheet = page.getByRole('dialog');
+  const sheetClose = sheet.getByTestId('bottom-sheet-close');
+  await expect(filterTrigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(sheetClose).toBeFocused();
+  await sheetClose.press('Shift+Tab');
+  await expect.poll(() => page.evaluate(() => document.querySelector('[role="dialog"]')?.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+  await expect(filterTrigger).toBeFocused();
+  await expect(filterTrigger).toHaveAttribute('aria-expanded', 'false');
+  await filterTrigger.press('Enter');
+
+  sheet = page.getByRole('dialog');
   await sheet.getByTestId('sidebar-filter-listing_type').selectOption('Venta');
   await sheet.getByTestId('sidebar-filter-sort').selectOption('price_desc');
   await sheet.getByTestId('sidebar-filter-state').selectOption('Nuevo León');

@@ -18,8 +18,13 @@ export default function BottomSheet({
   children,
   maxHeight = '85vh',
   zIndex = 9999,
+  closeLabel = 'Close',
 }) {
   const sheetRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const openerRef = useRef(null);
+  const wasOpenRef = useRef(false);
+  const titleId = React.useId();
   const startY = useRef(null);
   const currentY = useRef(0);
   const isDragging = useRef(false);
@@ -34,13 +39,55 @@ export default function BottomSheet({
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  // Close on Escape key
+  const focusableSelector = 'button:not([disabled]):not([tabindex="-1"]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
   useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e) => { if (e.key === 'Escape') onClose?.(); };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen, onClose]);
+    if (isOpen && !wasOpenRef.current) {
+      wasOpenRef.current = true;
+      const active = document.activeElement;
+      openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+      const frame = window.requestAnimationFrame(() => {
+        const first = closeButtonRef.current || sheetRef.current?.querySelector(focusableSelector);
+        first?.focus();
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }
+    if (!isOpen && wasOpenRef.current) {
+      wasOpenRef.current = false;
+      const opener = openerRef.current;
+      openerRef.current = null;
+      const frame = window.requestAnimationFrame(() => {
+        if (opener?.isConnected) opener.focus();
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }
+    return undefined;
+  }, [isOpen]);
+
+  const handleKeyDown = useCallback((event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose?.();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    const focusables = Array.from(sheet.querySelectorAll(focusableSelector))
+      .filter(element => element.getClientRects().length > 0);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !sheet.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !sheet.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    }
+  }, [onClose]);
 
   // Drag-to-dismiss: if dragged down > 100px, close
   const handleTouchStart = useCallback((e) => {
@@ -76,13 +123,17 @@ export default function BottomSheet({
       style={{ zIndex }}
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      onKeyDown={handleKeyDown}
     >
       {/* Backdrop */}
       <button
         type="button"
+        tabIndex={-1}
+        data-testid="bottom-sheet-backdrop"
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
         onClick={onClose}
-        aria-label="Cerrar"
+        aria-label={closeLabel}
       />
 
       {/* Sheet */}
@@ -102,14 +153,16 @@ export default function BottomSheet({
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base">
+            <h3 id={titleId} className="font-bold text-slate-900 dark:text-white text-base">
               {title}
             </h3>
             <button
+              ref={closeButtonRef}
               type="button"
+              data-testid="bottom-sheet-close"
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-              aria-label="Cerrar"
+              aria-label={closeLabel}
             >
               ✕
             </button>

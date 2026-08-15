@@ -815,6 +815,7 @@ export default function AdDetailScreen({
                   isOpen={showShareMenu && typeof window !== 'undefined' && window.innerWidth < 768}
                   onClose={() => setShowShareMenu(false)}
                   title={t.share_ad_title || 'Compartir anuncio'}
+                  closeLabel={t.close_btn || t.close || 'Close'}
                   maxHeight="75vh"
                   zIndex={1001}
                 >

@@ -159,6 +159,7 @@ export default function CatalogScreen({
           </h1>
           <button
             data-testid="catalog-mobile-filters"
+            aria-expanded={showMobileFilters}
             onClick={() => setShowMobileFilters(value => !value)}
             className={`btn-sm flex items-center gap-2 border transition-colors ${showMobileFilters ? 'border-slate-900 bg-slate-900 text-white dark:border-[#84CC16] dark:bg-[#84CC16] dark:text-slate-950' : 'border-slate-300 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'}`}
           >
@@ -184,6 +185,7 @@ export default function CatalogScreen({
           isOpen={showMobileFilters}
           onClose={() => setShowMobileFilters(false)}
           title={t.filters || 'Filtros'}
+          closeLabel={t.close_btn || t.close || 'Close'}
           maxHeight="90vh"
           zIndex={9999}
         >
