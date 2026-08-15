@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Conversation;
+use App\Support\MailLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -14,25 +14,20 @@ class NewMessageMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public string $senderName;
-    public string $adTitle;
-    public string $messageBody;
-    public int    $conversationId;
+    public string $localeCode;
 
     public function __construct(
-        array $messageData,
-        Conversation $conversation,
+        public int $conversationId,
+        ?string $locale = null,
     ) {
-        $this->senderName     = $messageData['sender_name'];
-        $this->messageBody    = $messageData['body'];
-        $this->adTitle        = $conversation->ad->title ?? 'anuncio';
-        $this->conversationId = $conversation->id;
+        $this->localeCode = MailLocale::normalize($locale);
+        $this->locale($this->localeCode);
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->senderName . " te envió un mensaje sobre '{$this->adTitle}'",
+            subject: __('emails.new_message.subject'),
         );
     }
 

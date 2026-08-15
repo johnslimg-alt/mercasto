@@ -7,12 +7,14 @@ use App\Jobs\SendHuaweiPushNotification;
 use App\Jobs\SendMobilePushNotification;
 use App\Jobs\SendWebPushNotification;
 use App\Jobs\SendTelegramMessageNotification;
+use App\Mail\NewMessageMail;
 use App\Models\Ad;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -25,6 +27,7 @@ class MarketplaceChatApiTest extends TestCase
         parent::setUp();
         Event::fake([MessageSent::class]);
         Queue::fake();
+        Mail::fake();
     }
 
     public function test_chat_routes_require_authentication(): void
@@ -39,7 +42,13 @@ class MarketplaceChatApiTest extends TestCase
 
     public function test_buyer_can_start_a_conversation_with_the_ad_seller(): void
     {
-        $seller = User::factory()->create();
+        $seller = User::factory()->create([
+            'notification_preferences' => [
+                'email_alerts' => true,
+                'email_new_message' => true,
+                'locale' => 'ru',
+            ],
+        ]);
         $buyer = User::factory()->create();
         $ad = $this->createAd($seller);
 
@@ -99,6 +108,11 @@ class MarketplaceChatApiTest extends TestCase
             && ($job->data['conversation_id'] ?? null) === $conversation->id
             && ($job->data['url'] ?? null) === "/mensajes?conversation={$conversation->id}"
         );
+        Mail::assertQueued(NewMessageMail::class, fn (NewMessageMail $mail) =>
+            $mail->hasTo($seller->email)
+            && $mail->conversationId === $conversation->id
+            && $mail->localeCode === 'ru'
+        );
     }
 
     public function test_unread_message_notifications_coalesce_per_conversation_and_clear_on_read(): void
@@ -125,6 +139,7 @@ class MarketplaceChatApiTest extends TestCase
             'type' => 'message',
             'link' => "/mensajes?conversation={$conversation->id}",
         ]);
+        Mail::assertQueued(NewMessageMail::class, 1);
 
         $this->actingAs($seller, 'sanctum')
             ->getJson("/api/chat/conversations/{$conversation->id}/messages")
@@ -137,6 +152,34 @@ class MarketplaceChatApiTest extends TestCase
             'link' => "/mensajes?conversation={$conversation->id}",
             'is_read' => true,
         ]);
+
+        $this->actingAs($buyer, 'sanctum')->postJson('/api/chat/messages', [
+            'receiver_id' => $seller->id,
+            'ad_id' => $ad->id,
+            'content' => 'Tercer mensaje después de leer',
+        ])->assertOk();
+        Mail::assertQueued(NewMessageMail::class, 2);
+    }
+
+    public function test_new_message_email_respects_recipient_preferences(): void
+    {
+        $seller = User::factory()->create([
+            'notification_preferences' => [
+                'email_alerts' => true,
+                'email_new_message' => false,
+                'locale' => 'en',
+            ],
+        ]);
+        $buyer = User::factory()->create();
+        $ad = $this->createAd($seller);
+
+        $this->actingAs($buyer, 'sanctum')->postJson('/api/chat/messages', [
+            'receiver_id' => $seller->id,
+            'ad_id' => $ad->id,
+            'content' => 'Mensaje sin correo',
+        ])->assertOk();
+
+        Mail::assertNotQueued(NewMessageMail::class);
     }
 
     public function test_buyer_cannot_redirect_an_ad_message_to_an_unrelated_user(): void

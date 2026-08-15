@@ -99,7 +99,7 @@ test('App localizes auth/account actions and does not expose former Spanish fall
   }
 });
 
-test('auth/account request payload contracts stay unchanged', () => {
+test('auth/account request payload contracts stay stable', () => {
   const source = fs.readFileSync('src/App.jsx', 'utf8');
 
   assert.match(source, /fetch\(`\$\{API_URL\}\$\{endpoint\}`,[\s\S]*?body: JSON\.stringify\(data\)/);
@@ -108,6 +108,6 @@ test('auth/account request payload contracts stay unchanged', () => {
   assert.match(source, /fetch\(`\$\{API_URL\}\/auth\/phone\/verify`,[\s\S]*?phone_number: authPhone,[\s\S]*?code: formData\.get\('code'\),[\s\S]*?pendingPhoneRegistrationConsent/);
   assert.match(source, /fetch\(`\$\{API_URL\}\/user\/password`,[\s\S]*?current_password: passwordForm\.current_password,[\s\S]*?new_password: passwordForm\.new_password/);
   assert.match(source, /fetch\(`\$\{API_URL\}\/user\/email\/request`,[\s\S]*?body: JSON\.stringify\(emailForm\)/);
-  assert.match(source, /fetch\(`\$\{API_URL\}\/user\/notifications`,[\s\S]*?body: JSON\.stringify\(notificationsForm\)/);
+  assert.match(source, /fetch\(`\$\{API_URL\}\/user\/notifications`,[\s\S]*?body: JSON\.stringify\(\{ \.\.\.notificationsForm, locale: lang \}\)/);
   assert.match(source, /fetch\(`\$\{API_URL\}\/user`, \{[\s\S]*?method: 'DELETE'/);
 });
