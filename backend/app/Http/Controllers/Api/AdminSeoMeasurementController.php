@@ -127,6 +127,11 @@ class AdminSeoMeasurementController extends Controller
             'distinct_contacted_listings',
             'registration_to_first_publish_percent',
             'view_to_contact_percent',
+            'internal_conversations_started',
+            'seller_replied_conversations',
+            'seller_response_rate_percent',
+            'median_first_response_minutes',
+            'seller_replies_within_2h_percent',
         ];
     }
 }

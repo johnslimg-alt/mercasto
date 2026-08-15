@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Activity, AlertTriangle, BarChart3, CheckCircle,
-  Globe2, Loader2, RefreshCw, Search, ShieldCheck, Users,
+  Activity, AlertTriangle, BarChart3, CheckCircle, Clock3,
+  Globe2, Loader2, MessageCircle, RefreshCw, Search, ShieldCheck, Users,
 } from 'lucide-react';
 import { formatDate, formatDateTime, formatNumber } from '../../utils/localeFormat';
 import { getAdminOperationalCopy } from '../../utils/adminOperationalCopy';
@@ -55,6 +55,8 @@ export default function AdminSeoMeasurement({ token, lang = 'es', t }) {
   const copy = getAdminOperationalCopy(lang).seo;
   const number = value => formatNumber(value, lang);
   const percent = value => `${formatNumber(value, lang, { maximumFractionDigits: 1 })}%`;
+  const numberOrDash = value => value == null ? '—' : number(value);
+  const percentOrDash = value => value == null ? '—' : percent(value);
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -144,6 +146,9 @@ export default function AdminSeoMeasurement({ token, lang = 'es', t }) {
         <MetricCard icon={BarChart3} label={copy.firstPublishers} value={number(current.first_publishers)} note={percent(current.registration_to_first_publish_percent)} />
         <MetricCard icon={Activity} label={copy.genuineViews} value={number(current.genuine_listing_views)} note={`${number(current.genuine_contact_clicks)} ${copy.contacts}`} />
         <MetricCard icon={Search} label={copy.contactConversion} value={percent(current.view_to_contact_percent)} note={`${number(current.distinct_contacted_listings)} ${copy.contactedListings}`} />
+        <MetricCard icon={MessageCircle} label={copy.internalChats} value={numberOrDash(current.internal_conversations_started)} note={current.seller_replied_conversations == null ? null : `${number(current.seller_replied_conversations)} ${copy.sellerReplies}`} />
+        <MetricCard icon={Activity} label={copy.sellerResponseRate} value={percentOrDash(current.seller_response_rate_percent)} note={current.seller_replies_within_2h_percent == null ? null : `${percent(current.seller_replies_within_2h_percent)} ${copy.within2h}`} />
+        <MetricCard icon={Clock3} label={copy.medianFirstResponse} value={current.median_first_response_minutes == null ? '—' : `${number(current.median_first_response_minutes)} ${copy.minutes}`} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -192,13 +197,14 @@ export default function AdminSeoMeasurement({ token, lang = 'es', t }) {
           <p className="mt-1 text-xs text-slate-500">{copy.historyDesc}</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[860px] text-left text-sm">
             <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900/30">
               <tr>
                 <th className="px-5 py-3">{copy.period}</th>
                 <th className="px-5 py-3">{copy.genuineActive}</th>
                 <th className="px-5 py-3">{copy.users}</th>
                 <th className="px-5 py-3">{copy.firstPublications}</th>
+                <th className="px-5 py-3">{copy.responseRate}</th>
                 <th className="px-5 py-3">{copy.indexables}</th>
                 <th className="px-5 py-3">{copy.external}</th>
                 <th className="px-5 py-3">{copy.privacy}</th>
@@ -213,6 +219,7 @@ export default function AdminSeoMeasurement({ token, lang = 'es', t }) {
                     <td className="px-5 py-3">{number(row.supply?.summary?.active_genuine)}</td>
                     <td className="px-5 py-3">{number(row.internal?.current?.new_users)}</td>
                     <td className="px-5 py-3">{number(row.internal?.current?.first_publishers)}</td>
+                    <td className="px-5 py-3">{percentOrDash(row.internal?.current?.seller_response_rate_percent)}</td>
                     <td className="px-5 py-3">{number(row.indexability?.indexable_genuine_listing_urls)}</td>
                     <td className="px-5 py-3">{snapshot.external_complete ? copy.complete : copy.partial}</td>
                     <td className="px-5 py-3">{row.privacy_clear ? 'OK' : copy.review}</td>
