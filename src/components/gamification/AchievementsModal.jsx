@@ -2,8 +2,10 @@ import React from 'react';
 import { X } from 'lucide-react';
 import AchievementsPanel from './AchievementsPanel';
 import { getAchievementsTranslations } from './achievementsI18n';
+import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function AchievementsModal({ isOpen, onClose, lang = 'es' }) {
+  const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({ isOpen, onClose });
   if (!isOpen) return null;
   const tr = getAchievementsTranslations(lang);
   const closeLabel = {
@@ -12,7 +14,7 @@ export default function AchievementsModal({ isOpen, onClose, lang = 'es' }) {
   }[lang] || 'Close';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         data-pointer-dismiss-surface
@@ -22,11 +24,12 @@ export default function AchievementsModal({ isOpen, onClose, lang = 'es' }) {
       />
 
       {/* Modal */}
-      <div role="dialog" aria-modal="true" aria-labelledby="achievements-title" className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="achievements-title" onKeyDown={handleKeyDown} className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
           <h2 id="achievements-title" className="text-2xl font-bold">🏆 {tr.title}</h2>
           <button
+            ref={initialFocusRef}
             type="button"
             aria-label={closeLabel}
             onClick={onClose}
