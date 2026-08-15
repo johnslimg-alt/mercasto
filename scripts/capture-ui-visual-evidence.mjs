@@ -1,6 +1,12 @@
 import { chromium, devices, webkit } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import {
+  backendStaticScreens,
+  clientOnlyScreens,
+  redirectExpectations,
+  supportedDynamicTemplates,
+} from './public-ui-route-policy.mjs';
 
 const baseUrl = process.env.BASE_URL || 'https://mercasto.com';
 const sourceCommit = process.env.EVIDENCE_SOURCE_COMMIT || process.env.GITHUB_SHA || 'unknown';
@@ -50,33 +56,97 @@ const profiles = [
   },
 ];
 
-const screens = [
-  { name: 'home', path: '/' },
-  { name: 'listings', path: '/listings' },
-  { name: 'motor', path: '/motor' },
-  { name: 'real-estate', path: '/inmuebles' },
-  { name: 'jobs', path: '/empleos' },
-  { name: 'services', path: '/servicios' },
-  { name: 'stores', path: '/tiendas' },
-  { name: 'contact', path: '/contacto' },
-  { name: 'help', path: '/ayuda' },
-  { name: 'safety', path: '/seguridad' },
-  { name: 'pricing', path: '/tarifas' },
-  { name: 'login', path: '/login', selector: 'input[name="email"]' },
-  { name: 'register', path: '/register', selector: 'input[name="name"]' },
-  { name: 'post-auth-gate', path: '/post', selector: 'input[name="email"]' },
-  { name: 'profile-auth-gate', path: '/profile', selector: 'input[name="email"]' },
-  { name: 'admin-auth-gate', path: '/admin', selector: 'input[name="email"]' },
-];
+function envSet(name) {
+  const raw = process.env[name]?.trim();
+  return raw ? new Set(raw.split(',').map(value => value.trim()).filter(Boolean)) : null;
+}
+
+const requestedProfiles = envSet('EVIDENCE_PROFILE_NAMES');
+const requestedViewports = envSet('EVIDENCE_VIEWPORT_NAMES');
+const activeProfiles = profiles
+  .filter(profile => !requestedProfiles || requestedProfiles.has(profile.name))
+  .map(profile => ({
+    ...profile,
+    viewports: profile.viewports.filter(viewport => !requestedViewports || requestedViewports.has(viewport.name)),
+  }))
+  .filter(profile => profile.viewports.length > 0);
+
+async function resolveSampleAdId() {
+  try {
+    const response = await fetch(new URL('/api/ads?per_page=1', baseUrl), {
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) {
+      return { id: null, error: `HTTP ${response.status}` };
+    }
+    const payload = await response.json();
+    const rows = Array.isArray(payload?.data) ? payload.data : payload?.data?.data;
+    const id = Number(rows?.[0]?.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return { id: null, error: 'No active public ad id returned.' };
+    }
+    return { id, error: null };
+  } catch (error) {
+    return { id: null, error: String(error) };
+  }
+}
+
+async function verifyRedirects() {
+  const checks = [];
+  for (const [sourcePath, targetPath] of Object.entries(redirectExpectations)) {
+    try {
+      const response = await fetch(new URL(sourcePath, baseUrl), { redirect: 'manual' });
+      const location = response.headers.get('location');
+      const actualTarget = location ? new URL(location, baseUrl).pathname.replace(/\/$/, '') || '/' : null;
+      checks.push({
+        sourcePath,
+        expectedTarget: targetPath,
+        actualTarget,
+        status: response.status,
+        error: null,
+        passed: response.status === 301 && actualTarget === targetPath,
+      });
+    } catch (error) {
+      checks.push({
+        sourcePath,
+        expectedTarget: targetPath,
+        actualTarget: null,
+        status: null,
+        error: String(error),
+        passed: false,
+      });
+    }
+  }
+  return checks;
+}
+
+const sampleAd = await resolveSampleAdId();
+const dynamicScreens = sampleAd.id
+  ? supportedDynamicTemplates.map(template => {
+      const path = `/${template.replace('{id}', String(sampleAd.id))}`;
+      const shareRoute = template.startsWith('share/');
+      return {
+        name: shareRoute ? 'share-ad-sample' : 'ad-detail-sample',
+        path,
+        expectedPath: shareRoute ? `/ads/${sampleAd.id}` : path,
+      };
+    })
+  : [];
+const requestedScreens = envSet('EVIDENCE_SCREEN_NAMES');
+const allScreens = [...backendStaticScreens, ...clientOnlyScreens, ...dynamicScreens];
+const screens = allScreens.filter(screen => !requestedScreens || requestedScreens.has(screen.name));
+const redirectChecks = await verifyRedirects();
+
 
 function expectedPathname(screen) {
-  return new URL(screen.path, baseUrl).pathname.replace(/\/$/, '') || '/';
+  const expected = screen.expectedPath || screen.path;
+  return new URL(expected, baseUrl).pathname.replace(/\/$/, '') || '/';
 }
 
 await mkdir(outputRoot, { recursive: true });
 const results = [];
 
-for (const profile of profiles) {
+for (const profile of activeProfiles) {
   const browser = await profile.browserType.launch({ headless: true });
   try {
     for (const viewport of profile.viewports) {
@@ -182,7 +252,7 @@ for (const profile of profiles) {
   }
 }
 
-const failures = results.filter(result => (
+const visualFailures = results.filter(result => (
   (result.status !== null && result.status >= 400)
   || result.actualPath !== result.expectedPath
   || result.overflowPx > 1
@@ -192,6 +262,9 @@ const failures = results.filter(result => (
   || result.pageErrors.length > 0
   || result.sameOriginFailures.length > 0
 ));
+const redirectFailures = redirectChecks.filter(check => !check.passed);
+const dynamicCoverageFailure = dynamicScreens.length === supportedDynamicTemplates.length ? 0 : 1;
+const failures = visualFailures.length + redirectFailures.length + dynamicCoverageFailure;
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -199,9 +272,21 @@ const report = {
   baseUrl,
   evidenceState: 'anonymous production browser state; protected canonical routes display the authentication gate',
   activeLocale: 'es',
-  browserProfiles: profiles.map(profile => profile.name),
+  browserProfiles: activeProfiles.map(profile => profile.name),
+  routeCoverage: {
+    availableVisualScreens: allScreens.length,
+    selectedVisualScreens: screens.length,
+    backendStaticScreens: backendStaticScreens.length,
+    clientOnlyScreens: clientOnlyScreens.length,
+    dynamicScreens: dynamicScreens.length,
+    expectedDynamicScreens: supportedDynamicTemplates.length,
+    sampleAdId: sampleAd.id,
+    sampleAdResolutionError: sampleAd.error,
+    redirects: redirectChecks.length,
+  },
   totalScreenshots: results.length,
-  failures: failures.length,
+  failures,
+  redirectChecks,
   results,
 };
 await writeFile(path.join(outputRoot, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
@@ -214,7 +299,10 @@ const lines = [
   `- Base URL: ${baseUrl}`,
   `- Browser profiles: ${report.browserProfiles.join(', ')}`,
   `- Screenshots: ${results.length}`,
-  `- Automated failures: ${failures.length}`,
+  `- Automated failures: ${failures}`,
+  `- Static backend browser surfaces: ${backendStaticScreens.length}`,
+  `- Dynamic listing/share samples: ${dynamicScreens.length}`,
+  `- Redirect checks: ${redirectChecks.length}`,
   '- State: anonymous production browser; protected canonical routes show the login gate without mutating production data.',
   '- Scope: full required layout widths in Chromium plus representative Pixel 7 Chromium, Desktop Safari/WebKit and iPhone WebKit.',
   '- Real physical iPhone sign-off remains separate; WebKit emulation is not real-device evidence.',
@@ -225,12 +313,21 @@ const lines = [
   '',
   '## Notes',
   '',
-  '- Canonical routes are captured directly; acquisition/legacy aliases such as `/vendedores`, `/publicar-gratis`, `/publish`, `/account/listings`, and `/admin/login` stay in redirect/link-integrity coverage instead of visual baselines.',
+  '- Static backend browser routes come directly from the committed semantic Laravel route inventory; new static routes enter the evidence matrix automatically.',
+  '- Backend 301 redirect routes are verified separately against explicit target expectations.',
+  '- Dynamic `/ads/{id}` and `/share/ads/{id}` routes use one current read-only public ad sample.',
+  '- Acquisition/client legacy aliases such as `/vendedores`, `/publicar-gratis`, `/publish`, `/account/listings`, and `/admin/login` remain client-side redirect/link-integrity concerns.',
   '- Login and registration are captured with their production forms open.',
   '- Post, profile, and admin are captured in the anonymous authentication-gate state.',
   '- Authenticated seller/buyer/admin/Advertising Hub surfaces are covered by the separate isolated authenticated cabinet matrix.',
 ];
 await writeFile(path.join(outputRoot, 'README.md'), `${lines.join('\n')}\n`);
 
-console.log(JSON.stringify({ outputRoot, screenshots: results.length, failures: failures.length }, null, 2));
-if (failures.length > 0) process.exitCode = 1;
+console.log(JSON.stringify({
+  outputRoot,
+  screens: screens.length,
+  screenshots: results.length,
+  redirects: redirectChecks.length,
+  failures,
+}, null, 2));
+if (failures > 0) process.exitCode = 1;
