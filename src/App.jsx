@@ -554,6 +554,7 @@ function App() {
   const [automotiveAds, setAutomotiveAds] = useState([]);
   const [adsTotal, setAdsTotal] = useState(0);
   const [loadingAds, setLoadingAds] = useState(true);
+  const [adsLoadError, setAdsLoadError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -2134,6 +2135,7 @@ function App() {
       setLoadingMore(true);
     } else {
       setLoadingAds(true);
+      setAdsLoadError(false);
     }
     const params = new URLSearchParams();
     params.append('page', page);
@@ -2159,9 +2161,13 @@ function App() {
 
     try {
       const res = await fetch(`${API_URL}/ads?${params.toString()}`, { signal: controller.signal });
-      if (!res.ok) return;
+      if (!res.ok) {
+        if (page === 1 && requestSequence === adsRequestSequenceRef.current) setAdsLoadError(true);
+        return;
+      }
       const data = await res.json();
       if (requestSequence !== adsRequestSequenceRef.current) return;
+      if (page === 1) setAdsLoadError(false);
 
       const items = Array.isArray(data) ? data : (data.data || []);
       const nextTotal = Number(data.total);
@@ -2173,6 +2179,7 @@ function App() {
       setHasMore(data.last_page ? data.current_page < data.last_page : false);
     } catch (err) {
       if (err?.name !== 'AbortError' && requestSequence === adsRequestSequenceRef.current) {
+        if (page === 1) setAdsLoadError(true);
         console.error("Error fetching ads", err);
       }
     } finally {
@@ -3904,6 +3911,7 @@ function App() {
   const renderCatalogScreen = () => (
     <CatalogScreen
       activeCat={activeCat}
+      adsLoadError={adsLoadError}
       conditionFilter={conditionFilter}
       dynamicFilters={dynamicFilters}
       executeSearch={executeSearch}
@@ -3917,6 +3925,7 @@ function App() {
       loadingMore={loadingMore}
       maxPrice={maxPrice}
       minPrice={minPrice}
+      onRetryAds={() => loadAds(1)}
       onSearchArea={handleSearchArea}
       renderAdCard={renderAdCard}
       savingSearchAlert={savingSearchAlert}

@@ -27,7 +27,9 @@ const getIsMobileCatalog = () => {
  */
 export default function SplitViewContainer({
   ads = [],
+  adsLoadError = false,
   onAdClick,
+  onRetryAds,
   renderAdCard,
   title = '',
   selectedState,
@@ -317,12 +319,20 @@ export default function SplitViewContainer({
       {/* ═══════════════════════════════════════════════════════════════ */}
       <div ref={listContainerRef}>
         {loadingAds ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#84CC16]"></div>
+          <div data-testid="catalog-loading" role="status" aria-live="polite" className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#84CC16]" aria-hidden="true"></div>
+          </div>
+        ) : adsLoadError ? (
+          <div data-testid="catalog-load-error" role="alert" className="py-20 text-center flex flex-col items-center">
+            <Search size={48} className="text-slate-300 mb-4" aria-hidden="true" />
+            <span className="text-slate-700 dark:text-slate-200 font-bold text-sm">{t.route_load_error}</span>
+            <button type="button" data-testid="catalog-retry" onClick={onRetryAds} className="btn-sm mt-4 border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+              {t.retry_btn}
+            </button>
           </div>
         ) : ads.length === 0 ? (
-          <div className="py-20 text-center flex flex-col items-center">
-            <Search size={48} className="text-slate-300 mb-4" />
+          <div data-testid="catalog-empty" className="py-20 text-center flex flex-col items-center">
+            <Search size={48} className="text-slate-300 mb-4" aria-hidden="true" />
             <span className="text-slate-400 font-bold uppercase tracking-widest text-sm">{t.no_results_found || 'No se encontraron resultados'}</span>
             <p className="text-slate-400 text-sm mt-2">{t.change_filters_or_search || 'Intenta cambiar los filtros o la búsqueda'}</p>
           </div>

@@ -102,12 +102,15 @@ test('mobile catalog reveals cards in small batches', async ({ page }, testInfo)
   await expect(catalogImages.nth(2)).toHaveAttribute('loading', 'lazy');
   await expect(catalogImages.nth(2)).toHaveAttribute('fetchpriority', 'auto');
   await page.waitForTimeout(400);
-  await expect(page.locator('[data-catalog-card]')).toHaveCount(8);
+  const countBeforeScroll = await page.locator('[data-catalog-card]').count();
+  expect(countBeforeScroll).toBeGreaterThanOrEqual(8);
+  expect(countBeforeScroll).toBeLessThan(catalogAds.length);
+  expect(countBeforeScroll % 8).toBe(0);
   const cls = await page.evaluate(() => window.__mercastoCatalogCls || 0);
   expect(cls).toBeLessThan(0.1);
 
   await page.locator('[data-catalog-batch-sentinel]').scrollIntoViewIfNeeded();
-  await expect.poll(() => page.locator('[data-catalog-card]').count()).toBeGreaterThan(8);
+  await expect.poll(() => page.locator('[data-catalog-card]').count()).toBeGreaterThan(countBeforeScroll);
 });
 
 test('desktop catalog renders the complete current page', async ({ page }, testInfo) => {

@@ -9,6 +9,7 @@ const SavedSearchesPanel = React.lazy(() => import('../common/SavedSearchesPanel
 
 export default function CatalogScreen({
   activeCat,
+  adsLoadError,
   conditionFilter,
   dynamicFilters,
   executeSearch,
@@ -22,6 +23,7 @@ export default function CatalogScreen({
   loadingMore,
   maxPrice,
   minPrice,
+  onRetryAds,
   onSearchArea,
   renderAdCard,
   savingSearchAlert,
@@ -255,11 +257,13 @@ export default function CatalogScreen({
             selectedState={selectedState}
             category={activeCat}
             initialFilters={mapInitialFilters}
+            adsLoadError={adsLoadError}
             loadingAds={loadingAds}
             hasMore={hasMore}
             loadingMore={loadingMore}
             lastAdElementRef={lastAdElementRef}
             getImageUrl={getImageUrl}
+            onRetryAds={onRetryAds}
             onSearchArea={area => {
               onSearchArea?.(area);
               if (!area?.suppressToast) showCatalogToast(t.search_area_applied);
