@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const baseUrl = process.env.BASE_URL || 'https://mercasto.com';
 
-test.describe('SMS launch mode', () => {
+test.describe('production SMS-disabled contract', () => {
   test('disabled provider is not offered as a login method', async ({ page, request }) => {
     const response = await request.get(`${baseUrl}/api/auth/providers`);
     expect(response.ok()).toBeTruthy();
@@ -10,7 +10,7 @@ test.describe('SMS launch mode', () => {
     const providers = payload.providers ?? payload;
     const rawSms = providers?.sms;
     const smsEnabled = typeof rawSms === 'object' ? rawSms?.enabled === true : rawSms === true;
-    test.skip(smsEnabled, 'SMS provider is enabled; use the enabled launch contract.');
+    expect(smsEnabled, 'SMS provider must remain disabled in production').toBeFalsy();
 
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('button', { name: 'Teléfono (SMS)' })).toHaveCount(0);
