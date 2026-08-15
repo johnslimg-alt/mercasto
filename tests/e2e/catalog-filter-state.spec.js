@@ -114,6 +114,39 @@ test('mobile filter sheet persists canonical state and clear-all resets it', asy
   await restoredSheet.getByTestId('sidebar-clear-filters').click();
   await expect.poll(() => page.url()).not.toContain('filters%5B');
 });
+test('tablet filter drawer is reachable, traps focus and restores its trigger', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'en');
+    localStorage.setItem('cookie_consent', 'essential');
+  });
+  await mockPublicCatalogApi(page);
+  await page.goto('/listings');
+
+  const filterTrigger = page.getByTestId('catalog-mobile-filters');
+  await expect(filterTrigger).toBeVisible();
+  await filterTrigger.focus();
+  await filterTrigger.press('Enter');
+
+  const dialogs = page.getByRole('dialog');
+  await expect(dialogs).toHaveCount(1);
+  const drawer = page.getByTestId('catalog-tablet-filter-dialog');
+  const closeButton = page.getByTestId('catalog-tablet-filter-close');
+  await expect(drawer).toBeVisible();
+  await expect(filterTrigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(closeButton).toBeFocused();
+  await closeButton.press('Shift+Tab');
+  await expect.poll(() => page.evaluate(() => document.querySelector('[data-testid=\"catalog-tablet-filter-dialog\"]')?.contains(document.activeElement))).toBe(true);
+
+  await drawer.getByTestId('sidebar-filter-state').selectOption('Jalisco');
+  await expect.poll(() => page.url()).toContain('filters%5Blocation_state%5D=Jalisco');
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(filterTrigger).toBeFocused();
+  await expect(filterTrigger).toHaveAttribute('aria-expanded', 'false');
+});
+
 test('saved search restores full canonical filter state into URL, API and desktop controls', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   const user = { id: 91, name: 'QA User', email: 'qa@example.test', role: 'individual', is_verified: true };

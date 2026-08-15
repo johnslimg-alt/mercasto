@@ -45,12 +45,74 @@ export default function CatalogScreen({
   user,
 }) {
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
+  const [filterViewport, setFilterViewport] = React.useState(() => {
+    if (typeof window === 'undefined') return 'desktop';
+    if (window.innerWidth < 768) return 'mobile';
+    if (window.innerWidth < 1024) return 'tablet';
+    return 'desktop';
+  });
   const [catalogToast, setCatalogToast] = React.useState(null);
   const toastTimerRef = React.useRef(null);
+  const tabletFilterDialogRef = React.useRef(null);
+  const tabletFilterCloseRef = React.useRef(null);
+  const tabletFilterOpenerRef = React.useRef(null);
   const safeServerAds = React.useMemo(
     () => (Array.isArray(serverAds) ? serverAds : []),
     [serverAds],
   );
+
+  React.useEffect(() => {
+    const updateFilterViewport = () => {
+      const nextViewport = window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop';
+      setFilterViewport(nextViewport);
+      if (nextViewport === 'desktop') setShowMobileFilters(false);
+    };
+    updateFilterViewport();
+    window.addEventListener('resize', updateFilterViewport);
+    return () => window.removeEventListener('resize', updateFilterViewport);
+  }, []);
+
+  React.useEffect(() => {
+    if (!showMobileFilters || filterViewport !== 'tablet') return undefined;
+    const dialog = tabletFilterDialogRef.current;
+    if (!dialog) return undefined;
+    tabletFilterOpenerRef.current = document.activeElement;
+    const focusableSelector = 'button:not([disabled]):not([tabindex=\"-1\"]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\"-1\"])';
+    const frame = window.requestAnimationFrame(() => tabletFilterCloseRef.current?.focus());
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setShowMobileFilters(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusables = Array.from(dialog.querySelectorAll(focusableSelector))
+        .filter((element) => !element.hasAttribute('disabled') && element.getClientRects().length > 0);
+      if (focusables.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    dialog.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      dialog.removeEventListener('keydown', handleKeyDown);
+      const opener = tabletFilterOpenerRef.current;
+      tabletFilterOpenerRef.current = null;
+      window.requestAnimationFrame(() => {
+        if (opener?.isConnected) opener.focus();
+      });
+    };
+  }, [filterViewport, showMobileFilters]);
   const mapInitialFilters = React.useMemo(() => {
     const arrayFirst = (value) => Array.isArray(value) ? (value[0] || '') : (value || '');
     return {
@@ -152,7 +214,7 @@ export default function CatalogScreen({
       )}
 
       <div className="mx-auto flex min-h-[calc(100vh-11rem)] max-w-[1440px] flex-col gap-6 px-4 py-6 pb-28 md:pb-8 lg:flex-row lg:px-6 lg:py-8">
-        <div className="mb-2 flex min-h-10 items-center justify-between md:hidden">
+        <div className="mb-2 flex min-h-10 items-center justify-between lg:hidden">
           <h1 className="text-[18px] font-bold text-slate-900 dark:text-white">
             {t.search_results || 'Resultados'}
             <span className="ml-1 text-[14px] font-normal text-slate-400">({safeServerAds.length})</span>
@@ -182,14 +244,14 @@ export default function CatalogScreen({
         </aside>
 
         <BottomSheet
-          isOpen={showMobileFilters}
+          isOpen={showMobileFilters && filterViewport === 'mobile'}
           onClose={() => setShowMobileFilters(false)}
           title={t.filters || 'Filtros'}
           closeLabel={t.close_btn || t.close || 'Close'}
           maxHeight="90vh"
           zIndex={9999}
         >
-          <div className="block p-6 md:hidden">
+          <div className="block p-6">
             <SidebarFilters {...filterProps} />
             {user && (
               <div className="mt-4">
@@ -206,15 +268,17 @@ export default function CatalogScreen({
           </div>
         </BottomSheet>
 
-        {showMobileFilters && (
-          <div className="fixed inset-0 z-[9999] hidden items-stretch justify-start bg-slate-900/60 backdrop-blur-sm md:flex lg:hidden" onKeyDown={(e) => { if (e.key === 'Escape') setShowMobileFilters(false); }}>
+        {showMobileFilters && filterViewport === 'tablet' && (
+          <div className="fixed inset-0 z-[9999] flex items-stretch justify-start bg-slate-900/60 backdrop-blur-sm">
             <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 -z-10" onClick={() => setShowMobileFilters(false)} />
-            <div role="dialog" aria-modal="true" aria-labelledby="tablet-filters-title" className="h-full w-[360px] overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-2xl animate-slideRight dark:border-slate-800 dark:bg-slate-900">
+            <div ref={tabletFilterDialogRef} data-testid="catalog-tablet-filter-dialog" role="dialog" aria-modal="true" aria-labelledby="tablet-filters-title" className="h-full w-[360px] overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-2xl animate-slideRight dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
                 <h2 id="tablet-filters-title" className="text-base font-bold text-slate-900 dark:text-white">{t.filters || 'Filtros'}</h2>
                 <button
+                  ref={tabletFilterCloseRef}
                   type="button"
-                  aria-label={t.close || 'Cerrar'}
+                  data-testid="catalog-tablet-filter-close"
+                  aria-label={t.close_btn || t.close || 'Close'}
                   onClick={() => setShowMobileFilters(false)}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:text-slate-900 dark:bg-slate-800 dark:hover:text-white"
                 >
