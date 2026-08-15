@@ -110,6 +110,7 @@ class SeoWeeklyMeasurementService
         );
         $viewCount = $views->count();
         $contactCount = $contacts->count();
+        $conversationMetrics = $this->conversationResponseMetrics($start, $end);
 
         return [
             'new_users' => $newUsers,
@@ -121,7 +122,86 @@ class SeoWeeklyMeasurementService
             'distinct_contacted_listings' => $contacts->distinct()->count('ad_clicks.ad_id'),
             'registration_to_first_publish_percent' => $this->percent($firstPublishers, $newUsers),
             'view_to_contact_percent' => $this->percent($contactCount, $viewCount),
+            ...$conversationMetrics,
         ];
+    }
+
+    private function conversationResponseMetrics(CarbonInterface $start, CarbonInterface $end): array
+    {
+        $conversations = $this->within(
+            DB::table('conversations')
+                ->join('ads', 'ads.id', '=', 'conversations.ad_id')
+                ->where('ads.is_catalog_filler', false),
+            'conversations.created_at',
+            $start,
+            $end,
+        )->select([
+            'conversations.id',
+            'conversations.buyer_id',
+            'conversations.seller_id',
+        ])->get();
+
+        if ($conversations->isEmpty()) {
+            return [
+                'internal_conversations_started' => 0,
+                'seller_replied_conversations' => 0,
+                'seller_response_rate_percent' => 0.0,
+                'median_first_response_minutes' => null,
+                'seller_replies_within_2h_percent' => 0.0,
+            ];
+        }
+
+        $messages = DB::table('messages')
+            ->whereIn('conversation_id', $conversations->pluck('id'))
+            ->where('created_at', '<', $end)
+            ->orderBy('created_at')
+            ->get(['conversation_id', 'sender_id', 'created_at'])
+            ->groupBy('conversation_id');
+
+        $responseMinutes = [];
+        foreach ($conversations as $conversation) {
+            $firstBuyerAt = null;
+            foreach ($messages->get($conversation->id, collect()) as $message) {
+                if ($firstBuyerAt === null && (int) $message->sender_id === (int) $conversation->buyer_id) {
+                    $firstBuyerAt = Carbon::parse($message->created_at);
+                    continue;
+                }
+                if ($firstBuyerAt !== null && (int) $message->sender_id === (int) $conversation->seller_id) {
+                    $sellerAt = Carbon::parse($message->created_at);
+                    if ($sellerAt->greaterThanOrEqualTo($firstBuyerAt)) {
+                        $responseMinutes[] = max(0.0, ($sellerAt->getTimestamp() - $firstBuyerAt->getTimestamp()) / 60);
+                        break;
+                    }
+                }
+            }
+        }
+
+        $started = $conversations->count();
+        $replied = count($responseMinutes);
+        $withinTwoHours = count(array_filter($responseMinutes, fn (float $minutes): bool => $minutes <= 120));
+
+        return [
+            'internal_conversations_started' => $started,
+            'seller_replied_conversations' => $replied,
+            'seller_response_rate_percent' => $this->percent($replied, $started),
+            'median_first_response_minutes' => $this->median($responseMinutes),
+            'seller_replies_within_2h_percent' => $this->percent($withinTwoHours, $started),
+        ];
+    }
+
+    private function median(array $values): ?float
+    {
+        if ($values === []) {
+            return null;
+        }
+        sort($values, SORT_NUMERIC);
+        $count = count($values);
+        $middle = intdiv($count, 2);
+        $value = $count % 2 === 1
+            ? $values[$middle]
+            : ($values[$middle - 1] + $values[$middle]) / 2;
+
+        return round((float) $value, 1);
     }
 
     private function indexability(): array

@@ -68,6 +68,18 @@ test('web analytics enforces platform/version and avoids duplicate signup hooks'
   assert.doesNotMatch(authContext, /events\.registered/);
 });
 
+test('internal chat emits canonical message events without message content or user IDs', () => {
+  const chat = read('src/components/screens/ChatScreen.jsx');
+  assert.match(chat, /import \{ events \} from '\.\.\/\.\.\/utils\/analytics'/);
+  assert.match(chat, /events\.messageStarted\(analyticsContext\)/);
+  assert.match(chat, /events\.messageSent\(analyticsContext\)/);
+  const contextStart = chat.indexOf('const analyticsContext = {');
+  const contextEnd = chat.indexOf('\n      };', contextStart);
+  const context = chat.slice(contextStart, contextEnd);
+  for (const key of ['listing_id', 'ad_id', 'source']) assert.match(context, new RegExp(key));
+  for (const blocked of ['content', 'receiver_id', 'sender_id', 'user_id', 'conversation_id']) assert.doesNotMatch(context, new RegExp(blocked));
+});
+
 test('category selection analytics is wired to primary discovery surfaces', () => {
   const analytics = read('src/utils/analytics.js');
   const app = read('src/App.jsx');

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateTime } from '../../utils/localeFormat';
+import { events } from '../../utils/analytics';
 import {
   ArrowLeft,
   CircleAlert,
@@ -239,6 +240,15 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
       setDraft('');
       setMessages((previous) => uniqueMessages([...previous, payload]));
       const nextConversationId = Number(payload.conversation_id || selectedConversationId);
+      const analyticsContext = {
+        listing_id: String(adId),
+        ad_id: String(adId),
+        source: selectedConversationId ? 'existing_conversation' : 'listing_contact',
+      };
+      if (!selectedConversationId && nextConversationId) {
+        events.messageStarted(analyticsContext);
+      }
+      events.messageSent(analyticsContext);
       if (nextConversationId) {
         setSelectedConversationId(nextConversationId);
         setSearchParams({ conversation: String(nextConversationId) }, { replace: true });

@@ -53,6 +53,9 @@ test('SEO/GEO admin uses active locale for text, numbers and dates', () => {
   assert.match(seoSource, /formatNumber\(value, lang\)/);
   assert.match(seoSource, /formatDateTime\(latest\.generated_at, lang/);
   assert.match(seoSource, /formatDate\(snapshot\.period_start, lang\)/);
+  assert.match(seoSource, /copy\.internalChats/);
+  assert.match(seoSource, /copy\.sellerResponseRate/);
+  assert.match(seoSource, /copy\.medianFirstResponse/);
   assert.equal(seoSource.includes("toLocaleString('es-MX')"), false);
   for (const literal of ['No se pudo cargar el reporte SEO/GEO.', 'Aún no hay snapshots semanales.', 'Privacidad verificada', 'Umbral nacional alcanzado', 'Historial de snapshots']) {
     assert.equal(seoSource.includes(literal), false, literal);

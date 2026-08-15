@@ -63,6 +63,36 @@ class SeoWeeklyMeasurementTest extends TestCase
             'updated_at' => now()->subHours(4),
         ]);
 
+        $buyer = User::factory()->create(['created_at' => now()->subDays(20)]);
+        $secondBuyer = User::factory()->create(['created_at' => now()->subDays(20)]);
+        $conversationId = DB::table('conversations')->insertGetId([
+            'ad_id' => $genuine->id,
+            'buyer_id' => $buyer->id,
+            'seller_id' => $publisher->id,
+            'last_message_at' => now()->subHours(8.5),
+            'buyer_unread_count' => 0,
+            'seller_unread_count' => 0,
+            'status' => 'active',
+            'created_at' => now()->subHours(10),
+            'updated_at' => now()->subHours(8.5),
+        ]);
+        $unansweredConversationId = DB::table('conversations')->insertGetId([
+            'ad_id' => $genuine->id,
+            'buyer_id' => $secondBuyer->id,
+            'seller_id' => $publisher->id,
+            'last_message_at' => now()->subHours(7),
+            'buyer_unread_count' => 0,
+            'seller_unread_count' => 1,
+            'status' => 'active',
+            'created_at' => now()->subHours(7),
+            'updated_at' => now()->subHours(7),
+        ]);
+        DB::table('messages')->insert([
+            $this->messageRow($conversationId, $buyer->id, $publisher->id, $genuine->id, now()->subHours(9)),
+            $this->messageRow($conversationId, $publisher->id, $buyer->id, $genuine->id, now()->subHours(8.5)),
+            $this->messageRow($unansweredConversationId, $secondBuyer->id, $publisher->id, $genuine->id, now()->subHours(7)),
+        ]);
+
         $report = app(SeoWeeklyMeasurementService::class)->report(7);
 
         $this->assertSame(2, $report['internal']['current']['new_users']);
@@ -71,6 +101,11 @@ class SeoWeeklyMeasurementTest extends TestCase
         $this->assertSame(1, $report['internal']['current']['first_publishers']);
         $this->assertSame(1, $report['internal']['current']['genuine_listing_views']);
         $this->assertSame(1, $report['internal']['current']['genuine_contact_clicks']);
+        $this->assertSame(2, $report['internal']['current']['internal_conversations_started']);
+        $this->assertSame(1, $report['internal']['current']['seller_replied_conversations']);
+        $this->assertSame(50.0, $report['internal']['current']['seller_response_rate_percent']);
+        $this->assertSame(30.0, $report['internal']['current']['median_first_response_minutes']);
+        $this->assertSame(50.0, $report['internal']['current']['seller_replies_within_2h_percent']);
         $this->assertSame(1, $report['indexability']['indexable_genuine_listing_urls']);
         $this->assertSame(1, $report['indexability']['active_catalog_references_noindex']);
         $this->assertSame(6, $report['indexability']['source_pages']);
@@ -133,6 +168,27 @@ class SeoWeeklyMeasurementTest extends TestCase
         ])->saveQuietly();
 
         return $ad->fresh();
+    }
+
+    private function messageRow(
+        int $conversationId,
+        int $senderId,
+        int $receiverId,
+        int $adId,
+        Carbon $createdAt,
+    ): array {
+        return [
+            'conversation_id' => $conversationId,
+            'sender_id' => $senderId,
+            'receiver_id' => $receiverId,
+            'ad_id' => $adId,
+            'body' => 'Mensaje de prueba',
+            'type' => 'text',
+            'content' => 'Mensaje de prueba',
+            'is_read' => true,
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ];
     }
 
     private function viewRow(int $adId): array
