@@ -37,3 +37,60 @@ test('mobile header has a working search button and location cascade', async ({ 
   await expect(page).toHaveURL(/state=Nuevo\+Le%C3%B3n/);
   await expect(page).toHaveURL(/city=Monterrey/);
 });
+
+async function mockPublicShellApi(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookiesAccepted', 'true');
+  });
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/auth/providers')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ providers: { google: false, apple: false, telegram: false, sms: false } }) });
+    }
+    if (url.pathname.endsWith('/ads')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], total: 0, current_page: 1, last_page: 1 }) });
+    }
+    if (url.pathname.endsWith('/categories') || url.pathname.endsWith('/category-attributes') || url.pathname.endsWith('/favorites')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    }
+    if (url.pathname.endsWith('/banners')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ banners: [] }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+  });
+}
+
+test('auth modal traps keyboard focus and restores the desktop or mobile opener', async ({ page }, testInfo) => {
+  test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name));
+  await page.addInitScript(() => localStorage.setItem('cookie_consent', 'essential'));
+  await mockPublicShellApi(page);
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+  const opener = testInfo.project.name === 'chromium-mobile'
+    ? page.getByTestId('mobile-account-button')
+    : page.getByTestId('desktop-account-button');
+  await opener.focus();
+  await expect(opener).toBeFocused();
+  await opener.press('Enter');
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  const email = dialog.locator('input[name="email"]');
+  await expect(email).toBeFocused();
+
+  const focusables = dialog.locator('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+  const first = focusables.first();
+  const last = focusables.last();
+  await first.focus();
+  await first.press('Shift+Tab');
+  await expect(last).toBeFocused();
+  await last.press('Tab');
+  await expect(first).toBeFocused();
+
+  await email.focus();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(opener).toBeFocused();
+});

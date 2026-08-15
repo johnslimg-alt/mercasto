@@ -988,13 +988,18 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                         {t.profile_visible_desc || 'Permite que otros usuarios vean tus anuncios activos y valoraciones en tu perfil público de vendedor.'}
                       </p>
                     </div>
-                    <button 
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={profileVisible}
+                      aria-label={t.profile_visible_title || 'Perfil público visible'}
+                      data-testid="privacy-profile-visible-switch"
                       onClick={() => {
                         const newVal = !profileVisible;
                         setProfileVisible(newVal);
                         localStorage.setItem('mercasto_privacy_profile_visible', String(newVal));
                       }}
-                      className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none flex-shrink-0 ${profileVisible ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${profileVisible ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                     >
                       <span className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform ${profileVisible ? 'translate-x-5' : ''}`} />
                     </button>
@@ -1008,13 +1013,18 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                         {t.gdpr_analytics_desc || 'Tu dirección IP se cifra (hash SHA-256) antes de procesar cualquier métrica para proteger tu privacidad. Desactiva para excluirte del seguimiento analítico.'}
                       </p>
                     </div>
-                    <button 
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={trackingConsent}
+                      aria-label={t.gdpr_analytics_title || 'Análisis y estadísticas anónimas (GDPR)'}
+                      data-testid="privacy-tracking-consent-switch"
                       onClick={() => {
                         const newVal = !trackingConsent;
                         setTrackingConsent(newVal);
                         localStorage.setItem('mercasto_privacy_tracking_consent', String(newVal));
                       }}
-                      className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none flex-shrink-0 ${trackingConsent ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${trackingConsent ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                     >
                       <span className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-transform ${trackingConsent ? 'translate-x-5' : ''}`} />
                     </button>
@@ -1144,8 +1154,10 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                         <button
                                           key={star}
                                           onClick={() => setRs({ rating: star })}
-                                          className="focus:outline-none transition-transform hover:scale-110"
-                                          title={`${star} estrella${star > 1 ? 's' : ''}`}
+                                          className="transition-transform hover:scale-110"
+                                          aria-label={`${star} / 5`}
+                                          aria-pressed={rating === star}
+                                          title={`${star} / 5`}
                                           type="button"
                                         >
                                           <Star

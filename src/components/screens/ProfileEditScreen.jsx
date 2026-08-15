@@ -27,8 +27,9 @@ function Toggle({ value, onChange, label }) {
         type="button"
         role="switch"
         aria-checked={value}
+        aria-label={label}
         onClick={() => onChange(!value)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${value ? 'bg-lime-500' : 'bg-slate-300'}`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${value ? 'bg-lime-500' : 'bg-slate-300'}`}
       >
         <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
       </button>
@@ -39,6 +40,8 @@ function Toggle({ value, onChange, label }) {
 export default function ProfileEditScreen({ smsEnabled = false }) {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const deleteDialogRef = useRef(null);
+  const deleteOpenerRef = useRef(null);
   const { lang } = useUI();
   const t = getTranslations(lang);
 
@@ -252,6 +255,55 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
     }
   };
 
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteConfirmText('');
+    const opener = deleteOpenerRef.current;
+    deleteOpenerRef.current = null;
+    window.requestAnimationFrame(() => {
+      if (opener?.isConnected) opener.focus();
+    });
+  };
+
+  const openDeleteModal = () => {
+    deleteOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setShowDeleteModal(true);
+  };
+
+  useEffect(() => {
+    if (!showDeleteModal) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      deleteDialogRef.current?.querySelector('[data-testid="profile-delete-cancel"]')?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [showDeleteModal]);
+
+  const handleDeleteDialogKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDeleteModal();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const dialog = deleteDialogRef.current;
+    if (!dialog) return;
+    const focusables = Array.from(dialog.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )).filter(element => element.getClientRects().length > 0);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !dialog.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   if (loading) {
     return <div className="profile-dark-scope min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin" /></div>;
   }
@@ -298,7 +350,7 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
             <input type="tel" maxLength={20} value={form.whatsapp} onChange={event => setForm(prev => ({ ...prev, whatsapp: event.target.value }))} className={inputClass} placeholder={t.whatsapp} />
             <input type="url" maxLength={255} value={form.website} onChange={event => setForm(prev => ({ ...prev, website: event.target.value }))} className={inputClass} placeholder={t.website} />
           </div>
-          <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-950">
+          <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-950 focus-within:border-lime-500 focus-within:ring-2 focus-within:ring-lime-500/30">
             <span className="px-3 text-slate-400 text-sm bg-slate-50 dark:bg-slate-900 border-r border-slate-300 dark:border-slate-700 py-2.5">@</span>
             <input maxLength={100} value={form.social_instagram} onChange={event => setForm(prev => ({ ...prev, social_instagram: event.target.value.replace(/^@/, '') }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Instagram" />
           </div>
@@ -344,18 +396,18 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-red-100 dark:border-red-500/20 space-y-3">
           <h2 className="font-semibold text-red-700 flex items-center gap-2"><Trash2 size={16} /> {t.danger_zone}</h2>
           <p className="text-sm text-slate-600 dark:text-slate-300">{t.delete_account_desc}</p>
-          <button type="button" data-testid="profile-delete-open" onClick={() => setShowDeleteModal(true)} className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium rounded-xl py-2.5 text-sm">{t.del_account}</button>
+          <button type="button" data-testid="profile-delete-open" onClick={openDeleteModal} className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium rounded-xl py-2.5 text-sm">{t.del_account}</button>
         </div>
       </div>
 
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="delete-account-title" className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full shadow-xl border border-slate-200 dark:border-slate-800">
+          <div ref={deleteDialogRef} role="dialog" aria-modal="true" aria-labelledby="delete-account-title" onKeyDown={handleDeleteDialogKeyDown} className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full shadow-xl border border-slate-200 dark:border-slate-800">
             <h3 id="delete-account-title" className="font-bold text-slate-900 dark:text-white text-lg mb-2">{t.delete_account_confirm}</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{t.delete_account_warn}</p>
             <input data-testid="profile-delete-confirm-input" value={deleteConfirmText} onChange={event => setDeleteConfirmText(event.target.value)} placeholder={t.delete_confirmation_word} className={`${inputClass} mb-4`} />
             <div className="flex gap-3">
-              <button type="button" onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">{t.cancel}</button>
+              <button type="button" data-testid="profile-delete-cancel" onClick={closeDeleteModal} className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">{t.cancel}</button>
               <button type="button" data-testid="profile-delete-confirm" disabled={deleteConfirmText !== t.delete_confirmation_word} onClick={async () => {
                 const response = await fetch(`${API_URL}/user`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
                 if (response.ok) {
@@ -364,7 +416,7 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
                   window.location.href = '/';
                 } else {
                   showToast(t.delete_account_error, 'error');
-                  setShowDeleteModal(false);
+                  closeDeleteModal();
                 }
               }} className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium">{t.delete}</button>
             </div>

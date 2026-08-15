@@ -49,6 +49,7 @@ async function installSession(page, lang) {
     localStorage.setItem('lang', savedLang);
     localStorage.setItem('mercasto_language', savedLang);
     localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
     localStorage.setItem('auth_token', 'dashboard-locale-token');
     localStorage.setItem('user', JSON.stringify(savedUser));
     localStorage.setItem('mercasto_contact_history', JSON.stringify([savedContact]));
@@ -328,4 +329,86 @@ for (const lang of ['es', 'en']) {
       await expect(page.getByTestId('dashboard-analytics-content')).toBeVisible();
     });
   }
+}
+
+for (const lang of ['es', 'en']) {
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    test(`privacy switches expose state and work from keyboard in ${lang} on ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium-desktop');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await installSession(page, lang);
+      await mockApi(page);
+      await page.goto('/profile?tab=privacy');
+      const t = translations[lang];
+
+      const profileSwitch = page.getByRole('switch', { name: t.profile_visible_title });
+      const trackingSwitch = page.getByRole('switch', { name: t.gdpr_analytics_title });
+      await expect(profileSwitch).toHaveAttribute('aria-checked', 'true');
+      await expect(trackingSwitch).toHaveAttribute('aria-checked', 'true');
+
+      await profileSwitch.focus();
+      await expect(profileSwitch).toBeFocused();
+      await page.keyboard.press('Space');
+      await expect(profileSwitch).toHaveAttribute('aria-checked', 'false');
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('mercasto_privacy_profile_visible'))).toBe('false');
+
+      await trackingSwitch.focus();
+      await expect(trackingSwitch).toBeFocused();
+      await page.keyboard.press('Space');
+      await expect(trackingSwitch).toHaveAttribute('aria-checked', 'false');
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('mercasto_privacy_tracking_consent'))).toBe('false');
+    });
+  }
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`dashboard review rating is keyboard-operable on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installSession(page, 'es');
+    await mockApi(page);
+    await page.goto('/profile?tab=reviews');
+
+    const oneStar = page.getByRole('button', { name: '1 / 5' }).first();
+    const fiveStars = page.getByRole('button', { name: '5 / 5' }).first();
+    await expect(oneStar).toBeVisible();
+    await expect(fiveStars).toHaveAttribute('aria-pressed', 'false');
+    await oneStar.focus();
+    await expect(oneStar).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(oneStar).toHaveAttribute('aria-pressed', 'true');
+  });
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`achievements dialog traps focus and restores its opener on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installSession(page, 'en');
+    await mockApi(page);
+    await page.goto('/profile');
+    const t = translations.en;
+
+    const opener = page.getByRole('button', { name: t.achievements, exact: true });
+    await opener.focus();
+    await opener.click();
+    const dialog = page.locator('[role="dialog"][aria-labelledby="achievements-title"]');
+    const closeButton = dialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(closeButton).toBeFocused();
+    await closeButton.press('Shift+Tab');
+    await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(opener).toBeFocused();
+  });
 }

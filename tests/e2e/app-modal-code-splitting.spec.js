@@ -79,7 +79,17 @@ test('report modal chunk loads only after the report action', async ({ page }, t
   await page.goto('/ads/43', { waitUntil: 'domcontentloaded' });
   await expect.poll(() => hasChunk(page, 'ReportModal')).toBe(false);
 
-  await page.getByRole('button', { name: t.report_ad, exact: true }).click();
-  await expect(page.getByRole('dialog', { name: t.report_ad, exact: true })).toBeVisible();
+  const reportOpener = page.getByRole('button', { name: t.report_ad, exact: true });
+  await reportOpener.focus();
+  await reportOpener.click();
+  const reportDialog = page.getByRole('dialog', { name: t.report_ad, exact: true });
+  const reportClose = reportDialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
+  await expect(reportDialog).toBeVisible();
+  await expect(reportClose).toBeFocused();
+  await reportClose.press('Shift+Tab');
+  await expect.poll(() => reportDialog.evaluate(dialog => dialog.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(reportDialog).toHaveCount(0);
+  await expect(reportOpener).toBeFocused();
   await expect.poll(() => hasChunk(page, 'ReportModal')).toBe(true);
 });

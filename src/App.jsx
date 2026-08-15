@@ -712,9 +712,75 @@ function App() {
   const [resetToken, setResetToken] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const authModalDialogRef = useRef(null);
+  const authModalOpenerRef = useRef(null);
+  const authModalWasOpenRef = useRef(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorEmail, setTwoFactorEmail] = useState('');
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState('');
+
+  const getAuthModalFocusables = useCallback(() => {
+    const dialog = authModalDialogRef.current;
+    if (!dialog) return [];
+    return Array.from(dialog.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )).filter((element) => element.getClientRects().length > 0);
+  }, []);
+
+  const handleAuthModalKeyDown = useCallback((event) => {
+    if (event.key === 'Escape' && !authLoading) {
+      event.preventDefault();
+      event.stopPropagation();
+      setShowAuthModal(false);
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const dialog = authModalDialogRef.current;
+    const focusables = getAuthModalFocusables();
+    if (!dialog || focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey && (active === first || !dialog.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    }
+  }, [authLoading, getAuthModalFocusables]);
+
+  useEffect(() => {
+    if (showAuthModal && !authModalWasOpenRef.current) {
+      const active = document.activeElement;
+      authModalOpenerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+      authModalWasOpenRef.current = true;
+      return;
+    }
+    if (!showAuthModal && authModalWasOpenRef.current) {
+      authModalWasOpenRef.current = false;
+      const opener = authModalOpenerRef.current;
+      authModalOpenerRef.current = null;
+      window.requestAnimationFrame(() => {
+        if (opener?.isConnected) opener.focus();
+      });
+    }
+  }, [showAuthModal]);
+
+  useEffect(() => {
+    if (!showAuthModal) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const dialog = authModalDialogRef.current;
+      if (!dialog) return;
+      const preferred = dialog.querySelector(
+        'input[autofocus], input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])',
+      ) || getAuthModalFocusables()[0];
+      preferred?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [showAuthModal, authMode, requiresTwoFactor, getAuthModalFocusables]);
 
   const [accountType, setAccountType] = useState('particular');
   const [userRole, setUserRole] = useState(() => initialUser?.role || 'individual');
@@ -4299,7 +4365,7 @@ function App() {
                   )}
                 </div>
                 <div className="relative">
-                  <button type="button" aria-label={user ? t.open_account_menu : t.login} onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
+                  <button type="button" data-testid="mobile-account-button" aria-label={user ? t.open_account_menu : t.login} onClick={() => { user ? setShowProfileMenu(v => !v) : (setAuthMode('login'), setShowAuthModal(true)); }} className="mobile-account-button mobile-account-button--top" aria-expanded={showProfileMenu}>
                     {user?.avatar_url ? (
                       <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-7 h-7 rounded-full object-cover" alt=""/>
                     ) : (
@@ -4445,7 +4511,7 @@ function App() {
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
             <div className="relative hidden sm:block">
-            <button onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
+            <button data-testid="desktop-account-button" onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
                 {user?.avatar_url ? (
                   <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-full object-cover" alt=""/>
                 ) : (
@@ -4737,10 +4803,10 @@ function App() {
       )}
 
       {showAuthModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape' && !authLoading) setShowAuthModal(false); }}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onKeyDown={handleAuthModalKeyDown}>
           <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { if (!authLoading) setShowAuthModal(false); }} />
           {requiresTwoFactor ? (
-            <div role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
               <button type="button" aria-label={t.close_btn || 'Cerrar'} disabled={authLoading} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"><XCircle size={24}/></button>
               <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_two_factor_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
@@ -4757,7 +4823,7 @@ function App() {
               </form>
             </div>
           ) : authMode === 'phone_request' || authMode === 'phone_verify' ? (
-            <div role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
               <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
               <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_phone_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
@@ -4781,7 +4847,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <div role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+            <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
                 <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
                 <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}

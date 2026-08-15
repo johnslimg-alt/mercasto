@@ -86,10 +86,15 @@ test('seller onboarding persists completion and opens the real publication route
   await expect.poll(() => page.evaluate(() => localStorage.getItem('just_registered'))).toBeNull();
 });
 
-test('closing onboarding persists a server-side skipped state', async ({ page }) => {
+test('closing onboarding from the keyboard persists a server-side skipped state', async ({ page }) => {
   const payloads = await prepareOrganicRegistration(page);
 
-  await page.getByRole('dialog', { name: /Bienvenido/ }).getByRole('button', { name: 'Cerrar' }).click();
+  const dialog = page.getByRole('dialog', { name: /Bienvenido/ });
+  const closeButton = dialog.getByRole('button', { name: 'Cerrar' });
+  await expect(closeButton).toBeFocused();
+  await closeButton.press('Shift+Tab');
+  await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press('Escape');
 
   await expect(page.getByRole('heading', { name: /Bienvenido/ })).toHaveCount(0);
   expect(payloads).toHaveLength(1);
