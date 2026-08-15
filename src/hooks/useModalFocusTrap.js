@@ -9,15 +9,20 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
-export default function useModalFocusTrap({ isOpen, onClose }) {
+export default function useModalFocusTrap({ isOpen, onClose, returnFocusRef = null }) {
   const dialogRef = useRef(null);
   const initialFocusRef = useRef(null);
   const openerRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return undefined;
+    const explicitReturnTarget = returnFocusRef?.current;
     const active = document.activeElement;
-    openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    openerRef.current = explicitReturnTarget instanceof HTMLElement
+      ? explicitReturnTarget
+      : active instanceof HTMLElement && active !== document.body
+        ? active
+        : null;
     const frame = window.requestAnimationFrame(() => {
       const dialog = dialogRef.current;
       const target = initialFocusRef.current || dialog?.querySelector(FOCUSABLE_SELECTOR);

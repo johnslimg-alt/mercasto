@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { ADMIN_MODERATION_NAMESPACE } from './adminModerationI18n';
+import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
@@ -117,6 +118,14 @@ export default function AdminModerationCenter() {
   const [error, setError] = useState('');
 
   const visible = location.pathname.startsWith('/admin') && isAdmin;
+  const closeCenter = () => {
+    setOpen(false);
+    setDetail(null);
+  };
+  const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({
+    isOpen: visible && open,
+    onClose: closeCenter,
+  });
   const token = localStorage.getItem('auth_token');
 
   useEffect(() => {
@@ -244,6 +253,7 @@ export default function AdminModerationCenter() {
   return (
     <>
       <button
+        data-testid="admin-smart-moderation-open"
         type="button"
         dir={direction}
         onClick={() => { setOpen(true); loadQueue(); }}
@@ -261,11 +271,11 @@ export default function AdminModerationCenter() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[100] flex bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true" dir={direction}>
+        <div ref={dialogRef} data-testid="admin-smart-moderation-dialog" className="fixed inset-0 z-[100] flex bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="admin-smart-moderation-title" onKeyDown={handleKeyDown} dir={direction}>
           <div className="ml-auto flex h-full w-full max-w-5xl flex-col bg-slate-50 shadow-2xl dark:bg-slate-950">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4 md:px-6 dark:border-slate-800 dark:bg-slate-900">
               <div>
-                <h2 className="text-xl font-black text-slate-950 dark:text-white">{t('title')}</h2>
+                <h2 id="admin-smart-moderation-title" className="text-xl font-black text-slate-950 dark:text-white">{t('title')}</h2>
                 <p className="text-sm text-slate-500">{t('subtitle')}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -277,7 +287,7 @@ export default function AdminModerationCenter() {
                 >
                   {processing ? t('sending') : t('processWithAi')}
                 </button>
-                <button type="button" onClick={() => { setOpen(false); setDetail(null); }} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">{t('close')}</button>
+                <button ref={initialFocusRef} data-testid="admin-smart-moderation-close" type="button" onClick={closeCenter} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">{t('close')}</button>
               </div>
             </header>
 

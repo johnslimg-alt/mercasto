@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
 import { markerMatchesMapFilters } from '../../utils/mapMarkerFilters';
 import { localeFor } from '../../utils/localeFormat';
+import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -239,6 +240,11 @@ export default function MapV3({
   const { t, i18n } = useTranslation();
   const lang = productLang || i18n.resolvedLanguage || i18n.language || 'es';
   const [expanded, setExpanded] = useState(false);
+  const closeFullscreenMap = () => setExpanded(false);
+  const { dialogRef: fullscreenDialogRef, initialFocusRef: fullscreenInitialFocusRef, handleKeyDown: handleFullscreenKeyDown } = useModalFocusTrap({
+    isOpen: expanded,
+    onClose: closeFullscreenMap,
+  });
   const [drawMode, setDrawMode] = useState(false);
   const [leaflet, setLeaflet] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -419,16 +425,11 @@ export default function MapV3({
     mountedRef.current = false;
   }, []);
 
-  // Close fullscreen on Escape key
+  // Prevent body scroll while the fullscreen dialog is open.
   useEffect(() => {
-    if (!expanded) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setExpanded(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
+    if (!expanded) return undefined;
     document.body.style.overflow = 'hidden';
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
   }, [expanded]);
@@ -1489,10 +1490,12 @@ function createPopupElement(ad, marker) {
       {/* ===================== FULLSCREEN MAP MODAL ===================== */}
       {expanded && (
         <div
+          ref={fullscreenDialogRef}
           className="fixed inset-0 z-[9999] flex flex-col bg-slate-950"
           role="dialog"
           aria-modal="true"
           aria-label={t('map.interactive')}
+          onKeyDown={handleFullscreenKeyDown}
         >
           {/* ── Header bar ── */}
           <div className="relative z-[10] flex items-center gap-3 border-b border-slate-800 bg-slate-900/98 px-4 py-3 shadow-lg backdrop-blur sm:px-6">
@@ -1552,9 +1555,10 @@ function createPopupElement(ad, marker) {
             </button>
 
             <button
+              ref={fullscreenInitialFocusRef}
               data-testid="map-close"
               type="button"
-              onClick={() => setExpanded(false)}
+              onClick={closeFullscreenMap}
               className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-colors sm:h-10 sm:w-auto sm:gap-2 sm:px-4"
               aria-label={t('map.closeMap')}
               title={t('map.closeEsc')}

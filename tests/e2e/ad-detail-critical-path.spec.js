@@ -155,3 +155,36 @@ test('deep-link ad renders NotFound only for a real 404', async ({ page }) => {
   await expect(page.getByTestId('not-found-screen')).toBeVisible();
   await expect(page.getByTestId('deep-link-ad-load-error')).toHaveCount(0);
 });
+
+
+test('ad detail QR dialog traps focus and restores the share control on desktop and mobile layouts', async ({ page }) => {
+  const requests = [];
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'en');
+    localStorage.setItem('mercasto_language', 'en');
+    localStorage.setItem('cookie_consent', 'essential');
+  });
+  await mockDetailApi(page, requests);
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/ads/6336', { waitUntil: 'domcontentloaded' });
+    const shareOpener = page.getByRole('button', { name: /Share/i }).first();
+    await shareOpener.focus();
+    await shareOpener.click();
+    const qrAction = page.getByRole('button', { name: /QR/i }).first();
+    await qrAction.click();
+
+    const qrDialog = page.locator('[role="dialog"][aria-labelledby="ad-qr-title"]');
+    const closeButton = qrDialog.getByRole('button', { name: /Close/i });
+    await expect(qrDialog).toBeVisible();
+    await expect(closeButton).toBeFocused();
+    await closeButton.press('Shift+Tab');
+    await expect.poll(() => qrDialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(qrDialog).toHaveCount(0);
+    await expect(shareOpener).toBeFocused();
+  }
+});
