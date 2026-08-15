@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, AlertTriangle, BarChart3, CheckCircle, Clock3,
-  Globe2, Loader2, MessageCircle, RefreshCw, Search, ShieldCheck, Users,
+  Globe2, Loader2, MessageCircle, RefreshCw, RotateCcw, Search, ShieldCheck, Users,
 } from 'lucide-react';
 import { formatDate, formatDateTime, formatNumber } from '../../utils/localeFormat';
 import { getAdminOperationalCopy } from '../../utils/adminOperationalCopy';
@@ -144,6 +144,7 @@ export default function AdminSeoMeasurement({ token, lang = 'es', t }) {
         <MetricCard icon={Activity} label={copy.sourcePages} value={number(indexability.source_pages)} note={copy.factualPages} />
         <MetricCard icon={Users} label={copy.newUsers} value={number(current.new_users)} note={`${number(current.verified_new_users)} ${copy.verified}`} />
         <MetricCard icon={BarChart3} label={copy.firstPublishers} value={number(current.first_publishers)} note={percent(current.registration_to_first_publish_percent)} />
+        <MetricCard icon={RotateCcw} label={copy.returnAfter24h} value={percentOrDash(current.new_user_24h_return_rate_percent)} note={current.new_user_24h_returned == null ? null : `${number(current.new_user_24h_returned)} / ${number(current.new_user_24h_return_eligible)} ${copy.eligibleUsers}`} />
         <MetricCard icon={Activity} label={copy.genuineViews} value={number(current.genuine_listing_views)} note={`${number(current.genuine_contact_clicks)} ${copy.contacts}`} />
         <MetricCard icon={Search} label={copy.contactConversion} value={percent(current.view_to_contact_percent)} note={`${number(current.distinct_contacted_listings)} ${copy.contactedListings}`} />
         <MetricCard icon={MessageCircle} label={copy.internalChats} value={numberOrDash(current.internal_conversations_started)} note={current.seller_replied_conversations == null ? null : `${number(current.seller_replied_conversations)} ${copy.sellerReplies}`} />

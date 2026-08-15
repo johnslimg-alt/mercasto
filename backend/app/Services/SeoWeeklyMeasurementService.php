@@ -111,6 +111,7 @@ class SeoWeeklyMeasurementService
         $viewCount = $views->count();
         $contactCount = $contacts->count();
         $conversationMetrics = $this->conversationResponseMetrics($start, $end);
+        $returnMetrics = $this->newUserReturnMetrics($start, $end);
 
         return [
             'new_users' => $newUsers,
@@ -123,6 +124,32 @@ class SeoWeeklyMeasurementService
             'registration_to_first_publish_percent' => $this->percent($firstPublishers, $newUsers),
             'view_to_contact_percent' => $this->percent($contactCount, $viewCount),
             ...$conversationMetrics,
+            ...$returnMetrics,
+        ];
+    }
+
+    private function newUserReturnMetrics(CarbonInterface $start, CarbonInterface $end): array
+    {
+        $eligibilityCutoff = Carbon::parse($end->toIso8601String())->subDay();
+        if ($eligibilityCutoff->lessThanOrEqualTo($start)) {
+            return [
+                'new_user_24h_return_eligible' => 0,
+                'new_user_24h_returned' => 0,
+                'new_user_24h_return_rate_percent' => 0.0,
+            ];
+        }
+
+        $eligible = $this->within(DB::table('users'), 'users.created_at', $start, $eligibilityCutoff);
+        $eligibleCount = (clone $eligible)->count();
+        $returnedCount = (clone $eligible)
+            ->whereNotNull('users.first_return_after_24h_at')
+            ->where('users.first_return_after_24h_at', '<', $end)
+            ->count();
+
+        return [
+            'new_user_24h_return_eligible' => $eligibleCount,
+            'new_user_24h_returned' => $returnedCount,
+            'new_user_24h_return_rate_percent' => $this->percent($returnedCount, $eligibleCount),
         ];
     }
 
