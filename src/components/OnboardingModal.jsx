@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, CheckCircle, ArrowRight, ArrowLeft, Camera, Phone, FileText, ShoppingBag, Store, Users, MapPin, Bell, Heart, Star, Sparkles, MessageCircle } from 'lucide-react';
 import { getOnboardingExperienceCopy } from '../utils/onboardingExperienceCopy';
+import useModalFocusTrap from '../hooks/useModalFocusTrap';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const ONBOARDING_DONE_USER_KEY = 'onboarding_done_user_id';
@@ -185,12 +186,22 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
     return true;
   };
 
+  const closeOnboarding = () => {
+    if (!saving) void handleSkip();
+  };
+  const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({
+    isOpen: true,
+    onClose: closeOnboarding,
+  });
+
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"
+        onKeyDown={handleKeyDown}
         className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[90vh] flex flex-col"
       >
         {/* Header */}
@@ -199,8 +210,11 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
           : 'from-[#84CC16] to-[#65A30D]'
         } px-6 pt-6 pb-5 relative flex-shrink-0`}>
           <button
-            onClick={handleSkip}
-            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+            ref={initialFocusRef}
+            type="button"
+            onClick={closeOnboarding}
+            disabled={saving}
+            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10 disabled:opacity-50"
             aria-label={dictionary.close_btn}
           >
             <X size={20} />
