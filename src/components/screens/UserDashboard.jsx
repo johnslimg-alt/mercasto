@@ -223,7 +223,7 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
   );
 };
 
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, favoriteAdsLoading = false, favoriteAdsLoadError = false, loadFavoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
   const [dashToast, setDashToast] = React.useState(null);
   const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
   const [profileVisible, setProfileVisible] = React.useState(() => localStorage.getItem('mercasto_privacy_profile_visible') !== 'false');
@@ -679,8 +679,19 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                 {/* Ads List */}
                 <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {displayedAds.length === 0 ? (
-                    <div className="p-12 text-center">
+                  {favoriteAdsLoading && displayedAds.length === 0 ? (
+                    <div data-testid="dashboard-favorites-loading" role="status" aria-live="polite" className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-lime-500" aria-hidden="true" />
+                    </div>
+                  ) : favoriteAdsLoadError && displayedAds.length === 0 ? (
+                    <div data-testid="dashboard-favorites-load-error" role="alert" className="flex flex-col items-center justify-center gap-4 p-12 text-center">
+                      <p className="text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
+                      <button type="button" data-testid="dashboard-favorites-retry" onClick={loadFavoriteAds} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                        {t.retry_btn || 'Reintentar'}
+                      </button>
+                    </div>
+                  ) : displayedAds.length === 0 ? (
+                    <div data-testid="dashboard-favorites-empty" className="p-12 text-center">
                       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
                         <Package className="w-8 h-8 text-slate-400" />
                       </div>
