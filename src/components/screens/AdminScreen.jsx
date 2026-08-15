@@ -626,6 +626,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                            </td>
                            <td className="p-3">
                              <select 
+                               aria-label={`${t.role || 'Rol'}: ${u.name || u.email || u.id}`}
                                value={u.role} 
                                onChange={(e) => handleAdminChangeRole(u.id, e.target.value, adminCopy)}
                                className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest outline-none cursor-pointer ${u.role === 'admin' ? 'bg-red-100 text-red-700' : u.role === 'business' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}

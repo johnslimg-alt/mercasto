@@ -332,3 +332,39 @@ for (const viewport of [
     expect(unnamed, `unnamed Advertising Hub controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
   });
 }
+
+
+for (const viewport of [
+  { name: 'desktop', width: 1280, height: 860 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`dynamic Admin controls expose accessible names on ${viewport.name}`, async ({ page }) => {
+    await installAdmin(page, 'es');
+    await mockApi(page);
+    await page.route('**/api/categories', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 1, slug: 'qa-cat', name: { es: 'QA Categoría', en: 'QA Category' }, icon: 'Star', sort_order: 1 }]) }));
+    await page.route('**/api/users?**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [{ id: 2, name: 'QA Usuario', email: 'qa-user@example.test', role: 'individual', is_verified: false, email_verified: true, kyc_status: 'unverified', active_plan: { name: 'Gratis', monthly_ad_limit: 3 } }] }) }));
+    await page.route('**/api/admin/coupons', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 3, code: 'QA100', credits: 100, max_uses: 10, used_count: 0 }]) }));
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+    const unnamed = [];
+    const scan = async (tab) => {
+      const items = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.map(node => {
+        const id=node.id||''; const label=id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim()||'' : '';
+        return {tag:node.tagName.toLowerCase(),text:(node.innerText||'').trim(),aria:(node.getAttribute('aria-label')||'').trim(),labelledby:(node.getAttribute('aria-labelledby')||'').trim(),title:(node.getAttribute('title')||'').trim(),label,type:node.getAttribute('type')||'',html:node.outerHTML.slice(0,300)};
+      }));
+      for (const item of items) {
+        const nativeTextName = item.tag === 'button' || item.tag === 'a' ? item.text : '';
+        if (!(nativeTextName || item.aria || item.labelledby || item.title || item.label) && item.type !== 'hidden') unnamed.push({tab,...item});
+      }
+    };
+    await expect(page.getByText('QA Categoría', { exact: true })).toBeVisible();
+    await scan('categories');
+    await page.getByTestId('admin-tab-users').click();
+    await expect(page.getByText('qa-user@example.test', { exact: true })).toBeVisible();
+    await scan('users');
+    await page.getByTestId('admin-tab-coupons').click();
+    await expect(page.getByText('QA100', { exact: true })).toBeVisible();
+    await scan('coupons');
+    expect(unnamed, `unnamed dynamic Admin controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}
