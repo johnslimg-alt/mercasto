@@ -24,7 +24,9 @@ function formatHours(hours = [], t = {}) {
 
 export default function StorefrontScreen({
   company, t, lang, getImageUrl, companyRatingStats, companyAds, companyReviews,
-  loadingCompanyAds, submittingReview, setShowUserReportModal, setQrModalData,
+  loadingCompanyAds, companyAdsLoadError = false, retryCompanyAds,
+  loadingCompanyReviews = false, companyReviewsLoadError = false, retryCompanyReviews,
+  submittingReview, setShowUserReportModal, setQrModalData,
   setViewedCompany, renderAdCard, renderSkeletonCard, handleReviewSubmit, reviewForm, setReviewForm,
   user, handleViewCompany
 }) {
@@ -212,12 +214,17 @@ export default function StorefrontScreen({
       </div>
 
       <h3 className="text-[18px] font-bold text-slate-900 mb-5">{t.active_ads} ({companyAds.length})</h3>
-      {loadingCompanyAds ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {loadingCompanyAds && companyAds.length === 0 ? (
+        <div data-testid="storefront-ads-loading" role="status" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => renderSkeletonCard(`storefront-${i}`))}
         </div>
+      ) : companyAdsLoadError && companyAds.length === 0 ? (
+        <div data-testid="storefront-ads-load-error" role="alert" className="p-10 text-center bg-white rounded-3xl border border-slate-200">
+          <p className="text-slate-500 text-[13px] mb-4">{t.connection_error}</p>
+          <button type="button" data-testid="storefront-ads-retry" onClick={retryCompanyAds} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20">{t.retry_btn}</button>
+        </div>
       ) : companyAds.length === 0 ? (
-        <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px] bg-white rounded-3xl border border-slate-200">{t.noAds}</div>
+        <div data-testid="storefront-ads-empty" className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px] bg-white rounded-3xl border border-slate-200">{t.noAds}</div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {companyAds.map(ad => renderAdCard(ad))}
@@ -247,8 +254,15 @@ export default function StorefrontScreen({
         )}
 
         <div className="space-y-4">
-          {companyReviews.length === 0 ? (
-            <p className="text-slate-500 text-[13px]">{t.no_reviews}</p>
+          {loadingCompanyReviews && companyReviews.length === 0 ? (
+            <div data-testid="storefront-reviews-loading" role="status" className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-lime-500" aria-hidden="true" /></div>
+          ) : companyReviewsLoadError && companyReviews.length === 0 ? (
+            <div data-testid="storefront-reviews-load-error" role="alert" className="py-6 text-center">
+              <p className="text-slate-500 text-[13px] mb-4">{t.connection_error}</p>
+              <button type="button" data-testid="storefront-reviews-retry" onClick={retryCompanyReviews} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20">{t.retry_btn}</button>
+            </div>
+          ) : companyReviews.length === 0 ? (
+            <p data-testid="storefront-reviews-empty" className="text-slate-500 text-[13px]">{t.no_reviews}</p>
           ) : (
             companyReviews.map((rev, idx) => (
               <div key={idx} className="p-4 border border-slate-100 rounded-2xl">
