@@ -806,12 +806,15 @@ function App() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminUserSearch, setAdminUserSearch] = useState('');
   const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
+  const [adminUsersLoadError, setAdminUsersLoadError] = useState(false);
   const [isUploadingBulk, setIsUploadingBulk] = useState(false);
   const [adminPendingAds, setAdminPendingAds] = useState([]);
   const [loadingPendingAds, setLoadingPendingAds] = useState(false);
+  const [adminPendingAdsLoadError, setAdminPendingAdsLoadError] = useState(false);
   const [adminCoupons, setAdminCoupons] = useState([]);
   const [couponForm, setCouponForm] = useState({ code: '', credits: 100, max_uses: 10 });
   const [loadingCoupons, setLoadingCoupons] = useState(false);
+  const [adminCouponsLoadError, setAdminCouponsLoadError] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportingAd, setReportingAd] = useState(null);
   const [reportForm, setReportForm] = useState({ reason: '', comments: '' });
@@ -832,10 +835,13 @@ function App() {
 
   const [adminPayments, setAdminPayments] = useState([]);
   const [loadingAdminPayments, setLoadingAdminPayments] = useState(false);
+  const [adminPaymentsLoadError, setAdminPaymentsLoadError] = useState(false);
   const [adminPaymentsPage, setAdminPaymentsPage] = useState(1);
   const [adminPaymentsLastPage, setAdminPaymentsLastPage] = useState(1);
   const [adminPaymentsTotal, setAdminPaymentsTotal] = useState(0);
   const [adminAnalytics, setAdminAnalytics] = useState(null);
+  const [loadingAdminAnalytics, setLoadingAdminAnalytics] = useState(false);
+  const [adminAnalyticsLoadError, setAdminAnalyticsLoadError] = useState(false);
 
   // --- AI COMMAND CENTER STATE ---
   const [showAiModal, setShowAiModal] = useState(false);
@@ -844,6 +850,7 @@ function App() {
   const [aiResult, setAiResult] = useState(null);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [adminReportsLoadError, setAdminReportsLoadError] = useState(false);
   const [radius, setRadius] = useState(50);
   const [searchLocation, setSearchLocation] = useState(null); // { lat, lng, name }
   const [searchLocationInput, setSearchLocationInput] = useState('');
@@ -2311,17 +2318,22 @@ function App() {
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: ПОЛЬЗОВАТЕЛИ ---
   const loadAdminUsers = useCallback(async () => {
     setLoadingAdminUsers(true);
+    setAdminUsersLoadError(false);
     try {
       const token = localStorage.getItem('auth_token');
       // UX Fix: Передаем поисковый запрос на бэкенд, чтобы поиск работал по ВСЕЙ базе данных, а не только по первой странице
       const res = await fetch(`${API_URL}/users?search=${encodeURIComponent(adminUserSearch)}`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        // Фикс белого экрана: Laravel возвращает { data: [...] } при пагинации
-        setAdminUsers(data.data || (Array.isArray(data) ? data : []));
-      }
-    } catch (err) { console.error("Error fetching users", err); }
-    finally { setLoadingAdminUsers(false); }
+      if (!res.ok) throw new Error(`admin-users-load-failed:${res.status}`);
+      const data = await res.json();
+      // Фикс белого экрана: Laravel возвращает { data: [...] } при пагинации
+      setAdminUsers(data.data || (Array.isArray(data) ? data : []));
+      setAdminUsersLoadError(false);
+    } catch (err) {
+      setAdminUsersLoadError(true);
+      console.error("Error fetching users", err);
+    } finally {
+      setLoadingAdminUsers(false);
+    }
   }, [adminUserSearch]);
 
   const handleAdminVerifyUser = async (id) => {
@@ -2368,15 +2380,20 @@ function App() {
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: МОДЕРАЦИЯ ---
   const loadPendingAds = useCallback(async () => {
     setLoadingPendingAds(true);
+    setAdminPendingAdsLoadError(false);
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/ads/pending`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setAdminPendingAds(Array.isArray(data) ? data : (data.data || []));
-      }
-    } catch (err) { console.error("Error fetching pending ads", err); }
-    finally { setLoadingPendingAds(false); }
+      if (!res.ok) throw new Error(`admin-pending-ads-load-failed:${res.status}`);
+      const data = await res.json();
+      setAdminPendingAds(Array.isArray(data) ? data : (data.data || []));
+      setAdminPendingAdsLoadError(false);
+    } catch (err) {
+      setAdminPendingAdsLoadError(true);
+      console.error("Error fetching pending ads", err);
+    } finally {
+      setLoadingPendingAds(false);
+    }
   }, []);
 
   const loadSearchAlerts = useCallback(async () => {
@@ -2502,20 +2519,25 @@ function App() {
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: ЖАЛОБЫ (REPORTS) ---
   const loadAdminReports = useCallback(async () => {
     setLoadingReports(true);
+    setAdminReportsLoadError(false);
     try {
       const token = localStorage.getItem('auth_token');
-      const res = await fetch(`${API_URL}/admin/reports`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setAdminReports(Array.isArray(data) ? data : (data.data || []));
-      }
-      const res2 = await fetch(`${API_URL}/admin/user-reports`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res2.ok) {
-        const data2 = await res2.json();
-        setAdminUserReports(Array.isArray(data2) ? data2 : (data2.data || []));
-      }
-    } catch (err) { console.error("Error fetching reports", err); }
-    finally { setLoadingReports(false); }
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const [res, res2] = await Promise.all([
+        fetch(`${API_URL}/admin/reports`, { headers }),
+        fetch(`${API_URL}/admin/user-reports`, { headers }),
+      ]);
+      if (!res.ok || !res2.ok) throw new Error(`admin-reports-load-failed:${res.status}:${res2.status}`);
+      const [data, data2] = await Promise.all([res.json(), res2.json()]);
+      setAdminReports(Array.isArray(data) ? data : (data.data || []));
+      setAdminUserReports(Array.isArray(data2) ? data2 : (data2.data || []));
+      setAdminReportsLoadError(false);
+    } catch (err) {
+      setAdminReportsLoadError(true);
+      console.error("Error fetching reports", err);
+    } finally {
+      setLoadingReports(false);
+    }
   }, []);
 
   const handleDeleteReport = async (id, adminCopy) => {
@@ -2562,19 +2584,21 @@ function App() {
 
   const loadAdminPayments = useCallback(async (page = 1) => {
     setLoadingAdminPayments(true);
-    setAdminPaymentsPage(page);
+    setAdminPaymentsLoadError(false);
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/payments?page=${page}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
-        const data = await res.json();
-        setAdminPayments(data.data || []);
-        setAdminPaymentsLastPage(data.last_page || 1);
-        setAdminPaymentsTotal(data.total || 0);
-      }
+      if (!res.ok) throw new Error(`admin-payments-load-failed:${res.status}`);
+      const data = await res.json();
+      setAdminPayments(data.data || []);
+      setAdminPaymentsPage(page);
+      setAdminPaymentsLastPage(data.last_page || 1);
+      setAdminPaymentsTotal(data.total || 0);
+      setAdminPaymentsLoadError(false);
     } catch (err) {
+      setAdminPaymentsLoadError(true);
       console.error("Error fetching admin payments", err);
     } finally {
       setLoadingAdminPayments(false);
@@ -2582,31 +2606,41 @@ function App() {
   }, []);
 
   const loadAdminAnalytics = useCallback(async () => {
+    setLoadingAdminAnalytics(true);
+    setAdminAnalyticsLoadError(false);
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/analytics?period=30`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
-        setAdminAnalytics(await res.json());
-      }
+      if (!res.ok) throw new Error(`admin-analytics-load-failed:${res.status}`);
+      setAdminAnalytics(await res.json());
+      setAdminAnalyticsLoadError(false);
     } catch (err) {
+      setAdminAnalyticsLoadError(true);
       console.error("Error fetching admin analytics", err);
+    } finally {
+      setLoadingAdminAnalytics(false);
     }
   }, []);
 
   // --- ПАНЕЛЬ АДМИНИСТРАТОРА: КУПОНЫ ---
   const loadCoupons = useCallback(async () => {
     setLoadingCoupons(true);
+    setAdminCouponsLoadError(false);
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/coupons`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setAdminCoupons(Array.isArray(data) ? data : (data.data || []));
-      }
-    } catch (err) { console.error("Error fetching coupons", err); }
-    finally { setLoadingCoupons(false); }
+      if (!res.ok) throw new Error(`admin-coupons-load-failed:${res.status}`);
+      const data = await res.json();
+      setAdminCoupons(Array.isArray(data) ? data : (data.data || []));
+      setAdminCouponsLoadError(false);
+    } catch (err) {
+      setAdminCouponsLoadError(true);
+      console.error("Error fetching coupons", err);
+    } finally {
+      setLoadingCoupons(false);
+    }
   }, []);
 
   const handleCreateCoupon = async (e, adminCopy) => {
@@ -4027,7 +4061,7 @@ function App() {
 
 
   // --- РЕНДЕР ПАНЕЛИ АДМИНИСТРАТОРА ---
-  const renderAdminScreen = () => <AdminScreen adminAnalytics={adminAnalytics} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminAnalytics={loadAdminAnalytics} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} adminPayments={adminPayments} loadingAdminPayments={loadingAdminPayments} adminPaymentsPage={adminPaymentsPage} adminPaymentsLastPage={adminPaymentsLastPage} adminPaymentsTotal={adminPaymentsTotal} loadAdminPayments={loadAdminPayments} token={localStorage.getItem('auth_token')} />;
+  const renderAdminScreen = () => <AdminScreen adminAnalytics={adminAnalytics} loadingAdminAnalytics={loadingAdminAnalytics} adminAnalyticsLoadError={adminAnalyticsLoadError} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminCouponsLoadError={adminCouponsLoadError} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminPendingAdsLoadError={adminPendingAdsLoadError} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} adminUsersLoadError={adminUsersLoadError} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminAnalytics={loadAdminAnalytics} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} adminReportsLoadError={adminReportsLoadError} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} adminPayments={adminPayments} loadingAdminPayments={loadingAdminPayments} adminPaymentsLoadError={adminPaymentsLoadError} adminPaymentsPage={adminPaymentsPage} adminPaymentsLastPage={adminPaymentsLastPage} adminPaymentsTotal={adminPaymentsTotal} loadAdminPayments={loadAdminPayments} token={localStorage.getItem('auth_token')} />;
 
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (
