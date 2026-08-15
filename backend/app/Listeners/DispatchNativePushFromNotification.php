@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\NewNotification;
 use App\Jobs\SendHuaweiPushNotification;
 use App\Jobs\SendMobilePushNotification;
+use App\Jobs\SendWebPushNotification;
 
 class DispatchNativePushFromNotification
 {
@@ -22,6 +23,9 @@ class DispatchNativePushFromNotification
         if (isset($data['ad_id']) && ! isset($data['listing_id'])) {
             $data['listing_id'] = $data['ad_id'];
         }
+        if (isset($notification['link']) && ! isset($data['url'])) {
+            $data['url'] = (string) $notification['link'];
+        }
         $data['type'] = (string) ($notification['type'] ?? $data['type'] ?? 'notification');
 
         $title = (string) ($notification['title'] ?? 'Mercasto');
@@ -34,6 +38,12 @@ class DispatchNativePushFromNotification
             $data,
         );
         SendHuaweiPushNotification::dispatch(
+            $event->userId(),
+            $title,
+            $body,
+            $data,
+        );
+        SendWebPushNotification::dispatch(
             $event->userId(),
             $title,
             $body,

@@ -54,6 +54,7 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
     }).catch(() => {});
+    window.dispatchEvent(new Event('mercasto:notifications-changed'));
   }, [token]);
 
   const markAllRead = async () => {
@@ -63,6 +64,7 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
     }).catch(() => {});
+    window.dispatchEvent(new Event('mercasto:notifications-changed'));
   };
 
   if (!user) {

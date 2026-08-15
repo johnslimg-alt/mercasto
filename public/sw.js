@@ -28,7 +28,14 @@ self.addEventListener('push', function(event) {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const target = event.notification.data?.url || '/';
+    const requested = event.notification.data?.url || '/';
+    let target = self.location.origin + '/';
+    try {
+        const resolved = new URL(requested, self.location.origin);
+        if (resolved.origin === self.location.origin) target = resolved.href;
+    } catch {
+        // Keep the safe same-origin fallback.
+    }
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
             for (const client of clients) {

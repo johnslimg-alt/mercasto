@@ -126,6 +126,9 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
       setConversation(data.conversation || null);
       setMessages(uniqueMessages(Array.isArray(data.messages) ? data.messages : []));
       setError('');
+      if (!quiet) {
+        window.dispatchEvent(new Event('mercasto:notifications-changed'));
+      }
     } catch {
       if (!quiet) setError(t.chat_load_failed);
     } finally {
