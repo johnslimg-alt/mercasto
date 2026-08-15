@@ -589,6 +589,8 @@ function App() {
 
   const [viewedAd, setViewedAd] = useState(null);
   const [deepLinkAdMissing, setDeepLinkAdMissing] = useState(false);
+  const [deepLinkAdLoadError, setDeepLinkAdLoadError] = useState(false);
+  const [deepLinkAdRetryNonce, setDeepLinkAdRetryNonce] = useState(0);
   const [viewedCompany, setViewedCompany] = useState(null);
   const [companyAds, setCompanyAds] = useState([]);
   const [loadingCompanyAds, setLoadingCompanyAds] = useState(false);
@@ -1438,20 +1440,36 @@ function App() {
     let cancelled = false;
 
     if (targetAdId) {
-      if (pathAdMatch) setDeepLinkAdMissing(false);
+      if (pathAdMatch) {
+        setDeepLinkAdMissing(false);
+        setDeepLinkAdLoadError(false);
+      }
       const token = localStorage.getItem('auth_token');
       fetch(`${API_URL}/ads/${targetAdId}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
-        .then(res => res.ok ? res.json() : null)
+        .then(async res => {
+          if (res.status === 404 || res.status === 410) {
+            if (!cancelled && pathAdMatch) setDeepLinkAdMissing(true);
+            return null;
+          }
+          if (!res.ok) throw new Error(`deep-link-ad-load-failed:${res.status}`);
+          return res.json();
+        })
         .then(adData => {
-          if (cancelled) return;
-          if (!adData) { if (pathAdMatch) setDeepLinkAdMissing(true); return; }
+          if (cancelled || !adData) return;
+          if (pathAdMatch) {
+            setDeepLinkAdMissing(false);
+            setDeepLinkAdLoadError(false);
+          }
           setViewedCompany(null);
           setViewedAd(adData);
           if (adIdParam) navigate(`/#ad-${targetAdId}`, { replace: true });
         })
-        .catch(() => { if (!cancelled && pathAdMatch) setDeepLinkAdMissing(true); });
+        .catch(err => {
+          console.error('Error loading deep-link ad', err);
+          if (!cancelled && pathAdMatch) setDeepLinkAdLoadError(true);
+        });
     } else if (targetStoreId) {
       fetch(`${API_URL}/users/${targetStoreId}/profile`)
         .then(res => res.ok ? res.json() : null)
@@ -1478,7 +1496,7 @@ function App() {
     }
 
     return () => { cancelled = true; };
-  }, [location.hash, location.search, location.pathname, navigate, setCurrentTab]);
+  }, [location.hash, location.search, location.pathname, navigate, setCurrentTab, deepLinkAdRetryNonce]);
 
   // --- ПЕРЕХВАТ OAuth ТОКЕНА ИЗ URL ---
   useEffect(() => {
@@ -4539,8 +4557,26 @@ function App() {
               <Route path="/vendedor/:id" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><SellerProfileScreen currentUser={user} /></React.Suspense>} />
               <Route path="/perfil/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ProfileEditScreen smsEnabled={availableProviders.sms} /></React.Suspense></RequireAuth>} />
               <Route path="/anuncio/:id/editar" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><EditAdScreen t={t} lang={lang} /></React.Suspense></RequireAuth>} />
-              <Route path="/ads/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
-              <Route path="/anuncio/:id" element={deepLinkAdMissing ? <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense> : <div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
+              <Route path="/ads/:id" element={deepLinkAdMissing ? (
+                <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense>
+              ) : deepLinkAdLoadError ? (
+                <div data-testid="deep-link-ad-load-error" role="alert" className="flex h-screen flex-col items-center justify-center gap-4 p-10 text-center">
+                  <p className="text-slate-500 dark:text-slate-300">{t.route_load_error || t.connection_error}</p>
+                  <button type="button" data-testid="deep-link-ad-retry" onClick={() => setDeepLinkAdRetryNonce(value => value + 1)} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                    {t.retry_btn}
+                  </button>
+                </div>
+              ) : <div data-testid="deep-link-ad-loading" role="status" className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
+              <Route path="/anuncio/:id" element={deepLinkAdMissing ? (
+                <React.Suspense fallback={null}><NotFoundScreen /></React.Suspense>
+              ) : deepLinkAdLoadError ? (
+                <div data-testid="deep-link-ad-load-error" role="alert" className="flex h-screen flex-col items-center justify-center gap-4 p-10 text-center">
+                  <p className="text-slate-500 dark:text-slate-300">{t.route_load_error || t.connection_error}</p>
+                  <button type="button" data-testid="deep-link-ad-retry" onClick={() => setDeepLinkAdRetryNonce(value => value + 1)} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                    {t.retry_btn}
+                  </button>
+                </div>
+              ) : <div data-testid="deep-link-ad-loading" role="status" className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>} />
               <Route path="/motor" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><AutosLanding lang={lang} /></React.Suspense>} />
               <Route path="/autos" element={<Navigate to="/motor" replace />} />
               <Route path="/inmuebles" element={<React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><InmueblesLanding lang={lang} /></React.Suspense>} />

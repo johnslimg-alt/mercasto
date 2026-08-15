@@ -80,3 +80,78 @@ test('ad detail prioritizes the hero and defers below-fold bundles', async ({ pa
   await expect.poll(() => apiRequests.some(url => url.startsWith('/api/recommendations'))).toBeTruthy();
   await expect.poll(() => scripts.some(url => /RecommendationsWidget-/.test(url))).toBeTruthy();
 });
+
+const routeRecoveryTranslations = {};
+for (const lang of ['es', 'en']) {
+  routeRecoveryTranslations[lang] = (await import(`../../src/constants/translations/${lang}.js`)).default;
+}
+
+async function installRouteLanguage(page, lang) {
+  await page.addInitScript(savedLang => {
+    localStorage.setItem('lang', savedLang);
+    localStorage.setItem('mercasto_language', savedLang);
+    localStorage.setItem('cookiesAccepted', 'true');
+  }, lang);
+}
+
+async function mockDeepLinkRecoveryApi(page, state) {
+  await page.route('**/api/**', async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname;
+
+    if (path === '/api/ads/6336' && request.method() === 'GET') {
+      if (!state.recovered) {
+        return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'temporarily unavailable' }) });
+      }
+      await new Promise(resolve => setTimeout(resolve, 650));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(detailAd) });
+    }
+    if (path === '/api/ads/404404' && request.method() === 'GET') {
+      return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'not found' }) });
+    }
+    if (path === '/api/ads/6336/price-history') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"history":[]}' });
+    if (path === '/api/ads/6336/similar') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    if (path.startsWith('/api/recommendations')) return route.fulfill({ status: 200, contentType: 'application/json', body: '{"data":[]}' });
+    if (path === '/api/ads') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"data":[],"total":0,"current_page":1,"last_page":1}' });
+    if (path === '/api/categories' || path === '/api/category-attributes') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    if (path === '/api/auth/providers') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false }) });
+    if (path.includes('/notifications')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], count: 0 }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+}
+
+for (const lang of ['es', 'en']) {
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    test(`deep-link ad keeps 503 distinct from 404 and recovers in ${lang} on ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium-desktop');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await installRouteLanguage(page, lang);
+      const state = { recovered: false };
+      await mockDeepLinkRecoveryApi(page, state);
+      await page.goto('/ads/6336', { waitUntil: 'domcontentloaded' });
+      const t = routeRecoveryTranslations[lang];
+
+      await expect(page.getByTestId('deep-link-ad-load-error')).toContainText(t.route_load_error);
+      await expect(page.getByTestId('not-found-screen')).toHaveCount(0);
+      await expect(page.getByTestId('deep-link-ad-retry')).toHaveText(t.retry_btn);
+
+      state.recovered = true;
+      await page.getByTestId('deep-link-ad-retry').click();
+      await expect(page.getByTestId('deep-link-ad-loading')).toBeVisible();
+      await expect(page.getByTestId('deep-link-ad-load-error')).toHaveCount(0);
+      await expect(page.locator('[data-ad-detail-hero="true"]')).toBeVisible();
+    });
+  }
+}
+
+test('deep-link ad renders NotFound only for a real 404', async ({ page }) => {
+  await installRouteLanguage(page, 'es');
+  await mockDeepLinkRecoveryApi(page, { recovered: false });
+  await page.goto('/ads/404404', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('not-found-screen')).toBeVisible();
+  await expect(page.getByTestId('deep-link-ad-load-error')).toHaveCount(0);
+});
