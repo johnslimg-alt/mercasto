@@ -190,7 +190,7 @@ export default function StoresScreen() {
       </div>
 
       {/* Main Grid List */}
-      <main className="max-w-7xl mx-auto px-4 mt-12">
+      <section className="max-w-7xl mx-auto px-4 mt-12">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-2">
             <Store className="w-6 h-6 text-lime-500" /> {copy.active}
@@ -341,7 +341,7 @@ export default function StoresScreen() {
             </button>
           </div>
         )}
-      </main>
+      </section>
 
       {/* Why Choose PRO Banner */}
       <section className="max-w-7xl mx-auto px-4 mt-20">

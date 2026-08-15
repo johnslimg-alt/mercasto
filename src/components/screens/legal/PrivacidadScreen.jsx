@@ -81,7 +81,7 @@ export default function PrivacidadScreen() {
             </div>
           </aside>
 
-          <main className="flex-1 min-w-0">
+          <section className="flex-1 min-w-0">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 md:p-10">
               <div className="mb-8 pb-6 border-b border-slate-100">
                 <div className="flex items-center gap-3 mb-2">
@@ -226,7 +226,7 @@ export default function PrivacidadScreen() {
               <button onClick={() => navigate('/terminos')} className="text-sm text-slate-500 hover:text-lime-600 underline underline-offset-2 transition-colors">Términos de Uso</button>
               <button onClick={() => navigate('/cookies')} className="text-sm text-slate-500 hover:text-lime-600 underline underline-offset-2 transition-colors">Política de Cookies</button>
             </div>
-          </main>
+          </section>
         </div>
       </div>
     </div>

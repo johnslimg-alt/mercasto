@@ -229,7 +229,7 @@ export default function AdvertisingHub() {
             </nav>
           </aside>
 
-          <main className="min-w-0 space-y-5">
+          <section className="min-w-0 space-y-5">
             {error && <div className="break-words rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
             {notice && <div className="break-words rounded-2xl border border-lime-200 bg-lime-50 px-4 py-3 text-sm font-semibold text-lime-800">{notice}</div>}
 
@@ -323,7 +323,7 @@ export default function AdvertisingHub() {
                 <p className="mx-auto mt-2 max-w-xl break-words text-sm text-slate-500">{activeSectionInfo.description} {copy.moduleSuffix}</p>
               </section>
             )}
-          </main>
+          </section>
         </div>
       </div>
     </div>

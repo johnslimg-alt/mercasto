@@ -332,7 +332,7 @@ export default function AdminModerationCenter() {
                 )}
               </aside>
 
-              <main className="min-h-0 overflow-y-auto p-4 md:p-6">
+              <section className="min-h-0 overflow-y-auto p-4 md:p-6">
                 {detailLoading ? (
                   <div className="py-24 text-center text-sm font-semibold text-slate-500">{t('openingAd')}</div>
                 ) : !detail ? (
@@ -342,7 +342,7 @@ export default function AdminModerationCenter() {
                 ) : (
                   <AdReview detail={detail} reason={reason} setReason={setReason} actionLoading={actionLoading} submitDecision={submitDecision} retryAI={retryAI} t={t} locale={locale} />
                 )}
-              </main>
+              </section>
             </div>
           </div>
         </div>

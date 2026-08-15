@@ -379,7 +379,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
           )}
         </aside>
 
-        <main className={`${showThread ? 'flex' : 'hidden md:flex'} min-h-[calc(100vh-8rem)] flex-col`}>
+        <section className={`${showThread ? 'flex' : 'hidden md:flex'} min-h-[calc(100vh-8rem)] flex-col`}>
           {showThread ? (
             <>
               <div className="flex min-h-16 items-center gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
@@ -483,7 +483,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
               </p>
             </div>
           )}
-        </main>
+        </section>
       </div>
     </div>
   );
