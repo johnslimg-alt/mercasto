@@ -1,13 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, MessageCircle, Shield, AlertTriangle } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
 import { getCurrentSiteLanguage, whatsappInterestMessage } from '../../utils/whatsappLocale';
+import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
 export default function ContactButton({ ad, user, t = {}, className = '' }) {
   const [isOpen, setIsOpen] = useState(false);
-  const modalRef = useRef(null);
+  const closeModal = () => setIsOpen(false);
+  const { dialogRef: modalRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({ isOpen, onClose: closeModal });
 
   // Извлечение контактов
   const getSafeTelegramUsername = (ad) => {
@@ -79,15 +81,6 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
     }
   }, [isOpen]);
 
-  // Закрытие по Escape
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) setIsOpen(false);
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen]);
-
   if (!hasContacts) return null;
 
   const isVerified = ad?.user?.is_verified || ad?.user?.verified || ad?.user?.kyc_status === 'approved';
@@ -95,6 +88,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
   return (
     <>
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all ${className}`}
       >
@@ -106,14 +100,20 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
         <div className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 animate-fadeIn">
           <div
             ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="contact-dialog-title"
+            onKeyDown={handleKeyDown}
             className="bg-white dark:bg-gray-900 w-full md:max-w-md rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden animate-slideUp"
           >
             {/* Header */}
             <div className="relative px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800">
               <button
-                onClick={() => setIsOpen(false)}
+                ref={initialFocusRef}
+                type="button"
+                onClick={closeModal}
                 className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label={t.close || 'Cerrar'}
+                aria-label={t.close_btn || t.close || 'Close'}
               >
                 <X size={20} className="text-gray-500" />
               </button>
@@ -128,7 +128,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">
+                    <h3 id="contact-dialog-title" className="font-bold text-lg text-gray-900 dark:text-white truncate">
                       {ad?.user?.name || t.ct_seller_fallback || 'Vendedor'}
                     </h3>
                     {isVerified && (
