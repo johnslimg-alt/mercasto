@@ -363,6 +363,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
           search: t.search_btn,
           allMexico: t.all_mexico,
           allCity: t.all_city || t.city,
+          state: t.state,
           city: t.city,
           mapAds: t.search_map || t.view_map,
           radius: t.radius,

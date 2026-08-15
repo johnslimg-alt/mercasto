@@ -61,6 +61,7 @@ export default function VerticalHero({
   const copy = {
     allMexico: labels.allMexico || '',
     allCity: labels.allCity || '',
+    state: labels.state || labels.allMexico || '',
     city: labels.city || '',
     search: labels.search || '',
     mapAds: labels.mapAds || '',
@@ -128,6 +129,7 @@ export default function VerticalHero({
             <Search size={18} className="text-slate-400 shrink-0" />
             <input
               type="text"
+              aria-label={searchPlaceholder || copy.search}
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder={searchPlaceholder || `${copy.search}…`}
@@ -136,21 +138,21 @@ export default function VerticalHero({
           </label>
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <MapPin size={18} className="text-slate-400 shrink-0" />
-            <select value={state} onChange={handleStateChange} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
+            <select aria-label={copy.state} value={state} onChange={handleStateChange} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
               <option value="">{copy.allMexico}</option>
               {states.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <LocateFixed size={18} className="text-slate-400 shrink-0" />
-            <select ref={citySelectRef} value={city} onChange={e => setCity(e.target.value)} disabled={!state} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none disabled:text-slate-400">
+            <select ref={citySelectRef} aria-label={copy.city} value={city} onChange={e => setCity(e.target.value)} disabled={!state} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none disabled:text-slate-400">
               <option value="">{state ? copy.allCity : copy.city}</option>
               {cities.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <SlidersHorizontal size={18} className="text-slate-400 shrink-0" />
-            <select value={radius} onChange={e => setRadius(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
+            <select aria-label={copy.radius} value={radius} onChange={e => setRadius(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
               {['5', '10', '25', '50', '100'].map(item => <option key={item} value={item}>{item} km</option>)}
             </select>
           </label>

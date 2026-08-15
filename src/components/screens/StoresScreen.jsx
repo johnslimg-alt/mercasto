@@ -123,6 +123,7 @@ export default function StoresScreen() {
             <Search className="absolute left-4 top-3.5 text-slate-400 w-5 h-5" />
             <input
               type="text"
+              aria-label={copy.search}
               placeholder={copy.search}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -134,6 +135,7 @@ export default function StoresScreen() {
           <div className="relative">
             <MapPin className="absolute left-4 top-3.5 text-slate-400 w-5 h-5" />
             <select
+              aria-label={t('filters.allStates')}
               value={selectedState}
               onChange={(e) => { setSelectedState(e.target.value); setPage(1); }}
               className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500 text-sm font-medium transition-all appearance-none cursor-pointer bg-white"
@@ -149,6 +151,7 @@ export default function StoresScreen() {
           <div className="relative">
             <Building2 className="absolute left-4 top-3.5 text-slate-400 w-5 h-5" />
             <select
+              aria-label={t('filters.allCategories')}
               value={selectedCategory}
               onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
               className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-lime-500/30 focus:border-lime-500 text-sm font-medium transition-all appearance-none cursor-pointer bg-white"
