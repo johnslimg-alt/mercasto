@@ -447,3 +447,27 @@ for (const viewport of [
     expect(unnamed, `unnamed authenticated dashboard form controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
   });
 }
+
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`authenticated dashboard buttons and links expose accessible names on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await mockApi(page);
+    await installSession(page, 'es');
+    await page.goto('/profile');
+    const tabs = ['my_ads','favorites','saved_searches','stats','transactions','contact_history','reviews','privacy','settings'];
+    const unnamed = [];
+    for (const tabId of tabs) {
+      await page.getByTestId(`dashboard-tab-${tabId}`).click();
+      await page.waitForTimeout(30);
+      const items = await page.locator('button:visible, a[href]:visible').evaluateAll(nodes => nodes.map(node => ({
+        tag: node.tagName.toLowerCase(), text:(node.innerText||'').trim(), aria:(node.getAttribute('aria-label')||'').trim(), labelledby:(node.getAttribute('aria-labelledby')||'').trim(), title:(node.getAttribute('title')||'').trim(), html:node.outerHTML.slice(0,260)
+      })));
+      for (const item of items) if (!(item.text || item.aria || item.labelledby || item.title)) unnamed.push({ tab: tabId, ...item });
+    }
+    expect(unnamed, `unnamed dashboard actions: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}
