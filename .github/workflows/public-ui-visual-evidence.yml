@@ -16,7 +16,7 @@ jobs:
   capture:
     name: Read-only public browser matrix
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       BASE_URL: https://mercasto.com
       EVIDENCE_OUTPUT: docs/evidence/ui-visual-qa/public-production

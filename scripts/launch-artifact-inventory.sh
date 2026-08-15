@@ -29,6 +29,8 @@ required_files=(
   "scripts/capture-authenticated-ui-visual-evidence.mjs"
   "scripts/capture-ui-visual-evidence.mjs"
   "scripts/public-ui-visual-evidence-gate.sh"
+  "scripts/public-ui-route-policy.mjs"
+  "scripts/public-ui-route-coverage-gate.mjs"
   ".github/workflows/public-ui-visual-evidence.yml"
   ".github/workflows/authenticated-cabinet-qa.yml"
   "playwright.config.mjs"
