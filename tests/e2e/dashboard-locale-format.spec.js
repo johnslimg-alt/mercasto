@@ -329,3 +329,36 @@ for (const lang of ['es', 'en']) {
     });
   }
 }
+
+for (const lang of ['es', 'en']) {
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    test(`privacy switches expose state and work from keyboard in ${lang} on ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium-desktop');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await installSession(page, lang);
+      await mockApi(page);
+      await page.goto('/profile?tab=privacy');
+      const t = translations[lang];
+
+      const profileSwitch = page.getByRole('switch', { name: t.profile_visible_title });
+      const trackingSwitch = page.getByRole('switch', { name: t.gdpr_analytics_title });
+      await expect(profileSwitch).toHaveAttribute('aria-checked', 'true');
+      await expect(trackingSwitch).toHaveAttribute('aria-checked', 'true');
+
+      await profileSwitch.focus();
+      await expect(profileSwitch).toBeFocused();
+      await page.keyboard.press('Space');
+      await expect(profileSwitch).toHaveAttribute('aria-checked', 'false');
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('mercasto_privacy_profile_visible'))).toBe('false');
+
+      await trackingSwitch.focus();
+      await expect(trackingSwitch).toBeFocused();
+      await page.keyboard.press('Space');
+      await expect(trackingSwitch).toHaveAttribute('aria-checked', 'false');
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('mercasto_privacy_tracking_consent'))).toBe('false');
+    });
+  }
+}
