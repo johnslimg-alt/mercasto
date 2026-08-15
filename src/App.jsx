@@ -693,23 +693,21 @@ function App() {
   const [couponInput, setCouponInput] = useState('');
   const [availableProviders, setAvailableProviders] = useState({ google: false, twitter: false, telegram: false, telegram_bot_id: null, sms: false });
 
-  const setCurrentTab = useCallback((tab) => {
-    // FIX: Memory Leak. При уходе со страницы создания/редактирования объявления очищаем временные URL-объекты
-    if (currentTab === 'post' && tab !== 'post') {
-        (Array.isArray(images) ? images : []).forEach(img => {
-            if (img.source === 'new' && img.preview) {
-                URL.revokeObjectURL(img.preview);
-            }
-        });
-        // Также сбрасываем состояние формы, чтобы не показывать "протухшие" данные
-        setImages([]);
-        setVideoFile(null);
-        setEditingAd(null);
-        setForm({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
-    }
+  const discardPostDraft = useCallback(() => {
+    (Array.isArray(images) ? images : []).forEach(img => {
+      if (img.source === 'new' && img.preview) URL.revokeObjectURL(img.preview);
+    });
+    setImages([]);
+    setVideoFile(null);
+    setEditingAd(null);
+    setForm({ title: '', price: '', description: '', location: '', city: '', state: '', latitude: '', longitude: '', category: '', condition: 'nuevo', attributes: {} });
+  }, [images]);
 
+  const setCurrentTab = useCallback((tab) => {
+    // Leaving the publication flow must clean temporary previews, regardless of the next route.
+    if (currentTab === 'post' && tab !== 'post') discardPostDraft();
     if (tab === 'home') navigate('/'); else navigate(`/${tab}`);
-  }, [navigate, currentTab, images]);
+  }, [navigate, currentTab, discardPostDraft]);
 
   const handleHeaderCategoryClick = useCallback((slug = '') => {
     if (slug) events.categorySelected(slug, { source: 'header_category' });
@@ -913,7 +911,7 @@ function App() {
     setDebouncedLocInput(nextLoc);
     if (typeof overrideCategory === 'string') setActiveCat(overrideCategory);
     if (Object.prototype.hasOwnProperty.call(filters, 'dynamicFilters')) setDynamicFilters(nextDynamicFilters);
-    setCurrentTab('home');
+    if (currentTab === 'post') discardPostDraft();
     setViewedAd(null);
     setViewedCompany(null);
     navigate(buildHomeFilterPath({
@@ -940,7 +938,8 @@ function App() {
     navigate,
     searchLocationInput,
     searchQuery,
-    setCurrentTab,
+    currentTab,
+    discardPostDraft,
   ]);
 
   const applyHeaderLocation = useCallback((mobile = false) => {
@@ -4102,7 +4101,7 @@ function App() {
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
               <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="desktop-header-control desktop-header-search-control header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-              <input data-testid="desktop-search-input" value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
+              <input data-testid="desktop-search-input" value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
                 {searchLocation?.lat && (
                   <>
                     <div className="h-7 w-px bg-slate-200"></div>
@@ -4334,7 +4333,7 @@ function App() {
             <div ref={mobileSearchRef} className="relative min-w-0">
               <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-full focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input data-testid="mobile-search-input" ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
+                <input data-testid="mobile-search-input" ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
                 <button type="submit" data-testid="mobile-search-submit" aria-label={t.search_btn || 'Buscar'} className="mobile-search-submit mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#84CC16] text-slate-950">
                   <Search className="h-4 w-4" />
                 </button>
