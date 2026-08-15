@@ -326,7 +326,7 @@ export default function MyAdsScreen({
         </div>
 
         {filteredAds.length === 0 ? (
-          <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px]">{t.noAds}</div>
+          <div data-testid="dashboard-my-ads-empty" className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px]">{t.noAds}</div>
         ) : filteredAds.map(ad => {
           const selected = selectedIds.has(ad.id);
           const promo = activePromotion(ad, t);

@@ -248,3 +248,43 @@ for (const lang of ['es', 'en']) {
     });
   }
 }
+
+async function mockMyAdsRecoveryApi(page, shouldRecover) {
+  await page.route('**/api/**', async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.pathname.endsWith('/user') && request.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) });
+    if (url.pathname.endsWith('/user/ads')) {
+      if (!shouldRecover()) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'temporarily unavailable' }) });
+      await new Promise(resolve => setTimeout(resolve, 700));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    }
+    if (url.pathname.endsWith('/user/favorite-ads') || url.pathname.endsWith('/categories')) return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    if (url.pathname.endsWith('/user/payments')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], last_page: 1, total: 0 }) });
+    if (url.pathname.endsWith('/auth/providers')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false, twitter: false, telegram: false }) });
+    if (url.pathname.includes('/notifications')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], count: 0 }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+}
+
+for (const lang of ['es', 'en']) {
+  for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: 'mobile', width: 390, height: 844 }]) {
+    test(`my ads distinguish failure, retry loading and empty in ${lang} on ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium-desktop');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await installSession(page, lang);
+      let recover = false;
+      await mockMyAdsRecoveryApi(page, () => recover);
+      await page.goto('/profile?tab=my_ads');
+      const t = translations[lang];
+      await expect(page.getByTestId('dashboard-my-ads-load-error')).toContainText(t.connection_error);
+      await expect(page.getByTestId('dashboard-my-ads-empty')).toHaveCount(0);
+      await expect(page.getByTestId('dashboard-my-ads-retry')).toHaveText(t.retry_btn);
+      recover = true;
+      await page.getByTestId('dashboard-my-ads-retry').click();
+      await expect(page.getByTestId('dashboard-my-ads-loading')).toBeVisible();
+      await expect(page.getByTestId('dashboard-my-ads-load-error')).toHaveCount(0);
+      await expect(page.getByTestId('dashboard-my-ads-empty')).toContainText(t.noAds);
+    });
+  }
+}
