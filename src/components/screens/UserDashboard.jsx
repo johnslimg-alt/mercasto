@@ -223,7 +223,7 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
   );
 };
 
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, favoriteAdsLoading = false, favoriteAdsLoadError = false, loadFavoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, favoriteAdsLoading = false, favoriteAdsLoadError = false, loadFavoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userAdsLoading = false, userAdsLoadError = false, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
   const [dashToast, setDashToast] = React.useState(null);
   const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
   const [profileVisible, setProfileVisible] = React.useState(() => localStorage.getItem('mercasto_privacy_profile_visible') !== 'false');
@@ -656,6 +656,18 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
           <div className="lg:col-span-3">
             {/* Content based on active tab */}
             {dashboardTab === 'my_ads' ? (
+              userAdsLoading && userAds.length === 0 ? (
+                <div data-testid="dashboard-my-ads-loading" role="status" aria-live="polite" className="flex min-h-48 items-center justify-center rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+                  <Loader2 className="w-8 h-8 animate-spin text-lime-500" aria-hidden="true" />
+                </div>
+              ) : userAdsLoadError && userAds.length === 0 ? (
+                <div data-testid="dashboard-my-ads-load-error" role="alert" className="flex min-h-48 flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-800">
+                  <p className="text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
+                  <button type="button" data-testid="dashboard-my-ads-retry" onClick={onRefreshAds} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                    {t.retry_btn || 'Reintentar'}
+                  </button>
+                </div>
+              ) : (
               <MyAdsScreen
                 userAds={userAds}
                 getImageUrl={getImageUrl}
@@ -675,6 +687,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 isUploadingBulk={isUploadingBulk}
                 userRole={userRole}
               />
+              )
             ) : dashboardTab === 'favorites' ? (
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                 {/* Ads List */}
