@@ -1,12 +1,15 @@
 import { XCircle } from 'lucide-react';
+import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function UserReportModal({ handleUserReportSubmit, setShowUserReportModal, setUserReportForm, showUserReportModal, t, userReportForm }) {
+    const closeModal = () => setShowUserReportModal(false);
+    const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({ isOpen: showUserReportModal, onClose: closeModal });
     if (!showUserReportModal) return null;
     return (
-      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowUserReportModal(false); }}>
-        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowUserReportModal(false)} />
-        <div role="dialog" aria-modal="true" aria-labelledby="report-user-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md">
-          <button type="button" aria-label={t.close_btn || t.close} onClick={() => setShowUserReportModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+        <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeModal} />
+        <div ref={dialogRef} role="dialog" aria-modal="true" onKeyDown={handleKeyDown} aria-labelledby="report-user-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 w-full max-w-md">
+          <button ref={initialFocusRef} type="button" aria-label={t.close_btn || t.close} onClick={closeModal} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
           <h2 id="report-user-title" className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">{t.report_seller}</h2>
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">{t.report_user_help}</p>
           <form onSubmit={handleUserReportSubmit} className="space-y-4">
