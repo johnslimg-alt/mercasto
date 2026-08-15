@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Pencil, Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter, Navigation, Locate } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
@@ -250,6 +250,9 @@ export default function MapV3({
   const [mapQuery, setMapQuery] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const mapQueryRef = useRef('');
+  const minPriceRef = useRef('');
+  const maxPriceRef = useRef('');
   const [onlyWithCoords, setOnlyWithCoords] = useState(false);
   const [selectedState, setSelectedState] = useState(initialFilters.state || '');
   const [selectedCity, setSelectedCity] = useState(initialFilters.city || '');
@@ -273,6 +276,7 @@ export default function MapV3({
   const largeMapContainerRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const largeMapInstanceRef = React.useRef(null);
+  const lastMapAreaRef = React.useRef(null);
   const mountedRef = React.useRef(true);
   const userMarkerRef = React.useRef(null);
   const pickerMarkerRef = React.useRef(null);
@@ -293,9 +297,15 @@ export default function MapV3({
 
   // Keep map controls aligned with the catalog's canonical filter state.
   useEffect(() => {
-    setMapQuery(initialFilters.query || '');
-    setMinPrice(initialFilters.minPrice == null ? '' : String(initialFilters.minPrice));
-    setMaxPrice(initialFilters.maxPrice == null ? '' : String(initialFilters.maxPrice));
+    const nextQuery = initialFilters.query || '';
+    const nextMinPrice = initialFilters.minPrice == null ? '' : String(initialFilters.minPrice);
+    const nextMaxPrice = initialFilters.maxPrice == null ? '' : String(initialFilters.maxPrice);
+    mapQueryRef.current = nextQuery;
+    minPriceRef.current = nextMinPrice;
+    maxPriceRef.current = nextMaxPrice;
+    setMapQuery(nextQuery);
+    setMinPrice(nextMinPrice);
+    setMaxPrice(nextMaxPrice);
     setSelectedState(initialFilters.state || '');
     setSelectedCity(initialFilters.city || '');
     setListingType(initialFilters.listingType || '');
@@ -448,11 +458,13 @@ export default function MapV3({
       const bounds = map.getBounds();
       const north = bounds.getNorthEast();
       const radiusKm = Math.max(5, Math.min(250, Math.round(center.distanceTo(north) / 1000)));
-      return {
+      const area = {
         lat: Number(center.lat.toFixed(6)),
         lng: Number(center.lng.toFixed(6)),
         radius: radiusKm,
       };
+      lastMapAreaRef.current = area;
+      return area;
     } catch {
       return null;
     }
@@ -462,14 +474,19 @@ export default function MapV3({
     ? (largeMapInstanceRef.current || mapInstanceRef.current)
     : mapInstanceRef.current;
 
+  const handleExpandMap = () => {
+    updateMapArea(mapInstanceRef.current);
+    setExpanded(true);
+  };
+
   const handleSearchArea = () => {
-    const mapArea = updateMapArea(activeMapInstance());
+    const mapArea = updateMapArea(activeMapInstance()) || lastMapAreaRef.current;
     if (onSearchArea && mapArea) {
       onSearchArea({
         ...mapArea,
-        query: mapQuery.trim(),
-        minPrice: minPrice ? Number(minPrice) : null,
-        maxPrice: maxPrice ? Number(maxPrice) : null,
+        query: mapQueryRef.current.trim(),
+        minPrice: minPriceRef.current ? Number(minPriceRef.current) : null,
+        maxPrice: maxPriceRef.current ? Number(maxPriceRef.current) : null,
         onlyWithCoords,
         state: selectedState,
         city: selectedCity,
@@ -489,7 +506,10 @@ export default function MapV3({
   };
 
   const clearAllFilters = () => {
-    const mapArea = updateMapArea(activeMapInstance());
+    const mapArea = updateMapArea(activeMapInstance()) || lastMapAreaRef.current;
+    mapQueryRef.current = '';
+    minPriceRef.current = '';
+    maxPriceRef.current = '';
     setMapQuery('');
     setMinPrice('');
     setMaxPrice('');
@@ -1127,7 +1147,7 @@ function createPopupElement(ad, marker) {
         <input
           data-testid="map-filter-query"
           value={mapQuery}
-          onChange={(e) => setMapQuery(e.target.value)}
+          onChange={(e) => { mapQueryRef.current = e.target.value; setMapQuery(e.target.value); }}
           className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
           placeholder={t('home.searchPlaceholder')}
         />
@@ -1183,7 +1203,7 @@ function createPopupElement(ad, marker) {
         <input
           data-testid="map-filter-min-price"
           value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
+          onChange={(e) => { minPriceRef.current = e.target.value; setMinPrice(e.target.value); }}
           type="number"
           className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
           placeholder={t('filters.minPrice')}
@@ -1191,7 +1211,7 @@ function createPopupElement(ad, marker) {
         <input
           data-testid="map-filter-max-price"
           value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
+          onChange={(e) => { maxPriceRef.current = e.target.value; setMaxPrice(e.target.value); }}
           type="number"
           className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
           placeholder={t('filters.maxPrice')}
@@ -1458,7 +1478,7 @@ function createPopupElement(ad, marker) {
           <button
             data-testid="map-expand"
             type="button"
-            onClick={() => setExpanded(true)}
+            onClick={handleExpandMap}
             className="absolute bottom-3 right-3 z-[2] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg hover:scale-105 active:scale-95 transition-all"
           >
             <Maximize2 size={13} /> {t('map.fullscreen')}

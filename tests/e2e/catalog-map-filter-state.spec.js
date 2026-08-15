@@ -149,7 +149,7 @@ test('map controls hydrate from catalog state and search-area preserves canonica
   await expect(page.getByTestId('map-filter-city')).toHaveValue('Monterrey');
 });
 
-test('map search-area clears price bounds when the map inputs are emptied', async ({ page }, testInfo) => {
+test('map search-area uses immediate text and price drafts without stale state', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   const adRequests = [];
   await installCatalogSession(page);
@@ -159,6 +159,7 @@ test('map search-area clears price bounds when the map inputs are emptied', asyn
 
   await page.getByTestId('map-expand').click();
   await page.getByTestId('map-filter-toggle').click();
+  await page.getByTestId('map-filter-query').fill('camry');
   await page.getByTestId('map-filter-min-price').fill('');
   await page.getByTestId('map-filter-max-price').fill('');
   const requestCountBeforeAreaSearch = adRequests.length;
@@ -166,12 +167,13 @@ test('map search-area clears price bounds when the map inputs are emptied', asyn
 
   await expect.poll(() => {
     const params = new URL(page.url()).searchParams;
-    return [params.has('min_price'), params.has('max_price')];
-  }).toEqual([false, false]);
+    return [params.get('search'), params.has('min_price'), params.has('max_price')];
+  }).toEqual(['camry', false, false]);
 
   await expect.poll(() => adRequests.slice(requestCountBeforeAreaSearch).some((requestUrl) => {
     const params = new URL(requestUrl).searchParams;
     return params.has('lat') && params.has('lng') && params.has('radius')
+      && params.get('search') === 'camry'
       && !params.has('min_price') && !params.has('max_price');
   })).toBe(true);
 });
