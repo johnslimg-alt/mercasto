@@ -31,6 +31,8 @@ required_files=(
   "scripts/public-ui-visual-evidence-gate.sh"
   "scripts/public-ui-route-policy.mjs"
   "scripts/public-ui-route-coverage-gate.mjs"
+  "scripts/client-spa-route-policy.mjs"
+  "scripts/client-spa-route-coverage-gate.mjs"
   ".github/workflows/public-ui-visual-evidence.yml"
   ".github/workflows/authenticated-cabinet-qa.yml"
   "playwright.config.mjs"

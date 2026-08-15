@@ -8,6 +8,9 @@ node --check scripts/capture-ui-visual-evidence.mjs
 node --check scripts/public-ui-route-policy.mjs
 node --check scripts/public-ui-route-coverage-gate.mjs
 node scripts/public-ui-route-coverage-gate.mjs
+node --check scripts/client-spa-route-policy.mjs
+node --check scripts/client-spa-route-coverage-gate.mjs
+node scripts/client-spa-route-coverage-gate.mjs
 grep -qF "name: 'desktop-1920'" scripts/capture-ui-visual-evidence.mjs
 grep -qF "name: 'tablet-768-portrait'" scripts/capture-ui-visual-evidence.mjs
 grep -qF "name: 'tablet-820-portrait'" scripts/capture-ui-visual-evidence.mjs
