@@ -111,8 +111,25 @@ async function verifyProfileEdit(page, lang, viewport) {
   await page.getByRole('button', { name: t.update_pass_btn }).click();
   await expect(page.getByText(t.passwords_mismatch, { exact: true })).toBeVisible();
 
-  await page.getByTestId('profile-delete-open').click();
-  const dialog = page.getByRole('dialog', { name: t.delete_account_confirm });
+  const deleteOpener = page.getByTestId('profile-delete-open');
+  await deleteOpener.focus();
+  await expect(deleteOpener).toBeFocused();
+  await deleteOpener.press('Enter');
+  let dialog = page.getByRole('dialog', { name: t.delete_account_confirm });
+  await expect(dialog).toBeVisible();
+  const cancelButton = page.getByTestId('profile-delete-cancel');
+  const firstInput = page.getByTestId('profile-delete-confirm-input');
+  await expect(cancelButton).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(firstInput).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(cancelButton).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(deleteOpener).toBeFocused();
+
+  await deleteOpener.press('Enter');
+  dialog = page.getByRole('dialog', { name: t.delete_account_confirm });
   await expect(dialog).toBeVisible();
   const confirmInput = page.getByTestId('profile-delete-confirm-input');
   const confirmButton = page.getByTestId('profile-delete-confirm');
