@@ -403,6 +403,7 @@ export default {
   "elec_phones": "电子产品和手机",
   "email": "邮箱",
   "email_alerts": "邮件提醒",
+  "email_new_message": "新消息邮件提醒",
   "email_settings": "邮箱设置",
   "email_verification_failed": "无法发送验证邮件。",
   "email_verification_sent": "验证邮件已发送。",

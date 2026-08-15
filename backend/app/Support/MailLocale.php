@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\App;
 class MailLocale
 {
     public const SUPPORTED = [
-        'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'he', 'yi', 'ru', 'ja',
+        'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja',
     ];
 
     public const FALLBACK = 'es';
@@ -22,6 +22,9 @@ class MailLocale
 
         $locale = str_replace('_', '-', $locale);
         $primary = explode('-', $locale)[0] ?? $locale;
+        if (in_array($primary, ['he', 'yi'], true)) {
+            return self::FALLBACK;
+        }
 
         return in_array($primary, self::SUPPORTED, true)
             ? $primary
@@ -37,6 +40,14 @@ class MailLocale
 
         if ($requestLocale) {
             return self::normalize($requestLocale);
+        }
+
+        $preferences = $user?->notification_preferences ?? [];
+        if (is_string($preferences)) {
+            $preferences = json_decode($preferences, true) ?: [];
+        }
+        if (is_array($preferences) && ! empty($preferences['locale'])) {
+            return self::normalize((string) $preferences['locale']);
         }
 
         foreach (['locale', 'language', 'preferred_locale', 'preferred_language'] as $field) {
@@ -61,6 +72,6 @@ class MailLocale
 
     public static function rtl(string $locale): bool
     {
-        return in_array(self::normalize($locale), ['ar', 'he', 'yi'], true);
+        return self::normalize($locale) === 'ar';
     }
 }

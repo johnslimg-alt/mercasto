@@ -403,6 +403,7 @@ export default {
   "elec_phones": "Elektronik und Telefone",
   "email": "E-Mail",
   "email_alerts": "E-Mail-Benachrichtigungen",
+  "email_new_message": "E-Mails bei neuen Nachrichten",
   "email_settings": "E-Mail-Einstellungen",
   "email_verification_failed": "E-Mail-Verifizierung konnte nicht gesendet werden.",
   "email_verification_sent": "Verifizierungs-E-Mail gesendet.",

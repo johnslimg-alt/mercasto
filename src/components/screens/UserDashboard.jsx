@@ -1184,6 +1184,10 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                       <span className="text-sm text-slate-700 dark:text-slate-300">{t.email_alerts || 'Alertas por correo'}</span>
                       <input type="checkbox" checked={notificationsForm.email_alerts} onChange={e => setNotificationsForm({ ...notificationsForm, email_alerts: e.target.checked })} className="w-4 h-4 accent-lime-500" />
                     </label>
+                    <label className={`flex items-center justify-between py-1.5 pl-3 ${notificationsForm.email_alerts ? '' : 'opacity-50'}`}>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{t.email_new_message}</span>
+                      <input type="checkbox" data-testid="email-new-message-toggle" checked={notificationsForm.email_new_message} disabled={!notificationsForm.email_alerts} onChange={e => setNotificationsForm({ ...notificationsForm, email_new_message: e.target.checked })} className="w-4 h-4 accent-lime-500 disabled:cursor-not-allowed" />
+                    </label>
                     <label className="flex items-center justify-between py-1.5">
                       <span className="text-sm text-slate-700 dark:text-slate-300">{t.push_notifications || 'Notificaciones push'}</span>
                       <input type="checkbox" checked={notificationsForm.push_notifications} onChange={e => setNotificationsForm({ ...notificationsForm, push_notifications: e.target.checked })} className="w-4 h-4 accent-lime-500" />

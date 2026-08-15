@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Models\User;
 use App\Events\NewNotification;
+use App\Support\MailLocale;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 
@@ -367,6 +368,7 @@ class ProfileController extends Controller
             'email_new_message' => 'boolean',
             'email_ad_reply' => 'boolean',
             'push_enabled' => 'boolean',
+            'locale' => 'nullable|string|max:16',
         ]);
 
         $existing = $user->notification_preferences ?? [];
@@ -381,6 +383,9 @@ class ProfileController extends Controller
             'email_new_message' => $request->boolean('email_new_message', $existing['email_new_message'] ?? true),
             'email_ad_reply' => $request->boolean('email_ad_reply', $existing['email_ad_reply'] ?? true),
             'push_enabled' => $request->boolean('push_enabled', $existing['push_enabled'] ?? false),
+            'locale' => $request->filled('locale')
+                ? MailLocale::normalize((string) $request->input('locale'))
+                : MailLocale::normalize((string) ($existing['locale'] ?? MailLocale::FALLBACK)),
         ]);
         $user->save();
 

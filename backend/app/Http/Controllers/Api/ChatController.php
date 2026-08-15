@@ -4,11 +4,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Ad;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\User;
 use App\Events\MessageSent;
 use App\Events\NewNotification;
+use App\Mail\NewMessageMail;
+use App\Support\MailLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Mail;
 use App\Jobs\SendTelegramMessageNotification;
 
 class ChatController extends Controller {
@@ -234,6 +238,30 @@ class ChatController extends Controller {
         $notification['created_at'] = $now->toISOString();
         $notification['updated_at'] = $now->toISOString();
         broadcast(new NewNotification($receiverId, $notification))->toOthers();
+
+        if (! $existingId) {
+            $this->queueNewMessageEmail($receiverId, $conversationId);
+        }
+    }
+
+    private function queueNewMessageEmail(int $receiverId, int $conversationId): void
+    {
+        $receiver = User::query()->find($receiverId);
+        if (! $receiver || ! $receiver->email || ! ($receiver->email_verified_at || $receiver->is_verified)) {
+            return;
+        }
+
+        $preferences = $receiver->notification_preferences ?? [];
+        if (is_string($preferences)) {
+            $preferences = json_decode($preferences, true) ?: [];
+        }
+        if (($preferences['email_alerts'] ?? true) === false
+            || ($preferences['email_new_message'] ?? true) === false) {
+            return;
+        }
+
+        $locale = MailLocale::normalize((string) ($preferences['locale'] ?? MailLocale::FALLBACK));
+        Mail::to($receiver->email)->queue(new NewMessageMail($conversationId, $locale));
     }
 
     private function conversationLink(int $conversationId): string

@@ -771,7 +771,7 @@ function App() {
   const [showTabBarMenu, setShowTabBarMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sliderAutoplay, setSliderAutoplay] = useState(() => localStorage.getItem('sliderAutoplay') !== 'false');
-  const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, push_notifications: true, marketing: false });
+  const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, email_new_message: true, push_notifications: true, marketing: false });
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [searchAlerts, setSearchAlerts] = useState([]);
   const [loadingSearchAlerts, setLoadingSearchAlerts] = useState(false);
@@ -1929,6 +1929,7 @@ function App() {
         const prefs = typeof user.notification_preferences === 'string' ? JSON.parse(user.notification_preferences) : user.notification_preferences;
         setNotificationsForm({
           email_alerts: prefs.email_alerts ?? true,
+          email_new_message: prefs.email_new_message ?? true,
           push_notifications: prefs.push_notifications ?? true,
           marketing: prefs.marketing ?? false,
         });
@@ -1954,6 +1955,41 @@ function App() {
     }
 
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id || !lang) return undefined;
+    const preferences = typeof user.notification_preferences === 'string'
+      ? (() => { try { return JSON.parse(user.notification_preferences || '{}'); } catch { return {}; } })()
+      : (user.notification_preferences || {});
+    if (preferences.locale === lang) return undefined;
+
+    let cancelled = false;
+    const syncNotificationLocale = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        const res = await fetch(`${API_URL}/user/notifications`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ locale: lang }),
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const updatedPreferences = data?.user?.notification_preferences;
+        if (!updatedPreferences) return;
+        setUser(prev => {
+          if (!prev || cancelled) return prev;
+          const next = { ...prev, notification_preferences: updatedPreferences };
+          localStorage.setItem('user', JSON.stringify(next));
+          return next;
+        });
+      } catch {
+        // Locale persistence is best-effort and must never block the UI.
+      }
+    };
+    syncNotificationLocale();
+    return () => { cancelled = true; };
+  }, [user?.id, user?.notification_preferences, lang]);
 
   const loadUserAds = useCallback(async () => {
     if (!user) return;
@@ -2970,7 +3006,7 @@ function App() {
       const res = await fetch(`${API_URL}/user/notifications`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(notificationsForm)
+        body: JSON.stringify({ ...notificationsForm, locale: lang })
       });
       const data = await res.json();
       if (res.ok) {

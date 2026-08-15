@@ -403,6 +403,7 @@ export default {
   "elec_phones": "電子機器・電話",
   "email": "メール",
   "email_alerts": "メール通知",
+  "email_new_message": "新着メッセージのメール通知",
   "email_settings": "メール設定",
   "email_verification_failed": "確認メールを送信できませんでした。",
   "email_verification_sent": "確認メールを送信しました。",

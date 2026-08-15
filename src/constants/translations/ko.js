@@ -403,6 +403,7 @@ export default {
   "elec_phones": "전자기기 및 휴대폰",
   "email": "이메일",
   "email_alerts": "이메일 알림",
+  "email_new_message": "새 메시지 이메일 알림",
   "email_settings": "이메일 설정",
   "email_verification_failed": "확인 이메일을 보낼 수 없습니다.",
   "email_verification_sent": "확인 이메일 전송됨.",

@@ -403,6 +403,7 @@ export default {
   "elec_phones": "Электроника и телефоны",
   "email": "Электронная почта",
   "email_alerts": "Уведомления по email",
+  "email_new_message": "Email о новых сообщениях",
   "email_settings": "Настройки email",
   "email_verification_failed": "Не удалось отправить письмо для подтверждения.",
   "email_verification_sent": "Письмо для подтверждения отправлено.",

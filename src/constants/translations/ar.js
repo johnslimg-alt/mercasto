@@ -403,6 +403,7 @@ export default {
   "elec_phones": "الإلكترونيات والهواتف",
   "email": "البريد الإلكتروني",
   "email_alerts": "تنبيهات البريد الإلكتروني",
+  "email_new_message": "رسائل بريد للرسائل الجديدة",
   "email_settings": "إعدادات البريد الإلكتروني",
   "email_verification_failed": "تعذر إرسال بريد التحقق.",
   "email_verification_sent": "تم إرسال بريد التحقق.",
