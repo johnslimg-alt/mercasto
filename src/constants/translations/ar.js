@@ -191,6 +191,7 @@ export default {
   "star_4": "جيد",
   "star_5": "ممتاز",
   "stats": "الإحصائيات",
+  "stats_period": "فترة الإحصائيات",
   "submit_comment": "نشر",
   "submit_review": "إرسال التقييم",
   "tap_map_hint": "اختياري: اضغط على الخريطة أو استخدم GPS لتحديد الموقع بدقة أكبر.",

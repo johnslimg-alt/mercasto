@@ -191,6 +191,7 @@ export default {
   "star_4": "好",
   "star_5": "极好",
   "stats": "统计",
+  "stats_period": "统计周期",
   "submit_comment": "发布",
   "submit_review": "提交评价",
   "tap_map_hint": "可选：点击地图或使用 GPS 来精确位置。",

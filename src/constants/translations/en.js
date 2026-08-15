@@ -191,6 +191,7 @@ export default {
   "star_4": "Good",
   "star_5": "Excellent",
   "stats": "Stats",
+  "stats_period": "Statistics period",
   "submit_comment": "Post",
   "submit_review": "Submit review",
   "tap_map_hint": "Optional: tap the map or use GPS to refine the location.",

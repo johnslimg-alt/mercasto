@@ -273,6 +273,7 @@ export default function MyAdsScreen({
           </h2>
           <div className="flex items-center gap-2">
             <select
+              aria-label={t.filter_global_sort || t.sort_order || 'Sort by'}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="shrink-0 text-[12.5px] font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-200 outline-none focus:ring-2 focus:ring-[#84CC16]/30"
