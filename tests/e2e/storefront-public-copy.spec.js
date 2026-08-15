@@ -94,3 +94,62 @@ for (const lang of ['es', 'zh', 'ar', 'ru']) {
     await expectNoOverflow(page);
   });
 }
+
+async function mockStorefrontSecondaryRecoveryApi(page, state) {
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    if (path.endsWith('/users/77/profile')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(company) });
+    if (path.endsWith('/users/77/business-profile')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(businessProfile) });
+    if (path.endsWith('/users/77/reviews')) {
+      if (!state.reviews) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'reviews unavailable' }) });
+      await new Promise(resolve => setTimeout(resolve, 650));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reviews: [], average: 0, total: 0 }) });
+    }
+    if (path.endsWith('/ads') && url.searchParams.get('user_id') === '77') {
+      if (!state.ads) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'ads unavailable' }) });
+      await new Promise(resolve => setTimeout(resolve, 650));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    }
+    if (path.endsWith('/categories') || path.endsWith('/category-attributes')) return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    if (path.endsWith('/auth/providers')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false }) });
+    if (path.endsWith('/banners')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ banners: [] }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+}
+
+for (const lang of ['es', 'en']) {
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    test(`storefront keeps ads and reviews outages independent in ${lang} on ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium-desktop');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      const t = await expected(lang);
+      await setLanguage(page, lang);
+      const state = { ads: false, reviews: false };
+      await mockStorefrontSecondaryRecoveryApi(page, state);
+      await page.goto('/?store=77', { waitUntil: 'domcontentloaded' });
+      await expectDocumentLanguage(page, lang);
+
+      await expect(page.getByRole('heading', { level: 1, name: company.name, exact: false })).toBeVisible();
+      await expect(page.getByTestId('storefront-ads-load-error')).toContainText(t.connection_error);
+      await expect(page.getByTestId('storefront-reviews-load-error')).toContainText(t.connection_error);
+      await expect(page.getByTestId('storefront-ads-empty')).toHaveCount(0);
+      await expect(page.getByTestId('storefront-reviews-empty')).toHaveCount(0);
+
+      state.ads = true;
+      await page.getByTestId('storefront-ads-retry').click();
+      await expect(page.getByTestId('storefront-ads-loading')).toBeVisible();
+      await expect(page.getByTestId('storefront-ads-empty')).toHaveText(t.noAds);
+      await expect(page.getByTestId('storefront-reviews-load-error')).toBeVisible();
+
+      state.reviews = true;
+      await page.getByTestId('storefront-reviews-retry').click();
+      await expect(page.getByTestId('storefront-reviews-loading')).toBeVisible();
+      await expect(page.getByTestId('storefront-reviews-empty')).toHaveText(t.no_reviews);
+      await expectNoOverflow(page);
+    });
+  }
+}

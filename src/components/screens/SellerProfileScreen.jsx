@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { MapPin, Globe, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, Package } from 'lucide-react';
+import { MapPin, Globe, Star, ChevronLeft, MessageCircle, Pencil, ShieldCheck, Package, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
 import { formatNumber } from '../../utils/localeFormat';
@@ -64,6 +64,9 @@ export default function SellerProfileScreen({ currentUser }) {
   const navigate = useNavigate();
   const [seller, setSeller] = useState(null);
   const [ads, setAds] = useState([]);
+  const [adsLoading, setAdsLoading] = useState(true);
+  const [adsLoadError, setAdsLoadError] = useState(false);
+  const [adsRetryNonce, setAdsRetryNonce] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -86,22 +89,50 @@ export default function SellerProfileScreen({ currentUser }) {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     setLoading(true);
     setError(null);
-    Promise.all([
-      fetch(`${API_URL}/users/${id}/profile`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-      fetch(`${API_URL}/ads?user_id=${id}&status=active&per_page=12`).then(r => r.ok ? r.json() : { data: [] }),
-    ])
-      .then(([profile, adsResp]) => {
-        setSeller(profile);
-        setAds(adsResp.data || []);
+    setSeller(null);
+    fetch(`${API_URL}/users/${id}/profile`)
+      .then(async response => {
+        if (response.status === 404) throw 404;
+        if (!response.ok) throw new Error(`seller-profile-load-failed:${response.status}`);
+        return response.json();
       })
+      .then(profile => { if (!cancelled) setSeller(profile); })
       .catch(err => {
+        if (cancelled) return;
         if (err === 404) setError('not_found');
         else setError('load_error');
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setAdsLoading(true);
+    setAdsLoadError(false);
+    setAds([]);
+    fetch(`${API_URL}/ads?user_id=${id}&status=active&per_page=12`)
+      .then(async response => {
+        if (!response.ok) throw new Error(`seller-ads-load-failed:${response.status}`);
+        return response.json();
+      })
+      .then(payload => {
+        if (cancelled) return;
+        setAds(payload.data || []);
+        setAdsLoadError(false);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        console.error('Error loading seller ads', err);
+        setAdsLoadError(true);
+      })
+      .finally(() => { if (!cancelled) setAdsLoading(false); });
+    return () => { cancelled = true; };
+  }, [id, adsRetryNonce]);
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -230,8 +261,17 @@ export default function SellerProfileScreen({ currentUser }) {
               {ads.length > 0 && <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{ads.length}</span>}
             </h2>
 
-            {ads.length === 0 ? (
-              <div className="bg-white rounded-2xl p-10 shadow-sm text-center">
+            {adsLoading && ads.length === 0 ? (
+              <div data-testid="seller-profile-ads-loading" role="status" className="bg-white rounded-2xl p-10 shadow-sm flex items-center justify-center">
+                <Loader2 className="w-7 h-7 animate-spin text-lime-500" aria-hidden="true" />
+              </div>
+            ) : adsLoadError && ads.length === 0 ? (
+              <div data-testid="seller-profile-ads-load-error" role="alert" className="bg-white rounded-2xl p-10 shadow-sm text-center">
+                <p className="text-slate-500 text-sm mb-4">{copy.adsLoadError}</p>
+                <button type="button" data-testid="seller-profile-ads-retry" onClick={() => setAdsRetryNonce(value => value + 1)} className="px-4 py-2 rounded-xl border border-lime-300 bg-lime-50 text-lime-700 text-sm font-semibold hover:bg-lime-100">{copy.retry}</button>
+              </div>
+            ) : ads.length === 0 ? (
+              <div data-testid="seller-profile-ads-empty" className="bg-white rounded-2xl p-10 shadow-sm text-center">
                 <Package size={40} className="mx-auto text-slate-300 mb-3" />
                 <p className="text-slate-500 text-sm">{copy.noActiveAds}</p>
               </div>

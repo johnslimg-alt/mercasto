@@ -594,10 +594,60 @@ function App() {
   const [viewedCompany, setViewedCompany] = useState(null);
   const [companyAds, setCompanyAds] = useState([]);
   const [loadingCompanyAds, setLoadingCompanyAds] = useState(false);
+  const [companyAdsLoadError, setCompanyAdsLoadError] = useState(false);
   const [companyReviews, setCompanyReviews] = useState([]);
+  const [loadingCompanyReviews, setLoadingCompanyReviews] = useState(false);
+  const [companyReviewsLoadError, setCompanyReviewsLoadError] = useState(false);
   const [companyRatingStats, setCompanyRatingStats] = useState({ average: 0, total: 0 });
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  const loadCompanyAds = useCallback(async (sellerId, { clear = false } = {}) => {
+    if (!sellerId) return;
+    if (clear) setCompanyAds([]);
+    setLoadingCompanyAds(true);
+    setCompanyAdsLoadError(false);
+    try {
+      const response = await fetch(`${API_URL}/ads?user_id=${sellerId}`);
+      if (!response.ok) throw new Error(`company-ads-load-failed:${response.status}`);
+      const payload = await response.json();
+      setCompanyAds(payload.data || (Array.isArray(payload) ? payload : []));
+      setCompanyAdsLoadError(false);
+    } catch (err) {
+      setCompanyAdsLoadError(true);
+      console.error('Error loading company ads', err);
+    } finally {
+      setLoadingCompanyAds(false);
+    }
+  }, []);
+
+  const loadCompanyReviews = useCallback(async (sellerId, { clear = false } = {}) => {
+    if (!sellerId) return;
+    if (clear) {
+      setCompanyReviews([]);
+      setCompanyRatingStats({ average: 0, total: 0 });
+    }
+    setLoadingCompanyReviews(true);
+    setCompanyReviewsLoadError(false);
+    try {
+      const response = await fetch(`${API_URL}/users/${sellerId}/reviews`);
+      if (!response.ok) throw new Error(`company-reviews-load-failed:${response.status}`);
+      const payload = await response.json();
+      setCompanyReviews(payload.reviews || []);
+      setCompanyRatingStats({ average: payload.average || 0, total: payload.total || 0 });
+      setCompanyReviewsLoadError(false);
+    } catch (err) {
+      setCompanyReviewsLoadError(true);
+      console.error('Error loading company reviews', err);
+    } finally {
+      setLoadingCompanyReviews(false);
+    }
+  }, []);
+
+  const loadCompanySecondaryData = useCallback((sellerId, options = {}) => Promise.all([
+    loadCompanyAds(sellerId, options),
+    loadCompanyReviews(sellerId, options),
+  ]), [loadCompanyAds, loadCompanyReviews]);
 
   // Защита от фатального "Белого экрана смерти" (WSOD) при повреждении localStorage
   const getSafeUser = () => {
@@ -1478,25 +1528,14 @@ function App() {
           setViewedAd(null);
           setViewedCompany(sellerData);
           window.scrollTo(0, 0);
-          setLoadingCompanyAds(true);
-          Promise.all([
-            fetch(`${API_URL}/ads?user_id=${sellerData.id}`).then(res => res.ok ? res.json() : { data: [] }),
-            fetch(`${API_URL}/users/${sellerData.id}/reviews`).then(res => res.ok ? res.json() : { reviews: [], average: 0, total: 0 })
-          ]).then(([adsData, reviewsData]) => {
-            if (cancelled) return;
-            setCompanyAds(adsData.data || (Array.isArray(adsData) ? adsData : []));
-            setCompanyReviews(reviewsData.reviews || []);
-            setCompanyRatingStats({ average: reviewsData.average || 0, total: reviewsData.total || 0 });
-          }).catch(err => console.error(err)).finally(() => {
-            if (!cancelled) setLoadingCompanyAds(false);
-          });
+          if (!cancelled) loadCompanySecondaryData(sellerData.id, { clear: true });
           if (storeIdParam) navigate(`/#company-${targetStoreId}`, { replace: true });
         })
         .catch(() => console.error("Error loading deep link store"));
     }
 
     return () => { cancelled = true; };
-  }, [location.hash, location.search, location.pathname, navigate, setCurrentTab, deepLinkAdRetryNonce]);
+  }, [location.hash, location.search, location.pathname, navigate, setCurrentTab, deepLinkAdRetryNonce, loadCompanySecondaryData]);
 
   // --- ПЕРЕХВАТ OAuth ТОКЕНА ИЗ URL ---
   useEffect(() => {
@@ -3424,7 +3463,7 @@ function App() {
       });
       if (res.ok) {
         setReviewForm({ rating: 5, comment: '' });
-        handleViewCompany(viewedCompany); // Перезагружаем профиль продавца для обновления отзывов
+        loadCompanyReviews(viewedCompany.id); // Обновляем только отзывы, не скрывая объявления продавца
       } else {
         const errData = await res.json();
         showToast(localizeServerMessage(lang, errData.message, t.review_error), 'error');
@@ -3847,15 +3886,7 @@ function App() {
     window.history.pushState({ popup: 'company' }, '', `#company-${seller.id}`);
     setViewedCompany(seller);
     window.scrollTo(0, 0); // Исправляет проблему "белого экрана" из-за скролла
-    setLoadingCompanyAds(true);
-    Promise.all([
-      fetch(`${API_URL}/ads?user_id=${seller.id}`).then(res => res.ok ? res.json() : { data: [] }),
-      fetch(`${API_URL}/users/${seller.id}/reviews`).then(res => res.ok ? res.json() : { reviews: [], average: 0, total: 0 })
-    ]).then(([adsData, reviewsData]) => {
-        setCompanyAds(adsData.data || (Array.isArray(adsData) ? adsData : []));
-        setCompanyReviews(reviewsData.reviews || []);
-        setCompanyRatingStats({ average: reviewsData.average || 0, total: reviewsData.total || 0 });
-    }).catch(err => console.error(err)).finally(() => setLoadingCompanyAds(false));
+    loadCompanySecondaryData(seller.id, { clear: true });
   };
 
   // --- РЕНДЕР КАРТОЧКИ ---
@@ -3893,7 +3924,7 @@ function App() {
   const renderAdDetailScreen = () => <AdDetailScreen ad={viewedAd} API_URL={API_URL} getImageUrl={getImageUrl} getImageUrls={getImageUrls} getCatName={getCatName} t={t} lang={lang} favoriteIds={favoriteIds} categoriesData={categoriesData} sliderAutoplay={sliderAutoplay} handleShareAd={handleShareAd} handleToggleFavorite={handleToggleFavorite} setReportingAd={setReportingAd} setShowReportModal={setShowReportModal} handleViewCompany={handleViewCompany} handleWhatsAppClick={handleWhatsAppClick} allAds={allAds} setViewedAd={setViewedAd} onBack={handleAdBack} MediaSlider={MediaSlider} renderAdCard={renderAdCard} AdSenseBanner={AdSenseBanner} currentUser={user} handleRenewAd={handleRenewAd} />;
 
   // --- РЕНДЕР ПУБЛИЧНОГО ПРОФИЛЯ ПРОДАВЦА (STOREFRONT) ---
-  const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} lang={lang} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
+  const renderStorefrontScreen = () => <StorefrontScreen company={viewedCompany} t={t} lang={lang} getImageUrl={getImageUrl} companyRatingStats={companyRatingStats} companyAds={companyAds} companyReviews={companyReviews} loadingCompanyAds={loadingCompanyAds} companyAdsLoadError={companyAdsLoadError} retryCompanyAds={() => loadCompanyAds(viewedCompany?.id)} loadingCompanyReviews={loadingCompanyReviews} companyReviewsLoadError={companyReviewsLoadError} retryCompanyReviews={() => loadCompanyReviews(viewedCompany?.id)} submittingReview={submittingReview} setShowUserReportModal={setShowUserReportModal} setQrModalData={setQrModalData} setViewedCompany={setViewedCompany} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} handleReviewSubmit={handleReviewSubmit} reviewForm={reviewForm} setReviewForm={setReviewForm} user={user} handleViewCompany={handleViewCompany} />;
 
   // --- РЕНДЕР МОДАЛКИ С QR-КОДОМ ---
 
