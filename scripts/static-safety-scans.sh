@@ -10,6 +10,8 @@ bash scripts/repository-sensitive-artifact-scan.sh
 bash scripts/repository-sensitive-artifact-scan.test.sh
 bash scripts/normalize-route-inventory.test.sh
 bash scripts/route-inventory-doc-gate.sh
+bash -n scripts/route-inventory-freshness-gate.sh
+python3 -m py_compile scripts/normalize-route-inventory-json.py
 node scripts/frontend-interaction-contract.mjs
 node --test tests/filter-url-state.test.mjs
 node scripts/self-hosted-pr-safety.mjs

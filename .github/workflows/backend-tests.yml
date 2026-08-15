@@ -7,12 +7,30 @@ on:
       - main
     paths:
       - 'backend/**'
+      - 'docs/route-inventory.md'
+      - 'docs/route-inventory-generated.md'
+      - 'docs/route-inventory-signatures.json'
+      - 'scripts/check-route-inventory-artifact.sh'
+      - 'scripts/export-route-inventory.sh'
+      - 'scripts/normalize-route-inventory.sh'
+      - 'scripts/normalize-route-inventory-json.py'
+      - 'scripts/route-inventory-doc-gate.sh'
+      - 'scripts/route-inventory-freshness-gate.sh'
       - '.github/workflows/backend-tests.yml'
   pull_request:
     branches:
       - main
     paths:
       - 'backend/**'
+      - 'docs/route-inventory.md'
+      - 'docs/route-inventory-generated.md'
+      - 'docs/route-inventory-signatures.json'
+      - 'scripts/check-route-inventory-artifact.sh'
+      - 'scripts/export-route-inventory.sh'
+      - 'scripts/normalize-route-inventory.sh'
+      - 'scripts/normalize-route-inventory-json.py'
+      - 'scripts/route-inventory-doc-gate.sh'
+      - 'scripts/route-inventory-freshness-gate.sh'
       - '.github/workflows/backend-tests.yml'
   schedule:
     - cron: '37 14 * * *'
@@ -53,6 +71,10 @@ jobs:
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Verify route inventory freshness
+        working-directory: .
+        run: bash scripts/route-inventory-freshness-gate.sh
 
       - name: Run PHPUnit
         run: ./vendor/bin/phpunit

@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ARTIFACT="${ROUTE_INVENTORY_ARTIFACT:-$ROOT_DIR/docs/route-inventory-generated.md}"
+SIGNATURES="${ROUTE_INVENTORY_SIGNATURES:-$ROOT_DIR/docs/route-inventory-signatures.json}"
 
 if [[ ! -f "$ARTIFACT" ]]; then
   echo "missing route inventory artifact: $ARTIFACT" >&2
@@ -40,4 +41,23 @@ if ! grep -qE "GET|POST|PUT|PATCH|DELETE" "$ARTIFACT"; then
   exit 1
 fi
 
+if [[ ! -s "$SIGNATURES" ]]; then
+  echo "route inventory semantic signatures are missing or empty: $SIGNATURES" >&2
+  exit 1
+fi
+
+python3 - "$SIGNATURES" <<'PYJSON'
+import json
+import sys
+
+rows = json.load(open(sys.argv[1], encoding='utf-8'))
+if not isinstance(rows, list) or not rows:
+    raise SystemExit('route inventory semantic signatures must be a non-empty JSON list')
+if any((row.get('name') or '').startswith('generated::') for row in rows):
+    raise SystemExit('route inventory semantic signatures contain unstable generated route names')
+if any(row.get('uri') in {'storage/{path}', 'up'} for row in rows):
+    raise SystemExit('route inventory semantic signatures contain framework environment routes')
+PYJSON
+
 echo "route inventory artifact OK: $ARTIFACT"
+echo "route inventory semantic signatures OK: $SIGNATURES"
