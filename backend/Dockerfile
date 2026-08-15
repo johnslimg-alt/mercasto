@@ -30,9 +30,21 @@ RUN set -eux; \
     docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip opcache intl; \
     rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем и включаем расширение Redis
+# Устанавливаем и включаем расширение Redis. Версия закреплена для воспроизводимости,
+# а ограниченный retry защищает CI/deploy от кратковременных 5xx на pecl.php.net.
+ARG REDIS_EXTENSION_VERSION=6.3.0
 RUN set -eux; \
-    pecl install redis; \
+    for attempt in 1 2 3; do \
+        if pecl install "redis-${REDIS_EXTENSION_VERSION}"; then \
+            break; \
+        fi; \
+        if [ "$attempt" -eq 3 ]; then \
+            echo "PECL redis install failed after ${attempt} attempts" >&2; \
+            exit 1; \
+        fi; \
+        rm -rf /tmp/pear; \
+        sleep "$((attempt * 5))"; \
+    done; \
     docker-php-ext-enable redis; \
     rm -rf /tmp/pear
 
