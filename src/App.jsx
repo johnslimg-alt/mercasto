@@ -3084,11 +3084,6 @@ function App() {
       setShowAuthModal(true);
       return;
     }
-    if (form.latitude === '' || form.longitude === '') {
-      showToast(t.post_location_required, 'error');
-      return;
-    }
-
     setPostLoading(true);
     const formData = new FormData();
     formData.append('title', form.title);
@@ -3170,9 +3165,13 @@ function App() {
         setImages([]);
         setVideoFile(null);
         setEditingAd(null);
-        if (!isUpdating) clearPublishDraft();
+        if (!isUpdating) {
+          clearPublishDraft();
+          showToast(t.listing_action_publish_submitted);
+        }
         setCurrentTab('profile');
-        navigate('/profile');
+        setDashboardTab('my_ads');
+        navigate('/profile?tab=my_ads');
         // GA4 + Meta Pixel/CAPI ad posted event
         if (!editingAd && savedAd?.id) events.listingPublished(savedAd.id, form.category || "general");
         loadAds(1); // Reload after create/update

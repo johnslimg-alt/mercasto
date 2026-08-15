@@ -450,8 +450,8 @@ class AdController extends Controller
             'location' => 'required|string|max:255',
             'city' => 'required|string|max:100',
             'state' => 'required|string|max:60',
-            'latitude' => 'required|numeric|between:14,33',
-            'longitude' => 'required|numeric|between:-118,-86',
+            'latitude' => 'nullable|required_with:longitude|numeric|between:14,33',
+            'longitude' => 'nullable|required_with:latitude|numeric|between:-118,-86',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД, защита от Data Integrity Bypass
             'subcategory' => 'nullable|string|max:255',
             'images' => 'nullable|array|max:10', // Максимум 10 картинок
@@ -625,8 +625,8 @@ class AdController extends Controller
             'location' => 'required|string|max:255',
             'city' => 'required|string|max:100',
             'state' => 'required|string|max:60',
-            'latitude' => 'required|numeric|between:14,33',
-            'longitude' => 'required|numeric|between:-118,-86',
+            'latitude' => 'nullable|required_with:longitude|numeric|between:14,33',
+            'longitude' => 'nullable|required_with:latitude|numeric|between:-118,-86',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД
             'subcategory' => 'nullable|string|max:255',
             'existing_images' => 'nullable|array',

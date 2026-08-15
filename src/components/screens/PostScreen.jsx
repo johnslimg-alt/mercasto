@@ -193,11 +193,17 @@ export default function PostScreen({
     if (user?.telegram_username) methods.push('telegram');
     return methods.length ? methods : ['whatsapp'];
   });
-  const [waMode, setWaMode] = useState(initialDraftContact.waMode);
-  const [phoneValue, setPhoneValue] = useState(
-    initialDraftContact.phoneValue || user?.phone_number || user?.whatsapp || '',
+  const profileWhatsapp = String(user?.whatsapp || '').trim();
+  const profileWhatsappIsUsername = profileWhatsapp.startsWith('@');
+  const [waMode, setWaMode] = useState(
+    initialDraftContact.waMode || (profileWhatsappIsUsername ? 'username' : 'phone'),
   );
-  const [waUsername, setWaUsername] = useState(initialDraftContact.waUsername);
+  const [phoneValue, setPhoneValue] = useState(
+    initialDraftContact.phoneValue || user?.phone_number || (profileWhatsappIsUsername ? '' : profileWhatsapp),
+  );
+  const [waUsername, setWaUsername] = useState(
+    initialDraftContact.waUsername || (profileWhatsappIsUsername ? profileWhatsapp.replace(/^@/, '') : ''),
+  );
   const [telegramValue, setTelegramValue] = useState(
     initialDraftContact.telegramValue || user?.telegram_username || '',
   );
@@ -345,9 +351,7 @@ export default function PostScreen({
   const mapQuery = form.location || form.state || 'México';
 
   const phoneDigitsOk = (phoneValue || '').replace(/\D/g, '').length === 10;
-  const hasCoordinates = form.latitude !== '' && form.longitude !== ''
-    && Number.isFinite(Number(form.latitude)) && Number.isFinite(Number(form.longitude));
-  const step3Valid = !!form.state && !!form.location && hasCoordinates && contactMethods.length > 0
+  const step3Valid = !!form.state && !!form.city && !!form.location && contactMethods.length > 0
     && (!contactMethods.includes('phone') || phoneDigitsOk)
     && (!contactMethods.includes('whatsapp') || (waMode === 'username' ? !!waUsername.trim() : phoneDigitsOk))
     && (!contactMethods.includes('telegram') || !!telegramValue.trim());
@@ -790,7 +794,14 @@ export default function PostScreen({
                       data-testid="publish-state"
                       value={form.state || ''}
                       onChange={e => {
-                        setForm({ ...form, state: e.target.value, city: '', location: e.target.value });
+                        setForm(prev => ({
+                          ...prev,
+                          state: e.target.value,
+                          city: '',
+                          location: e.target.value,
+                          latitude: '',
+                          longitude: '',
+                        }));
                         setCustomCity(false);
                       }}
                       className={selectFieldClass}
@@ -809,10 +820,17 @@ export default function PostScreen({
                         <div className="flex gap-2">
                           <input
                             type="text"
+                            data-testid="publish-city"
                             value={form.city || ''}
                             onChange={e => {
                               const v = e.target.value;
-                              setForm(prev => ({ ...prev, city: v, location: v ? `${v}, ${prev.state}` : prev.state }));
+                              setForm(prev => ({
+                                ...prev,
+                                city: v,
+                                location: v ? `${v}, ${prev.state}` : prev.state,
+                                latitude: '',
+                                longitude: '',
+                              }));
                             }}
                             placeholder={t.post_city_manual_placeholder}
                             className={fieldClass}
@@ -827,6 +845,7 @@ export default function PostScreen({
                         </div>
                       ) : (
                         <select
+                          data-testid="publish-city"
                           value={form.city || ''}
                           onChange={e => {
                             const v = e.target.value;
@@ -834,7 +853,13 @@ export default function PostScreen({
                               setCustomCity(true);
                               setForm(prev => ({ ...prev, city: '' }));
                             } else {
-                              setForm(prev => ({ ...prev, city: v, location: v ? `${v}, ${prev.state}` : prev.state }));
+                              setForm(prev => ({
+                                ...prev,
+                                city: v,
+                                location: v ? `${v}, ${prev.state}` : prev.state,
+                                latitude: '',
+                                longitude: '',
+                              }));
                             }
                           }}
                           className={selectFieldClass}
@@ -857,7 +882,12 @@ export default function PostScreen({
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
                       value={form.location || ''}
-                      onChange={e => setForm({ ...form, location: e.target.value })}
+                      onChange={e => setForm(prev => ({
+                        ...prev,
+                        location: e.target.value,
+                        latitude: '',
+                        longitude: '',
+                      }))}
                       className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                       placeholder={t.loc_placeholder}
                     />
@@ -876,12 +906,9 @@ export default function PostScreen({
                     </button>
                   </div>
 
-                  <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-2">{t.tap_map_hint}</p>
-                  {!hasCoordinates && (
-                    <p className="mb-2 text-[12px] font-semibold text-amber-700 dark:text-amber-300" data-testid="publish-location-required">
-                      {t.post_location_required}
-                    </p>
-                  )}
+                  <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-2" data-testid="publish-location-optional">
+                    {t.tap_map_hint}
+                  </p>
                   <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
                     {isMapUpdating && <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/50"><Loader2 className="w-8 h-8 text-[#84CC16] animate-spin" /></div>}
                     <MapV3
@@ -936,7 +963,7 @@ export default function PostScreen({
                       <label className={labelClass}>{t.post_phone_digits}</label>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">+52</span>
-                        <input type="tel" value={phoneValue} onChange={(e) => setPhoneValue(e.target.value.replace(/[^\d\s-]/g, ''))}
+                        <input type="tel" data-testid="publish-phone" value={phoneValue} onChange={(e) => setPhoneValue(e.target.value.replace(/[^\d\s-]/g, ''))}
                           placeholder="55 1234 5678" className="w-full pl-11 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                       {contactMethods.includes('whatsapp') && waMode === 'phone' && (
