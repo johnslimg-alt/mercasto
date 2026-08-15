@@ -84,6 +84,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'pending_email',
         'phone_otp',
         'phone_otp_expires_at',
+        'first_return_after_24h_at',
     ];
 
     protected $appends = [
@@ -113,6 +114,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'balance' => 'decimal:2',
             'unlimited_balance' => 'boolean',
             'last_active_at' => 'datetime',
+            'first_return_after_24h_at' => 'datetime',
             'plan_expires_at' => 'datetime',
             'plan_activated_at' => 'datetime',
             'monthly_ad_limit' => 'integer',

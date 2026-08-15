@@ -90,6 +90,7 @@ class SeoWeeklyMeasurement extends Command
             ['Genuine listing views', $current['genuine_listing_views']],
             ['Genuine contact clicks', $current['genuine_contact_clicks']],
             ['Registration → first publish', $current['registration_to_first_publish_percent'] . '%'],
+            ['New-user return after 24h', $current['new_user_24h_return_rate_percent'] . '%'],
             ['View → contact', $current['view_to_contact_percent'] . '%'],
             ['Active genuine supply', $supply['active_genuine']],
             ['Ready for seller confirmation', $supply['ready_for_seller_confirmation']],

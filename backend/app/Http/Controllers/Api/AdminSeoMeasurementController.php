@@ -132,6 +132,9 @@ class AdminSeoMeasurementController extends Controller
             'seller_response_rate_percent',
             'median_first_response_minutes',
             'seller_replies_within_2h_percent',
+            'new_user_24h_return_eligible',
+            'new_user_24h_returned',
+            'new_user_24h_return_rate_percent',
         ];
     }
 }

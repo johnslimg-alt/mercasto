@@ -37,6 +37,7 @@ class SeoWeeklyMeasurementTest extends TestCase
         $publisher = User::factory()->create([
             'created_at' => now()->subDays(2),
             'email_verified_at' => now()->subDay(),
+            'first_return_after_24h_at' => now()->subHours(12),
         ]);
         User::factory()->create([
             'created_at' => now()->subDay(),
@@ -106,6 +107,9 @@ class SeoWeeklyMeasurementTest extends TestCase
         $this->assertSame(50.0, $report['internal']['current']['seller_response_rate_percent']);
         $this->assertSame(30.0, $report['internal']['current']['median_first_response_minutes']);
         $this->assertSame(50.0, $report['internal']['current']['seller_replies_within_2h_percent']);
+        $this->assertSame(1, $report['internal']['current']['new_user_24h_return_eligible']);
+        $this->assertSame(1, $report['internal']['current']['new_user_24h_returned']);
+        $this->assertSame(100.0, $report['internal']['current']['new_user_24h_return_rate_percent']);
         $this->assertSame(1, $report['indexability']['indexable_genuine_listing_urls']);
         $this->assertSame(1, $report['indexability']['active_catalog_references_noindex']);
         $this->assertSame(6, $report['indexability']['source_pages']);

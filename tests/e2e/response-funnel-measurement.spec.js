@@ -32,6 +32,9 @@ const report = {
         seller_response_rate_percent: 75,
         median_first_response_minutes: 18.5,
         seller_replies_within_2h_percent: 62.5,
+        new_user_24h_return_eligible: 10,
+        new_user_24h_returned: 4,
+        new_user_24h_return_rate_percent: 40,
       },
       previous: {},
       change_percent: {},
@@ -120,8 +123,10 @@ for (const lang of SUPPORTED_LANGUAGES) {
     await expect(page.getByRole('paragraph').filter({ hasText: copy.internalChats }).first()).toBeVisible();
     await expect(page.getByRole('paragraph').filter({ hasText: copy.sellerResponseRate }).first()).toBeVisible();
     await expect(page.getByRole('paragraph').filter({ hasText: copy.medianFirstResponse }).first()).toBeVisible();
+    await expect(page.getByRole('paragraph').filter({ hasText: copy.returnAfter24h }).first()).toBeVisible();
     await expect(page.getByText(`${formatNumber(6, lang)} ${copy.sellerReplies}`, { exact: true })).toBeVisible();
     await expect(page.getByText(`${formatNumber(62.5, lang, { maximumFractionDigits: 1 })}% ${copy.within2h}`, { exact: true })).toBeVisible();
+    await expect(page.getByText(`${formatNumber(4, lang)} / ${formatNumber(10, lang)} ${copy.eligibleUsers}`, { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   });
 }

@@ -39,6 +39,9 @@ class AdminSeoMeasurementTest extends TestCase
                         'seller_response_rate_percent' => 75.0,
                         'median_first_response_minutes' => 18.5,
                         'seller_replies_within_2h_percent' => 83.3,
+                        'new_user_24h_return_eligible' => 10,
+                        'new_user_24h_returned' => 4,
+                        'new_user_24h_return_rate_percent' => 40.0,
                         'email' => 'hidden@example.com',
                     ],
                     'previous' => ['new_users' => 1],
@@ -80,6 +83,7 @@ class AdminSeoMeasurementTest extends TestCase
             ->assertJsonPath('data.0.report.internal.current.internal_conversations_started', 8)
             ->assertJsonPath('data.0.report.internal.current.seller_response_rate_percent', 75)
             ->assertJsonPath('data.0.report.internal.current.median_first_response_minutes', 18.5)
+            ->assertJsonPath('data.0.report.internal.current.new_user_24h_return_rate_percent', 40)
             ->assertJsonPath('data.0.report.supply.summary.active_genuine', 1)
             ->assertJsonPath('data.0.report.indexability.source_pages', 6)
             ->assertJsonPath('data.0.report.external.readiness.status', 'not_configured')
