@@ -1,0 +1,46 @@
+name: Public UI Visual Evidence
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 13 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-ui-visual-evidence
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Read-only public browser matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE_URL: https://mercasto.com
+      EVIDENCE_OUTPUT: docs/evidence/ui-visual-qa/public-production
+      EVIDENCE_SOURCE_COMMIT: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify evidence contract
+        run: bash scripts/public-ui-visual-evidence-gate.sh
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Capture production visual evidence
+        run: node scripts/capture-ui-visual-evidence.mjs
+      - name: Upload visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-ui-visual-evidence-${{ github.run_number }}
+          path: docs/evidence/ui-visual-qa/public-production/
+          if-no-files-found: warn
+          retention-days: 14
