@@ -18,7 +18,7 @@ test('AdCard preserves current listing-card behaviors', () => {
   assert.match(card, /localizedText\(ad\.title, lang\)/);
   assert.match(card, /handleToggleFavorite\(e, ad\.id\)/);
   assert.match(card, /navigate\(currentUser \? '\/post' : '\/vendedores'/);
-  assert.match(card, />Contact<\/button>/);
+  assert.match(card, />\{t\.ct_contact_btn\}<\/button>/);
   assert.match(card, /if \(!hasReviews\) return null/);
   assert.doesNotMatch(card, /4 \+ \(\(\(Number\(ad\.id\)/);
 });
