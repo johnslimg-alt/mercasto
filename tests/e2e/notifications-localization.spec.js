@@ -78,3 +78,53 @@ for (const lang of LANGUAGES) {
     await verifyNotifications(page, lang, { width: 390, height: 844 });
   });
 }
+
+
+for (const lang of ['es', 'en']) {
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    test(`notifications distinguishes failure, retry loading and empty in ${lang} on ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium-desktop');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await installSession(page, lang);
+      let notificationRequests = 0;
+      let recover = false;
+      await page.route('**/api/**', async route => {
+        const url = new URL(route.request().url());
+        if (url.pathname.endsWith('/user')) {
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 91, name: 'QA User', role: 'individual', is_verified: true }) });
+        }
+        if (url.pathname.endsWith('/notifications')) {
+          notificationRequests += 1;
+          if (!recover) {
+            return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'temporarily unavailable' }) });
+          }
+          await new Promise(resolve => setTimeout(resolve, 700));
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], next_page_url: null }) });
+        }
+        if (url.pathname.endsWith('/auth/providers')) {
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false }) });
+        }
+        if (url.pathname.endsWith('/categories')) {
+          return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+        }
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+      });
+
+      await page.goto('/notificaciones');
+      const t = translations[lang];
+      await expect(page.getByTestId('notifications-load-error')).toContainText(t.notifications_load_error);
+      await expect(page.getByTestId('notifications-empty')).toHaveCount(0);
+      await expect(page.getByTestId('notifications-retry')).toHaveText(t.retry_btn);
+
+      recover = true;
+      await page.getByTestId('notifications-retry').click();
+      await expect(page.getByTestId('notifications-loading')).toBeVisible();
+      await expect(page.getByTestId('notifications-load-error')).toHaveCount(0);
+      await expect(page.getByTestId('notifications-empty')).toBeVisible();
+      expect(notificationRequests).toBeGreaterThanOrEqual(2);
+    });
+  }
+}
