@@ -64,6 +64,7 @@ async function mockPublicShellApi(page) {
 
 test('auth modal traps keyboard focus and restores the desktop or mobile opener', async ({ page }, testInfo) => {
   test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name));
+  await page.addInitScript(() => localStorage.setItem('cookie_consent', 'essential'));
   await mockPublicShellApi(page);
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
