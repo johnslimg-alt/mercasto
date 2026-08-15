@@ -51,6 +51,9 @@ jobs:
           grep -n 'max_file_uploads=12' backend/Dockerfile
           grep -n 'expose_php=0' backend/Dockerfile
           grep -n 'HEALTHCHECK .*php-fpm -t' backend/Dockerfile
+          grep -n '^storage/framework/testing$' backend/.dockerignore
+          grep -n '^storage/app/private$' backend/.dockerignore
+          grep -n 'mkdir -p storage/app/private storage/app/public' backend/Dockerfile
 
       - name: Validate compose files
         shell: bash
@@ -59,8 +62,14 @@ jobs:
           DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose config >/tmp/mercasto_compose_base.out
           DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out
 
-      - name: Build backend image
+      - name: Build backend image with unreadable runtime test storage
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p backend/storage/framework/testing/disks/local backend/storage/app/private/qa-unreadable
+          chmod 000 backend/storage/framework/testing/disks backend/storage/app/private
+          cleanup() {
+            chmod 755 backend/storage/framework/testing/disks backend/storage/app/private 2>/dev/null || true
+          }
+          trap cleanup EXIT
           DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml build mercasto-backend

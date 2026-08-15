@@ -82,8 +82,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Build frontend image
-        run: docker build -f Dockerfile .
+      - name: Build frontend image with unreadable backend private storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -n '^backend/storage/app/private$' .dockerignore
+          mkdir -p backend/storage/app/private/qa-unreadable
+          chmod 000 backend/storage/app/private
+          cleanup() {
+            chmod 755 backend/storage/app/private 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          docker build -f Dockerfile .
 
   backend-docker-build:
     name: Build backend Docker image
