@@ -27,8 +27,9 @@ function Toggle({ value, onChange, label }) {
         type="button"
         role="switch"
         aria-checked={value}
+        aria-label={label}
         onClick={() => onChange(!value)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${value ? 'bg-lime-500' : 'bg-slate-300'}`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${value ? 'bg-lime-500' : 'bg-slate-300'}`}
       >
         <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
       </button>
@@ -298,7 +299,7 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
             <input type="tel" maxLength={20} value={form.whatsapp} onChange={event => setForm(prev => ({ ...prev, whatsapp: event.target.value }))} className={inputClass} placeholder={t.whatsapp} />
             <input type="url" maxLength={255} value={form.website} onChange={event => setForm(prev => ({ ...prev, website: event.target.value }))} className={inputClass} placeholder={t.website} />
           </div>
-          <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-950">
+          <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-950 focus-within:border-lime-500 focus-within:ring-2 focus-within:ring-lime-500/30">
             <span className="px-3 text-slate-400 text-sm bg-slate-50 dark:bg-slate-900 border-r border-slate-300 dark:border-slate-700 py-2.5">@</span>
             <input maxLength={100} value={form.social_instagram} onChange={event => setForm(prev => ({ ...prev, social_instagram: event.target.value.replace(/^@/, '') }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Instagram" />
           </div>

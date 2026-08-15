@@ -30,10 +30,11 @@ async function setLanguage(page, lang) {
   }, lang);
 }
 
-async function mockApi(page) {
+async function mockApi(page, viewer = null) {
   await page.route('**/api/**', async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
+    if (path.endsWith('/user') && route.request().method() === 'GET' && viewer) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(viewer) });
     if (path.endsWith('/users/77/profile')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(company) });
     if (path.endsWith('/users/77/business-profile')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(businessProfile) });
     if (path.endsWith('/users/77/reviews')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reviews: [], average: 0, total: 0 }) });
@@ -152,4 +153,33 @@ for (const lang of ['es', 'en']) {
       await expectNoOverflow(page);
     });
   }
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`storefront review rating is keyboard-operable on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    const viewer = { id: 91, name: 'QA Viewer', email: 'viewer@example.test', role: 'individual', is_verified: true };
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.addInitScript(({ savedUser }) => {
+      localStorage.setItem('lang', 'es');
+      localStorage.setItem('mercasto_language', 'es');
+      localStorage.setItem('cookiesAccepted', 'true');
+      localStorage.setItem('auth_token', 'storefront-review-a11y-token');
+      localStorage.setItem('user', JSON.stringify(savedUser));
+    }, { savedUser: viewer });
+    await mockApi(page, viewer);
+    await page.goto('/?store=77', { waitUntil: 'domcontentloaded' });
+
+    const oneStar = page.getByRole('button', { name: '1 / 5' });
+    const fiveStars = page.getByRole('button', { name: '5 / 5' });
+    await expect(fiveStars).toHaveAttribute('aria-pressed', 'true');
+    await oneStar.focus();
+    await expect(oneStar).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(oneStar).toHaveAttribute('aria-pressed', 'true');
+    await expect(fiveStars).toHaveAttribute('aria-pressed', 'false');
+  });
 }

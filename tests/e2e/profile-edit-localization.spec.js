@@ -95,6 +95,14 @@ async function verifyProfileEdit(page, lang, viewport) {
   await expect(page.getByText(t.phone_verification, { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: t.business_profile })).toBeVisible();
   await expect(page.getByTestId('profile-member-since')).toContainText(await localizedMemberDate(page, lang));
+  const notificationSwitch = page.getByRole('switch', { name: t.notif_email_desc });
+  await expect(notificationSwitch).toHaveAttribute('aria-checked', 'true');
+  await notificationSwitch.focus();
+  await expect(notificationSwitch).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(notificationSwitch).toHaveAttribute('aria-checked', 'false');
+  await page.keyboard.press('Space');
+  await expect(notificationSwitch).toHaveAttribute('aria-checked', 'true');
 
   const newPassword = page.getByPlaceholder(t.new_password, { exact: true });
   const confirmPassword = page.getByPlaceholder(t.conf_password, { exact: true });

@@ -241,7 +241,7 @@ export default function StorefrontScreen({
             <h4 className="text-[14px] font-semibold text-slate-800 mb-3">{t.leave_review}</h4>
             <div className="flex items-center gap-2 mb-3">
               {[1, 2, 3, 4, 5].map(star => (
-                <button type="button" key={star} onClick={() => setReviewForm({...reviewForm, rating: star})} className="focus:outline-none">
+                <button type="button" key={star} aria-label={`${star} / 5`} aria-pressed={reviewForm.rating === star} onClick={() => setReviewForm({...reviewForm, rating: star})}>
                   <Star className={`w-6 h-6 ${star <= reviewForm.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-300'}`} />
                 </button>
               ))}

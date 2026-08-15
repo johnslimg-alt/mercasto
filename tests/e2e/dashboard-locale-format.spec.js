@@ -362,3 +362,25 @@ for (const lang of ['es', 'en']) {
     });
   }
 }
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`dashboard review rating is keyboard-operable on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installSession(page, 'es');
+    await mockApi(page);
+    await page.goto('/profile?tab=reviews');
+
+    const oneStar = page.getByRole('button', { name: '1 / 5' }).first();
+    const fiveStars = page.getByRole('button', { name: '5 / 5' }).first();
+    await expect(oneStar).toBeVisible();
+    await expect(fiveStars).toHaveAttribute('aria-pressed', 'false');
+    await oneStar.focus();
+    await expect(oneStar).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(oneStar).toHaveAttribute('aria-pressed', 'true');
+  });
+}

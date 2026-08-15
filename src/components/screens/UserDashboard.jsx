@@ -1154,8 +1154,10 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                         <button
                                           key={star}
                                           onClick={() => setRs({ rating: star })}
-                                          className="focus:outline-none transition-transform hover:scale-110"
-                                          title={`${star} estrella${star > 1 ? 's' : ''}`}
+                                          className="transition-transform hover:scale-110"
+                                          aria-label={`${star} / 5`}
+                                          aria-pressed={rating === star}
+                                          title={`${star} / 5`}
                                           type="button"
                                         >
                                           <Star
