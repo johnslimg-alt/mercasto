@@ -223,7 +223,7 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
   );
 };
 
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userRole, userPayments, loadingUserPayments, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
   const [dashToast, setDashToast] = React.useState(null);
   const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
   const [profileVisible, setProfileVisible] = React.useState(() => localStorage.getItem('mercasto_privacy_profile_visible') !== 'false');
@@ -850,8 +850,15 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">{t.transactions || 'Transacciones'}</h2>
                 {loadingUserPayments ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-lime-500" />
+                  <div data-testid="dashboard-transactions-loading" role="status" aria-live="polite" className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-lime-500" aria-hidden="true" />
+                  </div>
+                ) : userPaymentsLoadError && !(userPayments?.length > 0) ? (
+                  <div data-testid="dashboard-transactions-load-error" role="alert" className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+                    <p className="text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
+                    <button type="button" data-testid="dashboard-transactions-retry" onClick={() => loadUserPayments(1)} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                      {t.retry_btn || 'Reintentar'}
+                    </button>
                   </div>
                 ) : userPayments?.length > 0 ? (
                   <div className="space-y-3">
@@ -870,7 +877,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-500 dark:text-slate-400 text-center py-12">{t.no_transactions_yet || 'No hay transacciones'}</p>
+                  <p data-testid="dashboard-transactions-empty" className="text-slate-500 dark:text-slate-400 text-center py-12">{t.no_transactions_yet || 'No hay transacciones'}</p>
                 )}
               </div>
             ) : dashboardTab === 'contact_history' ? (
