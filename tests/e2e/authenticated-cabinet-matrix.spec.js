@@ -23,10 +23,27 @@ const credentials = {
 };
 
 const viewports = [
-  { name: 'desktop', width: 1440, height: 900 },
-  { name: 'tablet', width: 1024, height: 768 },
-  { name: 'mobile', width: 390, height: 844 },
+  { name: 'desktop-1440', width: 1440, height: 900 },
+  { name: 'desktop-1920', width: 1920, height: 1080 },
+  { name: 'tablet-768-portrait', width: 768, height: 1024 },
+  { name: 'tablet-820-portrait', width: 820, height: 1180 },
+  { name: 'tablet-1024-landscape', width: 1024, height: 768 },
+  { name: 'mobile-360', width: 360, height: 800 },
+  { name: 'mobile-375', width: 375, height: 812 },
+  { name: 'mobile-390', width: 390, height: 844 },
+  { name: 'mobile-430', width: 430, height: 932 },
 ];
+
+const representativeProjectViewports = {
+  'chromium-mobile-cabinet': new Set(['mobile-390']),
+  'webkit-desktop-cabinet': new Set(['desktop-1440']),
+  'webkit-mobile-cabinet': new Set(['mobile-390']),
+};
+
+function supportsViewport(projectName, viewportName) {
+  if (projectName === 'chromium-layout-cabinet') return true;
+  return representativeProjectViewports[projectName]?.has(viewportName) ?? false;
+}
 async function authenticate(request, role) {
   const response = await request.post(`${API_BASE_URL}/login`, { data: credentials[role] });
   expect(response.ok(), `${role} login`).toBeTruthy();
@@ -57,11 +74,11 @@ function watchPageErrors(page) {
   return errors;
 }
 
-async function capture(page, viewport, role, screen) {
+async function capture(page, viewport, role, screen, projectName) {
   await mkdir(evidenceRoot, { recursive: true });
   const safe = String(screen).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   await page.screenshot({
-    path: path.join(evidenceRoot, `${viewport.name}-${role}-${safe}.jpg`),
+    path: path.join(evidenceRoot, `${projectName}-${viewport.name}-${role}-${safe}.jpg`),
     type: 'jpeg',
     quality: 65,
     fullPage: true,
@@ -70,7 +87,8 @@ async function capture(page, viewport, role, screen) {
 const sellerTabs = ['my_ads', 'favorites', 'saved_searches', 'stats', 'transactions', 'contact_history', 'reviews', 'privacy', 'settings'];
 
 for (const viewport of viewports) {
-  test(`seller cabinet tabs work at ${viewport.name}`, async ({ page, request }) => {
+  test(`seller cabinet tabs work at ${viewport.name}`, async ({ page, request }, testInfo) => {
+    test.skip(!supportsViewport(testInfo.project.name, viewport.name), 'Viewport covered by the full Chromium layout project.');
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const errors = watchPageErrors(page);
     await installSession(page, await authenticate(request, 'seller'));
@@ -83,7 +101,7 @@ for (const viewport of viewports) {
       await button.click();
       await expect(button).toHaveAttribute('aria-pressed', 'true');
       await expectNoHorizontalOverflow(page);
-      await capture(page, viewport, 'seller', tabId);
+      await capture(page, viewport, 'seller', tabId, testInfo.project.name);
     }
     expect(errors).toEqual([]);
   });
@@ -91,7 +109,8 @@ for (const viewport of viewports) {
 const adminTabs = ['categories', 'users', 'moderation', 'coupons', 'reports', 'payments', 'seo_geo', 'business_verifications'];
 
 for (const viewport of viewports) {
-  test(`admin cabinet tabs work at ${viewport.name}`, async ({ page, request }) => {
+  test(`admin cabinet tabs work at ${viewport.name}`, async ({ page, request }, testInfo) => {
+    test.skip(!supportsViewport(testInfo.project.name, viewport.name), 'Viewport covered by the full Chromium layout project.');
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const errors = watchPageErrors(page);
     await installSession(page, await authenticate(request, 'admin'));
@@ -104,7 +123,7 @@ for (const viewport of viewports) {
       await button.click();
       await expect(button).toHaveAttribute('aria-pressed', 'true');
       await expectNoHorizontalOverflow(page);
-      await capture(page, viewport, 'admin', tabId);
+      await capture(page, viewport, 'admin', tabId, testInfo.project.name);
     }
     expect(errors).toEqual([]);
   });
@@ -112,7 +131,8 @@ for (const viewport of viewports) {
 const marketingSections = ['dashboard', 'connections', 'campaigns', 'creatives', 'audiences', 'tracking', 'budgets', 'tests', 'automations', 'ai'];
 
 for (const viewport of viewports) {
-  test(`advertising hub navigation works at ${viewport.name}`, async ({ page, request }) => {
+  test(`advertising hub navigation works at ${viewport.name}`, async ({ page, request }, testInfo) => {
+    test.skip(!supportsViewport(testInfo.project.name, viewport.name), 'Viewport covered by the full Chromium layout project.');
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const errors = watchPageErrors(page);
     await installSession(page, await authenticate(request, 'admin'));
@@ -126,7 +146,7 @@ for (const viewport of viewports) {
       await expect(button).toHaveAttribute('aria-pressed', 'true');
       await expect(page).toHaveURL(new RegExp(`section=${section}`));
       await expectNoHorizontalOverflow(page);
-      await capture(page, viewport, 'marketing', section);
+      await capture(page, viewport, 'marketing', section, testInfo.project.name);
     }
     expect(errors).toEqual([]);
   });
@@ -134,7 +154,8 @@ for (const viewport of viewports) {
 const buyerTabs = ['favorites', 'saved_searches', 'contact_history', 'privacy', 'settings'];
 
 for (const viewport of viewports) {
-  test(`buyer cabinet tabs work at ${viewport.name}`, async ({ page, request }) => {
+  test(`buyer cabinet tabs work at ${viewport.name}`, async ({ page, request }, testInfo) => {
+    test.skip(!supportsViewport(testInfo.project.name, viewport.name), 'Viewport covered by the full Chromium layout project.');
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const errors = watchPageErrors(page);
     await installSession(page, await authenticate(request, 'buyer'));
@@ -147,7 +168,7 @@ for (const viewport of viewports) {
       await button.click();
       await expect(button).toHaveAttribute('aria-pressed', 'true');
       await expectNoHorizontalOverflow(page);
-      await capture(page, viewport, 'buyer', tabId);
+      await capture(page, viewport, 'buyer', tabId, testInfo.project.name);
     }
     expect(errors).toEqual([]);
   });

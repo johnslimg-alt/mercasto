@@ -197,11 +197,14 @@ if ! wait_for_url "http://127.0.0.1:$FRONTEND_PORT" "Vite frontend"; then
   exit 1
 fi
 
-npx playwright install chromium
-
 suite_enabled() {
   [[ ",$E2E_SUITES," == *",$1,"* ]]
 }
+
+npx playwright install chromium
+if suite_enabled cabinets; then
+  npx playwright install --with-deps webkit
+fi
 
 base_env=(
   E2E_ISOLATED_STACK=1
@@ -239,7 +242,7 @@ fi
 
 if suite_enabled cabinets; then
   echo "== Authenticated cabinet navigation matrix =="
-  env "${base_env[@]}" npx playwright test tests/e2e/authenticated-cabinet-matrix.spec.js --project=chromium-desktop --workers=1 --retries=0 --reporter=list
+  env "${base_env[@]}" npx playwright test tests/e2e/authenticated-cabinet-matrix.spec.js --config=playwright.cabinet.config.mjs --workers=1 --retries=0 --reporter=list
 fi
 
 if suite_enabled auth; then

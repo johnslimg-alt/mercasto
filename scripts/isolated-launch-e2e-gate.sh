@@ -19,6 +19,11 @@ grep -qF 'tests/e2e/payments.spec.js' scripts/run-isolated-launch-e2e.sh
 grep -qF 'suite_enabled visual' scripts/run-isolated-launch-e2e.sh
 grep -qF 'suite_enabled cabinets' scripts/run-isolated-launch-e2e.sh
 grep -qF 'tests/e2e/authenticated-cabinet-matrix.spec.js' scripts/run-isolated-launch-e2e.sh
+grep -qF 'playwright.cabinet.config.mjs' scripts/run-isolated-launch-e2e.sh
+grep -qF 'install --with-deps webkit' scripts/run-isolated-launch-e2e.sh
+grep -qF "name: 'webkit-desktop-cabinet'" playwright.cabinet.config.mjs
+grep -qF "name: 'webkit-mobile-cabinet'" playwright.cabinet.config.mjs
+grep -qF "name: 'chromium-mobile-cabinet'" playwright.cabinet.config.mjs
 grep -qF 'capture-authenticated-ui-visual-evidence.mjs' scripts/run-isolated-launch-e2e.sh
 grep -qF 'never mutate production payments' tests/e2e/payments.spec.js
 grep -qF 'const expectedNetworkAborts = [];' scripts/capture-authenticated-ui-visual-evidence.mjs
@@ -27,6 +32,8 @@ grep -qF 'requestUrl.pathname ===' scripts/capture-authenticated-ui-visual-evide
 grep -qF '}/ads`;' scripts/capture-authenticated-ui-visual-evidence.mjs
 grep -qF 'else sameOriginFailures.push(failure);' scripts/capture-authenticated-ui-visual-evidence.mjs
 node --check scripts/capture-authenticated-ui-visual-evidence.mjs
+node --check playwright.cabinet.config.mjs
+node --check tests/e2e/authenticated-cabinet-matrix.spec.js
 node --check scripts/clip-e2e-mock.mjs
 node --check scripts/ollama-e2e-mock.mjs
 bash -n scripts/run-isolated-launch-e2e.sh
