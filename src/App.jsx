@@ -686,6 +686,8 @@ function App() {
   const [customCreditsAmount, setCustomCreditsAmount] = useState('');
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [analyticsData, setAnalyticsData] = useState([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsLoadError, setAnalyticsLoadError] = useState(false);
   const [analyticsDays, setAnalyticsDays] = useState(7);
   const [dashboardPage, setDashboardPage] = useState(1);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -2129,16 +2131,29 @@ function App() {
     } catch (err) { console.error(err); }
   };
 
-  useEffect(() => {
-    if (currentTab === 'profile' && accountType === 'pro' && user) {
-      fetch(`${API_URL}/user/analytics?days=${analyticsDays}`, {
+  const loadUserAnalytics = useCallback(async () => {
+    if (currentTab !== 'profile' || accountType !== 'pro' || !user) return;
+    setAnalyticsLoading(true);
+    setAnalyticsLoadError(false);
+    try {
+      const res = await fetch(`${API_URL}/user/analytics?days=${analyticsDays}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-      })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => setAnalyticsData(Array.isArray(data) ? data : (data.data || [])))
-      .catch(err => console.error("Error fetching analytics", err));
+      });
+      if (!res.ok) throw new Error(`user-analytics-load-failed:${res.status}`);
+      const data = await res.json();
+      setAnalyticsData(Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []));
+      setAnalyticsLoadError(false);
+    } catch (err) {
+      setAnalyticsLoadError(true);
+      console.error("Error fetching analytics", err);
+    } finally {
+      setAnalyticsLoading(false);
     }
   }, [currentTab, accountType, user, analyticsDays]);
+
+  useEffect(() => {
+    loadUserAnalytics();
+  }, [loadUserAnalytics]);
 
   useEffect(() => {
     setIsMapUpdating(true);
@@ -3848,7 +3863,7 @@ function App() {
     return cats;
   }, [safeCategoriesData, lang, navLabels]);
 
-  const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} favoriteAdsLoading={favoriteAdsLoading} favoriteAdsLoadError={favoriteAdsLoadError} loadFavoriteAds={loadFavoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} setUser={setUser} userAds={userAds} userAdsLoading={userAdsLoading} userAdsLoadError={userAdsLoadError} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsLoadError={userPaymentsLoadError} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
+  const renderUserDashboard = () => <UserDashboard accountType={accountType} activeAds={activeAds} adStatusFilter={adStatusFilter} analyticsData={analyticsData} analyticsLoading={analyticsLoading} analyticsLoadError={analyticsLoadError} loadUserAnalytics={loadUserAnalytics} analyticsDays={analyticsDays} catObj={catObj} categoriesData={categoriesData} categoryStats={categoryStats} companyForm={companyForm} conversionRate={conversionRate} dashboardPage={dashboardPage} dashboardTab={dashboardTab} emailForm={emailForm} emailLoading={emailLoading} favoriteAds={favoriteAds} favoriteAdsLoading={favoriteAdsLoading} favoriteAdsLoadError={favoriteAdsLoadError} loadFavoriteAds={loadFavoriteAds} fileInputRef={fileInputRef} form={form} getImageUrl={getImageUrl} handleBulkUpload={handleBulkUpload} handleClipPayment={handleClipPayment} handleDeleteAccount={handleDeleteAccount} handleDeleteAd={handleDeleteAd} handleEditAd={handleEditAd} handleEmailSubmit={handleEmailSubmit} handleExportCompanyData={handleExportCompanyData} handleLogout={handleLogout} handleNotificationsSubmit={handleNotificationsSubmit} handlePasswordSubmit={handlePasswordSubmit} handlePromoteAd={handlePromoteAd} handleToggleAdStatus={handleToggleAdStatus} handleRepublishAd={handleRepublishAd} handleRenewAd={handleRenewAd} handleToggleFavorite={handleToggleFavorite} inactiveAds={inactiveAds} isDarkMode={isDarkMode} isUploadingBulk={isUploadingBulk} lang={lang} notifications={notifications} notificationsForm={notificationsForm} notificationsLoading={notificationsLoading} openProfileModal={openProfileModal} passwordForm={passwordForm} passwordLoading={passwordLoading} renderAdCard={renderAdCard} renderSkeletonCard={renderSkeletonCard} searchAlerts={searchAlerts} loadingSearchAlerts={loadingSearchAlerts} handleToggleSearchAlert={handleToggleSearchAlert} handleDeleteSearchAlert={handleDeleteSearchAlert} setAccountType={setAccountType} setAdStatusFilter={setAdStatusFilter} setAnalyticsDays={setAnalyticsDays} setCompanyForm={setCompanyForm} setCurrentTab={setCurrentTab} setDashboardPage={setDashboardPage} setDashboardTab={setDashboardTab} setEmailForm={setEmailForm} setNotificationsForm={setNotificationsForm} setPasswordForm={setPasswordForm} setShowCouponModal={setShowCouponModal} setShowPricingModal={setShowPricingModal} setSliderAutoplay={setSliderAutoplay} sliderAutoplay={sliderAutoplay} t={t} totalContactClicks={totalContactClicks} totalViews={totalViews} user={user} setUser={setUser} userAds={userAds} userAdsLoading={userAdsLoading} userAdsLoadError={userAdsLoadError} userRole={userRole} onRefreshAds={loadUserAds} userPayments={userPayments} loadingUserPayments={loadingUserPayments} userPaymentsLoadError={userPaymentsLoadError} userPaymentsPage={userPaymentsPage} userPaymentsLastPage={userPaymentsLastPage} userPaymentsTotal={userPaymentsTotal} loadUserPayments={loadUserPayments} token={localStorage.getItem('auth_token')} />;
 
   const handleSearchArea = useCallback((area = {}) => {
     const { lat, lng, radius: nextRadius } = area;
