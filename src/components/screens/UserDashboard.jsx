@@ -223,7 +223,7 @@ const TrustWidget = ({ trustScore, responseRate, avgResponseTime, accountVerifie
   );
 };
 
-export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, favoriteAdsLoading = false, favoriteAdsLoadError = false, loadFavoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userAdsLoading = false, userAdsLoadError = false, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
+export default function UserDashboard({ onRefreshAds, accountType, adStatusFilter, analyticsData, analyticsLoading = false, analyticsLoadError = false, loadUserAnalytics, analyticsDays, catObj, categoriesData, companyForm, dashboardPage, dashboardTab, emailForm, emailLoading, favoriteAds, favoriteAdsLoading = false, favoriteAdsLoadError = false, loadFavoriteAds, fileInputRef, form, getImageUrl, handleBulkUpload, handleClipPayment, handleDeleteAccount, handleDeleteAd, handleEditAd, handleEmailSubmit, handleExportCompanyData, handleLogout, handleNotificationsSubmit, handlePasswordSubmit, handlePromoteAd, handleRepublishAd, handleRenewAd, handleToggleAdStatus, handleToggleFavorite, isDarkMode, isUploadingBulk, lang, notifications, notificationsForm, notificationsLoading, openProfileModal, passwordForm, passwordLoading, renderUserDashboard, searchAlerts = [], loadingSearchAlerts = false, handleToggleSearchAlert, handleDeleteSearchAlert, setAccountType, setAdStatusFilter, setAnalyticsDays, setCompanyForm, setCurrentTab, setDashboardPage, setDashboardTab, setEmailForm, setNotificationsForm, setPasswordForm, setShowCouponModal, setShowPricingModal, setSliderAutoplay, sliderAutoplay, t, user, setUser, userAds, userAdsLoading = false, userAdsLoadError = false, userRole, userPayments, loadingUserPayments, userPaymentsLoadError = false, userPaymentsPage, userPaymentsLastPage, userPaymentsTotal, loadUserPayments, token }) {
   const [dashToast, setDashToast] = React.useState(null);
   const [showAchievementsModal, setShowAchievementsModal] = React.useState(false);
   const [profileVisible, setProfileVisible] = React.useState(() => localStorage.getItem('mercasto_privacy_profile_visible') !== 'false');
@@ -832,9 +832,24 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                       <option value={90}>{t.last_90_days || 'Últimos 90 días'}</option>
                     </select>
                   </div>
-                  <React.Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-lime-500" /></div>}>
-                    <DashboardCharts analyticsData={analyticsData || []} categoryStats={categoryStats || []} isDarkMode={isDarkMode} />
-                  </React.Suspense>
+                  {accountType === 'pro' && analyticsLoading && !(analyticsData?.length > 0) ? (
+                    <div data-testid="dashboard-analytics-loading" role="status" aria-live="polite" className="h-64 flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-lime-500" aria-hidden="true" />
+                    </div>
+                  ) : accountType === 'pro' && analyticsLoadError && !(analyticsData?.length > 0) ? (
+                    <div data-testid="dashboard-analytics-load-error" role="alert" className="flex h-64 flex-col items-center justify-center gap-4 text-center">
+                      <p className="text-slate-500 dark:text-slate-300">{t.connection_error || 'Error de conexión.'}</p>
+                      <button type="button" data-testid="dashboard-analytics-retry" onClick={loadUserAnalytics} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+                        {t.retry_btn || 'Reintentar'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div data-testid="dashboard-analytics-content">
+                      <React.Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-lime-500" /></div>}>
+                        <DashboardCharts analyticsData={analyticsData || []} categoryStats={categoryStats || []} isDarkMode={isDarkMode} />
+                      </React.Suspense>
+                    </div>
+                  )}
                 </div>
 
                 {/* Trust & Respuesta Widget */}
