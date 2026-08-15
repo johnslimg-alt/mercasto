@@ -7,6 +7,11 @@ import {
   redirectExpectations,
   supportedDynamicTemplates,
 } from './public-ui-route-policy.mjs';
+import {
+  protectedClientScreens,
+  publicClientScreens,
+  staticClientRedirects,
+} from './client-spa-route-policy.mjs';
 
 const baseUrl = process.env.BASE_URL || 'https://mercasto.com';
 const sourceCommit = process.env.EVIDENCE_SOURCE_COMMIT || process.env.GITHUB_SHA || 'unknown';
@@ -71,24 +76,100 @@ const activeProfiles = profiles
   }))
   .filter(profile => profile.viewports.length > 0);
 
-async function resolveSampleAdId() {
+async function resolveSampleAd() {
   try {
     const response = await fetch(new URL('/api/ads?per_page=1', baseUrl), {
       headers: { Accept: 'application/json' },
     });
     if (!response.ok) {
-      return { id: null, error: `HTTP ${response.status}` };
+      return { id: null, sellerId: null, error: `HTTP ${response.status}` };
     }
     const payload = await response.json();
     const rows = Array.isArray(payload?.data) ? payload.data : payload?.data?.data;
     const id = Number(rows?.[0]?.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      return { id: null, error: 'No active public ad id returned.' };
+    const sellerId = Number(rows?.[0]?.user_id ?? rows?.[0]?.user?.id);
+    if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(sellerId) || sellerId <= 0) {
+      return { id: null, sellerId: null, error: 'No active public ad/seller sample returned.' };
     }
-    return { id, error: null };
+    return { id, sellerId, error: null };
   } catch (error) {
-    return { id: null, error: String(error) };
+    return { id: null, sellerId: null, error: String(error) };
   }
+}
+
+async function verifyClientRedirects(sampleAd) {
+  if (!sampleAd.id) {
+    return [{ sourcePath: 'dynamic-client-redirects', expectedTarget: 'sample ad required', actualTarget: null, status: null, error: sampleAd.error, passed: false }];
+  }
+
+  const referralCode = 'QA-ROUTE-COVERAGE';
+  const checksToRun = [
+    ...Object.entries(staticClientRedirects).map(([sourcePath, expectation]) => ({ sourcePath, ...expectation })),
+    { sourcePath: `/account/listing/${sampleAd.id}/edit`, expectedPath: `/anuncio/${sampleAd.id}/editar` },
+    { sourcePath: `/account/listing/${sampleAd.id}/photos`, expectedPath: `/anuncio/${sampleAd.id}/editar`, expectedSearch: '?section=photos' },
+    { sourcePath: `/r/${referralCode}`, expectedPath: '/', expectedStorage: { pendingReferral: referralCode } },
+  ];
+
+  const browser = await chromium.launch({ headless: true });
+  const checks = [];
+  try {
+    for (const expectation of checksToRun) {
+      const context = await browser.newContext({ ...devices['Desktop Chrome'], locale: 'es-MX' });
+      await context.addInitScript(() => {
+        localStorage.setItem('lang', 'es');
+        localStorage.setItem('mercasto_language', 'es');
+        localStorage.setItem('cookie_consent', 'essential');
+        localStorage.setItem('cookiesAccepted', 'true');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('pendingReferral');
+      });
+      const page = await context.newPage();
+      try {
+        const response = await page.goto(new URL(expectation.sourcePath, baseUrl).toString(), {
+          waitUntil: 'domcontentloaded',
+          timeout: 30_000,
+        });
+        await page.waitForTimeout(1200);
+        const finalUrl = new URL(page.url());
+        const actualPath = finalUrl.pathname.replace(/\/$/, '') || '/';
+        const expectedSearch = expectation.expectedSearch || '';
+        const storage = expectation.expectedStorage
+          ? await page.evaluate(() => ({ pendingReferral: localStorage.getItem('pendingReferral') }))
+          : null;
+        const storagePassed = !expectation.expectedStorage
+          || Object.entries(expectation.expectedStorage).every(([key, value]) => storage?.[key] === value);
+        checks.push({
+          sourcePath: expectation.sourcePath,
+          expectedTarget: expectation.expectedPath,
+          expectedSearch,
+          actualTarget: actualPath,
+          actualSearch: finalUrl.search,
+          status: response?.status() ?? null,
+          error: null,
+          passed: actualPath === expectation.expectedPath
+            && (!expectation.expectedSearch || finalUrl.search === expectation.expectedSearch)
+            && storagePassed,
+        });
+      } catch (error) {
+        checks.push({
+          sourcePath: expectation.sourcePath,
+          expectedTarget: expectation.expectedPath,
+          expectedSearch: expectation.expectedSearch || '',
+          actualTarget: null,
+          actualSearch: null,
+          status: null,
+          error: String(error),
+          passed: false,
+        });
+      } finally {
+        await context.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+  return checks;
 }
 
 async function verifyRedirects() {
@@ -120,8 +201,8 @@ async function verifyRedirects() {
   return checks;
 }
 
-const sampleAd = await resolveSampleAdId();
-const dynamicScreens = sampleAd.id
+const sampleAd = await resolveSampleAd();
+const backendDynamicScreens = sampleAd.id
   ? supportedDynamicTemplates.map(template => {
       const path = `/${template.replace('{id}', String(sampleAd.id))}`;
       const shareRoute = template.startsWith('share/');
@@ -132,10 +213,27 @@ const dynamicScreens = sampleAd.id
       };
     })
   : [];
+const clientDynamicVisualScreens = sampleAd.id && sampleAd.sellerId
+  ? [
+      { name: 'ad-alias-sample', path: `/anuncio/${sampleAd.id}` },
+      { name: 'seller-profile-sample', path: `/vendedor/${sampleAd.sellerId}` },
+      { name: 'ad-edit-auth-gate', path: `/anuncio/${sampleAd.id}/editar`, selector: 'input[name="email"]' },
+    ]
+  : [];
+const notFoundScreen = { name: 'not-found-sample', path: '/__qa_route_not_found__', expectNotFound: true };
 const requestedScreens = envSet('EVIDENCE_SCREEN_NAMES');
-const allScreens = [...backendStaticScreens, ...clientOnlyScreens, ...dynamicScreens];
+const allScreens = [
+  ...backendStaticScreens,
+  ...clientOnlyScreens,
+  ...protectedClientScreens,
+  ...publicClientScreens,
+  ...backendDynamicScreens,
+  ...clientDynamicVisualScreens,
+  notFoundScreen,
+];
 const screens = allScreens.filter(screen => !requestedScreens || requestedScreens.has(screen.name));
 const redirectChecks = await verifyRedirects();
+const clientRedirectChecks = await verifyClientRedirects(sampleAd);
 
 
 function expectedPathname(screen) {
@@ -194,6 +292,7 @@ for (const profile of activeProfiles) {
         const finalUrl = new URL(page.url());
         const expectedPath = expectedPathname(screen);
         const actualPath = finalUrl.pathname.replace(/\/$/, '') || '/';
+        const expectedSearch = screen.expectedSearch || '';
         const metrics = await page.evaluate(() => {
           const images = [...document.images];
           const bodyText = document.body.innerText.replace(/\s+/g, ' ').trim();
@@ -234,6 +333,9 @@ for (const profile of activeProfiles) {
           requestedPath: screen.path,
           expectedPath,
           actualPath,
+          expectedSearch,
+          actualSearch: finalUrl.search,
+          expectNotFound: Boolean(screen.expectNotFound),
           finalUrl: page.url(),
           status: response?.status() ?? null,
           screenshot: imageName,
@@ -255,16 +357,22 @@ for (const profile of activeProfiles) {
 const visualFailures = results.filter(result => (
   (result.status !== null && result.status >= 400)
   || result.actualPath !== result.expectedPath
+  || (result.expectedSearch && result.actualSearch !== result.expectedSearch)
   || result.overflowPx > 1
   || result.brokenImages.length > 0
-  || result.bodyHas404
+  || (result.bodyHas404 && !result.expectNotFound)
+  || (!result.bodyHas404 && result.expectNotFound)
   || result.bodyTextLength < 20
   || result.pageErrors.length > 0
   || result.sameOriginFailures.length > 0
 ));
 const redirectFailures = redirectChecks.filter(check => !check.passed);
-const dynamicCoverageFailure = dynamicScreens.length === supportedDynamicTemplates.length ? 0 : 1;
-const failures = visualFailures.length + redirectFailures.length + dynamicCoverageFailure;
+const clientRedirectFailures = clientRedirectChecks.filter(check => !check.passed);
+const dynamicCoverageFailure = (
+  backendDynamicScreens.length === supportedDynamicTemplates.length
+  && clientDynamicVisualScreens.length === 3
+) ? 0 : 1;
+const failures = visualFailures.length + redirectFailures.length + clientRedirectFailures.length + dynamicCoverageFailure;
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -278,15 +386,21 @@ const report = {
     selectedVisualScreens: screens.length,
     backendStaticScreens: backendStaticScreens.length,
     clientOnlyScreens: clientOnlyScreens.length,
-    dynamicScreens: dynamicScreens.length,
-    expectedDynamicScreens: supportedDynamicTemplates.length,
+    protectedClientScreens: protectedClientScreens.length,
+    publicClientScreens: publicClientScreens.length,
+    backendDynamicScreens: backendDynamicScreens.length,
+    clientDynamicVisualScreens: clientDynamicVisualScreens.length,
+    expectedBackendDynamicScreens: supportedDynamicTemplates.length,
     sampleAdId: sampleAd.id,
+    sampleSellerId: sampleAd.sellerId,
     sampleAdResolutionError: sampleAd.error,
-    redirects: redirectChecks.length,
+    backendRedirects: redirectChecks.length,
+    clientRedirects: clientRedirectChecks.length,
   },
   totalScreenshots: results.length,
   failures,
   redirectChecks,
+  clientRedirectChecks,
   results,
 };
 await writeFile(path.join(outputRoot, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
@@ -301,8 +415,10 @@ const lines = [
   `- Screenshots: ${results.length}`,
   `- Automated failures: ${failures}`,
   `- Static backend browser surfaces: ${backendStaticScreens.length}`,
-  `- Dynamic listing/share samples: ${dynamicScreens.length}`,
-  `- Redirect checks: ${redirectChecks.length}`,
+  `- Backend dynamic listing/share samples: ${backendDynamicScreens.length}`,
+  `- Client dynamic visual samples: ${clientDynamicVisualScreens.length}`,
+  `- Backend redirect checks: ${redirectChecks.length}`,
+  `- Client redirect checks: ${clientRedirectChecks.length}`,
   '- State: anonymous production browser; protected canonical routes show the login gate without mutating production data.',
   '- Scope: full required layout widths in Chromium plus representative Pixel 7 Chromium, Desktop Safari/WebKit and iPhone WebKit.',
   '- Real physical iPhone sign-off remains separate; WebKit emulation is not real-device evidence.',
@@ -315,8 +431,9 @@ const lines = [
   '',
   '- Static backend browser routes come directly from the committed semantic Laravel route inventory; new static routes enter the evidence matrix automatically.',
   '- Backend 301 redirect routes are verified separately against explicit target expectations.',
-  '- Dynamic `/ads/{id}` and `/share/ads/{id}` routes use one current read-only public ad sample.',
-  '- Acquisition/client legacy aliases such as `/vendedores`, `/publicar-gratis`, `/publish`, `/account/listings`, and `/admin/login` remain client-side redirect/link-integrity concerns.',
+  '- Dynamic ad/share, ad alias/edit and seller-profile routes use one current read-only public ad/seller sample.',
+  '- Client-side acquisition, legacy account and referral redirects are verified separately in a single Chromium navigation pass.',
+  '- The wildcard React route is captured with an intentional not-found sample and must render the localized 404 state.',
   '- Login and registration are captured with their production forms open.',
   '- Post, profile, and admin are captured in the anonymous authentication-gate state.',
   '- Authenticated seller/buyer/admin/Advertising Hub surfaces are covered by the separate isolated authenticated cabinet matrix.',
@@ -327,7 +444,8 @@ console.log(JSON.stringify({
   outputRoot,
   screens: screens.length,
   screenshots: results.length,
-  redirects: redirectChecks.length,
+  backendRedirects: redirectChecks.length,
+  clientRedirects: clientRedirectChecks.length,
   failures,
 }, null, 2));
 if (failures > 0) process.exitCode = 1;
