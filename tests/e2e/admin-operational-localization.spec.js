@@ -160,3 +160,75 @@ for (const lang of ['es', 'en']) {
     });
   }
 }
+
+async function mockAdminAnalyticsRecoveryApi(page, state) {
+  await page.route('**/api/**', async route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    const method = request.method();
+
+    if (path.endsWith('/user') && method === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(adminUser) });
+    }
+    if (path.endsWith('/admin/payments') && method === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], last_page: 1, total: 0 }) });
+    }
+    if (path.endsWith('/admin/analytics') && method === 'GET') {
+      if (!state.recovered) {
+        return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'temporarily unavailable' }) });
+      }
+      await new Promise(resolve => setTimeout(resolve, 650));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ revenue_period: 0, promotion_revenue_period: 0, ctr: 0, total_clicks: 0, total_impressions: 0 }) });
+    }
+    if (path.endsWith('/ads')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], total: 0, current_page: 1, last_page: 1 }) });
+    }
+    if (path.endsWith('/categories') || path.endsWith('/category-attributes') || path.endsWith('/favorites') || path.endsWith('/user/ads') || path.endsWith('/user/favorite-ads')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    }
+    if (path.endsWith('/user/payments')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], last_page: 1, total: 0 }) });
+    }
+    if (path.endsWith('/auth/providers')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ providers: { google: false, apple: false, telegram: false, sms: false } }) });
+    }
+    if (path.includes('/notifications')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], count: 0 }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+  });
+}
+
+for (const lang of ['es', 'en']) {
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    test(`admin analytics outage does not become real zero KPI in ${lang} on ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium-desktop');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await installAdmin(page, lang);
+      const state = { recovered: false };
+      await mockAdminAnalyticsRecoveryApi(page, state);
+      await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+      await expectDocumentLocale(page, lang);
+      const t = recoveryTranslations[lang];
+
+      await page.getByTestId('admin-tab-payments').click();
+      await expect(page.getByTestId('admin-payments-empty')).toBeVisible();
+      await expect(page.getByTestId('admin-analytics-load-error')).toContainText(t.connection_error);
+      await expect(page.getByTestId('admin-analytics-retry')).toHaveText(t.retry_btn);
+      await expect(page.getByTestId('admin-promotion-revenue-value')).toHaveText('—');
+      await expect(page.getByTestId('admin-ctr-value')).toHaveText('—');
+      await expect(page.getByTestId('admin-ctr-detail')).toHaveText('—');
+
+      state.recovered = true;
+      await page.getByTestId('admin-analytics-retry').click();
+      await expect(page.getByTestId('admin-analytics-loading')).toBeVisible();
+      await expect(page.getByTestId('admin-analytics-load-error')).toHaveCount(0);
+      await expect(page.getByTestId('admin-promotion-revenue-value')).not.toHaveText('—');
+      await expect(page.getByTestId('admin-ctr-value')).not.toHaveText('—');
+      await expect(page.getByTestId('admin-payments-empty')).toBeVisible();
+    });
+  }
+}

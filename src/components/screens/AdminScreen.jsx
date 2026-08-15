@@ -17,7 +17,7 @@ const AdminDataLoadError = ({ testId, onRetry, t }) => (
     </button>
   </div>
 );
-export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons, adminCouponsLoadError = false, adminLoading, adminPendingAds, adminPendingAdsLoadError = false, adminReportTab, adminReports, adminReportsLoadError = false, adminTab, adminUserReports, adminUserSearch, adminUsers, adminUsersLoadError = false, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsLoadError = false, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments, token }) {
+export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = false, adminAnalyticsLoadError = false, adminCatForm, adminCoupons, adminCouponsLoadError = false, adminLoading, adminPendingAds, adminPendingAdsLoadError = false, adminReportTab, adminReports, adminReportsLoadError = false, adminTab, adminUserReports, adminUserSearch, adminUsers, adminUsersLoadError = false, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsLoadError = false, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments, token }) {
     if (userRole !== 'admin') return <div className="p-10 text-center font-bold text-red-500">{t.access_denied || 'Access denied'}</div>;
     React.useEffect(() => {
         if (adminTab === 'payments') {
@@ -297,8 +297,8 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
                     <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{adminCopy.admin_promotion_revenue_30d}</span>
-                    <span className="text-3xl font-black text-amber-500 mt-1 block">
-                      {formatMXN(adminAnalytics?.promotion_revenue_period || 0, lang)}
+                    <span data-testid="admin-promotion-revenue-value" className="text-3xl font-black text-amber-500 mt-1 block">
+                      {adminAnalytics ? formatMXN(adminAnalytics.promotion_revenue_period ?? 0, lang) : '—'}
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">{adminCopy.admin_promotion_products}</span>
                   </div>
@@ -309,9 +309,13 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
                     <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{adminCopy.admin_global_ctr}</span>
-                    <span className="text-3xl font-black text-blue-500 mt-1 block">{formatNumber(adminAnalytics?.ctr || 0, lang, { maximumFractionDigits: 2 })}%</span>
-                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
-                      {formatNumber(adminAnalytics?.total_clicks || 0, lang)} {t.clicks} / {formatNumber(adminAnalytics?.total_impressions || 0, lang)} {t.impressions}
+                    <span data-testid="admin-ctr-value" className="text-3xl font-black text-blue-500 mt-1 block">
+                      {adminAnalytics ? `${formatNumber(adminAnalytics.ctr ?? 0, lang, { maximumFractionDigits: 2 })}%` : '—'}
+                    </span>
+                    <span data-testid="admin-ctr-detail" className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
+                      {adminAnalytics
+                        ? `${formatNumber(adminAnalytics.total_clicks ?? 0, lang)} ${t.clicks} / ${formatNumber(adminAnalytics.total_impressions ?? 0, lang)} ${t.impressions}`
+                        : '—'}
                     </span>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-500 shadow-sm border border-blue-100/55 dark:border-blue-900/30">
@@ -319,6 +323,18 @@ export default function AdminScreen({ adminAnalytics, adminCatForm, adminCoupons
                   </div>
                 </div>
               </div>
+              {loadingAdminAnalytics && !adminAnalytics ? (
+                <div data-testid="admin-analytics-loading" role="status" aria-live="polite" className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-[13px] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#84CC16]" aria-hidden="true" />
+                </div>
+              ) : adminAnalyticsLoadError ? (
+                <div data-testid="admin-analytics-load-error" role="alert" className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                  <p className="text-[13px] font-medium text-amber-900 dark:text-amber-200">{t.connection_error || 'Error de conexión.'}</p>
+                  <button type="button" data-testid="admin-analytics-retry" onClick={loadAdminAnalytics} className="btn-sm border border-amber-300 bg-white text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-200">
+                    {t.retry_btn || 'Reintentar'}
+                  </button>
+                </div>
+              ) : null}
               {/* Audit Table Section */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">

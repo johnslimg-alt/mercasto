@@ -840,6 +840,8 @@ function App() {
   const [adminPaymentsLastPage, setAdminPaymentsLastPage] = useState(1);
   const [adminPaymentsTotal, setAdminPaymentsTotal] = useState(0);
   const [adminAnalytics, setAdminAnalytics] = useState(null);
+  const [loadingAdminAnalytics, setLoadingAdminAnalytics] = useState(false);
+  const [adminAnalyticsLoadError, setAdminAnalyticsLoadError] = useState(false);
 
   // --- AI COMMAND CENTER STATE ---
   const [showAiModal, setShowAiModal] = useState(false);
@@ -2604,16 +2606,21 @@ function App() {
   }, []);
 
   const loadAdminAnalytics = useCallback(async () => {
+    setLoadingAdminAnalytics(true);
+    setAdminAnalyticsLoadError(false);
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/admin/analytics?period=30`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
-        setAdminAnalytics(await res.json());
-      }
+      if (!res.ok) throw new Error(`admin-analytics-load-failed:${res.status}`);
+      setAdminAnalytics(await res.json());
+      setAdminAnalyticsLoadError(false);
     } catch (err) {
+      setAdminAnalyticsLoadError(true);
       console.error("Error fetching admin analytics", err);
+    } finally {
+      setLoadingAdminAnalytics(false);
     }
   }, []);
 
@@ -4054,7 +4061,7 @@ function App() {
 
 
   // --- РЕНДЕР ПАНЕЛИ АДМИНИСТРАТОРА ---
-  const renderAdminScreen = () => <AdminScreen adminAnalytics={adminAnalytics} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminCouponsLoadError={adminCouponsLoadError} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminPendingAdsLoadError={adminPendingAdsLoadError} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} adminUsersLoadError={adminUsersLoadError} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminAnalytics={loadAdminAnalytics} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} adminReportsLoadError={adminReportsLoadError} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} adminPayments={adminPayments} loadingAdminPayments={loadingAdminPayments} adminPaymentsLoadError={adminPaymentsLoadError} adminPaymentsPage={adminPaymentsPage} adminPaymentsLastPage={adminPaymentsLastPage} adminPaymentsTotal={adminPaymentsTotal} loadAdminPayments={loadAdminPayments} token={localStorage.getItem('auth_token')} />;
+  const renderAdminScreen = () => <AdminScreen adminAnalytics={adminAnalytics} loadingAdminAnalytics={loadingAdminAnalytics} adminAnalyticsLoadError={adminAnalyticsLoadError} adminCatForm={adminCatForm} adminCoupons={adminCoupons} adminCouponsLoadError={adminCouponsLoadError} adminLoading={adminLoading} adminPendingAds={adminPendingAds} adminPendingAdsLoadError={adminPendingAdsLoadError} adminReportTab={adminReportTab} adminReports={adminReports} adminTab={adminTab} adminUserReports={adminUserReports} adminUserSearch={adminUserSearch} adminUsers={adminUsers} adminUsersLoadError={adminUsersLoadError} allAds={allAds} cancelCatEdit={cancelCatEdit} categoriesData={categoriesData} couponForm={couponForm} editingCatId={editingCatId} form={form} getImageUrl={getImageUrl} getImageUrls={getImageUrls} handleAdminChangeRole={handleAdminChangeRole} handleAdminDeleteUser={handleAdminDeleteUser} handleAdminVerifyUser={handleAdminVerifyUser} handleCreateCoupon={handleCreateCoupon} handleDeleteCoupon={handleDeleteCoupon} handleDeleteReport={handleDeleteReport} handleDeleteUserReport={handleDeleteUserReport} handleEditCategory={handleEditCategory} handleModerateAd={handleModerateAd} handleSaveCategory={handleSaveCategory} handleViewAd={handleViewAd} lang={lang} loadAdminAnalytics={loadAdminAnalytics} loadAdminReports={loadAdminReports} loadAdminUsers={loadAdminUsers} loadCoupons={loadCoupons} loadPendingAds={loadPendingAds} loadingAdminUsers={loadingAdminUsers} loadingCoupons={loadingCoupons} loadingPendingAds={loadingPendingAds} loadingReports={loadingReports} adminReportsLoadError={adminReportsLoadError} setAdminCatForm={setAdminCatForm} setAdminReportTab={setAdminReportTab} setAdminTab={setAdminTab} setAdminUserSearch={setAdminUserSearch} setCouponForm={setCouponForm} t={t} user={user} userRole={userRole} adminPayments={adminPayments} loadingAdminPayments={loadingAdminPayments} adminPaymentsLoadError={adminPaymentsLoadError} adminPaymentsPage={adminPaymentsPage} adminPaymentsLastPage={adminPaymentsLastPage} adminPaymentsTotal={adminPaymentsTotal} loadAdminPayments={loadAdminPayments} token={localStorage.getItem('auth_token')} />;
 
   // --- РЕНДЕР МОБИЛЬНОГО ТАБ-БАРА ---
   const renderTabBar = () => (
