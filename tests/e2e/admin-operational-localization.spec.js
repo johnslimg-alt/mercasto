@@ -232,3 +232,32 @@ for (const lang of ['es', 'en']) {
     });
   }
 }
+
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`smart moderation dialog traps focus and restores its opener on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installAdmin(page, 'en');
+    await mockApi(page);
+    await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+
+    const opener = page.getByTestId('admin-smart-moderation-open');
+    await expect(opener).toBeVisible();
+    await opener.focus();
+    await opener.click();
+    const dialog = page.getByTestId('admin-smart-moderation-dialog');
+    const closeButton = page.getByTestId('admin-smart-moderation-close');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute('aria-labelledby', 'admin-smart-moderation-title');
+    await expect(closeButton).toBeFocused();
+    await closeButton.press('Shift+Tab');
+    await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(opener).toBeFocused();
+  });
+}

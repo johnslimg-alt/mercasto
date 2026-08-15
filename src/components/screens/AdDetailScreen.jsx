@@ -1,4 +1,5 @@
 import useDocumentMeta from '../../hooks/useDocumentMeta';
+import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 import { localizedText } from '../../utils/localize';
 import { whatsappInterestMessage } from '../../utils/whatsappLocale';
 import { formatDate, formatNumber } from '../../utils/localeFormat';
@@ -328,11 +329,18 @@ export default function AdDetailScreen({
   const detailCopy = getAdDetailCopy(lang);
   const [similarAds, setSimilarAds] = useState([]);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const shareButtonRef = useRef(null);
   const [priceHistory, setPriceHistory] = useState([]);
   const [alertEnabled, setAlertEnabled] = useState(true);
   const [renderedAtMs] = useState(() => Date.now());
   const [showQR, setShowQR] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const closeQr = () => setShowQR(false);
+  const { dialogRef: qrDialogRef, initialFocusRef: qrInitialFocusRef, handleKeyDown: handleQrKeyDown } = useModalFocusTrap({
+    isOpen: showQR,
+    onClose: closeQr,
+    returnFocusRef: shareButtonRef,
+  });
   const [mapMountRef, mapReady] = useNearViewport('0px');
   const [relatedMountRef, relatedReady] = useNearViewport('300px');
 
@@ -761,6 +769,7 @@ export default function AdDetailScreen({
               </button>
               <div className="relative flex-1">
                 <button
+                  ref={shareButtonRef}
                   onClick={handleShareClick}
                   className="btn-md w-full bg-white dark:bg-slate-700 border border-slate-300 text-slate-700 dark:text-slate-200 hover:bg-slate-50 flex items-center justify-center gap-2"
                   aria-expanded={showShareMenu}
@@ -919,24 +928,28 @@ export default function AdDetailScreen({
 
       {/* QR Code Modal */}
       {showQR && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4" onKeyDown={(e) => { if (e.key === 'Escape') setShowQR(false); }}>
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
           <div
             data-pointer-dismiss-surface
             aria-hidden="true"
             className="absolute inset-0"
             style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-            onClick={() => setShowQR(false)}
+            onClick={closeQr}
           />
           <div
+            ref={qrDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="ad-qr-title"
+            onKeyDown={handleQrKeyDown}
             className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center gap-5 max-w-xs w-full"
           >
             <button
-              onClick={() => setShowQR(false)}
+              ref={qrInitialFocusRef}
+              type="button"
+              onClick={closeQr}
               className="self-end -mt-4 -mr-4 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-              aria-label={t.close || 'Cerrar'}
+              aria-label={t.close_btn || t.close || 'Close'}
             >
               <X size={22} />
             </button>

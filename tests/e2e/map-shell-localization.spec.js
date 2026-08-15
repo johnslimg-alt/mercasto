@@ -57,10 +57,14 @@ for (const lang of languages) {
 
     const expand = page.getByTestId('map-expand');
     await expect(expand).toBeVisible();
+    await expand.focus();
     await expand.click();
 
     const dialog = page.getByRole('dialog', { name: tr.map.interactive });
     await expect(dialog).toBeVisible();
+    await expect(dialog.getByTestId('map-close')).toBeFocused();
+    await dialog.getByTestId('map-close').press('Shift+Tab');
+    await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
     await expect(page.locator('html')).toHaveAttribute('dir', rtlLanguages.has(lang) ? 'rtl' : 'ltr');
     const filterToggle = dialog.getByTestId('map-filter-toggle');
     await expect(filterToggle).toContainText(tr.map.filters);
@@ -108,7 +112,8 @@ for (const lang of languages) {
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(1);
-    await dialog.getByTestId('map-close').click();
+    await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
+    await expect(expand).toBeFocused();
   });
 }
