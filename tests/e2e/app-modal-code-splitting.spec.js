@@ -33,6 +33,7 @@ async function installSession(page, lang = 'en') {
     localStorage.setItem('auth_token', 'modal-split-token');
     localStorage.setItem('user', JSON.stringify(savedUser));
     localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
   }, { savedLang: lang, savedUser: user });
 }
 
@@ -58,18 +59,75 @@ async function hasChunk(page, chunkName) {
   return page.evaluate(name => performance.getEntriesByType('resource').some(entry => entry.name.includes(`/${name}-`) && entry.name.endsWith('.js')), chunkName);
 }
 
-test('pricing modal chunk loads only when the pricing UI opens', async ({ page }, testInfo) => {
+test('pricing modal chunk and keyboard focus stay correct on desktop and mobile layouts', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   const t = enTranslations;
-  await installSession(page, 'en');
-  await mockApi(page);
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-  await expect.poll(() => hasChunk(page, 'PricingModal')).toBe(false);
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await installSession(page, 'en');
+    await mockApi(page);
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    await expect.poll(() => hasChunk(page, 'PricingModal')).toBe(false);
 
-  await page.getByRole('button', { name: t.view_plans, exact: true }).click();
-  await expect(page.getByRole('heading', { name: t.pm_plan_impulso, exact: true })).toBeVisible();
-  await expect.poll(() => hasChunk(page, 'PricingModal')).toBe(true);
+    const opener = page.getByRole('button', { name: t.view_plans, exact: true }).last();
+    await opener.focus();
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: t.pricing_title });
+    const closeButton = dialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(closeButton).toBeFocused();
+    await closeButton.press('Shift+Tab');
+    await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(opener).toBeFocused();
+    await expect.poll(() => hasChunk(page, 'PricingModal')).toBe(true);
+  }
 });
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`profile and coupon dialogs expose modal semantics on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    const t = enTranslations;
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installSession(page, 'en');
+    await mockApi(page);
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+
+    const profileOpener = page.getByRole('button', { name: t.edit_profile, exact: true }).first();
+    await profileOpener.focus();
+    await profileOpener.click();
+    const profileDialog = page.getByRole('dialog', { name: t.edit_profile_title });
+    const profileClose = profileDialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
+    await expect(profileClose).toBeFocused();
+    await profileClose.press('Shift+Tab');
+    await expect.poll(() => profileDialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(profileDialog).toHaveCount(0);
+    await expect(profileOpener).toBeFocused();
+
+    const couponOpener = viewport.name === 'mobile'
+      ? page.getByTestId('dashboard-mobile-redeem-coupon')
+      : page.getByRole('button', { name: t.redeem_coupon, exact: true }).first();
+    await expect(couponOpener).toBeVisible();
+    await couponOpener.focus();
+    await couponOpener.press('Enter');
+    const couponDialog = page.getByRole('dialog', { name: t.redeem_coupon_title });
+    const couponClose = couponDialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
+    await expect(couponClose).toBeFocused();
+    await couponClose.press('Shift+Tab');
+    await expect.poll(() => couponDialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(couponDialog).toHaveCount(0);
+    await expect(couponOpener).toBeFocused();
+  });
+}
 
 test('report modal chunk loads only after the report action', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');

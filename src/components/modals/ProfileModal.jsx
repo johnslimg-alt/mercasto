@@ -1,12 +1,15 @@
 import { Camera, Loader2, User, XCircle } from 'lucide-react';
+import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function ProfileModal({ handleProfileSubmit, profileForm, profileLoading, setProfileForm, setShowProfileModal, showProfileModal, t }) {
+    const closeModal = () => setShowProfileModal(false);
+    const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({ isOpen: showProfileModal, onClose: closeModal });
     if (!showProfileModal) return null;
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-          <button onClick={() => setShowProfileModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
-          <h2 className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">{t.edit_profile_title || 'Editar Perfil'}</h2>
+        <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="profile-modal-title" onKeyDown={handleKeyDown} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-md rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+          <button ref={initialFocusRef} type="button" aria-label={t.close_btn || t.close || 'Close'} onClick={closeModal} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+          <h2 id="profile-modal-title" className="text-[22px] font-bold tracking-tight mb-6 text-center text-slate-900 dark:text-white">{t.edit_profile_title || 'Editar Perfil'}</h2>
 
           <form onSubmit={handleProfileSubmit} className="space-y-5">
             <div className="flex flex-col items-center mb-6">

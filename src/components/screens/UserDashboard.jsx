@@ -493,8 +493,9 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
               >
                 +
               </button>
-              <div className="absolute top-full right-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto">
+              <div className="absolute top-full right-0 mt-2 hidden opacity-0 transition-opacity z-10 pointer-events-none md:block md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-focus-within:opacity-100 md:group-focus-within:pointer-events-auto">
                 <button 
+                  type="button"
                   onClick={() => setShowCouponModal(true)} 
                   className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5"
                 >
@@ -502,6 +503,14 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 </button>
               </div>
             </div>
+            <button
+              type="button"
+              data-testid="dashboard-mobile-redeem-coupon"
+              onClick={() => setShowCouponModal(true)}
+              className="md:hidden btn-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5"
+            >
+              <Ticket size={14}/> {t.redeem_coupon || 'Canjear cupón'}
+            </button>
             {userRole === 'admin' && (
               <button 
                 onClick={() => setCurrentTab('admin')} 

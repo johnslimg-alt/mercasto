@@ -17,10 +17,11 @@ const detailAd = {
     name: 'Vendedor de prueba',
     role: 'individual',
     created_at: '2025-01-01T12:00:00Z',
+    whatsapp: '+525512345678',
   },
 };
 
-async function mockDetailApi(page, requests) {
+async function mockDetailApi(page, requests, authenticated = false) {
   await page.addInitScript(() => localStorage.setItem('cookiesAccepted', 'true'));
   await page.route('**/api/**', async route => {
     const request = route.request();
@@ -29,6 +30,9 @@ async function mockDetailApi(page, requests) {
 
     if (url.pathname === '/api/ads/6336' && request.method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(detailAd) });
+    }
+    if (url.pathname === '/api/user' && request.method() === 'GET' && authenticated) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 501, name: 'Buyer QA', email: 'buyer@example.test', role: 'individual', is_verified: true }) });
     }
     if (url.pathname === '/api/ads/6336/price-history') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{"history":[]}' });
@@ -186,5 +190,39 @@ test('ad detail QR dialog traps focus and restores the share control on desktop 
     await page.keyboard.press('Escape');
     await expect(qrDialog).toHaveCount(0);
     await expect(shareOpener).toBeFocused();
+  }
+});
+
+
+test('contact dialog exposes modal semantics and restores its opener on desktop and mobile', async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    const requests = [];
+    await page.setViewportSize(viewport);
+    await page.addInitScript(() => {
+      localStorage.setItem('lang', 'en');
+      localStorage.setItem('mercasto_language', 'en');
+      localStorage.setItem('cookie_consent', 'essential');
+      localStorage.setItem('auth_token', 'contact-modal-token');
+      localStorage.setItem('user', JSON.stringify({ id: 501, name: 'Buyer QA', email: 'buyer@example.test', role: 'individual', is_verified: true }));
+    });
+    await mockDetailApi(page, requests, true);
+    await page.goto('/ads/6336', { waitUntil: 'domcontentloaded' });
+
+    const opener = page.getByRole('button', { name: /Contact/i }).last();
+    await expect(opener).toBeVisible();
+    await opener.focus();
+    await opener.click();
+    const dialog = page.locator('[role="dialog"][aria-labelledby="contact-dialog-title"]');
+    const closeButton = dialog.getByRole('button', { name: /Close/i });
+    await expect(dialog).toBeVisible();
+    await expect(closeButton).toBeFocused();
+    await closeButton.press('Shift+Tab');
+    await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(opener).toBeFocused();
   }
 });

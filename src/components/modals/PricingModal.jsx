@@ -1,6 +1,9 @@
 import { CheckCircle, Crown, XCircle } from 'lucide-react';
+import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function PricingModal({ customCreditsAmount, handleClipPayment, handleCreditsPayment, handlePromotionProductPayment, lang, localizedText, priceTab, promotableAds, promotionTargetAdId, setCustomCreditsAmount, setPriceTab, setPromotionTargetAdId, setShowPricingModal, showPricingModal, t, user }) {
+    const closeModal = () => setShowPricingModal(false);
+    const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({ isOpen: showPricingModal, onClose: closeModal });
     if (!showPricingModal) return null;
 
     // Текущий активный план пользователя (если оплачен и не истёк)
@@ -15,11 +18,11 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
 
     return (
       <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-end md:items-center justify-center p-0 md:p-6 backdrop-blur-sm">
-        <div className="bg-slate-50 dark:bg-slate-950 w-full max-w-5xl md:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0">
+        <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title" onKeyDown={handleKeyDown} className="bg-slate-50 dark:bg-slate-950 w-full max-w-5xl md:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0">
           <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
             <div className="p-5 flex justify-between items-center">
-              <h3 className="font-bold text-[22px] text-slate-900 dark:text-white flex items-center gap-2"><Crown className="w-6 h-6 text-[#84CC16]"/> {t.pricing_title || 'Planes y Promociones'}</h3>
-              <button onClick={() => setShowPricingModal(false)} className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"><XCircle size={26}/></button>
+              <h3 id="pricing-modal-title" className="font-bold text-[22px] text-slate-900 dark:text-white flex items-center gap-2"><Crown className="w-6 h-6 text-[#84CC16]"/> {t.pricing_title || 'Planes y Promociones'}</h3>
+              <button ref={initialFocusRef} type="button" aria-label={t.close_btn || t.close || 'Close'} onClick={closeModal} className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"><XCircle size={26}/></button>
             </div>
             <div className="flex px-5 gap-6 border-t border-slate-100 dark:border-slate-800">
               <button onClick={() => setPriceTab('particular')} className={`py-4 font-semibold text-[14px] border-b-2 transition-colors ${priceTab === 'particular' ? 'border-[#84CC16] text-[#65A30D] dark:text-[#84CC16]' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'}`}>{t.pm_tab_plans || 'Planes mensuales'}</button>
