@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-08-06T17:10:59Z
-Commit: 98843f40
+Generated at: 2026-08-15T05:15:00Z
+Commit: dfe868ed
 Source: php artisan route:list --except-vendor -v
 
 ```text
@@ -628,21 +628,73 @@ Source: php artisan route:list --except-vendor -v
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
   POST      api/webhooks/clip/ad-renewal generated::<auto> › Api\AdRenewalWebhookController
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
+  GET|HEAD  articulos_camping generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
+  GET|HEAD  atracciones_exp generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
+  ANY       autos generated::<auto> › Illuminate\Routing › RedirectController
+            ⇂ web
+  GET|HEAD  ayuda generated::<auto> › SeoShellController@publicPage
+            ⇂ web
   GET|HEAD  ayuda/comprar-y-contactar generated::<auto> › SeoShellController@source
             ⇂ web
   GET|HEAD  ayuda/publicar-anuncio generated::<auto> › SeoShellController@source
             ⇂ web
+  GET|HEAD  boletos generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  boletos_turismo generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
   GET|HEAD  como-funciona generated::<auto> › SeoShellController@source
+            ⇂ web
+  GET|HEAD  contacto generated::<auto> › SeoShellController@publicPage
+            ⇂ web
+  GET|HEAD  cookies generated::<auto> › SeoShellController@publicPage
+            ⇂ web
+  GET|HEAD  electronica generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  empleos generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  guias_servicios generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
   ANY       help generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
+  GET|HEAD  hogar .. generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  hospedaje generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
+  GET|HEAD  infantil generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  ANY       informatica generated::<auto> › Illuminate\Routing › RedirectController
+            ⇂ web
+  GET|HEAD  inmuebles generated::<auto> › SeoShellController@vertical
+            ⇂ web
   GET|HEAD  listings generated::<auto> › SeoShellController@listings
             ⇂ web
+  GET|HEAD  mascotas generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  moda ... generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  motor .. generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  negocios generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  ocio ... generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  privacidad generated::<auto> › SeoShellController@publicPage
+            ⇂ web
   ANY       privacy generated::<auto> › Illuminate\Routing › RedirectController
+            ⇂ web
+  GET|HEAD  productos generated::<auto> › SeoShellController@vertical
+            ⇂ web
+  GET|HEAD  renta_vehiculos generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
+  GET|HEAD  retiros_bienestar generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
   ANY       safety generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
   GET|HEAD  seguridad generated::<auto> › SeoShellController@source
+            ⇂ web
+  GET|HEAD  servicios generated::<auto> › SeoShellController@vertical
             ⇂ web
   GET|HEAD  share/ads/{id} ... generated::<auto> › ShareAdController
             ⇂ web
@@ -658,14 +710,30 @@ Source: php artisan route:list --except-vendor -v
             ⇂ web
   GET|HEAD  sobre-mercasto generated::<auto> › SeoShellController@source
             ⇂ web
+  GET|HEAD  souvenirs generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
   GET|HEAD  storage/{path} ..................................... storage.local
   PUT       storage/{path} .............................. storage.local.upload
   GET|HEAD  tarifas .. generated::<auto> › SeoShellController@source
             ⇂ web
+  GET|HEAD  tecnologia generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
+  ANY       telefonia generated::<auto> › Illuminate\Routing › RedirectController
+            ⇂ web
+  GET|HEAD  telefonos generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
+  GET|HEAD  terminos generated::<auto> › SeoShellController@publicPage
+            ⇂ web
   ANY       terms generated::<auto> › Illuminate\Routing › RedirectController
+            ⇂ web
+  GET|HEAD  tiendas generated::<auto> › SeoShellController@publicPage
+            ⇂ web
+  GET|HEAD  tours generated::<auto> › SeoShellController@verticalAlias
+            ⇂ web
+  GET|HEAD  turismo generated::<auto> › SeoShellController@vertical
             ⇂ web
   GET|HEAD  up ................................... generated::<auto>
 
-                                                          Showing [211] routes
+                                                          Showing [245] routes
 
 ```

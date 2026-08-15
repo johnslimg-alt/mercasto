@@ -1,12 +1,12 @@
 # Mercasto Route Inventory
 
-Last reviewed against production commit `98843f40` on 2026-08-06 UTC.
+Last reviewed against production commit `dfe868ed` on 2026-08-15 UTC.
 
 This document is the curated security and release inventory for high-risk route groups. The complete machine-generated Laravel snapshot is [`route-inventory-generated.md`](./route-inventory-generated.md); it contains every non-vendor route and the exact middleware emitted by `php artisan route:list --except-vendor -v`.
 
 ## Runtime routing model
 
-- Public browser paths such as `/login`, `/register`, `/publish`, `/account/*` and vertical landing pages are React SPA shells. A browser `200` does **not** grant access to protected data.
+- Public browser paths such as `/login`, `/register`, canonical protected shells `/post`, `/profile`, `/admin`, and vertical landing pages are React SPA surfaces. A browser `200` does **not** grant access to protected data. Legacy aliases such as `/publish`, `/account/*` and `/admin/login` redirect to canonical SPA routes.
 - Authentication and state changes happen through `/api/*` routes.
 - Protected APIs use Sanctum bearer authentication. Browser cookies and CSRF tokens are not accepted as a substitute for a valid bearer token; this is enforced by `production-session-security-smoke.sh` and `csrf-session-contract-gate.sh`.
 - OAuth redirect/callback routes additionally carry `web` middleware where shown by Laravel.
@@ -52,7 +52,7 @@ php artisan route:list --except-vendor -v
 | `GET /sitemap-categories.xml` | `SitemapController@categories` | `web` | No | No | Edge limits | `seo-public-audit.sh` |
 | `GET /sitemap-states.xml` | `SitemapController@states` | `web` | No | No | Edge limits | `seo-public-audit.sh` |
 
-React routes under `/login`, `/register`, `/publish`, `/account/*`, `/payment/*` and public verticals are validated as shell/deep-link routes by `production-route-audit.sh`; their protected data is loaded only from the authenticated APIs below.
+React routes under `/login`, `/register`, canonical `/post`, `/profile`, `/admin`, payment return surfaces and public verticals are validated as shell/deep-link routes by `production-route-audit.sh`; their protected data is loaded only from the authenticated APIs below. Acquisition aliases `/vendedores` and `/publicar-gratis` are intentionally rewritten to `/post`, while legacy `/publish`, `/account/*` and `/admin/login` routes redirect to their canonical SPA destinations.
 
 ## Authentication and account lifecycle
 
@@ -151,6 +151,8 @@ The generated inventory contains admin KYC, moderation, reports, banners, coupon
 
 ## Known compatibility aliases
 
+- Client-side SPA aliases: `/publish` → `/post`, `/account` → `/profile`, `/account/listings` → `/profile?tab=my_ads`, `/account/billing` → `/profile?tab=transactions`, `/account/promotions` → `/tarifas`, and `/admin/login` → `/admin`.
+- Seller acquisition aliases `/vendedores` and `/publicar-gratis` are normalized to `/post` before React mounts so paid/organic acquisition enters the publication flow directly.
 - `PUT` and `POST` aliases exist for `/api/user/profile`, `/api/user/password` and `/api/user/notifications`.
 - Both `/api/payment/webhook` and `/api/webhooks/clip` route to `PaymentController@handleWebhook`.
 - Legacy `/listing/{id}` and `/listing/{id}-{slug}` browser routes redirect to the canonical listing path; `listing-route-smoke.sh` verifies the redirect contract.
