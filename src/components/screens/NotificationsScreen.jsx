@@ -17,6 +17,7 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const token = localStorage.getItem('auth_token');
@@ -28,6 +29,7 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
     }
 
     setLoading(true);
+    if (nextPage === 1) setLoadError(false);
     try {
       const res = await fetch(`${API_URL}/notifications?page=${nextPage}`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -38,8 +40,9 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
       setNotifications(prev => nextPage === 1 ? items : [...prev, ...items]);
       setHasMore(Boolean(json.next_page_url));
       setPage(nextPage);
+      if (nextPage === 1) setLoadError(false);
     } catch {
-      // Keep the screen quiet; the user can retry by reopening.
+      if (nextPage === 1) setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -91,9 +94,16 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
 
       <div className="max-w-2xl mx-auto">
         {loading && notifications.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-[14px]">{t.notifications_loading}</div>
+          <div data-testid="notifications-loading" role="status" aria-live="polite" className="p-8 text-center text-slate-400 text-[14px]">{t.notifications_loading}</div>
+        ) : loadError && notifications.length === 0 ? (
+          <div data-testid="notifications-load-error" role="alert" className="flex flex-col items-center justify-center py-24 gap-4 px-6 text-center">
+            <p className="text-slate-600 dark:text-slate-300 text-[14px] font-medium">{t.notifications_load_error}</p>
+            <button type="button" data-testid="notifications-retry" onClick={() => load(1)} className="btn-sm border border-[#84CC16]/50 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 dark:text-[#BEF264]">
+              {t.retry_btn}
+            </button>
+          </div>
         ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
+          <div data-testid="notifications-empty" className="flex flex-col items-center justify-center py-24 gap-3">
             <p className="text-slate-500 dark:text-slate-300 text-[15px] font-medium">{t.notifications_empty_title}</p>
             <p className="text-slate-400 dark:text-slate-500 text-[13px] text-center px-8">
               {t.notifications_empty_desc}
