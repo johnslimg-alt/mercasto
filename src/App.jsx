@@ -1307,16 +1307,11 @@ function App() {
     } catch (err) { console.error("Export error", err); showToast(t.connection_error, 'error'); }
   };
 
-  useEffect(() => {
-    if (!['/', '/listings'].includes(location.pathname)) return;
-    const currentPath = `${location.pathname}${location.search}`;
-    if (lastInternalFilterPathRef.current === currentPath) {
-      lastInternalFilterPathRef.current = '';
-      return;
-    }
-    const params = new URLSearchParams(location.search);
-    const hash = location.hash || window.location.hash;
-    if (params.has('ad') || params.has('store') || hash.startsWith('#ad-') || hash.startsWith('#company-')) return;
+  const hydrateCatalogStateFromUrl = useCallback((pathname, rawSearch, rawHash = '') => {
+    if (!['/', '/listings'].includes(pathname)) return false;
+    const params = new URLSearchParams(rawSearch);
+    const hash = rawHash || '';
+    if (params.has('ad') || params.has('store') || hash.startsWith('#ad-') || hash.startsWith('#company-')) return false;
 
     skipFilterUrlSyncRef.current = true;
     skipCategoryFilterResetRef.current = true;
@@ -1381,7 +1376,27 @@ function App() {
     }
     const nextDynamicFilters = parseDynamicFilters(params);
     setDynamicFilters(current => JSON.stringify(current) === JSON.stringify(nextDynamicFilters) ? current : nextDynamicFilters);
-  }, [location.pathname, location.search]);
+    return true;
+  }, []);
+
+  useEffect(() => {
+    const handleCatalogPopState = () => {
+      lastInternalFilterPathRef.current = '';
+      hydrateCatalogStateFromUrl(window.location.pathname, window.location.search, window.location.hash);
+    };
+    window.addEventListener('popstate', handleCatalogPopState);
+    return () => window.removeEventListener('popstate', handleCatalogPopState);
+  }, [hydrateCatalogStateFromUrl]);
+
+  useEffect(() => {
+    if (!['/', '/listings'].includes(location.pathname)) return;
+    const currentPath = `${location.pathname}${location.search}`;
+    if (lastInternalFilterPathRef.current === currentPath) {
+      lastInternalFilterPathRef.current = '';
+      return;
+    }
+    hydrateCatalogStateFromUrl(location.pathname, location.search, location.hash || window.location.hash);
+  }, [location.hash, location.pathname, location.search, hydrateCatalogStateFromUrl]);
 
   useEffect(() => {
     if (!['/', '/listings'].includes(location.pathname)) return;
