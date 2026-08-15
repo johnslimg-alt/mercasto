@@ -113,7 +113,7 @@ export default function GeoSourcePage({ slug }) {
       />
       <SourceSchema page={page} lang={lang} homeLabel={shell.home} />
 
-      <main>
+      <section>
         <section className="border-b border-slate-200 bg-slate-950 text-white">
           <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-lime-300/25 bg-lime-300/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-lime-300">
@@ -184,7 +184,7 @@ export default function GeoSourcePage({ slug }) {
             </div>
           </section>
         </section>
-      </main>
+      </section>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export default function ModeracionScreen() {
           </nav>
         </header>
 
-        <main>
+        <section>
           <div className="rounded-[2rem] bg-gradient-to-br from-emerald-950 to-slate-950 text-white p-7 sm:p-10 shadow-2xl shadow-slate-900/10 mb-8">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300 mb-3">Confianza, seguridad y calidad</p>
             <h1 className="text-4xl sm:text-6xl font-black tracking-[-0.06em] leading-none mb-4">Política de moderación</h1>
@@ -90,7 +90,7 @@ export default function ModeracionScreen() {
               </Section>
             </article>
           </div>
-        </main>
+        </section>
       </div>
     </div>
   );

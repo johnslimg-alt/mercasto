@@ -9,7 +9,7 @@ const plans = [
 
 export default function CreditsScreen() {
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-950 dark:bg-[#071120] dark:text-white sm:px-6 lg:px-8">
+    <section className="min-h-screen bg-slate-50 px-4 py-10 text-slate-950 dark:bg-[#071120] dark:text-white sm:px-6 lg:px-8">
       <section className="mx-auto max-w-6xl">
         <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/5 sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -57,6 +57,6 @@ export default function CreditsScreen() {
           </div>
         </div>
       </section>
-    </main>
+    </section>
   );
 }
