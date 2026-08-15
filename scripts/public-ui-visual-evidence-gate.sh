@@ -12,6 +12,8 @@ grep -qF "name: 'mobile-360'" scripts/capture-ui-visual-evidence.mjs
 grep -qF "name: 'mobile-430'" scripts/capture-ui-visual-evidence.mjs
 grep -qF "name: 'webkit-desktop-safari'" scripts/capture-ui-visual-evidence.mjs
 grep -qF "name: 'webkit-iphone13'" scripts/capture-ui-visual-evidence.mjs
+grep -qF 'maxSafeCssHeight' scripts/capture-ui-visual-evidence.mjs
+grep -qF "screenshotMode: fullPageScreenshot ? 'full-page' : 'viewport-capped'" scripts/capture-ui-visual-evidence.mjs
 grep -qF "path: '/post'" scripts/capture-ui-visual-evidence.mjs
 grep -qF "path: '/profile'" scripts/capture-ui-visual-evidence.mjs
 grep -qF "path: '/admin'" scripts/capture-ui-visual-evidence.mjs

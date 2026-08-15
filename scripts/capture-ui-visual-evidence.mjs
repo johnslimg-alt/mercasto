@@ -140,12 +140,21 @@ for (const profile of profiles) {
             mainLandmarks: document.querySelectorAll('main').length,
             bodyTextLength: bodyText.length,
             bodyTextSample: bodyText.slice(0, 280),
+            scrollHeight: document.documentElement.scrollHeight,
           };
         });
 
+        const deviceScaleFactor = Number(profile.context.deviceScaleFactor || 1);
+        const maxSafeCssHeight = Math.floor(30000 / deviceScaleFactor);
+        const fullPageScreenshot = metrics.scrollHeight <= maxSafeCssHeight;
         const safeProfile = profile.name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
         const imageName = `${safeProfile}-${viewport.name}-${screen.name}.jpg`;
-        await page.screenshot({ path: path.join(outputRoot, imageName), type: 'jpeg', quality: 72, fullPage: true });
+        await page.screenshot({
+          path: path.join(outputRoot, imageName),
+          type: 'jpeg',
+          quality: 72,
+          fullPage: fullPageScreenshot,
+        });
         results.push({
           browserProfile: profile.name,
           viewport: viewport.name,
@@ -158,6 +167,8 @@ for (const profile of profiles) {
           finalUrl: page.url(),
           status: response?.status() ?? null,
           screenshot: imageName,
+          screenshotMode: fullPageScreenshot ? 'full-page' : 'viewport-capped',
+          deviceScaleFactor,
           ...metrics,
           consoleErrors,
           pageErrors,
@@ -208,9 +219,9 @@ const lines = [
   '- Scope: full required layout widths in Chromium plus representative Pixel 7 Chromium, Desktop Safari/WebKit and iPhone WebKit.',
   '- Real physical iPhone sign-off remains separate; WebKit emulation is not real-device evidence.',
   '',
-  '| Browser | Viewport | Screen | Final path | HTTP | Main landmarks | Overflow | Broken images | Page errors | Screenshot |',
-  '|---|---|---|---|---:|---:|---:|---:|---:|---|',
-  ...results.map(result => `| ${result.browserProfile} | ${result.viewport} ${result.width}×${result.height} | ${result.screen} | \`${result.actualPath}\` | ${result.status} | ${result.mainLandmarks} | ${result.overflowPx}px | ${result.brokenImages.length} | ${result.pageErrors.length} | [view](./${result.screenshot}) |`),
+  '| Browser | Viewport | Screen | Final path | HTTP | Main landmarks | Overflow | Broken images | Page errors | Capture | Screenshot |',
+  '|---|---|---|---|---:|---:|---:|---:|---:|---|---|',
+  ...results.map(result => `| ${result.browserProfile} | ${result.viewport} ${result.width}×${result.height} | ${result.screen} | \`${result.actualPath}\` | ${result.status} | ${result.mainLandmarks} | ${result.overflowPx}px | ${result.brokenImages.length} | ${result.pageErrors.length} | ${result.screenshotMode} | [view](./${result.screenshot}) |`),
   '',
   '## Notes',
   '',
