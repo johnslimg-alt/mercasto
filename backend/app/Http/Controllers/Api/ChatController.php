@@ -5,11 +5,10 @@ use App\Models\Ad;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Events\MessageSent;
+use App\Events\NewNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use App\Jobs\SendHuaweiPushNotification;
-use App\Jobs\SendMobilePushNotification;
 use App\Jobs\SendTelegramMessageNotification;
 
 class ChatController extends Controller {
@@ -57,6 +56,13 @@ class ChatController extends Controller {
                 'read_at' => now(),
                 'is_read' => true,
             ]);
+
+        DB::table('user_notifications')
+            ->where('user_id', $userId)
+            ->where('type', 'message')
+            ->where('link', $this->conversationLink((int) $conversation->id))
+            ->where('is_read', false)
+            ->update(['is_read' => true, 'updated_at' => now()]);
 
         $conversation->forceFill($conversation->buyer_id === $userId
             ? ['buyer_unread_count' => 0]
@@ -151,10 +157,14 @@ class ChatController extends Controller {
                 $data['content'],
                 $ad->title
             );
-            $this->dispatchNativeMessagePush(
+            $this->notifyMessageRecipient(
                 $receiverId,
                 (int) $conversation->id,
                 $adId,
+                (string) $request->user()->name,
+                (string) $ad->title,
+                (string) $data['content'],
+                $userId,
             );
 
             return response()->json($this->formatMessage($message->load('sender:id,name,avatar_url', 'conversation.ad:id,title,price,image_url'), $userId));
@@ -174,30 +184,61 @@ class ChatController extends Controller {
         return response()->json($message->load('sender:id,name,avatar_url'));
     }
 
-    private function dispatchNativeMessagePush(
+    private function notifyMessageRecipient(
         int $receiverId,
         int $conversationId,
         int $adId,
+        string $senderName,
+        string $adTitle,
+        string $content,
+        int $senderId,
     ): void {
-        $data = [
-            'type' => 'message',
+        $link = $this->conversationLink($conversationId);
+        $now = now();
+        $payload = [
             'conversation_id' => $conversationId,
             'listing_id' => $adId,
             'ad_id' => $adId,
+            'sender_id' => $senderId,
+            'sender_name' => $senderName,
+            'ad_title' => $adTitle,
+        ];
+        $notification = [
+            'user_id' => $receiverId,
+            'title' => $senderName,
+            'message' => str($content)->limit(180)->toString(),
+            'is_read' => false,
+            'type' => 'message',
+            'data' => json_encode($payload, JSON_THROW_ON_ERROR),
+            'link' => $link,
+            'created_at' => $now,
+            'updated_at' => $now,
         ];
 
-        SendMobilePushNotification::dispatch(
-            $receiverId,
-            'Mercasto',
-            'Tienes un nuevo mensaje.',
-            $data,
-        );
-        SendHuaweiPushNotification::dispatch(
-            $receiverId,
-            'Mercasto',
-            'Tienes un nuevo mensaje.',
-            $data,
-        );
+        $existingId = DB::table('user_notifications')
+            ->where('user_id', $receiverId)
+            ->where('type', 'message')
+            ->where('link', $link)
+            ->where('is_read', false)
+            ->value('id');
+
+        if ($existingId) {
+            DB::table('user_notifications')->where('id', $existingId)->update($notification);
+            $notification['id'] = (int) $existingId;
+        } else {
+            $notification['id'] = DB::table('user_notifications')->insertGetId($notification);
+        }
+
+        $notification['data'] = $payload;
+        $notification['replaces_unread'] = (bool) $existingId;
+        $notification['created_at'] = $now->toISOString();
+        $notification['updated_at'] = $now->toISOString();
+        broadcast(new NewNotification($receiverId, $notification))->toOthers();
+    }
+
+    private function conversationLink(int $conversationId): string
+    {
+        return '/mensajes?conversation=' . $conversationId;
     }
 
     private function authorizeConversation(Conversation $conversation, int $userId): void

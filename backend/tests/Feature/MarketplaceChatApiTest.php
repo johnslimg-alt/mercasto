@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\MessageSent;
 use App\Jobs\SendHuaweiPushNotification;
 use App\Jobs\SendMobilePushNotification;
+use App\Jobs\SendWebPushNotification;
 use App\Jobs\SendTelegramMessageNotification;
 use App\Models\Ad;
 use App\Models\Conversation;
@@ -67,6 +68,14 @@ class MarketplaceChatApiTest extends TestCase
             'content' => '¿Sigue disponible?',
             'body' => '¿Sigue disponible?',
         ]);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $seller->id,
+            'title' => $buyer->name,
+            'message' => '¿Sigue disponible?',
+            'is_read' => false,
+            'type' => 'message',
+            'link' => "/mensajes?conversation={$conversation->id}",
+        ]);
 
         Event::assertDispatched(MessageSent::class);
         Queue::assertPushed(SendTelegramMessageNotification::class, fn ($job) =>
@@ -84,6 +93,50 @@ class MarketplaceChatApiTest extends TestCase
             && ($job->data['conversation_id'] ?? null) === $conversation->id
             && ($job->data['listing_id'] ?? null) === $ad->id
         );
+        Queue::assertPushed(SendWebPushNotification::class, fn ($job) =>
+            $job->userId === $seller->id
+            && ($job->data['type'] ?? null) === 'message'
+            && ($job->data['conversation_id'] ?? null) === $conversation->id
+            && ($job->data['url'] ?? null) === "/mensajes?conversation={$conversation->id}"
+        );
+    }
+
+    public function test_unread_message_notifications_coalesce_per_conversation_and_clear_on_read(): void
+    {
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create();
+        $ad = $this->createAd($seller);
+
+        foreach (['Primer mensaje', 'Segundo mensaje'] as $content) {
+            $this->actingAs($buyer, 'sanctum')->postJson('/api/chat/messages', [
+                'receiver_id' => $seller->id,
+                'ad_id' => $ad->id,
+                'content' => $content,
+            ])->assertOk();
+        }
+
+        $conversation = Conversation::query()->sole();
+        $this->assertSame(2, $conversation->fresh()->seller_unread_count);
+        $this->assertDatabaseCount('user_notifications', 1);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $seller->id,
+            'message' => 'Segundo mensaje',
+            'is_read' => false,
+            'type' => 'message',
+            'link' => "/mensajes?conversation={$conversation->id}",
+        ]);
+
+        $this->actingAs($seller, 'sanctum')
+            ->getJson("/api/chat/conversations/{$conversation->id}/messages")
+            ->assertOk();
+
+        $this->assertSame(0, $conversation->fresh()->seller_unread_count);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $seller->id,
+            'type' => 'message',
+            'link' => "/mensajes?conversation={$conversation->id}",
+            'is_read' => true,
+        ]);
     }
 
     public function test_buyer_cannot_redirect_an_ad_message_to_an_unrelated_user(): void

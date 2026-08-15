@@ -1872,8 +1872,12 @@ function App() {
       }
       channel = echo.private(`App.Models.User.${user.id}`);
       channel.listen('.NewNotification', (e) => {
-          // The actual notification data is inside e.notification
-          setNotifications(prev => [e.notification, ...prev]);
+          const incoming = e.notification;
+          if (!incoming?.id) return;
+          setNotifications(prev => [incoming, ...prev.filter(item => item.id !== incoming.id)]);
+          if (!incoming.is_read && !incoming.replaces_unread) {
+            setUnreadCount(prev => prev + 1);
+          }
       });
     });
     return () => {
@@ -1996,16 +2000,22 @@ function App() {
       const res = await fetch(`${API_URL}/user/notifications/list`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(
-          Array.isArray(data)
-            ? data
-            : (Array.isArray(data?.data) ? data.data : [])
-        );
+        const items = Array.isArray(data)
+          ? data
+          : (Array.isArray(data?.data) ? data.data : []);
+        setNotifications(items);
+        setUnreadCount(items.filter(item => !item.is_read).length);
       }
     } catch (err) { console.error("Error fetching notifications", err); }
   }, [user]);
 
-  useEffect(() => { loadNotifications(); }, [loadNotifications]);
+  useEffect(() => { loadNotifications(); }, [loadNotifications, location.pathname]);
+
+  useEffect(() => {
+    const syncNotifications = () => loadNotifications();
+    window.addEventListener('mercasto:notifications-changed', syncNotifications);
+    return () => window.removeEventListener('mercasto:notifications-changed', syncNotifications);
+  }, [loadNotifications]);
 
   useEffect(() => {
     if (!user) {
@@ -3932,9 +3942,9 @@ function App() {
           <Plus className="w-7 h-7 stroke-[3]" />
         </div>
       </button>
-      <button aria-label={t.notifications || 'Notificaciones'} onClick={() => { user ? (setCurrentTab('profile'), setDashboardTab('notifications'), navigate('/profile')) : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${currentTab === 'profile' && dashboardTab === 'notifications' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button data-testid="mobile-notifications-tab" aria-label={t.notifications || 'Notificaciones'} onClick={() => { user ? navigate('/notificaciones') : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${location.pathname === '/notificaciones' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Bell className="w-6 h-6 mb-1" />
-        {notifications.filter(n => !n.is_read).length > 0 && <span className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
+        {unreadCount > 0 && <span data-testid="mobile-notifications-unread" className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
       </button>
       <button onClick={() => setShowTabBarMenu(v => !v)} className={`flex flex-col items-center p-1 ${showTabBarMenu ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`} aria-expanded={showTabBarMenu} aria-label={t.global_menu || 'Menú global'}>
         <Menu className="w-6 h-6 mb-1" />
