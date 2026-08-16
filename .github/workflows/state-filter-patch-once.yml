@@ -24,34 +24,19 @@ jobs:
           from pathlib import Path
           p = Path('backend/app/Http/Controllers/Api/AdController.php')
           s = p.read_text()
-          old = """        if ($request->filled('state')) {
-              $state = trim((string) $request->state);
-
-              if ($state !== '') {
-                  $query->whereRaw('state ILIKE ?', [$state]);
-              }
-          }
-          """
-          new = """        if ($request->filled('state')) {
-              $state = trim((string) $request->state);
-
-              if ($state !== '') {
-                  $locationLike = '%' . $state . '%';
-                  $query->where(function ($q) use ($state, $locationLike) {
-                      $q->whereRaw('state ILIKE ?', [$state])
-                          ->orWhereRaw('location ILIKE ?', [$locationLike]);
-                  });
-              }
-          }
-          """
-          if old not in s:
-              raise SystemExit('target state filter block not found')
+          old = "                $query->whereRaw('state ILIKE ?', [$state]);"
+          new = """                $locationLike = '%' . $state . '%';
+                          $query->where(function ($q) use ($state, $locationLike) {
+                              $q->whereRaw('state ILIKE ?', [$state])
+                                  ->orWhereRaw('location ILIKE ?', [$locationLike]);
+                          });"""
+          if s.count(old) != 1:
+              raise SystemExit(f'expected exactly one state filter line, found {s.count(old)}')
           p.write_text(s.replace(old, new, 1))
 
           p = Path('backend/tests/Feature/AdIndexSearchTest.php')
           s = p.read_text()
-          needle = """    public function test_similar_ads_falls_back_to_category_without_a_canonical_vector(): void
-          """
+          needle = '    public function test_similar_ads_falls_back_to_category_without_a_canonical_vector(): void\n'
           test = """    public function test_state_filter_falls_back_to_legacy_combined_location(): void
               {
                   Http::preventStrayRequests();
@@ -70,8 +55,8 @@ jobs:
               }
 
           """
-          if needle not in s:
-              raise SystemExit('test insertion point not found')
+          if s.count(needle) != 1:
+              raise SystemExit(f'expected one test insertion point, found {s.count(needle)}')
           p.write_text(s.replace(needle, test + needle, 1))
           PY
           git diff --check
