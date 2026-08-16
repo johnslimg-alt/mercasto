@@ -76,12 +76,22 @@ jobs:
           cd "$PROJECT_DIR"
           npm run verify:quick
 
-      - name: Audit catalog coverage and active content quality
+      - name: Dry-run catalog coverage maintenance
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR"
           docker exec mercasto_backend_container php artisan ads:ensure-catalog-coverage --minimum=4 --dry-run
+
+      - name: Audit catalog coverage
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
           docker exec mercasto_backend_container php artisan ads:audit-catalog-coverage --minimum=4
+
+      - name: Audit active content quality
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
           docker exec mercasto_backend_container php artisan ads:audit-active-content-quality --limit-groups=12
 
       - name: Probe critical public endpoints
