@@ -43,4 +43,4 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          bash scripts/lmstudio-vision-benchmark.sh
+          bash scripts/lmstudio-sdk-benchmark-wrapper.sh
