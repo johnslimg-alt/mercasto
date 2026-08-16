@@ -2,17 +2,14 @@ name: Patch state filter compatibility once
 
 on:
   push:
-    branches:
-      - fix/state-filter-location-fallback
-    paths:
-      - .github/workflows/state-filter-patch-once.yml
+    branches: [fix/state-filter-location-fallback]
+    paths: [.github/workflows/state-filter-patch-once.yml]
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: contains(github.event.head_commit.message, 'ops: patch state filter compatibility once')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -20,13 +17,14 @@ jobs:
           ref: fix/state-filter-location-fallback
           fetch-depth: 0
       - name: Patch legacy state filtering and regression test
+        shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('backend/app/Http/Controllers/Api/AdController.php')
-          s=p.read_text()
-          old="""        if ($request->filled('state')) {
+          p = Path('backend/app/Http/Controllers/Api/AdController.php')
+          s = p.read_text()
+          old = """        if ($request->filled('state')) {
               $state = trim((string) $request->state);
 
               if ($state !== '') {
@@ -34,7 +32,7 @@ jobs:
               }
           }
           """
-          new="""        if ($request->filled('state')) {
+          new = """        if ($request->filled('state')) {
               $state = trim((string) $request->state);
 
               if ($state !== '') {
@@ -48,13 +46,13 @@ jobs:
           """
           if old not in s:
               raise SystemExit('target state filter block not found')
-          p.write_text(s.replace(old,new,1))
+          p.write_text(s.replace(old, new, 1))
 
-          p=Path('backend/tests/Feature/AdIndexSearchTest.php')
-          s=p.read_text()
-          needle="""    public function test_similar_ads_falls_back_to_category_without_a_canonical_vector(): void
+          p = Path('backend/tests/Feature/AdIndexSearchTest.php')
+          s = p.read_text()
+          needle = """    public function test_similar_ads_falls_back_to_category_without_a_canonical_vector(): void
           """
-          test="""    public function test_state_filter_falls_back_to_legacy_combined_location(): void
+          test = """    public function test_state_filter_falls_back_to_legacy_combined_location(): void
               {
                   Http::preventStrayRequests();
 
@@ -74,7 +72,7 @@ jobs:
           """
           if needle not in s:
               raise SystemExit('test insertion point not found')
-          p.write_text(s.replace(needle,test+needle,1))
+          p.write_text(s.replace(needle, test + needle, 1))
           PY
           git diff --check
           git config user.name github-actions[bot]
