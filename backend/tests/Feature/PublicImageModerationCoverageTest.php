@@ -26,6 +26,9 @@ class PublicImageModerationCoverageTest extends TestCase
             $this->assertStringContainsString($marker, $middleware, $marker);
         }
 
+        $this->assertStringContainsString("Auth::guard('sanctum')->user()", $middleware);
+        $this->assertStringContainsString('RateLimiter::tooManyAttempts', $middleware);
+        $this->assertStringContainsString('RateLimiter::hit', $middleware);
         $this->assertStringContainsString('function uploadAvatar', $profile);
         $this->assertStringContainsString("'avatar' => 'nullable|file|mimes:jpg,jpeg,png,webp", $profile);
         $this->assertStringContainsString('function uploadLogo', $business);
