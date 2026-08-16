@@ -9,6 +9,19 @@ use RuntimeException;
 
 class RepairCatalogFillers extends Command
 {
+    private const LEGACY_LOCATION_MAP = [
+        'ciudad de méxico, cdmx' => ['Ciudad de México', 'Ciudad de México'],
+        'guadalajara, jal' => ['Guadalajara', 'Jalisco'],
+        'monterrey, nl' => ['Monterrey', 'Nuevo León'],
+        'puebla, pue' => ['Puebla', 'Puebla'],
+        'querétaro, qro' => ['Querétaro', 'Querétaro'],
+        'cancún, roo' => ['Cancún', 'Quintana Roo'],
+        'mérida, yuc' => ['Mérida', 'Yucatán'],
+        'tijuana, bc' => ['Tijuana', 'Baja California'],
+        'león, gto' => ['León', 'Guanajuato'],
+        'veracruz, ver' => ['Veracruz', 'Veracruz'],
+    ];
+
     protected $signature = 'ads:repair-catalog-fillers {--apply : Apply repairs; without this flag the command is read-only}';
     protected $description = 'Repair active editorial catalog references without modifying genuine user listings.';
 
@@ -22,12 +35,13 @@ class RepairCatalogFillers extends Command
         $this->info("Active catalog references: {$total}");
 
         if (! $this->option('apply')) {
-            $this->comment('Preview only. Pass --apply to replace legacy filler images with unique local editorial covers and approve the editorial references.');
+            $this->comment('Preview only. Pass --apply to replace legacy filler images with unique local editorial covers, approve editorial references, and restore structured geography from known legacy seed locations.');
             return self::SUCCESS;
         }
 
         $updated = 0;
-        $query->orderBy('id')->chunkById(200, function ($ads) use (&$updated): void {
+        $geographyNormalized = 0;
+        $query->orderBy('id')->chunkById(200, function ($ads) use (&$updated, &$geographyNormalized): void {
             foreach ($ads as $ad) {
                 $path = 'ads/catalog/reference-' . $ad->id . '.svg';
                 if (! Storage::disk('public')->put($path, $this->coverSvg($ad))) {
@@ -51,12 +65,29 @@ class RepairCatalogFillers extends Command
                 ];
 
                 $location = trim((string) $ad->location);
+                $city = trim((string) $ad->city);
+                $state = trim((string) $ad->state);
+
                 if ($location === '') {
-                    $city = trim((string) $ad->city);
-                    $state = trim((string) $ad->state);
                     $parts = array_values(array_unique(array_filter([$city, $state], fn (string $part): bool => $part !== '')));
                     if ($parts !== []) {
                         $repair['location'] = implode(', ', $parts);
+                    }
+                } else {
+                    $legacyGeography = $this->legacyGeography($location);
+                    if ($legacyGeography !== null && ($city === '' || $state === '')) {
+                        [$legacyCity, $legacyState] = $legacyGeography;
+                        if ($city === '') {
+                            $repair['city'] = $legacyCity;
+                        }
+                        if ($state === '') {
+                            $repair['state'] = $legacyState;
+                        }
+                        $repair['location'] = implode(', ', [
+                            $city !== '' ? $city : $legacyCity,
+                            $state !== '' ? $state : $legacyState,
+                        ]);
+                        $geographyNormalized++;
                     }
                 }
 
@@ -65,8 +96,15 @@ class RepairCatalogFillers extends Command
             }
         });
 
-        $this->info("Catalog filler repair complete: {$updated} active reference(s) normalized.");
+        $this->info("Catalog filler repair complete: {$updated} active reference(s) normalized; {$geographyNormalized} legacy geography record(s) restored.");
         return self::SUCCESS;
+    }
+
+    private function legacyGeography(string $location): ?array
+    {
+        $key = mb_strtolower(preg_replace('/\s+/', ' ', trim($location)) ?? trim($location), 'UTF-8');
+
+        return self::LEGACY_LOCATION_MAP[$key] ?? null;
     }
 
     private function coverSvg(Ad $ad): string
