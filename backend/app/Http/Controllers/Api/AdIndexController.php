@@ -103,7 +103,14 @@ class AdIndexController extends Controller
             $state = trim((string) $request->state);
 
             if ($state !== '') {
-                $query->whereRaw('state ILIKE ?', [$state]);
+                $normalizedState = mb_strtolower($state, 'UTF-8');
+                $stateLike = $this->caseInsensitiveContainsExpression('state');
+                $locationLike = $this->caseInsensitiveContainsExpression('location');
+
+                $query->where(function ($q) use ($normalizedState, $stateLike, $locationLike): void {
+                    $q->whereRaw($stateLike, [$normalizedState])
+                        ->orWhereRaw($locationLike, ['%' . $normalizedState . '%']);
+                });
             }
         }
 

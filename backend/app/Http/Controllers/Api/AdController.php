@@ -302,7 +302,11 @@ class AdController extends Controller
             $state = trim((string) $request->state);
 
             if ($state !== '') {
-                $query->whereRaw('state ILIKE ?', [$state]);
+                $locationLike = '%' . $state . '%';
+                $query->where(function ($q) use ($state, $locationLike) {
+                    $q->whereLike('state', $state)
+                        ->orWhereLike('location', $locationLike);
+                });
             }
         }
 
