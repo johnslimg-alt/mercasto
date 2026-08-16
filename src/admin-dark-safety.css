@@ -1,0 +1,68 @@
+/*
+ * Admin dark-mode compatibility layer.
+ *
+ * AdminScreen still contains a number of semantic light utility surfaces from the
+ * original light-only dashboard (success/error/warning/info badges and actions).
+ * The shared dashboard safety layer in index.css already normalizes white/slate/
+ * gray utilities. Keep semantic colors here so dark mode preserves meaning without
+ * leaving bright cards or pills inside the admin shell.
+ */
+html.dark .dashboard-dark-scope :is(.bg-emerald-50, .bg-emerald-100) {
+  background-color: rgb(2 44 34 / 0.72) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.bg-red-50, .bg-red-100) {
+  background-color: rgb(69 10 10 / 0.72) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.bg-amber-50, .bg-amber-100) {
+  background-color: rgb(69 26 3 / 0.72) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.bg-blue-50, .bg-blue-100) {
+  background-color: rgb(23 37 84 / 0.72) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.bg-lime-50, .bg-lime-100) {
+  background-color: rgb(26 46 5 / 0.72) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.border-emerald-100, .border-emerald-200) {
+  border-color: rgb(6 95 70 / 0.75) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.border-red-100, .border-red-200) {
+  border-color: rgb(153 27 27 / 0.65) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.border-amber-100, .border-amber-200) {
+  border-color: rgb(146 64 14 / 0.65) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.border-blue-100, .border-blue-200) {
+  border-color: rgb(30 64 175 / 0.65) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.border-lime-100, .border-lime-200) {
+  border-color: rgb(77 124 15 / 0.7) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.text-emerald-600, .text-emerald-700) {
+  color: rgb(110 231 183) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.text-red-600, .text-red-700) {
+  color: rgb(252 165 165) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.text-amber-700, .text-amber-900) {
+  color: rgb(253 230 138) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.text-blue-600, .text-blue-700) {
+  color: rgb(147 197 253) !important;
+}
+
+html.dark .dashboard-dark-scope :is(.text-lime-700, .text-lime-800) {
+  color: rgb(190 242 100) !important;
+}
