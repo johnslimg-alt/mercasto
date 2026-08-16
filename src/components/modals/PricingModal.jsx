@@ -103,6 +103,7 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                       <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_promote_ad_hint || 'El paquete se aplicará solo al anuncio seleccionado.'}</p>
                     </div>
                     <select
+                      aria-label={t.pm_promote_ad_label || 'Anuncio a promocionar'}
                       value={promotionTargetAdId}
                       onChange={(e) => setPromotionTargetAdId(e.target.value)}
                       className="w-full md:w-[360px] px-3.5 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-[14px] outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16]"
@@ -130,14 +131,14 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_boost_1d_name || 'Subir 24 horas'}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_boost_1d_desc || 'Reposiciona tu anuncio al inicio por 1 día'}</p>
                         </div>
-                        <button onClick={() => handlePromotionProductPayment(19, t.pm_boost_1d_name || 'Subir 24 horas', 'boost_1_day')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$19</button>
+                        <button aria-label={`${t.pm_boost_1d_name || 'Subir 24 horas'} — $19`} onClick={() => handlePromotionProductPayment(19, t.pm_boost_1d_name || 'Subir 24 horas', 'boost_1_day')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$19</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_boost_3d_name || 'Subir 3 días'}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_boost_3d_desc || 'Reposiciona al inicio cada día por 3 días'}</p>
                         </div>
-                        <button onClick={() => handlePromotionProductPayment(49, t.pm_boost_3d_name || 'Subir 3 días', 'boost_3_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$49</button>
+                        <button aria-label={`${t.pm_boost_3d_name || 'Subir 3 días'} — $49`} onClick={() => handlePromotionProductPayment(49, t.pm_boost_3d_name || 'Subir 3 días', 'boost_3_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$49</button>
                       </div>
                     </div>
                   </div>
@@ -151,14 +152,14 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_highlight_7d_name || 'Resaltar 7 días'}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_highlight_7d_desc || 'Fondo llamativo en los resultados'}</p>
                         </div>
-                        <button onClick={() => handlePromotionProductPayment(79, t.pm_highlight_7d_name || 'Resaltar 7 días', 'highlight_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$79</button>
+                        <button aria-label={`${t.pm_highlight_7d_name || 'Resaltar 7 días'} — $79`} onClick={() => handlePromotionProductPayment(79, t.pm_highlight_7d_name || 'Resaltar 7 días', 'highlight_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$79</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_featured_7d_name || 'Destacado 7 días'}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_featured_7d_desc || 'Etiqueta dorada y mayor exposición'}</p>
                         </div>
-                        <button onClick={() => handlePromotionProductPayment(149, t.pm_featured_7d_name || 'Destacado 7 días', 'featured_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$149</button>
+                        <button aria-label={`${t.pm_featured_7d_name || 'Destacado 7 días'} — $149`} onClick={() => handlePromotionProductPayment(149, t.pm_featured_7d_name || 'Destacado 7 días', 'featured_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$149</button>
                       </div>
                     </div>
                   </div>
@@ -172,14 +173,14 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_featured_30d_name || 'Destacado 30 días'}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_featured_30d_desc || 'Súper exposición por un mes completo'}</p>
                         </div>
-                        <button onClick={() => handlePromotionProductPayment(399, t.pm_featured_30d_name || 'Destacado 30 días', 'featured_30_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
+                        <button aria-label={`${t.pm_featured_30d_name || 'Destacado 30 días'} — $399`} onClick={() => handlePromotionProductPayment(399, t.pm_featured_30d_name || 'Destacado 30 días', 'featured_30_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_top_category_name || 'Top categoría 7 días'}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_top_category_desc || 'Anuncio fijo al inicio de su categoría'}</p>
                         </div>
-                        <button onClick={() => handlePromotionProductPayment(399, t.pm_top_category_name || 'Top categoría 7 días', 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
+                        <button aria-label={`${t.pm_top_category_name || 'Top categoría 7 días'} — $399`} onClick={() => handlePromotionProductPayment(399, t.pm_top_category_name || 'Top categoría 7 días', 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
                       </div>
                     </div>
                   </div>
@@ -202,8 +203,9 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
                     <div className="flex-1">
-                      <label className="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-1 block">{t.pm_custom_amount || 'Monto personalizado'}</label>
+                      <label htmlFor="pricing-custom-credits-amount" className="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-1 block">{t.pm_custom_amount || 'Monto personalizado'}</label>
                       <input
+                        id="pricing-custom-credits-amount"
                         type="number"
                         min="50"
                         max="5000"

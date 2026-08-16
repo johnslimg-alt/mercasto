@@ -81,6 +81,21 @@ test('pricing modal chunk and keyboard focus stay correct on desktop and mobile 
     await expect(closeButton).toBeFocused();
     await closeButton.press('Shift+Tab');
     await expect.poll(() => dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+
+    await dialog.getByRole('button', { name: t.pm_tab_promos, exact: true }).click();
+    await expect(dialog.getByRole('combobox', { name: t.pm_promote_ad_label, exact: true })).toBeVisible();
+    await expect(dialog.getByRole('spinbutton', { name: t.pm_custom_amount, exact: true })).toBeVisible();
+    for (const [label, price] of [
+      [t.pm_boost_1d_name, '$19'],
+      [t.pm_boost_3d_name, '$49'],
+      [t.pm_highlight_7d_name, '$79'],
+      [t.pm_featured_7d_name, '$149'],
+      [t.pm_featured_30d_name, '$399'],
+      [t.pm_top_category_name, '$399'],
+    ]) {
+      await expect(dialog.getByRole('button', { name: `${label} — ${price}`, exact: true })).toBeVisible();
+    }
+
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(opener).toBeFocused();
@@ -119,6 +134,7 @@ for (const viewport of [
     await couponOpener.focus();
     await couponOpener.press('Enter');
     const couponDialog = page.getByRole('dialog', { name: t.redeem_coupon_title });
+    await expect(couponDialog.getByRole('textbox', { name: t.coupon_code_placeholder, exact: true })).toBeVisible();
     const couponClose = couponDialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
     await expect(couponClose).toBeFocused();
     await couponClose.press('Shift+Tab');
