@@ -19,9 +19,6 @@ use App\Models\Ad;
 
 $locations = Ad::query()
     ->where("status", "active")
-    ->where(function ($query): void {
-        $query->whereNull("state")->orWhere("state", "");
-    })
     ->whereNotNull("location")
     ->where("location", "like", "%,%")
     ->pluck("location");
@@ -43,43 +40,70 @@ foreach ($locations as $location) {
 }
 
 uasort($segments, fn (array $a, array $b): int => $b["count"] <=> $a["count"]);
-$selected = reset($segments);
-if (! is_array($selected) || empty($selected["label"])) {
-    fwrite(STDERR, "No active legacy combined-location candidate is available for the state-filter smoke.\n");
+$selected = null;
+
+foreach ($segments as $segment) {
+    $label = $segment["label"];
+    $length = mb_strlen($label, "UTF-8");
+    $probes = [$label];
+
+    // Once structured geography is fully repaired, the compatibility path can still
+    // be exercised with a proper substring of the persisted combined location.
+    // This keeps the smoke independent of intentionally cleaned legacy rows.
+    if ($length >= 5) {
+        $probes[] = mb_substr($label, 1, null, "UTF-8");
+    }
+    if ($length >= 7) {
+        $probes[] = mb_substr($label, 0, $length - 1, "UTF-8");
+    }
+
+    foreach (array_values(array_unique($probes)) as $probe) {
+        if (mb_strlen($probe, "UTF-8") < 3 || ! preg_match("/\\p{L}/u", $probe)) {
+            continue;
+        }
+
+        $locationPattern = "%{$probe}%";
+        $structured = Ad::query()
+            ->where("status", "active")
+            ->whereRaw("state ILIKE ?", [$probe])
+            ->count();
+
+        $fallbackOnly = Ad::query()
+            ->where("status", "active")
+            ->where(function ($query) use ($probe): void {
+                $query->whereNull("state")
+                    ->orWhereRaw("state NOT ILIKE ?", [$probe]);
+            })
+            ->whereRaw("location ILIKE ?", [$locationPattern])
+            ->count();
+
+        $expected = Ad::query()
+            ->where("status", "active")
+            ->where(function ($query) use ($probe, $locationPattern): void {
+                $query->whereRaw("state ILIKE ?", [$probe])
+                    ->orWhereRaw("location ILIKE ?", [$locationPattern]);
+            })
+            ->count();
+
+        if ($fallbackOnly > 0 && $expected > $structured) {
+            $selected = [
+                "state" => $probe,
+                "source_state" => $label,
+                "structured" => $structured,
+                "fallback_only" => $fallbackOnly,
+                "expected" => $expected,
+            ];
+            break 2;
+        }
+    }
+}
+
+if (! is_array($selected)) {
+    fwrite(STDERR, "No active combined-location probe can exercise the state-filter fallback.\n");
     exit(2);
 }
 
-$state = $selected["label"];
-$locationPattern = "%{$state}%";
-
-$structured = Ad::query()
-    ->where("status", "active")
-    ->whereRaw("state ILIKE ?", [$state])
-    ->count();
-
-$fallbackOnly = Ad::query()
-    ->where("status", "active")
-    ->where(function ($query) use ($state): void {
-        $query->whereNull("state")
-            ->orWhereRaw("state NOT ILIKE ?", [$state]);
-    })
-    ->whereRaw("location ILIKE ?", [$locationPattern])
-    ->count();
-
-$expected = Ad::query()
-    ->where("status", "active")
-    ->where(function ($query) use ($state, $locationPattern): void {
-        $query->whereRaw("state ILIKE ?", [$state])
-            ->orWhereRaw("location ILIKE ?", [$locationPattern]);
-    })
-    ->count();
-
-echo json_encode([
-    "state" => $state,
-    "structured" => $structured,
-    "fallback_only" => $fallbackOnly,
-    "expected" => $expected,
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+echo json_encode($selected, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 ' > "$db_file"
 
 read_json_field() {
@@ -95,12 +119,13 @@ read_json_field() {
 }
 
 state="$(read_json_field state)"
+source_state="$(read_json_field source_state)"
 structured="$(read_json_field structured)"
 fallback_only="$(read_json_field fallback_only)"
 expected="$(read_json_field expected)"
 
 if [ "$fallback_only" -le 0 ]; then
-  echo "State-filter smoke cannot prove the legacy fallback: fallback_only=$fallback_only"
+  echo "State-filter smoke cannot prove the location fallback: fallback_only=$fallback_only"
   exit 1
 fi
 
@@ -133,4 +158,4 @@ if [ "$api_total" -ne "$expected" ]; then
   exit 1
 fi
 
-echo "state-filter production smoke OK: candidate=$state structured=$structured fallback_only=$fallback_only api_total=$api_total"
+echo "state-filter production smoke OK: source_state=$source_state probe=$state structured=$structured fallback_only=$fallback_only api_total=$api_total"
