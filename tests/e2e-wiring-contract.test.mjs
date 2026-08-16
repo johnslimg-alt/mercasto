@@ -27,6 +27,7 @@ test('every E2E spec is wired into an executable project surface', () => {
     .filter((name) => name.endsWith('.spec.js'))
     .sort();
   const frontendWorkflow = fs.readFileSync(path.join(WORKFLOW_DIR, 'frontend-quality.yml'), 'utf8');
+  const webkitConfig = fs.readFileSync(path.join(ROOT, 'playwright.config.webkit.js'), 'utf8');
   const wiringText = [
     readTree(WORKFLOW_DIR),
     readTree(SCRIPTS_DIR),
@@ -35,11 +36,17 @@ test('every E2E spec is wired into an executable project surface', () => {
 
   assert.equal((frontendWorkflow.match(/- 'tests\/\*\*'/g) || []).length, 2, 'Frontend Quality must trigger on tests/** for push and pull_request');
   assert.equal((frontendWorkflow.match(/- 'playwright\.config\.\*'/g) || []).length, 2, 'Frontend Quality must trigger on Playwright config changes');
+  assert.match(frontendWorkflow, /name: WebKit public smoke/, 'Frontend Quality must keep the dedicated WebKit smoke job');
+  assert.match(frontendWorkflow, /npx playwright install --with-deps webkit/, 'Frontend Quality must install WebKit for the dedicated smoke job');
+  assert.match(frontendWorkflow, /frontend-quality-shard\.sh webkit-public 4178/, 'Frontend Quality must execute the WebKit public shard');
+  assert.match(frontendWorkflow, /WEBKIT_RESULT: \$\{\{ needs\.webkit\.result \}\}/, 'Frontend Quality aggregate must require the WebKit result');
+  assert.match(webkitConfig, /name: 'webkit-desktop'/, 'WebKit config must keep desktop Safari coverage');
+  assert.match(webkitConfig, /name: 'webkit-mobile'/, 'WebKit config must keep mobile Safari coverage');
 
   const timeoutMinutes = Number(frontendWorkflow.match(/timeout-minutes:\s*(\d+)/)?.[1] || 0);
   assert.ok(timeoutMinutes >= 30, `Frontend Quality timeout is too low for the full browser matrix: ${timeoutMinutes}`);
 
   const orphaned = e2eSpecs.filter((name) => !wiringText.includes(name));
   assert.deepEqual(orphaned, [], `Unwired E2E specs: ${orphaned.join(', ')}`);
-  assert.ok(e2eSpecs.length >= 66, `Unexpected E2E inventory shrink: ${e2eSpecs.length}`);
+  assert.ok(e2eSpecs.length >= 67, `Unexpected E2E inventory shrink: ${e2eSpecs.length}`);
 });
