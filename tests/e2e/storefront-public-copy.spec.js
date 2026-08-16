@@ -162,6 +162,7 @@ for (const viewport of [
   test(`storefront review rating is keyboard-operable on ${viewport.name}`, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium-desktop');
     const viewer = { id: 91, name: 'QA Viewer', email: 'viewer@example.test', role: 'individual', is_verified: true };
+    const t = await expected('es');
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.addInitScript(({ savedUser }) => {
       localStorage.setItem('lang', 'es');
@@ -173,6 +174,8 @@ for (const viewport of [
     await mockApi(page, viewer);
     await page.goto('/?store=77', { waitUntil: 'domcontentloaded' });
 
+    const reviewComment = page.getByRole('textbox', { name: t.review_placeholder, exact: true });
+    await expect(reviewComment).toBeVisible();
     const oneStar = page.getByRole('button', { name: '1 / 5' });
     const fiveStars = page.getByRole('button', { name: '5 / 5' });
     await expect(fiveStars).toHaveAttribute('aria-pressed', 'true');

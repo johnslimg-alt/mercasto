@@ -262,6 +262,40 @@ for (const viewport of [
   });
 }
 
+test('smart moderation rejection comment uses its visible label as the textbox name', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await installAdmin(page, 'en');
+  await mockApi(page);
+  const pending = {
+    id: 501,
+    title: 'QA Pending Ad',
+    description: 'QA moderation description',
+    price: 1200,
+    status: 'pending',
+    moderation_submitted_at: '2026-08-15T18:00:00Z',
+    waiting_seconds: 1800,
+    ai_moderation_status: 'manual_review',
+    images: [],
+    attributes: {},
+    moderation_decisions: [],
+    user: { id: 77, name: 'QA Seller', email: 'seller@example.test', is_verified: true },
+  };
+  await page.route('**/api/admin/moderation/ads**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/admin/moderation/ads/501')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pending) });
+    }
+    if (path.endsWith('/admin/moderation/ads')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [pending], total: 1 }) });
+    }
+    return route.fallback();
+  });
+  await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('admin-smart-moderation-open').click();
+  await page.getByRole('button', { name: /QA Pending Ad/ }).click();
+  await expect(page.getByRole('textbox', { name: 'Comment or rejection reason', exact: true })).toBeVisible();
+});
+
 for (const viewport of [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'mobile', width: 390, height: 844 },

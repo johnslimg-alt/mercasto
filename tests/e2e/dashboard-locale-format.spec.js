@@ -449,6 +449,31 @@ for (const viewport of [
 }
 
 
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`2FA setup code control has a localized accessible name on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installSession(page, 'en');
+    await mockApi(page);
+    await page.route('**/api/user/two-factor-authentication', async route => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        qr_code_url: 'otpauth://totp/Mercasto:qa@example.test?secret=JBSWY3DPEHPK3PXP&issuer=Mercasto',
+        recovery_codes: ['qa-recovery-code'],
+      }) });
+    });
+    await page.goto('/profile');
+    await page.getByTestId('dashboard-tab-settings').click();
+    const t = translations.en;
+    await page.getByRole('button', { name: t.twofa_enable, exact: true }).click();
+    await expect(page.getByRole('textbox', { name: t.auth_code_placeholder, exact: true })).toBeVisible();
+  });
+}
+
 for (const viewport of [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'mobile', width: 390, height: 844 },
