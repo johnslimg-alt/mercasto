@@ -5,6 +5,8 @@ namespace App\Http\Middleware;
 use App\Services\PublicImageModerationService;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 class ModeratePublicImageUploads
@@ -28,8 +30,24 @@ class ModeratePublicImageUploads
                 continue;
             }
 
+            // This group middleware runs before route-level auth/throttle middleware.
+            // Resolve Sanctum here so unauthenticated requests can never consume AI work.
+            $user = $request->user() ?? Auth::guard('sanctum')->user();
+            if (! $user) {
+                break;
+            }
+
+            $key = 'public-image-ai:' . $user->getAuthIdentifier();
+            if (RateLimiter::tooManyAttempts($key, 10)) {
+                return response()->json([
+                    'error' => 'Demasiadas revisiones de imagen. Intenta de nuevo en un momento.',
+                    'retry_after' => RateLimiter::availableIn($key),
+                ], 429);
+            }
+
             $file = $request->file($rule['field']);
             if ($file !== null && $file->isValid()) {
+                RateLimiter::hit($key, 60);
                 $this->moderation->assertApproved($file, $rule['context'], $rule['field']);
             }
             break;
