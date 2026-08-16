@@ -42,3 +42,4 @@ jobs:
           else
             docker exec mercasto_backend_container php artisan ads:ensure-catalog-coverage --minimum="$MINIMUM" --dry-run
           fi
+          docker exec mercasto_backend_container php artisan ads:audit-active-content-quality --limit-groups=12
