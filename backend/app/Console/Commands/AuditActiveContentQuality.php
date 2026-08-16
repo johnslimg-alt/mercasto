@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class AuditActiveContentQuality extends Command
 {
-    protected $signature = 'ads:audit-active-content-quality {--limit-groups=12 : Maximum duplicate groups to print}';
+    protected $signature = 'ads:audit-active-content-quality {--limit-groups=12 : Maximum diagnostic groups to print}';
     protected $description = 'Report active listing quality issues without changing production data.';
 
     public function handle(): int
@@ -36,6 +36,8 @@ class AuditActiveContentQuality extends Command
             'missing_location' => 0,
             'missing_state_or_city' => 0,
             'no_external_contact' => 0,
+            'genuine_no_external_contact' => 0,
+            'catalog_refs_no_external_contact' => 0,
             'orphan_user' => 0,
             'unsplash_primary_image' => 0,
         ];
@@ -43,6 +45,7 @@ class AuditActiveContentQuality extends Command
         $categories = [];
         $images = [];
         $fingerprints = [];
+        $missingGeoLocations = [];
 
         foreach ($ads as $ad) {
             $category = trim((string) $ad->category) ?: '(none)';
@@ -78,12 +81,21 @@ class AuditActiveContentQuality extends Command
             $state = trim((string) $ad->state);
             $city = trim((string) $ad->city);
             if ($location === '' && $state === '' && $city === '') $summary['missing_location']++;
-            if ($state === '' || $city === '') $summary['missing_state_or_city']++;
+            if ($state === '' || $city === '') {
+                $summary['missing_state_or_city']++;
+                $locationKey = $location !== '' ? $location : '(empty location)';
+                $missingGeoLocations[$locationKey] = ($missingGeoLocations[$locationKey] ?? 0) + 1;
+            }
 
             if (! $ad->user) {
                 $summary['orphan_user']++;
             } elseif (! $this->hasExternalContact($ad->user)) {
                 $summary['no_external_contact']++;
+                if ($ad->is_catalog_filler) {
+                    $summary['catalog_refs_no_external_contact']++;
+                } else {
+                    $summary['genuine_no_external_contact']++;
+                }
             }
 
             $primary = $this->primaryImage($ad->image_url);
@@ -104,6 +116,7 @@ class AuditActiveContentQuality extends Command
         }
 
         ksort($categories);
+        arsort($missingGeoLocations);
         $duplicateImages = $this->duplicateGroups($images);
         $duplicateContent = $this->duplicateGroups($fingerprints);
 
@@ -114,6 +127,11 @@ class AuditActiveContentQuality extends Command
                 $category, $row['active'], $row['not_approved'], $row['weak_description'], $row['missing_image'], $row['unsplash_image'],
             ])->values()->all()
         );
+
+        $this->line('missing_geo_location_groups=' . count($missingGeoLocations));
+        foreach (array_slice($missingGeoLocations, 0, $limitGroups, true) as $location => $count) {
+            $this->line('missing geo location=' . $location . ' count=' . $count);
+        }
 
         $this->line('duplicate_primary_image_groups=' . count($duplicateImages));
         $this->line('duplicate_primary_image_ads=' . array_sum(array_map('count', $duplicateImages)));
