@@ -103,6 +103,7 @@ export default function ReferralScreen({ t = {}, lang = 'es' }) {
         <p className="text-sm text-slate-500 dark:text-slate-300 mb-1">{t.referral_link}</p>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <input
+            aria-label={t.referral_link}
             readOnly
             value={data.referral_url}
             onFocus={e => e.target.select()}

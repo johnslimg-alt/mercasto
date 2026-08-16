@@ -1,7 +1,9 @@
+import { useRef } from 'react';
 import { Camera, Loader2, User, XCircle } from 'lucide-react';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function ProfileModal({ handleProfileSubmit, profileForm, profileLoading, setProfileForm, setShowProfileModal, showProfileModal, t }) {
+    const avatarInputRef = useRef(null);
     const closeModal = () => setShowProfileModal(false);
     const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({ isOpen: showProfileModal, onClose: closeModal });
     if (!showProfileModal) return null;
@@ -19,20 +21,20 @@ export default function ProfileModal({ handleProfileSubmit, profileForm, profile
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400"><User size={40} /></div>
                 )}
-                <label className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer transition-colors">
+                <button type="button" aria-label={t.change_photo || 'Cambiar Foto'} onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                   <Camera className="w-8 h-8 text-white" />
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) setProfileForm({ ...profileForm, avatarFile: file, avatarPreview: URL.createObjectURL(file) });
-                  }}/>
-                </label>
+                </button>
+                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) setProfileForm({ ...profileForm, avatarFile: file, avatarPreview: URL.createObjectURL(file) });
+                }}/>
               </div>
               <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">{t.change_photo || 'Cambiar Foto'}</span>
             </div>
 
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.name_label || 'Nombre'}</label>
-              <input value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
+              <label htmlFor="profile-modal-name" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.name_label || 'Nombre'}</label>
+              <input id="profile-modal-name" value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} required className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
             </div>
 
             <button type="submit" disabled={profileLoading} className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] flex justify-center mt-2">

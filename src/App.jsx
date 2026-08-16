@@ -4311,7 +4311,7 @@ function App() {
                 {searchLocation?.lat && (
                   <>
                     <div className="h-7 w-px bg-slate-200"></div>
-                    <select value={radius} onChange={e => setRadius(Number(e.target.value))} className="bg-transparent px-3 py-2.5 text-[13px] outline-none text-slate-700 w-fit cursor-pointer">
+                    <select aria-label={t.filter_global_radius || t.radius} value={radius} onChange={e => setRadius(Number(e.target.value))} className="bg-transparent px-3 py-2.5 text-[13px] outline-none text-slate-700 w-fit cursor-pointer">
                       <option value={5}>+5 km</option>
                       <option value={10}>+10 km</option>
                       <option value={25}>+25 km</option>
@@ -4551,6 +4551,7 @@ function App() {
             {activeCat && getSubcategoryOptions(activeCat, lang) && (
               <div className="mt-2 w-full">
                 <select
+                  aria-label={t.all_subcategories}
                   value={activeSub}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -4589,6 +4590,7 @@ function App() {
                 <div className="relative ml-2 shrink-0 flex items-center">
                   <span className="text-[12px] text-slate-400 mr-2">/</span>
                   <select
+                    aria-label={t.all_subcategories}
                     value={activeSub}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -4814,7 +4816,7 @@ function App() {
               </p>
               <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">{t.auth_two_factor_desc}</p>
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
-                <input name="code" required autoFocus placeholder={t.auth_two_factor_placeholder} maxLength="32" className="w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                <input name="code" aria-label={t.auth_two_factor_placeholder} required autoFocus placeholder={t.auth_two_factor_placeholder} maxLength="32" className="w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                 <div className="pt-2">
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">
                     {authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_two_factor_verify}
@@ -4832,13 +4834,13 @@ function App() {
 
               {authMode === 'phone_request' ? (
                 <form onSubmit={handlePhoneRequestSubmit} className="space-y-3.5">
-                  <input name="phone_number" required type="tel" placeholder={t.auth_phone_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                  <input name="phone_number" aria-label={t.auth_phone_placeholder} required type="tel" placeholder={t.auth_phone_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#0F172A] text-white hover:bg-black flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_sms_receive}</button>
                 </form>
               ) : (
                 <form onSubmit={handlePhoneVerifySubmit} className="space-y-3.5">
                   <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] -mt-2 mb-4">{t.auth_code_sent_to} <br/><strong>{authPhone}</strong></p>
-                  <input name="code" required autoFocus placeholder={t.auth_code_placeholder} maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
+                  <input name="code" aria-label={t.auth_code_placeholder} required autoFocus placeholder={t.auth_code_placeholder} maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                   <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_phone_verify}</button>
                 </form>
               )}

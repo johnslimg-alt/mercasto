@@ -246,6 +246,7 @@ export default function SidebarFilters({
                   isMobile ? (
                     <div className="relative">
                       <select
+                        aria-label={fieldLabel}
                         data-testid={`sidebar-category-filter-${fieldId}`}
                         value={dynamicFilters[fieldId]?.[0] || ''}
                         onChange={e => {
@@ -273,7 +274,7 @@ export default function SidebarFilters({
 
                 {field.type === 'select' && Array.isArray(field.options) && (
                   <div className="relative">
-                    <select data-testid={`sidebar-category-filter-${fieldId}`} value={dynamicFilters[fieldId] || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} className={`${selectClass} appearance-none`}>
+                    <select aria-label={fieldLabel} data-testid={`sidebar-category-filter-${fieldId}`} value={dynamicFilters[fieldId] || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} className={`${selectClass} appearance-none`}>
                       <option value="">{anyLabel}</option>
                       {field.options.map(opt => { const value = filterOptionValue(opt); return <option key={value} value={value}>{filterOptionDisplayLabel(fieldId, opt, lang)}</option>; })}
                     </select>
@@ -282,14 +283,14 @@ export default function SidebarFilters({
                 )}
 
                 {field.type === 'text' && (
-                  <input type="text" value={dynamicFilters[fieldId] || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} placeholder={field.placeholder || ''} className={inputClass} />
+                  <input aria-label={fieldLabel} type="text" value={dynamicFilters[fieldId] || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} placeholder={field.placeholder || ''} className={inputClass} />
                 )}
 
                 {field.type === 'range' && (
                   <div className="flex items-center gap-2">
-                    <input type="number" placeholder={field.minPlaceholder || tr('from')} value={(dynamicFilters[fieldId] || {}).min || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), min: e.target.value })} className={inputClass} />
+                    <input aria-label={`${fieldLabel} ${field.minPlaceholder || tr('from')}`} type="number" placeholder={field.minPlaceholder || tr('from')} value={(dynamicFilters[fieldId] || {}).min || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), min: e.target.value })} className={inputClass} />
                     <span className="text-slate-400">-</span>
-                    <input type="number" placeholder={field.maxPlaceholder || tr('to')} value={(dynamicFilters[fieldId] || {}).max || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), max: e.target.value })} className={inputClass} />
+                    <input aria-label={`${fieldLabel} ${field.maxPlaceholder || tr('to')}`} type="number" placeholder={field.maxPlaceholder || tr('to')} value={(dynamicFilters[fieldId] || {}).max || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), max: e.target.value })} className={inputClass} />
                   </div>
                 )}
               </div>

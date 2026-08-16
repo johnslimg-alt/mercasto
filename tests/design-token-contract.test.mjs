@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const css = fs.readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
 const doc = fs.readFileSync(new URL('../docs/design/token-contract.md', import.meta.url), 'utf8');
+const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 const expected = {
   '--mc-brand': '#84CC16',
@@ -38,6 +39,9 @@ test('web design tokens match the shared Mercasto contract', () => {
     assert.equal(valueOf(token), value, token);
   }
   assert.match(css, /--mc-design-contract:\s*'2026-08-04'/);
+  assert.match(css, /@import ['"]@fontsource-variable\/inter['"]/);
+  assert.doesNotMatch(css, /fonts\.(?:googleapis|gstatic)\.com/);
+  assert.equal(packageJson.dependencies?.['@fontsource-variable/inter'], '^5.3.0');
 });
 
 test('Tailwind compatibility aliases use the product brand', () => {

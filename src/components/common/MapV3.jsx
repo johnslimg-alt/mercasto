@@ -1267,6 +1267,7 @@ function createPopupElement(ad, marker) {
             <p className="text-xs font-black text-slate-400 capitalize">{fieldLabel}</p>
             {hasOptions ? (
               <select
+                aria-label={fieldLabel}
                 data-testid={`map-filter-dynamic-${fieldId}`}
                 value={currentVal}
                 onChange={(e) => {
@@ -1286,6 +1287,7 @@ function createPopupElement(ad, marker) {
               </select>
             ) : (
               <input
+                aria-label={fieldLabel}
                 type="text"
                 value={currentVal}
                 onChange={(e) => {

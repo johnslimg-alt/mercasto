@@ -13,7 +13,7 @@ export default function CouponModal({ couponInput, handleRedeemCoupon, setCoupon
           <h2 id="coupon-modal-title" className="text-[20px] font-bold tracking-tight mb-2 text-center text-slate-900 dark:text-white">{t.redeem_coupon_title || 'Canjear Cupón'}</h2>
           <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] mb-6">{t.redeem_coupon_desc || 'Introduce tu código promocional para recibir créditos gratis.'}</p>
           <form onSubmit={handleRedeemCoupon} className="space-y-4">
-            <input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} required placeholder={t.coupon_code_placeholder || 'CÓDIGO'} className="w-full px-3.5 py-3 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 uppercase text-center font-bold tracking-widest bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
+            <input aria-label={t.coupon_code_placeholder || 'CÓDIGO'} value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} required placeholder={t.coupon_code_placeholder || 'CÓDIGO'} className="w-full px-3.5 py-3 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 uppercase text-center font-bold tracking-widest bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
             <button type="submit" className="btn-lg w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D]">{t.redeem || 'Canjear'}</button>
           </form>
         </div>

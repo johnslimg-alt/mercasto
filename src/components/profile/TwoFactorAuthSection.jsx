@@ -122,6 +122,7 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
           )}
           <form onSubmit={confirmSetup} className="flex gap-2">
             <input
+              aria-label={t.auth_code_placeholder || 'Código de 6 dígitos'}
               value={code}
               onChange={(e) => setCode(e.target.value)}
               maxLength={6}

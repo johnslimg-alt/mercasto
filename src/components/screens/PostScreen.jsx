@@ -987,7 +987,7 @@ export default function PostScreen({
                       <label className={labelClass}>{t.post_whatsapp_username}</label>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">@</span>
-                        <input value={waUsername} onChange={(e) => setWaUsername(e.target.value.replace(/^@/, ''))} placeholder={t.post_username}
+                        <input aria-label={t.post_whatsapp_username} value={waUsername} onChange={(e) => setWaUsername(e.target.value.replace(/^@/, ''))} placeholder={t.post_username}
                           className="w-full pl-7 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                     </div>
@@ -997,7 +997,7 @@ export default function PostScreen({
                       <label className={labelClass}>{t.post_telegram_username}</label>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">@</span>
-                        <input value={telegramValue} onChange={(e) => setTelegramValue(e.target.value.replace(/^@/, ''))} placeholder={t.post_username}
+                        <input aria-label={t.post_telegram_username} value={telegramValue} onChange={(e) => setTelegramValue(e.target.value.replace(/^@/, ''))} placeholder={t.post_username}
                           className="w-full pl-7 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                     </div>

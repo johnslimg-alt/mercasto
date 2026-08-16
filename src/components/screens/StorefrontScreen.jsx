@@ -246,7 +246,7 @@ export default function StorefrontScreen({
                 </button>
               ))}
             </div>
-            <textarea value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} placeholder={t.review_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[14px] mb-3 min-h-[80px]"></textarea>
+            <textarea aria-label={t.review_placeholder} value={reviewForm.comment} onChange={e => setReviewForm({...reviewForm, comment: e.target.value})} placeholder={t.review_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[14px] mb-3 min-h-[80px]"></textarea>
             <button type="submit" disabled={submittingReview} className="btn-sm bg-[#0F172A] text-white hover:bg-black flex items-center gap-2">
               {submittingReview ? <Loader2 className="w-4 h-4 animate-spin"/> : t.publish_review}
             </button>

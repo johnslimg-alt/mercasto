@@ -62,6 +62,28 @@ async function mockPublicShellApi(page) {
   });
 }
 
+
+test('2FA login challenge exposes a named code control', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.addInitScript(() => localStorage.setItem('cookie_consent', 'essential'));
+  await mockPublicShellApi(page);
+  await page.route('**/api/login', async route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ two_factor: true, email: 'qa-2fa@example.test', challenge_token: 'qa-two-factor-challenge' }),
+  }));
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('desktop-account-button').click();
+  const dialog = page.getByRole('dialog');
+  await dialog.locator('input[name="email"]').fill('qa-2fa@example.test');
+  await dialog.locator('input[name="password"]').fill('ExamplePass99!');
+  await dialog.locator('button[type="submit"]').click();
+  const code = dialog.locator('input[name="code"]');
+  await expect(code).toBeVisible();
+  await expect(code).toHaveAttribute('aria-label', /\S+/);
+  await expect(code).toBeFocused();
+});
+
 test('auth modal traps keyboard focus and restores the desktop or mobile opener', async ({ page }, testInfo) => {
   test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name));
   await page.addInitScript(() => localStorage.setItem('cookie_consent', 'essential'));

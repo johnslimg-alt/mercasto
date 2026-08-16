@@ -14,8 +14,8 @@ export default function ReportModal({ handleReportAd, reportForm, setReportForm,
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">{t.report_ad_help}</p>
           <form onSubmit={handleReportAd} className="space-y-4">
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.reason}</label>
-              <select required value={reportForm.reason} onChange={e => setReportForm({...reportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
+              <label htmlFor="report-ad-reason" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.reason}</label>
+              <select id="report-ad-reason" required value={reportForm.reason} onChange={e => setReportForm({...reportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                 <option value="">{t.report_select_reason}</option>
                 <option value="Fraude o estafa">{t.report_reason_fraud}</option>
                 <option value="Contenido inapropiado">{t.report_reason_inappropriate}</option>
@@ -25,8 +25,8 @@ export default function ReportModal({ handleReportAd, reportForm, setReportForm,
               </select>
             </div>
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.comments}</label>
-              <textarea value={reportForm.comments} onChange={e => setReportForm({...reportForm, comments: e.target.value})} placeholder={t.report_details_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
+              <label htmlFor="report-ad-comments" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.comments}</label>
+              <textarea id="report-ad-comments" value={reportForm.comments} onChange={e => setReportForm({...reportForm, comments: e.target.value})} placeholder={t.report_details_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
             </div>
             <button type="submit" className="btn-md w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] mt-2 shadow-sm">{t.report_send}</button>
           </form>

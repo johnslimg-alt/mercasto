@@ -77,7 +77,7 @@ export function NewsletterSection({ t, showHomeToast }) {
           <p className="text-[13px] text-slate-600">{t.newsletter_desc || 'Resumen semanal de ofertas, caída de precios y nuevos empleos.'}</p>
         </div>
         <form className="flex w-full md:w-auto gap-2" onSubmit={e => { e.preventDefault(); showHomeToast('Gracias por suscribirte.'); e.target.reset(); }}>
-          <input type="email" required placeholder={t.your_email || 'Tu correo electrónico'} className="w-full md:w-[300px] px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]"/>
+          <input type="email" aria-label={t.your_email} required placeholder={t.your_email || 'Tu correo electrónico'} className="w-full md:w-[300px] px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]"/>
           <button type="submit" className="btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white whitespace-nowrap">{t.subscribe || 'Suscribirse'}</button>
         </form>
       </div>
