@@ -1,0 +1,46 @@
+name: LM Studio Qwen3-VL 2B vision benchmark
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy Mercasto"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lmstudio-qwen3-vl-2b-benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: Benchmark LM Studio vision path
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Resolve deployed main and one-shot marker
+        id: marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          git fetch origin main --quiet
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          should_run=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            should_run=true
+          elif git log -1 --format=%B | grep -q '\[lmstudio-benchmark\]'; then
+            should_run=true
+          fi
+          echo "run=$should_run" >> "$GITHUB_OUTPUT"
+          echo "benchmark_run=$should_run"
+
+      - name: Run isolated synthetic LM Studio benchmark
+        if: steps.marker.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/lmstudio-vision-benchmark.sh
