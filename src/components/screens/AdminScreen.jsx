@@ -57,26 +57,26 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
             <form onSubmit={(e) => handleSaveCategory(e, adminCopy)} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.slug}</label>
-                  <input value={adminCatForm.slug} onChange={e=>setAdminCatForm({...adminCatForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})} required placeholder="ej. deportes-extremos" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
+                  <label htmlFor="admin-category-slug" className="block text-[13px] font-semibold text-slate-700 mb-2">{t.slug}</label>
+                  <input id="admin-category-slug" value={adminCatForm.slug} onChange={e=>setAdminCatForm({...adminCatForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')})} required placeholder="ej. deportes-extremos" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.icon}</label>
-                  <select value={adminCatForm.icon} onChange={e=>setAdminCatForm({...adminCatForm, icon: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
+                  <label htmlFor="admin-category-icon" className="block text-[13px] font-semibold text-slate-700 mb-2">{t.icon}</label>
+                  <select id="admin-category-icon" value={adminCatForm.icon} onChange={e=>setAdminCatForm({...adminCatForm, icon: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white cursor-pointer transition-all">
                     {Object.keys(IconMap).map(k => <option key={k} value={k}>{k}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.name_es}</label>
-                  <input value={adminCatForm.name_es} onChange={e=>setAdminCatForm({...adminCatForm, name_es: e.target.value})} required placeholder="Deportes Extremos" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
+                  <label htmlFor="admin-category-name-es" className="block text-[13px] font-semibold text-slate-700 mb-2">{t.name_es}</label>
+                  <input id="admin-category-name-es" value={adminCatForm.name_es} onChange={e=>setAdminCatForm({...adminCatForm, name_es: e.target.value})} required placeholder="Deportes Extremos" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.name_en}</label>
-                  <input value={adminCatForm.name_en} onChange={e=>setAdminCatForm({...adminCatForm, name_en: e.target.value})} required placeholder="Extreme Sports" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
+                  <label htmlFor="admin-category-name-en" className="block text-[13px] font-semibold text-slate-700 mb-2">{t.name_en}</label>
+                  <input id="admin-category-name-en" value={adminCatForm.name_en} onChange={e=>setAdminCatForm({...adminCatForm, name_en: e.target.value})} required placeholder="Extreme Sports" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                 </div>
                 <div>
-                  <label className="block text-[13px] font-semibold text-slate-700 mb-2">{t.sort_order}</label>
-                  <input type="number" value={adminCatForm.sort_order} onChange={e=>setAdminCatForm({...adminCatForm, sort_order: parseInt(e.target.value) || 0})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
+                  <label htmlFor="admin-category-sort-order" className="block text-[13px] font-semibold text-slate-700 mb-2">{t.sort_order}</label>
+                  <input id="admin-category-sort-order" type="number" value={adminCatForm.sort_order} onChange={e=>setAdminCatForm({...adminCatForm, sort_order: parseInt(e.target.value) || 0})} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all" />
                 </div>
               </div>
               <div className="flex flex-col md:flex-row gap-3 mt-2">
@@ -105,7 +105,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                         <p className="text-[11px] font-medium text-slate-500 mt-1">{cat.slug}</p>
                       </div>
                     </div>
-                    <button onClick={() => handleEditCategory(cat)} className="p-2 text-slate-400 hover:text-[#84CC16] hover:bg-[#84CC16]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+                    <button type="button" aria-label={`${t.edit_cat}: ${cat.name?.[lang] || cat.name?.es || cat.slug}`} onClick={() => handleEditCategory(cat)} className="p-2 text-slate-400 hover:text-[#84CC16] hover:bg-[#84CC16]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
                        <Pencil size={16} />
                     </button>
                   </div>
@@ -151,16 +151,16 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
               <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-2"><Ticket className="text-[#84CC16]" size={20}/> {t.coupon_gen}</h3>
               <form onSubmit={(e) => handleCreateCoupon(e, adminCopy)} className="flex flex-col sm:flex-row items-end gap-3 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div className="w-full sm:flex-1">
-                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">{t.code}</label>
-                  <input type="text" value={couponForm.code} onChange={e => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})} required className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px] uppercase" />
+                  <label htmlFor="admin-coupon-code" className="block text-[12px] font-semibold text-slate-600 mb-1">{t.code}</label>
+                  <input id="admin-coupon-code" type="text" value={couponForm.code} onChange={e => setCouponForm({...couponForm, code: e.target.value.toUpperCase()})} required className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px] uppercase" />
                 </div>
                 <div className="w-full sm:w-28">
-                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">{t.credits}</label>
-                  <input type="number" value={couponForm.credits} onChange={e => setCouponForm({...couponForm, credits: Number(e.target.value)})} required min="1" className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px]" />
+                  <label htmlFor="admin-coupon-credits" className="block text-[12px] font-semibold text-slate-600 mb-1">{t.credits}</label>
+                  <input id="admin-coupon-credits" type="number" value={couponForm.credits} onChange={e => setCouponForm({...couponForm, credits: Number(e.target.value)})} required min="1" className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px]" />
                 </div>
                 <div className="w-full sm:w-28">
-                  <label className="block text-[12px] font-semibold text-slate-600 mb-1">{t.max_uses}</label>
-                  <input type="number" value={couponForm.max_uses} onChange={e => setCouponForm({...couponForm, max_uses: Number(e.target.value)})} required min="1" className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px]" />
+                  <label htmlFor="admin-coupon-max-uses" className="block text-[12px] font-semibold text-slate-600 mb-1">{t.max_uses}</label>
+                  <input id="admin-coupon-max-uses" type="number" value={couponForm.max_uses} onChange={e => setCouponForm({...couponForm, max_uses: Number(e.target.value)})} required min="1" className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 text-[13px]" />
                 </div>
                 <button type="submit" className="btn-sm bg-[#0F172A] text-white hover:bg-black h-[38px] w-full sm:w-auto">{t.create}</button>
               </form>
@@ -177,7 +177,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                         <div className="font-black text-slate-900 tracking-wider text-[15px]">{c.code}</div>
                         <div className="text-[12px] text-slate-500 mt-1"><span className="font-bold text-[#65A30D]">{c.credits} {t.credits_unit}</span> • {t.used}: {c.used_count}/{c.max_uses}</div>
                       </div>
-                      <button onClick={() => handleDeleteCoupon(c.id, adminCopy)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><Trash2 size={16}/></button>
+                      <button type="button" aria-label={`${t.delete || 'Delete'} ${c.code}`} onClick={() => handleDeleteCoupon(c.id, adminCopy)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><Trash2 size={16}/></button>
                     </div>
                   ))}
                   {adminCoupons.length === 0 && <p data-testid="admin-coupons-empty" className="text-slate-400 text-[13px] col-span-full">{t.no_coupons}</p>}
@@ -562,8 +562,8 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-2"><Users className="text-[#84CC16]" size={20}/> {t.user_mgmt}</h3>
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                   <input value={adminUserSearch} onChange={e=>setAdminUserSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && loadAdminUsers()} placeholder={t.search_users} className="w-full md:w-64 px-3.5 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
-                   <button onClick={loadAdminUsers} className="bg-slate-900 hover:bg-black text-white p-2 border border-slate-900 rounded-xl transition-colors"><Search size={18}/></button>
+                   <input aria-label={t.search_users} value={adminUserSearch} onChange={e=>setAdminUserSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && loadAdminUsers()} placeholder={t.search_users} className="w-full md:w-64 px-3.5 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px]" />
+                   <button type="button" aria-label={t.search_users} onClick={loadAdminUsers} className="bg-slate-900 hover:bg-black text-white p-2 border border-slate-900 rounded-xl transition-colors"><Search size={18}/></button>
                 </div>
               </div>
               {loadingAdminUsers ? (

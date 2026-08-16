@@ -261,3 +261,45 @@ for (const viewport of [
     await expect(opener).toBeFocused();
   });
 }
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`admin form controls have accessible names on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installAdmin(page, 'en');
+    await mockApi(page);
+    await page.goto('/admin');
+    const tabs = ['categories', 'users', 'moderation', 'coupons', 'reports', 'payments', 'seo_geo', 'business_verifications'];
+    const unnamed = [];
+    for (const tab of tabs) {
+      const button = page.getByTestId(`admin-tab-${tab}`);
+      if (await button.count()) await button.click();
+      const controls = await page.locator('input:visible:not([type="hidden"]), select:visible, textarea:visible').evaluateAll((elements) => elements.map((element) => {
+        const id = element.id;
+        const explicitLabel = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`) : null;
+        const wrappingLabel = element.closest('label');
+        return {
+          aria: (element.getAttribute('aria-label') || '').trim(),
+          labelledby: (element.getAttribute('aria-labelledby') || '').trim(),
+          title: (element.getAttribute('title') || '').trim(),
+          label: (explicitLabel?.textContent || wrappingLabel?.textContent || '').trim(),
+          html: element.outerHTML.slice(0, 260),
+        };
+      }));
+      controls.forEach(control => {
+        if (!control.aria && !control.labelledby && !control.title && !control.label) unnamed.push({ tab, html: control.html });
+      });
+      const unnamedButtons = await page.locator('button:visible').evaluateAll((buttons) => buttons.map((button) => ({
+        text: (button.textContent || '').trim(),
+        aria: (button.getAttribute('aria-label') || '').trim(),
+        title: (button.getAttribute('title') || '').trim(),
+        html: button.outerHTML.slice(0, 260),
+      })).filter(button => !button.text && !button.aria && !button.title));
+      unnamedButtons.forEach(button => unnamed.push({ tab, html: button.html }));
+    }
+    expect(unnamed, `unnamed admin form/button controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}

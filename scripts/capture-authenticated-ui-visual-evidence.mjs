@@ -98,7 +98,12 @@ for (const viewport of viewports) {
     const sameOriginFailures = [];
     const expectedNetworkAborts = [];
     page.on('console', message => {
-      if (message.type() === 'error') consoleErrors.push(message.text());
+      if (message.type() !== 'error') return;
+      const location = message.location();
+      const source = location?.url
+        ? `${location.url}:${location.lineNumber ?? 0}:${location.columnNumber ?? 0}`
+        : 'unknown';
+      consoleErrors.push(`${message.text()} @ ${source}`);
     });
     page.on('pageerror', error => pageErrors.push(String(error)));
     page.on('requestfailed', request => {
