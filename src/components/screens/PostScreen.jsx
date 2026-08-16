@@ -397,6 +397,7 @@ export default function PostScreen({
     const val = form.attributes?.[key] || '';
     const errKey = `attr_${key}`;
     const hasErr = !!errors[errKey];
+    const fieldLabel = t[`filter_label_${key}`] || key;
     const baseClass = `w-full px-3.5 py-2.5 border ${hasErr ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-all`;
     const onChange = v => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), [key]: v } }));
 
@@ -409,7 +410,7 @@ export default function PostScreen({
             <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
               {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
-            <select data-testid={`post-attribute-${key}`} value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
+            <select data-testid={`post-attribute-${key}`} aria-label={fieldLabel} value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
               <option value="">{t.select}</option>
               {models.map(m => <option key={m} value={m}>{m}</option>)}
               <option value="Otro">{t.post_other_model}</option>
@@ -417,6 +418,7 @@ export default function PostScreen({
             {val === 'Otro' && (
               <input
                 type="text"
+                aria-label={`${fieldLabel}: ${t.post_other_model}`}
                 value={form.attributes?.modelo_otro || ''}
                 onChange={e => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), modelo_otro: e.target.value, modelo: e.target.value } }))}
                 placeholder={t.post_specify_model}
@@ -435,7 +437,7 @@ export default function PostScreen({
           <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
             {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
           </label>
-          <select data-testid={`post-attribute-${key}`} value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
+          <select data-testid={`post-attribute-${key}`} aria-label={fieldLabel} value={val} onChange={e => onChange(e.target.value)} className={baseClass + ' cursor-pointer'}>
             <option value="">{t.select}</option>
             {field.options.map(o => { const value = filterOptionValue(o); return <option key={value} value={value}>{filterOptionDisplayLabel(key, o, lang)}</option>; })}
           </select>
@@ -449,7 +451,7 @@ export default function PostScreen({
           <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
             {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
           </label>
-          <input type="number" value={val} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || ''} className={baseClass} />
+          <input type="number" aria-label={fieldLabel} value={val} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || ''} className={baseClass} />
           {hasErr && <p className="text-xs text-red-500">{errors[errKey]}</p>}
         </div>
       );
@@ -459,7 +461,7 @@ export default function PostScreen({
         <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">
           {t[`filter_label_${key}`] || key}{field.required && <span className="text-red-500 ml-1">*</span>}
         </label>
-        <input type="text" value={val} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || ''} className={baseClass} />
+        <input type="text" aria-label={fieldLabel} value={val} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || ''} className={baseClass} />
         {hasErr && <p className="text-xs text-red-500">{errors[errKey]}</p>}
       </div>
     );
@@ -604,6 +606,7 @@ export default function PostScreen({
                 <label className={labelClass}>{t.ad_title}</label>
                 <input
                   data-testid="publish-title"
+                  aria-label={t.ad_title}
                   value={form.title}
                   onChange={e => { setForm({ ...form, title: e.target.value }); if (errors.title) setErrors(p => ({ ...p, title: null })); }}
                   className={`w-full px-3.5 py-2.5 border ${errors.title ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
@@ -672,6 +675,7 @@ export default function PostScreen({
                 <div>
                   <label className={labelClass}>{t.condition}</label>
                   <select
+                    aria-label={t.condition}
                     value={form.condition}
                     onChange={e => setForm({ ...form, condition: e.target.value })}
                     className={selectFieldClass}
@@ -687,6 +691,7 @@ export default function PostScreen({
                     <input
                       type="number"
                       data-testid="publish-price"
+                      aria-label={t.ad_price}
                       value={form.price}
                       onChange={e => { setForm({ ...form, price: e.target.value }); if (errors.price) setErrors(p => ({ ...p, price: null })); }}
                       className={`w-full px-3.5 py-2.5 pl-7 border ${errors.price ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
@@ -726,6 +731,7 @@ export default function PostScreen({
                     <div key={f.key} className="space-y-2">
                       <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300">{f.label}</label>
                       <select
+                        aria-label={f.label}
                         value={form.attributes?.[f.key] || ''}
                         onChange={e => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), [f.key]: e.target.value } }))}
                         className={selectFieldClass}
@@ -756,6 +762,7 @@ export default function PostScreen({
                 </div>
                 <textarea
                   data-testid="publish-description"
+                  aria-label={t.ad_desc}
                   value={form.description}
                   onChange={e => { setForm({ ...form, description: e.target.value }); if (errors.description) setErrors(p => ({ ...p, description: null })); }}
                   className={`w-full px-3.5 py-2.5 border ${errors.description ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all min-h-[140px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
@@ -792,6 +799,7 @@ export default function PostScreen({
                     </label>
                     <select
                       data-testid="publish-state"
+                      aria-label={t.state}
                       value={form.state || ''}
                       onChange={e => {
                         setForm(prev => ({
@@ -821,6 +829,7 @@ export default function PostScreen({
                           <input
                             type="text"
                             data-testid="publish-city"
+                            aria-label={t.city}
                             value={form.city || ''}
                             onChange={e => {
                               const v = e.target.value;
@@ -846,6 +855,7 @@ export default function PostScreen({
                       ) : (
                         <select
                           data-testid="publish-city"
+                          aria-label={t.city}
                           value={form.city || ''}
                           onChange={e => {
                             const v = e.target.value;
@@ -881,6 +891,7 @@ export default function PostScreen({
                   <div className="relative mb-3">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
+                      aria-label={t.location}
                       value={form.location || ''}
                       onChange={e => setForm(prev => ({
                         ...prev,
@@ -963,7 +974,7 @@ export default function PostScreen({
                       <label className={labelClass}>{t.post_phone_digits}</label>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">+52</span>
-                        <input type="tel" data-testid="publish-phone" value={phoneValue} onChange={(e) => setPhoneValue(e.target.value.replace(/[^\d\s-]/g, ''))}
+                        <input type="tel" data-testid="publish-phone" aria-label={t.post_phone_digits} value={phoneValue} onChange={(e) => setPhoneValue(e.target.value.replace(/[^\d\s-]/g, ''))}
                           placeholder="55 1234 5678" className="w-full pl-11 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                       {contactMethods.includes('whatsapp') && waMode === 'phone' && (

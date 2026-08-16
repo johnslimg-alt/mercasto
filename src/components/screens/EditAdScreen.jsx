@@ -258,7 +258,7 @@ export default function EditAdScreen({ t, lang }) {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className={labelClass}>{t.ad_title} *</label>
-          <input type="text" name="title" data-testid="edit-ad-title" value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))}
+          <input type="text" name="title" data-testid="edit-ad-title" aria-label={t.ad_title} value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))}
             required maxLength={255} placeholder={t.post_title_placeholder}
             className={fieldClass} />
         </div>
@@ -267,7 +267,7 @@ export default function EditAdScreen({ t, lang }) {
           <label className={labelClass}>{t.ad_price} *</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
-            <input type="number" name="price" data-testid="edit-ad-price" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))}
+            <input type="number" name="price" data-testid="edit-ad-price" aria-label={t.ad_price} value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))}
               required min={0} step="0.01" placeholder="0.00"
               className={`${fieldClass} pl-8`} />
           </div>
@@ -275,7 +275,7 @@ export default function EditAdScreen({ t, lang }) {
 
         <div>
           <label className={labelClass}>{t.category} *</label>
-          <select value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value, attributes: {}}))}
+          <select aria-label={t.category} value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value, attributes: {}}))}
             required className={fieldClass}>
             <option value="">{t.select_category}</option>
             {categories.map(cat => (
@@ -294,23 +294,24 @@ export default function EditAdScreen({ t, lang }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {categoryFields.map(field => {
                 const fieldId = field.id || field.key;
+                const fieldLabel = t[`filter_label_${fieldId}`] || fieldId;
                 return (
                   <div key={fieldId}>
-                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{t[`filter_label_${fieldId}`] || fieldId}</label>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{fieldLabel}</label>
                     {(field.type === 'select' || field.type === 'checkbox') ? (
-                      <select data-testid={`edit-attribute-${fieldId}`} value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
+                      <select data-testid={`edit-attribute-${fieldId}`} aria-label={fieldLabel} value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
                         required={field.required}
                         className={compactFieldClass}>
                         <option value="">{t.select}...</option>
                         {(field.options || []).map(opt => { const value = filterOptionValue(opt); return <option key={value} value={value}>{filterOptionDisplayLabel(fieldId, opt, lang)}</option>; })}
                       </select>
                     ) : field.type === 'range' ? (
-                      <input type="number" value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
+                      <input type="number" aria-label={fieldLabel} value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
                         min={field.range?.min} max={field.range?.max} step={field.range?.step}
                         placeholder={field.minPlaceholder || '0'} required={field.required}
                         className={compactFieldClass} />
                     ) : (
-                      <input type="text" value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
+                      <input type="text" aria-label={fieldLabel} value={form.attributes[fieldId] || ''} onChange={e => handleAttrChange(fieldId, e.target.value)}
                         placeholder={field.placeholder || ''} required={field.required}
                         className={compactFieldClass} />
                     )}
@@ -323,7 +324,7 @@ export default function EditAdScreen({ t, lang }) {
 
         <div>
           <label className={labelClass}>{t.state}</label>
-          <select value={form.state || ''} onChange={e => setForm(p => ({...p, state: e.target.value}))}
+          <select aria-label={t.state} value={form.state || ''} onChange={e => setForm(p => ({...p, state: e.target.value}))}
             className={fieldClass}>
             <option value="">{t.select_state}</option>
             {MEXICO_STATES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -332,7 +333,7 @@ export default function EditAdScreen({ t, lang }) {
 
         <div>
           <label className={labelClass}>{t.city} / {t.location}</label>
-          <input type="text" value={form.location} onChange={e => setForm(p => ({...p, location: e.target.value}))}
+          <input type="text" aria-label={`${t.city} / ${t.location}`} value={form.location} onChange={e => setForm(p => ({...p, location: e.target.value}))}
             placeholder={t.loc_placeholder}
             className={fieldClass} />
         </div>
@@ -363,7 +364,7 @@ export default function EditAdScreen({ t, lang }) {
               <AlertTriangle size={13} /> {aiError}
             </div>
           )}
-          <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))}
+          <textarea aria-label={t.ad_desc} value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))}
             required rows={6} placeholder={t.ad_desc_placeholder}
             className={`${fieldClass} resize-none`} />
         </div>
