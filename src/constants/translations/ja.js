@@ -191,6 +191,7 @@ export default {
   "star_4": "良い",
   "star_5": "とても良い",
   "stats": "統計",
+  "stats_period": "統計期間",
   "submit_comment": "投稿",
   "submit_review": "レビューを送信",
   "tap_map_hint": "任意：地図または GPS を使って場所をより正確に指定できます。",

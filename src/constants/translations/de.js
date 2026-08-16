@@ -191,6 +191,7 @@ export default {
   "star_4": "Gut",
   "star_5": "Ausgezeichnet",
   "stats": "Statistiken",
+  "stats_period": "Statistikzeitraum",
   "submit_comment": "Veröffentlichen",
   "submit_review": "Bewertung senden",
   "tap_map_hint": "Optional: Tippe auf die Karte oder nutze GPS, um den Standort genauer anzugeben.",

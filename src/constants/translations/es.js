@@ -191,6 +191,7 @@ export default {
   "star_4": "Bueno",
   "star_5": "Excelente",
   "stats": "Estadísticas",
+  "stats_period": "Período de estadísticas",
   "submit_comment": "Publicar",
   "submit_review": "Enviar valoración",
   "tap_map_hint": "Opcional: toca el mapa o usa GPS para precisar la ubicación.",

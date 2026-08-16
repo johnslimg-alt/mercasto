@@ -191,6 +191,7 @@ export default {
   "star_4": "좋음",
   "star_5": "훌륭함",
   "stats": "통계",
+  "stats_period": "통계 기간",
   "submit_comment": "게시",
   "submit_review": "리뷰 제출",
   "tap_map_hint": "선택 사항: 지도나 GPS를 사용해 위치를 더 정확하게 지정하세요.",

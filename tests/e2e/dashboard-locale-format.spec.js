@@ -412,3 +412,38 @@ for (const viewport of [
     await expect(opener).toBeFocused();
   });
 }
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`authenticated dashboard form controls have accessible names on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installSession(page, 'en');
+    await mockApi(page);
+    await page.goto('/profile');
+    const tabs = ['my_ads', 'favorites', 'saved_searches', 'stats', 'transactions', 'contact_history', 'reviews', 'privacy', 'settings'];
+    const unnamed = [];
+    for (const tab of tabs) {
+      const button = page.getByTestId(`dashboard-tab-${tab}`);
+      if (await button.count()) await button.click();
+      const controls = await page.locator('input:visible:not([type="hidden"]), select:visible, textarea:visible').evaluateAll((elements) => elements.map((element) => {
+        const id = element.id;
+        const explicitLabel = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`) : null;
+        const wrappingLabel = element.closest('label');
+        return {
+          aria: (element.getAttribute('aria-label') || '').trim(),
+          labelledby: (element.getAttribute('aria-labelledby') || '').trim(),
+          title: (element.getAttribute('title') || '').trim(),
+          label: (explicitLabel?.textContent || wrappingLabel?.textContent || '').trim(),
+          html: element.outerHTML.slice(0, 240),
+        };
+      }));
+      controls.forEach(control => {
+        if (!control.aria && !control.labelledby && !control.title && !control.label) unnamed.push({ tab, html: control.html });
+      });
+    }
+    expect(unnamed, `unnamed authenticated dashboard form controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}
