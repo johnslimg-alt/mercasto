@@ -8,6 +8,10 @@ use Illuminate\Console\Command;
 
 class AuditCatalogCoverage extends Command
 {
+    private const AGGREGATE_CATEGORIES = [
+        'productos' => ['electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'formacion'],
+    ];
+
     protected $signature = 'ads:audit-catalog-coverage {--minimum=4}';
     protected $description = 'Verify active category coverage and catalog-reference content quality.';
 
@@ -17,9 +21,10 @@ class AuditCatalogCoverage extends Command
         $errors = [];
         $rows = [];
         foreach (Category::query()->orderBy('sort_order')->get(['slug']) as $category) {
-            $active = Ad::query()->where('category', $category->slug)->where('status', 'active')->count();
-            $genuine = Ad::query()->where('category', $category->slug)->where('status', 'active')->where('is_catalog_filler', false)->count();
-            $filler = Ad::query()->where('category', $category->slug)->where('status', 'active')->where('is_catalog_filler', true)->count();
+            $coverageSlugs = self::AGGREGATE_CATEGORIES[$category->slug] ?? [$category->slug];
+            $active = Ad::query()->whereIn('category', $coverageSlugs)->where('status', 'active')->count();
+            $genuine = Ad::query()->whereIn('category', $coverageSlugs)->where('status', 'active')->where('is_catalog_filler', false)->count();
+            $filler = Ad::query()->whereIn('category', $coverageSlugs)->where('status', 'active')->where('is_catalog_filler', true)->count();
             $rows[] = [$category->slug, $active, $genuine, $filler, $active >= $minimum ? 'ok' : 'LOW'];
             if ($active < $minimum) $errors[] = "{$category->slug}: only {$active} active listing(s)";
         }

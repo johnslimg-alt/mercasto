@@ -60,6 +60,7 @@ for (const lang of SUPPORTED_LANGUAGES) {
     await expect(page.getByRole('heading', { level: 2, name: landing.exploreTitle })).toBeVisible();
     await expect(page.getByRole('button', { name: landing.sectionLabels[0] })).toBeVisible();
     await expect(page.getByRole('button', { name: landing.sectionLabels.at(-1) })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: copy.featured })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: landing.guideTitle })).toBeVisible();
 
     const heroForm = page.locator('form').filter({ has: page.locator(`input[placeholder="${copy.placeholder}"]`) }).first();

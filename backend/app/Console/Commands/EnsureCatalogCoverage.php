@@ -12,6 +12,10 @@ use Illuminate\Support\Str;
 
 class EnsureCatalogCoverage extends Command
 {
+    private const AGGREGATE_CATEGORIES = [
+        'productos' => ['electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'formacion'],
+    ];
+
     protected $signature = 'ads:ensure-catalog-coverage {--minimum=4} {--dry-run}';
     protected $description = 'Fill sparse categories with transparent Mercasto catalog references.';
 
@@ -24,8 +28,9 @@ class EnsureCatalogCoverage extends Command
         $plan = [];
 
         foreach (Category::query()->orderBy('sort_order')->get(['slug', 'name']) as $category) {
-            $active = Ad::query()->where('category', $category->slug)->where('status', 'active')->count();
-            $needed = max(0, $minimum - $active);
+            $coverageSlugs = self::AGGREGATE_CATEGORIES[$category->slug] ?? [$category->slug];
+            $active = Ad::query()->whereIn('category', $coverageSlugs)->where('status', 'active')->count();
+            $needed = isset(self::AGGREGATE_CATEGORIES[$category->slug]) ? 0 : max(0, $minimum - $active);
             if ($needed > 0 && empty($templates[$category->slug])) $missingTemplates[] = $category->slug;
             $plan[] = [$category->slug, $active, $needed];
         }
@@ -36,6 +41,12 @@ class EnsureCatalogCoverage extends Command
             return self::FAILURE;
         }
         if ($dryRun) return self::SUCCESS;
+
+        $totalNeeded = array_sum(array_column($plan, 2));
+        if ($totalNeeded === 0) {
+            $this->info('Catalog coverage already satisfies the minimum; no data changes applied.');
+            return self::SUCCESS;
+        }
 
         $owner = $this->catalogOwner();
         $created = 0;
