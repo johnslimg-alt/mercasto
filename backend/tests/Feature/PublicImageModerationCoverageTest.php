@@ -41,7 +41,7 @@ class PublicImageModerationCoverageTest extends TestCase
 
         $this->assertStringContainsString('PreScreenKycDocumentWithAI::dispatch', $profile);
         $this->assertStringContainsString('crossCheckCsfWithAi', $business);
-        $this->assertStringContainsString("'images' => $imagePayloads", $adJob);
+        $this->assertStringContainsString("'images' => \$imagePayloads", $adJob);
         $this->assertStringContainsString('videoFramePayloads', $adJob);
     }
 }
