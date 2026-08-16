@@ -8,24 +8,14 @@ MODEL_QUANT="Q4_K_M"
 CONTEXT_LENGTH=3072
 MAX_TOKENS=220
 REQUEST_TIMEOUT=60
-INSTANCE_ID=""
 SERVER_STARTED=0
 DAEMON_STARTED=0
 TMP_DIR="$(mktemp -d /tmp/mercasto-lmstudio-benchmark.XXXXXX)"
 
 cleanup() {
   set +e
-  if [ -n "$INSTANCE_ID" ]; then
-    python3 - "$INSTANCE_ID" >"$TMP_DIR/unload.json" <<'PY'
-import json, sys
-print(json.dumps({"instance_id": sys.argv[1]}))
-PY
-    curl -fsS --max-time 15 \
-      -H 'Content-Type: application/json' \
-      --data-binary @"$TMP_DIR/unload.json" \
-      "$BASE_URL/api/v1/models/unload" >/dev/null 2>&1 || true
-  fi
   if [ "$SERVER_STARTED" -eq 1 ] && command -v lms >/dev/null 2>&1; then
+    lms unload --all >/dev/null 2>&1 || true
     lms server stop >/dev/null 2>&1 || true
   fi
   if [ "$DAEMON_STARTED" -eq 1 ] && command -v lms >/dev/null 2>&1; then
@@ -38,7 +28,7 @@ trap cleanup EXIT INT TERM
 bytes_human() {
   python3 - "$1" <<'PY'
 import sys
-n = int(sys.argv[1])
+n = float(sys.argv[1])
 for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
     if n < 1024 or unit == "TiB":
         print(f"{n:.2f} {unit}")
@@ -54,7 +44,7 @@ if [ -r /etc/os-release ]; then
   echo "os=${PRETTY_NAME:-unknown}"
 fi
 if [ "$(uname -m)" = "x86_64" ] && ! grep -qm1 -w avx2 /proc/cpuinfo; then
-  echo 'AVX2 is required for the default LM Studio Linux x64 runtime but is not present.' >&2
+  echo 'AVX2 is required by the default LM Studio Linux x64 runtime but is not present.' >&2
   exit 2
 fi
 
@@ -76,14 +66,10 @@ else
   curl -fsSL https://lmstudio.ai/install.sh | bash
   export PATH="$HOME/.lmstudio/bin:$PATH"
 fi
-
-if ! command -v lms >/dev/null 2>&1; then
-  export PATH="$HOME/.lmstudio/bin:$PATH"
-fi
+export PATH="$HOME/.lmstudio/bin:$PATH"
 command -v lms >/dev/null 2>&1 || { echo 'lms CLI not found after installation.' >&2; exit 4; }
-
-lms --version 2>/dev/null || true
-lms runtime survey --json 2>/dev/null || lms runtime survey 2>/dev/null || true
+lms --help | head -20 || true
+lms runtime ls || true
 
 echo '== Start private headless daemon/server =='
 lms daemon up --json
@@ -91,12 +77,12 @@ DAEMON_STARTED=1
 lms server start --bind 127.0.0.1 --port "$PORT"
 SERVER_STARTED=1
 for _ in $(seq 1 30); do
-  if curl -fsS --max-time 2 "$BASE_URL/v1/models" >/dev/null; then
+  if curl -fsS --max-time 2 "$BASE_URL/api/v1/models" >/dev/null; then
     break
   fi
   sleep 1
 done
-curl -fsS --max-time 5 "$BASE_URL/v1/models" >/dev/null
+curl -fsS --max-time 5 "$BASE_URL/api/v1/models" >/dev/null
 
 echo '== Download Qwen3-VL 2B GGUF Q4_K_M =='
 python3 - "$MODEL_SOURCE" "$MODEL_QUANT" >"$TMP_DIR/download-request.json" <<'PY'
@@ -145,27 +131,33 @@ PY
 fi
 
 curl -fsS --max-time 10 "$BASE_URL/api/v1/models" >"$TMP_DIR/models.json"
-MODEL_KEY=$(python3 - "$TMP_DIR/models.json" <<'PY'
+MODEL_KEY=$(python3 - "$TMP_DIR/models.json" "$MODEL_QUANT" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as f:
     data = json.load(f)
+target_quant = sys.argv[2].upper()
 models = data.get("models", data.get("data", []))
 candidates = []
 for model in models:
-    haystack = " ".join(str(model.get(k, "")) for k in ("key", "id", "display_name", "displayName", "path")).lower()
+    haystack = " ".join(str(model.get(k, "")) for k in ("key", "id", "display_name", "displayName")).lower()
+    if "qwen3-vl-2b" not in haystack:
+        continue
     quant = model.get("quantization")
     if isinstance(quant, dict):
         quant = quant.get("name", "")
-    if "qwen3-vl-2b" in haystack and str(model.get("format", "")).lower() == "gguf":
-        candidates.append((str(quant).upper() == "Q4_K_M", model.get("key") or model.get("id") or model.get("modelKey")))
+    key = model.get("key") or model.get("id") or model.get("modelKey")
+    if key:
+        candidates.append((str(quant).upper() == target_quant, str(key), model.get("size_bytes", 0), str(quant)))
 if not candidates:
-    raise SystemExit("Downloaded Qwen3-VL 2B GGUF was not found in LM Studio model inventory")
+    raise SystemExit("Downloaded Qwen3-VL 2B was not found in LM Studio v1 model inventory")
 candidates.sort(reverse=True)
-print(candidates[0][1])
+exact, key, size_bytes, quant = candidates[0]
+print(key)
+print(f"inventory_quant={quant} inventory_size_bytes={size_bytes} exact_quant={str(exact).lower()}", file=sys.stderr)
 PY
 )
 echo "model_key=$MODEL_KEY"
-lms ls --json || true
+lms ls --json || lms ls || true
 
 echo '== Estimate and load model =='
 lms load --estimate-only "$MODEL_KEY" --context-length "$CONTEXT_LENGTH" --gpu off || true
@@ -187,15 +179,14 @@ curl -fsS --max-time 120 \
 load_end=$(date +%s%3N)
 echo "load_elapsed_ms=$((load_end - load_start))"
 cat "$TMP_DIR/load.json"
-INSTANCE_ID=$(python3 - "$TMP_DIR/load.json" <<'PY'
+python3 - "$TMP_DIR/load.json" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as f:
     data = json.load(f)
-print(data.get("instance_id") or data.get("model_instance_id") or "")
+if data.get("status") != "loaded" or not data.get("instance_id"):
+    raise SystemExit("LM Studio load response is missing loaded status or instance_id")
 PY
-)
-[ -n "$INSTANCE_ID" ] || { echo 'LM Studio load response did not include an instance id.' >&2; exit 8; }
-lms ps --json || true
+lms ps --json || lms ps || true
 free -h || true
 ps -eo pid,rss,%cpu,comm,args --sort=-rss | grep -E 'llmster|llm-engine|llama|LM Studio' | grep -v grep | head -20 || true
 
@@ -208,10 +199,7 @@ raw = bytearray()
 for y in range(h):
     raw.append(0)
     for x in range(w):
-        r = (x * 255) // (w - 1)
-        g = (y * 255) // (h - 1)
-        b = ((x // 64 + y // 64) % 2) * 90 + 80
-        raw.extend((r, g, b))
+        raw.extend(((x * 255) // (w - 1), (y * 255) // (h - 1), ((x // 64 + y // 64) % 2) * 90 + 80))
 def chunk(kind, data):
     return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", binascii.crc32(kind + data) & 0xffffffff)
 png = b"\x89PNG\r\n\x1a\n"
@@ -240,7 +228,7 @@ Reglas:
 - Logotipos comerciales normales, retratos apropiados, productos y fotografías de negocio permitidas pueden aprobarse.
 - Si existe duda material, usa manual_review. No inventes hechos.
 - approved solo con alta confianza."""
-payload = {
+print(json.dumps({
     "model": model,
     "messages": [
         {"role": "system", "content": system},
@@ -252,8 +240,7 @@ payload = {
     "temperature": 0.1,
     "max_tokens": max_tokens,
     "stream": False,
-}
-print(json.dumps(payload, ensure_ascii=False))
+}, ensure_ascii=False))
 PY
 
 validate_response() {
@@ -283,15 +270,11 @@ PY
 }
 
 run_vision() {
-  local label="$1"
-  local response="$TMP_DIR/${label}.json"
-  local start end rc http_code
+  local label="$1" response="$TMP_DIR/$1.json" start end rc http_code
   start=$(date +%s%3N)
   set +e
-  http_code=$(curl -sS --max-time "$REQUEST_TIMEOUT" \
-    -o "$response" -w '%{http_code}' \
-    -H 'Content-Type: application/json' \
-    --data-binary @"$TMP_DIR/vision-request.json" \
+  http_code=$(curl -sS --max-time "$REQUEST_TIMEOUT" -o "$response" -w '%{http_code}' \
+    -H 'Content-Type: application/json' --data-binary @"$TMP_DIR/vision-request.json" \
     "$BASE_URL/v1/chat/completions")
   rc=$?
   set -e
@@ -308,7 +291,7 @@ run_vision vision_first
 run_vision vision_warm
 
 echo '== Final runtime snapshot =='
-lms ps --json || true
+lms ps --json || lms ps || true
 free -h || true
 ps -eo pid,rss,%cpu,comm,args --sort=-rss | grep -E 'llmster|llm-engine|llama|LM Studio' | grep -v grep | head -20 || true
 docker stats --no-stream --format 'ollama={{.Name}} mem={{.MemUsage}} cpu={{.CPUPerc}}' mercasto_ollama 2>/dev/null || true
