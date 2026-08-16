@@ -7,6 +7,7 @@ import { localizedText } from '../../utils/localize';
 import { formatDate, formatDateTime, formatMXN, formatNumber } from '../../utils/localeFormat';
 import { getAdminSurfaceCopy } from '../../utils/adminSurfaceCopy';
 import AdminBusinessVerifications from './AdminBusinessVerifications';
+import AdminKycVerifications from './AdminKycVerifications';
 import AdminSeoMeasurement from '../admin/AdminSeoMeasurement';
 
 const AdminDataLoadError = ({ testId, onRetry, t }) => (
@@ -36,7 +37,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
         <div className="p-4 md:p-8 w-full max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
             <h2 className="hidden md:flex text-2xl font-bold items-center gap-3 text-slate-900 tracking-tight"><Shield className="text-red-500" size={32}/> {t.admin_panel}</h2>
-            <div className="bg-slate-200 p-1 rounded-xl flex flex-wrap items-center gap-1 w-fit">
+            <div data-testid="admin-tab-strip" className="bg-slate-200 p-1 rounded-xl flex flex-wrap items-center gap-1 w-fit">
                <button type="button" aria-pressed={adminTab === 'categories'} data-testid="admin-tab-categories" onClick={() => setAdminTab('categories')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'categories' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.cat_tab}</button>
                <button type="button" aria-pressed={adminTab === 'users'} data-testid="admin-tab-users" onClick={() => {setAdminTab('users'); loadAdminUsers();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.users_tab}</button>
                <button type="button" aria-pressed={adminTab === 'moderation'} data-testid="admin-tab-moderation" onClick={() => {setAdminTab('moderation'); loadPendingAds();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'moderation' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.mod_tab}</button>
@@ -44,6 +45,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                <button type="button" aria-pressed={adminTab === 'reports'} data-testid="admin-tab-reports" onClick={() => {setAdminTab('reports'); loadAdminReports();}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'reports' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.reports_tab}</button>
                <button type="button" aria-pressed={adminTab === 'payments'} data-testid="admin-tab-payments" onClick={() => {setAdminTab('payments'); loadAdminPayments(1);}} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'payments' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.admin_payments_tab || 'Pagos'}</button>
                <button type="button" aria-pressed={adminTab === 'seo_geo'} data-testid="admin-tab-seo_geo" onClick={() => setAdminTab('seo_geo')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all inline-flex items-center gap-1.5 ${adminTab === 'seo_geo' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}><Globe size={14}/> SEO/GEO</button>
+               <button type="button" aria-pressed={adminTab === 'kyc'} data-testid="admin-tab-kyc" onClick={() => setAdminTab('kyc')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'kyc' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{adminCopy.admin_kyc_tab}</button>
                <button type="button" aria-pressed={adminTab === 'business_verifications'} data-testid="admin-tab-business_verifications" onClick={() => setAdminTab('business_verifications')} className={`px-4 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${adminTab === 'business_verifications' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>RFC/CSF</button>
             </div>
           </div>
@@ -549,13 +551,21 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
             </div>
           ) : adminTab === 'seo_geo' ? (
             <AdminSeoMeasurement token={token} lang={lang} t={t} />
+          ) : adminTab === 'kyc' ? (
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="p-5 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">{adminCopy.admin_kyc_pending}</h3>
+                <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1">{adminCopy.admin_kyc_desc}</p>
+              </div>
+              <AdminKycVerifications token={token} copy={adminCopy} />
+            </div>
           ) : adminTab === 'business_verifications' ? (
             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="p-5 border-b border-slate-100 dark:border-slate-700">
                 <h3 className="text-[16px] font-bold text-slate-900 dark:text-white">{adminCopy.admin_business_verifications_pending}</h3>
                 <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1">{adminCopy.admin_business_verifications_desc}</p>
               </div>
-              <AdminBusinessVerifications token={token} />
+              <AdminBusinessVerifications token={token} copy={adminCopy} />
             </div>
           ) : (
             <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700">

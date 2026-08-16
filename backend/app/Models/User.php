@@ -63,6 +63,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'business_rfc_verified_at',
         'kyc_document_url',
         'kyc_status',
+        'kyc_ai_status',
+        'kyc_ai_notes',
+        'kyc_ai_checked_at',
         'preferred_role',
         'preferred_categories',
         'onboarding_completed_at',
@@ -85,6 +88,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone_otp',
         'phone_otp_expires_at',
         'first_return_after_24h_at',
+        'kyc_ai_status',
+        'kyc_ai_notes',
+        'kyc_ai_checked_at',
     ];
 
     protected $appends = [
@@ -124,6 +130,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'preferred_categories' => 'array',
             'onboarding_completed_at' => 'datetime',
             'onboarding_skipped_at' => 'datetime',
+            'kyc_ai_checked_at' => 'datetime',
         ];
     }
 

@@ -1717,7 +1717,7 @@ html.dark .btn-lg.bg-white:hover {
   }
 
   /* Dark-mode safety layer for account/admin/store screens with legacy light utility classes. */
-  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.bg-white, .bg-slate-50, .bg-gray-50) {
+  html.dark :is(.dashboard-dark-scope, .profile-dark-scope, .business-profile-dark-scope, .stores-dark-scope, .storefront-dark-scope) :is(.bg-white, .bg-slate-50, .bg-slate-100, .bg-slate-200, .bg-gray-50, .bg-gray-100, .bg-gray-200) {
     background-color: #1E293B !important;
   }
 

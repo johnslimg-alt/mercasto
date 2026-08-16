@@ -3,7 +3,7 @@ import { ShieldAlert, ShieldCheck, ShieldX, Loader2, Download, FileText } from '
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
-export default function AdminBusinessVerifications({ token }) {
+export default function AdminBusinessVerifications({ token, copy }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
@@ -63,45 +63,47 @@ export default function AdminBusinessVerifications({ token }) {
   if (items.length === 0) {
     return (
       <div className="p-10 text-center text-slate-400 font-bold uppercase tracking-widest text-[12px]">
-        Sin verificaciones pendientes de revisión manual
+        {copy.admin_no_business_verifications}
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-slate-100">
+    <div className="divide-y divide-slate-100 dark:divide-slate-700">
       {items.map(item => (
         <div key={item.id} className="p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-slate-900 text-[14px]">{item.business_name || item.name}</p>
+              <p className="font-semibold text-slate-900 dark:text-white text-[14px]">{item.business_name || item.name}</p>
               <span className={`badge text-[10px] ${item.business_rfc_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                 {item.business_rfc_status === 'rejected' ? <ShieldX className="w-3 h-3 inline mr-1" /> : <ShieldAlert className="w-3 h-3 inline mr-1" />}
-                {item.business_rfc_status}
+                {item.business_rfc_status === 'rejected' ? copy.admin_rejected_status : copy.admin_ai_review}
               </span>
             </div>
-            <p className="text-[12px] text-slate-500 mt-0.5">{item.email} · RFC: <span className="font-mono">{item.business_rfc}</span></p>
+            <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">{item.email} · RFC: <span className="font-mono">{item.business_rfc}</span></p>
             {item.business_rfc_ai_notes && (
-              <p className="text-[12px] text-slate-600 mt-1 bg-slate-50 rounded-lg px-2.5 py-1.5">{item.business_rfc_ai_notes}</p>
+              <p className="text-[12px] text-slate-600 dark:text-slate-300 mt-1 bg-slate-50 dark:bg-slate-900 rounded-lg px-2.5 py-1.5">{item.business_rfc_ai_notes}</p>
             )}
           </div>
           <div className="flex gap-2 shrink-0">
-            <button onClick={() => downloadCsf(item.id)} className="btn-sm bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 text-xs">
+            <button type="button" aria-label={`${copy.admin_download}: ${item.business_name || item.name}`} onClick={() => downloadCsf(item.id)} className="btn-sm bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 text-xs">
               <FileText className="w-3.5 h-3.5" /> <Download className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={() => review(item.id, 'approve')}
               disabled={busyId === item.id}
               className="btn-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center gap-1.5 text-xs disabled:opacity-50"
             >
-              {busyId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} Aprobar
+              {busyId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} {copy.admin_approve}
             </button>
             <button
+              type="button"
               onClick={() => review(item.id, 'reject')}
               disabled={busyId === item.id}
               className="btn-sm bg-red-50 hover:bg-red-100 text-red-600 flex items-center gap-1.5 text-xs disabled:opacity-50"
             >
-              <ShieldX className="w-3.5 h-3.5" /> Rechazar
+              <ShieldX className="w-3.5 h-3.5" /> {copy.admin_reject}
             </button>
           </div>
         </div>
