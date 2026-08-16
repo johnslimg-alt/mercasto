@@ -203,7 +203,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
       <div className="w-full">
         {homeToast && (
-          <div className="fixed left-1/2 top-24 z-[120] -translate-x-1/2 rounded-2xl border border-lime-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-xl shadow-slate-900/10">
+          <div data-testid="home-toast" role="status" aria-live="polite" className="fixed left-1/2 top-24 z-[120] -translate-x-1/2 rounded-2xl border border-lime-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-xl shadow-slate-900/10">
             {homeToast}
           </div>
         )}
@@ -440,7 +440,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     {savingSearchAlert ? `${t.saving_word}...` : (t.save_search || 'Guardar búsqueda')}
                   </button>
 
-                  <button onClick={() => { setActiveCat(''); document.querySelector('.md\\:hidden button')?.click(); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter || 'Filtros'}</button>
+                  <button data-testid="home-open-filters" type="button" onClick={() => { setActiveCat(''); navigate('/listings'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter || 'Filtros'}</button>
 
                   <a href="/listings" onClick={(e) => { e.preventDefault(); setActiveCat(''); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
 
@@ -574,7 +574,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <div className="hidden md:flex items-center gap-2">
 
-                    <button onClick={() => { runSearch('renta', 'inmobiliaria'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.rent || 'Rentar'}</button>
+                    <button data-testid="home-real-estate-rent" onClick={() => { runSearch('renta', 'inmobiliaria'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.rent || 'Rentar'}</button>
 
                     <button onClick={() => { runSearch('venta', 'inmobiliaria'); }} className="btn-sm bg-slate-900 text-white">{t.buy || 'Comprar'}</button>
 
@@ -760,9 +760,9 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <div className="flex items-center gap-2">
 
-                    <button onClick={() => showHomeToast('La carga de CV estará disponible desde tu panel de usuario.')} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">{t.upload_cv || 'Subir CV'}</button>
+                    <button data-testid="home-upload-cv" onClick={() => showHomeToast(t.upload_cv_available_toast)} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">{t.upload_cv || 'Subir CV'}</button>
 
-                    <button onClick={() => showHomeToast('Alerta de empleo guardada para esta búsqueda.')} className="btn-sm bg-[#0F172A] text-white hover:bg-black">{t.create_job_alert || 'Crear alerta'}</button>
+                    <button data-testid="home-create-job-alert" onClick={() => showHomeToast(t.job_alert_saved_toast)} className="btn-sm bg-[#0F172A] text-white hover:bg-black">{t.create_job_alert || 'Crear alerta'}</button>
 
                   </div>
 
