@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import VerticalHero from '../../verticals/VerticalHero';
 import { Laptop, Home, Shirt, Gamepad2, Baby, Dog, BookOpen } from 'lucide-react';
 import { getVerticalCopy, getVerticalLandingCopy } from '../../../utils/verticalCopy';
+import VerticalAdGrid from '../../verticals/VerticalAdGrid';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const SUBSECTIONS = [
   { name: 'Electrónica', query: 'electronica', Icon: Laptop },
@@ -72,6 +75,27 @@ export default function ProductosLanding({ lang = 'es' }) {
           </div>
         </div>
       </div>
+
+      <section className="max-w-[1440px] mx-auto px-4 lg:px-6 mt-12">
+        <div className="mb-5 flex items-baseline justify-between gap-3">
+          <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{copy.featured}</h2>
+          <button
+            type="button"
+            onClick={() => navigate('/listings')}
+            className="text-sm font-bold text-purple-700 hover:underline dark:text-purple-300"
+          >
+            {copy.labels.viewAll} →
+          </button>
+        </div>
+        <VerticalAdGrid
+          apiUrls={SUBSECTIONS.map(sub => `${API_URL}/ads?category=${sub.query}&per_page=2`)}
+          viewAllUrl="/listings"
+          viewAllLabel={`${copy.labels.viewAll} →`}
+          lang={lang}
+          cols={4}
+          limit={8}
+        />
+      </section>
 
       <section className="max-w-[1440px] mx-auto px-4 lg:px-6 mt-12">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">

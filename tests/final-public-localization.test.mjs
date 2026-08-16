@@ -10,6 +10,7 @@ import { PUSH_NOTIFICATION_LANGUAGES, PUSH_NOTIFICATION_COPY } from '../src/util
 
 const app = fs.readFileSync('src/App.jsx', 'utf8');
 const grid = fs.readFileSync('src/components/verticals/VerticalAdGrid.jsx', 'utf8');
+const productsLanding = fs.readFileSync('src/components/screens/verticals/ProductosLanding.jsx', 'utf8');
 const itemList = fs.readFileSync('src/components/seo/ItemListSchema.jsx', 'utf8');
 const faqSchema = fs.readFileSync('src/components/seo/FAQSchema.jsx', 'utf8');
 const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
@@ -64,10 +65,14 @@ test('vertical grids receive lang and format public values by locale', () => {
   assert.equal(grid.includes("toLocaleString('es-MX')"), false);
   assert.equal(grid.includes("viewAllLabel = 'Ver todos"), false);
 
-  for (const file of ['AutosLanding', 'InmueblesLanding', 'EmpleosLanding', 'ServiciosLanding', 'TurismoLanding', 'CategoryLanding']) {
+  for (const file of ['AutosLanding', 'InmueblesLanding', 'EmpleosLanding', 'ServiciosLanding', 'TurismoLanding', 'CategoryLanding', 'ProductosLanding']) {
     const source = fs.readFileSync(`src/components/screens/verticals/${file}.jsx`, 'utf8');
     assert.match(source, /<VerticalAdGrid[\s\S]*?lang=\{lang\}[\s\S]*?\/>/, file);
   }
+  assert.match(productsLanding, /apiUrls=\{SUBSECTIONS\.map\(sub => `\$\{API_URL\}\/ads\?category=\$\{sub\.query\}&per_page=2`\)\}/);
+  assert.equal(productsLanding.includes('category=productos'), false);
+  assert.match(grid, /const apiUrlKey = Array\.isArray\(apiUrls\)/);
+  assert.match(grid, /seen\.has\(ad\.id\)/);
 });
 
 test('vertical card metadata localizes known canonical attributes', async () => {

@@ -54,23 +54,38 @@ function AdSkeleton() {
   );
 }
 
-export default function VerticalAdGrid({ apiUrl, viewAllUrl, viewAllLabel = '', cols = 4, variant = '', lang = 'es' }) {
+export default function VerticalAdGrid({ apiUrl, apiUrls, viewAllUrl, viewAllLabel = '', cols = 4, variant = '', lang = 'es', limit = null }) {
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const t = getTranslations(lang);
   const resolvedViewAllLabel = viewAllLabel || t.view_all || 'View all';
+  const apiUrlKey = Array.isArray(apiUrls) && apiUrls.length ? apiUrls.filter(Boolean).join('\u001f') : (apiUrl || '');
 
   useEffect(() => {
+    const urls = apiUrlKey ? apiUrlKey.split('\u001f') : [];
     setLoading(true);
-    fetch(apiUrl)
+    Promise.all(urls.map(url => fetch(url)
       .then(r => r.ok ? r.json() : { data: [] })
-      .then(d => {
-        setAds(Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []));
+      .then(d => Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []))
+      .catch(() => [])))
+      .then(groups => {
+        const seen = new Set();
+        const merged = [];
+        const maxLength = Math.max(0, ...groups.map(group => group.length));
+        for (let index = 0; index < maxLength; index += 1) {
+          for (const group of groups) {
+            const ad = group[index];
+            if (!ad || seen.has(ad.id)) continue;
+            seen.add(ad.id);
+            merged.push(ad);
+          }
+        }
+        setAds(limit ? merged.slice(0, limit) : merged);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [apiUrl]);
+  }, [apiUrlKey, limit]);
 
   const skeletonCount = cols === 3 ? 6 : 8;
   const gridClass = cols === 3

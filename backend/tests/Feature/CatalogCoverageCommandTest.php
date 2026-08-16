@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Ad;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -15,12 +16,24 @@ class CatalogCoverageCommandTest extends TestCase
     public function test_editorial_catalog_coverage_is_idempotent_transparent_and_complete(): void
     {
         Storage::fake('public');
+        Category::query()->firstOrCreate(
+            ['slug' => 'productos'],
+            ['name' => ['es' => 'Productos', 'en' => 'Goods'], 'icon' => 'ShoppingBag', 'sort_order' => 0]
+        );
 
         $this->artisan('ads:ensure-catalog-coverage', ['--minimum' => 2])->assertSuccessful();
         $this->artisan('ads:audit-catalog-coverage', ['--minimum' => 2])->assertSuccessful();
 
-        $categories = \App\Models\Category::query()->pluck('slug');
+        $categories = Category::query()->pluck('slug');
         foreach ($categories as $slug) {
+            if ($slug === 'productos') {
+                $this->assertSame(0, Ad::query()->where('category', 'productos')->count(), 'productos is an aggregate landing, not an ad category');
+                $this->assertGreaterThanOrEqual(2, Ad::query()
+                    ->whereIn('category', ['electronica', 'hogar', 'moda', 'ocio', 'infantil', 'mascotas', 'formacion'])
+                    ->where('status', 'active')
+                    ->count(), 'productos aggregate coverage');
+                continue;
+            }
             $this->assertGreaterThanOrEqual(2, Ad::query()->where('category', $slug)->where('status', 'active')->count(), $slug);
         }
 
