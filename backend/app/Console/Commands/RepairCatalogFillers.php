@@ -38,7 +38,7 @@ class RepairCatalogFillers extends Command
                 $attributes['editorial_reference'] = true;
                 $attributes['catalog_cover_key'] = 'reference-' . $ad->id;
 
-                $ad->forceFill([
+                $repair = [
                     'attributes' => $attributes,
                     'image_url' => json_encode([$path], JSON_UNESCAPED_SLASHES),
                     'generated_cover' => true,
@@ -48,8 +48,19 @@ class RepairCatalogFillers extends Command
                     'ai_moderated_at' => now(),
                     'expires_at' => null,
                     'reminder_sent_at' => null,
-                ])->saveQuietly();
+                ];
 
+                $location = trim((string) $ad->location);
+                if ($location === '') {
+                    $city = trim((string) $ad->city);
+                    $state = trim((string) $ad->state);
+                    $parts = array_values(array_unique(array_filter([$city, $state], fn (string $part): bool => $part !== '')));
+                    if ($parts !== []) {
+                        $repair['location'] = implode(', ', $parts);
+                    }
+                }
+
+                $ad->forceFill($repair)->saveQuietly();
                 $updated++;
             }
         });
