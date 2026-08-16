@@ -19,8 +19,8 @@ class PublicImageModerationService
     public function assertApproved(UploadedFile $file, string $context, string $field): void
     {
         try {
-            $manager = ImageManager::withDriver(Driver::class);
-            $image = $manager->decode($file->getRealPath());
+            $manager = ImageManager::usingDriver(Driver::class);
+            $image = $manager->decode(file_get_contents($file->getRealPath()));
             $image->scaleDown(width: 768, height: 768);
             $payload = base64_encode((string) $image->encodeUsingFileExtension('webp', quality: 68));
 
