@@ -19,19 +19,26 @@ class AiRuntimeReadiness extends Command
         $host = (string) (parse_url($baseUrl, PHP_URL_HOST) ?: 'invalid');
 
         if ($baseUrl === '' || $model === '') {
-            $this->error('local AI readiness FAILED stage=config');
+            $this->error('local AI readiness FAILED');
+            $this->error('stage=config');
             return self::FAILURE;
         }
 
         try {
             $tags = Http::acceptJson()->connectTimeout(3)->timeout(8)->get($baseUrl . '/api/tags');
         } catch (Throwable $error) {
-            $this->error('local AI readiness FAILED stage=transport host=' . $host . ' type=' . $error::class);
+            $this->error('local AI readiness FAILED');
+            $this->error('stage=transport');
+            $this->error('host=' . $host);
+            $this->error('type=' . $error::class);
             return self::FAILURE;
         }
 
         if ($tags->failed()) {
-            $this->error('local AI readiness FAILED stage=tags host=' . $host . ' status=' . $tags->status());
+            $this->error('local AI readiness FAILED');
+            $this->error('stage=tags');
+            $this->error('host=' . $host);
+            $this->error('status=' . $tags->status());
             return self::FAILURE;
         }
 
@@ -45,7 +52,10 @@ class AiRuntimeReadiness extends Command
             ->values();
 
         if (! $installed->contains($model)) {
-            $this->error('local AI readiness FAILED stage=model_missing configured=' . $model . ' installed_count=' . $installed->count());
+            $this->error('local AI readiness FAILED');
+            $this->error('stage=model_missing');
+            $this->error('configured=' . $model);
+            $this->error('installed_count=' . $installed->count());
             return self::FAILURE;
         }
 
@@ -61,13 +71,12 @@ class AiRuntimeReadiness extends Command
             // Load-state is diagnostic only. Transport/model installation already passed.
         }
 
-        $this->info(sprintf(
-            'local AI readiness OK host=%s configured=%s installed=yes loaded=%s installed_count=%d',
-            $host,
-            $model,
-            $loaded ? 'yes' : 'no',
-            $installed->count(),
-        ));
+        $this->info('local AI readiness OK');
+        $this->info('host=' . $host);
+        $this->info('configured=' . $model);
+        $this->info('installed=yes');
+        $this->info('loaded=' . ($loaded ? 'yes' : 'no'));
+        $this->info('installed_count=' . $installed->count());
 
         return self::SUCCESS;
     }
