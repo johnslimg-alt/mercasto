@@ -383,6 +383,8 @@ for (const viewport of [
     await expect(oneStar).toBeFocused();
     await page.keyboard.press('Space');
     await expect(oneStar).toHaveAttribute('aria-pressed', 'true');
+    const t = translations.es;
+    await expect(page.getByRole('textbox', { name: t.review_comment_placeholder, exact: true })).toBeVisible();
   });
 }
 

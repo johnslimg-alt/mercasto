@@ -1,7 +1,9 @@
+import { useRef } from 'react';
 import { Camera, Loader2, User, XCircle } from 'lucide-react';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function ProfileModal({ handleProfileSubmit, profileForm, profileLoading, setProfileForm, setShowProfileModal, showProfileModal, t }) {
+    const avatarInputRef = useRef(null);
     const closeModal = () => setShowProfileModal(false);
     const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({ isOpen: showProfileModal, onClose: closeModal });
     if (!showProfileModal) return null;
@@ -19,13 +21,13 @@ export default function ProfileModal({ handleProfileSubmit, profileForm, profile
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400"><User size={40} /></div>
                 )}
-                <label role="button" tabIndex={0} aria-label={t.change_photo || 'Cambiar Foto'} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.currentTarget.querySelector('input[type="file"]')?.click(); } }} className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
+                <button type="button" aria-label={t.change_photo || 'Cambiar Foto'} onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                   <Camera className="w-8 h-8 text-white" />
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) setProfileForm({ ...profileForm, avatarFile: file, avatarPreview: URL.createObjectURL(file) });
-                  }}/>
-                </label>
+                </button>
+                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) setProfileForm({ ...profileForm, avatarFile: file, avatarPreview: URL.createObjectURL(file) });
+                }}/>
               </div>
               <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">{t.change_photo || 'Cambiar Foto'}</span>
             </div>

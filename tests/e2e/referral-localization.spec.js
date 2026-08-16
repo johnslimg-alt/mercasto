@@ -87,6 +87,7 @@ async function verifyReferral(page, lang, viewport) {
   await page.goto('/referidos');
 
   await expect(page.getByRole('heading', { name: t.referral_title })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: t.referral_link, exact: true })).toHaveValue(referralUrl);
   await expect(page.getByTestId('referral-status-completed')).toContainText(t.referral_status_completed);
   await expect(page.getByTestId('referral-status-pending')).toHaveText(t.referral_status_pending);
   await expect(page.getByText(await expectedDate(page, lang, '2026-08-01'), { exact: true })).toBeVisible();

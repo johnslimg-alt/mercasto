@@ -1190,6 +1190,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                                     {rating > 0 && (
                                       <>
                                         <textarea
+                                          aria-label={t.review_comment_placeholder || 'Escribe un comentario opcional...'}
                                           value={comment}
                                           onChange={(e) => setRs({ comment: e.target.value })}
                                           placeholder={t.review_comment_placeholder || 'Escribe un comentario opcional...'}
