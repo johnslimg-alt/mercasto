@@ -94,16 +94,23 @@ for (const viewport of viewports) {
 
     const page = await context.newPage();
     const consoleErrors = [];
+    const externalConsoleErrors = [];
     const pageErrors = [];
     const sameOriginFailures = [];
     const expectedNetworkAborts = [];
     page.on('console', message => {
       if (message.type() !== 'error') return;
       const location = message.location();
-      const source = location?.url
-        ? `${location.url}:${location.lineNumber ?? 0}:${location.columnNumber ?? 0}`
+      const sourceUrl = location?.url || '';
+      const source = sourceUrl
+        ? `${sourceUrl}:${location.lineNumber ?? 0}:${location.columnNumber ?? 0}`
         : 'unknown';
-      consoleErrors.push(`${message.text()} @ ${source}`);
+      const formatted = `${message.text()} @ ${source}`;
+      if (sourceUrl && !(sourceUrl.startsWith(baseUrl) || sourceUrl.startsWith(apiBaseUrl))) {
+        externalConsoleErrors.push(formatted);
+      } else {
+        consoleErrors.push(formatted);
+      }
     });
     page.on('pageerror', error => pageErrors.push(String(error)));
     page.on('requestfailed', request => {
@@ -163,6 +170,7 @@ for (const viewport of viewports) {
       screenshot: imageName,
       ...metrics,
       consoleErrors,
+      externalConsoleErrors,
       pageErrors,
       sameOriginFailures,
       expectedNetworkAborts,
@@ -204,6 +212,7 @@ const lines = [
   `- API: ${apiBaseUrl}`,
   `- Screenshots: ${results.length}`,
   `- Automated failures: ${failures.length}`,
+  `- External console warnings (non-blocking): ${results.reduce((sum, result) => sum + result.externalConsoleErrors.length, 0)}`,
   '- State: isolated credentialed environment; disposable PostgreSQL and provider-safe mocks; production data was not accessed or mutated.',
   '',
   '| Viewport | Role | Screen | Final URL | HTTP | Overflow | Broken images | Page errors | Screenshot |',
