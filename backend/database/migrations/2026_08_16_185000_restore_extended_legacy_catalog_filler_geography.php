@@ -75,24 +75,39 @@ return new class extends Migration
         ];
 
         foreach ($locations as $legacyLocation => [$city, $state]) {
-            $base = DB::table('ads')
+            $ids = DB::table('ads')
                 ->where('is_catalog_filler', true)
                 ->where('status', 'active')
-                ->whereRaw('LOWER(TRIM(location)) = ?', [$legacyLocation]);
+                ->whereRaw('LOWER(TRIM(location)) = ?', [$legacyLocation])
+                ->where(function ($query): void {
+                    $query->whereNull('city')
+                        ->orWhereRaw("TRIM(city) = ''")
+                        ->orWhereNull('state')
+                        ->orWhereRaw("TRIM(state) = ''");
+                })
+                ->pluck('id');
 
-            (clone $base)
+            if ($ids->isEmpty()) {
+                continue;
+            }
+
+            DB::table('ads')
+                ->whereIn('id', $ids)
                 ->where(function ($query): void {
                     $query->whereNull('city')->orWhereRaw("TRIM(city) = ''");
                 })
                 ->update(['city' => $city]);
 
-            (clone $base)
+            DB::table('ads')
+                ->whereIn('id', $ids)
                 ->where(function ($query): void {
                     $query->whereNull('state')->orWhereRaw("TRIM(state) = ''");
                 })
                 ->update(['state' => $state]);
 
-            (clone $base)->update(['location' => "{$city}, {$state}"]);
+            DB::table('ads')
+                ->whereIn('id', $ids)
+                ->update(['location' => "{$city}, {$state}"]);
         }
     }
 
