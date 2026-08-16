@@ -32,6 +32,10 @@ class PublicImageModerationCoverageTest extends TestCase
         $this->assertStringContainsString("\$user->role !== 'admin'", $middleware);
         $this->assertStringContainsString('RateLimiter::tooManyAttempts', $middleware);
         $this->assertStringContainsString('RateLimiter::hit', $middleware);
+        $this->assertStringContainsString('ImageManager::usingDriver(Driver::class)', $profile);
+        $this->assertStringContainsString('ImageManager::usingDriver(Driver::class)', $business);
+        $this->assertStringNotContainsString('ImageManager::withDriver(Driver::class)', $profile);
+        $this->assertStringNotContainsString('ImageManager::withDriver(Driver::class)', $business);
         $this->assertStringContainsString('function uploadAvatar', $profile);
         $this->assertStringContainsString("'avatar' => 'nullable|file|mimes:jpg,jpeg,png,webp", $profile);
         $this->assertStringContainsString('function uploadLogo', $business);
