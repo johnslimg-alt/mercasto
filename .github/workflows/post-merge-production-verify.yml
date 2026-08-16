@@ -2,6 +2,9 @@ name: Post-merge production verification
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy Mercasto"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -13,6 +16,7 @@ concurrency:
 jobs:
   verify:
     name: Verify live production after merge
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: self-hosted
     timeout-minutes: 15
 
@@ -52,6 +56,13 @@ jobs:
           echo "PROJECT_DIR=$project_dir" >> "$GITHUB_ENV"
           echo "Using project directory: $project_dir"
 
+      - name: Verify deployed main
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          git fetch origin main --quiet
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
       - name: Verify compose and containers
         run: |
           set -euo pipefail
@@ -64,6 +75,14 @@ jobs:
           set -euo pipefail
           cd "$PROJECT_DIR"
           npm run verify:quick
+
+      - name: Audit catalog coverage and active content quality
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          docker exec mercasto_backend_container php artisan ads:ensure-catalog-coverage --minimum=4 --dry-run
+          docker exec mercasto_backend_container php artisan ads:audit-catalog-coverage --minimum=4
+          docker exec mercasto_backend_container php artisan ads:audit-active-content-quality --limit-groups=12
 
       - name: Probe critical public endpoints
         run: |
