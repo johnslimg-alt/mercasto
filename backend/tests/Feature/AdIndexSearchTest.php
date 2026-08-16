@@ -53,6 +53,23 @@ class AdIndexSearchTest extends TestCase
             ->assertJsonPath('data.0.id', $legacy->id);
     }
 
+    public function test_state_filter_matches_structured_state_case_insensitively(): void
+    {
+        Http::preventStrayRequests();
+
+        $match = $this->activeAd('Casa en Xalapa', 'Anuncio con estado estructurado.');
+        $match->forceFill(['location' => 'Xalapa', 'state' => 'Veracruz', 'city' => 'Xalapa'])->saveQuietly();
+
+        $other = $this->activeAd('Casa en Guadalajara', 'Anuncio en otro estado.');
+        $other->forceFill(['location' => 'Guadalajara', 'state' => 'Jalisco', 'city' => 'Guadalajara'])->saveQuietly();
+
+        $response = $this->getJson('/api/ads?state=veracruz');
+
+        $response->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $match->id);
+    }
+
     public function test_similar_ads_falls_back_to_category_without_a_canonical_vector(): void
     {
         $source = $this->activeAd('Mesa de comedor', 'Mesa de madera sólida.');
