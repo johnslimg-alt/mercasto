@@ -36,6 +36,23 @@ class AdIndexSearchTest extends TestCase
             ->assertJsonValidationErrors('search');
     }
 
+    public function test_state_filter_falls_back_to_legacy_combined_location(): void
+    {
+        Http::preventStrayRequests();
+
+        $legacy = $this->activeAd('Bicicleta en Boca del Río', 'Referencia editorial con ubicación heredada.');
+        $legacy->forceFill(['location' => 'Boca del Río, Veracruz', 'state' => null, 'city' => null])->saveQuietly();
+
+        $other = $this->activeAd('Bicicleta en Guadalajara', 'Referencia editorial en otro estado.');
+        $other->forceFill(['location' => 'Guadalajara, Jalisco', 'state' => null, 'city' => null])->saveQuietly();
+
+        $response = $this->getJson('/api/ads?state=Veracruz');
+
+        $response->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $legacy->id);
+    }
+
     public function test_similar_ads_falls_back_to_category_without_a_canonical_vector(): void
     {
         $source = $this->activeAd('Mesa de comedor', 'Mesa de madera sólida.');
