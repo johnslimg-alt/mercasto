@@ -77,14 +77,18 @@ class OllamaModerationClient:
 
         try:
             parsed = json.loads(raw)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as outer_exc:
             match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
             if match is None:
-                raise OllamaUnavailable("Local Ollama returned invalid moderation JSON")
+                raise OllamaUnavailable(
+                    "Local Ollama returned invalid moderation JSON"
+                ) from outer_exc
             try:
                 parsed = json.loads(match.group(0))
-            except json.JSONDecodeError as exc:
-                raise OllamaUnavailable("Local Ollama returned invalid moderation JSON") from exc
+            except json.JSONDecodeError as nested_exc:
+                raise OllamaUnavailable(
+                    "Local Ollama returned invalid moderation JSON"
+                ) from nested_exc
 
         try:
             return ModelVerdict.model_validate(parsed)
