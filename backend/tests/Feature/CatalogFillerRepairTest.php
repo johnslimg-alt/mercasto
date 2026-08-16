@@ -21,6 +21,11 @@ class CatalogFillerRepairTest extends TestCase
         $genuine = $this->makeAd($user, false, 'https://example.com/genuine.jpg', 'pending');
         $first = $this->makeAd($user, true, 'https://images.unsplash.com/photo-legacy?sig=1', 'pending');
         $second = $this->makeAd($user, true, 'https://images.unsplash.com/photo-legacy?sig=2', null);
+        $second->forceFill([
+            'location' => null,
+            'city' => 'Boca del Río',
+            'state' => 'Veracruz',
+        ])->saveQuietly();
 
         $originalGenuine = $genuine->getRawOriginal('image_url');
         $originalFirst = $first->getRawOriginal('image_url');
@@ -28,6 +33,7 @@ class CatalogFillerRepairTest extends TestCase
         $this->assertSame(0, Artisan::call('ads:repair-catalog-fillers'));
         $this->assertSame($originalFirst, $first->fresh()->getRawOriginal('image_url'));
         $this->assertSame('pending', $first->fresh()->ai_moderation_status);
+        $this->assertNull($second->fresh()->location);
 
         $this->assertSame(0, Artisan::call('ads:repair-catalog-fillers', ['--apply' => true]));
 
@@ -48,6 +54,7 @@ class CatalogFillerRepairTest extends TestCase
         $this->assertTrue(Storage::disk('public')->exists($firstImage));
         $this->assertTrue(Storage::disk('public')->exists($secondImage));
         $this->assertTrue((bool) ($first->attributes['editorial_reference'] ?? false));
+        $this->assertSame('Boca del Río, Veracruz', $second->location);
 
         $this->assertSame($originalGenuine, $genuine->getRawOriginal('image_url'));
         $this->assertSame('pending', $genuine->ai_moderation_status);
