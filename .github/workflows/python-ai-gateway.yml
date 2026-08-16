@@ -1,0 +1,37 @@
+name: Python AI Gateway
+
+on:
+  pull_request:
+    paths:
+      - 'services/ai-gateway/**'
+      - '.github/workflows/python-ai-gateway.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/ai-gateway/**'
+      - '.github/workflows/python-ai-gateway.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: services/ai-gateway/pyproject.toml
+      - name: Install
+        run: python -m pip install -e 'services/ai-gateway[test]'
+      - name: Compile
+        run: python -m compileall -q services/ai-gateway/mercasto_ai
+      - name: Lint
+        run: ruff check services/ai-gateway
+      - name: Test
+        run: pytest -q services/ai-gateway/tests
+      - name: Build container
+        run: docker build -t mercasto-ai-gateway:ci services/ai-gateway
