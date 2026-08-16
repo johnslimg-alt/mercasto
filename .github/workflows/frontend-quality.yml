@@ -115,12 +115,33 @@ jobs:
       - name: Run ${{ matrix.shard }} regression
         run: bash scripts/frontend-quality-shard.sh '${{ matrix.shard }}' '${{ matrix.port }}'
 
+  webkit:
+    name: WebKit public smoke
+    needs: static
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Install WebKit
+        run: npx playwright install --with-deps webkit
+      - name: Run WebKit public smoke
+        run: bash scripts/frontend-quality-shard.sh webkit-public 4178
+
   frontend:
     name: Build and recovery checks
     if: ${{ always() }}
     needs:
       - static
       - browser
+      - webkit
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -128,6 +149,8 @@ jobs:
         env:
           STATIC_RESULT: ${{ needs.static.result }}
           BROWSER_RESULT: ${{ needs.browser.result }}
+          WEBKIT_RESULT: ${{ needs.webkit.result }}
         run: |
           test "${STATIC_RESULT}" = 'success'
           test "${BROWSER_RESULT}" = 'success'
+          test "${WEBKIT_RESULT}" = 'success'

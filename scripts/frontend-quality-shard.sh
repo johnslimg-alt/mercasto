@@ -73,6 +73,11 @@ case "${shard}" in
       tests/e2e/category-filter-option-localization.spec.js \
       --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=1 --reporter=list
     ;;
+  webkit-public)
+    BASE_URL="${base_url}" CI=1 npx playwright test \
+      tests/e2e/webkit-public-smoke.spec.js \
+      --config=playwright.config.webkit.js --workers=2 --retries=1 --reporter=list
+    ;;
   *)
     echo "Unknown frontend quality shard: ${shard}" >&2
     exit 2
