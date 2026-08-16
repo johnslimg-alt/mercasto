@@ -14,8 +14,8 @@ export default function UserReportModal({ handleUserReportSubmit, setShowUserRep
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6">{t.report_user_help}</p>
           <form onSubmit={handleUserReportSubmit} className="space-y-4">
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.reason}</label>
-              <select required value={userReportForm.reason} onChange={e => setUserReportForm({...userReportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
+              <label htmlFor="report-user-reason" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.reason}</label>
+              <select id="report-user-reason" required value={userReportForm.reason} onChange={e => setUserReportForm({...userReportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                 <option value="">{t.report_select_reason}</option>
                 <option value="Comportamiento abusivo">{t.report_reason_abusive}</option>
                 <option value="Sospecha de fraude">{t.report_reason_suspected_fraud}</option>
@@ -25,8 +25,8 @@ export default function UserReportModal({ handleUserReportSubmit, setShowUserRep
               </select>
             </div>
             <div>
-              <label className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.report_additional_details}</label>
-              <textarea value={userReportForm.comments} onChange={e => setUserReportForm({...userReportForm, comments: e.target.value})} placeholder={t.report_user_details_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
+              <label htmlFor="report-user-comments" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.report_additional_details}</label>
+              <textarea id="report-user-comments" value={userReportForm.comments} onChange={e => setUserReportForm({...userReportForm, comments: e.target.value})} placeholder={t.report_user_details_placeholder} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] min-h-[80px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
             </div>
             <button type="submit" className="btn-md w-full bg-[#0F172A] dark:bg-[#84CC16] text-white dark:text-slate-950 hover:bg-black dark:hover:bg-[#65A30D] mt-2 shadow-sm">{t.report_send}</button>
           </form>

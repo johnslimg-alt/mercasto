@@ -119,6 +119,8 @@ for (const viewport of [
     await profileOpener.focus();
     await profileOpener.click();
     const profileDialog = page.getByRole('dialog', { name: t.edit_profile_title });
+    await expect(profileDialog.getByRole('button', { name: t.change_photo, exact: true })).toBeAttached();
+    await expect(profileDialog.getByRole('textbox', { name: t.name_label, exact: true })).toBeVisible();
     const profileClose = profileDialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
     await expect(profileClose).toBeFocused();
     await profileClose.press('Shift+Tab');
@@ -157,6 +159,8 @@ test('report modal chunk loads only after the report action', async ({ page }, t
   await reportOpener.focus();
   await reportOpener.click();
   const reportDialog = page.getByRole('dialog', { name: t.report_ad, exact: true });
+  await expect(reportDialog.getByRole('combobox', { name: t.reason, exact: true })).toBeVisible();
+  await expect(reportDialog.getByRole('textbox', { name: t.comments, exact: true })).toBeVisible();
   const reportClose = reportDialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
   await expect(reportDialog).toBeVisible();
   await expect(reportClose).toBeFocused();

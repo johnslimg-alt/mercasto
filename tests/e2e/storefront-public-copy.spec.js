@@ -202,6 +202,8 @@ for (const viewport of [
     await reportOpener.focus();
     await reportOpener.click();
     const reportDialog = page.getByRole('dialog', { name: t.report_seller, exact: true });
+    await expect(reportDialog.getByRole('combobox', { name: t.reason, exact: true })).toBeVisible();
+    await expect(reportDialog.getByRole('textbox', { name: t.report_additional_details, exact: true })).toBeVisible();
     const reportClose = reportDialog.getByRole('button', { name: t.close_btn || t.close, exact: true });
     await expect(reportClose).toBeFocused();
     await reportClose.press('Shift+Tab');
