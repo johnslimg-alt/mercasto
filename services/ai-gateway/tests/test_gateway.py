@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from mercasto_ai.contracts import ModelVerdict, normalize_verdict
 from mercasto_ai.main import app, get_ollama_client
+from mercasto_ai.ollama import OllamaUnavailable
 
 
 class FakeOllamaClient:
@@ -17,6 +18,11 @@ class FakeOllamaClient:
     async def moderate(self, context: str, image_base64: str) -> ModelVerdict:
         self.calls.append((context, image_base64))
         return self.verdict
+
+
+class FailingOllamaClient:
+    async def moderate(self, context: str, image_base64: str) -> ModelVerdict:
+        raise OllamaUnavailable("synthetic local dependency outage")
 
 
 @pytest.fixture(autouse=True)
@@ -52,6 +58,17 @@ def test_normalize_verdict_matches_php_fail_closed_threshold() -> None:
     )
     assert low_confidence.approved is False
     assert low_confidence.decision == "manual_review"
+
+    rejected = normalize_verdict(
+        ModelVerdict(
+            decision="rejected",
+            reason="Contenido prohibido.",
+            confidence=0.99,
+            flags=["prohibited"],
+        )
+    )
+    assert rejected.approved is False
+    assert rejected.decision == "rejected"
 
 
 def test_gateway_requires_internal_service_token(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -107,6 +124,23 @@ def test_gateway_passes_only_authenticated_valid_payload_to_local_ai(
     assert response.json()["approved"] is True
     assert response.json()["decision"] == "approved"
     assert fake.calls == [("avatar público", image)]
+
+
+def test_gateway_fails_closed_when_local_ollama_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MERCASTO_AI_INTERNAL_TOKEN", "contract-secret")
+    app.dependency_overrides[get_ollama_client] = FailingOllamaClient
+    client = TestClient(app)
+
+    response = client.post(
+        "/v1/moderation/image",
+        headers={"X-Mercasto-Internal-Token": "contract-secret"},
+        json={"context": "avatar público", "image_base64": encoded_image()},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Local AI moderation is unavailable."
 
 
 def test_gateway_rejects_invalid_base64_before_local_ai(monkeypatch: pytest.MonkeyPatch) -> None:
