@@ -8,6 +8,7 @@ MODEL_QUANT="Q4_K_M"
 CONTEXT_LENGTH=3072
 MAX_TOKENS=220
 REQUEST_TIMEOUT=60
+CPU_THREADS="${LMSTUDIO_BENCHMARK_THREADS:-2}"
 SERVER_STARTED=0
 DAEMON_STARTED=0
 TMP_DIR="$(mktemp -d /tmp/mercasto-lmstudio-benchmark.XXXXXX)"
@@ -39,12 +40,17 @@ PY
 
 echo '== LM Studio isolated vision benchmark preflight =='
 echo "arch=$(uname -m)"
+echo "logical_cpu_count=$(nproc) benchmark_cpu_threads=$CPU_THREADS"
 if [ -r /etc/os-release ]; then
   . /etc/os-release
   echo "os=${PRETTY_NAME:-unknown}"
 fi
 if [ "$(uname -m)" = "x86_64" ] && ! grep -qm1 -w avx2 /proc/cpuinfo; then
   echo 'AVX2 is required by the default LM Studio Linux x64 runtime but is not present.' >&2
+  exit 2
+fi
+if ! [[ "$CPU_THREADS" =~ ^[1-9][0-9]*$ ]]; then
+  echo 'LMSTUDIO_BENCHMARK_THREADS must be a positive integer.' >&2
   exit 2
 fi
 
@@ -64,12 +70,18 @@ if command -v lms >/dev/null 2>&1; then
 else
   echo 'Installing official LM Studio headless daemon into the runner user home.'
   curl -fsSL https://lmstudio.ai/install.sh | bash
-  export PATH="$HOME/.lmstudio/bin:$PATH"
 fi
 export PATH="$HOME/.lmstudio/bin:$PATH"
 command -v lms >/dev/null 2>&1 || { echo 'lms CLI not found after installation.' >&2; exit 4; }
-lms --help | head -20 || true
 lms runtime ls || true
+
+echo '== Install official LM Studio Python SDK into temporary benchmark path =='
+python3 -m pip --version
+python3 -m pip install --disable-pip-version-check --quiet --target "$TMP_DIR/python-packages" 'lmstudio>=1.5,<2'
+PYTHONPATH="$TMP_DIR/python-packages" python3 - <<'PY'
+import lmstudio
+print(f"lmstudio_python_module={lmstudio.__file__}")
+PY
 
 echo '== Start private headless daemon/server =='
 lms daemon up --json
@@ -84,7 +96,7 @@ for _ in $(seq 1 30); do
 done
 curl -fsS --max-time 5 "$BASE_URL/api/v1/models" >/dev/null
 
-echo '== Download Qwen3-VL 2B GGUF Q4_K_M =='
+echo '== Ensure Qwen3-VL 2B GGUF Q4_K_M is downloaded =='
 python3 - "$MODEL_SOURCE" "$MODEL_QUANT" >"$TMP_DIR/download-request.json" <<'PY'
 import json, sys
 print(json.dumps({"model": sys.argv[1], "quantization": sys.argv[2]}))
@@ -149,7 +161,7 @@ for model in models:
     if key:
         candidates.append((str(quant).upper() == target_quant, str(key), model.get("size_bytes", 0), str(quant)))
 if not candidates:
-    raise SystemExit("Downloaded Qwen3-VL 2B was not found in LM Studio v1 model inventory")
+    raise SystemExit("Downloaded Qwen3-VL 2B was not found in LM Studio model inventory")
 candidates.sort(reverse=True)
 exact, key, size_bytes, quant = candidates[0]
 print(key)
@@ -190,7 +202,7 @@ lms ps --json || lms ps || true
 free -h || true
 ps -eo pid,rss,%cpu,comm,args --sort=-rss | grep -E 'llmster|llm-engine|llama|LM Studio' | grep -v grep | head -20 || true
 
-echo '== Build synthetic 768x768 moderation image and request =='
+echo '== Build synthetic 768x768 moderation image =='
 python3 - "$TMP_DIR/synthetic.png" <<'PY'
 import binascii, struct, sys, zlib
 path = sys.argv[1]
@@ -209,90 +221,29 @@ png += chunk(b"IEND", b"")
 with open(path, "wb") as f:
     f.write(png)
 PY
-python3 - "$TMP_DIR/synthetic.png" "$MODEL_KEY" "$MAX_TOKENS" >"$TMP_DIR/vision-request.json" <<'PY'
-import base64, json, sys
-image_path, model, max_tokens = sys.argv[1], sys.argv[2], int(sys.argv[3])
-with open(image_path, "rb") as f:
-    image = base64.b64encode(f.read()).decode("ascii")
-system = "Eres el moderador privado de imágenes públicas de Mercasto. Responde exclusivamente JSON válido, sin markdown."
-prompt = """Analiza la imagen que se quiere publicar en una superficie pública de Mercasto.
-Contexto: benchmark sintético sin datos de usuario.
 
-Devuelve exclusivamente JSON válido:
-{\"decision\":\"approved|manual_review|rejected\",\"reason\":\"motivo breve en español\",\"confidence\":0.0,\"flags\":[\"...\"]}
-
-Reglas:
-- Rechaza desnudez o contenido sexual explícito, explotación, violencia gráfica, armas, drogas ilegales, odio, amenazas, fraude evidente o instrucciones delictivas.
-- Rechaza identificaciones, pasaportes, tarjetas bancarias, comprobantes u otros documentos con datos personales sensibles usados como imagen pública.
-- Rechaza imágenes claramente diseñadas para suplantar a otra persona o empresa, phishing o engaño.
-- Logotipos comerciales normales, retratos apropiados, productos y fotografías de negocio permitidas pueden aprobarse.
-- Si existe duda material, usa manual_review. No inventes hechos.
-- approved solo con alta confianza."""
-print(json.dumps({
-    "model": model,
-    "messages": [
-        {"role": "system", "content": system},
-        {"role": "user", "content": [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": "data:image/png;base64," + image}},
-        ]},
-    ],
-    "temperature": 0.1,
-    "max_tokens": max_tokens,
-    "stream": False,
-}, ensure_ascii=False))
-PY
-
-validate_response() {
-  local file="$1"
-  python3 - "$file" <<'PY'
-import json, re, sys
-with open(sys.argv[1], encoding="utf-8") as f:
-    response = json.load(f)
-content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
-if not isinstance(content, str) or not content.strip():
-    raise SystemExit("LM Studio returned no assistant content")
-clean = re.sub(r"^```(?:json)?|```$", "", content.strip(), flags=re.M).strip()
-try:
-    result = json.loads(clean)
-except json.JSONDecodeError:
-    match = re.search(r"\{.*\}", clean, flags=re.S)
-    if not match:
-        raise
-    result = json.loads(match.group(0))
-if result.get("decision") not in {"approved", "manual_review", "rejected"}:
-    raise SystemExit("LM Studio moderation JSON has an invalid decision")
-confidence = result.get("confidence")
-if not isinstance(confidence, (int, float)):
-    raise SystemExit("LM Studio moderation JSON has no numeric confidence")
-print("decision=%s confidence=%s" % (result.get("decision"), confidence))
-PY
-}
-
-run_vision() {
-  local label="$1" response="$TMP_DIR/$1.json" start end rc http_code
-  start=$(date +%s%3N)
-  set +e
-  http_code=$(curl -sS --max-time "$REQUEST_TIMEOUT" -o "$response" -w '%{http_code}' \
-    -H 'Content-Type: application/json' --data-binary @"$TMP_DIR/vision-request.json" \
-    "$BASE_URL/v1/chat/completions")
-  rc=$?
-  set -e
-  end=$(date +%s%3N)
-  echo "${label}_elapsed_ms=$((end - start)) http_code=${http_code:-000} curl_rc=$rc"
-  if [ "$rc" -ne 0 ] || [ "$http_code" != "200" ]; then
-    [ -s "$response" ] && cat "$response" >&2 || true
-    return 1
-  fi
-  validate_response "$response"
-}
-
-run_vision vision_first
-run_vision vision_warm
+echo '== Run SDK vision probe with explicit CPU thread budget =='
+set +e
+PYTHONPATH="$TMP_DIR/python-packages" timeout "$((REQUEST_TIMEOUT * 2 + 30))" \
+  python3 scripts/lmstudio-sdk-vision-probe.py \
+    --host "127.0.0.1:$PORT" \
+    --model "$MODEL_KEY" \
+    --image "$TMP_DIR/synthetic.png" \
+    --threads "$CPU_THREADS" \
+    --max-tokens "$MAX_TOKENS" \
+    --timeout "$REQUEST_TIMEOUT"
+probe_rc=$?
+set -e
 
 echo '== Final runtime snapshot =='
 lms ps --json || lms ps || true
 free -h || true
 ps -eo pid,rss,%cpu,comm,args --sort=-rss | grep -E 'llmster|llm-engine|llama|LM Studio' | grep -v grep | head -20 || true
 docker stats --no-stream --format 'ollama={{.Name}} mem={{.MemUsage}} cpu={{.CPUPerc}}' mercasto_ollama 2>/dev/null || true
-echo 'LM Studio isolated vision benchmark OK'
+
+if [ "$probe_rc" -ne 0 ]; then
+  echo "LM Studio SDK vision benchmark failed rc=$probe_rc" >&2
+  exit "$probe_rc"
+fi
+
+echo 'LM Studio SDK vision benchmark OK'
