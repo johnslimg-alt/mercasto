@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Models\User;
 use App\Events\NewNotification;
+use App\Jobs\PreScreenKycDocumentWithAI;
 use App\Support\MailLocale;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
@@ -783,7 +784,12 @@ class ProfileController extends Controller
 
         $user->kyc_document_url = $path;
         $user->kyc_status = 'pending';
+        $user->kyc_ai_status = 'queued';
+        $user->kyc_ai_notes = null;
+        $user->kyc_ai_checked_at = null;
         $user->save();
+
+        PreScreenKycDocumentWithAI::dispatch($user->id);
 
         return response()->json(['message' => 'Documento enviado. Nuestro equipo lo revisará en breve.', 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'password'])]);
     }
@@ -793,6 +799,16 @@ class ProfileController extends Controller
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         
         $users = User::where('kyc_status', 'pending')->latest()->paginate(20);
+        $users->getCollection()->transform(fn (User $user) => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'kyc_status' => $user->kyc_status,
+            'kyc_ai_status' => $user->getRawOriginal('kyc_ai_status') ?: 'queued',
+            'kyc_ai_notes' => $user->getRawOriginal('kyc_ai_notes'),
+            'kyc_ai_checked_at' => $user->kyc_ai_checked_at?->toIso8601String(),
+            'created_at' => $user->created_at?->toIso8601String(),
+        ]);
         return response()->json($users);
     }
 

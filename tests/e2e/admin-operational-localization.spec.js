@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { ADMIN_OPERATIONAL_COPY } from '../../src/utils/adminOperationalCopy.js';
+import { ADMIN_SURFACE_COPY } from '../../src/utils/adminSurfaceCopy.js';
 import { SUPPORTED_LANGUAGES } from '../../src/utils/translations.js';
 
 const adminUser = { id: 991, name: 'Admin QA', email: 'admin-qa@example.test', role: 'admin', is_verified: true };
@@ -306,7 +307,7 @@ for (const viewport of [
     await installAdmin(page, 'en');
     await mockApi(page);
     await page.goto('/admin');
-    const tabs = ['categories', 'users', 'moderation', 'coupons', 'reports', 'payments', 'seo_geo', 'business_verifications'];
+    const tabs = ['categories', 'users', 'moderation', 'coupons', 'reports', 'payments', 'seo_geo', 'kyc', 'business_verifications'];
     const unnamed = [];
     for (const tab of tabs) {
       const button = page.getByTestId(`admin-tab-${tab}`);
@@ -391,7 +392,7 @@ for (const viewport of [
         if (!(nativeTextName || item.aria || item.labelledby || item.title || item.label) && item.type !== 'hidden') unnamed.push({tab,...item});
       }
     };
-    await expect(page.getByText('QA Categoría', { exact: true })).toBeVisible();
+    await expect(page.getByRole('main').getByText('QA Categoría', { exact: true })).toBeVisible();
     await scan('categories');
     await page.getByTestId('admin-tab-users').click();
     await expect(page.getByText('qa-user@example.test', { exact: true })).toBeVisible();
@@ -449,3 +450,39 @@ test('Advertising Hub populated campaign controls are named and mutate the inten
   }));
   expect(unnamed, `unnamed populated Advertising Hub controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
 });
+
+
+test('admin shell hides public marketplace search and category navigation', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await installAdmin(page, 'es');
+  await mockApi(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('desktop-header-search')).toBeHidden();
+  await expect(page.getByTestId('mobile-header-search')).toBeHidden();
+  await expect(page.getByTestId('header-category-bar')).toBeHidden();
+});
+
+test('admin legacy tab surface stays dark in dark mode', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await installAdmin(page, 'es');
+  await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
+  await mockApi(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+  await expect.poll(() => page.locator('html').evaluate(node => node.classList.contains('dark'))).toBe(true);
+  const color = await page.getByTestId('admin-tab-strip').evaluate(node => getComputedStyle(node).backgroundColor);
+  expect(color).toBe('rgb(30, 41, 59)');
+});
+
+for (const lang of ['es', 'en', 'ru']) {
+  test(`identity review tab follows ${lang} admin copy`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await installAdmin(page, lang);
+    await mockApi(page);
+    await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('admin-tab-kyc').click();
+    await expect(page.getByText(ADMIN_SURFACE_COPY[lang].admin_kyc_pending, { exact: true })).toBeVisible();
+    await expect(page.getByTestId('admin-kyc-empty')).toHaveText(ADMIN_SURFACE_COPY[lang].admin_no_kyc);
+  });
+}

@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
+use Symfony\Component\Process\Process;
 use Throwable;
 
 class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
@@ -64,25 +67,14 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         ])->saveQuietly();
 
         try {
-            $images = [];
-            foreach (array_slice($covers->originalImages($ad), 0, 3) as $imagePath) {
-                try {
-                    if (! Storage::disk('public')->exists($imagePath)) {
-                        continue;
-                    }
-                    $images[] = base64_encode(Storage::disk('public')->get($imagePath));
-                } catch (Throwable $mediaError) {
-                    Log::warning('Local AI moderation skipped unreadable image', [
-                        'ad_id' => $ad->id,
-                        'image' => $imagePath,
-                        'error' => $mediaError->getMessage(),
-                    ]);
-                }
-            }
+            $originalImages = $covers->originalImages($ad);
+            $images = $this->moderationImages($ad, $originalImages);
+            $videoFrames = $this->moderationVideoFrames($ad);
+            $aiImages = array_merge($images, $videoFrames);
 
             $messages = [
                 ['role' => 'system', 'content' => 'Eres el moderador privado de Mercasto. Responde exclusivamente JSON válido, sin markdown ni texto adicional.'],
-                ['role' => 'user', 'content' => $this->prompt($ad, $covers->hasOriginalImages($ad)), 'images' => $images],
+                ['role' => 'user', 'content' => $this->prompt($ad, $covers->hasOriginalImages($ad)), 'images' => $aiImages],
             ];
 
             $aiResponse = $ai->chatPro($messages, [
@@ -97,6 +89,15 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $decision = $this->safeDecision($result['decision'], $result['confidence']);
             $reason = trim((string) ($result['reason'] ?? 'Sin explicación del modelo.'));
             $confidence = max(0, min(1, (float) ($result['confidence'] ?? 0)));
+            $unreviewedImages = max(0, count($originalImages) - count($images));
+            if ($unreviewedImages > 0) {
+                $decision = 'manual_review';
+                $reason = "{$unreviewedImages} fotografía(s) no pudieron analizarse automáticamente. " . $reason;
+            }
+            if (! empty($ad->video_url) && $videoFrames === []) {
+                $decision = 'manual_review';
+                $reason = 'No fue posible extraer fotogramas del video para la revisión automática. Revisión visual manual requerida. ' . $reason;
+            }
 
             $newStatus = match ($decision) {
                 'approved' => $this->activateOnApproval ? 'active' : 'archived',
@@ -124,6 +125,10 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'metadata' => [
                     'model' => $model,
                     'had_original_images' => $covers->hasOriginalImages($ad),
+                    'original_image_count' => count($originalImages),
+                    'reviewed_image_count' => count($images),
+                    'reviewed_video_frame_count' => count($videoFrames),
+                    'video_manual_review_required' => ! empty($ad->video_url) && $videoFrames === [],
                     'previous_status' => $previousStatus,
                     'result' => $result,
                     'activation_mode' => $this->activateOnApproval
@@ -155,6 +160,85 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         }
     }
 
+
+    private function moderationImages(Ad $ad, array $imagePaths): array
+    {
+        $disk = Storage::disk('public');
+        $manager = ImageManager::usingDriver(Driver::class);
+        $payloads = [];
+
+        foreach ($imagePaths as $imagePath) {
+            try {
+                if (! $disk->exists($imagePath)) continue;
+                $image = $manager->decode($disk->get($imagePath));
+                $image->scaleDown(width: 768, height: 768);
+                $payloads[] = base64_encode((string) $image->encodeUsingFileExtension('webp', quality: 65));
+            } catch (Throwable $mediaError) {
+                Log::warning('Local AI moderation skipped unreadable image', [
+                    'ad_id' => $ad->id,
+                    'image' => $imagePath,
+                    'error' => $mediaError->getMessage(),
+                ]);
+            }
+        }
+
+        return $payloads;
+    }
+
+    private function moderationVideoFrames(Ad $ad): array
+    {
+        if (empty($ad->video_url)) return [];
+
+        $disk = Storage::disk('public');
+        if (! $disk->exists($ad->video_url)) return [];
+
+        $videoPath = $disk->path($ad->video_url);
+        $probe = new Process([
+            'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1', $videoPath,
+        ]);
+        $probe->setTimeout(20);
+
+        try {
+            $probe->mustRun();
+            $duration = max(0.0, (float) trim($probe->getOutput()));
+            $times = array_values(array_unique(array_map(
+                fn (float $time) => round(max(0, $time), 2),
+                [0.0, $duration / 2, max(0, $duration - 0.5)]
+            )));
+            $frames = [];
+            $manager = ImageManager::usingDriver(Driver::class);
+
+            foreach ($times as $time) {
+                $base = tempnam(sys_get_temp_dir(), 'mercasto-video-review-');
+                if ($base === false) continue;
+                @unlink($base);
+                $framePath = $base . '.jpg';
+                try {
+                    $extract = new Process([
+                        'ffmpeg', '-y', '-ss', (string) $time, '-i', $videoPath,
+                        '-frames:v', '1', '-vf', 'scale=768:-2:force_original_aspect_ratio=decrease',
+                        '-q:v', '5', $framePath,
+                    ]);
+                    $extract->setTimeout(30);
+                    $extract->mustRun();
+                    if (! is_file($framePath) || filesize($framePath) === 0) continue;
+                    $image = $manager->decode(file_get_contents($framePath));
+                    $frames[] = base64_encode((string) $image->encodeUsingFileExtension('webp', quality: 65));
+                } finally {
+                    @unlink($framePath);
+                }
+            }
+            return $frames;
+        } catch (Throwable $error) {
+            Log::warning('Local AI moderation could not extract video frames', [
+                'ad_id' => $ad->id,
+                'error' => $error->getMessage(),
+            ]);
+            return [];
+        }
+    }
+
     private function prompt(Ad $ad, bool $hasOriginalImages): string
     {
         $attributes = json_encode($ad->attributes ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -164,7 +248,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
         return <<<PROMPT
 Eres el moderador de seguridad de Mercasto, un mercado de anuncios clasificados en México.
-Analiza texto, atributos y fotografías originales. {$photoNotice}
+Analiza texto, atributos, TODAS las fotografías originales adjuntas y, cuando existan, fotogramas representativos del video. {$photoNotice}
 
 Devuelve exclusivamente JSON válido con esta forma:
 {"decision":"approved|manual_review|rejected","reason":"explicación breve y concreta en español","confidence":0.0,"flags":["..."]}

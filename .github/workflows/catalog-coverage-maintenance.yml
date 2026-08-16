@@ -1,0 +1,44 @@
+name: Catalog Coverage Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: dry-run or apply
+        required: true
+        default: dry-run
+        type: choice
+        options: [dry-run, apply]
+      minimum:
+        description: Minimum active cards per category
+        required: true
+        default: '4'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  catalog-coverage:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: Verify deployed main
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+      - name: Plan or apply editorial catalog coverage
+        env:
+          MODE: ${{ inputs.mode }}
+          MINIMUM: ${{ inputs.minimum }}
+        run: |
+          set -euo pipefail
+          case "$MINIMUM" in ''|*[!0-9]*) echo "minimum must be numeric"; exit 2;; esac
+          cd /var/www/mercasto
+          if [ "$MODE" = "apply" ]; then
+            docker exec mercasto_backend_container php artisan ads:ensure-catalog-coverage --minimum="$MINIMUM"
+            docker exec mercasto_backend_container php artisan ads:audit-catalog-coverage --minimum="$MINIMUM"
+          else
+            docker exec mercasto_backend_container php artisan ads:ensure-catalog-coverage --minimum="$MINIMUM" --dry-run
+          fi

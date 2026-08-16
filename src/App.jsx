@@ -519,6 +519,7 @@ export default function AppWrapper() {
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const { lang, setLang, loadedLangVersion } = useUI();
 
   // Page-view tracking. Keep filtered/catalog/detail states out of homepage conversion metrics.
@@ -4303,7 +4304,7 @@ function App() {
             <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
               <MercastoLogo className="h-6 sm:h-7 lg:h-9" tagline={t.ai_brand_short || 'Clasificados con IA'} />
             </a>
-            <div className="hidden lg:flex flex-1 items-center">
+            <div className={isAdminRoute ? "hidden" : "hidden lg:flex flex-1 items-center"}>
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
               <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="desktop-header-control desktop-header-search-control header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
@@ -4535,7 +4536,7 @@ function App() {
             </div>
           </div>
           {/* Mobile Search + Location + Account */}
-          <div className="mobile-search-row lg:hidden pt-7 pb-7">
+          <div className={isAdminRoute ? "hidden" : "mobile-search-row lg:hidden pt-7 pb-7"}>
             <div ref={mobileSearchRef} className="relative min-w-0">
               <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-full focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
@@ -4579,7 +4580,7 @@ function App() {
             )}
           </div>
         </div>
-        <div className="header-category-bar border-t">
+        <div data-testid="header-category-bar" className={isAdminRoute ? "hidden" : "header-category-bar border-t"}>
           <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
             <nav className="flex items-center gap-4 overflow-x-auto no-scrollbar font-medium text-slate-600 whitespace-nowrap">
               <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>

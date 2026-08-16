@@ -4,8 +4,7 @@ import test from 'node:test';
 import { SUPPORTED_LANGUAGES } from '../src/utils/translations.js';
 import { ADMIN_SURFACE_COPY } from '../src/utils/adminSurfaceCopy.js';
 
-const ADMIN_KEYS = ['admin_by', 'admin_promotion_revenue_30d', 'admin_promotion_products', 'admin_global_ctr', 'admin_business_verifications_pending', 'admin_business_verifications_desc', 'admin_plan', 'admin_email_phone_pending', 'admin_anonymous', 'admin_discard_report', 'admin_email_ip', 'deleteUserConfirm', 'deleteUserError', 'changeRoleConfirm', 'changeRoleError', 'rejectReasonPrompt', 'deleteReportConfirm', 'deleteUserReportConfirm', 'couponCreated', 'couponCreateError', 'couponDeleteConfirm', 'categorySaved', 'categorySaveError', 'roleIndividual', 'roleBusiness', 'roleAdmin'];
-
+const ADMIN_KEYS = Object.keys(ADMIN_SURFACE_COPY.es);
 async function translationsFor(lang) {
   return (await import(`../src/constants/translations/${lang}.js`)).default;
 }
@@ -30,6 +29,7 @@ test('non-Spanish admin actions are localized instead of copying Spanish', async
   for (const lang of SUPPORTED_LANGUAGES.filter(language => language !== 'es')) {
     for (const key of ['deleteUserConfirm', 'couponCreated']) assert.notEqual(ADMIN_SURFACE_COPY[lang][key], ADMIN_SURFACE_COPY.es[key], `${lang}.${key}`);
     assert.notEqual(ADMIN_SURFACE_COPY[lang].admin_business_verifications_desc, ADMIN_SURFACE_COPY.es.admin_business_verifications_desc, `${lang}.admin_business_verifications_desc`);
+    assert.notEqual(ADMIN_SURFACE_COPY[lang].admin_kyc_desc, ADMIN_SURFACE_COPY.es.admin_kyc_desc, `${lang}.admin_kyc_desc`);
   }
 });
 
@@ -91,4 +91,27 @@ test('admin mutation methods and payloads stay unchanged', () => {
   assert.match(source, /fetch\(`\$\{API_URL\}\/admin\/coupons\/\$\{id\}`, \{ method: 'DELETE'/);
   assert.match(source, /const method = editingCatId \? 'PUT' : 'POST'/);
   assert.match(source, /body: JSON\.stringify\(adminCatForm\)/);
+});
+
+
+test('admin identity and business verification components use localized admin copy', () => {
+  const business = fs.readFileSync('src/components/screens/AdminBusinessVerifications.jsx', 'utf8');
+  const kyc = fs.readFileSync('src/components/screens/AdminKycVerifications.jsx', 'utf8');
+  for (const marker of ['copy.admin_no_business_verifications', 'copy.admin_approve', 'copy.admin_reject']) assert.ok(business.includes(marker), marker);
+  for (const marker of ['copy.admin_no_kyc', 'copy.admin_ai_prescreen', 'copy.admin_identity_load_error', 'copy.admin_document_error']) assert.ok(kyc.includes(marker), marker);
+  for (const literal of ['Sin verificaciones pendientes de revisión manual', '> Aprobar', '> Rechazar']) assert.equal(business.includes(literal), false, literal);
+});
+
+test('admin route hides marketplace catalog search and category navigation', () => {
+  const source = fs.readFileSync('src/App.jsx', 'utf8');
+  assert.ok(source.includes("const isAdminRoute = location.pathname.startsWith('/admin')"));
+  assert.ok(source.includes('isAdminRoute ? "hidden" : "hidden lg:flex flex-1 items-center"'));
+  assert.ok(source.includes('isAdminRoute ? "hidden" : "mobile-search-row lg:hidden pt-7 pb-7"'));
+  assert.ok(source.includes('data-testid="header-category-bar" className={isAdminRoute ? "hidden"'));
+});
+
+test('admin dark safety layer covers legacy medium-light slate and gray surfaces', () => {
+  const css = fs.readFileSync('src/index.css', 'utf8');
+  assert.match(css, /dashboard-dark-scope[\s\S]{0,220}bg-slate-200/);
+  assert.match(css, /dashboard-dark-scope[\s\S]{0,260}bg-gray-200/);
 });
