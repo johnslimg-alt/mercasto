@@ -29,7 +29,7 @@ class PublicImageModerationCoverageTest extends TestCase
         $this->assertStringContainsString("Auth::guard('sanctum')->user()", $middleware);
         $this->assertStringContainsString('Validator::make', $middleware);
         $this->assertStringContainsString("['admin']", $middleware);
-        $this->assertStringContainsString("$user->role !== 'admin'", $middleware);
+        $this->assertStringContainsString("\$user->role !== 'admin'", $middleware);
         $this->assertStringContainsString('RateLimiter::tooManyAttempts', $middleware);
         $this->assertStringContainsString('RateLimiter::hit', $middleware);
         $this->assertStringContainsString('function uploadAvatar', $profile);
