@@ -303,3 +303,32 @@ for (const viewport of [
     expect(unnamed, `unnamed admin form/button controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
   });
 }
+
+
+for (const viewport of [
+  { name: 'desktop', width: 1280, height: 860 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`Advertising Hub controls expose accessible names on ${viewport.name}`, async ({ page }) => {
+    await installAdmin(page, 'es');
+    await mockApi(page);
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/admin/marketing?section=dashboard', { waitUntil: 'domcontentloaded' });
+    const sections = ['dashboard','connections','campaigns','creatives','audiences','tracking','budgets','tests','automations','ai'];
+    const unnamed = [];
+    for (const section of sections) {
+      await page.getByTestId(`marketing-section-${section}`).click();
+      await page.waitForTimeout(30);
+      const items = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.map(node => {
+        const id = node.id || '';
+        const label = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim() || '' : '';
+        return { tag: node.tagName.toLowerCase(), text:(node.innerText||'').trim(), aria:(node.getAttribute('aria-label')||'').trim(), labelledby:(node.getAttribute('aria-labelledby')||'').trim(), title:(node.getAttribute('title')||'').trim(), label, type:node.getAttribute('type')||'', html:node.outerHTML.slice(0,260) };
+      }));
+      for (const item of items) {
+        const named = item.text || item.aria || item.labelledby || item.title || item.label;
+        if (!named && item.type !== 'hidden') unnamed.push({ section, ...item });
+      }
+    }
+    expect(unnamed, `unnamed Advertising Hub controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}
