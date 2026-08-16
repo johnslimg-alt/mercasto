@@ -91,6 +91,11 @@ jobs:
           set -euo pipefail
           docker exec mercasto_backend_container php artisan ai:runtime-check --timeout=45
 
+      - name: Measure local AI vision path without user data
+        run: |
+          set -euo pipefail
+          docker exec mercasto_backend_container php artisan ai:vision-runtime-check --timeout=60
+
       - name: Dry-run catalog coverage maintenance
         run: |
           set -euo pipefail
