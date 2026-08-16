@@ -94,6 +94,51 @@ class CatalogFillerRepairTest extends TestCase
         $this->assertSame('Zona Centro', $unknown->location);
     }
 
+    public function test_deploy_migration_restores_only_legacy_catalog_fillers(): void
+    {
+        $user = User::factory()->create();
+
+        $known = $this->makeAd($user, true, 'legacy-migration.jpg', 'approved');
+        $known->forceFill([
+            'location' => 'Monterrey, NL',
+            'city' => null,
+            'state' => null,
+        ])->saveQuietly();
+
+        $genuine = $this->makeAd($user, false, 'genuine-migration.jpg', 'approved');
+        $genuine->forceFill([
+            'location' => 'Monterrey, NL',
+            'city' => null,
+            'state' => null,
+        ])->saveQuietly();
+
+        $unknown = $this->makeAd($user, true, 'unknown-migration.jpg', 'approved');
+        $unknown->forceFill([
+            'location' => 'Zona Centro',
+            'city' => null,
+            'state' => null,
+        ])->saveQuietly();
+
+        $migration = require database_path('migrations/2026_08_16_183500_restore_legacy_catalog_filler_geography.php');
+        $migration->up();
+
+        $known = $known->fresh();
+        $genuine = $genuine->fresh();
+        $unknown = $unknown->fresh();
+
+        $this->assertSame('Monterrey', $known->city);
+        $this->assertSame('Nuevo León', $known->state);
+        $this->assertSame('Monterrey, Nuevo León', $known->location);
+
+        $this->assertNull($genuine->city);
+        $this->assertNull($genuine->state);
+        $this->assertSame('Monterrey, NL', $genuine->location);
+
+        $this->assertNull($unknown->city);
+        $this->assertNull($unknown->state);
+        $this->assertSame('Zona Centro', $unknown->location);
+    }
+
     private function makeAd(User $user, bool $filler, string $image, ?string $moderation): Ad
     {
         return Ad::query()->create([
