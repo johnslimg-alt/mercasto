@@ -17,16 +17,19 @@ class PublicImageModerationCoverageTest extends TestCase
         $this->assertStringContainsString('ModeratePublicImageUploads::class', $bootstrap);
 
         foreach ([
-            "'api/user/avatar' => ['field' => 'avatar'",
-            "'api/user/profile' => ['field' => 'avatar'",
-            "'api/user/business-profile/logo' => ['field' => 'logo'",
-            "'api/user/business-profile/banner' => ['field' => 'banner'",
-            "'api/admin/banners/upload' => ['field' => 'image'",
+            "'api/user/avatar' => [",
+            "'api/user/profile' => [",
+            "'api/user/business-profile/logo' => [",
+            "'api/user/business-profile/banner' => [",
+            "'api/admin/banners/upload' => [",
         ] as $marker) {
             $this->assertStringContainsString($marker, $middleware, $marker);
         }
 
         $this->assertStringContainsString("Auth::guard('sanctum')->user()", $middleware);
+        $this->assertStringContainsString('Validator::make', $middleware);
+        $this->assertStringContainsString("['admin']", $middleware);
+        $this->assertStringContainsString("$user->role !== 'admin'", $middleware);
         $this->assertStringContainsString('RateLimiter::tooManyAttempts', $middleware);
         $this->assertStringContainsString('RateLimiter::hit', $middleware);
         $this->assertStringContainsString('function uploadAvatar', $profile);
@@ -44,7 +47,8 @@ class PublicImageModerationCoverageTest extends TestCase
 
         $this->assertStringContainsString('PreScreenKycDocumentWithAI::dispatch', $profile);
         $this->assertStringContainsString('crossCheckCsfWithAi', $business);
-        $this->assertStringContainsString("'images' => \$imagePayloads", $adJob);
-        $this->assertStringContainsString('videoFramePayloads', $adJob);
+        $this->assertStringContainsString("'images' => \$aiImages", $adJob);
+        $this->assertStringContainsString('array_merge($images, $videoFrames)', $adJob);
+        $this->assertStringContainsString('moderationVideoFrames', $adJob);
     }
 }
