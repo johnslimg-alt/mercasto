@@ -1,0 +1,46 @@
+name: Patch public image manager compatibility
+
+on:
+  push:
+    branches:
+      - fix/public-image-ai-moderation
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch Intervention Image API and remove temporary workflow
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path('backend/app/Http/Controllers/Api/ProfileController.php'),
+              Path('backend/app/Http/Controllers/Api/BusinessProfileController.php'),
+          ]
+          for path in paths:
+              text = path.read_text()
+              old = 'ImageManager::withDriver(Driver::class)'
+              new = 'ImageManager::usingDriver(Driver::class)'
+              if old not in text:
+                  raise SystemExit(f'expected legacy ImageManager call missing in {path}')
+              path.write_text(text.replace(old, new))
+
+          Path('.github/workflows/patch-public-image-manager.yml').unlink()
+          PY
+      - name: Commit compatibility fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add backend/app/Http/Controllers/Api/ProfileController.php \
+                  backend/app/Http/Controllers/Api/BusinessProfileController.php \
+                  .github/workflows/patch-public-image-manager.yml
+          git commit -m "fix: repair public image processing compatibility"
+          git push origin HEAD:fix/public-image-ai-moderation
