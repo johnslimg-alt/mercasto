@@ -14,6 +14,13 @@ Artisan::command('inspire', function () {
 // service, which uses the matching PostgreSQL/pgvector client image.
 // Keep `db:backup` manual-only so the backend container does not need pg_dump.
 
+// Keep the private vision model resident so a user's first moderation request
+// does not pay the full cold-load penalty. The preload contains no user data.
+Schedule::command('ai:runtime-preload --timeout=90')
+    ->cron('17 */6 * * *')
+    ->withoutOverlapping(10)
+    ->runInBackground();
+
 // Финансовый контроль (The Eternal VIP Fix): Ежечасно снимаем продвижение с просроченных объявлений
 Schedule::call(function () {
     $expiredPromotions = DB::table('ad_promotions')

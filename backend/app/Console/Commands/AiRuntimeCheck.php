@@ -15,6 +15,7 @@ class AiRuntimeCheck extends Command
     public function handle(LocalAiClient $client): int
     {
         $timeout = max(30, min(120, (int) $this->option('timeout')));
+        $startedAt = hrtime(true);
 
         try {
             $response = $client->chatFlash([
@@ -33,25 +34,27 @@ class AiRuntimeCheck extends Command
                 'num_ctx' => 512,
             ]);
         } catch (Throwable $error) {
+            $elapsedMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
             $this->error('local AI runtime check FAILED: ' . $error::class);
+            $this->line('elapsed_ms=' . $elapsedMs);
 
             return self::FAILURE;
         }
 
         if (($response['provider'] ?? null) !== 'ollama') {
             $this->error('local AI runtime check FAILED: unexpected provider');
-
             return self::FAILURE;
         }
 
         $model = trim((string) ($response['model'] ?? ''));
         if ($model === '') {
             $this->error('local AI runtime check FAILED: model was not reported');
-
             return self::FAILURE;
         }
 
+        $elapsedMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
         $this->info('local AI runtime OK provider=ollama model=' . $model);
+        $this->line('elapsed_ms=' . $elapsedMs);
 
         return self::SUCCESS;
     }
