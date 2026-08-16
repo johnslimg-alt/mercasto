@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-seller-report-${{ github.run_number }}
           path: playwright-report/
