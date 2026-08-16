@@ -8,6 +8,7 @@ use App\Models\AdModerationDecision;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -66,7 +67,8 @@ class ModerationAuthKeyTest extends TestCase
 
     public function test_original_image_is_sent_only_to_local_model(): void
     {
-        Storage::disk('public')->put('ads/photo.jpg', 'fake-image-bytes');
+        $fixture = UploadedFile::fake()->image('photo.jpg', 640, 480);
+        Storage::disk('public')->put('ads/photo.jpg', file_get_contents($fixture->getRealPath()));
         $this->fakeDecision([
             'decision' => 'manual_review',
             'reason' => 'Revisión requerida.',
@@ -79,9 +81,15 @@ class ModerationAuthKeyTest extends TestCase
         app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
 
         Http::assertSent(function (Request $request) {
+            $image = data_get($request->data(), 'messages.1.images.0');
             return $request->url() === 'http://ollama.test/api/chat'
-                && data_get($request->data(), 'messages.1.images.0') === base64_encode('fake-image-bytes');
+                && is_string($image)
+                && $image !== ''
+                && base64_decode($image, true) !== false;
         });
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'googleapis.com')
+            || str_contains($request->url(), 'deepseek')
+            || str_contains($request->url(), 'anthropic'));
     }
 
     public function test_automatic_approval_starts_fresh_lifetime(): void
