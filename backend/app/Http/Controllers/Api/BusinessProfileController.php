@@ -17,7 +17,7 @@ class BusinessProfileController extends Controller
 {
     private function imageManager(): ImageManager
     {
-        return ImageManager::withDriver(Driver::class);
+        return ImageManager::usingDriver(Driver::class);
     }
 
     public function show(Request $request)
