@@ -38,7 +38,7 @@ class AuditCatalogCoverage extends Command
             if (! is_string($image) || trim($image) === '') $errors[] = "filler #{$ad->id}: missing image";
             if (trim((string) $ad->description) === '' || mb_strlen(strip_tags((string) $ad->description)) < 60) $errors[] = "filler #{$ad->id}: weak description";
             if ((float) $ad->price <= 0) $errors[] = "filler #{$ad->id}: invalid price";
-            if (! $ad->state || ! $ad->city) $errors[] = "filler #{$ad->id}: missing location";
+            if (trim((string) $ad->location) === '') $errors[] = "filler #{$ad->id}: missing location";
             if ($ad->ai_moderation_status !== 'approved') $errors[] = "filler #{$ad->id}: moderation not approved";
             if ($image !== '') {
                 $normalized = preg_replace('/\?.*$/', '', $image) ?: $image;
