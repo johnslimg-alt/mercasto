@@ -342,17 +342,17 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
 
         <form onSubmit={handleSaveProfile} className={`${cardClass} space-y-4`}>
           <h2 className={headingClass}><User size={16} className="text-lime-500" /> {t.personal_info}</h2>
-          <input required maxLength={255} value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className={inputClass} placeholder={t.fullname_placeholder} />
-          <textarea rows={3} maxLength={1000} value={form.bio} onChange={event => setForm(prev => ({ ...prev, bio: event.target.value }))} className={`${inputClass} resize-none`} placeholder={t.bio_placeholder} />
+          <input required maxLength={255} aria-label={t.fullname_placeholder} value={form.name} onChange={event => setForm(prev => ({ ...prev, name: event.target.value }))} className={inputClass} placeholder={t.fullname_placeholder} />
+          <textarea rows={3} maxLength={1000} aria-label={t.bio_placeholder} value={form.bio} onChange={event => setForm(prev => ({ ...prev, bio: event.target.value }))} className={`${inputClass} resize-none`} placeholder={t.bio_placeholder} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input maxLength={120} value={form.city} onChange={event => setForm(prev => ({ ...prev, city: event.target.value }))} className={inputClass} placeholder={t.city} />
-            <input type="tel" maxLength={20} value={form.phone_number} onChange={event => setForm(prev => ({ ...prev, phone_number: event.target.value }))} className={inputClass} placeholder={t.phone} />
-            <input type="tel" maxLength={20} value={form.whatsapp} onChange={event => setForm(prev => ({ ...prev, whatsapp: event.target.value }))} className={inputClass} placeholder={t.whatsapp} />
-            <input type="url" maxLength={255} value={form.website} onChange={event => setForm(prev => ({ ...prev, website: event.target.value }))} className={inputClass} placeholder={t.website} />
+            <input maxLength={120} aria-label={t.city} value={form.city} onChange={event => setForm(prev => ({ ...prev, city: event.target.value }))} className={inputClass} placeholder={t.city} />
+            <input type="tel" maxLength={20} aria-label={t.phone} value={form.phone_number} onChange={event => setForm(prev => ({ ...prev, phone_number: event.target.value }))} className={inputClass} placeholder={t.phone} />
+            <input type="tel" maxLength={20} aria-label={t.whatsapp} value={form.whatsapp} onChange={event => setForm(prev => ({ ...prev, whatsapp: event.target.value }))} className={inputClass} placeholder={t.whatsapp} />
+            <input type="url" maxLength={255} aria-label={t.website} value={form.website} onChange={event => setForm(prev => ({ ...prev, website: event.target.value }))} className={inputClass} placeholder={t.website} />
           </div>
           <div className="flex items-center border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-950 focus-within:border-lime-500 focus-within:ring-2 focus-within:ring-lime-500/30">
             <span className="px-3 text-slate-400 text-sm bg-slate-50 dark:bg-slate-900 border-r border-slate-300 dark:border-slate-700 py-2.5">@</span>
-            <input maxLength={100} value={form.social_instagram} onChange={event => setForm(prev => ({ ...prev, social_instagram: event.target.value.replace(/^@/, '') }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Instagram" />
+            <input maxLength={100} aria-label="Instagram" value={form.social_instagram} onChange={event => setForm(prev => ({ ...prev, social_instagram: event.target.value.replace(/^@/, '') }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Instagram" />
           </div>
           <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60">{saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save size={15} />} {t.save_changes}</button>
         </form>
@@ -368,9 +368,9 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
               <div className="space-y-3">
                 <p className="text-xs text-slate-500">{t.phone_verify_desc}</p>
                 {!otpSent ? (
-                  <div className="flex gap-2"><input type="tel" placeholder="+52 55 1234 5678" value={phoneInput} onChange={event => setPhoneInput(event.target.value)} className={`${inputClass} flex-1`} /><button type="button" onClick={handleSendOtp} disabled={phoneVerifying} className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap">{t.send_code}</button></div>
+                  <div className="flex gap-2"><input type="tel" aria-label={t.phone_verification} placeholder="+52 55 1234 5678" value={phoneInput} onChange={event => setPhoneInput(event.target.value)} className={`${inputClass} flex-1`} /><button type="button" onClick={handleSendOtp} disabled={phoneVerifying} className="bg-lime-500 hover:bg-lime-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap">{t.send_code}</button></div>
                 ) : (
-                  <div className="space-y-3"><input inputMode="numeric" maxLength={6} placeholder="123456" value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\D/g, ''))} className={`${inputClass} text-center text-2xl tracking-widest font-mono`} /><button type="button" onClick={handleVerifyOtp} disabled={phoneVerifying || otpInput.length !== 6} className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">{t.verify}</button></div>
+                  <div className="space-y-3"><input inputMode="numeric" maxLength={6} aria-label={`${t.phone_verification}: ${t.verify}`} placeholder="123456" value={otpInput} onChange={event => setOtpInput(event.target.value.replace(/\D/g, ''))} className={`${inputClass} text-center text-2xl tracking-widest font-mono`} /><button type="button" onClick={handleVerifyOtp} disabled={phoneVerifying || otpInput.length !== 6} className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">{t.verify}</button></div>
                 )}
               </div>
             )}
@@ -380,9 +380,9 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
         {!isOAuth && (
           <form onSubmit={handleSavePassword} className={`${cardClass} space-y-4`}>
             <h2 className={headingClass}><Lock size={16} className="text-lime-500" /> {t.change_password}</h2>
-            {profile?.password_set && <input type="password" value={passwordForm.current_password} onChange={event => setPasswordForm(prev => ({ ...prev, current_password: event.target.value }))} className={inputClass} placeholder={t.curr_password} />}
-            <input type="password" minLength={8} required value={passwordForm.new_password} onChange={event => setPasswordForm(prev => ({ ...prev, new_password: event.target.value }))} className={inputClass} placeholder={t.new_password} />
-            <input type="password" required value={passwordForm.confirm_password} onChange={event => setPasswordForm(prev => ({ ...prev, confirm_password: event.target.value }))} className={inputClass} placeholder={t.conf_password} />
+            {profile?.password_set && <input type="password" aria-label={t.curr_password} value={passwordForm.current_password} onChange={event => setPasswordForm(prev => ({ ...prev, current_password: event.target.value }))} className={inputClass} placeholder={t.curr_password} />}
+            <input type="password" minLength={8} required aria-label={t.new_password} value={passwordForm.new_password} onChange={event => setPasswordForm(prev => ({ ...prev, new_password: event.target.value }))} className={inputClass} placeholder={t.new_password} />
+            <input type="password" required aria-label={t.conf_password} value={passwordForm.confirm_password} onChange={event => setPasswordForm(prev => ({ ...prev, confirm_password: event.target.value }))} className={inputClass} placeholder={t.conf_password} />
             <button type="submit" disabled={saving} className="w-full bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"><Lock size={15} /> {t.update_pass_btn}</button>
           </form>
         )}
@@ -405,7 +405,7 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
           <div ref={deleteDialogRef} role="dialog" aria-modal="true" aria-labelledby="delete-account-title" onKeyDown={handleDeleteDialogKeyDown} className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full shadow-xl border border-slate-200 dark:border-slate-800">
             <h3 id="delete-account-title" className="font-bold text-slate-900 dark:text-white text-lg mb-2">{t.delete_account_confirm}</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{t.delete_account_warn}</p>
-            <input data-testid="profile-delete-confirm-input" value={deleteConfirmText} onChange={event => setDeleteConfirmText(event.target.value)} placeholder={t.delete_confirmation_word} className={`${inputClass} mb-4`} />
+            <input data-testid="profile-delete-confirm-input" aria-label={t.delete_account_confirm} value={deleteConfirmText} onChange={event => setDeleteConfirmText(event.target.value)} placeholder={t.delete_confirmation_word} className={`${inputClass} mb-4`} />
             <div className="flex gap-3">
               <button type="button" data-testid="profile-delete-cancel" onClick={closeDeleteModal} className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">{t.cancel}</button>
               <button type="button" data-testid="profile-delete-confirm" disabled={deleteConfirmText !== t.delete_confirmation_word} onClick={async () => {

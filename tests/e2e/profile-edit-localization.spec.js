@@ -164,3 +164,41 @@ for (const lang of LANGUAGES) {
     await verifyProfileEdit(page, lang, { width: 390, height: 844 });
   });
 }
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`profile edit visible controls expose accessible names on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await mockProfileApi(page);
+    await installSession(page, 'es');
+    await page.goto('/perfil/editar');
+    await expect(page.getByRole('heading', { name: translations.es.edit_profile })).toBeVisible();
+    const unnamed = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.flatMap(node => {
+      const tag = node.tagName.toLowerCase();
+      const id = node.id || '';
+      const explicitLabel = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim() || '' : '';
+      const wrappingLabel = node.closest('label')?.innerText?.trim() || '';
+      const label = explicitLabel || wrappingLabel;
+      const nativeTextName = tag === 'button' || tag === 'a' ? (node.innerText || '').trim() : '';
+      const named = nativeTextName || (node.getAttribute('aria-label') || '').trim() || (node.getAttribute('aria-labelledby') || '').trim() || (node.getAttribute('title') || '').trim() || label;
+      if (named || node.getAttribute('type') === 'hidden') return [];
+      return [{ tag, type: node.getAttribute('type') || '', name: node.getAttribute('name') || '', placeholder: node.getAttribute('placeholder') || '', testid: node.getAttribute('data-testid') || '', html: node.outerHTML.slice(0, 320) }];
+    }));
+    const deleteOpener = page.getByTestId('profile-delete-open');
+    await deleteOpener.click();
+    const dialogUnnamed = await page.getByRole('dialog').locator('button:visible, input:visible').evaluateAll(nodes => nodes.flatMap(node => {
+      const tag = node.tagName.toLowerCase();
+      const id = node.id || '';
+      const explicitLabel = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim() || '' : '';
+      const wrappingLabel = node.closest('label')?.innerText?.trim() || '';
+      const nativeTextName = tag === 'button' ? (node.innerText || '').trim() : '';
+      const named = nativeTextName || (node.getAttribute('aria-label') || '').trim() || (node.getAttribute('aria-labelledby') || '').trim() || (node.getAttribute('title') || '').trim() || explicitLabel || wrappingLabel;
+      return named ? [] : [{ tag, testid: node.getAttribute('data-testid') || '', html: node.outerHTML.slice(0, 320) }];
+    }));
+    unnamed.push(...dialogUnnamed.map(item => ({ surface: 'delete-dialog', ...item })));
+    expect(unnamed, `unnamed profile controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}

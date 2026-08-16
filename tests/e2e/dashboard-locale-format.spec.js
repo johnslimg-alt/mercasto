@@ -447,3 +447,72 @@ for (const viewport of [
     expect(unnamed, `unnamed authenticated dashboard form controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
   });
 }
+
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`authenticated dashboard buttons and links expose accessible names on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await mockApi(page);
+    await installSession(page, 'es');
+    await page.goto('/profile');
+    const tabs = ['my_ads','favorites','saved_searches','stats','transactions','contact_history','reviews','privacy','settings'];
+    const unnamed = [];
+    for (const tabId of tabs) {
+      await page.getByTestId(`dashboard-tab-${tabId}`).click();
+      await page.waitForTimeout(30);
+      const items = await page.locator('button:visible, a[href]:visible').evaluateAll(nodes => nodes.map(node => ({
+        tag: node.tagName.toLowerCase(), text:(node.innerText||'').trim(), aria:(node.getAttribute('aria-label')||'').trim(), labelledby:(node.getAttribute('aria-labelledby')||'').trim(), title:(node.getAttribute('title')||'').trim(), html:node.outerHTML.slice(0,260)
+      })));
+      for (const item of items) if (!(item.text || item.aria || item.labelledby || item.title)) unnamed.push({ tab: tabId, ...item });
+    }
+    expect(unnamed, `unnamed dashboard actions: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}
+
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`business company dashboard controls expose accessible names on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    const businessUser = { ...user, role: 'business' };
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.addInitScript(({ savedUser }) => {
+      localStorage.setItem('lang', 'es');
+      localStorage.setItem('mercasto_language', 'es');
+      localStorage.setItem('cookiesAccepted', 'true');
+      localStorage.setItem('cookie_consent', 'essential');
+      localStorage.setItem('auth_token', 'business-company-control-token');
+      localStorage.setItem('user', JSON.stringify(savedUser));
+    }, { savedUser: businessUser });
+    await page.route('**/api/**', async route => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname;
+      if (path.endsWith('/user') && request.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(businessUser) });
+      if (path.endsWith('/user/business-profile')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: true, business_name: 'QA Negocio', business_rfc: 'XAXX010101000', business_description: 'QA business', business_hours: [] }) });
+      if (path.endsWith('/auth/providers')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false }) });
+      if (path.endsWith('/categories') || path.endsWith('/user/ads') || path.endsWith('/user/favorite-ads')) return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      if (path.includes('/notifications')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], count: 0 }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+    await page.goto('/profile');
+    await expect(page.getByTestId('dashboard-tab-company')).toBeVisible();
+    await page.getByTestId('dashboard-tab-company').click();
+    await expect(page.getByRole('heading', { name: /Registro de empresa/i })).toBeVisible();
+    const unnamed = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.flatMap(node => {
+      const tag = node.tagName.toLowerCase();
+      const id = node.id || '';
+      const explicitLabel = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim() || '' : '';
+      const wrappingLabel = node.closest('label')?.innerText?.trim() || '';
+      const nativeTextName = tag === 'button' || tag === 'a' ? (node.innerText || '').trim() : '';
+      const named = nativeTextName || (node.getAttribute('aria-label') || '').trim() || (node.getAttribute('aria-labelledby') || '').trim() || (node.getAttribute('title') || '').trim() || explicitLabel || wrappingLabel;
+      if (named || node.getAttribute('type') === 'hidden') return [];
+      return [{ tag, type: node.getAttribute('type') || '', placeholder: node.getAttribute('placeholder') || '', html: node.outerHTML.slice(0, 320) }];
+    }));
+    expect(unnamed, `unnamed business company controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}

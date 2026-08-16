@@ -226,3 +226,51 @@ for (const lang of LANGUAGES) {
     await runScenario(page, lang, { width: 390, height: 844 });
   });
 }
+
+
+async function verifyPublishEditControlNames(page, viewport) {
+  await loadFilterOptionLanguage('es');
+  await page.setViewportSize(viewport);
+  await mockApi(page);
+  await installSession(page, 'es');
+  const unnamed = [];
+  const scan = async (surface) => {
+    const items = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.map(node => {
+      const id=node.id||''; const label=id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim()||'' : '';
+      return {tag:node.tagName.toLowerCase(),text:(node.innerText||'').trim(),aria:(node.getAttribute('aria-label')||'').trim(),labelledby:(node.getAttribute('aria-labelledby')||'').trim(),title:(node.getAttribute('title')||'').trim(),label,type:node.getAttribute('type')||'',name:node.getAttribute('name')||'',placeholder:node.getAttribute('placeholder')||'',testid:node.getAttribute('data-testid')||'',html:node.outerHTML.slice(0,320)};
+    }));
+    for (const item of items) {
+      const nativeTextName = item.tag === 'button' || item.tag === 'a' ? item.text : '';
+      if (!(nativeTextName || item.aria || item.labelledby || item.title || item.label) && item.type !== 'hidden') unnamed.push({surface,...item});
+    }
+  };
+  const t = translations.es;
+  await page.goto('/post');
+  await scan('post-category');
+  await page.getByRole('main').getByRole('button', { name: 'Products-es' }).click();
+  await page.getByRole('main').getByRole('button', { name: 'Cars-es' }).click();
+  const motorLabel = firstMotorLabel('es');
+  if (motorLabel) await page.getByRole('button', { name: motorLabel }).first().click();
+  await scan('post-subcategory');
+  await page.getByRole('button', { name: t.next_btn }).filter({ visible: true }).click();
+  await scan('post-details');
+  await page.getByTestId('publish-title').fill('QA listing');
+  await page.getByTestId('publish-price').fill('1250');
+  await page.getByTestId('publish-description').fill('QA description');
+  await page.getByRole('button', { name: t.next_btn }).filter({ visible: true }).click();
+  await scan('post-contact');
+  await page.goto('/anuncio/9/editar');
+  await expect(page.getByTestId('edit-ad-title')).toBeVisible();
+  await scan('edit-ad');
+  expect(unnamed, `unnamed publish/edit controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`publish and edit visible controls expose accessible names on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await verifyPublishEditControlNames(page, viewport);
+  });
+}

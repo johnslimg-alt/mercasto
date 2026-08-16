@@ -332,3 +332,86 @@ for (const viewport of [
     expect(unnamed, `unnamed Advertising Hub controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
   });
 }
+
+
+for (const viewport of [
+  { name: 'desktop', width: 1280, height: 860 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`dynamic Admin controls expose accessible names on ${viewport.name}`, async ({ page }) => {
+    await installAdmin(page, 'es');
+    await mockApi(page);
+    await page.route('**/api/categories', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 1, slug: 'qa-cat', name: { es: 'QA Categoría', en: 'QA Category' }, icon: 'Star', sort_order: 1 }]) }));
+    await page.route('**/api/users?**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [{ id: 2, name: 'QA Usuario', email: 'qa-user@example.test', role: 'individual', is_verified: false, email_verified: true, kyc_status: 'unverified', active_plan: { name: 'Gratis', monthly_ad_limit: 3 } }] }) }));
+    await page.route('**/api/admin/coupons', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 3, code: 'QA100', credits: 100, max_uses: 10, used_count: 0 }]) }));
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+    const unnamed = [];
+    const scan = async (tab) => {
+      const items = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.map(node => {
+        const id=node.id||''; const label=id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim()||'' : '';
+        return {tag:node.tagName.toLowerCase(),text:(node.innerText||'').trim(),aria:(node.getAttribute('aria-label')||'').trim(),labelledby:(node.getAttribute('aria-labelledby')||'').trim(),title:(node.getAttribute('title')||'').trim(),label,type:node.getAttribute('type')||'',html:node.outerHTML.slice(0,300)};
+      }));
+      for (const item of items) {
+        const nativeTextName = item.tag === 'button' || item.tag === 'a' ? item.text : '';
+        if (!(nativeTextName || item.aria || item.labelledby || item.title || item.label) && item.type !== 'hidden') unnamed.push({tab,...item});
+      }
+    };
+    await expect(page.getByText('QA Categoría', { exact: true })).toBeVisible();
+    await scan('categories');
+    await page.getByTestId('admin-tab-users').click();
+    await expect(page.getByText('qa-user@example.test', { exact: true })).toBeVisible();
+    await scan('users');
+    await page.getByTestId('admin-tab-coupons').click();
+    await expect(page.getByText('QA100', { exact: true })).toBeVisible();
+    await scan('coupons');
+    expect(unnamed, `unnamed dynamic Admin controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+  });
+}
+
+
+test('Advertising Hub populated campaign controls are named and mutate the intended campaign', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await installAdmin(page, 'es');
+  await mockApi(page);
+  let campaign = {
+    id: 'qa-campaign-1', name: 'QA Campaign', status: 'ACTIVE', effective_status: 'ACTIVE',
+    objective: 'OUTCOME_TRAFFIC', daily_budget: 150, currency: 'MXN',
+    metrics: { spend: 12.5, clicks: 4, impressions: 1000, ctr: 0.4, registrations: 2, purchases: 0 },
+  };
+  const patches = [];
+  await page.route('**/api/admin/marketing/meta/status', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ configured: true, provider: 'meta', account_id: 'qa' }) }));
+  await page.route('**/api/admin/marketing/meta/campaigns?**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [campaign], period: { days: 7 } }) }));
+  await page.route('**/api/admin/marketing/meta/campaigns/qa-campaign-1/**', async route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    const body = request.postDataJSON();
+    patches.push({ path, body });
+    if (path.endsWith('/budget')) campaign = { ...campaign, daily_budget: body.daily_budget };
+    if (path.endsWith('/status')) campaign = { ...campaign, status: body.status, effective_status: body.status };
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+  });
+  page.on('dialog', dialog => dialog.accept());
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await page.goto('/admin/marketing?section=campaigns', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('QA Campaign', { exact: true })).toBeVisible();
+  const budget = page.getByRole('spinbutton', { name: /QA Campaign/ });
+  await expect(budget).toHaveValue('150');
+  await budget.fill('250');
+  await page.getByRole('button', { name: recoveryTranslations.es.save_changes, exact: true }).click();
+  await expect.poll(() => patches.find(item => item.path.endsWith('/budget'))?.body?.daily_budget).toBe(250);
+  await expect(budget).toHaveValue('250');
+  await page.getByRole('button', { name: recoveryTranslations.es.pause, exact: true }).click();
+  await expect.poll(() => patches.find(item => item.path.endsWith('/status'))?.body?.status).toBe('PAUSED');
+
+  const unnamed = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.flatMap(node => {
+    const tag = node.tagName.toLowerCase();
+    const id = node.id || '';
+    const explicitLabel = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim() || '' : '';
+    const wrappingLabel = node.closest('label')?.innerText?.trim() || '';
+    const nativeTextName = tag === 'button' || tag === 'a' ? (node.innerText || '').trim() : '';
+    const named = nativeTextName || (node.getAttribute('aria-label') || '').trim() || (node.getAttribute('aria-labelledby') || '').trim() || (node.getAttribute('title') || '').trim() || explicitLabel || wrappingLabel;
+    return named || node.getAttribute('type') === 'hidden' ? [] : [{ tag, html: node.outerHTML.slice(0, 320) }];
+  }));
+  expect(unnamed, `unnamed populated Advertising Hub controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+});

@@ -406,6 +406,7 @@ export default function CompanyRfcScreen({ lang, token }) {
           <label className="block text-xs font-medium text-slate-500 mb-1">{tr.rfc_label}</label>
           <div className="flex gap-2">
             <input
+              aria-label={tr.rfc_label}
               value={rfc}
               onChange={(e) => setRfc(e.target.value.toUpperCase())}
               maxLength={13}
