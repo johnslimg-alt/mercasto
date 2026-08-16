@@ -368,3 +368,50 @@ for (const viewport of [
     expect(unnamed, `unnamed dynamic Admin controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
   });
 }
+
+
+test('Advertising Hub populated campaign controls are named and mutate the intended campaign', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await installAdmin(page, 'es');
+  await mockApi(page);
+  let campaign = {
+    id: 'qa-campaign-1', name: 'QA Campaign', status: 'ACTIVE', effective_status: 'ACTIVE',
+    objective: 'OUTCOME_TRAFFIC', daily_budget: 150, currency: 'MXN',
+    metrics: { spend: 12.5, clicks: 4, impressions: 1000, ctr: 0.4, registrations: 2, purchases: 0 },
+  };
+  const patches = [];
+  await page.route('**/api/admin/marketing/meta/status', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ configured: true, provider: 'meta', account_id: 'qa' }) }));
+  await page.route('**/api/admin/marketing/meta/campaigns?**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [campaign], period: { days: 7 } }) }));
+  await page.route('**/api/admin/marketing/meta/campaigns/qa-campaign-1/**', async route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    const body = request.postDataJSON();
+    patches.push({ path, body });
+    if (path.endsWith('/budget')) campaign = { ...campaign, daily_budget: body.daily_budget };
+    if (path.endsWith('/status')) campaign = { ...campaign, status: body.status, effective_status: body.status };
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+  });
+  page.on('dialog', dialog => dialog.accept());
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await page.goto('/admin/marketing?section=campaigns', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('QA Campaign', { exact: true })).toBeVisible();
+  const budget = page.getByRole('spinbutton', { name: /QA Campaign/ });
+  await expect(budget).toHaveValue('150');
+  await budget.fill('250');
+  await page.getByRole('button', { name: recoveryTranslations.es.save_changes, exact: true }).click();
+  await expect.poll(() => patches.find(item => item.path.endsWith('/budget'))?.body?.daily_budget).toBe(250);
+  await expect(budget).toHaveValue('250');
+  await page.getByRole('button', { name: recoveryTranslations.es.pause, exact: true }).click();
+  await expect.poll(() => patches.find(item => item.path.endsWith('/status'))?.body?.status).toBe('PAUSED');
+
+  const unnamed = await page.locator('button:visible, a[href]:visible, input:visible, select:visible, textarea:visible').evaluateAll(nodes => nodes.flatMap(node => {
+    const tag = node.tagName.toLowerCase();
+    const id = node.id || '';
+    const explicitLabel = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText?.trim() || '' : '';
+    const wrappingLabel = node.closest('label')?.innerText?.trim() || '';
+    const nativeTextName = tag === 'button' || tag === 'a' ? (node.innerText || '').trim() : '';
+    const named = nativeTextName || (node.getAttribute('aria-label') || '').trim() || (node.getAttribute('aria-labelledby') || '').trim() || (node.getAttribute('title') || '').trim() || explicitLabel || wrappingLabel;
+    return named || node.getAttribute('type') === 'hidden' ? [] : [{ tag, html: node.outerHTML.slice(0, 320) }];
+  }));
+  expect(unnamed, `unnamed populated Advertising Hub controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+});

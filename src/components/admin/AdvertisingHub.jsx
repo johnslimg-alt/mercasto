@@ -293,7 +293,7 @@ export default function AdvertisingHub() {
                             <td className="px-5 py-4">
                               {campaign.daily_budget == null ? <span className="text-xs text-slate-500">{copy.adSetBudget}</span> : (
                                 <div className="flex min-w-[180px] items-center gap-2">
-                                  <input type="number" min="1" step="1" value={budgetDrafts[campaign.id] ?? ''} onChange={(event) => setBudgetDrafts((current) => ({ ...current, [campaign.id]: event.target.value }))} className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-950" />
+                                  <input type="number" aria-label={`${copy.dailyBudget}: ${campaign.name}`} min="1" step="1" value={budgetDrafts[campaign.id] ?? ''} onChange={(event) => setBudgetDrafts((current) => ({ ...current, [campaign.id]: event.target.value }))} className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-950" />
                                   <button type="button" disabled={busy} onClick={() => saveBudget(campaign)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">{t.save_changes}</button>
                                 </div>
                               )}
