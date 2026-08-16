@@ -62,3 +62,51 @@ test('every visible button on audited guest routes has an accessible name', asyn
 
   expect(unnamed, `unnamed visible buttons: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
 });
+
+
+test('every visible form control on audited guest routes has an accessible name', async ({ page }) => {
+  test.setTimeout(150_000);
+  const unnamed = [];
+  for (const route of AUDIT_ROUTES) {
+    await page.addInitScript(() => localStorage.setItem('cookie_consent', 'essential'));
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
+    const controls = await page.locator('input:visible:not([type="hidden"]), select:visible, textarea:visible').evaluateAll((elements) => elements.map((element) => {
+      const id = element.id;
+      const explicitLabel = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`) : null;
+      const wrappingLabel = element.closest('label');
+      return {
+        aria: (element.getAttribute('aria-label') || '').trim(),
+        labelledby: (element.getAttribute('aria-labelledby') || '').trim(),
+        title: (element.getAttribute('title') || '').trim(),
+        label: (explicitLabel?.textContent || wrappingLabel?.textContent || '').trim(),
+        html: element.outerHTML.slice(0, 240),
+      };
+    }));
+    controls.forEach((control) => {
+      if (!control.aria && !control.labelledby && !control.title && !control.label) unnamed.push({ route, html: control.html });
+    });
+  }
+  expect(unnamed, `unnamed visible form controls: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+});
+
+
+test('every visible link on audited guest routes has an accessible name', async ({ page }) => {
+  test.setTimeout(150_000);
+  const unnamed = [];
+  for (const route of AUDIT_ROUTES) {
+    await page.addInitScript(() => localStorage.setItem('cookie_consent', 'essential'));
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
+    const links = await page.locator('a:visible').evaluateAll((elements) => elements.map((element) => ({
+      text: (element.textContent || '').trim(),
+      aria: (element.getAttribute('aria-label') || '').trim(),
+      title: (element.getAttribute('title') || '').trim(),
+      imageAlt: Array.from(element.querySelectorAll('img')).map(image => image.alt || '').join(' ').trim(),
+      href: element.getAttribute('href') || '',
+      html: element.outerHTML.slice(0, 240),
+    })));
+    links.forEach((link) => {
+      if (!link.text && !link.aria && !link.title && !link.imageAlt) unnamed.push({ route, href: link.href, html: link.html });
+    });
+  }
+  expect(unnamed, `unnamed visible links: ${JSON.stringify(unnamed, null, 2)}`).toEqual([]);
+});

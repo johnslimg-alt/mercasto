@@ -7,6 +7,7 @@ async function setLanguage(page, lang) {
     localStorage.setItem('lang', savedLang);
     localStorage.setItem('mercasto_language', savedLang);
     localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
   }, lang);
 }
 
@@ -53,10 +54,23 @@ for (const lang of SUPPORTED_LANGUAGES) {
     await expect(page.getByText(copy.responseValue, { exact: true })).toBeVisible();
     await expect(page.getByText('Menos de 24 horas', { exact: true })).toHaveCount(0);
 
-    await page.locator('form input[type="text"]').fill('QA User');
-    await page.locator('form input[type="email"]').fill('qa@example.com');
-    await page.locator('form select').selectOption(subjects[1].value);
-    await page.locator('form textarea').fill('QA localized contact message');
+    const nameField = page.getByRole('textbox', { name: copy.name, exact: true });
+    const emailField = page.getByRole('textbox', { name: copy.email, exact: true });
+    const subjectField = page.getByRole('combobox', { name: copy.subject, exact: true });
+    const messageField = page.getByRole('textbox', { name: copy.message, exact: true });
+    await expect(nameField).toBeVisible();
+    await expect(emailField).toBeVisible();
+    await expect(subjectField).toBeVisible();
+    await expect(messageField).toBeVisible();
+    await expect(nameField).toHaveAttribute('required', '');
+    await expect(emailField).toHaveAttribute('required', '');
+    await expect(subjectField).toHaveAttribute('required', '');
+    await expect(messageField).toHaveAttribute('required', '');
+
+    await nameField.fill('QA User');
+    await emailField.fill('qa@example.com');
+    await subjectField.selectOption(subjects[1].value);
+    await messageField.fill('QA localized contact message');
     await page.getByRole('button', { name: copy.send, exact: true }).click();
 
     await expect(page.getByText(copy.successTitle, { exact: true })).toBeVisible();

@@ -127,40 +127,52 @@ export default function ContactoScreen() {
             <form onSubmit={handleSubmit} noValidate className="space-y-5">
               {/* Nombre */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  {copy.name} <span className="text-red-400">*</span>
+                <label htmlFor="contact-name" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  {copy.name} <span aria-hidden="true" className="text-red-400">*</span>
                 </label>
                 <input
+                  id="contact-name"
                   type="text"
+                  required
+                  aria-invalid={Boolean(errors.name)}
+                  aria-describedby={errors.name ? 'contact-name-error' : undefined}
                   value={form.name}
                   onChange={e => handleChange('name', e.target.value)}
                   placeholder={copy.namePlaceholder}
                   className={`w-full rounded-lg border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition ${errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
                 />
-                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+                {errors.name && <p id="contact-name-error" className="text-xs text-red-500 mt-1">{errors.name}</p>}
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  {copy.email} <span className="text-red-400">*</span>
+                <label htmlFor="contact-email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  {copy.email} <span aria-hidden="true" className="text-red-400">*</span>
                 </label>
                 <input
+                  id="contact-email"
                   type="email"
+                  required
+                  aria-invalid={Boolean(errors.email)}
+                  aria-describedby={errors.email ? 'contact-email-error' : undefined}
                   value={form.email}
                   onChange={e => handleChange('email', e.target.value)}
                   placeholder={copy.emailPlaceholder}
                   className={`w-full rounded-lg border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition ${errors.email ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
                 />
-                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+                {errors.email && <p id="contact-email-error" className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </div>
 
               {/* Asunto */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  {copy.subject} <span className="text-red-400">*</span>
+                <label htmlFor="contact-subject" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  {copy.subject} <span aria-hidden="true" className="text-red-400">*</span>
                 </label>
                 <select
+                  id="contact-subject"
+                  required
+                  aria-invalid={Boolean(errors.subject)}
+                  aria-describedby={errors.subject ? 'contact-subject-error' : undefined}
                   value={form.subject}
                   onChange={e => handleChange('subject', e.target.value)}
                   className={`w-full rounded-lg border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition bg-white ${errors.subject ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}
@@ -170,15 +182,19 @@ export default function ContactoScreen() {
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </select>
-                {errors.subject && <p className="text-xs text-red-500 mt-1">{errors.subject}</p>}
+                {errors.subject && <p id="contact-subject-error" className="text-xs text-red-500 mt-1">{errors.subject}</p>}
               </div>
 
               {/* Mensaje */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  {copy.message} <span className="text-red-400">*</span>
+                <label htmlFor="contact-message" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  {copy.message} <span aria-hidden="true" className="text-red-400">*</span>
                 </label>
                 <textarea
+                  id="contact-message"
+                  required
+                  aria-invalid={Boolean(errors.message)}
+                  aria-describedby={errors.message ? 'contact-message-error' : undefined}
                   value={form.message}
                   onChange={e => handleChange('message', e.target.value)}
                   placeholder={copy.messagePlaceholder}
@@ -187,7 +203,7 @@ export default function ContactoScreen() {
                   className={`w-full rounded-lg border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition resize-none ${errors.message ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}
                 />
                 <div className="flex justify-between items-center mt-1">
-                  {errors.message ? <p className="text-xs text-red-500">{errors.message}</p> : <span />}
+                  {errors.message ? <p id="contact-message-error" className="text-xs text-red-500">{errors.message}</p> : <span />}
                   <span className="text-xs text-slate-400">{form.message.length}/2000</span>
                 </div>
               </div>
