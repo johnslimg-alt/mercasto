@@ -70,6 +70,12 @@ for (const lang of SUPPORTED_LANGUAGES) {
 
     await page.getByRole('button', { name: categories[0].label, exact: true }).click();
     await expect.poll(() => requests.some(raw => new URL(raw).searchParams.get('category') === categories[0].query)).toBe(true);
+    const allCategories = page.getByTestId('stores-category-all');
+    await expect(allCategories).toHaveAttribute('aria-pressed', 'false');
+    const beforeReset = requests.length;
+    await allCategories.click();
+    await expect(allCategories).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => requests.slice(beforeReset).some(raw => !new URL(raw).searchParams.has('category'))).toBe(true);
   });
 }
 

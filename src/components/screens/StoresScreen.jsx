@@ -167,6 +167,9 @@ export default function StoresScreen() {
         {/* Categories Pills */}
         <div className="flex flex-wrap gap-2.5 mt-6 justify-center">
           <button
+            data-testid="stores-category-all"
+            type="button"
+            aria-pressed={selectedCategory === ''}
             onClick={() => { setSelectedCategory(''); setPage(1); }}
             className={`px-4 py-2 text-xs font-bold rounded-full border transition-all ${
               selectedCategory === ''
@@ -179,6 +182,8 @@ export default function StoresScreen() {
           {categories.map(cat => (
             <button
               key={cat.slug}
+              type="button"
+              aria-pressed={selectedCategory === cat.query}
               onClick={() => { setSelectedCategory(cat.query); setPage(1); }}
               className={`px-4 py-2 text-xs font-bold rounded-full border transition-all ${
                 selectedCategory === cat.query

@@ -4332,7 +4332,7 @@ function App() {
             </div>
             <div className="flex items-center gap-1 ml-auto">
               <div className="mobile-top-controls sm:hidden" aria-label={t.theme_language_controls}>
-                <button type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? t.light_mode : t.dark_mode} aria-pressed={isDarkMode}>
+                <button data-testid="mobile-theme-toggle" type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? t.light_mode : t.dark_mode} aria-pressed={isDarkMode}>
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
                 <div className="mobile-language-select" aria-label={t.language_switcher}>
@@ -4383,7 +4383,7 @@ function App() {
                   )}
                 </div>
               </div>
-              <button type="button" onClick={() => setIsDarkMode(v => !v)} className="desktop-header-control header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? t.light_mode : t.dark_mode} aria-pressed={isDarkMode}>
+              <button data-testid="desktop-theme-toggle" type="button" onClick={() => setIsDarkMode(v => !v)} className="desktop-header-control header-icon-button hidden sm:flex items-center justify-center w-8 h-8 rounded-xl transition-colors mr-1" aria-label={isDarkMode ? t.light_mode : t.dark_mode} aria-pressed={isDarkMode}>
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
               {/* DESKTOP LOCATION SELECTOR */}

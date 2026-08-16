@@ -74,6 +74,19 @@ async function expectHealthyPublicResponse(request, path) {
   ).toBe(true);
 }
 
+
+
+test('terms sidebar navigation scrolls to and marks the selected section', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.goto('/terminos', { waitUntil: 'domcontentloaded' });
+  const description = page.getByTestId('terms-section-descripcion');
+  await expect(description).toBeVisible();
+  await description.click();
+  await expect(description).toHaveAttribute('aria-current', 'location');
+  await expect.poll(() => page.locator('#descripcion').evaluate(node => node.getBoundingClientRect().top)).toBeLessThanOrEqual(130);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+});
+
 test.describe('browser route aliases', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {

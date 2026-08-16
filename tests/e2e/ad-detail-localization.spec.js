@@ -96,6 +96,15 @@ for (const lang of SUPPORTED_LANGUAGES) {
     await expect(page.getByText(t.filter_label_marca || 'Marca', { exact: true })).toBeVisible();
     await expect(page.getByText('Samsung', { exact: true })).toBeVisible();
     await expectNoOverflow(page);
+    if (lang === 'es') {
+      await page.getByRole('button', { name: t.ad_favorite, exact: true }).first().click();
+      const authEmail = page.locator('[role="dialog"] input[name="email"]');
+      await expect(authEmail).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(authEmail).toHaveCount(0);
+      await page.getByRole('button', { name: copy.publishSimilar, exact: true }).click();
+      await expect(page).toHaveURL(/\/vendedores$/);
+    }
   });
 }
 

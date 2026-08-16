@@ -38,6 +38,18 @@ test('mobile header has a working search button and location cascade', async ({ 
   await expect(page).toHaveURL(/city=Monterrey/);
 });
 
+
+test('theme toggle exposes and changes its pressed state on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name));
+  await page.goto('/');
+  const toggle = page.getByTestId(testInfo.project.name === 'chromium-mobile' ? 'mobile-theme-toggle' : 'desktop-theme-toggle');
+  await expect(toggle).toBeVisible();
+  const before = await toggle.getAttribute('aria-pressed');
+  expect(['true', 'false']).toContain(before);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', before === 'true' ? 'false' : 'true');
+});
+
 async function mockPublicShellApi(page) {
   await page.addInitScript(() => {
     localStorage.setItem('lang', 'es');

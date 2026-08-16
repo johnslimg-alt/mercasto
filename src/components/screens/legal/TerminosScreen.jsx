@@ -75,7 +75,11 @@ export default function TerminosScreen() {
               <ul className="space-y-0.5">
                 {SECTIONS.map(s => (
                   <li key={s.id}>
-                    <button onClick={() => scrollTo(s.id)}
+                    <button
+                      type="button"
+                      data-testid={`terms-section-${s.id}`}
+                      aria-current={active === s.id ? 'location' : undefined}
+                      onClick={() => scrollTo(s.id)}
                       className={`w-full text-left text-xs py-1.5 px-2 rounded-lg transition-colors ${active === s.id ? 'bg-lime-50 text-lime-700 font-semibold' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
                       {s.title}
                     </button>

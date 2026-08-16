@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { localizedText } from '../../utils/localize';
 import { localeFor } from '../../utils/localeFormat';
 import { getRecommendationCopy } from '../../utils/recommendationCopy';
@@ -16,6 +16,20 @@ const RecommendationsWidget = memo(({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const scrollRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ canLeft: false, canRight: false });
+
+  const updateScrollState = useCallback(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+    const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
+    const next = {
+      canLeft: node.scrollLeft > 2,
+      canRight: node.scrollLeft < maxScrollLeft - 2,
+    };
+    setScrollState(current => (
+      current.canLeft === next.canLeft && current.canRight === next.canRight ? current : next
+    ));
+  }, []);
 
   useEffect(() => {
     fetchRecommendations();
@@ -58,6 +72,18 @@ const RecommendationsWidget = memo(({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(updateScrollState);
+    const node = scrollRef.current;
+    node?.addEventListener('scroll', updateScrollState, { passive: true });
+    window.addEventListener('resize', updateScrollState);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      node?.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, [recommendations, updateScrollState]);
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -139,8 +165,11 @@ const RecommendationsWidget = memo(({
         {/* Navigation arrows */}
         <div className="flex gap-2">
           <button
+            data-testid="recommendations-prev"
+            type="button"
+            disabled={!scrollState.canLeft}
             onClick={() => scroll('left')}
-            className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             aria-label={copy.previous}
           >
             <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,8 +177,11 @@ const RecommendationsWidget = memo(({
             </svg>
           </button>
           <button
+            data-testid="recommendations-next"
+            type="button"
+            disabled={!scrollState.canRight}
             onClick={() => scroll('right')}
-            className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            className="p-2 rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             aria-label={copy.next}
           >
             <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,6 +194,8 @@ const RecommendationsWidget = memo(({
       {/* Recommendations carousel */}
       <div
         ref={scrollRef}
+        data-testid="recommendations-scroller"
+        onScroll={updateScrollState}
         className="flex gap-4 overflow-x-auto scrollbar-hide pb-2"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
