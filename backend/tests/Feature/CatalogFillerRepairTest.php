@@ -61,6 +61,39 @@ class CatalogFillerRepairTest extends TestCase
         $this->assertFalse($genuine->generated_cover);
     }
 
+    public function test_repair_restores_only_known_legacy_seed_geography(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $known = $this->makeAd($user, true, 'legacy-known.jpg', 'approved');
+        $known->forceFill([
+            'location' => 'Guadalajara, JAL',
+            'city' => null,
+            'state' => null,
+        ])->saveQuietly();
+
+        $unknown = $this->makeAd($user, true, 'legacy-unknown.jpg', 'approved');
+        $unknown->forceFill([
+            'location' => 'Zona Centro',
+            'city' => null,
+            'state' => null,
+        ])->saveQuietly();
+
+        $this->assertSame(0, Artisan::call('ads:repair-catalog-fillers', ['--apply' => true]));
+
+        $known = $known->fresh();
+        $unknown = $unknown->fresh();
+
+        $this->assertSame('Guadalajara', $known->city);
+        $this->assertSame('Jalisco', $known->state);
+        $this->assertSame('Guadalajara, Jalisco', $known->location);
+
+        $this->assertNull($unknown->city);
+        $this->assertNull($unknown->state);
+        $this->assertSame('Zona Centro', $unknown->location);
+    }
+
     private function makeAd(User $user, bool $filler, string $image, ?string $moderation): Ad
     {
         return Ad::query()->create([
