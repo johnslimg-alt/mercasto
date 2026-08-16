@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Pencil, Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter, Navigation, Locate } from 'lucide-react';
+import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter, Navigation, Locate } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
@@ -30,8 +30,6 @@ const loadLeaflet = () => {
           import('leaflet.markercluster/dist/MarkerCluster.css'),
           import('leaflet.markercluster/dist/MarkerCluster.Default.css'),
           import('leaflet.markercluster'),
-          import('leaflet-draw'),
-          import('leaflet-draw/dist/leaflet.draw.css'),
         ]).then(() => L);
       });
   }
@@ -245,7 +243,6 @@ export default function MapV3({
     isOpen: expanded,
     onClose: closeFullscreenMap,
   });
-  const [drawMode, setDrawMode] = useState(false);
   const [leaflet, setLeaflet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -438,11 +435,6 @@ export default function MapV3({
     if (!instanceRef.current) return;
     try {
       const map = instanceRef.current;
-      if (map._freehandDrawListeners) {
-        Object.entries(map._freehandDrawListeners).forEach(([evt, listener]) => {
-          map.off(evt, listener);
-        });
-      }
       map.off();
       map.remove();
     } catch {
@@ -741,7 +733,7 @@ function createPopupElement(ad, marker) {
     );
   };
 
-  const initMap = (container, instanceRef, isLarge = false, isDrawMode = false) => {
+  const initMap = (container, instanceRef, isLarge = false) => {
     if (!leaflet || !container) return;
 
     if (instanceRef.current) {
@@ -961,150 +953,6 @@ function createPopupElement(ad, marker) {
       }
     }
 
-    // ── Freehand Draw (polygon area search) ──
-    if (isDrawMode) {
-      // Disable map panning/zooming while drawing
-      map.dragging.disable();
-      if (map.touchZoom) map.touchZoom.disable();
-      if (map.doubleClickZoom) map.doubleClickZoom.disable();
-      if (map.scrollWheelZoom) map.scrollWheelZoom.disable();
-
-      let isDrawing = false;
-      let points = [];
-      let drawLayer = null;
-
-      const getEventLatLng = (e) => {
-        try {
-          if (e.latlng) return e.latlng;
-          if (e.originalEvent) {
-            const touch = (e.originalEvent.touches && e.originalEvent.touches[0]) || 
-                          (e.originalEvent.changedTouches && e.originalEvent.changedTouches[0]);
-            if (touch) {
-              return map.mouseEventToLatLng(touch);
-            }
-          }
-        } catch (err) {
-          console.error("Error converting touch to latlng", err);
-        }
-        return null;
-      };
-
-      const onDrawStart = (e) => {
-        const latlng = getEventLatLng(e);
-        if (!latlng) return;
-        isDrawing = true;
-        points = [latlng];
-        if (drawLayer) map.removeLayer(drawLayer);
-        drawLayer = L.polyline(points, {
-          color: '#84CC16',
-          weight: 4,
-          opacity: 0.85,
-          lineCap: 'round',
-          lineJoin: 'round'
-        }).addTo(map);
-      };
-
-      const onDrawMove = (e) => {
-        if (!isDrawing || !drawLayer) return;
-        const latlng = getEventLatLng(e);
-        if (!latlng) return;
-        const lastPt = points[points.length - 1];
-        if (!lastPt || lastPt.distanceTo(latlng) > 5) {
-          points.push(latlng);
-          drawLayer.setLatLngs(points);
-        }
-      };
-
-      const onDrawEnd = (e) => {
-        if (!isDrawing) return;
-        isDrawing = false;
-
-        const latlng = getEventLatLng(e);
-        if (latlng && points.length > 0) {
-          const lastPt = points[points.length - 1];
-          if (lastPt.distanceTo(latlng) > 5) {
-            points.push(latlng);
-          }
-        }
-
-        if (points.length > 3) {
-          points.push(points[0]); // Close loop
-          const polygon = L.polygon(points, {
-            color: '#84CC16',
-            fillColor: '#84CC16',
-            fillOpacity: 0.2
-          }).addTo(map);
-
-          const bounds = polygon.getBounds();
-          onSearchArea?.({
-            ...updateMapArea(map),
-            lat: bounds.getCenter().lat,
-            lng: bounds.getCenter().lng,
-            radius: Math.round(bounds.getNorthEast().distanceTo(bounds.getSouthWest()) / 2000),
-            polygon: polygon.toGeoJSON(),
-          });
-
-          // Keep polygon briefly visible then remove
-          setTimeout(() => {
-            if (map.hasLayer(polygon)) map.removeLayer(polygon);
-          }, 1500);
-
-          if (expanded) {
-            setExpanded(false);
-          }
-        }
-
-        if (drawLayer) {
-          map.removeLayer(drawLayer);
-          drawLayer = null;
-        }
-
-        // Re-enable controls
-        map.dragging.enable();
-        if (map.touchZoom) map.touchZoom.enable();
-        if (map.doubleClickZoom) map.doubleClickZoom.enable();
-        if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
-
-        setDrawMode(false);
-      };
-
-      map.on('mousedown', onDrawStart);
-      map.on('mousemove', onDrawMove);
-      map.on('mouseup', onDrawEnd);
-
-      // Touch support for mobile devices
-      map.on('touchstart', (e) => {
-        if (e.originalEvent) {
-          e.originalEvent.stopPropagation();
-          e.originalEvent.preventDefault();
-        }
-        onDrawStart(e);
-      });
-      map.on('touchmove', (e) => {
-        if (e.originalEvent) {
-          e.originalEvent.stopPropagation();
-          e.originalEvent.preventDefault();
-        }
-        onDrawMove(e);
-      });
-      map.on('touchend', (e) => {
-        if (e.originalEvent) {
-          e.originalEvent.stopPropagation();
-          e.originalEvent.preventDefault();
-        }
-        onDrawEnd(e);
-      });
-
-      map._freehandDrawListeners = {
-        mousedown: onDrawStart,
-        mousemove: onDrawMove,
-        mouseup: onDrawEnd,
-        touchstart: onDrawStart,
-        touchmove: onDrawMove,
-        touchend: onDrawEnd
-      };
-    }
-
     window.requestAnimationFrame(() => {
       if (mountedRef.current && instanceRef.current === map) {
         try {
@@ -1118,24 +966,24 @@ function createPopupElement(ad, marker) {
 
   useEffect(() => {
     if (leaflet && !expanded) {
-      initMap(mapContainerRef.current, mapInstanceRef, false, drawMode);
+      initMap(mapContainerRef.current, mapInstanceRef, false);
     }
     return () => {
       removeMap(mapInstanceRef);
     };
-  }, [leaflet, expanded, drawMode, visibleMarkers, locationPicker, locationQuery, selectedState, selectedCity]);
+  }, [leaflet, expanded, visibleMarkers, locationPicker, locationQuery, selectedState, selectedCity]);
 
   useEffect(() => {
     if (leaflet && expanded) {
       const timer = setTimeout(() => {
-        initMap(largeMapContainerRef.current, largeMapInstanceRef, true, drawMode);
+        initMap(largeMapContainerRef.current, largeMapInstanceRef, true);
       }, 100);
       return () => clearTimeout(timer);
     }
     return () => {
       removeMap(largeMapInstanceRef);
     };
-  }, [leaflet, expanded, drawMode, visibleMarkers, locationPicker, locationQuery, selectedState, selectedCity]);
+  }, [leaflet, expanded, visibleMarkers, locationPicker, locationQuery, selectedState, selectedCity]);
 
   const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
 
@@ -1460,23 +1308,6 @@ function createPopupElement(ad, marker) {
           </button>
         )}
 
-        {/* Draw Area Button (small map) */}
-        {showFullscreen && leaflet && !loadFailed && (
-          <button
-            type="button"
-            onClick={() => setDrawMode((v) => !v)}
-            className={`absolute bottom-14 left-3 z-[2] inline-flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-black shadow-lg hover:scale-105 active:scale-95 transition-all ${
-              drawMode
-                ? 'bg-[#84CC16] text-slate-950'
-                : 'bg-slate-800 text-white hover:bg-slate-700'
-            }`}
-            title={t('map.drawArea')}
-          >
-            <Pencil size={13} />
-            <span className="hidden sm:inline">{t('map.drawArea')}</span>
-          </button>
-        )}
-
         {showFullscreen && (
           <button
             data-testid="map-expand"
@@ -1539,21 +1370,6 @@ function createPopupElement(ad, marker) {
                 <Locate size={18} />
               )}
               <span className="hidden sm:inline">{t('map.nearMe')}</span>
-            </button>
-
-            {/* Draw Area Button (fullscreen header) */}
-            <button
-              type="button"
-              onClick={() => setDrawMode((v) => !v)}
-              className={`inline-flex items-center justify-center gap-1.5 rounded-xl transition-colors h-10 w-10 shrink-0 sm:w-auto sm:px-4 text-xs font-black ${
-                drawMode
-                  ? 'bg-[#84CC16] text-slate-950'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-              title={t('map.drawArea')}
-            >
-              <Pencil size={18} />
-              <span className="hidden sm:inline">{t('map.drawArea')}</span>
             </button>
 
             <button

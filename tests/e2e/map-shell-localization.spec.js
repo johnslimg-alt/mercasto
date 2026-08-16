@@ -71,7 +71,7 @@ for (const lang of languages) {
     await filterToggle.click();
 
     await expect(dialog.getByTitle(tr.map.nearMe)).toBeVisible();
-    await expect(dialog.getByTitle(tr.map.drawArea)).toBeVisible();
+    await expect(dialog.getByTitle(tr.map.drawArea)).toHaveCount(0);
     await expect(dialog.getByTestId('map-filter-listing-type').locator('option').first()).toHaveText(tr.map.listingType);
     await dialog.getByTestId('map-filter-listing-type').selectOption('Venta');
     await expect(dialog.getByTestId('map-filter-listing-type')).toHaveValue('Venta');
@@ -102,7 +102,6 @@ for (const lang of languages) {
         ['Mapa interactivo', tr.map.interactive],
         ['Filtros', tr.map.filters],
         ['Cerca de mí', tr.map.nearMe],
-        ['Dibujar área', tr.map.drawArea],
         ['Tipo de anuncio', tr.map.listingType],
       ];
       for (const [stale, expected] of stalePairs) {
