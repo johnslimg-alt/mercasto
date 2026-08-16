@@ -199,7 +199,7 @@ export default function BusinessProfileEditor({ showToast }) {
           </p>
         </div>
         <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
-          <input type="checkbox" checked={form.business_profile_enabled} onChange={event => updateField('business_profile_enabled', event.target.checked)} />
+          <input type="checkbox" aria-label={t.activate} checked={form.business_profile_enabled} onChange={event => updateField('business_profile_enabled', event.target.checked)} />
           {t.activate}
         </label>
       </div>
@@ -281,26 +281,26 @@ export default function BusinessProfileEditor({ showToast }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_name_label}</label>
-          <input value={form.business_name} onChange={event => updateField('business_name', event.target.value)} maxLength={120} className={`w-full ${inputClass}`} placeholder="Mercasto Autos Veracruz" />
+          <input aria-label={t.business_name_label} value={form.business_name} onChange={event => updateField('business_name', event.target.value)} maxLength={120} className={`w-full ${inputClass}`} placeholder="Mercasto Autos Veracruz" />
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_rfc_label}</label>
-          <input value={form.business_rfc} onChange={event => updateField('business_rfc', event.target.value.toUpperCase())} maxLength={13} className={`w-full uppercase ${inputClass}`} placeholder="XAXX010101000" />
+          <input aria-label={t.business_rfc_label} value={form.business_rfc} onChange={event => updateField('business_rfc', event.target.value.toUpperCase())} maxLength={13} className={`w-full uppercase ${inputClass}`} placeholder="XAXX010101000" />
           <p className="text-[11px] text-slate-400 mt-1">{t.business_rfc_hint}</p>
         </div>
       </div>
 
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-1">{t.business_desc_label}</label>
-        <textarea value={form.business_description} onChange={event => updateField('business_description', event.target.value)} maxLength={1200} rows={4} className={`w-full resize-none ${inputClass}`} placeholder={t.business_desc_placeholder} />
+        <textarea aria-label={t.business_desc_label} value={form.business_description} onChange={event => updateField('business_description', event.target.value)} maxLength={1200} rows={4} className={`w-full resize-none ${inputClass}`} placeholder={t.business_desc_placeholder} />
         <p className="text-right text-xs text-slate-400 mt-0.5">{form.business_description.length}/1200</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input type="url" value={form.business_website} onChange={event => updateField('business_website', event.target.value)} className={inputClass} placeholder={t.website} />
-        <input value={form.business_address} onChange={event => updateField('business_address', event.target.value)} maxLength={255} className={inputClass} placeholder={t.address} />
-        <input type="tel" value={form.business_phone} onChange={event => updateField('business_phone', event.target.value)} maxLength={20} className={inputClass} placeholder={t.phone} />
-        <input type="tel" value={form.business_whatsapp} onChange={event => updateField('business_whatsapp', event.target.value)} maxLength={20} className={inputClass} placeholder={t.whatsapp} />
+        <input type="url" aria-label={t.website} value={form.business_website} onChange={event => updateField('business_website', event.target.value)} className={inputClass} placeholder={t.website} />
+        <input aria-label={t.address} value={form.business_address} onChange={event => updateField('business_address', event.target.value)} maxLength={255} className={inputClass} placeholder={t.address} />
+        <input type="tel" aria-label={t.phone} value={form.business_phone} onChange={event => updateField('business_phone', event.target.value)} maxLength={20} className={inputClass} placeholder={t.phone} />
+        <input type="tel" aria-label={t.whatsapp} value={form.business_whatsapp} onChange={event => updateField('business_whatsapp', event.target.value)} maxLength={20} className={inputClass} placeholder={t.whatsapp} />
       </div>
 
       <div className="space-y-2">
@@ -308,10 +308,10 @@ export default function BusinessProfileEditor({ showToast }) {
         {form.business_hours.map((item, index) => (
           <div key={item.day} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center text-sm">
             <span className="text-slate-600 dark:text-slate-300">{getLocalizedDayName(item.day, t)}</span>
-            <input type="time" disabled={item.closed} value={item.open || ''} onChange={event => updateHour(index, 'open', event.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-800" />
-            <input type="time" disabled={item.closed} value={item.close || ''} onChange={event => updateHour(index, 'close', event.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-800" />
+            <input type="time" aria-label={`${getLocalizedDayName(item.day, t)}: ${t.from}`} disabled={item.closed} value={item.open || ''} onChange={event => updateHour(index, 'open', event.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-800" />
+            <input type="time" aria-label={`${getLocalizedDayName(item.day, t)}: ${t.to}`} disabled={item.closed} value={item.close || ''} onChange={event => updateHour(index, 'close', event.target.value)} className="border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-800" />
             <label className="flex items-center gap-1 text-xs text-slate-500">
-              <input type="checkbox" checked={Boolean(item.closed)} onChange={event => updateHour(index, 'closed', event.target.checked)} />
+              <input type="checkbox" aria-label={`${getLocalizedDayName(item.day, t)}: ${t.closed}`} checked={Boolean(item.closed)} onChange={event => updateHour(index, 'closed', event.target.checked)} />
               {t.closed}
             </label>
           </div>
