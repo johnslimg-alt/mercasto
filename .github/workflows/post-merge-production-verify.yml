@@ -70,6 +70,11 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_post_merge_compose.yml
           docker compose -f docker-compose.yml -f docker-compose.override.yml ps
 
+      - name: Preload local AI model without user data
+        run: |
+          set -euo pipefail
+          docker exec mercasto_backend_container php artisan ai:runtime-preload --timeout=90
+
       - name: Run quick production smoke suite
         run: |
           set -euo pipefail
