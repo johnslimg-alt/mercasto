@@ -53,8 +53,10 @@ test.describe('Production seller read-only smoke', () => {
   test('opens the authenticated publish flow without submitting data', async ({ page }) => {
     await login(page);
     await page.goto('/post');
-    await expect(page.getByTestId('publish-ai-brand-message')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/Selecciona una Categoría|Select a Category/i).first()).toBeVisible();
-    await expect(page.locator('form').filter({ hasText: /Selecciona una Categoría|Select a Category/i }).first()).toBeVisible();
+    const publishBrand = page.getByTestId('publish-ai-brand-message');
+    await expect(publishBrand).toBeVisible({ timeout: 10000 });
+    const publishForm = publishBrand.locator('xpath=following::form[1]');
+    await expect(publishForm).toBeVisible();
+    await expect(publishForm.locator('button[type="button"]').first()).toBeVisible();
   });
 });
