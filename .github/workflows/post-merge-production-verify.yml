@@ -94,6 +94,12 @@ jobs:
           cd "$PROJECT_DIR"
           docker exec mercasto_backend_container php artisan ads:audit-active-content-quality --limit-groups=12
 
+      - name: Verify production state-filter fallback
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          bash scripts/production-state-filter-smoke.sh
+
       - name: Probe critical public endpoints
         run: |
           set -euo pipefail
