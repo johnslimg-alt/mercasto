@@ -620,6 +620,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                                    )}
                                  </p>
                                  <p className="text-[11px] font-medium text-slate-500 font-mono">ID: {u.id} | KYC: <span className={`font-bold capitalize ${u.kyc_status === 'approved' ? 'text-blue-600' : u.kyc_status === 'pending' ? 'text-amber-500 animate-pulse' : 'text-slate-400'}`}>{u.kyc_status || 'unverified'}</span></p>
+                                 <p data-testid={`admin-user-registered-${u.id}`} className="text-[11px] font-medium text-slate-500 mt-0.5">{t.member_since || 'Miembro desde'}: {u.created_at ? formatDate(u.created_at, lang) : '—'}</p>
                                </div>
                              </div>
                            </td>
