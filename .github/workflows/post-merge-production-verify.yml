@@ -76,7 +76,12 @@ jobs:
           cd "$PROJECT_DIR"
           npm run verify:quick
 
-      - name: Verify local AI runtime without user data
+      - name: Verify local AI transport and configured model
+        run: |
+          set -euo pipefail
+          docker exec mercasto_backend_container php artisan ai:runtime-readiness
+
+      - name: Verify local AI inference without user data
         run: |
           set -euo pipefail
           docker exec mercasto_backend_container php artisan ai:runtime-check --timeout=45
