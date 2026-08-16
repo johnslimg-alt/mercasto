@@ -9,6 +9,10 @@ PROFILE_CONTROLLER="backend/app/Http/Controllers/Api/ProfileController.php"
 BUSINESS_CONTROLLER="backend/app/Http/Controllers/Api/BusinessProfileController.php"
 ROUTES="backend/routes/api.php"
 PROVIDER="backend/app/Providers/AppServiceProvider.php"
+BOOTSTRAP="backend/bootstrap/app.php"
+IMAGE_MODERATION_MIDDLEWARE="backend/app/Http/Middleware/ModeratePublicImageUploads.php"
+IMAGE_MODERATION_SERVICE="backend/app/Services/PublicImageModerationService.php"
+AD_MODERATION_JOB="backend/app/Jobs/ModerateAdWithAI.php"
 
 command -v grep >/dev/null 2>&1 || {
   echo "grep is required" >&2
@@ -40,5 +44,24 @@ grep -qF "Route::middleware('throttle:profile-uploads')->post('/user/business-pr
 grep -qF "Route::middleware('throttle:profile-uploads')->post('/user/business-profile/banner'" "$ROUTES"
 grep -qF "Route::middleware('throttle:identity-uploads')->post('/user/business-profile/csf'" "$ROUTES"
 grep -qF "Route::middleware('throttle:identity-uploads')->post('/user/kyc'" "$ROUTES"
+
+# Public images are blocked before storage unless the local vision model approves them.
+test -f "$IMAGE_MODERATION_MIDDLEWARE"
+test -f "$IMAGE_MODERATION_SERVICE"
+grep -qF 'ModeratePublicImageUploads::class' "$BOOTSTRAP"
+grep -qF "'api/user/avatar' => ['field' => 'avatar'" "$IMAGE_MODERATION_MIDDLEWARE"
+grep -qF "'api/user/profile' => ['field' => 'avatar'" "$IMAGE_MODERATION_MIDDLEWARE"
+grep -qF "'api/user/business-profile/logo' => ['field' => 'logo'" "$IMAGE_MODERATION_MIDDLEWARE"
+grep -qF "'api/user/business-profile/banner' => ['field' => 'banner'" "$IMAGE_MODERATION_MIDDLEWARE"
+grep -qF "'api/admin/banners/upload' => ['field' => 'image'" "$IMAGE_MODERATION_MIDDLEWARE"
+grep -qF 'chatPro([' "$IMAGE_MODERATION_SERVICE"
+grep -qF "decision'] === 'approved'" "$IMAGE_MODERATION_SERVICE"
+grep -qF "confidence'] >= 0.90" "$IMAGE_MODERATION_SERVICE"
+
+# Specialized moderation stays active for documents and listing media.
+grep -qF 'PreScreenKycDocumentWithAI::dispatch' "$PROFILE_CONTROLLER"
+grep -qF 'crossCheckCsfWithAi' "$BUSINESS_CONTROLLER"
+grep -qF "'images' => \$imagePayloads" "$AD_MODERATION_JOB"
+grep -qF 'videoFramePayloads' "$AD_MODERATION_JOB"
 
 echo "media upload validation scan OK"
