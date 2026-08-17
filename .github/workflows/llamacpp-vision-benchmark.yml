@@ -43,4 +43,4 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          bash scripts/llamacpp-vision-benchmark.sh
+          bash scripts/llamacpp-vision-benchmark-tolerant.sh
