@@ -1,7 +1,9 @@
 import React from 'react';
 import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import { useTranslation } from 'react-i18next';
 import { localizedText } from '../../utils/localize';
+import { localeFor } from '../../utils/localeFormat';
 
 const DEFAULT_MARKERS = [
   { label: '$1.7k', coords: [19.4326, -99.1332], tone: 'lime' },
@@ -39,8 +41,8 @@ const coordsToPoint = ([lat, lon]) => {
   };
 };
 
-const markerAccuracyLabel = (marker = {}) => (
-  marker.accuracyLabel || (marker.approximate ? 'Approx' : 'GPS real')
+const markerAccuracyLabel = (marker = {}, t) => (
+  marker.accuracyLabel || (marker.approximate ? t('map.approxCityState') : t('map.realGps'))
 );
 
 const markerAccuracyClass = (marker = {}) => (
@@ -50,7 +52,7 @@ const markerAccuracyClass = (marker = {}) => (
 );
 
 export default function MercastoMapPreview({
-  title = 'Todo México',
+  title = '',
   markers = DEFAULT_MARKERS,
   onSearch,
   onSearchArea,
@@ -58,6 +60,10 @@ export default function MercastoMapPreview({
   className = '',
   showFullscreen = true,
 }) {
+  const { t, i18n } = useTranslation();
+  const lang = String(i18n.resolvedLanguage || i18n.language || 'es').split('-')[0];
+  const mapTitle = title || t('map.allMexico');
+  const listingCountLabel = (count) => `${count} ${t(count === 1 ? 'map.listing' : 'map.listings')}`;
   const [expanded, setExpanded] = React.useState(false);
   const [leaflet, setLeaflet] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -80,7 +86,7 @@ export default function MercastoMapPreview({
 
     return normalizedMarkers.filter(marker => {
       const ad = marker.ad || {};
-      const text = `${marker.label || ''} ${localizedText(ad.title) || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
+      const text = `${marker.label || ''} ${localizedText(ad.title, lang) || ''} ${ad.location || ''} ${ad.state || ''} ${ad.category || ''}`.toLowerCase();
       const price = Number(ad.price || String(marker.label || '').replace(/[^\d.]/g, '') || 0);
 
       if (query && !text.includes(query)) return false;
@@ -88,7 +94,7 @@ export default function MercastoMapPreview({
       if (onlyWithCoords && (!(marker.coords && marker.coords.length >= 2) || marker.approximate)) return false;
       return true;
     });
-  }, [maxPrice, normalizedMarkers, mapQuery, onlyWithCoords]);
+  }, [lang, maxPrice, normalizedMarkers, mapQuery, onlyWithCoords]);
 
   React.useEffect(() => () => {
     mountedRef.current = false;
@@ -285,7 +291,7 @@ export default function MercastoMapPreview({
             ${marker.label || '$'}
           </div>
           <div class="custom-leaflet-marker-accuracy ${marker.approximate ? 'custom-leaflet-marker-accuracy--approx' : 'custom-leaflet-marker-accuracy--real'}">
-            ${escapeHtml(markerAccuracyLabel(marker))}
+            ${escapeHtml(markerAccuracyLabel(marker, t))}
           </div>
         </div>
       `;
@@ -302,11 +308,11 @@ export default function MercastoMapPreview({
 
       const ad = marker.ad;
       if (ad) {
-        const title = escapeHtml(localizedText(ad.title) || 'Anuncio');
-        const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+        const title = escapeHtml(localizedText(ad.title, lang) || t('map.listing'));
+        const price = Number(ad.price || 0).toLocaleString(localeFor(lang), { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
         const imgUrl = escapeHtml(ad.image_url || ad.image || 'https://picsum.photos/seed/mercasto/100/75');
         
-        const accuracy = escapeHtml(markerAccuracyLabel(marker));
+        const accuracy = escapeHtml(markerAccuracyLabel(marker, t));
         const popupContent = `
           <div class="leaflet-popup-card">
             <img src="${imgUrl}" class="leaflet-popup-card__img" alt="${title}"/>
@@ -314,7 +320,7 @@ export default function MercastoMapPreview({
               <span class="leaflet-popup-card__accuracy ${marker.approximate ? 'leaflet-popup-card__accuracy--approx' : 'leaflet-popup-card__accuracy--real'}">${accuracy}</span>
               <h4 class="leaflet-popup-card__title">${title}</h4>
               <p class="leaflet-popup-card__price">${price}</p>
-              <button type="button" class="leaflet-popup-card__btn" onclick="window.__onMapAdClick?.(${ad.id})">Ver anuncio</button>
+              <button type="button" class="leaflet-popup-card__btn" onclick="window.__onMapAdClick?.(${ad.id})">${escapeHtml(t('map.viewListing'))}</button>
             </div>
           </div>
         `;
@@ -354,7 +360,7 @@ export default function MercastoMapPreview({
     return () => {
       removeMap(mapInstanceRef);
     };
-  }, [leaflet, expanded, visibleMarkers]);
+  }, [leaflet, expanded, lang, visibleMarkers]);
 
   React.useEffect(() => {
     if (leaflet && expanded) {
@@ -367,7 +373,7 @@ export default function MercastoMapPreview({
     return () => {
       removeMap(largeMapInstanceRef);
     };
-  }, [leaflet, expanded, visibleMarkers]);
+  }, [leaflet, expanded, lang, visibleMarkers]);
 
   return (
     <>
@@ -375,7 +381,7 @@ export default function MercastoMapPreview({
         {loading && (
           <div className="absolute inset-0 z-[10] flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-[2px] dark:bg-slate-950/20">
             <Loader2 className="h-8 w-8 animate-spin text-[#84CC16]" />
-            <span className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-300">Cargando mapa...</span>
+            <span className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-300">{t('common.loading')}</span>
           </div>
         )}
         
@@ -397,22 +403,22 @@ export default function MercastoMapPreview({
                     {marker.label || '$'}
                   </span>
                   <span className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-black shadow ${markerAccuracyClass(marker)}`}>
-                    {markerAccuracyLabel(marker)}
+                    {markerAccuracyLabel(marker, t)}
                   </span>
                 </button>
               );
             })}
             <div className="absolute bottom-3 left-3 rounded-full bg-slate-950/80 px-3 py-1.5 text-[11px] font-bold text-white dark:bg-white/10">
-              Mapa
+              {t('map.label')}
             </div>
           </div>
         )}
         
         <div className="absolute left-3 top-3 z-[2] rounded-full bg-white/92 px-3 py-1.5 text-xs font-black text-slate-800 shadow-md dark:bg-slate-950/88 dark:text-white pointer-events-none">
-          {title}
+          {mapTitle}
         </div>
         <div className="absolute right-3 top-3 z-[2] rounded-full bg-slate-950/90 px-3 py-1.5 text-xs font-black text-white shadow-md dark:bg-[#84CC16] dark:text-slate-950 pointer-events-none">
-          {loadFailed ? 'Vista previa' : 'Mapa'}
+          {loadFailed ? t('map.preview') : t('map.label')}
         </div>
 
         {showFullscreen && (
@@ -421,7 +427,7 @@ export default function MercastoMapPreview({
             onClick={() => setExpanded(true)}
             className="absolute bottom-3 right-3 z-[2] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg hover:scale-105 active:scale-95 transition-all"
           >
-            <Maximize2 size={13} /> Ampliar
+            <Maximize2 size={13} /> {t('map.fullscreen')}
           </button>
         )}
       </div>
@@ -432,7 +438,7 @@ export default function MercastoMapPreview({
           className="fixed inset-0 z-[9999] flex flex-col bg-slate-950"
           role="dialog"
           aria-modal="true"
-          aria-label="Mapa interactivo"
+          aria-label={t('map.interactive')}
         >
           {/* ── Header bar ── */}
           <div className="relative z-[10] flex items-center gap-3 border-b border-slate-800 bg-slate-900/98 px-4 py-3 shadow-lg backdrop-blur sm:px-6">
@@ -442,9 +448,9 @@ export default function MercastoMapPreview({
                 <MapPin size={18} className="text-slate-950" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-sm font-black text-white truncate">Mapa interactivo</h2>
+                <h2 className="text-sm font-black text-white truncate">{t('map.interactive')}</h2>
                 <p className="text-[11px] font-semibold text-slate-400">
-                  {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}{mapArea ? ` · radio ${mapArea.radius} km` : ''}
+                  {listingCountLabel(visibleMarkers.length)}{mapArea ? ` · ${mapArea.radius} km` : ''}
                 </p>
               </div>
             </div>
@@ -457,7 +463,7 @@ export default function MercastoMapPreview({
                   value={mapQuery}
                   onChange={(e) => setMapQuery(e.target.value)}
                   className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-                  placeholder="Buscar en el mapa..."
+                  placeholder={t('common.search')}
                 />
               </div>
               <input
@@ -465,7 +471,7 @@ export default function MercastoMapPreview({
                 onChange={(e) => setMaxPrice(e.target.value)}
                 type="number"
                 className="w-28 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-                placeholder="Precio máx."
+                placeholder={t('filters.maxPrice')}
               />
               <button
                 type="button"
@@ -476,14 +482,14 @@ export default function MercastoMapPreview({
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                 }`}
               >
-                <SlidersHorizontal size={14} /> GPS real
+                <SlidersHorizontal size={14} /> {t('map.realGps')}
               </button>
               <button
                 type="button"
                 onClick={handleSearchArea}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2 text-xs font-black text-slate-950 hover:bg-[#a3e635] transition-colors"
               >
-                <Crosshair size={14} /> Buscar en zona
+                <Crosshair size={14} /> {t('map.searchArea')}
               </button>
             </div>
 
@@ -492,11 +498,11 @@ export default function MercastoMapPreview({
               type="button"
               onClick={() => setExpanded(false)}
               className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-colors sm:h-10 sm:w-auto sm:gap-2 sm:px-4"
-              aria-label="Cerrar mapa"
-              title="Cerrar (Esc)"
+              aria-label={t('map.closeMap')}
+              title={t('map.closeEsc')}
             >
               <X size={20} />
-              <span className="hidden text-sm font-black sm:inline">Cerrar</span>
+              <span className="hidden text-sm font-black sm:inline">{t('common.close')}</span>
             </button>
           </div>
 
@@ -508,7 +514,7 @@ export default function MercastoMapPreview({
                 value={mapQuery}
                 onChange={(e) => setMapQuery(e.target.value)}
                 className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-                placeholder="Buscar..."
+                placeholder={t('common.search')}
               />
             </div>
             <input
@@ -516,7 +522,7 @@ export default function MercastoMapPreview({
               onChange={(e) => setMaxPrice(e.target.value)}
               type="number"
               className="w-24 rounded-xl border border-slate-700 bg-slate-800 px-2 py-2 text-xs font-semibold text-white outline-none placeholder:text-slate-500"
-              placeholder="$ máx"
+              placeholder={t('filters.maxPrice')}
             />
             <button
               type="button"
@@ -547,7 +553,7 @@ export default function MercastoMapPreview({
                   return (
                     <button key={marker.id || index} type="button" onClick={() => onMarkerClick?.(marker.ad || marker)} className="absolute z-[2] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={pos}>
                       <span className="rounded-full bg-[#84CC16] px-3 py-1.5 text-xs font-black text-slate-950 shadow-xl ring-2 ring-white/70">{marker.label || '$'}</span>
-                      <span className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-black shadow ${markerAccuracyClass(marker)}`}>{markerAccuracyLabel(marker)}</span>
+                      <span className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-black shadow ${markerAccuracyClass(marker)}`}>{markerAccuracyLabel(marker, t)}</span>
                     </button>
                   );
                 })}
@@ -560,8 +566,8 @@ export default function MercastoMapPreview({
                 <div className="flex items-center gap-3 text-xs font-bold">
                   <span className="flex items-center gap-1.5">
                     <Layers size={14} className="text-[#84CC16]" />
-                    {visibleMarkers.length} anuncio{visibleMarkers.length !== 1 ? 's' : ''}
-                    {mapArea && <span className="text-slate-400">· radio {mapArea.radius} km</span>}
+                    {listingCountLabel(visibleMarkers.length)}
+                    {mapArea && <span className="text-slate-400">· {mapArea.radius} km</span>}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -570,7 +576,7 @@ export default function MercastoMapPreview({
                     onClick={() => { setMapQuery(''); setMaxPrice(''); setOnlyWithCoords(false); }}
                     className="rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 transition-colors"
                   >
-                    Limpiar filtros
+                    {t('map.clearFilters')}
                   </button>
                   <button
                     type="button"
@@ -578,13 +584,13 @@ export default function MercastoMapPreview({
                     className="rounded-lg bg-red-500/20 px-3 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-500/30 transition-colors"
                   >
                     <X size={14} className="inline mr-1" />
-                    Cerrar
+                    {t('common.close')}
                   </button>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black">
-                <span className="rounded-full bg-[#84CC16] px-2 py-1 text-slate-950">● GPS real</span>
-                <span className="rounded-full bg-amber-300 px-2 py-1 text-slate-950">● Approx ciudad/estado</span>
+                <span className="rounded-full bg-[#84CC16] px-2 py-1 text-slate-950">● {t('map.realGps')}</span>
+                <span className="rounded-full bg-amber-300 px-2 py-1 text-slate-950">● {t('map.approxCityState')}</span>
               </div>
               {visibleMarkers.length > 0 && (
                 <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -595,7 +601,7 @@ export default function MercastoMapPreview({
                       onClick={() => onMarkerClick?.(marker.ad || marker)}
                       className="shrink-0 rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-[11px] font-black text-white hover:bg-[#84CC16] hover:text-slate-950 hover:border-[#84CC16] transition-colors"
                     >
-                      {marker.label || 'Ver'}
+                      {marker.label || t('map.viewListing')}
                     </button>
                   ))}
                 </div>

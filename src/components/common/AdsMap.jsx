@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import MercastoMapPreview from './MercastoMapPreview';
+import { localeFor } from '../../utils/localeFormat';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -63,7 +65,7 @@ function adCoords(ad, index) {
   const lat = Number(ad?.latitude ?? ad?.lat);
   const lng = Number(ad?.longitude ?? ad?.lng);
   if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-    return { coords: [lat, lng], approximate: false, accuracy: 'real', accuracyLabel: 'GPS real' };
+    return { coords: [lat, lng], approximate: false, accuracy: 'real' };
   }
 
   const locationText = normalizeLocationText(`${ad?.city || ''} ${ad?.municipality || ''} ${ad?.location || ''} ${ad?.state || ''}`);
@@ -79,26 +81,28 @@ function adCoords(ad, index) {
     ],
     approximate: true,
     accuracy: cityKey ? 'city' : 'approx',
-    accuracyLabel: cityKey ? 'Approx ciudad' : 'Approx estado',
   };
 }
 
-function markerLabel(ad) {
+function markerLabel(ad, lang, t) {
   const price = Number(ad?.price || 0);
-  if (price > 0) return `$${price.toLocaleString('es-MX', { notation: 'compact' })}`;
-  return ad?.category ? String(ad.category).slice(0, 10) : 'Ver';
+  if (price > 0) return `$${price.toLocaleString(localeFor(lang), { notation: 'compact' })}`;
+  return ad?.category ? String(ad.category).slice(0, 10) : t('map.viewListing');
 }
+
 
 export default function AdsMap({
   ads,
   apiUrl,
   category,
-  title = 'Todo México',
+  title = '',
   className = 'h-[220px] md:h-[340px]',
   onMarkerClick,
   showFullscreen = true,
 }) {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const lang = String(i18n.resolvedLanguage || i18n.language || 'es').split('-')[0];
   const [loadedAds, setLoadedAds] = React.useState([]);
   const [loading, setLoading] = React.useState(Boolean(apiUrl || category));
 
@@ -134,15 +138,15 @@ export default function AdsMap({
       coords: location.coords,
       approximate: location.approximate,
       accuracy: location.accuracy,
-      accuracyLabel: location.accuracyLabel,
-      label: markerLabel(ad),
+      accuracyLabel: location.accuracy === 'real' ? t('map.realGps') : t(location.accuracy === 'city' ? 'map.approxCity' : 'map.approxState'),
+      label: markerLabel(ad, lang, t),
       tone: location.approximate ? 'dark' : 'lime',
       title: ad.title,
       price: ad.price,
       location: ad.location || ad.city || ad.state,
       category: ad.category,
     };
-  }), [sourceAds]);
+  }), [lang, sourceAds, t]);
 
   const handleMarkerClick = (adOrMarker) => {
     if (onMarkerClick) return onMarkerClick(adOrMarker);
@@ -166,7 +170,7 @@ export default function AdsMap({
     <div className={`relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-800 dark:bg-slate-950 ${className}`}>
       {loading && (
         <div className="absolute inset-0 z-[4] flex items-center justify-center bg-slate-950/10 text-xs font-black text-slate-500 dark:bg-slate-950/30 dark:text-slate-300">
-          Cargando anuncios...
+          {t('common.loading')}
         </div>
       )}
       <MercastoMapPreview
