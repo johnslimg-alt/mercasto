@@ -42,3 +42,37 @@ test('desktop header controls share one geometry system', async ({ page }, testI
     expect(submit.height).toBeCloseTo(36, 0);
   }
 });
+
+test('desktop language selector exposes a visible keyboard focus indicator', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await expect(page.getByTestId('desktop-header-row')).toBeVisible();
+
+  const languageSelect = page.getByTestId('desktop-language-select');
+  await expect(languageSelect).toBeVisible();
+
+  for (let index = 0; index < 20; index += 1) {
+    if (await languageSelect.evaluate((element) => document.activeElement === element)) break;
+    await page.keyboard.press('Tab');
+  }
+
+  await expect(languageSelect).toBeFocused();
+  const focusStyle = await languageSelect.evaluate((element) => {
+    const wrapper = element.closest('.header-lang-select');
+    if (!wrapper) return null;
+    const style = getComputedStyle(wrapper);
+    return {
+      borderColor: style.borderColor,
+      boxShadow: style.boxShadow,
+    };
+  });
+
+  expect(focusStyle).not.toBeNull();
+  expect(focusStyle.borderColor).toBe('rgb(132, 204, 22)');
+  expect(focusStyle.boxShadow).not.toBe('none');
+
+  await languageSelect.selectOption('en');
+  await expect(languageSelect).toHaveValue('en');
+});
