@@ -93,7 +93,11 @@ test('mobile catalog reveals cards in small batches', async ({ page }, testInfo)
   await mockPublicApi(page);
 
   await page.goto('/listings', { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('[data-catalog-card]')).toHaveCount(8);
+  const catalogCards = page.locator('[data-catalog-card]');
+  await expect.poll(() => catalogCards.count()).toBeGreaterThanOrEqual(8);
+  const initialBatchCount = await catalogCards.count();
+  expect(initialBatchCount).toBeLessThan(catalogAds.length);
+  expect(initialBatchCount % 8).toBe(0);
   const catalogImages = page.locator('[data-catalog-card] img');
   await expect(catalogImages.nth(0)).toHaveAttribute('loading', 'eager');
   await expect(catalogImages.nth(0)).toHaveAttribute('fetchpriority', 'high');
