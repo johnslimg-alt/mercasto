@@ -1,0 +1,31 @@
+@media (max-width: 767px) {
+  [data-testid="mobile-theme-toggle"],
+  [data-testid="mobile-account-button"],
+  [data-testid="mobile-search-submit"] {
+    min-width: var(--mc-touch-target, 48px);
+    min-height: var(--mc-touch-target, 48px);
+  }
+
+  [data-testid="mobile-location-button"],
+  [data-testid="mobile-language-select"],
+  [data-testid="mobile-search-input"] {
+    min-height: var(--mc-touch-target, 48px);
+  }
+
+  .mobile-language-select {
+    min-height: var(--mc-touch-target, 48px);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .mobile-tabbar > button {
+    min-width: var(--mc-touch-target, 48px);
+    min-height: var(--mc-touch-target, 48px);
+    justify-content: center;
+  }
+
+  .mobile-tabbar > button:nth-child(3) {
+    min-width: 56px;
+    min-height: 56px;
+  }
+}
