@@ -71,6 +71,7 @@ case "${shard}" in
       tests/e2e/catalog-map-filter-state.spec.js tests/e2e/catalog-map-responsive.spec.js \
       tests/e2e/map-shell-localization.spec.js tests/e2e/archived-language-fallback.spec.js \
       tests/e2e/category-filter-option-localization.spec.js tests/e2e/ad-card-favorite-tap-target.spec.js \
+      tests/e2e/mobile-shell-touch-targets.spec.js \
       --project=chromium-desktop --project=chromium-mobile --workers=1 --retries=1 --reporter=list
     ;;
   webkit-public)
