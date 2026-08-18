@@ -10,9 +10,9 @@ class ApplyListingQualityPreflightMiddlewareContractTest extends TestCase
     {
         $source = file_get_contents(__DIR__ . '/../../app/Http/Middleware/ApplyListingQualityPreflight.php');
 
-        $this->assertStringContainsString("$path === 'api/ads'", $source);
-        $this->assertStringContainsString("preg_match('#^api/ads/[0-9]+$#', $path)", $source);
-        $this->assertStringContainsString("$request->user('sanctum')", $source);
+        $this->assertStringContainsString("\$path === 'api/ads'", $source);
+        $this->assertStringContainsString("preg_match('#^api/ads/[0-9]+$#', \$path)", $source);
+        $this->assertStringContainsString("\$request->user('sanctum')", $source);
         $this->assertStringContainsString("'quality_preflight' => \$result", $source);
     }
 }
