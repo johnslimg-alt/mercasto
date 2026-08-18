@@ -1,0 +1,12 @@
+.header-lang-select:focus-within {
+  border-color: #84cc16 !important;
+  box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.28);
+}
+
+@media (forced-colors: active) {
+  .header-lang-select:focus-within {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
