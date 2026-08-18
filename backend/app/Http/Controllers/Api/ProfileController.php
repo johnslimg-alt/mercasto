@@ -599,7 +599,7 @@ class ProfileController extends Controller
             return response()->json(['message' => 'Usuario no encontrado'], 404);
         }
         
-        DB::table('user_reports')->insert([
+        $reportId = DB::table('user_reports')->insertGetId([
             'reported_user_id' => $id,
             'reporter_id' => auth('sanctum')->id(), // Может быть null, если гость
             'reason' => $request->reason,
@@ -607,7 +607,11 @@ class ProfileController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        return response()->json(['message' => 'Reporte enviado exitosamente. Revisaremos el perfil de este usuario.']);
+
+        return response()->json([
+            'message' => 'Reporte enviado exitosamente. Revisaremos el perfil de este usuario.',
+            'report_reference' => sprintf('RPT-U-%08d', $reportId),
+        ]);
     }
 
     public function getUserReports(Request $request)
