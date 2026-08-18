@@ -28,48 +28,15 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Find project directory
+      - name: Checkout audited commit
+        uses: actions/checkout@v7
+
+      - name: Prepare audit paths
         run: |
           set -euo pipefail
-
-          candidates=(
-            "$HOME/mercasto"
-            "/root/mercasto"
-            "/var/www/mercasto"
-            "/opt/mercasto"
-            "/srv/mercasto"
-          )
-
-          project_dir=""
-          for dir in "${candidates[@]}"; do
-            if [ -f "$dir/package.json" ] && [ -f "$dir/scripts/dependency-update-audit.sh" ]; then
-              project_dir="$dir"
-              break
-            fi
-          done
-
-          if [ -z "$project_dir" ]; then
-            found=$(find /root /home /var/www /opt /srv "$HOME" -maxdepth 5 -path '*/scripts/dependency-update-audit.sh' -print 2>/dev/null | head -1 || true)
-            if [ -n "$found" ]; then
-              project_dir=$(cd "$(dirname "$found")/.." && pwd)
-            fi
-          fi
-
-          if [ -z "$project_dir" ]; then
-            echo "Mercasto project directory was not found."
-            exit 1
-          fi
-
-          echo "PROJECT_DIR=$project_dir" >> "$GITHUB_ENV"
+          echo "PROJECT_DIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
           echo "AUDIT_DIR=/tmp/mercasto-dependency-audit-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
-          echo "Using project directory: $project_dir"
-
-      - name: Sync repository to latest main
-        run: |
-          set -euo pipefail
-          cd "$PROJECT_DIR"
-          git fetch origin main
-          git reset --hard origin/main
+          echo "Using isolated Actions workspace: $GITHUB_WORKSPACE"
 
       - name: Run dependency update audit
         run: |

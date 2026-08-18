@@ -47,8 +47,20 @@ probe_static_marker() {
   marker="$(strict_marker_for_path "$path")"
   [ -n "$marker" ] || return 0
   url="${BASE_URL}${path}"
+  local body_file
+  local grep_rc
+  body_file="$(mktemp)"
   printf 'checking content marker for %s: %s\n' "$url" "$marker"
-  curl -k -L -fsS --max-time 20 "$url" | grep -Fqi "$marker"
+  if ! curl -k -L -fsS --max-time 20 -o "$body_file" "$url"; then
+    rm -f "$body_file"
+    return 1
+  fi
+  set +e
+  grep -Fqi "$marker" "$body_file"
+  grep_rc=$?
+  set -e
+  rm -f "$body_file"
+  return "$grep_rc"
 }
 
 echo "== Mercasto legal/business readiness smoke =="
