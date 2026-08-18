@@ -217,6 +217,6 @@ class ListingQualityPreflightWritePathTest extends TestCase
 
         $ad->refresh();
         $this->assertSame('Sedán familiar usado', $ad->title);
-        $this->assertSame('145000.00', (string) $ad->price);
+        $this->assertSame(145000.0, (float) $ad->price);
     }
 }
