@@ -2,6 +2,12 @@ name: Self-hosted runner diagnostic
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ops/runner-workdir-health
+    paths:
+      - .github/workflows/self-hosted-runner-diagnostic.yml
+      - infra/github-runners/docker-compose.runners.yml
 
 permissions:
   contents: read
@@ -12,6 +18,32 @@ jobs:
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 10
     steps:
+      - name: Checkout diagnostic branch
+        uses: actions/checkout@v7
+
+      - name: Check runner temp and workspace are writable
+        run: |
+          set -euo pipefail
+          test -n "${RUNNER_TEMP:-}"
+          test -d "$RUNNER_TEMP"
+          test -w "$RUNNER_TEMP"
+          test -n "${GITHUB_WORKSPACE:-}"
+          test -d "$GITHUB_WORKSPACE"
+          test -w "$GITHUB_WORKSPACE"
+
+          probe="$RUNNER_TEMP/mercasto-runner-health-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          printf 'runner-temp-ok\n' > "$probe"
+          test -s "$probe"
+          rm -f "$probe"
+
+      - name: Check runner compose workdir isolation
+        run: |
+          set -euo pipefail
+          test "$(grep -c 'RUNNER_WORKDIR: /tmp/runner' infra/github-runners/docker-compose.runners.yml)" -eq 3
+          grep -Fq -- './runner1:/tmp/runner' infra/github-runners/docker-compose.runners.yml
+          grep -Fq -- './runner2:/tmp/runner' infra/github-runners/docker-compose.runners.yml
+          grep -Fq -- './runner3:/tmp/runner' infra/github-runners/docker-compose.runners.yml
+
       - name: Check production checkout mount
         run: |
           set -euo pipefail
