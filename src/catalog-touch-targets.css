@@ -1,0 +1,18 @@
+@media (max-width: 767px) {
+  [data-testid="catalog-mobile-filters"],
+  [data-testid="catalog-map-toggle"],
+  [data-testid="catalog-grid-view"],
+  [data-testid="catalog-list-view"] {
+    min-height: var(--mc-touch-target, 48px);
+  }
+
+  [data-testid="catalog-map-toggle"] {
+    top: 6px;
+    right: 6px;
+  }
+
+  [data-testid="catalog-grid-view"],
+  [data-testid="catalog-list-view"] {
+    padding-block: 0.5rem;
+  }
+}
