@@ -7,7 +7,7 @@ import { SUPPORTED_LANGUAGES } from '../src/utils/translations.js';
 const REQUIRED_KEYS = [
   'qr_contact_title', 'qr_contact_desc', 'report_ad_help', 'report_select_reason',
   'report_reason_fraud', 'report_reason_inappropriate', 'report_reason_counterfeit',
-  'report_reason_other', 'report_details_placeholder', 'report_send', 'report_user_help',
+  'report_reason_other', 'sold_status', 'report_details_placeholder', 'report_send', 'report_user_help',
   'report_reason_abusive', 'report_reason_suspected_fraud',
   'report_reason_prohibited_products', 'report_reason_impersonation',
   'report_additional_details', 'report_user_details_placeholder',
