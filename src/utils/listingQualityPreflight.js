@@ -25,6 +25,8 @@ function normalizeText(value) {
 
 function normalizeComparable(value) {
   return normalizeText(value)
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
     .toLocaleLowerCase('es-MX')
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
@@ -56,7 +58,9 @@ export function evaluateListingQuality(listing = {}, options = {}) {
   const title = normalizeText(listing.title);
   const description = normalizeText(listing.description);
   const category = normalizeComparable(listing.category);
-  const price = Number(listing.price);
+  const rawPrice = normalizeText(listing.price);
+  const hasPrice = rawPrice !== '';
+  const price = hasPrice ? Number(rawPrice) : Number.NaN;
   const imageCount = Number.isFinite(Number(listing.imageCount))
     ? Number(listing.imageCount)
     : Array.isArray(listing.images) ? listing.images.length : 0;
@@ -70,11 +74,11 @@ export function evaluateListingQuality(listing = {}, options = {}) {
   if (!category) addHard('category_required');
   if (!title) addHard('title_required');
   if (!description) addHard('description_required');
-  if (!Number.isFinite(price)) addHard('price_required');
+  if (!hasPrice || !Number.isFinite(price)) addHard('price_required');
 
   if (title && title.length < policy.minTitleLength) addWarning('title_too_short');
   if (description && description.length < policy.minDescriptionLength) addWarning('description_too_short');
-  if (Number.isFinite(price) && price <= 0 && policy.warnZeroPrice) addWarning('price_zero_or_negative');
+  if (hasPrice && Number.isFinite(price) && price <= 0 && policy.warnZeroPrice) addWarning('price_zero_or_negative');
   if (policy.recommendPhoto && imageCount < 1) addWarning('photo_recommended');
 
   const combined = `${title} ${description}`.trim();
@@ -91,7 +95,8 @@ export function evaluateListingQuality(listing = {}, options = {}) {
     addWarning('title_description_duplicate');
   }
 
-  if (tokenShare(description) > policy.maxRepeatedTokenShare) addWarning('keyword_stuffing');
+  const repeatedTokenShare = tokenShare(description);
+  if (repeatedTokenShare > policy.maxRepeatedTokenShare) addWarning('keyword_stuffing');
   if (/^(.)\1{4,}$/u.test(title.replace(/\s/g, ''))) addWarning('placeholder_like_title');
   if (/^(.)\1{9,}$/u.test(description.replace(/\s/g, ''))) addWarning('placeholder_like_description');
 
@@ -103,7 +108,7 @@ export function evaluateListingQuality(listing = {}, options = {}) {
       imageCount,
       titleLength: title.length,
       descriptionLength: description.length,
-      repeatedTokenShare: tokenShare(description),
+      repeatedTokenShare,
     },
   };
 }
