@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->prependToGroup('api', \App\Http\Middleware\SecurityAuditMiddleware::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\RejectUnsafeXmlUpload::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\ApplyListingQualityPreflight::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\ModeratePublicImageUploads::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastActive::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\TrackGoogleAnalyticsPurchase::class);
