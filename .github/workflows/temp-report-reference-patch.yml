@@ -1,0 +1,52 @@
+name: Temporary Report Reference Patch
+
+on:
+  push:
+    branches:
+      - feat/report-submission-references
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/report-submission-references
+      - name: Patch report handlers with exact guards
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          patches = [
+              (
+                  Path('backend/app/Http/Controllers/Api/AdController.php'),
+                  """        DB::table('reports')->insert([\n            'ad_id' => $id,\n            'user_id' => auth('sanctum')->id(), // Может быть null для гостей\n            'reason' => $request->reason,\n            'comments' => $request->comments,\n            'created_at' => now(),\n            'updated_at' => now(),\n        ]);\n        return response()->json(['message' => 'Reporte enviado exitosamente. Gracias por ayudarnos a mantener la plataforma segura.']);""",
+                  """        $reportId = DB::table('reports')->insertGetId([\n            'ad_id' => $id,\n            'user_id' => auth('sanctum')->id(), // Может быть null для гостей\n            'reason' => $request->reason,\n            'comments' => $request->comments,\n            'created_at' => now(),\n            'updated_at' => now(),\n        ]);\n\n        return response()->json([\n            'message' => 'Reporte enviado exitosamente. Gracias por ayudarnos a mantener la plataforma segura.',\n            'report_reference' => sprintf('RPT-A-%08d', $reportId),\n        ]);""",
+              ),
+              (
+                  Path('backend/app/Http/Controllers/Api/ProfileController.php'),
+                  """        DB::table('user_reports')->insert([\n            'reported_user_id' => $id,\n            'reporter_id' => auth('sanctum')->id(), // Может быть null, если гость\n            'reason' => $request->reason,\n            'comments' => $request->comments,\n            'created_at' => now(),\n            'updated_at' => now(),\n        ]);\n        return response()->json(['message' => 'Reporte enviado exitosamente. Revisaremos el perfil de este usuario.']);""",
+                  """        $reportId = DB::table('user_reports')->insertGetId([\n            'reported_user_id' => $id,\n            'reporter_id' => auth('sanctum')->id(), // Может быть null, если гость\n            'reason' => $request->reason,\n            'comments' => $request->comments,\n            'created_at' => now(),\n            'updated_at' => now(),\n        ]);\n\n        return response()->json([\n            'message' => 'Reporte enviado exitosamente. Revisaremos el perfil de este usuario.',\n            'report_reference' => sprintf('RPT-U-%08d', $reportId),\n        ]);""",
+              ),
+          ]
+
+          for path, old, new in patches:
+              source = path.read_text()
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exact report block once, found {count}')
+              path.write_text(source.replace(old, new, 1))
+          PY
+          php -l backend/app/Http/Controllers/Api/AdController.php
+          php -l backend/app/Http/Controllers/Api/ProfileController.php
+      - name: Commit controller patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/app/Http/Controllers/Api/AdController.php backend/app/Http/Controllers/Api/ProfileController.php
+          git diff --cached --check
+          git commit -m 'feat: return stable report submission references'
+          git push origin HEAD:feat/report-submission-references
