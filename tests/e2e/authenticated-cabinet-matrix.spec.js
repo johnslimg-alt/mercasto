@@ -44,9 +44,23 @@ function supportsViewport(projectName, viewportName) {
   if (projectName === 'chromium-layout-cabinet') return true;
   return representativeProjectViewports[projectName]?.has(viewportName) ?? false;
 }
+
 async function authenticate(request, role) {
-  const response = await request.post(`${API_BASE_URL}/login`, { data: credentials[role] });
-  expect(response.ok(), `${role} login`).toBeTruthy();
+  const maxAttempts = 6;
+  let response;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    response = await request.post(`${API_BASE_URL}/login`, { data: credentials[role] });
+    if (response.ok() || response.status() !== 429 || attempt === maxAttempts) break;
+
+    const payload = await response.json().catch(() => ({}));
+    const retryAfterHeader = Number(response.headers()['retry-after'] || 0);
+    const retryAfterBody = Number(payload?.retry_after || 0);
+    const retryAfterSeconds = Math.max(1, retryAfterHeader, retryAfterBody);
+    await new Promise(resolve => setTimeout(resolve, retryAfterSeconds * 1000));
+  }
+
+  expect(response?.ok(), `${role} login status=${response?.status() ?? 'unavailable'}`).toBeTruthy();
   const payload = await response.json();
   return { token: payload.access_token || payload.token, user: payload.user };
 }
