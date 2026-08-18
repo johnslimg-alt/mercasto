@@ -39,6 +39,33 @@ class ListingQualityPreflightWritePathTest extends TestCase
         ], $overrides);
     }
 
+    public function test_unauthenticated_create_still_uses_the_authentication_gate(): void
+    {
+        $this->category();
+
+        $response = $this->postJson('/api/ads', $this->payload([
+            'title' => 'x',
+        ]));
+
+        $response->assertUnauthorized();
+        $this->assertNull($response->json('quality_preflight'));
+        $this->assertDatabaseCount('ads', 0);
+    }
+
+    public function test_missing_required_field_still_uses_canonical_request_validation(): void
+    {
+        $this->category();
+        $user = User::factory()->create();
+        $payload = $this->payload();
+        unset($payload['title']);
+
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/ads', $payload);
+
+        $response->assertUnprocessable()->assertJsonValidationErrors(['title']);
+        $this->assertNull($response->json('quality_preflight'));
+        $this->assertDatabaseCount('ads', 0);
+    }
+
     public function test_create_blocks_hard_quality_failure_before_persistence(): void
     {
         $this->category();
