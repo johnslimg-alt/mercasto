@@ -33,3 +33,27 @@ test('catalog map preserves an explicit user collapse choice across resize', asy
   await expect(page.getByTestId('catalog-map-toggle')).toContainText('Abrir mapa');
   await expect(page.getByTestId('catalog-map-shell')).toHaveCSS('height', '60px');
 });
+
+test('mobile catalog primary toolbar controls keep 48px hit targets without overflow', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+
+  for (const width of [360, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/listings');
+
+    for (const testId of [
+      'catalog-mobile-filters',
+      'catalog-map-toggle',
+      'catalog-grid-view',
+      'catalog-list-view',
+    ]) {
+      const control = page.getByTestId(testId);
+      await expect(control).toBeVisible();
+      const box = await control.boundingBox();
+      expect(box?.height, `${testId} at ${width}px`).toBeGreaterThanOrEqual(48);
+    }
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(1);
+  }
+});
