@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ApplyListingQualityPreflight
 {
+    private const PREVIEW_HEADER = 'X-Mercasto-Quality-Preflight';
+
     public function __construct(private ListingQualityPreflightService $preflight)
     {
     }
@@ -19,17 +21,29 @@ class ApplyListingQualityPreflight
         $path = trim($request->path(), '/');
         $isCreate = $request->isMethod('post') && $path === 'api/ads';
         $isUpdate = $request->isMethod('post') && preg_match('#^api/ads/[0-9]+$#', $path) === 1;
+        $isPreview = strtolower(trim((string) $request->header(self::PREVIEW_HEADER))) === 'preview';
 
         if ((! $isCreate && ! $isUpdate) || ! $request->user('sanctum')) {
             return $next($request);
         }
 
-        // Let the canonical controller validator own missing/ill-typed required fields.
-        // This layer only evaluates quality once the structural payload is present.
+        // Let the canonical controller validator own missing/ill-typed required fields for real writes.
+        // Preview requests must never fall through to the controller because preview is non-mutating by contract.
         if (! $request->filled('title')
             || ! $request->filled('description')
             || ! $request->has('price')
             || ! $request->filled('category')) {
+            if ($isPreview) {
+                return response()->json([
+                    'message' => 'Listing quality preview requires the complete structural payload.',
+                    'quality_preflight' => [
+                        'passes_hard_validation' => false,
+                        'errors' => ['incomplete_preview_payload'],
+                        'warnings' => [],
+                    ],
+                ], 422);
+            }
+
             return $next($request);
         }
 
@@ -52,6 +66,12 @@ class ApplyListingQualityPreflight
                 'message' => 'Listing quality preflight failed.',
                 'quality_preflight' => $result,
             ], 422);
+        }
+
+        if ($isPreview) {
+            return response()->json([
+                'quality_preflight' => $result,
+            ]);
         }
 
         $response = $next($request);
