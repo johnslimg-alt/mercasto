@@ -1,13 +1,13 @@
 @media (max-width: 767px) {
   [data-testid="mobile-theme-toggle"],
   [data-testid="mobile-account-button"],
-  [data-testid="mobile-search-submit"] {
+  [data-testid="mobile-search-submit"],
+  [data-testid="mobile-language-select"] {
     min-width: var(--mc-touch-target, 48px);
     min-height: var(--mc-touch-target, 48px);
   }
 
   [data-testid="mobile-location-button"],
-  [data-testid="mobile-language-select"],
   [data-testid="mobile-search-input"] {
     min-height: var(--mc-touch-target, 48px);
   }
