@@ -1,0 +1,36 @@
+name: Direct llama.cpp diagnostic PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/llamacpp-diagnostic-pr.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: llamacpp-diagnostic-pr
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: Benchmark deployed main with readable PR logs
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - name: Verify deployed main
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          git fetch origin main --quiet
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          echo "deployed_sha=$(git rev-parse HEAD)"
+
+      - name: Run tolerant direct llama.cpp benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/llamacpp-vision-benchmark-tolerant.sh
