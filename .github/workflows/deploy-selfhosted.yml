@@ -110,8 +110,8 @@ jobs:
           UP_SERVICES=""
 
           if [ -z "$CHANGED_FILES" ]; then
-            BUILD_SERVICES="mercasto-frontend mercasto-backend"
-            UP_SERVICES="mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
+            BUILD_SERVICES="mercasto-frontend mercasto-backend mercasto-ai-gateway"
+            UP_SERVICES="mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb ollama mercasto-ai-gateway"
           else
             echo "$CHANGED_FILES"
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(Dockerfile|src/|public/|index.html|package\.json|package-lock\.json|vite\.config|tailwind\.config|postcss\.config|default\.conf|security_headers\.conf|scripts/verify-vite-dist\.mjs|\.github/workflows/(deploy|deploy-selfhosted)\.yml$)'; then
@@ -121,6 +121,10 @@ jobs:
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/Dockerfile|backend/composer\.(json|lock)|backend/package(-lock)?\.json|backend/vite\.config)'; then
               add_service mercasto-backend
               UP_SERVICES="$UP_SERVICES mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
+            fi
+            if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(services/ai-gateway/|docker-compose(\.override)?\.yml$|\.github/workflows/deploy-selfhosted\.yml$)'; then
+              add_service mercasto-ai-gateway
+              UP_SERVICES="$UP_SERVICES ollama mercasto-ai-gateway"
             fi
           fi
 
