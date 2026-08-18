@@ -56,6 +56,7 @@ trap 'rm -f "$TMP_ROUTE_LIST" "$TMP_ROUTE_JSON"' EXIT
   echo "Generated at: $GENERATED_AT"
   echo "Commit: $COMMIT_SHA"
   echo "Source: php artisan route:list --except-vendor -v"
+  echo 'Normalization: unstable cached Laravel route names are rendered as generated::<auto> when present.'
   echo
   echo '```text'
   bash "$NORMALIZER" < "$TMP_ROUTE_LIST"
