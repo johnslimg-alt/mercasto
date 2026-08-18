@@ -78,6 +78,12 @@ async function mockApi(page, capture) {
   });
 }
 
+async function expectMinHeight(locator, min = 48) {
+  await expect(locator).toBeVisible();
+  const box = await locator.boundingBox();
+  expect(box?.height).toBeGreaterThanOrEqual(min);
+}
+
 test('new seller can publish with city and WhatsApp without placing a map pin', async ({ page }) => {
   const capture = { profileUpdated: false, adBody: '' };
   await installSession(page);
@@ -108,4 +114,41 @@ test('new seller can publish with city and WhatsApp without placing a map pin', 
   expect(capture.adBody).toContain('name="city"');
   expect(capture.adBody).not.toContain('name="latitude"');
   expect(capture.adBody).not.toContain('name="longitude"');
+});
+
+test('mobile publish controls keep 48px tap targets without horizontal overflow', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+  const capture = { profileUpdated: false, adBody: '' };
+  await installSession(page);
+  await mockApi(page, capture);
+
+  for (const width of [360, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/post', { waitUntil: 'domcontentloaded' });
+
+    await page.getByRole('main').getByRole('button', { name: 'Otros', exact: true }).click();
+    await page.getByRole('button', { name: t.next_btn, exact: true }).click();
+
+    await expectMinHeight(page.getByTestId('publish-title'));
+    await expectMinHeight(page.getByTestId('publish-price'));
+    await expectMinHeight(page.getByRole('combobox', { name: t.condition, exact: true }));
+    await expectMinHeight(page.getByTestId('publish-generate-ai'));
+
+    await page.getByTestId('publish-title').fill('Mesa para comedor');
+    await page.getByTestId('publish-price').fill('2500');
+    await page.getByTestId('publish-description').fill('Mesa en buen estado, lista para recoger.');
+    await page.getByRole('button', { name: t.next_btn, exact: true }).click();
+
+    await page.getByTestId('publish-state').selectOption('Aguascalientes');
+    await page.getByTestId('publish-city').selectOption('Aguascalientes');
+    await expectMinHeight(page.getByTestId('publish-state'));
+    await expectMinHeight(page.getByTestId('publish-city'));
+    await expectMinHeight(page.getByTestId('publish-gps'));
+    await expectMinHeight(page.getByTestId('publish-whatsapp-mode-phone'));
+    await expectMinHeight(page.getByTestId('publish-whatsapp-mode-username'));
+    await expectMinHeight(page.getByTestId('publish-phone'));
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  }
 });
