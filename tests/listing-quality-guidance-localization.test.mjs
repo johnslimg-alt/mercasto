@@ -35,6 +35,8 @@ test('seller UI consumes backend machine codes without duplicating quality rules
 test('Mexico Spanish quality guidance keeps closing-only punctuation', async () => {
   const t = await translationsFor('es');
   const copy = [...UI_KEYS, ...CODES].map(key => t[`listing_quality_${key}`]).join(' ');
-  assert.equal(copy.includes('¿'), false);
-  assert.equal(copy.includes('¡'), false);
+  const invertedQuestionMark = String.fromCodePoint(0x00bf);
+  const invertedExclamationMark = String.fromCodePoint(0x00a1);
+  assert.equal(copy.includes(invertedQuestionMark), false);
+  assert.equal(copy.includes(invertedExclamationMark), false);
 });
