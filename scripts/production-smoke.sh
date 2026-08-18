@@ -102,3 +102,21 @@ bash scripts/origin-edge-security-smoke.sh
 bash scripts/security-audit-smoke.sh
 
 echo "production smoke OK"
+
+# Benchmark-only commits can collect direct llama.cpp latency/JSON diagnostics in
+# the already-trusted production deploy job. The benchmark is intentionally
+# non-blocking: production smoke has completed above, and any benchmark failure
+# is logged without changing the deploy result.
+if git log -1 --format=%B | grep -Fq '[llamacpp-benchmark]'; then
+  echo "== Direct llama.cpp schema benchmark (non-blocking) =="
+  set +e
+  bash scripts/llamacpp-vision-benchmark-json-schema.sh
+  LLAMACPP_BENCHMARK_RC=$?
+  set -e
+  echo "llamacpp_schema_benchmark_exit_code=$LLAMACPP_BENCHMARK_RC"
+  if [[ "$LLAMACPP_BENCHMARK_RC" -ne 0 ]]; then
+    echo "Direct llama.cpp benchmark failed after successful production smoke; deploy remains unaffected." >&2
+  fi
+fi
+
+echo "production smoke complete"
