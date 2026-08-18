@@ -1231,4 +1231,5 @@ export default {
   listing_quality_keyword_stuffing: 'Evita repetir demasiadas veces las mismas palabras.',
   listing_quality_title_repeated_as_description: 'Añade una descripción distinta del título.',
   listing_quality_photo_recommended: 'Una foto real ayuda a que los compradores entiendan mejor el anuncio.',
+  listing_quality_duplicate_listing_risk: 'Parece similar a otro anuncio tuyo en la misma zona. Revisa si realmente necesitas publicarlo de nuevo.',
 };

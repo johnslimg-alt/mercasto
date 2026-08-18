@@ -1231,4 +1231,5 @@ export default {
   listing_quality_keyword_stuffing: '避免过多重复相同的词。',
   listing_quality_title_repeated_as_description: '请添加与标题不同的描述。',
   listing_quality_photo_recommended: '真实照片有助于买家更好地了解商品。',
+  listing_quality_duplicate_listing_risk: '这条信息与您在同一区域发布的另一条信息很相似。请确认是否确实需要再次发布。',
 };

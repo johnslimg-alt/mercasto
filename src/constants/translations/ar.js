@@ -1231,4 +1231,5 @@ export default {
   listing_quality_keyword_stuffing: 'تجنب تكرار الكلمات نفسها مرات كثيرة.',
   listing_quality_title_repeated_as_description: 'أضف وصفًا مختلفًا عن العنوان.',
   listing_quality_photo_recommended: 'الصورة الحقيقية تساعد المشترين على فهم الإعلان بشكل أفضل.',
+  listing_quality_duplicate_listing_risk: 'يبدو هذا الإعلان مشابهاً لإعلان آخر لك في المنطقة نفسها. تحقق مما إذا كنت تحتاج فعلاً إلى نشره مرة أخرى.',
 };

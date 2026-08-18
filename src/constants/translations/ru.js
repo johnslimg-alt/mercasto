@@ -1231,4 +1231,5 @@ export default {
   listing_quality_keyword_stuffing: 'Не повторяйте одни и те же слова слишком много раз.',
   listing_quality_title_repeated_as_description: 'Добавьте описание, отличающееся от названия.',
   listing_quality_photo_recommended: 'Реальная фотография поможет покупателям лучше понять объявление.',
+  listing_quality_duplicate_listing_risk: 'Объявление похоже на другое ваше объявление в том же районе. Проверьте, действительно ли нужно публиковать его повторно.',
 };

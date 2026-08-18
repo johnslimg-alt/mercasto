@@ -1231,4 +1231,5 @@ export default {
   listing_quality_keyword_stuffing: '同じ単語を何度も繰り返さないでください。',
   listing_quality_title_repeated_as_description: 'タイトルとは異なる説明を追加してください。',
   listing_quality_photo_recommended: '実際の写真があると購入者に内容が伝わりやすくなります。',
+  listing_quality_duplicate_listing_risk: '同じ地域にある別の出品と似ています。本当にもう一度公開する必要があるか確認してください。',
 };

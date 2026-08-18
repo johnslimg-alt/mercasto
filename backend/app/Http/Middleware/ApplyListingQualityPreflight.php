@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\ListingDuplicateRiskService;
 use App\Services\ListingQualityPreflightService;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -12,8 +13,10 @@ class ApplyListingQualityPreflight
 {
     private const PREVIEW_HEADER = 'X-Mercasto-Quality-Preflight';
 
-    public function __construct(private ListingQualityPreflightService $preflight)
-    {
+    public function __construct(
+        private ListingQualityPreflightService $preflight,
+        private ListingDuplicateRiskService $duplicateRisk,
+    ) {
     }
 
     public function handle(Request $request, Closure $next): Response
@@ -60,6 +63,19 @@ class ApplyListingQualityPreflight
             'category' => $request->input('category'),
             'photo_count' => count($existingImages) + $newImages,
         ]);
+
+        $userId = (int) $request->user('sanctum')->getAuthIdentifier();
+        $excludeAdId = $isUpdate ? (int) basename($path) : null;
+        if ($this->duplicateRisk->hasRisk($userId, [
+            'title' => $request->input('title'),
+            'category' => $request->input('category'),
+            'location' => $request->input('location'),
+            'city' => $request->input('city'),
+            'state' => $request->input('state'),
+        ], $excludeAdId)) {
+            $result['warnings'][] = 'duplicate_listing_risk';
+            $result['warnings'] = array_values(array_unique($result['warnings']));
+        }
 
         if (! $result['passes_hard_validation']) {
             return response()->json([
