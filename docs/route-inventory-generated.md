@@ -1,8 +1,9 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-08-18T17:45:32Z
-Commit: f0eb8d3
+Generated at: 2026-08-18T17:50:36Z
+Commit: 9122d8f
 Source: php artisan route:list --except-vendor -v
+Normalization: unstable cached Laravel route names are rendered as generated::<auto> when present.
 
 ```text
 
