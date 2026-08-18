@@ -60,6 +60,7 @@ class OllamaModerationClient:
             ],
             "options": {
                 "temperature": 0.1,
+                "num_predict": 220,
                 "num_ctx": 3072,
             },
         }
