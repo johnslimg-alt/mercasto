@@ -19,6 +19,7 @@ async function installSession(page) {
     localStorage.setItem('user', JSON.stringify(sessionUser));
     localStorage.setItem('cookiesAccepted', 'true');
     localStorage.setItem('cookie_consent', 'essential');
+    sessionStorage.removeItem('mercasto.publish_draft.v1');
   }, { sessionUser: user });
 }
 
