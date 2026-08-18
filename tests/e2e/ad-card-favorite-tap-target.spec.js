@@ -13,7 +13,13 @@ const ad = {
   user: { id: 685, name: 'QA Seller', role: 'individual' },
 };
 
-async function mockCatalog(page) {
+async function prepareCatalog(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'en');
+    localStorage.setItem('mercasto_language', 'en');
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+  });
   await page.route('**/api/**', async route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -39,18 +45,12 @@ async function mockCatalog(page) {
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
+  await page.goto('/listings');
 }
 
-test('mobile favorite target is 48px and remains isolated from card activation', async ({ page }, testInfo) => {
+test('mobile favorite target is 48px and does not activate the card', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile');
-  await page.addInitScript(() => {
-    localStorage.setItem('lang', 'en');
-    localStorage.setItem('mercasto_language', 'en');
-    localStorage.setItem('cookiesAccepted', 'true');
-    localStorage.setItem('cookie_consent', 'essential');
-  });
-  await mockCatalog(page);
-  await page.goto('/listings');
+  await prepareCatalog(page);
 
   const favorite = page.getByTestId('ad-card-favorite').first();
   await expect(favorite).toBeVisible();
@@ -64,14 +64,15 @@ test('mobile favorite target is 48px and remains isolated from card activation',
   const contactBox = await contact.boundingBox();
   expect(contactBox?.height).toBeGreaterThanOrEqual(48);
 
-  const cardActivator = card.getByRole('button', { name: 'Favorite target QA', exact: true });
-  await cardActivator.click();
-  await expect.poll(() => new URL(page.url()).hash).toBe(`#ad-${ad.id}`);
-
-  await page.evaluate(() => window.history.back());
-  await expect.poll(() => new URL(page.url()).hash).toBe('');
-  await expect(favorite).toBeVisible();
-
   await favorite.click();
   await expect.poll(() => new URL(page.url()).hash).toBe('');
+});
+
+test('mobile card activation remains reachable outside the favorite target', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+  await prepareCatalog(page);
+
+  const card = page.getByTestId('ad-card-favorite').first().locator('xpath=ancestor::article');
+  await card.getByRole('button', { name: 'Favorite target QA', exact: true }).click();
+  await expect.poll(() => new URL(page.url()).hash).toBe(`#ad-${ad.id}`);
 });
