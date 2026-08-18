@@ -1442,7 +1442,7 @@ class AdController extends Controller
             return response()->json(['message' => 'Anuncio no encontrado'], 404);
         }
 
-        DB::table('reports')->insert([
+        $reportId = DB::table('reports')->insertGetId([
             'ad_id' => $id,
             'user_id' => auth('sanctum')->id(), // Может быть null для гостей
             'reason' => $request->reason,
@@ -1450,7 +1450,11 @@ class AdController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        return response()->json(['message' => 'Reporte enviado exitosamente. Gracias por ayudarnos a mantener la plataforma segura.']);
+
+        return response()->json([
+            'message' => 'Reporte enviado exitosamente. Gracias por ayudarnos a mantener la plataforma segura.',
+            'report_reference' => sprintf('RPT-A-%08d', $reportId),
+        ]);
     }
 
     /**
