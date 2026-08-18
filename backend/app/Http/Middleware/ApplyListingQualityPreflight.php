@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Http\Controllers\Api\AdController;
 use App\Services\ListingQualityPreflightService;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -17,12 +16,11 @@ class ApplyListingQualityPreflight
 
     public function handle(Request $request, Closure $next): Response
     {
-        $route = $request->route();
-        $targetsListingWrite = $route
-            && $route->getControllerClass() === AdController::class
-            && in_array($route->getActionMethod(), ['store', 'update'], true);
+        $path = trim($request->path(), '/');
+        $isCreate = $request->isMethod('post') && $path === 'api/ads';
+        $isUpdate = $request->isMethod('post') && preg_match('#^api/ads/[0-9]+$#', $path) === 1;
 
-        if (! $targetsListingWrite || ! auth('sanctum')->user()) {
+        if ((! $isCreate && ! $isUpdate) || ! $request->user('sanctum')) {
             return $next($request);
         }
 
