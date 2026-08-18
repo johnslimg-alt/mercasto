@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "benchmark_mode=schema-constrained-json-v1"
+
 TMP_SCRIPT="$(mktemp /tmp/mercasto-llamacpp-schema.XXXXXX.sh)"
 cleanup() {
   rm -f "$TMP_SCRIPT"
