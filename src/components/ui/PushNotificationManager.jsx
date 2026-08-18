@@ -3,14 +3,20 @@ import { Bell, BellOff, Check, X, Loader2 } from 'lucide-react';
 import { useToast } from './Toast';
 import { ensurePushSubscription, fetchVapidPublicKey } from '../../utils/webPush';
 import { getTranslations } from '../../utils/translations';
-import { getPushNotificationCopy } from '../../utils/pushNotificationCopy';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export default function PushNotificationManager({ user, compact = false, lang = 'es' }) {
   const toast = useToast();
   const t = getTranslations(lang);
-  const copy = getPushNotificationCopy(lang);
+  const copy = {
+    notReady: t.push_notification_not_ready, permissionDenied: t.push_notification_permission_denied, unsupported: t.push_notification_unsupported,
+    enabled: t.push_notification_enabled, saveError: t.push_notification_save_error, enableError: t.push_notification_enable_error,
+    disabled: t.push_notification_disabled, disableError: t.push_notification_disable_error, testSent: t.push_notification_test_sent, testError: t.push_notification_test_error,
+    blockedTitle: t.push_notification_blocked_title, blockedDesc: t.push_notification_blocked_desc, enabledTitle: t.push_notification_enabled_title,
+    enabledDesc: t.push_notification_enabled_desc, sendTest: t.push_notification_send_test, enableTitle: t.push_notification_enable_title,
+    enableDesc: t.push_notification_enable_desc, enabling: t.push_notification_enabling,
+  };
   const [permission, setPermission] = useState('default');
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);

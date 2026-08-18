@@ -6,7 +6,6 @@ import { HOME_FAQ_LANGUAGES, HOME_FAQ_COPY, getHomeFaqCopy } from '../src/utils/
 import { loadFilterOptionLanguage } from '../src/utils/filterOptionTranslations.js';
 import { getVerticalCardMeta } from '../src/utils/verticalCardMeta.js';
 import { HOME_MAP_LANGUAGES, HOME_MAP_COPY, formatHomePropertiesLabel } from '../src/utils/homeMapCopy.js';
-import { PUSH_NOTIFICATION_LANGUAGES, PUSH_NOTIFICATION_COPY } from '../src/utils/pushNotificationCopy.js';
 
 const app = fs.readFileSync('src/App.jsx', 'utf8');
 const grid = fs.readFileSync('src/components/verticals/VerticalAdGrid.jsx', 'utf8');
@@ -16,6 +15,10 @@ const faqSchema = fs.readFileSync('src/components/seo/FAQSchema.jsx', 'utf8');
 const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
 const adDetail = fs.readFileSync('src/components/screens/AdDetailScreen.jsx', 'utf8');
 const push = fs.readFileSync('src/components/ui/PushNotificationManager.jsx', 'utf8');
+
+async function translationsFor(lang) {
+  return (await import(`../src/constants/translations/${lang}.js`)).default;
+}
 const dashboard = fs.readFileSync('src/components/screens/UserDashboard.jsx', 'utf8');
 
 test('home FAQ copy covers exactly the 11 active languages', () => {
@@ -130,23 +133,24 @@ test('owner ad controls and price history follow active locale without changing 
   assert.match(adDetail, /fetch\(`\$\{API_URL\}\/ads\/\$\{ad\.id\}\/activate`,[\s\S]*?method: 'PUT'/);
 });
 
-test('push notification UI and feedback cover all active languages while preserving API calls', () => {
-  assert.deepEqual(PUSH_NOTIFICATION_LANGUAGES, SUPPORTED_LANGUAGES);
-  const spanish = PUSH_NOTIFICATION_COPY.es;
+test('push notification UI and feedback use canonical localization keys while preserving API calls', async () => {
+  const keys = ['push_notification_not_ready', 'push_notification_permission_denied', 'push_notification_unsupported', 'push_notification_enabled', 'push_notification_save_error', 'push_notification_enable_error', 'push_notification_disabled', 'push_notification_disable_error', 'push_notification_test_sent', 'push_notification_test_error', 'push_notification_blocked_title', 'push_notification_blocked_desc', 'push_notification_enabled_title', 'push_notification_enabled_desc', 'push_notification_send_test', 'push_notification_enable_title', 'push_notification_enable_desc', 'push_notification_enabling'];
+  const spanish = await translationsFor('es');
   for (const lang of SUPPORTED_LANGUAGES) {
-    const copy = PUSH_NOTIFICATION_COPY[lang];
-    for (const key of ['notReady', 'permissionDenied', 'unsupported', 'enabled', 'saveError', 'enableError', 'disabled', 'disableError', 'testSent', 'testError', 'blockedTitle', 'blockedDesc', 'enabledTitle', 'enabledDesc', 'sendTest', 'enableTitle', 'enableDesc', 'enabling']) {
-      assert.ok(String(copy[key] || '').trim(), `${lang}.${key}`);
-    }
-    assert.match(copy.testSent, /\{count\}/, `${lang}.testSent`);
-    if (lang !== 'es') assert.notEqual(copy.enableTitle, spanish.enableTitle, `${lang}.enableTitle`);
+    const t = await translationsFor(lang);
+    for (const key of keys) assert.ok(String(t[key] || '').trim(), `${lang}.${key}`);
+    assert.match(t.push_notification_test_sent, /\{count\}/, `${lang}.push_notification_test_sent`);
+    if (lang !== 'es') assert.notEqual(t.push_notification_enable_title, spanish.push_notification_enable_title, `${lang}.push_notification_enable_title`);
   }
-  assert.equal(JSON.stringify(spanish).includes(String.fromCharCode(0xbf)), false);
-  assert.equal(JSON.stringify(spanish).includes(String.fromCharCode(0xa1)), false);
+  const spanishPush = keys.map((key) => spanish[key]).join(' ');
+  assert.equal(spanishPush.includes(String.fromCharCode(0xbf)), false);
+  assert.equal(spanishPush.includes(String.fromCharCode(0xa1)), false);
   for (const literal of ['Permiso denegado', 'Notificaciones activadas!', 'Error al guardar suscripción', 'Notificaciones desactivadas', 'Notificaciones bloqueadas', 'Activa las notificaciones']) {
     assert.equal(push.includes(literal), false, literal);
   }
-  assert.match(push, /getPushNotificationCopy\(lang\)/);
+  assert.equal(push.includes('getPushNotificationCopy'), false);
+  assert.equal(fs.existsSync('src/utils/pushNotificationCopy.js'), false);
+  assert.match(push, /push_notification_enable_title/);
   assert.match(dashboard, /<PushNotificationManager user=\{user\} compact=\{false\} lang=\{lang\} \/>/);
   assert.match(push, /fetch\(`\$\{API_BASE\}\/push\/subscribe`,[\s\S]*?method: 'POST'/);
   assert.match(push, /fetch\(`\$\{API_BASE\}\/push\/unsubscribe`,[\s\S]*?method: 'POST'/);
