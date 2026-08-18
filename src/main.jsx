@@ -14,6 +14,7 @@ import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 // so it no longer bloats the render-blocking critical stylesheet.
 import './index.css'
 import './catalog-touch-targets.css'
+import './mobile-shell-touch-targets.css'
 import './header-focus.css'
 import './admin-dark-safety.css'
 import './i18n'; // Multi-language support
