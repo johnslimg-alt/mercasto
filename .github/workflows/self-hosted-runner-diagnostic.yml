@@ -2,9 +2,14 @@ name: Self-hosted runner diagnostic
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/self-hosted-runner-diagnostic.yml
+      - infra/github-runners/docker-compose.runners.yml
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   runner-diagnostic:
@@ -12,6 +17,32 @@ jobs:
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 10
     steps:
+      - name: Checkout diagnostic ref
+        uses: actions/checkout@v7
+
+      - name: Check runner temp and workspace are writable
+        run: |
+          set -euo pipefail
+          test -n "${RUNNER_TEMP:-}"
+          test -d "$RUNNER_TEMP"
+          test -w "$RUNNER_TEMP"
+          test -n "${GITHUB_WORKSPACE:-}"
+          test -d "$GITHUB_WORKSPACE"
+          test -w "$GITHUB_WORKSPACE"
+
+          probe="$RUNNER_TEMP/mercasto-runner-health-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          printf 'runner-temp-ok\n' > "$probe"
+          test -s "$probe"
+          rm -f "$probe"
+
+      - name: Check runner compose workdir isolation
+        run: |
+          set -euo pipefail
+          test "$(grep -c 'RUNNER_WORKDIR: /tmp/runner' infra/github-runners/docker-compose.runners.yml)" -eq 3
+          grep -Fq -- './runner1:/tmp/runner' infra/github-runners/docker-compose.runners.yml
+          grep -Fq -- './runner2:/tmp/runner' infra/github-runners/docker-compose.runners.yml
+          grep -Fq -- './runner3:/tmp/runner' infra/github-runners/docker-compose.runners.yml
+
       - name: Check production checkout mount
         run: |
           set -euo pipefail
@@ -29,3 +60,24 @@ jobs:
         run: |
           set -euo pipefail
           docker version >/dev/null
+
+      - name: Publish runner diagnostic commit status
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          state=failure
+          description='Self-hosted runner diagnostic failed'
+          if [ "$JOB_STATUS" = success ]; then
+            state=success
+            description='Self-hosted runner temp/workspace diagnostic passed'
+          fi
+          curl -fsS --retry 3 --retry-all-errors \
+            -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "{\"state\":\"$state\",\"context\":\"runner/self-hosted-diagnostic\",\"description\":\"$description\",\"target_url\":\"https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
