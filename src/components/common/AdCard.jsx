@@ -83,10 +83,19 @@ const AdCard = memo(({
         onClick={() => { options.onActivate?.(ad); handleViewAd(ad); }}
         className="absolute inset-0 z-10 cursor-pointer rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#84CC16] focus-visible:ring-inset"
       />
-      <div className="relative z-0 pointer-events-none aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
+      <div className="relative pointer-events-none aspect-[4/3] w-full overflow-hidden bg-slate-200 dark:bg-slate-800">
         <img src={safeImage} width={imageWidth} height={Math.round(imageWidth * 0.75)} loading={options.priority ? 'eager' : 'lazy'} fetchPriority={options.priority ? 'high' : 'auto'} decoding="async" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" onError={handleImageError} alt={localizedText(ad.title, lang)} />
-        <button type="button" aria-label={t.ad_favorite} aria-pressed={isFav} onClick={(e) => handleToggleFavorite(e, ad.id)} className="heart pointer-events-auto absolute top-2.5 right-2.5 w-8 h-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-full flex items-center justify-center hover:bg-white dark:hover:bg-slate-800 z-20">
-          <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
+        <button
+          type="button"
+          data-testid="ad-card-favorite"
+          aria-label={t.ad_favorite}
+          aria-pressed={isFav}
+          onClick={(e) => handleToggleFavorite(e, ad.id)}
+          className="heart pointer-events-auto absolute top-0.5 right-0.5 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#84CC16] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur transition-colors hover:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-800">
+            <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
+          </span>
         </button>
         {isCatalogFiller && <span className="badge absolute top-2.5 left-2.5 bg-slate-900/90 text-white z-10">{detailCopy.catalogTitle}</span>}
         {!isCatalogFiller && isDestacado && <span className="badge absolute top-2.5 left-2.5 bg-blue-600 text-white z-10">{t.featured_status}</span>}
@@ -94,7 +103,7 @@ const AdCard = memo(({
         {!isCatalogFiller && !isDestacado && !isUrgente && isHighlighted && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">{t.highlighted_badge}</span>}
         {!isCatalogFiller && !isDestacado && !isUrgente && !isHighlighted && isPro && <span className="badge absolute top-2.5 left-2.5 bg-[#84CC16] text-white z-10">PRO</span>}
       </div>
-      <div className="ad-result-body pointer-events-none p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] z-0 text-[#0F172A] dark:text-white">
+      <div className="ad-result-body pointer-events-none p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] text-[#0F172A] dark:text-white">
         <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">
           ${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span>
         </div>
