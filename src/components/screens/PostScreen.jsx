@@ -117,6 +117,8 @@ export default function PostScreen({
   images,
   isMapUpdating,
   lang,
+  listingQualityPreflight,
+  clearListingQualityPreflight,
   postLoading,
   removeImage,
   removeImageById,
@@ -142,6 +144,11 @@ export default function PostScreen({
   const [step, setStep] = useState(() => recoveredDraft?.step || 1);
   const [draftHydrated, setDraftHydrated] = useState(() => !recoveredDraft);
   const [draftRecovered, setDraftRecovered] = useState(false);
+  const hasQualityWarnings = !!listingQualityPreflight?.passes_hard_validation && (listingQualityPreflight?.warnings || []).length > 0;
+
+  useEffect(() => {
+    clearListingQualityPreflight?.(null);
+  }, [form, images, videoFile, clearListingQualityPreflight]);
 
   useEffect(() => {
     const preselected = preselectedCategory;
@@ -388,7 +395,7 @@ export default function PostScreen({
       finally { setSavingContact(false); }
     }
 
-    handlePostSubmit(e);
+    handlePostSubmit(e, { acceptWarnings: hasQualityWarnings });
   };
 
   // Render a dynamic attribute field
@@ -1006,6 +1013,20 @@ export default function PostScreen({
                 </div>
               </div>
 
+              {listingQualityPreflight && ((listingQualityPreflight.errors || []).length > 0 || (listingQualityPreflight.warnings || []).length > 0) && (
+                <div data-testid="listing-quality-guidance" className={`rounded-2xl border p-4 ${listingQualityPreflight.passes_hard_validation ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30' : 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30'}`}>
+                  <p className="font-semibold text-sm text-slate-900 dark:text-white">
+                    {listingQualityPreflight.passes_hard_validation ? t.listing_quality_warning_title : t.listing_quality_blocked_title}
+                  </p>
+                  <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-slate-700 dark:text-slate-300">
+                    {[...(listingQualityPreflight.errors || []), ...(listingQualityPreflight.warnings || [])].map(code => (
+                      <li key={code}>{t[`listing_quality_${code}`] || t.listing_quality_generic}</li>
+                    ))}
+                  </ul>
+                  {hasQualityWarnings && <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{t.listing_quality_continue_hint}</p>}
+                </div>
+              )}
+
               {/* Step 3 navigation */}
               <div className="hidden md:flex justify-between items-center pt-6">
                 <button type="button" onClick={goBack} className="btn-lg border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5">
@@ -1018,7 +1039,7 @@ export default function PostScreen({
                 >
                   {(postLoading || savingContact)
                     ? <Loader2 className="animate-spin" size={20} />
-                    : <><Sparkles size={18} /> {editingAd ? t.save_changes : t.publish_btn}</>
+                    : <><Sparkles size={18} /> {hasQualityWarnings ? t.listing_quality_continue : (editingAd ? t.save_changes : t.publish_btn)}</>
                   }
                 </button>
               </div>
@@ -1054,7 +1075,7 @@ export default function PostScreen({
           >
             {(postLoading || savingContact)
               ? <Loader2 className="animate-spin" size={20} />
-              : <><Sparkles size={18} /> {editingAd ? t.save_changes : t.publish_btn}</>
+              : <><Sparkles size={18} /> {hasQualityWarnings ? t.listing_quality_continue : (editingAd ? t.save_changes : t.publish_btn)}</>
             }
           </button>
         )}
