@@ -13,6 +13,7 @@ import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 // Leaflet CSS is loaded lazily alongside the map bundle (see MapV3 loadLeaflet)
 // so it no longer bloats the render-blocking critical stylesheet.
 import './index.css'
+import './catalog-touch-targets.css'
 import './header-focus.css'
 import './admin-dark-safety.css'
 import './i18n'; // Multi-language support
