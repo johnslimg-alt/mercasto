@@ -9,6 +9,7 @@ import { getAdminSurfaceCopy } from '../../utils/adminSurfaceCopy';
 import AdminBusinessVerifications from './AdminBusinessVerifications';
 import AdminKycVerifications from './AdminKycVerifications';
 import AdminSeoMeasurement from '../admin/AdminSeoMeasurement';
+import AdminReportLifecycleActions from '../admin/AdminReportLifecycleActions';
 
 const AdminDataLoadError = ({ testId, onRetry, t }) => (
   <div data-testid={`${testId}-load-error`} role="alert" className="flex flex-col items-center justify-center gap-4 p-10 text-center">
@@ -18,7 +19,7 @@ const AdminDataLoadError = ({ testId, onRetry, t }) => (
     </button>
   </div>
 );
-export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = false, adminAnalyticsLoadError = false, adminCatForm, adminCoupons, adminCouponsLoadError = false, adminLoading, adminPendingAds, adminPendingAdsLoadError = false, adminReportTab, adminReports, adminReportsLoadError = false, adminTab, adminUserReports, adminUserSearch, adminUsers, adminUsersLoadError = false, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleDeleteReport, handleDeleteUserReport, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsLoadError = false, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments, token }) {
+export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = false, adminAnalyticsLoadError = false, adminCatForm, adminCoupons, adminCouponsLoadError = false, adminLoading, adminPendingAds, adminPendingAdsLoadError = false, adminReportTab, adminReports, adminReportsLoadError = false, adminTab, adminUserReports, adminUserSearch, adminUsers, adminUsersLoadError = false, allAds, cancelCatEdit, categoriesData, couponForm, editingCatId, form, getImageUrl, getImageUrls, handleAdminChangeRole, handleAdminDeleteUser, handleAdminVerifyUser, handleCreateCoupon, handleDeleteCoupon, handleEditCategory, handleModerateAd, handleSaveCategory, handleViewAd, lang, loadAdminAnalytics, loadAdminReports, loadAdminUsers, loadCoupons, loadPendingAds, loadingAdminUsers, loadingCoupons, loadingPendingAds, loadingReports, setAdminCatForm, setAdminReportTab, setAdminTab, setAdminUserSearch, setCouponForm, t, user, userRole, adminPayments, loadingAdminPayments, adminPaymentsLoadError = false, adminPaymentsPage, adminPaymentsLastPage, adminPaymentsTotal, loadAdminPayments, token }) {
     if (userRole !== 'admin') return <div className="p-10 text-center font-bold text-red-500">{t.access_denied || 'Access denied'}</div>;
     React.useEffect(() => {
         if (adminTab === 'payments') {
@@ -191,8 +192,8 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                 <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-2"><Shield className="text-[#84CC16]" size={20}/> {t.report_center}</h3>
                 <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
-                  <button onClick={() => setAdminReportTab('ads')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${adminReportTab === 'ads' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.ads || 'Ads'}</button>
-                  <button onClick={() => setAdminReportTab('users')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${adminReportTab === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.users_tab || 'Users'}</button>
+                  <button type="button" data-testid="admin-report-tab-ads" onClick={() => setAdminReportTab('ads')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${adminReportTab === 'ads' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.ads || 'Ads'}</button>
+                  <button type="button" data-testid="admin-report-tab-users" onClick={() => setAdminReportTab('users')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${adminReportTab === 'users' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>{t.users_tab || 'Users'}</button>
                 </div>
               </div>
               {loadingReports ? (
@@ -223,7 +224,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                           <td className="p-3 text-slate-600 max-w-[200px] truncate hidden md:table-cell" title={r.comments}>{r.comments || '-'}</td>
                           <td className="p-3 text-slate-500 hidden sm:table-cell">{r.reporter_name ? `${r.reporter_name}` : adminCopy.admin_anonymous}</td>
                           <td className="p-3 text-right">
-                            <button onClick={() => handleDeleteReport(r.id, adminCopy)} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title={adminCopy.admin_discard_report}><Trash2 size={16}/></button>
+                            <AdminReportLifecycleActions kind="listing" report={r} token={token} lang={lang} reload={loadAdminReports} />
                           </td>
                         </tr>
                       ))}
@@ -249,7 +250,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                           <td className="p-3 text-slate-600 max-w-[200px] truncate hidden md:table-cell" title={r.comments}>{r.comments || '-'}</td>
                           <td className="p-3 text-slate-500 hidden sm:table-cell">{r.reporter_name ? `${r.reporter_name}` : adminCopy.admin_anonymous}</td>
                           <td className="p-3 text-right">
-                            <button onClick={() => handleDeleteUserReport(r.id, adminCopy)} className="p-2 text-slate-400 hover:text-red-500 transition-colors" title={adminCopy.admin_discard_report}><Trash2 size={16}/></button>
+                            <AdminReportLifecycleActions kind="user" report={r} token={token} lang={lang} reload={loadAdminReports} />
                           </td>
                         </tr>
                       ))}

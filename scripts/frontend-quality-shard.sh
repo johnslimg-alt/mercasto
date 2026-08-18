@@ -30,6 +30,7 @@ case "${shard}" in
       tests/e2e/saved-searches-localization.spec.js tests/e2e/dashboard-locale-format.spec.js \
       tests/e2e/post-edit-localization.spec.js tests/e2e/onboarding-experience-localization.spec.js \
       tests/e2e/onboarding-first-publication.spec.js tests/e2e/admin-operational-localization.spec.js \
+      tests/e2e/admin-report-lifecycle.spec.js \
       tests/e2e/response-funnel-measurement.spec.js tests/e2e/message-return-email.spec.js \
       tests/e2e/app-modal-code-splitting.spec.js tests/e2e/seller-landing-language.spec.js \
       --project=chromium-desktop --workers=1 --retries=1 --reporter=list
