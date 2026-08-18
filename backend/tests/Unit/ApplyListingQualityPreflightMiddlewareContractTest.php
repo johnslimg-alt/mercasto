@@ -13,6 +13,6 @@ class ApplyListingQualityPreflightMiddlewareContractTest extends TestCase
         $this->assertStringContainsString("getControllerClass() === AdController::class", $source);
         $this->assertStringContainsString("['store', 'update']", $source);
         $this->assertStringContainsString("auth('sanctum')->user()", $source);
-        $this->assertStringContainsString("'quality_preflight' => $result", $source);
+        $this->assertStringContainsString("'quality_preflight' => \$result", $source);
     }
 }
