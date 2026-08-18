@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { LISTING_REPORT_REASONS, USER_REPORT_REASONS } from '../src/constants/reportReasons.js';
 import { SUPPORTED_LANGUAGES } from '../src/utils/translations.js';
 
 const REQUIRED_KEYS = [
@@ -50,11 +51,11 @@ test('lazy QR and report modals render active-language copy', () => {
   const combined = `${qrSource}\n${reportSource}\n${userReportSource}`;
   for (const token of [
     't.qr_contact_title', 't.qr_contact_desc', 't.report_ad_help', 't.report_select_reason',
-    't.report_reason_fraud', 't.report_reason_inappropriate', 't.report_reason_counterfeit',
-    't.report_reason_abusive', 't.report_reason_suspected_fraud',
-    't.report_reason_prohibited_products', 't.report_reason_impersonation',
-    't.report_additional_details', 't.report_send',
+    't.report_additional_details', 't.report_send', 't[labelKey]',
   ]) assert.ok(combined.includes(token), token);
+
+  const reasonKeys = [...LISTING_REPORT_REASONS, ...USER_REPORT_REASONS].map(({ labelKey }) => labelKey);
+  for (const key of reasonKeys) assert.ok(REQUIRED_KEYS.includes(key), key);
 
   for (const formerLiteral of [
     '>Escanea para contactar</h2>',
@@ -74,11 +75,16 @@ test('report reason codes and request payload contracts stay unchanged', () => {
   const reportSource = fs.readFileSync('src/components/modals/ReportModal.jsx', 'utf8');
   const userReportSource = fs.readFileSync('src/components/modals/UserReportModal.jsx', 'utf8');
   const modalSource = `${reportSource}\n${userReportSource}`;
-  for (const value of [
-    'Fraude o estafa', 'Contenido inapropiado', 'Artículo falso o falsificado',
-    'Ya se vendió', 'Otro', 'Comportamiento abusivo', 'Sospecha de fraude',
-    'Vende productos ilegales', 'Suplantación de identidad',
-  ]) assert.ok(modalSource.includes(`value="${value}"`), value);
+
+  assert.deepEqual(
+    LISTING_REPORT_REASONS.map(({ value }) => value),
+    ['Fraude o estafa', 'Contenido inapropiado', 'Artículo falso o falsificado', 'Ya se vendió', 'Otro'],
+  );
+  assert.deepEqual(
+    USER_REPORT_REASONS.map(({ value }) => value),
+    ['Comportamiento abusivo', 'Sospecha de fraude', 'Vende productos ilegales', 'Suplantación de identidad', 'Otro'],
+  );
+  assert.ok(modalSource.includes('value={value}'));
 
   assert.match(appSource, /fetch\(`\$\{API_URL\}\/ads\/\$\{reportingAd\.id\}\/report`,[\s\S]*?method: 'POST',[\s\S]*?body: JSON\.stringify\(reportForm\)/);
   assert.match(appSource, /fetch\(`\$\{API_URL\}\/users\/\$\{viewedCompany\.id\}\/report`,[\s\S]*?method: 'POST',[\s\S]*?body: JSON\.stringify\(userReportForm\)/);
