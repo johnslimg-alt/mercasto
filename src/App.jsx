@@ -790,6 +790,7 @@ function App() {
   const [debouncedLocation, setDebouncedLocation] = useState('');
   const [isMapUpdating, setIsMapUpdating] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
+  const [listingQualityPreflight, setListingQualityPreflight] = useState(null);
   const [editingAd, setEditingAd] = useState(null);
   const [images, setImages] = useState([]); // { source: 'new' | 'existing', file?: File, url?: string, preview: string }
   const [videoFile, setVideoFile] = useState(null);
@@ -3345,7 +3346,7 @@ function App() {
     }
   };
 
-  const handlePostSubmit = async (e) => {
+  const handlePostSubmit = async (e, { acceptWarnings = false } = {}) => {
     e.preventDefault();
     if (!user) {
       setShowAuthModal(true);
@@ -3411,6 +3412,28 @@ function App() {
       }
       console.log("============================");
 
+      if (!acceptWarnings) {
+        const previewRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            'X-Mercasto-Quality-Preflight': 'preview',
+          },
+          body: formData,
+        });
+        const previewData = await previewRes.json().catch(() => ({}));
+        const preview = previewData.quality_preflight || null;
+        if (preview) {
+          setListingQualityPreflight(preview);
+          if (!preview.passes_hard_validation || (preview.warnings || []).length > 0) return;
+        }
+        if (!previewRes.ok) {
+          const validationError = Object.values(previewData.errors || {}).flat().find(Boolean);
+          showToast(localizeServerMessage(lang, validationError || previewData.message, t.listing_action_save_error), 'error');
+          return;
+        }
+      }
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -3418,6 +3441,7 @@ function App() {
       });
 
       if (res.ok) {
+        setListingQualityPreflight(null);
         const savedAd = await res.json().catch(() => null);
 
         // Очищаем оперативную память браузера от временных файлов (Memory Leak fix)
@@ -4169,7 +4193,7 @@ function App() {
   const renderHomeRoute = () => (hasCatalogIntent ? renderCatalogScreen() : renderHomeScreen());
 
   // --- РЕНДЕР РОСКОШНОЙ ФОРМЫ (POST SCREEN) ---
-  const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} user={user} setUser={setUser} />;
+  const renderPostScreen = () => <PostScreen categoriesData={safeCategoriesData} debouncedLocation={debouncedLocation} editingAd={editingAd} form={form} handleImageChange={handleImageChange} handlePostSubmit={handlePostSubmit} images={Array.isArray(images) ? images : []} isMapUpdating={isMapUpdating} lang={lang} listingQualityPreflight={listingQualityPreflight} clearListingQualityPreflight={setListingQualityPreflight} postLoading={postLoading} removeImage={removeImage} removeImageById={removeImageById} reorderImages={setImages} setEditingAd={setEditingAd} setForm={setForm} setVideoFile={setVideoFile} t={t} videoFile={videoFile} aiLoading={aiLoading} handleGenerateDescription={handleGenerateDescription} isDarkMode={isDarkMode} user={user} setUser={setUser} />;
 
 
 
