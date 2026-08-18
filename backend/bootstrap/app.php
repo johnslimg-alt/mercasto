@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('/api/admin')
                 ->group(base_path('routes/admin-reports.php'));
             require base_path('routes/marketing.php');
+            require base_path('routes/support.php');
         },
     )
     ->withMiddleware(function (Middleware $middleware) use ($trustedProxies) {
