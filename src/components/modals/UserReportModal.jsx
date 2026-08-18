@@ -1,4 +1,5 @@
 import { XCircle } from 'lucide-react';
+import { USER_REPORT_REASONS } from '../../constants/reportReasons';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function UserReportModal({ handleUserReportSubmit, setShowUserReportModal, setUserReportForm, showUserReportModal, t, userReportForm }) {
@@ -17,11 +18,9 @@ export default function UserReportModal({ handleUserReportSubmit, setShowUserRep
               <label htmlFor="report-user-reason" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.reason}</label>
               <select id="report-user-reason" required value={userReportForm.reason} onChange={e => setUserReportForm({...userReportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                 <option value="">{t.report_select_reason}</option>
-                <option value="Comportamiento abusivo">{t.report_reason_abusive}</option>
-                <option value="Sospecha de fraude">{t.report_reason_suspected_fraud}</option>
-                <option value="Vende productos ilegales">{t.report_reason_prohibited_products}</option>
-                <option value="Suplantación de identidad">{t.report_reason_impersonation}</option>
-                <option value="Otro">{t.report_reason_other}</option>
+                {USER_REPORT_REASONS.map(({ value, labelKey }) => (
+                  <option key={value} value={value}>{t[labelKey]}</option>
+                ))}
               </select>
             </div>
             <div>

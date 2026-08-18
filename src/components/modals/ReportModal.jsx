@@ -1,4 +1,5 @@
 import { XCircle } from 'lucide-react';
+import { LISTING_REPORT_REASONS } from '../../constants/reportReasons';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function ReportModal({ handleReportAd, reportForm, setReportForm, setShowReportModal, showReportModal, t }) {
@@ -17,11 +18,9 @@ export default function ReportModal({ handleReportAd, reportForm, setReportForm,
               <label htmlFor="report-ad-reason" className="block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.reason}</label>
               <select id="report-ad-reason" required value={reportForm.reason} onChange={e => setReportForm({...reportForm, reason: e.target.value})} className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
                 <option value="">{t.report_select_reason}</option>
-                <option value="Fraude o estafa">{t.report_reason_fraud}</option>
-                <option value="Contenido inapropiado">{t.report_reason_inappropriate}</option>
-                <option value="Artículo falso o falsificado">{t.report_reason_counterfeit}</option>
-                <option value="Ya se vendió">{t.sold_status}</option>
-                <option value="Otro">{t.report_reason_other}</option>
+                {LISTING_REPORT_REASONS.map(({ value, labelKey }) => (
+                  <option key={value} value={value}>{t[labelKey]}</option>
+                ))}
               </select>
             </div>
             <div>
