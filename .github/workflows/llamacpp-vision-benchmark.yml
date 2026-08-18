@@ -3,6 +3,9 @@ name: Direct llama.cpp Qwen3-VL 2B vision benchmark
 on:
   push:
     branches: [main]
+    paths:
+      - '.github/workflows/llamacpp-vision-benchmark.yml'
+      - 'scripts/llamacpp-vision-benchmark*.sh'
   workflow_dispatch:
 
 permissions:
@@ -17,7 +20,6 @@ concurrency:
 jobs:
   announce:
     name: Wait for deploy and announce direct llama.cpp benchmark
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[llamacpp-benchmark]') }}
     runs-on: ubuntu-latest
     outputs:
       deployed_sha: ${{ steps.resolve.outputs.sha }}
