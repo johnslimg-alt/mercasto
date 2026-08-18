@@ -103,11 +103,20 @@ bash scripts/security-audit-smoke.sh
 
 echo "production smoke OK"
 
-# Benchmark-only commits can collect direct llama.cpp latency/JSON diagnostics in
-# the already-trusted production deploy job. The benchmark is intentionally
-# non-blocking: production smoke has completed above, and any benchmark failure
-# is logged without changing the deploy result.
-if git log -1 --format=%B | grep -Fq '[llamacpp-benchmark]'; then
+# Benchmark-only commits collect synthetic local-AI diagnostics after the
+# authoritative production smoke. Results never change the deploy outcome.
+COMMIT_MESSAGE="$(git log -1 --format=%B)"
+if printf '%s' "$COMMIT_MESSAGE" | grep -Fq '[llamacpp-quality]'; then
+  echo "== Direct llama.cpp moderation quality benchmark (non-blocking) =="
+  set +e
+  bash scripts/llamacpp-moderation-quality-benchmark.sh
+  LLAMACPP_QUALITY_RC=$?
+  set -e
+  echo "llamacpp_quality_benchmark_exit_code=$LLAMACPP_QUALITY_RC"
+  if [[ "$LLAMACPP_QUALITY_RC" -ne 0 ]]; then
+    echo "Direct llama.cpp quality benchmark failed after successful production smoke; deploy remains unaffected." >&2
+  fi
+elif printf '%s' "$COMMIT_MESSAGE" | grep -Fq '[llamacpp-benchmark]'; then
   echo "== Direct llama.cpp schema benchmark (non-blocking) =="
   set +e
   bash scripts/llamacpp-vision-benchmark-json-schema.sh
