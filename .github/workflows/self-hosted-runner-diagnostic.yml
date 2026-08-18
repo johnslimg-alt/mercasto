@@ -2,9 +2,13 @@ name: Self-hosted runner diagnostic
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/self-hosted-runner-diagnostic.yml
+      - infra/github-runners/docker-compose.runners.yml
   push:
     branches:
-      - ops/runner-workdir-health
+      - main
     paths:
       - .github/workflows/self-hosted-runner-diagnostic.yml
       - infra/github-runners/docker-compose.runners.yml
@@ -18,7 +22,7 @@ jobs:
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 10
     steps:
-      - name: Checkout diagnostic branch
+      - name: Checkout diagnostic ref
         uses: actions/checkout@v7
 
       - name: Check runner temp and workspace are writable
