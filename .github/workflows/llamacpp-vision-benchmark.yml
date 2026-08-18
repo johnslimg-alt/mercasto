@@ -42,16 +42,16 @@ jobs:
         run: |
           set -euo pipefail
           payload="$(python3 - "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" <<'PY'
-import json, sys
-repo, run_id = sys.argv[1:]
-print(json.dumps({
-    "state": "pending",
-    "context": "benchmark/llamacpp-latency",
-    "description": "direct llama.cpp schema benchmark waiting for exact deploy",
-    "target_url": f"https://github.com/{repo}/actions/runs/{run_id}",
-}))
-PY
-)"
+          import json, sys
+          repo, run_id = sys.argv[1:]
+          print(json.dumps({
+              "state": "pending",
+              "context": "benchmark/llamacpp-latency",
+              "description": "direct llama.cpp schema benchmark waiting for exact deploy",
+              "target_url": f"https://github.com/{repo}/actions/runs/{run_id}",
+          }))
+          PY
+          )"
           curl -fsS --retry 3 --retry-all-errors \
             -X POST \
             -H "Accept: application/vnd.github+json" \
@@ -79,18 +79,18 @@ PY
               > "$response_file"
 
             read -r run_id run_status conclusion < <(python3 - "$response_file" "$EXPECTED_SHA" <<'PY'
-import json, sys
-path, expected_sha = sys.argv[1:]
-with open(path, encoding="utf-8") as f:
-    payload = json.load(f)
-for run in payload.get("workflow_runs", []):
-    if run.get("head_sha") == expected_sha:
-        print(run.get("id") or "none", run.get("status") or "none", run.get("conclusion") or "none")
-        break
-else:
-    print("none none none")
-PY
-)
+          import json, sys
+          path, expected_sha = sys.argv[1:]
+          with open(path, encoding="utf-8") as f:
+              payload = json.load(f)
+          for run in payload.get("workflow_runs", []):
+              if run.get("head_sha") == expected_sha:
+                  print(run.get("id") or "none", run.get("status") or "none", run.get("conclusion") or "none")
+                  break
+          else:
+              print("none none none")
+          PY
+            )
 
             echo "deploy_probe attempt=$attempt run_id=$run_id status=$run_status conclusion=$conclusion"
 
@@ -189,16 +189,16 @@ PY
             local description="$3"
             description="$(printf '%s' "$description" | tr -cd '[:alnum:] .,:_()/-' | cut -c1-140)"
             payload="$(python3 - "$state" "$context" "$description" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" <<'PY'
-import json, sys
-state, context, description, repo, run_id = sys.argv[1:]
-print(json.dumps({
-    "state": state,
-    "context": context,
-    "description": description,
-    "target_url": f"https://github.com/{repo}/actions/runs/{run_id}",
-}))
-PY
-)"
+          import json, sys
+          state, context, description, repo, run_id = sys.argv[1:]
+          print(json.dumps({
+              "state": state,
+              "context": context,
+              "description": description,
+              "target_url": f"https://github.com/{repo}/actions/runs/{run_id}",
+          }))
+          PY
+            )"
             curl -fsS --retry 3 --retry-all-errors \
               -X POST \
               -H "Accept: application/vnd.github+json" \
