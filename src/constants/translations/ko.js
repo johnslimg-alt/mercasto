@@ -1231,4 +1231,5 @@ export default {
   listing_quality_keyword_stuffing: '같은 단어를 너무 많이 반복하지 마세요.',
   listing_quality_title_repeated_as_description: '제목과 다른 설명을 추가하세요.',
   listing_quality_photo_recommended: '실제 사진은 구매자가 상품을 더 잘 이해하는 데 도움이 됩니다.',
+  listing_quality_duplicate_listing_risk: '같은 지역에 있는 다른 판매글과 비슷합니다. 정말 다시 게시해야 하는지 확인하세요.',
 };

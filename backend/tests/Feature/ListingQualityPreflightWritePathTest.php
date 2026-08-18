@@ -144,6 +144,23 @@ class ListingQualityPreflightWritePathTest extends TestCase
         $this->assertDatabaseCount('ads', 0);
     }
 
+    public function test_preview_reports_duplicate_risk_without_creating_listing(): void
+    {
+        $this->category();
+        $user = User::factory()->create();
+        $this->ad($user);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->withHeader(self::PREVIEW_HEADER, 'preview')
+            ->postJson('/api/ads', $this->payload());
+
+        $response->assertOk()
+            ->assertJsonPath('quality_preflight.passes_hard_validation', true)
+            ->assertJsonFragment(['duplicate_listing_risk']);
+
+        $this->assertDatabaseCount('ads', 1);
+    }
+
     public function test_preview_hard_failure_is_rejected_without_creating_listing(): void
     {
         $this->category();

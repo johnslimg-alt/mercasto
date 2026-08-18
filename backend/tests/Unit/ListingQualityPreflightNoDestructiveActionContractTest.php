@@ -14,5 +14,10 @@ class ListingQualityPreflightNoDestructiveActionContractTest extends TestCase
         $this->assertStringNotContainsString('->delete(', $source);
         $this->assertStringNotContainsString('->update(', $source);
         $this->assertStringNotContainsString('Ad::create(', $source);
+
+        $duplicateRisk = file_get_contents(__DIR__ . '/../../app/Services/ListingDuplicateRiskService.php');
+        $this->assertStringNotContainsString('->delete(', $duplicateRisk);
+        $this->assertStringNotContainsString('->update(', $duplicateRisk);
+        $this->assertStringNotContainsString('::create(', $duplicateRisk);
     }
 }

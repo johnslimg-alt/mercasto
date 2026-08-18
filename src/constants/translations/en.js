@@ -1231,4 +1231,5 @@ export default {
   listing_quality_keyword_stuffing: 'Avoid repeating the same words too many times.',
   listing_quality_title_repeated_as_description: 'Add a description that is different from the title.',
   listing_quality_photo_recommended: 'A real photo helps buyers understand the listing better.',
+  listing_quality_duplicate_listing_risk: 'This looks similar to another listing of yours in the same area. Check whether you really need to publish it again.',
 };
