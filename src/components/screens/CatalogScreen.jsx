@@ -77,7 +77,7 @@ export default function CatalogScreen({
     const dialog = tabletFilterDialogRef.current;
     if (!dialog) return undefined;
     tabletFilterOpenerRef.current = document.activeElement;
-    const focusableSelector = 'button:not([disabled]):not([tabindex=\"-1\"]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\"-1\"])';
+    const focusableSelector = 'button:not([disabled]):not([tabindex="-1"]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
     const frame = window.requestAnimationFrame(() => tabletFilterCloseRef.current?.focus());
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -216,7 +216,7 @@ export default function CatalogScreen({
       <div className="mx-auto flex min-h-[calc(100vh-11rem)] max-w-[1440px] flex-col gap-6 px-4 py-6 pb-28 md:pb-8 lg:flex-row lg:px-6 lg:py-8">
         <div className="mb-2 flex min-h-10 items-center justify-between lg:hidden">
           <h1 className="text-[18px] font-bold text-slate-900 dark:text-white">
-            {t.search_results || 'Resultados'}
+            {t.search_results}
             <span className="ml-1 text-[14px] font-normal text-slate-400">({safeServerAds.length})</span>
           </h1>
           <button
@@ -225,7 +225,7 @@ export default function CatalogScreen({
             onClick={() => setShowMobileFilters(value => !value)}
             className={`btn-sm flex items-center gap-2 border transition-colors ${showMobileFilters ? 'border-slate-900 bg-slate-900 text-white dark:border-[#84CC16] dark:bg-[#84CC16] dark:text-slate-950' : 'border-slate-300 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'}`}
           >
-            <Settings2 size={16} /> {t.filters || 'Filtros'}
+            <Settings2 size={16} /> {t.filters}
           </button>
         </div>
 
@@ -246,8 +246,8 @@ export default function CatalogScreen({
         <BottomSheet
           isOpen={showMobileFilters && filterViewport === 'mobile'}
           onClose={() => setShowMobileFilters(false)}
-          title={t.filters || 'Filtros'}
-          closeLabel={t.close_btn || t.close || 'Close'}
+          title={t.filters}
+          closeLabel={t.close_btn || t.close}
           maxHeight="90vh"
           zIndex={9999}
         >
@@ -273,12 +273,12 @@ export default function CatalogScreen({
             <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 -z-10" onClick={() => setShowMobileFilters(false)} />
             <div ref={tabletFilterDialogRef} data-testid="catalog-tablet-filter-dialog" role="dialog" aria-modal="true" aria-labelledby="tablet-filters-title" className="h-full w-[360px] overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-2xl animate-slideRight dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
-                <h2 id="tablet-filters-title" className="text-base font-bold text-slate-900 dark:text-white">{t.filters || 'Filtros'}</h2>
+                <h2 id="tablet-filters-title" className="text-base font-bold text-slate-900 dark:text-white">{t.filters}</h2>
                 <button
                   ref={tabletFilterCloseRef}
                   type="button"
                   data-testid="catalog-tablet-filter-close"
-                  aria-label={t.close_btn || t.close || 'Close'}
+                  aria-label={t.close_btn || t.close}
                   onClick={() => setShowMobileFilters(false)}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:text-slate-900 dark:bg-slate-800 dark:hover:text-white"
                 >
