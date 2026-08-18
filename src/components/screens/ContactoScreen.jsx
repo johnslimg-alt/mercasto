@@ -4,6 +4,10 @@ import { useUI } from '../../contexts/UIContext';
 import { getTranslations } from '../../utils/translations';
 import { getContactPageCopy, getContactSubjects } from '../../utils/contactPageCopy';
 import {
+  getSupportRequestAcknowledgementCopy,
+  getSupportRequestStatusLabel,
+} from '../../utils/supportRequestAcknowledgementCopy';
+import {
   ChevronLeft, Mail, Clock, Send,
   CheckCircle, AlertCircle, ExternalLink, HelpCircle,
 } from 'lucide-react';
@@ -22,6 +26,7 @@ export default function ContactoScreen() {
   void loadedLangVersion;
   const t = getTranslations(lang);
   const copy = getContactPageCopy(lang);
+  const acknowledgementCopy = getSupportRequestAcknowledgementCopy(lang);
   const subjects = getContactSubjects(lang);
   const contactInfo = [
     { icon: Mail, title: copy.emailCardTitle, value: 'soporte@mercasto.com', sub: copy.emailCardSub, href: 'mailto:soporte@mercasto.com', color: 'bg-lime-50 text-lime-600' },
@@ -31,6 +36,7 @@ export default function ContactoScreen() {
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
   const [serverMsg, setServerMsg] = useState('');
+  const [acknowledgement, setAcknowledgement] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -53,6 +59,7 @@ export default function ContactoScreen() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
     setStatus('loading');
+    setAcknowledgement(null);
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
@@ -61,8 +68,11 @@ export default function ContactoScreen() {
       });
       const data = await res.json();
       if (res.ok && data.ok) {
+        const reference = typeof data.reference === 'string' ? data.reference.trim() : '';
+        const caseStatus = typeof data.status === 'string' ? data.status : 'received';
         setStatus('success');
         setServerMsg(copy.successMessage);
+        setAcknowledgement(reference ? { reference, status: caseStatus } : null);
         setForm(EMPTY);
       } else {
         throw new Error('contact_submit_failed');
@@ -70,6 +80,7 @@ export default function ContactoScreen() {
     } catch {
       setStatus('error');
       setServerMsg(copy.genericError);
+      setAcknowledgement(null);
     }
   }
 
@@ -108,11 +119,26 @@ export default function ContactoScreen() {
             <h2 className="text-lg font-bold text-slate-900 mb-6 dark:text-white">{copy.formTitle}</h2>
 
             {status === 'success' && (
-              <div className="flex items-start gap-3 bg-lime-50 border border-lime-200 rounded-xl p-4 mb-6">
+              <div className="flex items-start gap-3 bg-lime-50 border border-lime-200 rounded-xl p-4 mb-6 dark:border-lime-900/60 dark:bg-lime-950/30">
                 <CheckCircle className="w-5 h-5 text-lime-600 mt-0.5 shrink-0" />
                 <div>
-                  <p className="font-medium text-lime-800">{copy.successTitle}</p>
-                  <p className="text-sm text-lime-700 mt-0.5">{serverMsg}</p>
+                  <p className="font-medium text-lime-800 dark:text-lime-300">{copy.successTitle}</p>
+                  <p className="text-sm text-lime-700 mt-0.5 dark:text-lime-200">{serverMsg}</p>
+                  {acknowledgement && (
+                    <div className="mt-3 space-y-1.5 text-sm text-lime-800 dark:text-lime-200">
+                      <p data-testid="contact-reference">
+                        <span className="font-semibold">{acknowledgementCopy.referenceLabel}:</span>{' '}
+                        <code className="font-mono font-bold">{acknowledgement.reference}</code>
+                      </p>
+                      <p data-testid="contact-status">
+                        <span className="font-semibold">{acknowledgementCopy.statusLabel}:</span>{' '}
+                        {getSupportRequestStatusLabel(lang, acknowledgement.status)}
+                      </p>
+                      <p className="pt-1 text-xs text-lime-700 dark:text-lime-300" data-testid="contact-follow-up">
+                        {acknowledgementCopy.followUp}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
