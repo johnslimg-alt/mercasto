@@ -81,7 +81,7 @@ const CONTACT_METHODS = [
   { id: 'telegram', label: 'Telegram', icon: Send, hintKey: 'post_username' },
 ];
 
-const fieldClass = 'w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500';
+const fieldClass = 'w-full min-h-12 sm:min-h-0 px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500';
 const selectFieldClass = fieldClass + ' cursor-pointer';
 const labelClass = 'block text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-2';
 
@@ -398,7 +398,7 @@ export default function PostScreen({
     const errKey = `attr_${key}`;
     const hasErr = !!errors[errKey];
     const fieldLabel = t[`filter_label_${key}`] || key;
-    const baseClass = `w-full px-3.5 py-2.5 border ${hasErr ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-all`;
+    const baseClass = `w-full min-h-12 sm:min-h-0 px-3.5 py-2.5 border ${hasErr ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-all`;
     const onChange = v => setForm(prev => ({ ...prev, attributes: { ...(prev.attributes || {}), [key]: v } }));
 
     if (key === 'modelo') {
@@ -609,7 +609,7 @@ export default function PostScreen({
                   aria-label={t.ad_title}
                   value={form.title}
                   onChange={e => { setForm({ ...form, title: e.target.value }); if (errors.title) setErrors(p => ({ ...p, title: null })); }}
-                  className={`w-full px-3.5 py-2.5 border ${errors.title ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
+                  className={`w-full min-h-12 sm:min-h-0 px-3.5 py-2.5 border ${errors.title ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
                   placeholder={t.post_title_placeholder}
                 />
                 {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
@@ -694,7 +694,7 @@ export default function PostScreen({
                       aria-label={t.ad_price}
                       value={form.price}
                       onChange={e => { setForm({ ...form, price: e.target.value }); if (errors.price) setErrors(p => ({ ...p, price: null })); }}
-                      className={`w-full px-3.5 py-2.5 pl-7 border ${errors.price ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
+                      className={`w-full min-h-12 sm:min-h-0 px-3.5 py-2.5 pl-7 border ${errors.price ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'} rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white`}
                       placeholder="0.00"
                     />
                   </div>
@@ -751,9 +751,10 @@ export default function PostScreen({
                   {handleGenerateDescription && (
                     <button
                       type="button"
+                      data-testid="publish-generate-ai"
                       onClick={handleGenerateDescription}
                       disabled={aiLoading}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-[#65A30D] hover:text-[#84CC16] disabled:opacity-50 transition-colors"
+                      className="flex min-h-12 sm:min-h-0 items-center gap-1.5 px-2 sm:px-0 text-xs font-semibold text-[#65A30D] hover:text-[#84CC16] disabled:opacity-50 transition-colors"
                     >
                       {aiLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
                       {t.generate_ai}
@@ -847,7 +848,7 @@ export default function PostScreen({
                           <button
                             type="button"
                             onClick={() => { setCustomCity(false); setForm(prev => ({ ...prev, city: '' })); }}
-                            className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap"
+                            className="min-h-12 sm:min-h-0 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap"
                           >
                             {t.post_city_select_list}
                           </button>
@@ -899,7 +900,7 @@ export default function PostScreen({
                         latitude: '',
                         longitude: '',
                       }))}
-                      className="w-full px-3.5 py-2.5 pl-10 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
+                      className="w-full min-h-12 sm:min-h-0 px-3.5 py-2.5 pl-10 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                       placeholder={t.loc_placeholder}
                     />
                   </div>
@@ -910,7 +911,7 @@ export default function PostScreen({
                       data-testid="publish-gps"
                       onClick={handleGPS}
                       disabled={gpsLoading}
-                      className="px-4 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                      className="min-h-12 sm:min-h-0 px-4 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
                     >
                       {gpsLoading ? <Loader2 size={14} className="animate-spin" /> : <Locate size={14} />}
                       {t.post_use_current_gps}
@@ -959,8 +960,8 @@ export default function PostScreen({
                     <label className={labelClass}>{t.post_whatsapp_question}</label>
                     <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 p-1 bg-white dark:bg-slate-950">
                       {[{ id: 'phone', label: t.post_phone_number }, { id: 'username', label: `${t.post_username} (@usuario)` }].map((opt) => (
-                        <button key={opt.id} type="button" onClick={() => setWaMode(opt.id)}
-                          className={`min-h-[40px] rounded-lg px-4 text-sm font-semibold transition-colors ${waMode === opt.id ? 'bg-[#84CC16] text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>
+                        <button key={opt.id} type="button" data-testid={`publish-whatsapp-mode-${opt.id}`} onClick={() => setWaMode(opt.id)}
+                          className={`min-h-12 sm:min-h-[40px] rounded-lg px-4 text-sm font-semibold transition-colors ${waMode === opt.id ? 'bg-[#84CC16] text-slate-950' : 'text-slate-600 dark:text-slate-300'}`}>
                           {opt.label}
                         </button>
                       ))}
@@ -975,7 +976,7 @@ export default function PostScreen({
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">+52</span>
                         <input type="tel" data-testid="publish-phone" aria-label={t.post_phone_digits} value={phoneValue} onChange={(e) => setPhoneValue(e.target.value.replace(/[^\d\s-]/g, ''))}
-                          placeholder="55 1234 5678" className="w-full pl-11 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
+                          placeholder="55 1234 5678" className="w-full min-h-12 sm:min-h-0 pl-11 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                       {contactMethods.includes('whatsapp') && waMode === 'phone' && (
                         <p className="mt-1 text-xs text-slate-400">{t.post_phone_whatsapp_hint}</p>
@@ -988,7 +989,7 @@ export default function PostScreen({
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">@</span>
                         <input aria-label={t.post_whatsapp_username} value={waUsername} onChange={(e) => setWaUsername(e.target.value.replace(/^@/, ''))} placeholder={t.post_username}
-                          className="w-full pl-7 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
+                          className="w-full min-h-12 sm:min-h-0 pl-7 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                     </div>
                   )}
@@ -998,7 +999,7 @@ export default function PostScreen({
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-slate-400 text-[14px]">@</span>
                         <input aria-label={t.post_telegram_username} value={telegramValue} onChange={(e) => setTelegramValue(e.target.value.replace(/^@/, ''))} placeholder={t.post_username}
-                          className="w-full pl-7 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
+                          className="w-full min-h-12 sm:min-h-0 pl-7 pr-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white" />
                       </div>
                     </div>
                   )}
