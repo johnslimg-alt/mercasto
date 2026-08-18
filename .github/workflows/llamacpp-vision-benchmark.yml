@@ -12,41 +12,35 @@ permissions:
 
 concurrency:
   group: llamacpp-qwen3-vl-2b-benchmark
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  benchmark:
-    name: Benchmark direct llama.cpp vision path
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
-    runs-on: self-hosted
-    timeout-minutes: 20
+  announce:
+    name: Announce direct llama.cpp benchmark
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && contains(github.event.workflow_run.head_commit.message, '[llamacpp-benchmark]')) }}
+    runs-on: ubuntu-latest
+    outputs:
+      deployed_sha: ${{ steps.resolve.outputs.sha }}
     steps:
-      - name: Resolve deployed main and one-shot marker
-        id: marker
+      - name: Resolve deployed commit
+        id: resolve
         shell: bash
         run: |
           set -euo pipefail
-          cd /var/www/mercasto
-          git fetch origin main --quiet
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-          deployed_sha="$(git rev-parse HEAD)"
-          should_run=false
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            should_run=true
-          elif git log -1 --format=%B | grep -q '\[llamacpp-benchmark\]'; then
-            should_run=true
+            deployed_sha="$GITHUB_SHA"
+          else
+            deployed_sha="${{ github.event.workflow_run.head_sha }}"
           fi
-          echo "run=$should_run" >> "$GITHUB_OUTPUT"
+          test -n "$deployed_sha"
           echo "sha=$deployed_sha" >> "$GITHUB_OUTPUT"
-          echo "benchmark_run=$should_run"
           echo "deployed_sha=$deployed_sha"
 
-      - name: Publish benchmark pending status
-        if: steps.marker.outputs.run == 'true'
+      - name: Publish queued benchmark status
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEPLOYED_SHA: ${{ steps.marker.outputs.sha }}
+          DEPLOYED_SHA: ${{ steps.resolve.outputs.sha }}
         run: |
           set -euo pipefail
           payload="$(python3 - "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" <<'PY'
@@ -55,7 +49,7 @@ repo, run_id = sys.argv[1:]
 print(json.dumps({
     "state": "pending",
     "context": "benchmark/llamacpp-latency",
-    "description": "direct llama.cpp schema-constrained benchmark running",
+    "description": "direct llama.cpp schema benchmark queued",
     "target_url": f"https://github.com/{repo}/actions/runs/{run_id}",
 }))
 PY
@@ -68,9 +62,26 @@ PY
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${DEPLOYED_SHA}" \
             -d "$payload"
 
+  benchmark:
+    name: Benchmark direct llama.cpp vision path
+    needs: announce
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - name: Verify deployed main
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ needs.announce.outputs.deployed_sha }}
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          git fetch origin main --quiet
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          echo "deployed_sha=$EXPECTED_SHA"
+
       - name: Run isolated direct llama.cpp benchmark
         id: benchmark
-        if: steps.marker.outputs.run == 'true'
         continue-on-error: true
         shell: bash
         run: |
@@ -113,11 +124,11 @@ PY
           exit "$rc"
 
       - name: Publish benchmark commit status
-        if: always() && steps.marker.outputs.run == 'true'
+        if: always()
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEPLOYED_SHA: ${{ steps.marker.outputs.sha }}
+          DEPLOYED_SHA: ${{ needs.announce.outputs.deployed_sha }}
           BENCHMARK_OUTCOME: ${{ steps.benchmark.outcome }}
           FIRST_MS: ${{ steps.benchmark.outputs.first_elapsed_ms }}
           WARM_MS: ${{ steps.benchmark.outputs.warm_elapsed_ms }}
@@ -168,7 +179,6 @@ PY
             "json cold=${FIRST_JSON:-unknown} warm=${WARM_JSON:-unknown} finish=${FIRST_FINISH:-unknown}/${WARM_FINISH:-unknown}"
 
       - name: Require benchmark success
-        if: steps.marker.outputs.run == 'true'
         shell: bash
         env:
           BENCHMARK_OUTCOME: ${{ steps.benchmark.outcome }}
