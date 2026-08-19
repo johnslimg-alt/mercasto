@@ -229,5 +229,12 @@
     "failed": "Verifica dell’email non riuscita",
     "retry": "Accedi e richiedi un nuovo link di verifica.",
     "home": "Vai a Mercasto"
+  },
+  "geolocation": {
+    "unsupported": "La geolocalizzazione non è supportata dal browser.",
+    "permissionDenied": "Il permesso di localizzazione è stato negato. Attivalo nelle impostazioni del browser.",
+    "unavailable": "Posizione non disponibile. Controlla la connessione GPS.",
+    "timeout": "La richiesta della posizione è scaduta. Riprova.",
+    "unknown": "Impossibile ottenere la tua posizione."
   }
 }

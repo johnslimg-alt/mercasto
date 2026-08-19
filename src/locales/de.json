@@ -229,5 +229,12 @@
     "failed": "E-Mail-Bestätigung fehlgeschlagen",
     "retry": "Melde dich an und fordere einen neuen Bestätigungslink an.",
     "home": "Zu Mercasto"
+  },
+  "geolocation": {
+    "unsupported": "Geolokalisierung wird von deinem Browser nicht unterstützt.",
+    "permissionDenied": "Die Standortberechtigung wurde verweigert. Aktiviere sie in den Browsereinstellungen.",
+    "unavailable": "Standort nicht verfügbar. Prüfe deine GPS-Verbindung.",
+    "timeout": "Die Standortanfrage hat das Zeitlimit überschritten. Versuche es erneut.",
+    "unknown": "Dein Standort konnte nicht ermittelt werden."
   }
 }

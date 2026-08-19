@@ -229,5 +229,12 @@
     "failed": "邮箱验证失败",
     "retry": "请登录并申请新的验证链接。",
     "home": "前往 Mercasto"
+  },
+  "geolocation": {
+    "unsupported": "你的浏览器不支持地理定位。",
+    "permissionDenied": "位置权限已被拒绝。请在浏览器设置中启用。",
+    "unavailable": "无法获取位置。请检查 GPS 连接。",
+    "timeout": "位置请求超时。请重试。",
+    "unknown": "无法获取你的位置。"
   }
 }

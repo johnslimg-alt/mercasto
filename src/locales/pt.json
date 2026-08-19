@@ -229,5 +229,12 @@
     "failed": "Não foi possível verificar o email",
     "retry": "Entre na sua conta e solicite um novo link de verificação.",
     "home": "Ir para o Mercasto"
+  },
+  "geolocation": {
+    "unsupported": "A geolocalização não é compatível com seu navegador.",
+    "permissionDenied": "A permissão de localização foi negada. Ative-a nas configurações do navegador.",
+    "unavailable": "Localização indisponível. Verifique sua conexão GPS.",
+    "timeout": "A solicitação de localização expirou. Tente novamente.",
+    "unknown": "Não foi possível obter sua localização."
   }
 }

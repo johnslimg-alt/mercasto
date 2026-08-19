@@ -229,5 +229,12 @@
     "failed": "Email verification failed",
     "retry": "Sign in and request a new verification link.",
     "home": "Go to Mercasto"
+  },
+  "geolocation": {
+    "unsupported": "Geolocation is not supported by your browser.",
+    "permissionDenied": "Location permission was denied. Enable it in your browser settings.",
+    "unavailable": "Location is unavailable. Check your GPS connection.",
+    "timeout": "Location request timed out. Try again.",
+    "unknown": "We could not get your location."
   }
 }
