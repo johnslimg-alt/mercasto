@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import test from 'node:test';
 
@@ -99,4 +100,9 @@ test('rejects a response without required CSP safety directives', async () => {
   await Promise.all([close(secure), close(redirect)]);
   assert.notEqual(result.code, 0);
   assert.match(result.stderr, /content-security-policy/);
+});
+
+test('production CSP allows the Cloudflare Web Analytics beacon', async () => {
+  const config = await readFile(new URL('../security_headers.conf', import.meta.url), 'utf8');
+  assert.match(config, /script-src[^;]*https:\/\/static\.cloudflareinsights\.com/);
 });

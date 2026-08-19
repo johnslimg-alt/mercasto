@@ -53,7 +53,7 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_10}</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_more_visibility}</li>
                     </ul>
-                    {renderPlanBtn('package_impulso', () => handleClipPayment(99, 'Plan Impulso', null, 'package_impulso'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
+                    {renderPlanBtn('package_impulso', () => handleClipPayment(99, 'Plan Impulso', null, 'package_impulso'), "py-2.5 w-full bg-[#84CC16] text-slate-950 rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Negocio */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -63,11 +63,11 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_ads_30}</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_business_badge}</li>
                     </ul>
-                    {renderPlanBtn('package_negocio', () => handleClipPayment(249, 'Plan Negocio', null, 'package_negocio'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
+                    {renderPlanBtn('package_negocio', () => handleClipPayment(249, 'Plan Negocio', null, 'package_negocio'), "py-2.5 w-full bg-[#84CC16] text-slate-950 rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Pro */}
                   <div className="bg-slate-900 dark:bg-slate-900 rounded-2xl p-5 border border-slate-800 flex flex-col shadow-lg relative ring-2 ring-[#84CC16]">
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#84CC16] text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">{t.pm_popular}</div>
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#84CC16] text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">{t.pm_popular}</div>
                     <h4 className="font-bold text-lime-400 uppercase tracking-wider text-[11px] mb-1">{t.pm_plan_pro}</h4>
                     <p className="text-2xl font-black text-white mb-3">$599 <span className="text-[12px] font-normal text-slate-300 dark:text-slate-400">{t.pm_per_month}</span></p>
                     <ul className="space-y-2 mb-6 flex-1 text-[13px] text-slate-300 dark:text-slate-300">
@@ -75,7 +75,7 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_company_page}</li>
                       <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-[#84CC16] shrink-0"/> {t.pm_feat_priority_support}</li>
                     </ul>
-                    {renderPlanBtn('package_pro', () => handleClipPayment(599, 'Plan Pro', null, 'package_pro'), "py-2.5 w-full bg-[#84CC16] text-white rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
+                    {renderPlanBtn('package_pro', () => handleClipPayment(599, 'Plan Pro', null, 'package_pro'), "py-2.5 w-full bg-[#84CC16] text-slate-950 rounded-xl text-xs font-bold hover:bg-[#65A30D] transition-colors shadow-sm")}
                   </div>
                   {/* Agencia */}
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
@@ -131,14 +131,14 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_boost_1d_name}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_boost_1d_desc}</p>
                         </div>
-                        <button aria-label={`${t.pm_boost_1d_name} — $19`} onClick={() => handlePromotionProductPayment(19, t.pm_boost_1d_name, 'boost_1_day')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$19</button>
+                        <button aria-label={`${t.pm_boost_1d_name} — $19`} onClick={() => handlePromotionProductPayment(19, t.pm_boost_1d_name, 'boost_1_day')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 rounded-xl text-[13px] font-bold shadow-sm transition-colors">$19</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_boost_3d_name}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_boost_3d_desc}</p>
                         </div>
-                        <button aria-label={`${t.pm_boost_3d_name} — $49`} onClick={() => handlePromotionProductPayment(49, t.pm_boost_3d_name, 'boost_3_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$49</button>
+                        <button aria-label={`${t.pm_boost_3d_name} — $49`} onClick={() => handlePromotionProductPayment(49, t.pm_boost_3d_name, 'boost_3_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 rounded-xl text-[13px] font-bold shadow-sm transition-colors">$49</button>
                       </div>
                     </div>
                   </div>
@@ -152,14 +152,14 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_highlight_7d_name}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_highlight_7d_desc}</p>
                         </div>
-                        <button aria-label={`${t.pm_highlight_7d_name} — $79`} onClick={() => handlePromotionProductPayment(79, t.pm_highlight_7d_name, 'highlight_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$79</button>
+                        <button aria-label={`${t.pm_highlight_7d_name} — $79`} onClick={() => handlePromotionProductPayment(79, t.pm_highlight_7d_name, 'highlight_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 rounded-xl text-[13px] font-bold shadow-sm transition-colors">$79</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_featured_7d_name}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_featured_7d_desc}</p>
                         </div>
-                        <button aria-label={`${t.pm_featured_7d_name} — $149`} onClick={() => handlePromotionProductPayment(149, t.pm_featured_7d_name, 'featured_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$149</button>
+                        <button aria-label={`${t.pm_featured_7d_name} — $149`} onClick={() => handlePromotionProductPayment(149, t.pm_featured_7d_name, 'featured_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 rounded-xl text-[13px] font-bold shadow-sm transition-colors">$149</button>
                       </div>
                     </div>
                   </div>
@@ -173,14 +173,14 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_featured_30d_name}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_featured_30d_desc}</p>
                         </div>
-                        <button aria-label={`${t.pm_featured_30d_name} — $399`} onClick={() => handlePromotionProductPayment(399, t.pm_featured_30d_name, 'featured_30_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
+                        <button aria-label={`${t.pm_featured_30d_name} — $399`} onClick={() => handlePromotionProductPayment(399, t.pm_featured_30d_name, 'featured_30_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
                       </div>
                       <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white text-[14px]">{t.pm_top_category_name}</p>
                           <p className="text-[12px] text-slate-500 dark:text-slate-400">{t.pm_top_category_desc}</p>
                         </div>
-                        <button aria-label={`${t.pm_top_category_name} — $399`} onClick={() => handlePromotionProductPayment(399, t.pm_top_category_name, 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
+                        <button aria-label={`${t.pm_top_category_name} — $399`} onClick={() => handlePromotionProductPayment(399, t.pm_top_category_name, 'top_category_7_days')} className="px-3 py-2 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 rounded-xl text-[13px] font-bold shadow-sm transition-colors">$399</button>
                       </div>
                     </div>
                   </div>
@@ -219,7 +219,7 @@ export default function PricingModal({ customCreditsAmount, handleClipPayment, h
                     </div>
                     <button
                       onClick={() => handleCreditsPayment(customCreditsAmount, 'credits_custom')}
-                      className="px-5 py-2.5 bg-[#84CC16] hover:bg-[#65A30D] text-white rounded-xl text-[13px] font-bold shadow-sm transition-colors whitespace-nowrap"
+                      className="px-5 py-2.5 bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 rounded-xl text-[13px] font-bold shadow-sm transition-colors whitespace-nowrap"
                     >
                       {t.pm_buy_credits_title}
                     </button>

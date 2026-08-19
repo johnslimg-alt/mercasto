@@ -286,7 +286,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                     <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                       {t.admin_approved_revenue || 'Ingresos Aprobados (Pág. Actual)'}
                     </span>
-                    <span className="text-3xl font-black text-[#84CC16] mt-1 block">
+                    <span className="text-3xl font-black text-lime-700 dark:text-lime-400 mt-1 block">
                       {formatMXN(adminAnalytics?.revenue_period ?? adminPayments.filter(p => ['paid', 'succeeded', 'approved'].includes(p.status?.toLowerCase())).reduce((sum, p) => sum + parseFloat(p.amount || 0), 0), lang)}
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">
@@ -300,7 +300,7 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <div>
                     <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{adminCopy.admin_promotion_revenue_30d}</span>
-                    <span data-testid="admin-promotion-revenue-value" className="text-3xl font-black text-amber-500 mt-1 block">
+                    <span data-testid="admin-promotion-revenue-value" className="text-3xl font-black text-amber-700 dark:text-amber-400 mt-1 block">
                       {adminAnalytics ? formatMXN(adminAnalytics.promotion_revenue_period ?? 0, lang) : '—'}
                     </span>
                     <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1 block">{adminCopy.admin_promotion_products}</span>

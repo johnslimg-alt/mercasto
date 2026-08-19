@@ -41,8 +41,8 @@ function ProviderStatus({ label, provider, configured, copy }) {
           </p>
         </div>
         <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-          ok ? 'bg-emerald-100 text-emerald-700' : status === 'error'
-            ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+          ok ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : status === 'error'
+            ? 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
         }`}>
           {text}
         </span>
@@ -169,23 +169,23 @@ export default function AdminSeoMeasurement({ token, lang = 'es', t }) {
 
       <div className={`rounded-3xl border p-6 ${
         nationalQualified
-          ? 'border-emerald-200 bg-emerald-50'
-          : 'border-amber-200 bg-amber-50'
+          ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30'
+          : 'border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-950/30'
       }`}>
         <div className="flex items-start gap-3">
           {nationalQualified
             ? <CheckCircle className="mt-0.5 text-emerald-600" size={22} />
             : <AlertTriangle className="mt-0.5 text-amber-600" size={22} />}
           <div>
-            <p className={`font-black ${nationalQualified ? 'text-emerald-900' : 'text-amber-900'}`}>
+            <p className={`font-black ${nationalQualified ? 'text-emerald-900 dark:text-emerald-200' : 'text-amber-900 dark:text-amber-200'}`}>
               {nationalQualified ? copy.nationalReached : copy.localBlocked}
             </p>
-            <p className={`mt-1 text-sm ${nationalQualified ? 'text-emerald-800' : 'text-amber-800'}`}>
+            <p className={`mt-1 text-sm ${nationalQualified ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
               {nationalQualified
                 ? copy.twoSnapshots
                 : copy.blockedReason}
             </p>
-            <p className="mt-2 text-xs font-bold text-slate-600">
+            <p className="mt-2 text-xs font-bold text-slate-600 dark:text-slate-300">
               {copy.routesOpen}: {number(indexability.location_routes_open)} · {copy.qualifiedCategories}: {number(report.supply?.qualified_categories)} · {copy.stateCategories}: {number(report.supply?.qualified_state_categories)} · {copy.cityCategories}: {number(report.supply?.qualified_city_categories)}
             </p>
           </div>

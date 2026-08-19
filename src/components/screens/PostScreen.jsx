@@ -95,7 +95,7 @@ function Stepper({ step, t }) {
         const done = step > n;
         return (
           <div key={label} className="flex items-center gap-2">
-            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${active ? 'bg-[#84CC16] text-white shadow-md' : done ? 'bg-[#84CC16]/25 text-[#65A30D]' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${active ? 'bg-[#84CC16] text-slate-950 shadow-md' : done ? 'bg-[#84CC16]/25 text-[#65A30D]' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
               {done ? <Check size={14} /> : n}
             </span>
             <span data-testid={`publish-step-${n}`} className={`text-xs md:text-sm font-semibold ${active ? 'text-slate-950 dark:text-white' : 'text-slate-400'}`}>

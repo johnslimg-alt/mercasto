@@ -113,7 +113,7 @@ const AdCard = memo(({
           <span className="truncate pr-2">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || t.all_mexico)}</span>
         </div>
         {isCatalogFiller ? (
-          <button className="pointer-events-auto relative z-20 w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white" onClick={(e) => { e.stopPropagation(); navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } }); }}>
+          <button className="pointer-events-auto relative z-20 w-full mt-3 btn-md bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]" onClick={(e) => { e.stopPropagation(); navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } }); }}>
             {detailCopy.publishSimilar}
           </button>
         ) : ad.user?.role !== 'business' && (

@@ -369,7 +369,7 @@ export default function OnboardingModal({ onClose, user, t, lang, smsEnabled = f
               </p>
               {checklist.map(({ icon: Icon, label, done }) => (
                 <div key={label} className={`flex items-center gap-3 p-3 rounded-2xl border ${done ? 'bg-lime-50 dark:bg-lime-900/20 border-lime-100 dark:border-lime-400/30' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${done ? 'bg-[#84CC16] text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${done ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
                     {done ? <CheckCircle size={16} /> : <Icon size={16} />}
                   </div>
                   <span className={`text-[14px] font-medium ${done ? 'text-lime-700 dark:text-lime-300 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{label}</span>

@@ -11,7 +11,7 @@ export default function LevelBadge({ user, compact = false }) {
     return (
       <div className="flex items-center gap-2">
         {/* Level */}
-        <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-lime-500 to-green-600 text-white rounded-full text-xs font-bold">
+        <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-lime-500 to-green-600 text-slate-950 rounded-full text-xs font-bold">
           <Star className="w-3 h-3" />
           Lv.{user.level}
         </div>
@@ -38,7 +38,7 @@ export default function LevelBadge({ user, compact = false }) {
     <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center text-white font-bold">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center text-slate-950 font-bold">
             {user.level}
           </div>
           <div>

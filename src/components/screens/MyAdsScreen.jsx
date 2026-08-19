@@ -260,7 +260,7 @@ export default function MyAdsScreen({
   return (
     <>
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold ${toast.type === 'success' ? 'bg-[#84CC16] text-white' : 'bg-red-500 text-white'}`}>
+        <div className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold ${toast.type === 'success' ? 'bg-[#84CC16] text-slate-950' : 'bg-red-500 text-white'}`}>
           {toast.text}
         </div>
       )}
@@ -342,7 +342,7 @@ export default function MyAdsScreen({
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h4 className="font-semibold text-slate-900 dark:text-white text-[13.5px] line-clamp-1">{localizedText(ad.title, lang)}</h4>
                   {ad.status !== 'active' && (
-                    <span className="badge bg-slate-200 text-slate-600 text-[10px] py-0.5">
+                    <span className="badge bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 text-[10px] py-0.5">
                       {ad.status === 'paused' ? (t.paused_status || 'Pausado') :
                        ad.status === 'expired' ? (t.expired_status || 'Expirado') :
                        ad.status === 'draft' ? (t.draft_status || 'Borrador') :
@@ -354,16 +354,16 @@ export default function MyAdsScreen({
                        ad.status}
                     </span>
                   )}
-                  {(() => { const d = daysUntilExpiry(ad.expires_at); if (ad.status === 'expired' || d !== null && d <= 0) return <span className="badge bg-red-100 text-red-700 text-[10px] py-0.5">{t.expired_status || 'Expired'}</span>; if (d !== null && d <= 7 && ad.status === 'active') return <span className="badge bg-orange-100 text-orange-700 text-[10px] py-0.5">{t.expires_in || 'Expires in'} {d} {t.days || 'days'}</span>; return null; })()}
-                  {(ad.promoted || ad.is_featured) && !promo && <span className="badge bg-lime-100 text-lime-700 text-[10px] py-0.5">{ad.promoted === 'urgente' ? t.urgent_badge : ad.promoted === 'highlight' ? t.highlighted_badge : (t.destacado || 'Destacado')}</span>}
+                  {(() => { const d = daysUntilExpiry(ad.expires_at); if (ad.status === 'expired' || d !== null && d <= 0) return <span className="badge bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300 text-[10px] py-0.5">{t.expired_status || 'Expired'}</span>; if (d !== null && d <= 7 && ad.status === 'active') return <span className="badge bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 text-[10px] py-0.5">{t.expires_in || 'Expires in'} {d} {t.days || 'days'}</span>; return null; })()}
+                  {(ad.promoted || ad.is_featured) && !promo && <span className="badge bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:text-lime-300 text-[10px] py-0.5">{ad.promoted === 'urgente' ? t.urgent_badge : ad.promoted === 'highlight' ? t.highlighted_badge : (t.destacado || 'Destacado')}</span>}
                 </div>
                 <div className="flex items-center gap-3 flex-wrap mt-0.5">
-                  <p className="text-[#65A30D] text-[13.5px] font-bold">
+                  <p className="text-lime-700 dark:text-lime-400 text-[13.5px] font-bold">
                     {formatMXN(ad.price, lang)}
                   </p>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> {formatNumber(ad.views || 0, lang)} {t.views}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> {formatNumber(ad.views || 0, lang)} {t.views}</p>
                   {promo && (
-                    <span className="text-[11px] font-semibold text-[#65A30D] flex items-center gap-1"><Zap className="w-3 h-3" /> {promo.remainingLabel}</span>
+                    <span className="text-[11px] font-semibold text-lime-700 dark:text-lime-400 flex items-center gap-1"><Zap className="w-3 h-3" /> {promo.remainingLabel}</span>
                   )}
                 </div>
                 {promo && (
@@ -398,12 +398,12 @@ export default function MyAdsScreen({
               {!selectionMode && (
                 <div className="flex w-full sm:w-auto sm:min-w-0 sm:max-w-[60%] gap-1.5 mt-1 sm:mt-0 flex-wrap justify-end">
                   {!correction && <Link to={`/?ad=${ad.id}`} data-testid={`view-ad-${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 text-[11px]"><ExternalLink className="w-3 h-3" /> {t.view || 'Ver'}</Link>}
-                  <Link to={`/anuncio/${ad.id}/editar`} data-testid={`edit-ad-${ad.id}`} className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${correction ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}><Pencil className="w-3 h-3" /> {correction ? (t.correct_and_resubmit) : (t.edit || 'Editar')}</Link>
-                  {ad.status === 'active' && <button data-testid={`pause-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.pause || 'Pausar'}</button>}
-                  {ad.status === 'paused' && <button data-testid={`reactivate-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}
-                  {ad.status === 'archived' && ad.ai_moderation_status === 'approved' && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-[#65A30D] flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate}</button>}
-                  {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1 text-[11px]">{t.renew || 'Renew'}</button> : null; })()}
-                  {ad.status === 'expired' && <button data-testid={`republish-ad-${ad.id}`} onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-1 text-[11px]">{t.republish || 'Republicar'}</button>}
+                  <Link to={`/anuncio/${ad.id}/editar`} data-testid={`edit-ad-${ad.id}`} className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${correction ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-200' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}><Pencil className="w-3 h-3" /> {correction ? (t.correct_and_resubmit) : (t.edit || 'Editar')}</Link>
+                  {ad.status === 'active' && <button data-testid={`pause-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.pause || 'Pausar'}</button>}
+                  {ad.status === 'paused' && <button data-testid={`reactivate-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}
+                  {ad.status === 'archived' && ad.ai_moderation_status === 'approved' && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate}</button>}
+                  {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 flex items-center justify-center gap-1 text-[11px]">{t.renew || 'Renew'}</button> : null; })()}
+                  {ad.status === 'expired' && <button data-testid={`republish-ad-${ad.id}`} onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 flex items-center justify-center gap-1 text-[11px]">{t.republish || 'Republicar'}</button>}
                   {ad.status === 'active' && PROMO_CATEGORIES.map((key) => {
                     const isActiveHere = promo && promo.category === key;
                     const label = key === 'boost' ? (t.promo_boost || 'Subir')
@@ -414,14 +414,14 @@ export default function MyAdsScreen({
                         key={key}
                         onClick={() => handlePromoteAd(ad, key)}
                         title={isActiveHere ? `${promo.name} · ${promo.remainingLabel}` : label}
-                        className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${isActiveHere ? 'bg-[#84CC16] text-white' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}
+                        className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${isActiveHere ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}
                       >
                         <TrendingUp className="w-3 h-3" />
                         {isActiveHere ? promo.remainingLabel : label}
                       </button>
                     );
                   })}
-                  <button data-testid={`delete-ad-${ad.id}`} aria-label={`${t.delete || 'Eliminar'} ${localizedText(ad.title, lang)}`} onClick={() => handleDeleteAd(ad.id)} className="btn-sm flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center gap-1 text-[11px]"><Trash2 className="w-3 h-3" /></button>
+                  <button data-testid={`delete-ad-${ad.id}`} aria-label={`${t.delete || 'Eliminar'} ${localizedText(ad.title, lang)}`} onClick={() => handleDeleteAd(ad.id)} className="btn-sm flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/40 dark:hover:bg-red-900/50 dark:text-red-300 flex items-center justify-center gap-1 text-[11px]"><Trash2 className="w-3 h-3" /></button>
                 </div>
               )}
             </div>
@@ -434,9 +434,9 @@ export default function MyAdsScreen({
           <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 shrink-0">{selectedIds.size} {t.selected || 'seleccionados'}</span>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={doBulkPromoteWithCredits} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-[#0F172A] text-white flex items-center gap-1.5 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />} {t.promote_with_credits || 'Promocionar con créditos'} ({selectedIds.size} × 50)</button>
-            <button onClick={() => doBulkAction('pause')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-amber-50 text-amber-700 border border-amber-200 disabled:opacity-40">{t.pause || 'Pausar'}</button>
-            <button onClick={() => doBulkAction('activate')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-lime-50 text-[#65A30D] border border-lime-200 disabled:opacity-40">{t.reactivate || 'Activar'}</button>
-            <button onClick={() => doBulkAction('delete')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-red-50 text-red-600 border border-red-200 disabled:opacity-40">{t.delete || 'Eliminar'}</button>
+            <button onClick={() => doBulkAction('pause')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 disabled:opacity-40">{t.pause || 'Pausar'}</button>
+            <button onClick={() => doBulkAction('activate')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-lime-50 text-lime-800 border border-lime-200 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/60 disabled:opacity-40">{t.reactivate || 'Activar'}</button>
+            <button onClick={() => doBulkAction('delete')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/60 disabled:opacity-40">{t.delete || 'Eliminar'}</button>
           </div>
         </div>
       )}
@@ -447,7 +447,7 @@ export default function MyAdsScreen({
             <h3 className="text-[20px] md:text-[22px] font-bold mb-2 text-white">{t.upgrade_pro}</h3>
             <p className="text-[14px] text-white/80">{t.upgrade_pro_desc}</p>
           </div>
-          <button onClick={() => setShowPricingModal(true)} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-white whitespace-nowrap w-full md:w-auto text-center shadow-md">{t.tariffs}</button>
+          <button onClick={() => setShowPricingModal(true)} className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 whitespace-nowrap w-full md:w-auto text-center shadow-md">{t.tariffs}</button>
         </div>
       )}
     </>

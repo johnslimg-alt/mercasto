@@ -601,7 +601,7 @@ export default function AdDetailScreen({
     <button
       type="button"
       onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
-      className="mt-3 inline-flex items-center rounded-xl bg-[#84CC16] px-4 py-2 text-[13px] font-bold text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+      className="mt-3 inline-flex items-center rounded-xl bg-[#84CC16] px-4 py-2 text-[13px] font-bold text-slate-950 transition-colors hover:bg-[#65A30D]"
     >
       {detailCopy.publishSimilar}
     </button>
@@ -708,7 +708,7 @@ export default function AdDetailScreen({
     <button
       type="button"
       onClick={() => navigate(currentUser ? '/post' : '/vendedores', { state: { category: ad.category } })}
-      className="mt-4 w-full rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D] hover:text-white"
+      className="mt-4 w-full rounded-xl bg-[#84CC16] px-4 py-3 text-sm font-black text-slate-950 transition-colors hover:bg-[#65A30D]"
     >
       {detailCopy.publishFree}
     </button>

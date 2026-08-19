@@ -381,7 +381,7 @@ export default function CompanyRfcScreen({ lang, token }) {
   return (
     <div className="space-y-6">
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold ${toast.type === 'success' ? 'bg-[#84CC16] text-white' : 'bg-red-500 text-white'}`}>
+        <div className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold ${toast.type === 'success' ? 'bg-[#84CC16] text-slate-950' : 'bg-red-500 text-white'}`}>
           {toast.text}
         </div>
       )}

@@ -66,11 +66,12 @@ async function registerUser(page, email, name = 'E2E Test User', password = 'E2e
 
   await page.waitForFunction(() => localStorage.getItem('auth_token') !== null, { timeout: 10000 }).catch(() => {});
 
-  const skipButton = page.locator('button').filter({ hasText: /Omitir|Skip/i }).first();
-  await skipButton.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
-  if (await skipButton.isVisible().catch(() => false)) {
-    await skipButton.click();
-    await skipButton.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
+  const onboarding = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: /Bienvenido a Mercasto|Welcome to Mercasto/i }) }).first();
+  await onboarding.waitFor({ state: 'visible', timeout: 2500 }).catch(() => {});
+  if (await onboarding.isVisible().catch(() => false)) {
+    const closeButton = onboarding.getByRole('button', { name: /Cerrar|Close/i }).first();
+    await closeButton.click();
+    await onboarding.waitFor({ state: 'hidden', timeout: 5000 });
   }
 }
 
@@ -159,11 +160,20 @@ test.describe('Authentication E2E Flow', () => {
     await modal.locator('input[name="password_confirmation"]').fill(RESET_NEW_PASSWORD);
     await modal.locator('button[type="submit"]').click();
 
-    const loginModal = getModal(page);
-    await expect(loginModal.locator('input[name="email"]')).toBeVisible({ timeout: 8000 });
-    await loginModal.locator('input[name="email"]').fill(fixture.email);
-    await loginModal.locator('input[name="password"]').fill(RESET_NEW_PASSWORD);
-    await loginModal.locator('input[name="password"]').press('Enter');
+    const loginModal = page.getByRole('dialog').filter({
+      has: page.getByRole('heading', { name: /Iniciar Sesión|Login/i }),
+    }).first();
+    await expect(loginModal).toBeVisible({ timeout: 8000 });
+    const emailInput = loginModal.locator('input[type="email"][name="email"]');
+    const passwordInput = loginModal.locator('input[type="password"][name="password"]');
+    await expect(emailInput).toBeVisible();
+    await expect(passwordInput).toBeVisible();
+    await emailInput.fill(fixture.email);
+    await expect(emailInput).toHaveValue(fixture.email);
+    await passwordInput.fill(RESET_NEW_PASSWORD);
+    await expect(passwordInput).toHaveValue(RESET_NEW_PASSWORD);
+    await expect(emailInput).toHaveValue(fixture.email);
+    await loginModal.getByRole('button', { name: /Iniciar Sesión|Login/i }).click();
     await page.waitForFunction(() => localStorage.getItem('auth_token') !== null, { timeout: 10000 });
   });
 
@@ -225,7 +235,7 @@ test.describe('Authentication E2E Flow', () => {
     const accountButton = page.getByRole('button', { name: /E2E Login User|Abrir menú de cuenta/i }).filter({ visible: true }).first();
     await expect(accountButton).toBeVisible({ timeout: 10000 });
     await accountButton.click();
-    const logoutButton = page.getByRole('button', { name: 'Salir' }).filter({ visible: true }).first();
+    const logoutButton = page.getByRole('button', { name: /Cerrar sesión|Salir|Log out|Logout/i }).filter({ visible: true }).first();
     await expect(logoutButton).toBeVisible({ timeout: 5000 });
     await logoutButton.click();
     await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBeNull();

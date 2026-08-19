@@ -401,7 +401,7 @@ export default function EditAdScreen({ t, lang }) {
             {t.cancel}
           </button>
           <button type="submit" data-testid="edit-ad-save" disabled={saving}
-            className="flex-1 py-3 rounded-2xl bg-[#84CC16] hover:bg-[#65A30D] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+            className="flex-1 py-3 rounded-2xl bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {t.saving_word}...</> : (t.save_changes)}
           </button>
         </div>
