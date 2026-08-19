@@ -1,9 +1,17 @@
 import React from 'react';
-import { Loader2 as Loader2Icon, Sparkles } from 'lucide-react';
-const AdSenseBanner = () => (
-  <div className="w-full col-span-2 sm:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 text-[12px] font-bold uppercase tracking-widest border border-slate-200 h-[120px] shadow-inner my-2">
-    Espacio Publicitario
-  </div>
-);
+import { useUI } from '../../contexts/UIContext';
+import { getTranslations } from '../../utils/translations';
+
+const AdSenseBanner = () => {
+  const { lang, loadedLangVersion } = useUI();
+  void loadedLangVersion;
+  const t = getTranslations(lang);
+
+  return (
+    <div className="w-full col-span-2 sm:col-span-3 lg:col-span-4 xl:col-span-5 2xl:col-span-6 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 text-[12px] font-bold uppercase tracking-widest border border-slate-200 h-[120px] shadow-inner my-2 dark:bg-slate-900 dark:text-slate-500 dark:border-slate-800">
+      {t.ads}
+    </div>
+  );
+};
 
 export default AdSenseBanner;
