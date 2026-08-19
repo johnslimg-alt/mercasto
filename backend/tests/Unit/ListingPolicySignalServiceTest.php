@@ -32,6 +32,34 @@ class ListingPolicySignalServiceTest extends TestCase
         $this->assertNull($assessment['authoritative_action']);
     }
 
+    public function test_plural_high_risk_terms_are_recognized(): void
+    {
+        foreach (['armas de fuego', 'firearms', 'explosives', 'grenades', 'pistolas'] as $term) {
+            $assessment = $this->service()->assessListing([
+                'title' => ucfirst($term) . ' seminuevas',
+                'description' => 'Disponible para entrega local.',
+            ]);
+
+            $this->assertContains(
+                'weapons_ammunition_explosives',
+                $assessment['policy_ids'],
+                'Expected policy match for: ' . $term,
+            );
+        }
+    }
+
+    public function test_benign_pistol_tool_contexts_are_not_flagged_as_weapons(): void
+    {
+        foreach (['Pistola de calor industrial', 'Pistola de silicón profesional', 'Pistola para pintar'] as $title) {
+            $assessment = $this->service()->assessListing([
+                'title' => $title,
+                'description' => 'Herramienta usada en buen estado.',
+            ]);
+
+            $this->assertNotContains('weapons_ammunition_explosives', $assessment['policy_ids'], $title);
+        }
+    }
+
     public function test_normal_marketplace_copy_is_not_flagged(): void
     {
         $assessment = $this->service()->assessListing([
