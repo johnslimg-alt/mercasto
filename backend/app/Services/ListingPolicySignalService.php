@@ -6,9 +6,14 @@ use Illuminate\Support\Str;
 
 class ListingPolicySignalService
 {
+    private array $termsByPolicy;
+
     public function __construct(
         private readonly ListingPolicyMatrixService $matrix,
-    ) {}
+        ?array $termsByPolicy = null,
+    ) {
+        $this->termsByPolicy = $termsByPolicy ?? (array) config('listing_policy_terms', []);
+    }
 
     public function assessListing(array $listing): array
     {
@@ -21,9 +26,7 @@ class ListingPolicySignalService
         }
 
         $signals = [];
-        $termsByPolicy = (array) config('listing_policy_terms', []);
-
-        foreach ($termsByPolicy as $policyId => $terms) {
+        foreach ($this->termsByPolicy as $policyId => $terms) {
             if ($this->containsAnyPhrase($text, (array) $terms)) {
                 $policy = $this->matrix->policy((string) $policyId);
                 if (! $policy) {
