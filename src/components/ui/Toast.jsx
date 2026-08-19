@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
+import { useUI } from '../../contexts/UIContext';
+import { getTranslations } from '../../utils/translations';
 
 const ToastContext = createContext();
 
@@ -24,6 +26,8 @@ export const useToast = () => {
 };
 
 export const ToastProvider = ({ children }) => {
+  const { lang } = useUI();
+  const t = getTranslations(lang);
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((message, type = 'info', duration = 5000) => {
@@ -51,24 +55,24 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ addToast, removeToast, success, error, warning, info }}>
       {children}
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} removeToast={removeToast} closeLabel={t.close_btn || t.close} />
     </ToastContext.Provider>
   );
 };
 
-const ToastContainer = ({ toasts, removeToast }) => {
+const ToastContainer = ({ toasts, removeToast, closeLabel }) => {
   if (toasts.length === 0) return null;
 
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 max-w-sm">
       {toasts.map((toast) => (
-        <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+        <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} closeLabel={closeLabel} />
       ))}
     </div>
   );
 };
 
-const Toast = ({ toast, onClose }) => {
+const Toast = ({ toast, onClose, closeLabel }) => {
   const { type, message } = toast;
 
   const icons = {
@@ -95,7 +99,7 @@ const Toast = ({ toast, onClose }) => {
       <button
         onClick={onClose}
         className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-        aria-label="Cerrar"
+        aria-label={closeLabel}
       >
         <X className="w-4 h-4" />
       </button>

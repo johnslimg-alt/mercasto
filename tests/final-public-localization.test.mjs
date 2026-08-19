@@ -15,6 +15,7 @@ const faqSchema = fs.readFileSync('src/components/seo/FAQSchema.jsx', 'utf8');
 const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
 const adDetail = fs.readFileSync('src/components/screens/AdDetailScreen.jsx', 'utf8');
 const push = fs.readFileSync('src/components/ui/PushNotificationManager.jsx', 'utf8');
+const toast = fs.readFileSync('src/components/ui/Toast.jsx', 'utf8');
 
 async function translationsFor(lang) {
   return (await import(`../src/constants/translations/${lang}.js`)).default;
@@ -155,4 +156,16 @@ test('push notification UI and feedback use canonical localization keys while pr
   assert.match(push, /fetch\(`\$\{API_BASE\}\/push\/subscribe`,[\s\S]*?method: 'POST'/);
   assert.match(push, /fetch\(`\$\{API_BASE\}\/push\/unsubscribe`,[\s\S]*?method: 'POST'/);
   assert.match(push, /fetch\(`\$\{API_BASE\}\/push\/test`,[\s\S]*?method: 'POST'/);
+});
+
+
+test('global toast close control follows active locale instead of hardcoded Spanish', async () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const t = await translationsFor(lang);
+    assert.ok(String(t.close_btn || t.close || '').trim(), `${lang}.close`);
+  }
+  assert.equal(toast.includes('aria-label="Cerrar"'), false);
+  assert.match(toast, /const \{ lang \} = useUI\(\)/);
+  assert.match(toast, /const t = getTranslations\(lang\)/);
+  assert.match(toast, /aria-label=\{closeLabel\}/);
 });
