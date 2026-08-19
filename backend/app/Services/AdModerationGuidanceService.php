@@ -44,6 +44,17 @@ class AdModerationGuidanceService
         }
 
         $decision = $this->latestManualReviewDecision($ad);
+        $rollout = is_array($decision?->metadata['rollout'] ?? null)
+            ? $decision->metadata['rollout']
+            : [];
+
+        // In assist-only rollout, model output is evidence for the human queue,
+        // not an authoritative seller-facing change request. Only an explicit
+        // admin `changes_requested` decision may tell the seller what to fix.
+        if (($rollout['assist_only'] ?? false) === true) {
+            return null;
+        }
+
         $policyReview = is_array($decision?->metadata['policy_review'] ?? null)
             ? $decision->metadata['policy_review']
             : [];
