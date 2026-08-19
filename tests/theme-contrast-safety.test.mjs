@@ -21,8 +21,8 @@ test('UIProvider is the only owner of the persisted theme state', () => {
 });
 test('brand-lime surfaces never use white foreground text', () => {
   const unsafe = [];
-  const limeThenWhite = /bg-\\[#84CC16\\](?!\/)[^'"`}]*(?:\btext-white\b)/g;
-  const whiteThenConditionalLime = /text-white[^\n]{0,120}bg-\\[#84CC16\\](?!\/)/g;
+  const limeThenWhite = /bg-\[#84CC16\](?!\/)[^'"`}]*(?:\btext-white\b)/g;
+  const whiteThenConditionalLime = /text-white[^\n]{0,120}bg-\[#84CC16\](?!\/)/g;
   for (const file of jsxFiles('src')) {
     const source = fs.readFileSync(file, 'utf8');
     for (const match of source.matchAll(limeThenWhite)) unsafe.push(`${file}: ${match[0]}`);
