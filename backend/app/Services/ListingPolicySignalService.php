@@ -26,8 +26,12 @@ class ListingPolicySignalService
         }
 
         $signals = [];
-        foreach ($this->termsByPolicy as $policyId => $terms) {
-            if ($this->containsAnyPhrase($text, (array) $terms)) {
+        foreach ($this->termsByPolicy as $policyId => $rule) {
+            $rule = (array) $rule;
+            $include = array_is_list($rule) ? $rule : (array) ($rule['include'] ?? []);
+            $exclude = array_is_list($rule) ? [] : (array) ($rule['exclude'] ?? []);
+
+            if ($this->containsAnyPhrase($text, $include) && ! $this->containsAnyPhrase($text, $exclude)) {
                 $policy = $this->matrix->policy((string) $policyId);
                 if (! $policy) {
                     continue;
@@ -42,6 +46,10 @@ class ListingPolicySignalService
 
     private function containsAnyPhrase(string $normalizedText, array $terms): bool
     {
+        if ($terms === []) {
+            return false;
+        }
+
         $haystack = ' ' . $normalizedText . ' ';
 
         foreach ($terms as $term) {
