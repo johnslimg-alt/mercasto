@@ -17,6 +17,7 @@ const adDetail = fs.readFileSync('src/components/screens/AdDetailScreen.jsx', 'u
 const push = fs.readFileSync('src/components/ui/PushNotificationManager.jsx', 'utf8');
 const toast = fs.readFileSync('src/components/ui/Toast.jsx', 'utf8');
 const cookieBanner = fs.readFileSync('src/components/CookieBanner.jsx', 'utf8');
+const pricingModal = fs.readFileSync('src/components/modals/PricingModal.jsx', 'utf8');
 
 async function translationsFor(lang) {
   return (await import(`../src/constants/translations/${lang}.js`)).default;
@@ -213,4 +214,17 @@ test('global App shell uses guaranteed localization keys without fallback litera
   ]) assert.equal(app.includes(fallback), false, fallback);
   assert.match(app, /placeholder=\{t\.search_placeholder\}/);
   assert.match(app, /placeholder=\{t\.search_placeholder_short\}/);
+});
+
+test('pricing modal uses guaranteed localization keys without fallback literals', async () => {
+  const keys = [...new Set([...pricingModal.matchAll(/(?<![A-Za-z0-9_])t\.([A-Za-z0-9_]+)/g)].map((match) => match[1]))];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const t = await translationsFor(lang);
+    for (const key of keys) assert.ok(String(t[key] || '').trim(), `${lang}.${key}`);
+  }
+  assert.doesNotMatch(pricingModal, /t\.[A-Za-z0-9_]+\s*\|\|/);
+  for (const productCode of ['boost_1_day', 'boost_3_days', 'highlight_7_days', 'featured_7_days', 'featured_30_days', 'top_category_7_days']) {
+    assert.ok(pricingModal.includes(`'${productCode}'`), productCode);
+  }
+  for (const price of [19, 49, 79, 149, 399]) assert.ok(pricingModal.includes(`handlePromotionProductPayment(${price},`), `promotion ${price}`);
 });
