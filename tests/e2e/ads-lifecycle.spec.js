@@ -10,65 +10,55 @@ const uniqueAdTitle = () => `Toyota Corolla E2E ${Date.now()} ${Math.floor(Math.
 
 test.skip(!E2E_SELLER_EMAIL || !E2E_SELLER_PASSWORD, 'Set E2E_SELLER_EMAIL and E2E_SELLER_PASSWORD to run seller lifecycle tests.');
 
-// Precise helper to select the active auth modal container on the page uniquely
-const getModal = (page) => page.locator('.fixed.inset-0').filter({ has: page.locator('input[name="email"], input[name="code"]') }).first();
+const sessionCache = new Map();
 
-// Helper to log in a user using the modal flow
-async function loginUser(page, email, password) {
-  const userButton = page.locator('.header-user-button, .mobile-account-button').filter({ visible: true }).first();
-  await expect(userButton).toBeVisible();
+async function authenticatedSession(request, email, password) {
+  if (sessionCache.has(email)) return sessionCache.get(email);
 
-  const modal = getModal(page);
+  const maxAttempts = 6;
+  let response;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    response = await request.post(`${API_BASE_URL}/login`, {
+      data: { email, password },
+      headers: { Accept: 'application/json' },
+    });
+    if (response.ok() || response.status() !== 429 || attempt === maxAttempts) break;
 
-  // Real Playwright click
-  await userButton.click();
-  await expect(modal).toBeVisible({ timeout: 5000 });
-
-  // Wait for modal animation to settle and React click handlers to attach
-  await page.waitForTimeout(500);
-
-  // Ensure modal is in Login mode (header has "Iniciar Sesión" or "Login")
-  const h2Text = await modal.locator('h2').innerText().catch(() => '');
-  if (!/Iniciar Sesión|Login/i.test(h2Text)) {
-    const hasAccountBtn = modal.locator('button:has-text("tienes cuenta")').first();
-    const smsBackBtn = modal.locator('button:has-text("Volver a iniciar")').first();
-
-    if (await hasAccountBtn.isVisible()) {
-      await hasAccountBtn.click();
-    } else if (await smsBackBtn.isVisible()) {
-      await smsBackBtn.click();
-    }
-    await expect(modal.locator('h2')).toContainText(/Iniciar Sesión|Login/i, { timeout: 3000 });
+    const payload = await response.json().catch(() => ({}));
+    const retryAfterHeader = Number(response.headers()['retry-after'] || 0);
+    const retryAfterBody = Number(payload?.retry_after || 0);
+    await new Promise(resolve => setTimeout(resolve, Math.max(1, retryAfterHeader, retryAfterBody) * 1000));
   }
 
-  // Fill credentials inside the modal
-  await modal.locator('input[name="email"]').fill(email);
-  await modal.locator('input[name="password"]').fill(password);
-
-  // Submit login via Enter key
-  await modal.locator('input[name="password"]').press('Enter');
-
-  // Wait for the auth session token to be successfully saved in localStorage
-  await page.waitForFunction(() => localStorage.getItem('auth_token') !== null, { timeout: 10000 });
-
-  // Wait for onboarding modal and dismiss it if it appears (App.jsx opens it with a 500ms delay)
-  const skipButton = page.locator('button').filter({ hasText: /Omitir|Skip/i }).first();
-  await skipButton.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
-  if (await skipButton.isVisible().catch(() => false)) {
-    await skipButton.click();
-    await skipButton.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
-  }
+  expect(response?.ok(), `login status=${response?.status() ?? 'unavailable'} for ${email}`).toBeTruthy();
+  const payload = await response.json();
+  const session = { token: payload.access_token || payload.token, user: payload.user };
+  sessionCache.set(email, session);
+  return session;
 }
 
+async function installUserSession(page, request, email, password) {
+  const session = await authenticatedSession(request, email, password);
+  await page.evaluate(({ token, user }) => {
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+  }, session);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.header-user-button, .mobile-account-button').filter({ visible: true }).first())
+    .not.toContainText(/Invitado|Guest/i, { timeout: 10000 });
+}
 
-async function logoutUser(page) {
-  const accountButton = page.locator('.header-user-button, .mobile-account-button').filter({ visible: true }).first();
-  await expect(accountButton).toBeVisible({ timeout: 10000 });
-  await accountButton.click();
-  const logoutButton = page.getByRole('button', { name: /Salir|Logout/i }).filter({ visible: true }).first();
-  await expect(logoutButton).toBeVisible({ timeout: 5000 });
-  await logoutButton.click();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBeNull();
+async function dismissOnboarding(page) {
+  const onboarding = page.getByRole('dialog').filter({
+    has: page.getByRole('heading', { name: /Bienvenido a Mercasto|Welcome to Mercasto/i }),
+  }).first();
+  await onboarding.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+  if (await onboarding.isVisible().catch(() => false)) {
+    await onboarding.getByRole('button', { name: /Cerrar|Close/i }).first().click();
+    await onboarding.waitFor({ state: 'hidden', timeout: 5000 });
+  }
 }
 
 async function authenticatedAds(page, request) {
@@ -96,13 +86,8 @@ async function createTestAd(page, options = {}) {
   // Navigate to the post screen (the route in SPA is /post)
   await page.goto('/post');
 
-  // Dismiss onboarding modal if it appears (safeguard)
-  const skipButton = page.locator('button').filter({ hasText: /Omitir|Skip/i }).first();
-  await skipButton.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
-  if (await skipButton.isVisible().catch(() => false)) {
-    await skipButton.click().catch(() => {});
-    await skipButton.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
-  }
+  // Dismiss onboarding modal if it appears (safeguard).
+  await dismissOnboarding(page);
 
   // Scope elements within the post form to prevent any header/footer collision
   const formContainer = page.locator('main form').first();
@@ -157,10 +142,12 @@ async function createTestAd(page, options = {}) {
   const yearInput = formContainer.locator('div:has(> label:has-text("Año")) input, div:has(> label:has-text("Year")) input').first();
   await yearInput.fill('2022');
 
-  const kmsInput = formContainer.locator('div:has(> label:has-text("Kilómetros")) input, div:has(> label:has-text("Kilometer")) input').first();
+  const kmsInput = formContainer.getByRole('spinbutton', { name: /kms|kilómetros|kilometers?/i }).first();
+  await expect(kmsInput).toBeVisible();
   await kmsInput.fill('45000');
 
-  const fuelSelect = formContainer.locator('div:has(> label:has-text("Combustible")), div:has(> label:has-text("Fuel"))').locator('select').first();
+  const fuelSelect = formContainer.getByRole('combobox', { name: /fuel|combustible/i }).first();
+  await expect(fuelSelect).toBeVisible();
   await fuelSelect.selectOption({ label: 'Gasolina' });
 
   if (useAiDescription) {
@@ -238,7 +225,7 @@ async function createTestAd(page, options = {}) {
 
 test.describe('Ads Lifecycle E2E Flow', () => {
   test.describe.configure({ timeout: 60_000 });
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
     // Navigate to homepage, clear state, and login
     await page.goto('/');
     await page.evaluate(() => localStorage.clear());
@@ -251,7 +238,7 @@ test.describe('Ads Lifecycle E2E Flow', () => {
       await acceptCookies.click().catch(() => {});
     }
 
-    await loginUser(page, E2E_SELLER_EMAIL, E2E_SELLER_PASSWORD);
+    await installUserSession(page, request, E2E_SELLER_EMAIL, E2E_SELLER_PASSWORD);
   });
 
   test('should create a new ad with media and category-specific attributes', async ({ page }) => {
@@ -305,21 +292,21 @@ test.describe('Ads Lifecycle E2E Flow', () => {
     const activeAd = (payload.data || []).find((item) => item.title === 'Mercasto E2E Active Listing');
     expect(activeAd).toBeTruthy();
 
-    await logoutUser(page);
-    await loginUser(page, E2E_BUYER_EMAIL, E2E_BUYER_PASSWORD);
+    await installUserSession(page, request, E2E_BUYER_EMAIL, E2E_BUYER_PASSWORD);
     await page.goto(`/?ad=${activeAd.id}`);
     await expect(page.getByRole('heading', { name: 'Mercasto E2E Active Listing' }).first()).toBeVisible({ timeout: 10000 });
 
     await page.getByRole('button', { name: /Report listing|Reportar (?:este )?anuncio/i }).click();
-    const reportModal = page.locator('.fixed.inset-0').filter({ hasText: /Reportar Anuncio/i }).first();
+    const reportModal = page.getByRole('dialog', { name: /Reportar (?:este )?anuncio|Report listing/i }).first();
     await expect(reportModal).toBeVisible();
-    await reportModal.locator('select').selectOption('Contenido inapropiado');
-    await reportModal.locator('textarea').fill('Fixture E2E: contenido inapropiado para validar el flujo de reporte.');
+    await reportModal.getByRole('combobox', { name: /Motivo|Reason/i }).selectOption({ label: 'Contenido inapropiado' });
+    await reportModal.getByRole('textbox', { name: /Comentarios|Comments/i })
+      .fill('Fixture E2E: contenido inapropiado para validar el flujo de reporte.');
 
     const reportResponsePromise = page.waitForResponse((result) => (
       result.url().endsWith(`/api/ads/${activeAd.id}/report`) && result.request().method() === 'POST'
     ));
-    await reportModal.getByRole('button', { name: /Enviar Reporte/i }).click();
+    await reportModal.getByRole('button', { name: /Enviar reporte|Submit report/i }).click();
     const reportResponse = await reportResponsePromise;
     expect(reportResponse.status()).toBe(200);
     await expect(reportModal).not.toBeVisible();

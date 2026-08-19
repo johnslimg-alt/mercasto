@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 
 const ISOLATED_STACK = process.env.E2E_ISOLATED_STACK === '1';
@@ -8,32 +8,44 @@ const E2E_SELLER_PASSWORD = process.env.E2E_SELLER_PASSWORD || 'E2eTestPass99!';
 const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin_e2e@mercasto.com';
 const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'E2eTestPass99!';
 const CLIP_WEBHOOK_SECRET = process.env.CLIP_WEBHOOK_SECRET || 'test-webhook-secret';
+const CLIP_E2E_PUBLIC_BASE_URL = process.env.CLIP_E2E_PUBLIC_BASE_URL || 'http://127.0.0.1:18001';
 
-const getModal = (page) => page
-  .locator('.fixed.inset-0')
-  .filter({ has: page.locator('input[name="email"], input[name="code"]') })
-  .first();
+const sessionCache = new Map();
 
-async function loginUser(page, email, password) {
-  const userButton = page
-    .locator('.header-user-button, .mobile-account-button')
-    .filter({ visible: true })
-    .first();
-  await expect(userButton).toBeVisible();
-  await userButton.click();
+async function authenticatedSession(request, email, password) {
+  if (sessionCache.has(email)) return sessionCache.get(email);
 
-  const modal = getModal(page);
-  await expect(modal).toBeVisible({ timeout: 5000 });
-  await modal.locator('input[name="email"]').fill(email);
-  await modal.locator('input[name="password"]').fill(password);
-  await modal.locator('input[name="password"]').press('Enter');
-  await page.waitForFunction(() => localStorage.getItem('auth_token') !== null, { timeout: 10000 });
-
-  const skipButton = page.getByRole('button', { name: /Omitir|Skip/i }).first();
-  await skipButton.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
-  if (await skipButton.isVisible().catch(() => false)) {
-    await skipButton.click();
+  let response;
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    response = await request.post(`${API_BASE_URL}/login`, {
+      data: { email, password },
+      headers: { Accept: 'application/json' },
+    });
+    if (response.ok() || response.status() !== 429 || attempt === 6) break;
+    const payload = await response.json().catch(() => ({}));
+    const retryAfterHeader = Number(response.headers()['retry-after'] || 0);
+    const retryAfterBody = Number(payload?.retry_after || 0);
+    await new Promise(resolve => setTimeout(resolve, Math.max(1, retryAfterHeader, retryAfterBody) * 1000));
   }
+
+  expect(response?.ok(), `login status=${response?.status() ?? 'unavailable'} for ${email}`).toBeTruthy();
+  const payload = await response.json();
+  const session = { token: payload.access_token || payload.token, user: payload.user };
+  sessionCache.set(email, session);
+  return session;
+}
+
+async function loginUser(page, request, email, password) {
+  const session = await authenticatedSession(request, email, password);
+  await page.evaluate(({ token, user }) => {
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+  }, session);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.header-user-button, .mobile-account-button').filter({ visible: true }).first())
+    .not.toContainText(/Invitado|Guest/i, { timeout: 10000 });
 }
 
 async function authToken(page) {
@@ -75,8 +87,8 @@ test.describe('Payments and Clip Billing E2E Flow', () => {
     });
   });
 
-  test('renders billing history and the current pricing catalog', async ({ page }) => {
-    await loginUser(page, E2E_SELLER_EMAIL, E2E_SELLER_PASSWORD);
+  test('renders billing history and the current pricing catalog', async ({ page, request }) => {
+    await loginUser(page, request, E2E_SELLER_EMAIL, E2E_SELLER_PASSWORD);
     await page.goto('/profile');
 
     await page.getByRole('button', { name: /^Transacciones$/i }).click();
@@ -90,7 +102,7 @@ test.describe('Payments and Clip Billing E2E Flow', () => {
   });
 
   test('creates a Clip checkout, verifies it and fulfills it exactly once', async ({ page, request }, testInfo) => {
-    await loginUser(page, E2E_SELLER_EMAIL, E2E_SELLER_PASSWORD);
+    await loginUser(page, request, E2E_SELLER_EMAIL, E2E_SELLER_PASSWORD);
     const token = await authToken(page);
     const pricingModal = await openPricing(page);
     const mobileProject = testInfo.project.name.includes('mobile');
@@ -102,7 +114,8 @@ test.describe('Payments and Clip Billing E2E Flow', () => {
     await expect(planCard).toBeVisible();
     await planCard.getByRole('button', { name: /Adquirir plan|Get plan/i }).click();
 
-    await page.waitForURL(/^http:\/\/127\.0\.0\.1:18001\/checkout\/local-checkout-/, { timeout: 15000 });
+    const clipOrigin = new URL(CLIP_E2E_PUBLIC_BASE_URL).origin;
+    await page.waitForURL((url) => url.origin === clipOrigin && url.pathname.startsWith('/checkout/local-checkout-'), { timeout: 15000 });
     await expect(page.getByRole('heading', { name: 'Clip local checkout' })).toBeVisible();
     const paymentRequestId = new URL(page.url()).pathname.split('/').pop();
     expect(paymentRequestId).toMatch(/^local-checkout-/);
@@ -121,8 +134,7 @@ test.describe('Payments and Clip Billing E2E Flow', () => {
       payment_request_id: paymentRequestId,
       me_reference_id: pending.clip_checkout_id,
     });
-    const signature = crypto
-      .createHmac('sha256', CLIP_WEBHOOK_SECRET)
+    const signature = createHmac('sha256', CLIP_WEBHOOK_SECRET)
       .update(webhookBody)
       .digest('hex');
 
@@ -171,8 +183,8 @@ test.describe('Payments and Clip Billing E2E Flow', () => {
     expect((await response.json()).status).toBe('invalid_signature');
   });
 
-  test('exposes payment audit and recovery tools only to an admin', async ({ page }) => {
-    await loginUser(page, E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
+  test('exposes payment audit and recovery tools only to an admin', async ({ page, request }) => {
+    await loginUser(page, request, E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
     await page.goto('/admin');
     await expect(page.locator('body')).toContainText(/Administración|Panel de Admin/i);
     await page.getByRole('button', { name: /Pagos|Payments/i }).first().click();

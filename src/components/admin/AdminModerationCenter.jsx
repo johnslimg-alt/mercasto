@@ -257,17 +257,17 @@ export default function AdminModerationCenter() {
         type="button"
         dir={direction}
         onClick={() => { setOpen(true); loadQueue(); }}
-        className="fixed right-4 bottom-20 md:bottom-6 z-[80] flex items-center gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-start text-white shadow-2xl ring-1 ring-white/10 hover:bg-slate-900"
+        className="fixed right-3 bottom-20 md:right-4 md:bottom-6 z-[80] flex items-center gap-3 rounded-2xl bg-slate-950 p-2.5 text-start text-white shadow-2xl ring-1 ring-white/10 hover:bg-slate-900 sm:px-4 sm:py-3"
         aria-label={t('openAria')}
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-lime-400 text-xl text-slate-950">✓</span>
-        <span>
+        <span className="hidden sm:block">
           <span className="block text-sm font-extrabold">{t('smartModeration')}</span>
           <span className="block text-xs text-slate-300">
             {t('summary', { count: total })}{oldest ? ` · ${t('oldest', { wait: formatWait(oldest.waiting_seconds, t) })}` : ''}
           </span>
         </span>
-        {total > 0 && <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-black">{total}</span>}
+        {total > 0 && <span className="absolute -right-1.5 -top-1.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black sm:static sm:px-2 sm:text-xs">{total}</span>}
       </button>
 
       {open && (

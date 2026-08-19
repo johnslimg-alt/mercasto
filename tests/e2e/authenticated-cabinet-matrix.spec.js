@@ -65,21 +65,50 @@ async function authenticate(request, role) {
   return { token: payload.access_token || payload.token, user: payload.user };
 }
 
-async function installSession(page, session) {
-  await page.addInitScript(({ token, user }) => {
+async function installSession(page, session, theme = 'light') {
+  await page.addInitScript(({ token, user, theme }) => {
     localStorage.setItem('lang', 'es');
     localStorage.setItem('mercasto_language', 'es');
     localStorage.setItem('cookiesAccepted', 'true');
     localStorage.setItem('cookie_consent', 'essential');
     localStorage.setItem('auth_token', token);
     localStorage.setItem('user', JSON.stringify(user));
-  }, session);
+    localStorage.setItem('theme', theme);
+  }, { ...session, theme });
 }
 
 async function expectNoHorizontalOverflow(page) {
   await expect.poll(() => page.evaluate(() => (
     document.documentElement.scrollWidth - document.documentElement.clientWidth
   ))).toBeLessThanOrEqual(1);
+}
+
+async function expectDarkThemeIntegrity(page) {
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBeTruthy();
+  const brightSurfaces = await page.evaluate(() => {
+    const findings = [];
+    for (const element of document.querySelectorAll('body *')) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      if (rect.width < 80 || rect.height < 24 || style.display === 'none' || style.visibility === 'hidden') continue;
+      const match = style.backgroundColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/);
+      if (!match) continue;
+      const [red, green, blue] = match.slice(1, 4).map(Number);
+      const alpha = match[4] === undefined ? 1 : Number(match[4]);
+      if (alpha > 0.2 && Math.min(red, green, blue) >= 175) {
+        findings.push({
+          tag: element.tagName,
+          background: style.backgroundColor,
+          className: String(element.className || '').slice(0, 140),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        });
+        if (findings.length >= 10) break;
+      }
+    }
+    return findings;
+  });
+  expect(brightSurfaces, `Unexpected bright surfaces in dark theme: ${JSON.stringify(brightSurfaces)}`).toEqual([]);
 }
 
 function watchPageErrors(page) {
@@ -186,4 +215,43 @@ for (const viewport of viewports) {
     }
     expect(errors).toEqual([]);
   });
+}
+
+const darkThemeViewports = [
+  { name: 'desktop-1440-dark', width: 1440, height: 900 },
+  { name: 'mobile-390-dark', width: 390, height: 844 },
+];
+
+const darkThemeCases = [
+  { name: 'seller', role: 'seller', path: '/profile', prefix: 'dashboard-tab-', tabs: sellerTabs, marker: 'dashboard-ai-brand-message' },
+  { name: 'buyer', role: 'buyer', path: '/profile', prefix: 'dashboard-tab-', tabs: buyerTabs, marker: 'dashboard-ai-brand-message' },
+  { name: 'admin', role: 'admin', path: '/admin', prefix: 'admin-tab-', tabs: adminTabs },
+  { name: 'marketing', role: 'admin', path: '/admin/marketing?section=dashboard', prefix: 'marketing-section-', tabs: marketingSections },
+];
+
+for (const viewport of darkThemeViewports) {
+  for (const cabinet of darkThemeCases) {
+    test(`${cabinet.name} dark theme stays visually safe at ${viewport.name}`, async ({ page, request }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium-layout-cabinet', 'Dark visual guard runs once in Chromium layout coverage.');
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      const errors = watchPageErrors(page);
+      await installSession(page, await authenticate(request, cabinet.role), 'dark');
+      await page.goto(cabinet.path);
+      if (cabinet.marker) await expect(page.getByTestId(cabinet.marker)).toBeVisible();
+      else if (cabinet.name === 'admin') await expect(page.locator('main')).toBeVisible();
+      else await expect(page.getByText('Mercasto Marketing', { exact: true })).toBeVisible();
+      await expectDarkThemeIntegrity(page);
+
+      for (const tabId of cabinet.tabs) {
+        const button = page.getByTestId(`${cabinet.prefix}${tabId}`);
+        await expect(button).toBeVisible();
+        await button.click();
+        await expect(button).toHaveAttribute('aria-pressed', 'true');
+        await expectNoHorizontalOverflow(page);
+        await expectDarkThemeIntegrity(page);
+        await capture(page, viewport, cabinet.name, `dark-${tabId}`, testInfo.project.name);
+      }
+      expect(errors).toEqual([]);
+    });
+  }
 }
