@@ -10,12 +10,12 @@ class AiRuntimePreload extends Command
 {
     protected $signature = 'ai:runtime-preload {--timeout=90 : Maximum preload time in seconds}';
 
-    protected $description = 'Preload the configured local Ollama model without user data and verify it is resident.';
+    protected $description = 'Preload the configured local Ollama text model without user data and verify it is resident.';
 
     public function handle(): int
     {
         $baseUrl = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
-        $model = trim((string) config('services.ollama.chat_model', 'qwen3-vl:4b-instruct'));
+        $model = trim((string) config('services.ollama.chat_model', 'qwen2.5:1.5b'));
         $keepAlive = config('services.ollama.keep_alive', '24h');
         $timeout = max(30, min(180, (int) $this->option('timeout')));
         $startedAt = hrtime(true);
