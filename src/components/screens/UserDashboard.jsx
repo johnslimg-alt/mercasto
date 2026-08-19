@@ -1276,7 +1276,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-red-200 dark:border-red-500/30 p-6">
                   <h3 className="font-bold text-sm text-red-600 dark:text-red-400 mb-1">{t.danger_zone || 'Zona de Peligro'}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 max-w-md">{t.del_warning || 'Una vez que elimines tu cuenta perderás todo...'}</p>
-                  <button onClick={handleDeleteAccount} className="btn-sm bg-red-50 hover:bg-red-100 text-red-600 border border-red-200">
+                  <button onClick={handleDeleteAccount} className="btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/50 dark:text-red-300 dark:border-red-800/60">
                     {t.del_account || 'Eliminar Cuenta'}
                   </button>
                 </div>
@@ -1294,7 +1294,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
             </div>
             <button 
               onClick={() => setShowPricingModal(true)} 
-              className="btn-md bg-gradient-to-r from-lime-500 to-emerald-500 hover:from-lime-600 hover:to-emerald-600 text-white whitespace-nowrap w-full md:w-auto text-center shadow-xl"
+              className="btn-md bg-gradient-to-r from-lime-500 to-emerald-500 hover:from-lime-600 hover:to-emerald-600 text-slate-950 whitespace-nowrap w-full md:w-auto text-center shadow-xl"
             >
               {t.view_plans || 'Ver planes'}
             </button>

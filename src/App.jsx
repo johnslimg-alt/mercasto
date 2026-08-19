@@ -235,7 +235,7 @@ function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, 
             setAuthMode(mode);
             setShowAuthModal(true);
           }}
-          className="btn-lg mt-6 w-full bg-[#84CC16] text-white hover:bg-[#65A30D]"
+          className="btn-lg mt-6 w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]"
         >
           {isRegistration ? t.register : t.login}
         </button>
@@ -520,7 +520,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const { lang, setLang, loadedLangVersion } = useUI();
+  const { lang, setLang, loadedLangVersion, isDarkMode, setIsDarkMode } = useUI();
 
   // Page-view tracking. Keep filtered/catalog/detail states out of homepage conversion metrics.
   useEffect(() => {
@@ -1308,17 +1308,6 @@ function App() {
     impressionObserverRef.current?.disconnect();
   }, [flushAdImpressions]);
 
-  // --- СОСТОЯНИЕ ТЕМНОЙ ТЕМЫ ---
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
-      if (saved) {
-        return saved === 'dark';
-      }
-      return true; // Night mode by default
-    }
-    return true;
-  });
   const [qrModalData, setQrModalData] = useState(null);
   const fileInputRef = useRef(null);
   const [adStatusFilter, setAdStatusFilter] = useState('active');
@@ -1776,17 +1765,6 @@ function App() {
   useEffect(() => {
     localStorage.setItem('sliderAutoplay', sliderAutoplay);
   }, [sliderAutoplay]);
-
-  // --- ПРИМЕНЕНИЕ ТЕМНОЙ ТЕМЫ ---
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
 
   // --- ДИНАМИЧЕСКОЕ SEO & GOOGLE TAG MANAGER ---
   useEffect(() => {
@@ -4345,7 +4323,7 @@ function App() {
                     </select>
                   </>
                 )}
-                <button type="submit" data-testid="desktop-search-submit" className="desktop-header-search-submit btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white m-1 ml-2 flex items-center gap-1.5 rounded-full shadow-sm shadow-[#84CC16]/30">
+                <button type="submit" data-testid="desktop-search-submit" className="desktop-header-search-submit btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 m-1 ml-2 flex items-center gap-1.5 rounded-full shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
                   {t.search_btn}
                 </button>
@@ -4385,7 +4363,7 @@ function App() {
                         <option value="">{locState ? t.all_cities : t.select_state_first}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
-                      <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply}</button>
+                      <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-slate-950 py-3">{t.apply}</button>
                     </div>
                   )}
                 </div>
@@ -4435,7 +4413,7 @@ function App() {
                     </div>
                     <div className="flex gap-2">
                       <button type="button" data-testid="desktop-location-cancel" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">{t.cancel}</button>
-                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply}</button>
+                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">{t.apply}</button>
                     </div>
                   </div>
                 )}
@@ -4533,7 +4511,7 @@ function App() {
             </button>
             <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label={t.favorites || 'Favoritos'}>
                 <Heart className="w-[22px] h-[22px]" />
-                {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
+                {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-slate-950 text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
             <div className="relative hidden sm:block">
             <button data-testid="desktop-account-button" onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
@@ -4554,7 +4532,7 @@ function App() {
                 </div>
               )}
               </div>
-              <button onClick={() => { setCurrentTab('post'); setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control btn-lg bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white shadow-md shadow-[#84CC16]/20 ml-1 hidden sm:inline-flex items-center gap-1.5">
+              <button onClick={() => { setCurrentTab('post'); setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control btn-lg bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 shadow-md shadow-[#84CC16]/20 ml-1 hidden sm:inline-flex items-center gap-1.5">
               <PlusCircle className="w-4 h-4" /> {t.post_ad || "Publicar"}
               </button>
             </div>
@@ -4843,7 +4821,7 @@ function App() {
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
                 <input name="code" aria-label={t.auth_two_factor_placeholder} required autoFocus placeholder={t.auth_two_factor_placeholder} maxLength="32" className="w-full text-center tracking-[0.2em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
                 <div className="pt-2">
-                  <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">
+                  <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] flex items-center justify-center">
                     {authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_two_factor_verify}
                   </button>
                 </div>
@@ -4866,7 +4844,7 @@ function App() {
                 <form onSubmit={handlePhoneVerifySubmit} className="space-y-3.5">
                   <p className="text-center text-slate-500 dark:text-slate-400 text-[13px] -mt-2 mb-4">{t.auth_code_sent_to} <br/><strong>{authPhone}</strong></p>
                   <input name="code" aria-label={t.auth_code_placeholder} required autoFocus placeholder={t.auth_code_placeholder} maxLength="6" className="w-full text-center tracking-[0.5em] px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#84CC16]/30 focus:border-[#84CC16] text-[14px] transition-all bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"/>
-                  <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_phone_verify}</button>
+                  <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] flex items-center justify-center mt-2">{authLoading ? <Loader2 className="animate-spin" size={20}/> : t.auth_phone_verify}</button>
                 </form>
               )}
               <div className="mt-6 text-center">
@@ -4924,7 +4902,7 @@ function App() {
                       </>
                     )}
                     <div className="pt-2">
-                      <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-white hover:bg-[#65A30D] flex items-center justify-center">
+                      <button type="submit" disabled={authLoading} className="btn-lg w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] flex items-center justify-center">
                           {authLoading ? <Loader2 className="animate-spin" size={20}/> : (authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.send_link : t.reset_password)}
                       </button>
                     </div>

@@ -743,7 +743,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                               {job.loc === 'Remote' ? <span className="badge bg-slate-900 text-white">Remote</span> : job.loc}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button type="button" onClick={() => { runSearch(job.role, 'empleo'); }} className={`btn-sm text-white ${idx === 0 ? 'bg-[#84CC16] hover:bg-[#65A30D]' : 'bg-slate-900 hover:bg-black'}`}>{t.view || 'Ver'}</button>
+                              <button type="button" onClick={() => { runSearch(job.role, 'empleo'); }} className={`btn-sm ${idx === 0 ? 'bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]' : 'bg-slate-900 text-white hover:bg-black'}`}>{t.view || 'Ver'}</button>
                             </td>
                           </tr>
                         );
@@ -806,7 +806,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                         <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.description}</p>
                         <div className="flex items-center justify-between mt-3">
                           <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>${Number(srv.price || 0).toLocaleString()} MXN</strong></span>
-                          <button type="button" onClick={() => handleViewAd(srv)} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.view || 'Ver'}</button>
+                          <button type="button" onClick={() => handleViewAd(srv)} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">{t.view || 'Ver'}</button>
                         </div>
                       </div>
                     );
@@ -824,7 +824,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                       <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.desc}</p>
                       <div className="flex items-center justify-between mt-3">
                         <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>{srv.price}</strong></span>
-                        <button type="button" onClick={() => { runSearch(srv.title, 'servicios'); }} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.view || 'Ver'}</button>
+                        <button type="button" onClick={() => { runSearch(srv.title, 'servicios'); }} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">{t.view || 'Ver'}</button>
                       </div>
                     </div>
                   );
@@ -1033,7 +1033,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   </ul>
 
-                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#84CC16] text-slate-950 hover:bg-[#65A30D] hover:text-white">{t.view_plans}</button>
+                  <button onClick={() => setShowPricingModal(true)} className="btn-md w-full mt-5 bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">{t.view_plans}</button>
 
                 </div>
 

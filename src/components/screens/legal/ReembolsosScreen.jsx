@@ -12,7 +12,7 @@ const PolicyShell = ({ children }) => (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <a href="/" className="inline-flex items-center gap-2 font-black text-2xl tracking-tight">
-          <span className="w-9 h-9 rounded-2xl bg-[#84CC16] text-white grid place-items-center shadow-lg shadow-lime-500/20">M</span>
+          <span className="w-9 h-9 rounded-2xl bg-[#84CC16] text-slate-950 grid place-items-center shadow-lg shadow-lime-500/20">M</span>
           Mercasto
         </a>
         <nav className="flex flex-wrap gap-3 text-sm font-bold text-slate-600">

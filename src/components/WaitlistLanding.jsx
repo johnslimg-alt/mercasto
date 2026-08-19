@@ -269,7 +269,7 @@ export default function WaitlistLanding() {
                 <div className="flex items-center space-x-3">
                   <div className="flex -space-x-2">
                     {[...Array(Math.min(5, waitlistCount))].map((_, i) => (
-                      <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-400 to-emerald-500 border-2 border-white flex items-center justify-center text-white text-xs font-bold">
+                      <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-400 to-emerald-500 border-2 border-white flex items-center justify-center text-slate-950 text-xs font-bold">
                         {String.fromCharCode(65 + i)}
                       </div>
                     ))}

@@ -51,8 +51,8 @@ const staticPlatformDefs = [
 ];
 
 const statusClass = {
-  ready: 'bg-lime-100 text-lime-800',
-  attention: 'bg-amber-100 text-amber-800',
+  ready: 'bg-lime-100 text-lime-900 dark:bg-lime-950/40 dark:text-lime-300',
+  attention: 'bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300',
   planned: 'bg-slate-100 text-slate-600',
 };
 

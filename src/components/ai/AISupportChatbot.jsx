@@ -37,7 +37,7 @@ export default function AISupportChatbot() {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-lime-500 to-green-500 text-white rounded-full p-4 shadow-2xl hover:shadow-xl transition-all hover:scale-110"
+        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-lime-500 to-green-500 text-slate-950 rounded-full p-4 shadow-2xl hover:shadow-xl transition-all hover:scale-110"
         aria-label="Chat de soporte"
       >
         {isOpen ? <X size={24} /> : <Bot size={24} />}
@@ -47,7 +47,7 @@ export default function AISupportChatbot() {
       {isOpen && (
         <div className="fixed bottom-24 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-8rem)] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-slate-700">
           {/* Header */}
-          <div className="bg-gradient-to-r from-lime-500 to-green-500 text-white p-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-lime-500 to-green-500 text-slate-950 p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <Bot size={24} />

@@ -95,7 +95,7 @@ export default function AchievementsPanel({ lang = 'es' }) {
   return (
     <div className="space-y-6">
       {/* Level & XP Card */}
-      <div className="bg-gradient-to-br from-lime-500 to-green-600 rounded-2xl p-6 text-white shadow-xl">
+      <div className="bg-gradient-to-br from-lime-500 to-green-600 rounded-2xl p-6 text-slate-950 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-sm opacity-80">{tr.level}</div>

@@ -165,9 +165,9 @@ export default function GeoSourcePage({ slug }) {
             </section>
           )}
 
-          <section className="mt-12 rounded-3xl bg-lime-100 p-6 sm:p-8">
+          <section className="mt-12 rounded-3xl border border-lime-200 bg-lime-100 p-6 text-slate-950 dark:border-lime-800/50 dark:bg-lime-950/30 dark:text-slate-100 sm:p-8">
             <h2 className="text-2xl font-black tracking-tight">{shell.relatedTitle}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700 dark:text-slate-300">
               {shell.relatedBody}
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -175,10 +175,10 @@ export default function GeoSourcePage({ slug }) {
                 <Link
                   key={item.href}
                   to={item.href}
-                  className="flex items-center justify-between rounded-2xl border border-lime-300 bg-white px-5 py-4 font-bold text-slate-900 transition hover:border-lime-500 hover:shadow-sm"
+                  className="flex items-center justify-between rounded-2xl border border-lime-300 bg-white px-5 py-4 font-bold text-slate-900 transition hover:border-lime-500 hover:shadow-sm dark:border-lime-800/60 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-lime-500"
                 >
                   <span>{item.label}</span>
-                  <ArrowRight className="h-5 w-5 text-lime-700 rtl:rotate-180" />
+                  <ArrowRight className="h-5 w-5 text-lime-700 dark:text-lime-400 rtl:rotate-180" />
                 </Link>
               ))}
             </div>

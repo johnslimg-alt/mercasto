@@ -90,7 +90,7 @@ const statusInfo = (status, t) => {
       css: 'bg-blue-100 text-blue-700',
     };
   }
-  if (value === 'failed') return { label: t('statuses.failed'), css: 'bg-amber-100 text-amber-800' };
+  if (value === 'failed') return { label: t('statuses.failed'), css: 'bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300' };
   return { label: t('statuses.manualReview'), css: 'bg-orange-100 text-orange-800' };
 };
 

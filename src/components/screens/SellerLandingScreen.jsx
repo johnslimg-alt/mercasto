@@ -667,7 +667,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full sm:w-auto">
           <button
             onClick={() => handleStart()}
-            className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-[#84CC16] hover:bg-[#72B013] text-white font-bold px-8 py-4 rounded-2xl shadow-lg shadow-[#84CC16]/20 transition-all duration-200 text-lg hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-[#84CC16] hover:bg-[#72B013] text-slate-950 font-bold px-8 py-4 rounded-2xl shadow-lg shadow-[#84CC16]/20 transition-all duration-200 text-lg hover:scale-[1.02] active:scale-[0.98]"
           >
             <PlusCircle size={22} />
             <span>{t.cta_btn}</span>
@@ -766,7 +766,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative">
             {/* Step 1 */}
             <div className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-[#84CC16] text-white flex items-center justify-center font-bold text-lg mb-4 shadow-md shadow-[#84CC16]/20">
+              <div className="w-10 h-10 rounded-full bg-[#84CC16] text-slate-950 flex items-center justify-center font-bold text-lg mb-4 shadow-md shadow-[#84CC16]/20">
                 1
               </div>
               <h4 className="text-lg font-bold mb-2">{t.step1_title}</h4>
@@ -777,7 +777,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
 
             {/* Step 2 */}
             <div className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-[#84CC16] text-white flex items-center justify-center font-bold text-lg mb-4 shadow-md shadow-[#84CC16]/20">
+              <div className="w-10 h-10 rounded-full bg-[#84CC16] text-slate-950 flex items-center justify-center font-bold text-lg mb-4 shadow-md shadow-[#84CC16]/20">
                 2
               </div>
               <h4 className="text-lg font-bold mb-2">{t.step2_title}</h4>
@@ -788,7 +788,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
 
             {/* Step 3 */}
             <div className="flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-[#84CC16] text-white flex items-center justify-center font-bold text-lg mb-4 shadow-md shadow-[#84CC16]/20">
+              <div className="w-10 h-10 rounded-full bg-[#84CC16] text-slate-950 flex items-center justify-center font-bold text-lg mb-4 shadow-md shadow-[#84CC16]/20">
                 3
               </div>
               <h4 className="text-lg font-bold mb-2">{t.step3_title}</h4>
@@ -861,7 +861,7 @@ export default function SellerLandingScreen({ lang = 'es' }) {
         </p>
         <button
           onClick={() => handleStart()}
-          className="flex items-center justify-center gap-2 mx-auto bg-[#84CC16] hover:bg-[#72B013] text-white font-bold px-10 py-4.5 rounded-2xl shadow-xl shadow-[#84CC16]/10 transition-all duration-200 text-lg hover:scale-[1.02] active:scale-[0.98]"
+          className="flex items-center justify-center gap-2 mx-auto bg-[#84CC16] hover:bg-[#72B013] text-slate-950 font-bold px-10 py-4.5 rounded-2xl shadow-xl shadow-[#84CC16]/10 transition-all duration-200 text-lg hover:scale-[1.02] active:scale-[0.98]"
         >
           <PlusCircle size={22} />
           <span>{t.cta_footer_btn}</span>

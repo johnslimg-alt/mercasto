@@ -127,6 +127,38 @@ async function capture(page, viewport, role, screen, projectName) {
     fullPage: true,
   });
 }
+test('fresh session applies the theme on the first toggle click', async ({ page }, testInfo) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.addInitScript(() => {
+    localStorage.removeItem('theme');
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+  });
+  await page.goto('/');
+
+  const mobile = testInfo.project.name.includes('mobile');
+  const toggle = page.getByTestId(mobile ? 'mobile-theme-toggle' : 'desktop-theme-toggle');
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBeFalsy();
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => page.evaluate(() => ({
+    dark: document.documentElement.classList.contains('dark'),
+    stored: localStorage.getItem('theme'),
+  }))).toEqual({ dark: true, stored: 'dark' });
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(() => page.evaluate(() => ({
+    dark: document.documentElement.classList.contains('dark'),
+    stored: localStorage.getItem('theme'),
+  }))).toEqual({ dark: false, stored: 'light' });
+});
+
 const sellerTabs = ['my_ads', 'favorites', 'saved_searches', 'stats', 'transactions', 'contact_history', 'reviews', 'privacy', 'settings'];
 
 for (const viewport of viewports) {
