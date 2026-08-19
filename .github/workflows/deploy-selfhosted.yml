@@ -213,6 +213,12 @@ jobs:
             *" mercasto-backend "*) docker compose --env-file "$COMPOSE_ENV_FILE" exec -T mercasto-frontend nginx -s reload || true ;;
           esac
 
+      - name: Ensure local AI models
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/ensure-local-ai-models.sh
+
       - name: Кэш и очереди
         run: |
           set -euo pipefail

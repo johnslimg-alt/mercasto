@@ -70,6 +70,8 @@ services:
       - "DB_HOST=postgres"
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
+      - "OLLAMA_TEXT_MODEL=qwen2.5:1.5b"
+      - "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct"
     depends_on:
       postgres:
         condition: service_healthy
@@ -112,6 +114,8 @@ services:
       - "DB_HOST=postgres"
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
+      - "OLLAMA_TEXT_MODEL=qwen2.5:1.5b"
+      - "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct"
     depends_on:
       postgres:
         condition: service_healthy
@@ -202,7 +206,7 @@ services:
       - "8080"
     environment:
       - "OLLAMA_BASE_URL=http://ollama:11434"
-      - "OLLAMA_VISION_MODEL=${OLLAMA_CHAT_MODEL:-qwen3-vl:4b-instruct}"
+      - "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct"
       - "OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT:-90}"
       - "MERCASTO_AI_INTERNAL_TOKEN=${MERCASTO_AI_INTERNAL_TOKEN:-}"
     depends_on:

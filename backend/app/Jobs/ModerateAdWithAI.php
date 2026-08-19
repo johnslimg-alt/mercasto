@@ -83,7 +83,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'timeout' => 150,
                 'num_ctx' => 4096,
             ]);
-            $model = (string) ($aiResponse['model'] ?? config('services.ollama.chat_model', 'qwen3-vl:4b-instruct'));
+            $model = (string) ($aiResponse['model'] ?? config('services.ollama.vision_model', 'qwen3-vl:2b-instruct'));
             $result = $this->parseResult((string) data_get($aiResponse, 'choices.0.message.content', ''));
 
             $decision = $this->safeDecision($result['decision'], $result['confidence']);
