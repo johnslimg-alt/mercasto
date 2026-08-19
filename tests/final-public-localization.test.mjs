@@ -16,6 +16,7 @@ const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
 const adDetail = fs.readFileSync('src/components/screens/AdDetailScreen.jsx', 'utf8');
 const push = fs.readFileSync('src/components/ui/PushNotificationManager.jsx', 'utf8');
 const toast = fs.readFileSync('src/components/ui/Toast.jsx', 'utf8');
+const cookieBanner = fs.readFileSync('src/components/CookieBanner.jsx', 'utf8');
 
 async function translationsFor(lang) {
   return (await import(`../src/constants/translations/${lang}.js`)).default;
@@ -168,4 +169,20 @@ test('global toast close control follows active locale instead of hardcoded Span
   assert.match(toast, /const \{ lang \} = useUI\(\)/);
   assert.match(toast, /const t = getTranslations\(lang\)/);
   assert.match(toast, /aria-label=\{closeLabel\}/);
+});
+
+
+test('global cookie consent banner uses canonical localized copy without Spanish fallbacks', async () => {
+  const keys = ['cookies_aria_label', 'close_btn', 'cookies_title', 'cookies_desc', 'learn_more', 'cookies_essential', 'cookies_accept_all'];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const t = await translationsFor(lang);
+    for (const key of keys) assert.ok(String(t[key] || '').trim(), `${lang}.${key}`);
+  }
+  for (const literal of ['Aviso de cookies', 'Cerrar', 'Usamos cookies para mejorar tu experiencia.', 'Más información', 'Solo esenciales', 'Aceptar todas']) {
+    assert.equal(cookieBanner.includes(literal), false, literal);
+  }
+  assert.match(cookieBanner, /aria-label=\{dictionary\.cookies_aria_label\}/);
+  assert.match(cookieBanner, /aria-label=\{dictionary\.close_btn\}/);
+  assert.match(cookieBanner, /localStorage\.setItem\('cookie_consent', 'all'\)/);
+  assert.match(cookieBanner, /localStorage\.setItem\('cookie_consent', 'essential'\)/);
 });
