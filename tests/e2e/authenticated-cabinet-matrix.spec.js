@@ -87,15 +87,81 @@ async function expectDarkThemeIntegrity(page) {
   await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBeTruthy();
   const brightSurfaces = await page.evaluate(() => {
     const findings = [];
+    const alphaValue = (raw, percent) => raw === undefined ? 1 : (percent ? Number(raw) / 100 : Number(raw));
+    const linearToByte = value => {
+      const clipped = Math.max(0, Math.min(1, value));
+      const srgb = clipped <= 0.0031308 ? 12.92 * clipped : 1.055 * Math.pow(clipped, 1 / 2.4) - 0.055;
+      return Math.round(srgb * 255);
+    };
+    const oklabToRgb = (lightness, a, b) => {
+      let l = lightness + 0.3963377774 * a + 0.2158037573 * b;
+      let m = lightness - 0.1055613458 * a - 0.0638541728 * b;
+      let s = lightness - 0.0894841775 * a - 1.291485548 * b;
+      l = l * l * l;
+      m = m * m * m;
+      s = s * s * s;
+      return [
+        linearToByte(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+        linearToByte(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+        linearToByte(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+      ];
+    };
+    const parseColor = value => {
+      const color = String(value || '').trim().toLowerCase();
+      const rgb = color.match(/^rgba?\(\s*([\d.]+)(%)?[\s,]+([\d.]+)(%)?[\s,]+([\d.]+)(%)?(?:\s*[,/]\s*([\d.]+)(%)?)?\s*\)$/);
+      if (rgb) {
+        const channel = (raw, percent) => percent ? Number(raw) * 2.55 : Number(raw);
+        return {
+          rgb: [channel(rgb[1], rgb[2]), channel(rgb[3], rgb[4]), channel(rgb[5], rgb[6])],
+          alpha: alphaValue(rgb[7], rgb[8]),
+        };
+      }
+      const oklch = color.match(/^oklch\(\s*([\d.]+)(%)?\s+([\d.]+)(%)?\s+([-\d.]+)(?:deg)?(?:\s*\/\s*([\d.]+)(%)?)?\s*\)$/);
+      if (oklch) {
+        const lightness = oklch[2] ? Number(oklch[1]) / 100 : Number(oklch[1]);
+        const chroma = oklch[4] ? Number(oklch[3]) * 0.004 : Number(oklch[3]);
+        const hue = Number(oklch[5]) * Math.PI / 180;
+        return {
+          rgb: oklabToRgb(lightness, chroma * Math.cos(hue), chroma * Math.sin(hue)),
+          alpha: alphaValue(oklch[6], oklch[7]),
+        };
+      }
+      const oklab = color.match(/^oklab\(\s*([\d.]+)(%)?\s+([-\d.]+)(%)?\s+([-\d.]+)(%)?(?:\s*\/\s*([\d.]+)(%)?)?\s*\)$/);
+      if (oklab) {
+        const lightness = oklab[2] ? Number(oklab[1]) / 100 : Number(oklab[1]);
+        const a = oklab[4] ? Number(oklab[3]) * 0.004 : Number(oklab[3]);
+        const b = oklab[6] ? Number(oklab[5]) * 0.004 : Number(oklab[5]);
+        return { rgb: oklabToRgb(lightness, a, b), alpha: alphaValue(oklab[7], oklab[8]) };
+      }
+      const srgb = color.match(/^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+)(%)?)?\s*\)$/);
+      if (srgb) {
+        return {
+          rgb: [Number(srgb[1]) * 255, Number(srgb[2]) * 255, Number(srgb[3]) * 255],
+          alpha: alphaValue(srgb[4], srgb[5]),
+        };
+      }
+      return color === 'transparent' ? { rgb: [0, 0, 0], alpha: 0 } : null;
+    };
+
     for (const element of document.querySelectorAll('body *')) {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
       if (rect.width < 80 || rect.height < 24 || style.display === 'none' || style.visibility === 'hidden') continue;
-      const match = style.backgroundColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/);
-      if (!match) continue;
-      const [red, green, blue] = match.slice(1, 4).map(Number);
-      const alpha = match[4] === undefined ? 1 : Number(match[4]);
-      if (alpha > 0.2 && Math.min(red, green, blue) >= 175) {
+      const parsed = parseColor(style.backgroundColor);
+      if (!parsed) {
+        findings.push({
+          tag: element.tagName,
+          background: style.backgroundColor,
+          reason: 'unsupported-color-format',
+          className: String(element.className || '').slice(0, 140),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        });
+        if (findings.length >= 10) break;
+        continue;
+      }
+      const [red, green, blue] = parsed.rgb;
+      if (parsed.alpha > 0.2 && Math.min(red, green, blue) >= 175) {
         findings.push({
           tag: element.tagName,
           background: style.backgroundColor,
@@ -181,7 +247,51 @@ for (const viewport of viewports) {
     expect(errors).toEqual([]);
   });
 }
-const adminTabs = ['categories', 'users', 'moderation', 'coupons', 'reports', 'payments', 'seo_geo', 'business_verifications'];
+
+const adminTabs = ['categories', 'users', 'moderation', 'coupons', 'reports', 'payments', 'seo_geo', 'kyc', 'business_verifications'];
+const adminDataRequestPaths = {
+  users: ['/api/users'],
+  moderation: ['/api/admin/ads/pending'],
+  coupons: ['/api/admin/coupons'],
+  reports: ['/api/admin/reports', '/api/admin/user-reports'],
+  payments: ['/api/admin/payments'],
+  seo_geo: ['/api/admin/seo-measurement'],
+  kyc: ['/api/admin/kyc'],
+  business_verifications: ['/api/admin/business-verifications'],
+};
+const adminLoadingTestIds = {
+  users: 'admin-users-loading',
+  moderation: 'admin-moderation-loading',
+  coupons: 'admin-coupons-loading',
+  reports: 'admin-reports-loading',
+  payments: 'admin-payments-loading',
+  kyc: 'admin-kyc-loading',
+  business_verifications: 'admin-business-verifications-loading',
+};
+
+async function clickAdminTabAndWaitForData(page, button, tabId) {
+  const paths = adminDataRequestPaths[tabId] || [];
+  const pendingResponses = paths.map(expectedPath => page.waitForResponse(response => {
+    if (response.request().method() !== 'GET') return false;
+    try {
+      return new URL(response.url()).pathname === expectedPath;
+    } catch {
+      return false;
+    }
+  }));
+
+  await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+
+  const responses = await Promise.all(pendingResponses);
+  for (const response of responses) {
+    expect(response.ok(), `${tabId} data request failed: ${response.status()} ${response.url()}`).toBeTruthy();
+    await response.finished();
+  }
+
+  const loadingTestId = adminLoadingTestIds[tabId];
+  if (loadingTestId) await expect(page.getByTestId(loadingTestId)).toBeHidden();
+}
 
 for (const viewport of viewports) {
   test(`admin cabinet tabs work at ${viewport.name}`, async ({ page, request }, testInfo) => {
@@ -195,8 +305,7 @@ for (const viewport of viewports) {
     for (const tabId of adminTabs) {
       const button = page.getByTestId(`admin-tab-${tabId}`);
       await expect(button).toBeVisible();
-      await button.click();
-      await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await clickAdminTabAndWaitForData(page, button, tabId);
       await expectNoHorizontalOverflow(page);
       await capture(page, viewport, 'admin', tabId, testInfo.project.name);
     }
@@ -277,8 +386,12 @@ for (const viewport of darkThemeViewports) {
       for (const tabId of cabinet.tabs) {
         const button = page.getByTestId(`${cabinet.prefix}${tabId}`);
         await expect(button).toBeVisible();
-        await button.click();
-        await expect(button).toHaveAttribute('aria-pressed', 'true');
+        if (cabinet.name === 'admin') {
+          await clickAdminTabAndWaitForData(page, button, tabId);
+        } else {
+          await button.click();
+          await expect(button).toHaveAttribute('aria-pressed', 'true');
+        }
         await expectNoHorizontalOverflow(page);
         await expectDarkThemeIntegrity(page);
         await capture(page, viewport, cabinet.name, `dark-${tabId}`, testInfo.project.name);
