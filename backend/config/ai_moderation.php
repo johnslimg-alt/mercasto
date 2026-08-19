@@ -5,18 +5,17 @@ return [
     // and no model call is required to continue moderation operations.
     'enabled' => env('AI_MODERATION_ENABLED', true),
 
-    // Safety invariant for the first production rollout: model output is only
-    // advisory. This is deliberately not environment-switchable in the policy
-    // matrix rollout, so missing/unknown model flags can never auto-publish or
-    // auto-reject a listing. A later measured rollout may introduce a separate
-    // reviewed promotion gate.
-    'assist_only' => true,
+    // First production rollout is intentionally assist-only. The model may
+    // propose approved/rejected/manual_review, but only a human moderator can
+    // make the authoritative listing decision while this flag is enabled.
+    'assist_only' => env('AI_MODERATION_ASSIST_ONLY', true),
 
-    // Keep runtime bounded below the queue timeout.
+    // Keep runtime bounded. The job already has its own queue timeout; this is
+    // recorded here as the product-level moderation budget for observability.
     'max_runtime_seconds' => (int) env('AI_MODERATION_MAX_RUNTIME_SECONDS', 150),
 
     'rollout' => [
-        'mode' => 'assist',
+        'mode' => env('AI_MODERATION_ROLLOUT_MODE', 'assist'),
         'human_authoritative' => true,
         'destructive_model_only_actions' => false,
     ],
