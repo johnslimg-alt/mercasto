@@ -25,28 +25,51 @@ function tokenSet(fragment) {
   return new Set(fragment.split(/\s+/).map(clean).filter(Boolean));
 }
 
+function classScopes(fragment) {
+  if (!fragment.includes('${')) return [fragment];
+
+  const staticClasses = fragment.replace(/\$\{[\s\S]*?\}/g, ' ').trim();
+  const branchClasses = [...fragment.matchAll(/['"]([^'"]+)['"]/g)]
+    .map(match => match[1])
+    .filter(value => /(?:^|\s)(?:[a-z0-9-]+:)*[a-z0-9-[\]#:/]+(?:\s|$)/i.test(value));
+
+  return [staticClasses, ...branchClasses.map(branch => `${staticClasses} ${branch}`.trim())]
+    .filter(Boolean);
+}
+
 function limeContrastViolations(file, source) {
   const unsafe = [];
   for (const fragment of classFragments(source)) {
-    const tokens = tokenSet(fragment);
-    const hasBaseWhite = tokens.has('text-white');
-    if (!hasBaseWhite) continue;
+    for (const scope of classScopes(fragment)) {
+      const tokens = tokenSet(scope);
+      if (tokens.has('bg-[#84CC16]') && tokens.has('text-white')) {
+        unsafe.push(`${file}: base lime uses text-white: ${scope}`);
+      }
 
-    if (tokens.has('bg-[#84CC16]')) {
-      unsafe.push(`${file}: base lime uses text-white: ${fragment}`);
-    }
-
-    for (const token of tokens) {
-      const match = token.match(/^(.+:)bg-\[#84CC16\]$/);
-      if (!match) continue;
-      const variant = match[1];
-      if (!tokens.has(`${variant}text-slate-950`)) {
-        unsafe.push(`${file}: ${variant}lime lacks ${variant}text-slate-950: ${fragment}`);
+      for (const token of tokens) {
+        const match = token.match(/^(.+:)bg-\[#84CC16\]$/);
+        if (!match) continue;
+        const variant = match[1];
+        const variantWhite = tokens.has(`${variant}text-white`);
+        const inheritedWhite = tokens.has('text-white') && !tokens.has(`${variant}text-slate-950`);
+        if (variantWhite || inheritedWhite) {
+          unsafe.push(`${file}: ${variant}lime uses a white foreground: ${scope}`);
+        }
       }
     }
   }
   return unsafe;
 }
+
+test('lime contrast analyzer keeps conditional class branches isolated', () => {
+  const safe = `<div className={\`rounded ${'${tone === "dark" ? \'bg-slate-950 text-white dark:bg-[#84CC16] dark:text-slate-950\' : \'bg-[#84CC16] text-slate-950\'}'}\`} />`;
+  const unsafeDirect = '<div className="bg-[#84CC16] text-white" />';
+  const unsafeInherited = `<div className={\`text-white ${'${active ? \'dark:bg-[#84CC16]\' : \'bg-slate-950\'}'}\`} />`;
+
+  assert.deepEqual(limeContrastViolations('safe-fixture', safe), []);
+  assert.equal(limeContrastViolations('unsafe-direct', unsafeDirect).length, 1);
+  assert.equal(limeContrastViolations('unsafe-inherited', unsafeInherited).length, 1);
+});
 
 test('UIProvider is the only owner of the persisted theme state', () => {
   assert.match(uiContext, /const \[isDarkMode, setIsDarkMode\] = useState/);
