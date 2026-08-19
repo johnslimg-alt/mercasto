@@ -10,7 +10,7 @@ use RuntimeException;
  * Backwards-compatible local AI adapter.
  *
  * The class name is retained to avoid a risky broad refactor, but it never
- * contacts no external AI provider. All content stays on
+ * contacts an external AI provider. All content stays on
  * the Mercasto VPS and is processed by the local Ollama service.
  */
 class LocalAiClient
@@ -32,7 +32,16 @@ class LocalAiClient
         }
 
         $baseUrl = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
-        $model = (string) config('services.ollama.chat_model', 'qwen3-vl:4b-instruct');
+        $hasImages = collect($messages)->contains(static function ($message): bool {
+            return is_array($message)
+                && isset($message['images'])
+                && is_array($message['images'])
+                && $message['images'] !== [];
+        });
+        $defaultModel = $hasImages
+            ? (string) config('services.ollama.vision_model', 'qwen3-vl:4b-instruct')
+            : (string) config('services.ollama.chat_model', 'qwen2.5:1.5b');
+        $model = (string) Arr::get($options, 'model', $defaultModel);
         if ($baseUrl === '' || $model === '') {
             throw new RuntimeException('Local Ollama AI is not configured.');
         }

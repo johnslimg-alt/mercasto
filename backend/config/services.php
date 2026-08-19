@@ -9,8 +9,8 @@ return [
     |
     | This file is for storing the credentials for third party services such
     | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
+    | location for this type of information, allowing packages to have a
+    | conventional file to locate the various service credentials.
     |
     */
 
@@ -78,10 +78,11 @@ return [
 
     'ollama' => [
         'url' => env('OLLAMA_URL', 'http://mercasto_ollama:11434'),
-        'model' => env('OLLAMA_MODEL', 'qwen3-vl:4b-instruct'),
+        'model' => env('OLLAMA_TEXT_MODEL', 'qwen2.5:1.5b'),
         'timeout' => env('OLLAMA_TIMEOUT', 60),
         'base_url' => env('OLLAMA_BASE_URL', 'http://ollama:11434'),
-        'chat_model' => env('OLLAMA_CHAT_MODEL', 'qwen3-vl:4b-instruct'),
+        'chat_model' => env('OLLAMA_TEXT_MODEL', 'qwen2.5:1.5b'),
+        'vision_model' => env('OLLAMA_VISION_MODEL', 'qwen3-vl:4b-instruct'),
         'keep_alive' => env('OLLAMA_KEEP_ALIVE', '24h'),
     ],
 
