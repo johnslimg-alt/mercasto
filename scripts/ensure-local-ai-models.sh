@@ -10,9 +10,13 @@ if ! docker inspect "$OLLAMA_CONTAINER" >/dev/null 2>&1; then
   exit 1
 fi
 
+TMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+MODEL_LIST_FILE="$(mktemp "${TMP_ROOT%/}/mercasto-ollama-models.XXXXXX")"
+trap 'rm -f "$MODEL_LIST_FILE"' EXIT
+
 ready=0
 for attempt in $(seq 1 30); do
-  if docker exec "$OLLAMA_CONTAINER" ollama list >/tmp/mercasto-ollama-models.txt 2>/dev/null; then
+  if docker exec "$OLLAMA_CONTAINER" ollama list >"$MODEL_LIST_FILE" 2>/dev/null; then
     ready=1
     break
   fi
@@ -25,7 +29,9 @@ fi
 
 has_model() {
   local model="$1"
-  docker exec "$OLLAMA_CONTAINER" ollama list     | awk 'NR > 1 {print $1}'     | grep -Fxq "$model"
+  docker exec "$OLLAMA_CONTAINER" ollama list \
+    | awk 'NR > 1 {print $1}' \
+    | grep -Fxq "$model"
 }
 
 ensure_model() {
