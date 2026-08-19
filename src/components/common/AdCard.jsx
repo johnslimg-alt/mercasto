@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, Star } from 'lucide-react';
 import { sizedImage } from '../../utils/imageHelpers';
 import { localizedText } from '../../utils/localize';
+import { formatNumber } from '../../utils/localeFormat';
 import { getTranslations } from '../../utils/translations';
 import { getAdDetailCopy } from '../../utils/adDetailCopy';
 
@@ -105,7 +106,7 @@ const AdCard = memo(({
       </div>
       <div className="ad-result-body pointer-events-none p-3.5 flex flex-col flex-1 min-h-[112px] relative bg-white dark:bg-[#1E293B] text-[#0F172A] dark:text-white">
         <div className="text-[17px] sm:text-[18px] font-bold leading-none text-[#0F172A] dark:text-white truncate">
-          ${Number(ad.price).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span>
+          ${formatNumber(ad.price, lang)} <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">MXN</span>
         </div>
         <h3 className="text-[14px] font-medium mt-1.5 line-clamp-1 text-slate-700 dark:text-slate-300">{localizedText(ad.title, lang)}</h3>
         <div className="mt-1.5"><AdRatingStars ad={ad} compact /></div>
