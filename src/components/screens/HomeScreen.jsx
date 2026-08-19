@@ -216,7 +216,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[13px] text-slate-700">
 
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] dark:text-white font-semibold">{formatNumber(adsTotal || safeServerAds.length || 0, lang)}</strong> {t.active_listings || 'anuncios disponibles'}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] dark:text-white font-semibold">{formatNumber(adsTotal || safeServerAds.length || 0, lang)}</strong> {t.active_listings}</span>
 
               <span className="text-slate-300 hidden sm:block">•</span>
 
@@ -224,19 +224,19 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
               <span className="text-slate-300 hidden sm:block">•</span>
 
-              <span className="location-chip"><MapPin className="w-3.5 h-3.5" />{selectedState || t.all_mexico || 'Todo México'}</span>
+              <span className="location-chip"><MapPin className="w-3.5 h-3.5" />{selectedState || t.all_mexico}</span>
 
             </div>
 
             <div className="flex items-center gap-2">
 
-              <button onClick={() => setCurrentTab('post')} className="btn-sm bg-slate-900 text-white hover:bg-black">{t.sell_fast || 'Vender rápido'}</button>
+              <button onClick={() => setCurrentTab('post')} className="btn-sm bg-slate-900 text-white hover:bg-black">{t.sell_fast}</button>
 
-              <button onClick={() => setActiveCat('empleo')} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50">{t.find_job || 'Buscar empleo'}</button>
+              <button onClick={() => setActiveCat('empleo')} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50">{t.find_job}</button>
 
-              <button onClick={() => { runSearch('renta', 'inmobiliaria'); }} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.rent_apt || 'Rentar depa'}</button>
+              <button onClick={() => { runSearch('renta', 'inmobiliaria'); }} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.rent_apt}</button>
 
-              <button onClick={() => setActiveCat('servicios')} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.hire_service || 'Contratar servicio'}</button>
+              <button onClick={() => setActiveCat('servicios')} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.hire_service}</button>
 
             </div>
 
@@ -304,7 +304,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <h2 className="text-[22px] font-bold tracking-tight">
-                      {t.featured_ads || 'Destacados'}
+                      {t.featured_ads}
                     </h2>
                     <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 shadow-sm">
                       <Star size={9} className="fill-amber-900" />
@@ -315,7 +315,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     onClick={() => setShowPricingModal?.(true)}
                     className="btn-sm border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
                   >
-                    {t.promote_ad || 'Promocionar'}
+                    {t.promote_ad}
                   </button>
                 </div>
 
@@ -372,7 +372,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                               {/* Golden badge */}
                               <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2 py-0.5 shadow-md">
                                 <Star size={9} className="fill-amber-900 text-amber-900" />
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-900">{t.destacado || 'Destacado'}</span>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-900">{t.destacado}</span>
                               </div>
                               {/* Gradient overlay */}
                               <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/40 to-transparent" />
@@ -399,7 +399,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                               {ad.user?.is_verified && (
                                 <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-emerald-800 dark:text-emerald-400">
                                   <CheckCircle size={10} />
-                                  {t.verified_seller || 'Vendedor verificado'}
+                                  {t.verified_seller}
                                 </div>
                               )}
                             </div>
@@ -424,7 +424,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                 <div className="flex items-center gap-3">
 
-                  <h2 className="text-[22px] font-bold tracking-tight">{t.trending_now || 'Tendencias'}</h2>
+                  <h2 className="text-[22px] font-bold tracking-tight">{t.trending_now}</h2>
 
                   <span className="badge bg-red-500 text-white hidden sm:block">LIVE</span>
 
@@ -437,12 +437,12 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     disabled={savingSearchAlert}
                     className="btn-sm hidden border border-[#84CC16]/40 bg-[#84CC16]/10 text-[#365314] hover:bg-[#84CC16]/20 disabled:opacity-60 sm:block dark:text-[#BEF264]"
                   >
-                    {savingSearchAlert ? `${t.saving_word}...` : (t.save_search || 'Guardar búsqueda')}
+                    {savingSearchAlert ? `${t.saving_word}...` : (t.save_search)}
                   </button>
 
-                  <button data-testid="home-open-filters" type="button" onClick={() => { setActiveCat(''); navigate('/listings'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter || 'Filtros'}</button>
+                  <button data-testid="home-open-filters" type="button" onClick={() => { setActiveCat(''); navigate('/listings'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">{t.filter}</button>
 
-                  <a href="/listings" onClick={(e) => { e.preventDefault(); setActiveCat(''); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
+                  <a href="/listings" onClick={(e) => { e.preventDefault(); setActiveCat(''); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all}</a>
 
                 </div>
 
@@ -677,7 +677,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <button onClick={() => { runSearch('Tiempo Completo', 'empleo'); }} className="btn-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700">{t.full_time || 'Tiempo completo'}</button>
 
-                  <a href="/listings?category=empleo" onClick={(e) => { e.preventDefault(); setActiveCat('empleo'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all || 'Ver todo →'}</a>
+                  <a href="/listings?category=empleo" onClick={(e) => { e.preventDefault(); setActiveCat('empleo'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline ml-1 cursor-pointer">{t.see_all}</a>
 
                 </div>
 
