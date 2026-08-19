@@ -17,6 +17,10 @@ class AdModerationGuidanceService
         'regulated',
     ];
 
+    public function __construct(
+        private readonly ListingPolicyMatrixService $policyMatrix,
+    ) {}
+
     public function sellerCorrection(Ad $ad): ?array
     {
         if ($ad->status !== 'archived') {
@@ -42,6 +46,13 @@ class AdModerationGuidanceService
         $decision = $this->latestManualReviewDecision($ad);
         $flags = $this->normalizedFlags($decision);
         $flagText = implode(' ', $flags);
+
+        // High-risk policy signals stay inside the human-authoritative moderation
+        // workflow. They must not be transformed into ordinary seller correction
+        // hints that could imply the item becomes acceptable after copy edits.
+        if (($this->policyMatrix->assessment($flags)['requires_manual_review'] ?? false) === true) {
+            return null;
+        }
 
         if ($flagText === '' || $this->containsAny($flagText, self::ADMIN_ONLY_TERMS)) {
             return null;
