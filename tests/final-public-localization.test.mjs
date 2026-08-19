@@ -196,3 +196,21 @@ test('auth recovery back-to-login control follows active locale', async () => {
   assert.equal(app.includes('Volver a iniciar sesión'), false);
   assert.match(app, /\{t\.auth_back_to_login\}/);
 });
+
+
+test('global App shell uses guaranteed localization keys without fallback literals', async () => {
+  const keys = ['search', 'notifications', 'search_placeholder', 'search_placeholder_short', 'search_btn', 'all_mexico', 'state', 'city', 'cancel', 'apply', 'language', 'close_btn', 'ai_brand_tagline', 'ai_brand_short'];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const t = await translationsFor(lang);
+    for (const key of keys) assert.ok(String(t[key] || '').trim(), `${lang}.${key}`);
+  }
+  for (const fallback of [
+    "t.search || 'Buscar'", "t.notifications || 'Notificaciones'", "t.search_btn || 'Buscar'",
+    "t.language || 'Idioma'", "t.all_mexico || 'Todo México'", "t.state || 'Estado'",
+    "t.city || 'Ciudad'", "t.cancel || 'Cerrar'", "t.apply || 'Aplicar'", "t.close_btn || 'Cerrar'",
+    "t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'",
+    "t.ai_brand_short || t.ai_brand_tagline || 'AI classifieds'",
+  ]) assert.equal(app.includes(fallback), false, fallback);
+  assert.match(app, /placeholder=\{t\.search_placeholder\}/);
+  assert.match(app, /placeholder=\{t\.search_placeholder_short\}/);
+});
