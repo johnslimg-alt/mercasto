@@ -125,7 +125,13 @@ async function assertAuthShell(page, lang) {
   await expect(authPage.getByText(`${t.login} · Mercasto`, { exact: true })).toBeVisible();
   await expect(authPage.getByText(t.auth_login_desc, { exact: true })).toBeVisible();
   await expect(authPage.getByRole('button', { name: t.auth_no_account_join })).toBeVisible();
-  await expect(authPage.getByRole('button', { name: t.forgot_password })).toBeVisible();
+  const forgotPassword = authPage.getByRole('button', { name: t.forgot_password });
+  await expect(forgotPassword).toBeVisible();
+  await forgotPassword.click();
+  await expect(authPage.getByRole('button', { name: t.auth_back_to_login })).toBeVisible();
+  if (lang !== 'es') {
+    await expect(authPage.getByRole('button', { name: 'Volver a iniciar sesión' })).toHaveCount(0);
+  }
   await authPage.close();
 }
 
