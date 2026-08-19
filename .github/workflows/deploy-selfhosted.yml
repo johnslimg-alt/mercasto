@@ -84,6 +84,22 @@ jobs:
           sudo -n rm -f backend/bootstrap/cache/*.php
           docker exec mercasto_backend_container php artisan migrate --force
 
+      - name: Secure production E2E credentials
+        env:
+          E2E_SELLER_PASSWORD: ${{ secrets.E2E_SELLER_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          if [ -z "${E2E_SELLER_PASSWORD:-}" ]; then
+            echo "E2E_SELLER_PASSWORD secret is required for production E2E account security." >&2
+            exit 1
+          fi
+          docker exec \
+            -e E2E_SELLER_PASSWORD="$E2E_SELLER_PASSWORD" \
+            mercasto_backend_container \
+            php artisan mercasto:secure-production-e2e-credentials
+          bash scripts/production-e2e-account-security-smoke.sh
+
       - name: Собрать, проверить и поднять
         env:
           BEFORE_SHA: ${{ github.event.before }}
