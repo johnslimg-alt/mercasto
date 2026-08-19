@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Search, PlusCircle, Heart, User } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useUI } from '../../contexts/UIContext';
+import { getTranslations } from '../../utils/translations';
 
 const NavItem = ({ icon: Icon, label, tab, isCenter = false, activeTab, onNavigate }) => {
   const isActive = activeTab === tab;
@@ -46,7 +47,9 @@ const NavItem = ({ icon: Icon, label, tab, isCenter = false, activeTab, onNaviga
 const BottomNav = ({ user, setCurrentTab, setDashboardTab, setShowAuthModal, setAuthMode }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
+  const { lang, loadedLangVersion } = useUI();
+  void loadedLangVersion;
+  const t = getTranslations(lang);
   const pathname = location.pathname;
 
   // Страницы где BottomNav НЕ показывается
@@ -94,9 +97,12 @@ const BottomNav = ({ user, setCurrentTab, setDashboardTab, setShowAuthModal, set
         break;
       case 'search':
         navigate('/');
-        // Фокус на search input после навигации
+        // Focus the visible canonical search input after navigation without depending on localized placeholder text.
         setTimeout(() => {
-          const searchInput = document.querySelector('input[placeholder*="Buscar"], input[placeholder*="Search"]');
+          const searchInputs = Array.from(document.querySelectorAll(
+            '[data-testid="mobile-search-input"], [data-testid="desktop-search-input"]'
+          ));
+          const searchInput = searchInputs.find(input => input.getClientRects().length > 0) || searchInputs[0];
           if (searchInput) {
             searchInput.focus();
             searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -143,14 +149,14 @@ const BottomNav = ({ user, setCurrentTab, setDashboardTab, setShowAuthModal, set
       <nav 
         className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-lg pb-safe"
         role="navigation"
-        aria-label="Mobile navigation"
+        aria-label={t.global_menu}
       >
         <div className="flex items-center justify-around max-w-md mx-auto px-2 py-2">
-          <NavItem icon={Home} label={t('home.home', { defaultValue: 'Home' })} tab="home" activeTab={activeTab} onNavigate={handleNavClick} />
-          <NavItem icon={Search} label={t('common.search', { defaultValue: 'Search' })} tab="search" activeTab={activeTab} onNavigate={handleNavClick} />
-          <NavItem icon={PlusCircle} label={t('ads.publish', { defaultValue: 'Publish' })} tab="post" isCenter activeTab={activeTab} onNavigate={handleNavClick} />
-          <NavItem icon={Heart} label={t('ads.favorites', { defaultValue: 'Favorites' })} tab="favorites" activeTab={activeTab} onNavigate={handleNavClick} />
-          <NavItem icon={User} label={t('dashboard.profile', { defaultValue: 'Profile' })} tab="profile" activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={Home} label={t.home} tab="home" activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={Search} label={t.search} tab="search" activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={PlusCircle} label={t.post_ad} tab="post" isCenter activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={Heart} label={t.favorites} tab="favorites" activeTab={activeTab} onNavigate={handleNavClick} />
+          <NavItem icon={User} label={t.profile} tab="profile" activeTab={activeTab} onNavigate={handleNavClick} />
         </div>
       </nav>
     </>
