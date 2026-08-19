@@ -84,6 +84,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
   if (!hasContacts) return null;
 
   const isVerified = ad?.user?.is_verified || ad?.user?.verified || ad?.user?.kyc_status === 'approved';
+  const sellerName = ad?.user?.name || t.ct_seller_fallback;
 
   return (
     <>
@@ -93,7 +94,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
         className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all ${className}`}
       >
         <MessageCircle size={20} />
-        <span>{t.ct_contact_btn || 'Contactar'}</span>
+        <span>{t.ct_contact_btn}</span>
       </button>
 
       {isOpen && (
@@ -113,7 +114,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                 type="button"
                 onClick={closeModal}
                 className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label={t.close_btn || t.close || 'Close'}
+                aria-label={t.close_btn}
               >
                 <X size={20} className="text-gray-500" />
               </button>
@@ -123,23 +124,23 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                   <img src={ad.user.avatar} alt="" className="w-12 h-12 rounded-full object-cover" />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
-                    {(ad?.user?.name || 'V')[0].toUpperCase()}
+                    {String(sellerName).charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 id="contact-dialog-title" className="font-bold text-lg text-gray-900 dark:text-white truncate">
-                      {ad?.user?.name || t.ct_seller_fallback || 'Vendedor'}
+                      {sellerName}
                     </h3>
                     {isVerified && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full">
                         <Shield size={12} />
-                        {t.verified || 'Verificado'}
+                        {t.verified}
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                    {localizedText(ad?.title)}
+                    {localizedText(ad?.title, siteLang)}
                   </p>
                 </div>
               </div>
@@ -150,7 +151,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
               <div className="flex items-start gap-2">
                 <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                  <strong>{t.ct_safety_title || 'Seguridad:'}</strong> {t.ct_safety_text || 'No pagues anticipos sin verificar el producto o vendedor. Reúnete en lugares públicos.'}
+                  <strong>{t.ct_safety_title}</strong> {t.ct_safety_text}
                 </p>
               </div>
             </div>
@@ -163,10 +164,10 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                     <Shield className="w-6 h-6" />
                   </div>
                   <h4 className="font-bold text-[16px] text-gray-900 dark:text-white leading-tight">
-                    {t.ct_restricted_title || 'Acceso Restringido'}
+                    {t.ct_restricted_title}
                   </h4>
                   <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-normal">
-                    {t.ct_restricted_text || 'Regístrate para ver los contactos del vendedor.'}
+                    {t.ct_restricted_text}
                   </p>
                   <button
                     onClick={() => {
@@ -175,7 +176,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                     }}
                     className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors"
                   >
-                    {t.login_register || 'Iniciar sesión / Registrarse'}
+                    {t.login_register}
                   </button>
                 </div>
               ) : (
@@ -192,7 +193,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
                   </div>
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-gray-900 dark:text-white">WhatsApp</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{t.ct_whatsapp_sub || 'Responder rápida'}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{t.ct_whatsapp_sub}</div>
                   </div>
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -227,7 +228,7 @@ export default function ContactButton({ ad, user, t = {}, className = '' }) {
             {/* Footer */}
             <div className="px-6 pb-6 pt-2">
               <p className="text-xs text-center text-gray-400 dark:text-gray-500">
-                {t.ct_footer_note || 'Mercasto no participa en la transacción. Verifica siempre al vendedor.'}
+                {t.ct_footer_note}
               </p>
             </div>
           </div>
