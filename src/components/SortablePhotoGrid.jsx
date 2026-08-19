@@ -1,6 +1,7 @@
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useUI } from '../contexts/UIContext'
 
 const COVER_LABELS = {
   es: 'Portada',
@@ -17,7 +18,7 @@ const COVER_LABELS = {
 }
 
 function coverLabel(lang) {
-  const code = String(lang || document.documentElement.lang || 'es').toLowerCase().split('-')[0]
+  const code = String(lang || 'es').toLowerCase().split('-')[0]
   return COVER_LABELS[code] || COVER_LABELS.es
 }
 
@@ -61,6 +62,8 @@ function SortablePhoto({ photo, index, onDelete, lang }) {
 }
 
 export default function SortablePhotoGrid({ photos, onReorder, onDelete, lang }) {
+  const { lang: uiLang } = useUI()
+  const activeLang = lang || uiLang
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
@@ -80,7 +83,7 @@ export default function SortablePhotoGrid({ photos, onReorder, onDelete, lang })
       <SortableContext items={photos.map(p => p.id)} strategy={rectSortingStrategy}>
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {photos.map((photo, index) => (
-            <SortablePhoto key={photo.id} photo={photo} index={index} onDelete={onDelete} lang={lang} />
+            <SortablePhoto key={photo.id} photo={photo} index={index} onDelete={onDelete} lang={activeLang} />
           ))}
         </div>
       </SortableContext>
