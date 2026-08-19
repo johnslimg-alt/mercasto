@@ -34,8 +34,8 @@ test('bottom navigation uses product localization without English default values
 test('search focus no longer depends on Spanish or English placeholder text', () => {
   assert.equal(source.includes('placeholder*="Buscar"'), false);
   assert.equal(source.includes('placeholder*="Search"'), false);
-  assert.match(source, /data-testid=\\"mobile-search-input\\"/);
-  assert.match(source, /data-testid=\\"desktop-search-input\\"/);
+  assert.ok(source.includes('[data-testid="mobile-search-input"]'));
+  assert.ok(source.includes('[data-testid="desktop-search-input"]'));
   assert.match(source, /getClientRects\(\)\.length > 0/);
   assert.match(source, /searchInput\.focus\(\)/);
 });
