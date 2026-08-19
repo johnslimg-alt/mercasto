@@ -44,12 +44,23 @@ class AdModerationGuidanceService
         }
 
         $decision = $this->latestManualReviewDecision($ad);
+        $policyReview = is_array($decision?->metadata['policy_review'] ?? null)
+            ? $decision->metadata['policy_review']
+            : [];
+
+        // Persisted deterministic/model policy holds are authoritative routing
+        // signals for the human queue. Never downgrade them into seller-facing
+        // "fix the photo/text" guidance that implies a simple edit clears them.
+        if (($policyReview['required'] ?? false) === true
+            || ! empty($policyReview['policy_ids'] ?? [])) {
+            return null;
+        }
+
         $flags = $this->normalizedFlags($decision);
         $flagText = implode(' ', $flags);
 
-        // High-risk policy signals stay inside the human-authoritative moderation
-        // workflow. They must not be transformed into ordinary seller correction
-        // hints that could imply the item becomes acceptable after copy edits.
+        // Backward compatibility for older moderation records that predate the
+        // persisted policy_review payload but still contain high-risk AI flags.
         if (($this->policyMatrix->assessment($flags)['requires_manual_review'] ?? false) === true) {
             return null;
         }
