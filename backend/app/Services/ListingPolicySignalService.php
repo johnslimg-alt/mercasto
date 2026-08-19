@@ -31,7 +31,7 @@ class ListingPolicySignalService
             $include = array_is_list($rule) ? $rule : (array) ($rule['include'] ?? []);
             $exclude = array_is_list($rule) ? [] : (array) ($rule['exclude'] ?? []);
 
-            if ($this->containsAnyPhrase($text, $include) && ! $this->containsAnyPhrase($text, $exclude)) {
+            if ($this->containsIncludedPhraseOutsideExclusions($text, $include, $exclude)) {
                 $policy = $this->matrix->policy((string) $policyId);
                 if (! $policy) {
                     continue;
@@ -42,6 +42,22 @@ class ListingPolicySignalService
         }
 
         return $this->matrix->assessment(array_values(array_unique($signals)));
+    }
+
+    private function containsIncludedPhraseOutsideExclusions(string $normalizedText, array $include, array $exclude): bool
+    {
+        $candidate = ' ' . $normalizedText . ' ';
+
+        foreach ($exclude as $term) {
+            $needle = $this->normalizeText((string) $term);
+            if ($needle !== '') {
+                $candidate = str_replace(' ' . $needle . ' ', ' ', $candidate);
+            }
+        }
+
+        $candidate = trim(preg_replace('/\s+/', ' ', $candidate) ?? '');
+
+        return $this->containsAnyPhrase($candidate, $include);
     }
 
     private function containsAnyPhrase(string $normalizedText, array $terms): bool
