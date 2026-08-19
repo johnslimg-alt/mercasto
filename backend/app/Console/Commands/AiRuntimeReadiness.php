@@ -10,12 +10,12 @@ class AiRuntimeReadiness extends Command
 {
     protected $signature = 'ai:runtime-readiness';
 
-    protected $description = 'Check local Ollama transport, configured model installation and load state without user data.';
+    protected $description = 'Check local Ollama transport, configured text model installation and load state without user data.';
 
     public function handle(): int
     {
         $baseUrl = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
-        $model = trim((string) config('services.ollama.chat_model', 'qwen3-vl:4b-instruct'));
+        $model = trim((string) config('services.ollama.chat_model', 'qwen2.5:1.5b'));
         $host = (string) (parse_url($baseUrl, PHP_URL_HOST) ?: 'invalid');
 
         if ($baseUrl === '' || $model === '') {
