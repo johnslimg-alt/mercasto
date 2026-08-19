@@ -222,7 +222,7 @@ function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, 
         </h1>
         <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+          {tagline}
         </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
           {isRegistration
@@ -255,7 +255,7 @@ function LegacyAccountListingRoute({ suffix }) {
 }
 
 // --- ЛОГОТИП И ИКОНКИ ---
-const MercastoLogo = ({ className = "h-11", isFooter = false, tagline = "Clasificados con IA" }) => (
+const MercastoLogo = ({ className = "h-11", isFooter = false, tagline = "" }) => (
   <div className={`flex items-center gap-2 ${className}`}>
     {/* Новый лаконичный логотип: Буква "M" внутри геолокационного пина */}
     <svg viewBox="0 0 100 100" className="h-full w-auto drop-shadow-md">
@@ -4326,7 +4326,7 @@ function App() {
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
           <div data-testid="desktop-header-row" className="desktop-header-row relative flex items-center gap-2 h-[44px] sm:h-[48px] lg:h-[54px]">
             <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
-              <MercastoLogo className="h-6 sm:h-7 lg:h-9" tagline={t.ai_brand_short || 'Clasificados con IA'} />
+              <MercastoLogo className="h-6 sm:h-7 lg:h-9" tagline={t.ai_brand_short} />
             </a>
             <div className={isAdminRoute ? "hidden" : "hidden lg:flex flex-1 items-center"}>
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
@@ -4742,7 +4742,7 @@ function App() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div>
               <button type="button" aria-label={t.home || 'Inicio'} className="footer-logo flex items-center gap-2 mb-3 h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => { setCurrentTab('home'); setViewedAd(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }}>
-                <MercastoLogo className="h-8" isFooter={true} tagline={t.ai_brand_short || 'Clasificados con IA'} />
+                <MercastoLogo className="h-8" isFooter={true} tagline={t.ai_brand_short} />
               </button>
               <p className="text-[13px] text-slate-400 leading-relaxed">{t.footer_desc || 'La plataforma de clasificados más moderna e inteligente con AI para México.'}</p>
             </div>

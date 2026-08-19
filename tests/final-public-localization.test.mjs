@@ -211,6 +211,9 @@ test('global App shell uses guaranteed localization keys without fallback litera
     "t.city || 'Ciudad'", "t.cancel || 'Cerrar'", "t.apply || 'Aplicar'", "t.close_btn || 'Cerrar'",
     "t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'",
     "t.ai_brand_short || t.ai_brand_tagline || 'AI classifieds'",
+    "tagline || 'La plataforma de clasificados más moderna e inteligente con AI'",
+    "tagline = \"Clasificados con IA\"",
+    "t.ai_brand_short || 'Clasificados con IA'",
   ]) assert.equal(app.includes(fallback), false, fallback);
   assert.match(app, /placeholder=\{t\.search_placeholder\}/);
   assert.match(app, /placeholder=\{t\.search_placeholder_short\}/);
