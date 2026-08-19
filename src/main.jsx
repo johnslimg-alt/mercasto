@@ -34,6 +34,14 @@ if (['/vendedores', '/publicar-gratis'].includes(window.location.pathname)) {
 installCampaignAttribution();
 installStaleChunkRecovery();
 installProtectedRouteReturn();
+
+// Anonymous seller traffic already sits on /post while the auth modal is open.
+// Warm the lazy publication chunk now so a successful registration can reveal
+// the form immediately instead of paying the cold chunk load after auth state flips.
+if (window.location.pathname === '/post') {
+  void import('./components/screens/PostScreen');
+}
+
 scheduleNonCriticalBootstrap();
 
 function scheduleNonCriticalBootstrap() {
