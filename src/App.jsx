@@ -1793,7 +1793,7 @@ function App() {
     const verticalSeo = getVerticalSeo(location.pathname, lang);
     const publicSeo = getPublicSeo(location.pathname, lang);
     const verticalCanonicalAlias = getVerticalCanonicalAlias(location.pathname);
-    let title = `Mercasto | ${t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}`;
+    let title = `Mercasto | ${t.ai_brand_tagline}`;
     let desc = t.ai_brand_description || 'Mercasto combina publicación asistida, descripciones, recomendaciones y moderación con IA para comprar y vender más rápido en México.';
     let ogImage = "https://mercasto.com/icon-512x512.png";
     let ogType = "website";
@@ -1824,7 +1824,7 @@ function App() {
       ogImage = getImageUrl(viewedCompany.avatar_url, "https://mercasto.com/icon-512x512.png");
       ogType = "profile";
     } else if (window.location.pathname === '/listings') {
-      title = `Mercasto | ${t.ai_brand_short || t.ai_brand_tagline || 'AI classifieds'}`;
+      title = `Mercasto | ${t.ai_brand_short}`;
       desc = t.ai_brand_description || desc;
     } else if (verticalSeo) {
       title = verticalSeo.title;
@@ -4209,7 +4209,7 @@ function App() {
       <button aria-label={t.home || 'Inicio'} onClick={() => { setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); }} className={`flex flex-col items-center p-1 ${currentTab === 'home' && !viewedAd ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Home className="w-6 h-6 mb-1" />
       </button>
-      <button aria-label={t.search || 'Buscar'} onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
+      <button aria-label={t.search} onClick={() => { setCurrentTab('home'); setShowMobileLocationPicker(false); window.scrollTo(0,0); window.setTimeout(() => mobileSearchInputRef.current?.focus(), 60); }} className={`flex flex-col items-center p-1 text-gray-400 hover:text-[#84CC16]`}>
         <Search className="w-6 h-6 mb-1" />
       </button>
       <button onClick={() => setCurrentTab('post')} className="flex flex-col items-center p-1 -mt-6 hover:scale-105 transition-transform" aria-label={t.post_ad || 'Publicar anuncio'}>
@@ -4217,7 +4217,7 @@ function App() {
           <Plus className="w-7 h-7 stroke-[3]" />
         </div>
       </button>
-      <button data-testid="mobile-notifications-tab" aria-label={t.notifications || 'Notificaciones'} onClick={() => { user ? navigate('/notificaciones') : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${location.pathname === '/notificaciones' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
+      <button data-testid="mobile-notifications-tab" aria-label={t.notifications} onClick={() => { user ? navigate('/notificaciones') : (setAuthMode('login'), setShowAuthModal(true)); }} className={`flex flex-col items-center p-1 relative ${location.pathname === '/notificaciones' ? 'text-[#84CC16]' : 'text-gray-400 hover:text-[#84CC16]'}`}>
         <Bell className="w-6 h-6 mb-1" />
         {unreadCount > 0 && <span data-testid="mobile-notifications-unread" className="absolute top-0 right-2 w-2 h-2 bg-red-500 rounded-full"></span>}
       </button>
@@ -4332,7 +4332,7 @@ function App() {
               <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
               <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="desktop-header-control desktop-header-search-control header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
-              <input data-testid="desktop-search-input" aria-label={t.search_placeholder || t.search_btn || 'Search'} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder || "Buscar autos, celulares, empleos..."} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
+              <input data-testid="desktop-search-input" aria-label={t.search_placeholder} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
                 {searchLocation?.lat && (
                   <>
                     <div className="h-7 w-px bg-slate-200"></div>
@@ -4347,7 +4347,7 @@ function App() {
                 )}
                 <button type="submit" data-testid="desktop-search-submit" className="desktop-header-search-submit btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 hover:text-white m-1 ml-2 flex items-center gap-1.5 rounded-full shadow-sm shadow-[#84CC16]/30">
                   <Search size={16}/>
-                  {t.search_btn || "Buscar"}
+                  {t.search_btn}
                 </button>
               </form>
               <Suspense fallback={null}>
@@ -4362,7 +4362,7 @@ function App() {
                 </button>
                 <div className="mobile-language-select" aria-label={t.language_switcher}>
                   <Globe className="w-3.5 h-3.5" />
-                  <select data-testid="mobile-language-select" aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)}>
+                  <select data-testid="mobile-language-select" aria-label={t.language} value={lang} onChange={(e) => setLang(e.target.value)}>
                     {LANGUAGE_OPTIONS.map(l => (
                       <option key={l} value={l}>{l.toUpperCase()}</option>
                     ))}
@@ -4371,21 +4371,21 @@ function App() {
                 <div className="relative">
                   <button type="button" data-testid="mobile-location-button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label={t.change_location}>
                     <MapPin className="w-3 h-3 text-[#84CC16]" />
-                    <span className="truncate max-w-[45px] text-[10px] font-extrabold uppercase">{searchLocationInput || t.all_mexico || "Todo México"}</span>
+                    <span className="truncate max-w-[45px] text-[10px] font-extrabold uppercase">{searchLocationInput || t.all_mexico}</span>
                   </button>
                   {showMobileLocationPicker && (
                     <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
-                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state}</label>
                       <select data-testid="mobile-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-                        <option value="">{t.all_mexico || 'Todo México'}</option>
+                        <option value="">{t.all_mexico}</option>
                         {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                       </select>
-                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad'}</label>
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city}</label>
                       <select data-testid="mobile-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[14px] outline-none mb-3 bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
                         <option value="">{locState ? t.all_cities : t.select_state_first}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
-                      <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply || 'Aplicar'}</button>
+                      <button type="button" data-testid="mobile-location-apply" onClick={() => applyHeaderLocation(true)} className="btn-sm w-full bg-[#84CC16] text-white py-3">{t.apply}</button>
                     </div>
                   )}
                 </div>
@@ -4415,34 +4415,34 @@ function App() {
               <div className="relative hidden lg:block">
                 <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-bold text-slate-700 dark:text-slate-200 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer mr-1">
                   <MapPin className="w-3.5 h-3.5 text-[#84CC16]" />
-                  <span className="truncate max-w-[110px]">{searchLocationInput || t.all_mexico || "Todo México"}</span>
+                  <span className="truncate max-w-[110px]">{searchLocationInput || t.all_mexico}</span>
                 </button>
                 {showLocationPicker && (
                   <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50 bg-white dark:bg-slate-950">
                     <div className="mb-3">
-                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state || 'Estado'}</label>
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.state}</label>
                       <select data-testid="desktop-location-state" value={locState} onChange={e => { setLocState(e.target.value); setLocCity(''); }} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-                        <option value="">{t.all_mexico || 'Todo México'}</option>
+                        <option value="">{t.all_mexico}</option>
                         {Object.keys(MEXICO_STATES_CITIES).map(st => <option key={st} value={st}>{st}</option>)}
                       </select>
                     </div>
                     <div className="mb-4">
-                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city || 'Ciudad / Municipio'}</label>
+                      <label className="block text-[12px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{t.city}</label>
                       <select data-testid="desktop-location-city" value={locCity} onChange={e => setLocCity(e.target.value)} disabled={!locState} className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-[13px] outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-white disabled:bg-slate-50 dark:disabled:bg-slate-900 disabled:text-slate-400">
                         <option value="">{locState ? t.all_cities : t.select_state_first}</option>
                         {locState && MEXICO_STATES_CITIES[locState] ? MEXICO_STATES_CITIES[locState].map(city => <option key={city} value={city}>{city}</option>) : null}
                       </select>
                     </div>
                     <div className="flex gap-2">
-                      <button type="button" data-testid="desktop-location-cancel" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">{t.cancel || 'Cerrar'}</button>
-                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply || 'Aplicar'}</button>
+                      <button type="button" data-testid="desktop-location-cancel" onClick={() => setShowLocationPicker(false)} className="btn-sm flex-1 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">{t.cancel}</button>
+                      <button type="button" data-testid="desktop-location-apply" onClick={() => applyHeaderLocation(false)} className="btn-sm flex-1 bg-[#84CC16] text-white hover:bg-[#65A30D]">{t.apply}</button>
                     </div>
                   </div>
                 )}
               </div>
               <div className="desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
                 <Globe className="w-3.5 h-3.5 text-slate-400" />
-                <select data-testid="desktop-language-select" aria-label={t.language || 'Idioma'} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
+                <select data-testid="desktop-language-select" aria-label={t.language} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
                   {LANGUAGE_OPTIONS.map(l => (
                     <option key={l} value={l}>{l.toUpperCase()}</option>
                   ))}
@@ -4452,7 +4452,7 @@ function App() {
               <button type="button" onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.messages}>
                 <MessageCircle className="w-[22px] h-[22px]" />
               </button>
-              <button type="button" onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications || 'Notificaciones'}>
+              <button type="button" onClick={() => { user ? setShowNotifications(!showNotifications) : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.notifications}>
 
                   <Bell className="w-[22px] h-[22px]" />
                   {unreadCount > 0 && (
@@ -4564,8 +4564,8 @@ function App() {
             <div ref={mobileSearchRef} className="relative min-w-0">
               <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-full focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
-                <input data-testid="mobile-search-input" aria-label={t.search_placeholder_short || t.search_btn || 'Search'} ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder_short || "Buscar producto..."} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
-                <button type="submit" data-testid="mobile-search-submit" aria-label={t.search_btn || 'Buscar'} className="mobile-search-submit mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#84CC16] text-slate-950">
+                <input data-testid="mobile-search-input" aria-label={t.search_placeholder_short} ref={mobileSearchInputRef} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder_short} className="bg-transparent min-w-0 flex-1 px-2 py-2 text-sm outline-none"/>
+                <button type="submit" data-testid="mobile-search-submit" aria-label={t.search_btn} className="mobile-search-submit mr-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#84CC16] text-slate-950">
                   <Search className="h-4 w-4" />
                 </button>
               </form>
@@ -4641,7 +4641,7 @@ function App() {
         <div className="border-t border-lime-200/70 bg-lime-50/95 dark:border-lime-500/20 dark:bg-lime-950/40" data-testid="global-ai-brand-strip">
           <div className="mx-auto flex max-w-[1440px] items-center justify-center gap-1.5 px-4 py-1.5 text-center text-[11px] font-extrabold text-lime-900 sm:text-xs dark:text-lime-200">
             <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}</span>
+            <span>{t.ai_brand_tagline}</span>
           </div>
         </div>
       </header>
@@ -4834,10 +4834,10 @@ function App() {
           <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { if (!authLoading) setShowAuthModal(false); }} />
           {requiresTwoFactor ? (
             <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-              <button type="button" aria-label={t.close_btn || 'Cerrar'} disabled={authLoading} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"><XCircle size={24}/></button>
+              <button type="button" aria-label={t.close_btn} disabled={authLoading} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"><XCircle size={24}/></button>
               <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_two_factor_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
-                {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+                {t.ai_brand_tagline}
               </p>
               <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">{t.auth_two_factor_desc}</p>
               <form onSubmit={handleTwoFactorSubmit} className="space-y-3.5">
@@ -4851,10 +4851,10 @@ function App() {
             </div>
           ) : authMode === 'phone_request' || authMode === 'phone_verify' ? (
             <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-              <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+              <button type="button" aria-label={t.close_btn} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
               <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">{t.auth_phone_title}</h2>
               <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
-                {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+                {t.ai_brand_tagline}
               </p>
 
               {authMode === 'phone_request' ? (
@@ -4875,12 +4875,12 @@ function App() {
             </div>
           ) : (
             <div ref={authModalDialogRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 w-full max-w-sm rounded-3xl p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
-                <button type="button" aria-label={t.close_btn || 'Cerrar'} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
+                <button type="button" aria-label={t.close_btn} onClick={() => setShowAuthModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><XCircle size={24}/></button>
                 <h2 id="auth-modal-title" className="text-[22px] font-bold tracking-tight mb-3 text-center text-slate-900 dark:text-white">
                   {authMode === 'login' ? t.login : authMode === 'register' ? t.register : authMode === 'forgot_password' ? t.forgot_password : t.reset_password}
                 </h2>
                 <p data-testid="auth-modal-ai-brand-message" className="mx-auto mb-5 max-w-[17rem] rounded-2xl bg-lime-50 px-3 py-2 text-center text-[11px] font-extrabold leading-snug text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
-                  {t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'}
+                  {t.ai_brand_tagline}
                 </p>
                 {authMode === 'register' && localStorage.getItem('pendingReferral') && (
                   <div className="bg-lime-50 border border-lime-200 rounded-2xl px-4 py-3 mb-2 flex items-center gap-2 text-sm text-lime-800 dark:bg-lime-900/20 dark:border-lime-400/30 dark:text-lime-300">
