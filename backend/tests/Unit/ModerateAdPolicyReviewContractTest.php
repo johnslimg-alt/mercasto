@@ -4,6 +4,8 @@ namespace Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 
+// Regression contract for #693: deterministic and model policy signals must
+// survive the async moderation boundary and remain human-authoritative.
 class ModerateAdPolicyReviewContractTest extends TestCase
 {
     public function test_policy_matches_force_background_moderation_to_manual_review(): void
