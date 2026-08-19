@@ -186,3 +186,13 @@ test('global cookie consent banner uses canonical localized copy without Spanish
   assert.match(cookieBanner, /localStorage\.setItem\('cookie_consent', 'all'\)/);
   assert.match(cookieBanner, /localStorage\.setItem\('cookie_consent', 'essential'\)/);
 });
+
+
+test('auth recovery back-to-login control follows active locale', async () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const t = await translationsFor(lang);
+    assert.ok(String(t.auth_back_to_login || '').trim(), `${lang}.auth_back_to_login`);
+  }
+  assert.equal(app.includes('Volver a iniciar sesión'), false);
+  assert.match(app, /\{t\.auth_back_to_login\}/);
+});

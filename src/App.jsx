@@ -5066,7 +5066,7 @@ function App() {
                     )}
                     {(authMode === 'forgot_password' || authMode === 'reset_password' || authMode === 'phone_request' || authMode === 'phone_verify') && (
                         <button type="button" onClick={() => setAuthMode('login')} className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-[#84CC16] transition-colors underline underline-offset-4">
-                            Volver a iniciar sesión
+                            {t.auth_back_to_login}
                         </button>
                     )}
                 </div>
