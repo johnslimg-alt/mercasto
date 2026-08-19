@@ -31,7 +31,7 @@ if [[ ${#EXISTING_TARGETS[@]} -eq 0 ]]; then
   exit 1
 fi
 
-PATTERN='MVP|stack trace|stacktrace|En construcción|Página en construcción|Error Crítico|white screen|coming soon|under construction|lorem ipsum|reefmt\.com|localhost:|127\.0\.0\.1|ngrok'
+PATTERN='MVP|stack trace|stacktrace|En construcción|Página en construcción|Error Crítico|Espacio Publicitario|white screen|coming soon|under construction|lorem ipsum|reefmt\.com|localhost:|127\.0\.0\.1|ngrok'
 
 echo "== Public copy/code scan =="
 if grep -RInE \
