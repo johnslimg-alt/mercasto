@@ -228,3 +228,14 @@ test('pricing modal uses guaranteed localization keys without fallback literals'
   }
   for (const price of [19, 49, 79, 149, 399]) assert.ok(pricingModal.includes(`handlePromotionProductPayment(${price},`), `promotion ${price}`);
 });
+
+test('home discovery controls use guaranteed localization keys without Spanish fallbacks', async () => {
+  const keys = ['active_listings', 'all_mexico', 'sell_fast', 'find_job', 'rent_apt', 'hire_service', 'featured_ads', 'promote_ad', 'destacado', 'verified_seller', 'trending_now', 'save_search', 'filter', 'see_all'];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const t = await translationsFor(lang);
+    for (const key of keys) assert.ok(String(t[key] || '').trim(), `${lang}.${key}`);
+  }
+  for (const key of keys) {
+    assert.doesNotMatch(home, new RegExp(`t\\.${key}\\s*\\|\\|`), key);
+  }
+});
