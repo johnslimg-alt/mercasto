@@ -7,6 +7,39 @@ use InvalidArgumentException;
 
 class ListingPolicyMatrixService
 {
+    private const SIGNAL_ALIASES = [
+        'arma_de_fuego' => 'weapon',
+        'armas_de_fuego' => 'weapon',
+        'pistola' => 'weapon',
+        'pistolas' => 'weapon',
+        'rifle' => 'weapon',
+        'rifles' => 'weapon',
+        'escopeta' => 'weapon',
+        'escopetas' => 'weapon',
+        'municion' => 'ammunition',
+        'municiones' => 'ammunition',
+        'explosivo' => 'explosive',
+        'explosivos' => 'explosive',
+        'granada' => 'grenade',
+        'granadas' => 'grenade',
+        'droga_ilegal' => 'illegal_drug',
+        'drogas_ilegales' => 'illegal_drug',
+        'medicamento_controlado' => 'controlled_medicine',
+        'medicamentos_controlados' => 'controlled_medicine',
+        'documento_falso' => 'false_document',
+        'documentos_falsos' => 'false_document',
+        'bien_robado' => 'stolen_goods',
+        'bienes_robados' => 'stolen_goods',
+        'producto_robado' => 'stolen_goods',
+        'productos_robados' => 'stolen_goods',
+        'estafa' => 'fraud',
+        'fraude_evidente' => 'fraud',
+        'suplantacion' => 'impersonation',
+        'suplantacion_de_identidad' => 'impersonation',
+        'contenido_sexual_explicito' => 'sexual_exploitation',
+        'explotacion_sexual' => 'sexual_exploitation',
+    ];
+
     private array $matrix;
 
     public function __construct(?array $matrix = null)
@@ -62,7 +95,7 @@ class ListingPolicyMatrixService
     public function matchSignals(array $signals): array
     {
         $normalizedSignals = collect($signals)
-            ->map(fn ($signal) => $this->normalizeCode((string) $signal))
+            ->map(fn ($signal) => $this->canonicalSignal((string) $signal))
             ->filter()
             ->unique()
             ->values()
@@ -75,7 +108,7 @@ class ListingPolicyMatrixService
         $matches = [];
         foreach ($this->policies() as $policyId => $policy) {
             $policySignals = collect((array) ($policy['automated_signals'] ?? []))
-                ->map(fn ($signal) => $this->normalizeCode((string) $signal))
+                ->map(fn ($signal) => $this->canonicalSignal((string) $signal))
                 ->filter()
                 ->unique()
                 ->values()
@@ -115,6 +148,12 @@ class ListingPolicyMatrixService
             // emits an automatic moderation decision from model signals alone.
             'authoritative_action' => null,
         ];
+    }
+
+    public function canonicalSignal(string $value): string
+    {
+        $normalized = $this->normalizeCode($value);
+        return self::SIGNAL_ALIASES[$normalized] ?? $normalized;
     }
 
     private function normalizeCode(string $value): string
