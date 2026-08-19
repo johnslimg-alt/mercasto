@@ -1,12 +1,20 @@
 import esTranslations from '../constants/translations/es.js';
+import { getListingPolicyReviewTranslations } from '../constants/listingPolicyReviewTranslations.js';
 import { loadFilterOptionLanguage } from './filterOptionTranslations.js';
 
 // Hebrew (he) and Yiddish (yi) are intentionally disabled and archived.
 export const SUPPORTED_LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
 export const RTL_LANGUAGES = new Set(['ar']);
 
+function withPolicyReviewTranslations(lang, translations) {
+  return {
+    ...translations,
+    ...getListingPolicyReviewTranslations(lang),
+  };
+}
+
 const cache = {
-  es: esTranslations,
+  es: withPolicyReviewTranslations('es', esTranslations),
 };
 
 export function normalizeLanguage(language = 'es') {
@@ -28,7 +36,7 @@ export async function loadLanguage(language) {
 
   try {
     const module = await import(`../constants/translations/${lang}.js`);
-    cache[lang] = module.default;
+    cache[lang] = withPolicyReviewTranslations(lang, module.default);
     await loadFilterOptionLanguage(lang);
     return cache[lang];
   } catch (error) {
