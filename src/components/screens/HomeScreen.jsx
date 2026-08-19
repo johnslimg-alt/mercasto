@@ -691,7 +691,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                     <thead className="bg-slate-50 dark:bg-slate-950 text-[12px] uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
 
-                      <tr><th className="text-left font-semibold px-4 py-3">{t.role || 'Puesto'}</th><th className="text-left font-semibold px-4 py-3 hidden md:table-cell">{t.company || 'Empresa'}</th><th className="text-left font-semibold px-4 py-3">{t.salary_mxn || 'Salario MXN'}</th><th className="text-left font-semibold px-4 py-3 hidden sm:table-cell">{t.location || 'Ubicación'}</th><th className="text-right font-semibold px-4 py-3">{t.action || 'Acción'}</th></tr>
+                      <tr><th className="text-left font-semibold px-4 py-3">{t.role}</th><th className="text-left font-semibold px-4 py-3 hidden md:table-cell">{t.company}</th><th className="text-left font-semibold px-4 py-3">{t.salary_mxn}</th><th className="text-left font-semibold px-4 py-3 hidden sm:table-cell">{t.location}</th><th className="text-right font-semibold px-4 py-3">{t.action}</th></tr>
 
                     </thead>
 
