@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\ListingDuplicateRiskService;
+use App\Services\ListingPolicySignalService;
 use App\Services\ListingQualityPreflightService;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,7 @@ class ApplyListingQualityPreflight
     public function __construct(
         private ListingQualityPreflightService $preflight,
         private ListingDuplicateRiskService $duplicateRisk,
+        private ListingPolicySignalService $policySignals,
     ) {
     }
 
@@ -63,6 +65,24 @@ class ApplyListingQualityPreflight
             'category' => $request->input('category'),
             'photo_count' => count($existingImages) + $newImages,
         ]);
+
+        // Product-policy signals are review routing only. They never make an
+        // automatic legal/moderation decision and therefore do not change hard
+        // validation by themselves.
+        $policyReview = $this->policySignals->assessListing([
+            'title' => $request->input('title'),
+            'description' => $request->input('description'),
+        ]);
+        $result['policy_review'] = [
+            'required' => (bool) ($policyReview['requires_manual_review'] ?? false),
+            'policy_ids' => array_values((array) ($policyReview['policy_ids'] ?? [])),
+            'human_authoritative' => (bool) ($policyReview['human_authoritative'] ?? true),
+            'authoritative_action' => null,
+        ];
+        if ($result['policy_review']['required']) {
+            $result['warnings'][] = 'policy_manual_review';
+            $result['warnings'] = array_values(array_unique($result['warnings']));
+        }
 
         $userId = (int) $request->user('sanctum')->getAuthIdentifier();
         $excludeAdId = $isUpdate ? (int) basename($path) : null;
