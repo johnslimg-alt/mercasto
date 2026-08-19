@@ -19,7 +19,10 @@ function classFragments(source) {
 }
 
 function tokenSet(fragment) {
-  return new Set(fragment.split(/\s+/).filter(Boolean));
+  const clean = token => token
+    .replace(/^[^A-Za-z0-9_[\]#:/.-]+/, '')
+    .replace(/[^A-Za-z0-9_[\]#:/.-]+$/, '');
+  return new Set(fragment.split(/\s+/).map(clean).filter(Boolean));
 }
 
 function limeContrastViolations(file, source) {
