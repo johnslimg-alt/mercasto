@@ -487,17 +487,17 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <div className="relative bg-gradient-to-br from-[#84CC16] to-[#65A30D] rounded-[23px] p-6 text-white h-[190px] flex flex-col">
 
-                    <span className="text-[11px] uppercase tracking-wider bg-white/20 w-fit px-2.5 py-1 rounded-full font-semibold">{t.deal_of_day || 'Oferta del día'}</span>
+                    <span className="text-[11px] uppercase tracking-wider bg-white/20 w-fit px-2.5 py-1 rounded-full font-semibold">{t.deal_of_day}</span>
 
-                    <h3 className="text-[26px] font-bold mt-3 leading-tight">{t.up_to_40 || 'Hasta 40% OFF'}</h3>
+                    <h3 className="text-[26px] font-bold mt-3 leading-tight">{t.up_to_40}</h3>
 
-                    <p className="text-white/90 text-[14px]">{t.elec_phones || 'Electrónica y Celulares'}</p>
+                    <p className="text-white/90 text-[14px]">{t.elec_phones}</p>
 
                     <div className="mt-auto flex items-center justify-between">
 
-                      <button onClick={() => setActiveCat('electronica')} className="btn-md bg-white text-[#0F172A] hover:bg-slate-100">{t.shop_now || 'Comprar ahora →'}</button>
+                      <button onClick={() => setActiveCat('electronica')} className="btn-md bg-white text-[#0F172A] hover:bg-slate-100">{t.shop_now}</button>
 
-                      <span className="text-[12px] font-medium bg-black/20 px-2 py-1 rounded-lg">{t.ends_in_8h || 'Termina en 8h'}</span>
+                      <span className="text-[12px] font-medium bg-black/20 px-2 py-1 rounded-lg">{t.ends_in_8h}</span>
 
                     </div>
 
@@ -509,37 +509,37 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#84CC16]/10 rounded-full blur-2xl"></div>
 
-                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.furniture || 'Muebles'}</span>
+                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.furniture}</span>
 
-                  <h3 className="text-[22px] font-bold mt-2">{t.living_room_sets || 'Salas de estar'}</h3>
+                  <h3 className="text-[22px] font-bold mt-2">{t.living_room_sets}</h3>
 
-                  <p className="text-slate-600 text-[14px]">{t.from_price || 'Desde $4,999 MXN'}</p>
+                  <p className="text-slate-600 text-[14px]">{t.from_price}</p>
 
-                  <button className="btn-md border border-slate-300 mt-auto w-fit hover:bg-slate-50" onClick={() => setActiveCat('hogar')}>{t.see_deals || 'Ver ofertas →'}</button>
+                  <button className="btn-md border border-slate-300 mt-auto w-fit hover:bg-slate-50" onClick={() => setActiveCat('hogar')}>{t.see_deals}</button>
 
                 </div>
 
                 <div className="card bg-slate-900 text-white rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
 
-                  <span className="text-[11px] uppercase tracking-wider text-[#84CC16] font-semibold">{t.automotive || 'Automotriz'}</span>
+                  <span className="text-[11px] uppercase tracking-wider text-[#84CC16] font-semibold">{t.automotive}</span>
 
-                  <h3 className="text-[22px] font-bold mt-2">{t.certified_cars || 'Autos Certificados'}</h3>
+                  <h3 className="text-[22px] font-bold mt-2">{t.certified_cars}</h3>
 
-                  <p className="text-white/70 text-[14px]">{t.zero_comm || '0% comisión esta semana'}</p>
+                  <p className="text-white/70 text-[14px]">{t.zero_comm}</p>
 
-                  <button className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 mt-auto w-fit" onClick={() => setActiveCat('motor')}>{t.browse_cars || 'Explorar 124k →'}</button>
+                  <button className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 mt-auto w-fit" onClick={() => setActiveCat('motor')}>{t.browse_cars}</button>
 
                 </div>
 
                 <div className="market-card border-2 border-[#84CC16]/30 rounded-3xl p-6 h-[190px] flex flex-col">
 
-                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.for_sellers || 'Para vendedores'}</span>
+                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.for_sellers}</span>
 
-                  <h3 className="text-[22px] font-bold mt-2">{t.boost_ad || 'Destaca tu anuncio'}</h3>
+                  <h3 className="text-[22px] font-bold mt-2">{t.boost_ad}</h3>
 
-                  <p className="text-slate-600 text-[14px]">{t.boost_desc || '3x más vistas, mejor posición'}</p>
+                  <p className="text-slate-600 text-[14px]">{t.boost_desc}</p>
 
-                  <button className="btn-md bg-[#0F172A] text-white hover:bg-black mt-auto w-fit" onClick={() => setCurrentTab('post')}>{t.promote_now || 'Promocionar ahora →'}</button>
+                  <button className="btn-md bg-[#0F172A] text-white hover:bg-black mt-auto w-fit" onClick={() => setCurrentTab('post')}>{t.promote_now}</button>
 
                 </div>
 
@@ -841,7 +841,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
               <div className="flex items-end justify-between mb-4 mt-2">
 
-                <h2 className="text-[22px] font-bold tracking-tight">{t.automotive || 'Automotriz'}</h2>
+                <h2 className="text-[22px] font-bold tracking-tight">{t.automotive}</h2>
 
                 <div className="flex items-center gap-2">
 

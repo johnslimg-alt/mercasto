@@ -239,3 +239,12 @@ test('home discovery controls use guaranteed localization keys without Spanish f
     assert.doesNotMatch(home, new RegExp(`t\\.${key}\\s*\\|\\|`), key);
   }
 });
+
+test('home promotional cards use guaranteed localization keys without Spanish fallbacks', async () => {
+  const keys = ['deal_of_day', 'up_to_40', 'elec_phones', 'shop_now', 'ends_in_8h', 'furniture', 'living_room_sets', 'from_price', 'see_deals', 'automotive', 'certified_cars', 'zero_comm', 'browse_cars', 'for_sellers', 'boost_ad', 'boost_desc', 'promote_now'];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const t = await translationsFor(lang);
+    for (const key of keys) assert.ok(String(t[key] || '').trim(), `${lang}.${key}`);
+  }
+  for (const key of keys) assert.doesNotMatch(home, new RegExp(`t\\.${key}\\s*\\|\\|`), key);
+});
