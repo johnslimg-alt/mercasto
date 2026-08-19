@@ -13,6 +13,12 @@ const REQUIRED_KEYS = [
   'report_additional_details', 'report_user_details_placeholder',
 ];
 
+const CONTACT_BUTTON_KEYS = [
+  'close', 'ct_contact_btn', 'ct_seller_fallback', 'verified', 'ct_safety_title',
+  'ct_safety_text', 'ct_restricted_title', 'ct_restricted_text', 'login_register',
+  'ct_whatsapp_sub', 'ct_footer_note',
+];
+
 async function translationsFor(lang) {
   return (await import(`../src/constants/translations/${lang}.js`)).default;
 }
@@ -23,7 +29,7 @@ test('safety and contact modal copy covers exactly the 11 active languages', asy
   assert.equal(SUPPORTED_LANGUAGES.includes('yi'), false);
   for (const lang of SUPPORTED_LANGUAGES) {
     const t = await translationsFor(lang);
-    for (const key of REQUIRED_KEYS) assert.ok(String(t[key] || '').trim(), `${lang}.${key}`);
+    for (const key of [...REQUIRED_KEYS, ...CONTACT_BUTTON_KEYS]) assert.ok(String(t[key] || '').trim(), `${lang}.${key}`);
   }
 });
 
@@ -39,9 +45,26 @@ test('non-Spanish safety modal copy is not the Spanish source text', async () =>
 
 test('Mexico Spanish safety copy follows closing-only punctuation policy', async () => {
   const t = await translationsFor('es');
-  const serialized = JSON.stringify(Object.fromEntries(REQUIRED_KEYS.map(key => [key, t[key]])));
+  const serialized = JSON.stringify(Object.fromEntries([...REQUIRED_KEYS, ...CONTACT_BUTTON_KEYS].map(key => [key, t[key]])));
   assert.equal(serialized.includes(String.fromCharCode(0xbf)), false);
   assert.equal(serialized.includes(String.fromCharCode(0xa1)), false);
+});
+
+test('active ContactButton uses guaranteed localized copy and active language for listing title', () => {
+  const source = fs.readFileSync('src/components/common/ContactButton.jsx', 'utf8');
+  for (const token of CONTACT_BUTTON_KEYS.map(key => `t.${key}`)) assert.ok(source.includes(token), token);
+  assert.match(source, /localizedText\(ad\?\.title, siteLang\)/);
+  for (const formerLiteral of [
+    "t.ct_contact_btn || 'Contactar'",
+    "t.ct_seller_fallback || 'Vendedor'",
+    "t.verified || 'Verificado'",
+    "t.ct_safety_title || 'Seguridad:'",
+    "t.ct_restricted_title || 'Acceso Restringido'",
+    "t.login_register || 'Iniciar sesión / Registrarse'",
+    "t.ct_whatsapp_sub || 'Responder rápida'",
+    "t.ct_footer_note || 'Mercasto no participa en la transacción. Verifica siempre al vendedor.'",
+    "t.close_btn || t.close || 'Close'",
+  ]) assert.equal(source.includes(formerLiteral), false, formerLiteral);
 });
 
 test('lazy QR and report modals render active-language copy', () => {
