@@ -8,13 +8,13 @@ class AIModerationAssistOnlyContractTest extends TestCase
 {
     public function test_default_rollout_is_human_authoritative_assist_only(): void
     {
-        $config = require __DIR__ . '/../../config/ai_moderation.php';
+        $source = file_get_contents(__DIR__ . '/../../config/ai_moderation.php');
 
-        $this->assertTrue($config['enabled']);
-        $this->assertTrue($config['assist_only']);
-        $this->assertSame('assist', $config['rollout']['mode']);
-        $this->assertTrue($config['rollout']['human_authoritative']);
-        $this->assertFalse($config['rollout']['destructive_model_only_actions']);
+        $this->assertStringContainsString("env('AI_MODERATION_ENABLED', true)", $source);
+        $this->assertStringContainsString("env('AI_MODERATION_ASSIST_ONLY', true)", $source);
+        $this->assertStringContainsString("env('AI_MODERATION_ROLLOUT_MODE', 'assist')", $source);
+        $this->assertStringContainsString("'human_authoritative' => true", $source);
+        $this->assertStringContainsString("'destructive_model_only_actions' => false", $source);
     }
 
     public function test_job_keeps_model_decision_as_proposal_in_assist_only_mode(): void
