@@ -14,9 +14,9 @@ class ModerateAdPolicyReviewContractTest extends TestCase
         $this->assertStringContainsString('ListingPolicyMatrixService $policyMatrix', $source);
         $this->assertStringContainsString('$textPolicyReview = $policySignals->assessListing', $source);
         $this->assertStringContainsString('$modelPolicyReview = $policyMatrix->assessment', $source);
-        $this->assertStringContainsString("$decision = 'manual_review';", $source);
+        $this->assertStringContainsString("\$decision = 'manual_review';", $source);
         $this->assertStringContainsString("'policy_review' => [", $source);
-        $this->assertStringContainsString("'policy_ids' => $policyIds", $source);
+        $this->assertStringContainsString("'policy_ids' => \$policyIds", $source);
         $this->assertStringContainsString("'authoritative_action' => null", $source);
     }
 
