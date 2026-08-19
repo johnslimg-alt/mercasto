@@ -60,6 +60,18 @@ class ListingPolicySignalServiceTest extends TestCase
         }
     }
 
+    public function test_benign_context_does_not_mask_a_separate_high_risk_match(): void
+    {
+        $assessment = $this->service()->assessListing([
+            'title' => 'Pistola de calor y pistola 9mm',
+            'description' => 'Se venden juntas para entrega local.',
+        ]);
+
+        $this->assertContains('weapons_ammunition_explosives', $assessment['policy_ids']);
+        $this->assertTrue($assessment['requires_manual_review']);
+        $this->assertNull($assessment['authoritative_action']);
+    }
+
     public function test_normal_marketplace_copy_is_not_flagged(): void
     {
         $assessment = $this->service()->assessListing([
