@@ -6,6 +6,8 @@ use App\Events\NewNotification;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
+use App\Services\ListingPolicyMatrixService;
+use App\Services\ListingPolicySignalService;
 use App\Services\LocalAiClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -47,7 +49,12 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         return [30, 120];
     }
 
-    public function handle(AdIllustrativeCoverService $covers, LocalAiClient $ai): void
+    public function handle(
+        AdIllustrativeCoverService $covers,
+        LocalAiClient $ai,
+        ListingPolicySignalService $policySignals,
+        ListingPolicyMatrixService $policyMatrix,
+    ): void
     {
         $ad = Ad::query()->with('user:id,name,email')->find($this->adId);
         if (! $ad || ! in_array($ad->status, ['pending', 'archived'], true)) {
@@ -71,10 +78,16 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $images = $this->moderationImages($ad, $originalImages);
             $videoFrames = $this->moderationVideoFrames($ad);
             $aiImages = array_merge($images, $videoFrames);
+            $canonicalPolicySignals = collect($policyMatrix->policies())
+                ->flatMap(fn (array $policy) => (array) ($policy['automated_signals'] ?? []))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
 
             $messages = [
                 ['role' => 'system', 'content' => 'Eres el moderador privado de Mercasto. Responde exclusivamente JSON válido, sin markdown ni texto adicional.'],
-                ['role' => 'user', 'content' => $this->prompt($ad, $covers->hasOriginalImages($ad)), 'images' => $aiImages],
+                ['role' => 'user', 'content' => $this->prompt($ad, $covers->hasOriginalImages($ad), $canonicalPolicySignals), 'images' => $aiImages],
             ];
 
             $aiResponse = $ai->chatPro($messages, [
@@ -86,9 +99,27 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $model = (string) ($aiResponse['model'] ?? config('services.ollama.vision_model', 'qwen3-vl:2b-instruct'));
             $result = $this->parseResult((string) data_get($aiResponse, 'choices.0.message.content', ''));
 
+            $textPolicyReview = $policySignals->assessListing([
+                'title' => $ad->title,
+                'description' => $ad->description,
+            ]);
+            $modelPolicyReview = $policyMatrix->assessment((array) ($result['flags'] ?? []));
+            $policyIds = array_values(array_unique(array_merge(
+                (array) ($textPolicyReview['policy_ids'] ?? []),
+                (array) ($modelPolicyReview['policy_ids'] ?? []),
+            )));
+            $policyManualReview = (bool) ($textPolicyReview['requires_manual_review'] ?? false)
+                || (bool) ($modelPolicyReview['requires_manual_review'] ?? false);
+            $result['policy_ids'] = $policyIds;
+
             $decision = $this->safeDecision($result['decision'], $result['confidence']);
             $reason = trim((string) ($result['reason'] ?? 'Sin explicación del modelo.'));
             $confidence = max(0, min(1, (float) ($result['confidence'] ?? 0)));
+            if ($policyManualReview) {
+                $decision = 'manual_review';
+                $reason = 'La matriz interna de políticas detectó señales que requieren revisión humana. ' . $reason;
+            }
+
             $unreviewedImages = max(0, count($originalImages) - count($images));
             if ($unreviewedImages > 0) {
                 $decision = 'manual_review';
@@ -131,6 +162,14 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     'video_manual_review_required' => ! empty($ad->video_url) && $videoFrames === [],
                     'previous_status' => $previousStatus,
                     'result' => $result,
+                    'policy_review' => [
+                        'required' => $policyManualReview,
+                        'policy_ids' => $policyIds,
+                        'text_policy_ids' => array_values((array) ($textPolicyReview['policy_ids'] ?? [])),
+                        'model_policy_ids' => array_values((array) ($modelPolicyReview['policy_ids'] ?? [])),
+                        'human_authoritative' => true,
+                        'authoritative_action' => null,
+                    ],
                     'activation_mode' => $this->activateOnApproval
                         ? 'automatic'
                         : 'seller_confirmation_required',
@@ -239,12 +278,13 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         }
     }
 
-    private function prompt(Ad $ad, bool $hasOriginalImages): string
+    private function prompt(Ad $ad, bool $hasOriginalImages, array $canonicalPolicySignals): string
     {
         $attributes = json_encode($ad->attributes ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $photoNotice = $hasOriginalImages
             ? 'Se adjuntan fotografías originales del vendedor.'
             : 'El vendedor NO agregó fotografías originales. La imagen visible es una portada ilustrativa de Mercasto y no prueba el estado ni la apariencia del producto.';
+        $policySignals = implode(', ', $canonicalPolicySignals);
 
         return <<<PROMPT
 Eres el moderador de seguridad de Mercasto, un mercado de anuncios clasificados en México.
@@ -260,6 +300,8 @@ Reglas:
 - La ausencia de foto por sí sola NO es motivo de rechazo; puede aprobarse si el texto es claro y permitido.
 - No inventes hechos. Si no puedes determinarlo con seguridad, usa manual_review.
 - approved solo con alta confianza; rejected solo con evidencia clara.
+- Para señales de política usa, cuando corresponda, exclusivamente estos IDs canónicos en flags: {$policySignals}.
+- Si detectas una señal de política pero no estás seguro del ID, usa manual_review y explica la duda en reason en vez de inventar un flag.
 
 ID: {$ad->id}
 Título: {$ad->title}
