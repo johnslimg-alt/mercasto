@@ -56,6 +56,22 @@ class ListingPolicyMatrixContractTest extends TestCase
         $this->assertNull($assessment['authoritative_action']);
     }
 
+    public function test_free_form_ai_flags_map_to_canonical_policy_signals(): void
+    {
+        $matrix = require __DIR__ . '/../../config/listing_policy.php';
+        $service = new ListingPolicyMatrixService($matrix);
+
+        foreach (['arma_de_fuego', 'armas de fuego', 'pistolas'] as $flag) {
+            $assessment = $service->assessment([$flag]);
+            $this->assertContains(
+                'weapons_ammunition_explosives',
+                $assessment['policy_ids'],
+                'Expected canonical weapons match for: ' . $flag,
+            );
+            $this->assertTrue($assessment['requires_manual_review']);
+        }
+    }
+
     public function test_no_signal_is_never_promoted_into_an_authoritative_approval(): void
     {
         $matrix = require __DIR__ . '/../../config/listing_policy.php';
