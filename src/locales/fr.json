@@ -229,5 +229,12 @@
     "failed": "Échec de la vérification",
     "retry": "Connectez-vous et demandez un nouveau lien de vérification.",
     "home": "Aller sur Mercasto"
+  },
+  "geolocation": {
+    "unsupported": "La géolocalisation n’est pas prise en charge par votre navigateur.",
+    "permissionDenied": "L’autorisation de localisation a été refusée. Activez-la dans les paramètres du navigateur.",
+    "unavailable": "Localisation indisponible. Vérifiez votre connexion GPS.",
+    "timeout": "La demande de localisation a expiré. Réessayez.",
+    "unknown": "Impossible d’obtenir votre position."
   }
 }

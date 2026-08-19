@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * useGeolocation — React hook for browser geolocation.
@@ -27,6 +28,7 @@ export default function useGeolocation({
   onSuccess = null,
   onError = null,
 } = {}) {
+  const { t } = useTranslation();
   const [coords, setCoords] = useState(null); // { latitude, longitude, accuracy }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null); // { code, message }
@@ -43,7 +45,7 @@ export default function useGeolocation({
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      const err = { code: 0, message: 'Geolocalización no soportada en este navegador' };
+      const err = { code: 0, message: t('geolocation.unsupported') };
       setError(err);
       onError?.(err);
       return;
@@ -65,13 +67,13 @@ export default function useGeolocation({
       },
       (geoError) => {
         const errorMap = {
-          1: 'Permiso de ubicación denegado. Actívalo en la configuración del navegador.',
-          2: 'Ubicación no disponible. Verifica tu conexión GPS.',
-          3: 'Tiempo de espera agotado. Intenta de nuevo.',
+          1: t('geolocation.permissionDenied'),
+          2: t('geolocation.unavailable'),
+          3: t('geolocation.timeout'),
         };
         const err = {
           code: geoError.code,
-          message: errorMap[geoError.code] || geoError.message || 'Error desconocido',
+          message: errorMap[geoError.code] || t('geolocation.unknown'),
         };
         setError(err);
         setLoading(false);
@@ -83,7 +85,7 @@ export default function useGeolocation({
         maximumAge: maxAge,
       }
     );
-  }, [timeout, maxAge, highAccuracy, onSuccess, onError]);
+  }, [timeout, maxAge, highAccuracy, onSuccess, onError, t]);
 
   // Auto-request on mount if configured
   useEffect(() => {
