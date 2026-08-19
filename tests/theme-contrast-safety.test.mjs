@@ -14,24 +14,47 @@ function jsxFiles(root) {
   });
 }
 
+function classFragments(source) {
+  return [...source.matchAll(/className\s*=\s*\{?(["'`])([\s\S]*?)\1\}?/g)].map(match => match[2]);
+}
+
+function tokenSet(fragment) {
+  return new Set(fragment.split(/\s+/).filter(Boolean));
+}
+
+function limeContrastViolations(file, source) {
+  const unsafe = [];
+  for (const fragment of classFragments(source)) {
+    const tokens = tokenSet(fragment);
+    const hasBaseWhite = tokens.has('text-white');
+    if (!hasBaseWhite) continue;
+
+    if (tokens.has('bg-[#84CC16]')) {
+      unsafe.push(`${file}: base lime uses text-white: ${fragment}`);
+    }
+
+    for (const token of tokens) {
+      const match = token.match(/^(.+:)bg-\[#84CC16\]$/);
+      if (!match) continue;
+      const variant = match[1];
+      if (!tokens.has(`${variant}text-slate-950`)) {
+        unsafe.push(`${file}: ${variant}lime lacks ${variant}text-slate-950: ${fragment}`);
+      }
+    }
+  }
+  return unsafe;
+}
+
 test('UIProvider is the only owner of the persisted theme state', () => {
   assert.match(uiContext, /const \[isDarkMode, setIsDarkMode\] = useState/);
   assert.doesNotMatch(app, /const \[isDarkMode, setIsDarkMode\] = useState/);
   assert.doesNotMatch(app, /localStorage\.setItem\(['"]theme['"]/);
 });
-test('brand-lime surfaces never use white foreground text', () => {
+
+test('brand-lime surfaces never use white foreground text in the same Tailwind state', () => {
   const unsafe = [];
-  const limeThenWhite = /bg-\[#84CC16\](?!\/)[^'"`}]*(?:\btext-white\b)/g;
-  const whiteThenConditionalLime = /text-white[^\n]{0,120}bg-\[#84CC16\](?!\/)/g;
   for (const file of jsxFiles('src')) {
-    const source = fs.readFileSync(file, 'utf8');
-    for (const match of source.matchAll(limeThenWhite)) unsafe.push(`${file}: ${match[0]}`);
-    for (const match of source.matchAll(whiteThenConditionalLime)) {
-      const fragment = match[0];
-      if (fragment.includes('dark:bg-[#84CC16]') && fragment.includes('dark:text-slate-950')) continue;
-      if (fragment.includes('hover:bg-[#84CC16]') && fragment.includes('hover:text-slate-950')) continue;
-      unsafe.push(`${file}: ${fragment}`);
-    }
+    unsafe.push(...limeContrastViolations(file, fs.readFileSync(file, 'utf8')));
   }
   assert.deepEqual(unsafe, [], `Unsafe lime/white combinations:\n${unsafe.join('\n')}`);
 });
