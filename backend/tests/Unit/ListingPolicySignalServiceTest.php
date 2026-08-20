@@ -72,6 +72,22 @@ class ListingPolicySignalServiceTest extends TestCase
         $this->assertNull($assessment['authoritative_action']);
     }
 
+    public function test_html_tags_preserve_policy_phrase_boundaries(): void
+    {
+        foreach ([
+            '<p>pistola</p><p>9mm</p>',
+            'arma<br>de fuego',
+        ] as $description) {
+            $assessment = $this->service()->assessListing([
+                'title' => 'Artículo en venta',
+                'description' => $description,
+            ]);
+
+            $this->assertContains('weapons_ammunition_explosives', $assessment['policy_ids'], $description);
+            $this->assertTrue($assessment['requires_manual_review']);
+        }
+    }
+
     public function test_normal_marketplace_copy_is_not_flagged(): void
     {
         $assessment = $this->service()->assessListing([

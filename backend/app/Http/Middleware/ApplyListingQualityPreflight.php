@@ -140,7 +140,7 @@ class ApplyListingQualityPreflight
                     'ai_moderated_at' => null,
                 ])->saveQuietly();
 
-                AdModerationDecision::create([
+                $cycle = AdModerationDecision::create([
                     'ad_id' => $ad->id,
                     'source' => 'system',
                     'decision' => 'queued',
@@ -155,7 +155,7 @@ class ApplyListingQualityPreflight
                 // This is an edit of an already-existing listing, not a fresh
                 // submission. Human approval must return control to the seller
                 // instead of silently reactivating a previously paused item.
-                ModerateAdWithAI::dispatch($ad->id, false);
+                ModerateAdWithAI::dispatch($ad->id, false, $cycle->id);
             }
         }
 

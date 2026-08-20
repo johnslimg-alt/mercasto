@@ -32,15 +32,23 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
     public int $timeout = 180;
     public int $uniqueFor = 600;
 
+    public ?int $moderationCycleId = null;
+
     public function __construct(
         public int $adId,
         public bool $activateOnApproval = true,
+        ?int $moderationCycleId = null,
     )
     {
+        $this->moderationCycleId = $moderationCycleId;
     }
 
     public function uniqueId(): string
     {
+        if ($this->moderationCycleId) {
+            return $this->adId . ':cycle:' . $this->moderationCycleId;
+        }
+
         return $this->adId . ':' . ($this->activateOnApproval ? 'activate' : 'review');
     }
 
@@ -57,7 +65,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
     ): void
     {
         $ad = Ad::query()->with('user:id,name,email')->find($this->adId);
-        if (! $ad || ! in_array($ad->status, ['pending', 'archived'], true)) {
+        if (! $ad || ! in_array($ad->status, ['pending', 'archived'], true) || ! $this->isCurrentModerationCycle()) {
             return;
         }
 
@@ -65,6 +73,9 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
         $covers->ensureCover($ad);
         $ad->refresh();
+        if (! $this->isCurrentModerationCycle()) {
+            return;
+        }
 
         // Deterministic text-policy evidence must exist before any provider call
         // or kill-switch return so outages can never erase the canonical policy IDs.
@@ -177,6 +188,10 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'rejected' => 'rejected',
                 default => 'archived',
             };
+
+            if (! $this->isCurrentModerationCycle()) {
+                return;
+            }
 
             $previousStatus = $ad->status;
             $ad->forceFill([
@@ -419,6 +434,10 @@ PROMPT;
 
     private function leaveForManualReview(Ad $ad, string $reason, string $aiStatus, array $metadata = []): void
     {
+        if (! $this->isCurrentModerationCycle()) {
+            return;
+        }
+
         $ad->forceFill([
             'status' => 'archived',
             'ai_moderation_status' => $aiStatus,
@@ -453,6 +472,32 @@ PROMPT;
                 ], $metadata),
             ]);
         }
+    }
+
+    private function isCurrentModerationCycle(): bool
+    {
+        if (! $this->moderationCycleId) {
+            return true;
+        }
+
+        $cycle = AdModerationDecision::query()
+            ->whereKey($this->moderationCycleId)
+            ->where('ad_id', $this->adId)
+            ->where('source', 'system')
+            ->where('decision', 'queued')
+            ->first();
+        if (! $cycle) {
+            return false;
+        }
+
+        $latestCycleId = AdModerationDecision::query()
+            ->where('ad_id', $this->adId)
+            ->where('source', 'system')
+            ->where('decision', 'queued')
+            ->latest('id')
+            ->value('id');
+
+        return (int) $latestCycleId === $this->moderationCycleId;
     }
 
     private function notifyApprovalPendingReactivation(Ad $ad): void

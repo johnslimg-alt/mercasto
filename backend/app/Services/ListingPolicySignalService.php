@@ -80,6 +80,7 @@ class ListingPolicySignalService
 
     private function normalizeText(string $value): string
     {
+        $value = preg_replace('/<[^>]*>/', ' ', $value) ?? $value;
         $value = Str::lower(Str::ascii(strip_tags($value)));
         $value = preg_replace('/[^a-z0-9]+/', ' ', $value) ?? '';
         return trim(preg_replace('/\s+/', ' ', $value) ?? '');

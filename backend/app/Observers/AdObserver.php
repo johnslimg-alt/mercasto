@@ -141,7 +141,7 @@ class AdObserver
             'ai_moderated_at' => null,
         ])->saveQuietly();
 
-        AdModerationDecision::create([
+        $cycle = AdModerationDecision::create([
             'ad_id' => $ad->id,
             'source' => 'system',
             'decision' => 'queued',
@@ -153,6 +153,6 @@ class AdObserver
             ],
         ]);
 
-        ModerateAdWithAI::dispatch($ad->id, $activateOnApproval)->afterCommit();
+        ModerateAdWithAI::dispatch($ad->id, $activateOnApproval, $cycle->id)->afterCommit();
     }
 }
