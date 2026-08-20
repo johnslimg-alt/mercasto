@@ -45,5 +45,5 @@ test('each extracted modal retains its principal interaction surface', () => {
   assert.match(coupon, /handleRedeemCoupon/);
   assert.match(report, /handleReportAd/);
   assert.match(userReport, /handleUserReportSubmit/);
-  assert.match(qr, /encodeURIComponent\(qrModalData\)/);
+  assert.match(qr, /QRCode\.toDataURL\(String\(qrModalData\)/);
 });
