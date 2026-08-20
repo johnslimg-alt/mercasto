@@ -2,16 +2,23 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Ad;
 use App\Services\ListingDuplicateRiskService;
 use App\Services\ListingQualityPreflightService;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class ApplyListingQualityPreflight
 {
     private const PREVIEW_HEADER = 'X-Mercasto-Quality-Preflight';
+    private const BULK_TEXT_ERRORS = [
+        'title_missing_letters',
+        'description_missing_letters',
+    ];
 
     public function __construct(
         private ListingQualityPreflightService $preflight,
@@ -24,9 +31,19 @@ class ApplyListingQualityPreflight
         $path = trim($request->path(), '/');
         $isCreate = $request->isMethod('post') && $path === 'api/ads';
         $isUpdate = $request->isMethod('post') && preg_match('#^api/ads/[0-9]+$#', $path) === 1;
+        $isBulkUpload = $request->isMethod('post') && $path === 'api/ads/bulk-upload';
         $isPreview = strtolower(trim((string) $request->header(self::PREVIEW_HEADER))) === 'preview';
+        $user = $request->user('sanctum');
 
-        if ((! $isCreate && ! $isUpdate) || ! $request->user('sanctum')) {
+        if (! $user) {
+            return $next($request);
+        }
+
+        if ($isBulkUpload) {
+            return $this->guardBulkUpload($request, $next, (int) $user->getAuthIdentifier());
+        }
+
+        if (! $isCreate && ! $isUpdate) {
             return $next($request);
         }
 
@@ -64,7 +81,7 @@ class ApplyListingQualityPreflight
             'photo_count' => count($existingImages) + $newImages,
         ]);
 
-        $userId = (int) $request->user('sanctum')->getAuthIdentifier();
+        $userId = (int) $user->getAuthIdentifier();
         $excludeAdId = $isUpdate ? (int) basename($path) : null;
         if ($this->duplicateRisk->hasRisk($userId, [
             'title' => $request->input('title'),
@@ -101,5 +118,84 @@ class ApplyListingQualityPreflight
         }
 
         return $response;
+    }
+
+    /**
+     * Bulk import uses batched Ad::insert(), so model events cannot enforce the
+     * same text-quality contract as the ordinary write endpoint. Keep the whole
+     * controller write inside a transaction, inspect the rows created by this
+     * request, and commit only when every imported title/description contains a
+     * Unicode letter. This is fail-closed and leaves no partially imported bad
+     * rows when one row violates the new hard-validation rule.
+     */
+    private function guardBulkUpload(Request $request, Closure $next, int $userId): Response
+    {
+        DB::beginTransaction();
+
+        try {
+            $baselineId = (int) (Ad::query()->max('id') ?? 0);
+            $response = $next($request);
+
+            if (! $response->isSuccessful()) {
+                DB::rollBack();
+                return $response;
+            }
+
+            $violations = [];
+            $errors = [];
+            $imported = Ad::query()
+                ->where('id', '>', $baselineId)
+                ->where('user_id', $userId)
+                ->orderBy('id')
+                ->get(['id', 'title', 'description', 'price', 'category']);
+
+            foreach ($imported as $ad) {
+                $result = $this->preflight->evaluate([
+                    'title' => $ad->title,
+                    'description' => $ad->description,
+                    'price' => $ad->price,
+                    'category' => $ad->category,
+                    'photo_count' => 0,
+                ]);
+                $rowErrors = array_values(array_intersect(
+                    (array) ($result['errors'] ?? []),
+                    self::BULK_TEXT_ERRORS,
+                ));
+
+                if ($rowErrors === []) {
+                    continue;
+                }
+
+                $errors = array_merge($errors, $rowErrors);
+                $violations[] = [
+                    'ad_id' => $ad->id,
+                    'errors' => $rowErrors,
+                ];
+            }
+
+            if ($violations !== []) {
+                DB::rollBack();
+
+                return response()->json([
+                    'message' => 'Bulk upload failed listing quality validation.',
+                    'quality_preflight' => [
+                        'passes_hard_validation' => false,
+                        'errors' => array_values(array_unique($errors)),
+                        'warnings' => [],
+                    ],
+                    'bulk_quality_preflight' => [
+                        'rejected_rows' => $violations,
+                    ],
+                ], 422);
+            }
+
+            DB::commit();
+            return $response;
+        } catch (Throwable $error) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+            throw $error;
+        }
     }
 }
