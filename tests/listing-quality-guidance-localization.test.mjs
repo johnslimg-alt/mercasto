@@ -22,15 +22,18 @@ test('listing quality guidance covers all 11 active languages', async () => {
   }
 });
 
-test('seller UI consumes backend machine codes without duplicating quality rules', () => {
+test('seller create and edit UI consume backend machine codes without duplicating quality rules', () => {
   const app = fs.readFileSync('src/App.jsx', 'utf8');
-  const screen = fs.readFileSync('src/components/screens/PostScreen.jsx', 'utf8');
+  const postScreen = fs.readFileSync('src/components/screens/PostScreen.jsx', 'utf8');
+  const editScreen = fs.readFileSync('src/components/screens/EditAdScreen.jsx', 'utf8');
   assert.match(app, /'X-Mercasto-Quality-Preflight': 'preview'/);
   assert.match(app, /previewData\.quality_preflight/);
-  assert.match(screen, /t\[`listing_quality_\$\{code\}`\]/);
-  assert.match(screen, /hasQualityWarnings \? t\.listing_quality_continue/);
+  assert.match(postScreen, /t\[`listing_quality_\$\{code\}`\]/);
+  assert.match(postScreen, /hasQualityWarnings \? t\.listing_quality_continue/);
+  assert.match(editScreen, /data\?\.quality_preflight\?\.errors/);
+  assert.match(editScreen, /t\[`listing_quality_\$\{code\}`\]/);
   for (const implementationRule of ['keyword_stuffing', 'contact_data_in_copy', 'title_repeated_as_description']) {
-    assert.equal(screen.includes(`code === '${implementationRule}'`), false);
+    assert.equal(postScreen.includes(`code === '${implementationRule}'`), false);
   }
 });
 
