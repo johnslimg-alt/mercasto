@@ -3563,7 +3563,12 @@ function App() {
         showToast(localizeServerMessage(lang, data.message, t.listing_action_bulk_success));
         window.location.reload(); // Recargar para mostrar los nuevos anuncios en el dashboard
       } else {
-        showToast(localizeServerMessage(lang, data.message, t.listing_action_bulk_error), 'error');
+        const qualityGuidance = Array.isArray(data.rejected_rows)
+          ? data.rejected_rows.slice(0, 3).flatMap(row =>
+              (row.errors || []).map(code => `#${row.row}: ${t[`listing_quality_${code}`] || t.listing_quality_generic}`)
+            ).join(' ')
+          : '';
+        showToast(qualityGuidance || localizeServerMessage(lang, data.message, t.listing_action_bulk_error), 'error');
       }
     } catch (err) {
       console.error("Bulk upload error", err);
