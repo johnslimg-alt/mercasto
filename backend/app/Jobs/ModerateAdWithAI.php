@@ -100,6 +100,12 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     'rollout_mode' => 'disabled',
                     'assist_only' => true,
                     'human_authoritative' => true,
+                    'rollout' => [
+                        'mode' => 'disabled',
+                        'assist_only' => true,
+                        'human_authoritative' => true,
+                        'activate_on_human_approval' => $this->activateOnApproval,
+                    ],
                 ], $textPolicyMetadata),
             );
             return;
@@ -243,6 +249,12 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     'rollout_mode' => (string) config('ai_moderation.rollout.mode', 'assist'),
                     'assist_only' => (bool) config('ai_moderation.assist_only', true),
                     'human_authoritative' => true,
+                    'rollout' => [
+                        'mode' => (string) config('ai_moderation.rollout.mode', 'assist'),
+                        'assist_only' => (bool) config('ai_moderation.assist_only', true),
+                        'human_authoritative' => true,
+                        'activate_on_human_approval' => $this->activateOnApproval,
+                    ],
                 ], $textPolicyMetadata),
             );
         }

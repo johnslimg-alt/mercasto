@@ -58,12 +58,11 @@ class AdActivationLifecycleTest extends TestCase
         ]);
         AdModerationDecision::query()->create([
             'ad_id' => $ad->id,
-            'source' => 'ai',
-            'decision' => 'manual_review',
-            'reason' => 'Assist-only review pending.',
+            'source' => 'system',
+            'decision' => 'queued',
             'metadata' => [
                 'rollout' => [
-                    'assist_only' => true,
+                    'human_authoritative' => true,
                     'activate_on_human_approval' => true,
                 ],
             ],
@@ -81,6 +80,41 @@ class AdActivationLifecycleTest extends TestCase
         $this->assertSame('active', $ad->status);
         $this->assertSame('approved', $ad->ai_moderation_status);
         $this->assertTrue($ad->expires_at->equalTo(now()->addDays(7)));
+    }
+
+    public function test_admin_approval_ignores_stale_activation_intent_from_previous_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create();
+        $ad = $this->createAd($seller, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'manual_review',
+            'moderation_submitted_at' => now(),
+        ]);
+
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'system',
+            'decision' => 'queued',
+            'metadata' => ['rollout' => ['activate_on_human_approval' => true]],
+            'created_at' => now()->subHour(),
+            'updated_at' => now()->subHour(),
+        ]);
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'system',
+            'decision' => 'queued',
+            'metadata' => ['rollout' => ['activate_on_human_approval' => false]],
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson("/api/admin/moderation/ads/{$ad->id}/decision", ['decision' => 'approved'])
+            ->assertOk()
+            ->assertJsonPath('status', 'archived')
+            ->assertJsonPath('activation_mode', 'seller_confirmation_required');
+
+        $this->assertSame('archived', $ad->fresh()->status);
     }
 
     public function test_admin_approval_of_archived_ad_requires_seller_confirmation(): void

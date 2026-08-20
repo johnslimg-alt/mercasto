@@ -30,6 +30,7 @@ test('every active language explains policy holds as human review before publica
 test('runtime translation loader overlays the policy-review copy on every language bundle', async () => {
   const source = await readFile(new URL('../src/utils/translations.js', import.meta.url), 'utf8');
   assert.match(source, /getListingPolicyReviewTranslations/);
-  assert.match(source, /withPolicyReviewTranslations\('es', esTranslations\)/);
-  assert.match(source, /withPolicyReviewTranslations\(lang, module\.default\)/);
+  assert.match(source, /mergeListingQualityValidationTranslations/);
+  assert.match(source, /mergeRuntimeListingTranslations\('es', esTranslations\)/);
+  assert.match(source, /mergeRuntimeListingTranslations\(lang, module\.default\)/);
 });

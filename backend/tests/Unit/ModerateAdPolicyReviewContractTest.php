@@ -23,6 +23,15 @@ class ModerateAdPolicyReviewContractTest extends TestCase
         $this->assertStringContainsString("'activate_on_human_approval' => \$this->activateOnApproval", $source);
     }
 
+    public function test_activation_intent_survives_disabled_and_provider_failure_paths(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../../app/Jobs/ModerateAdWithAI.php');
+
+        $this->assertGreaterThanOrEqual(3, substr_count($source, "'activate_on_human_approval' => \$this->activateOnApproval"));
+        $this->assertStringContainsString("'mode' => 'disabled'", $source);
+        $this->assertStringContainsString("Log::error('AI moderation failed'", $source);
+    }
+
     public function test_text_policy_evidence_is_captured_before_kill_switch_and_provider_calls(): void
     {
         $source = file_get_contents(__DIR__ . '/../../app/Jobs/ModerateAdWithAI.php');

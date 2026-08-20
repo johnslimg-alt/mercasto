@@ -124,10 +124,23 @@ class AdminAdModerationController extends Controller
             ], 422);
         }
 
-        $latestAiDecision = $ad->moderationDecisions()->where('source', 'ai')->latest('id')->first();
-        $activateOnHumanApproval = (bool) data_get($latestAiDecision?->metadata, 'rollout.activate_on_human_approval', false);
+        $queueIntentQuery = $ad->moderationDecisions()
+            ->where('source', 'system')
+            ->where('decision', 'queued');
+        if ($ad->moderation_submitted_at) {
+            $queueIntentQuery->where('created_at', '>=', $ad->moderation_submitted_at);
+        }
+        $currentQueueDecision = $queueIntentQuery->latest('id')->first();
+        $hasCurrentActivationIntent = $currentQueueDecision !== null;
+        $activateOnHumanApproval = (bool) data_get(
+            $currentQueueDecision?->metadata,
+            'rollout.activate_on_human_approval',
+            false
+        );
         $publishImmediately = $decision === 'approved'
-            && ($previousStatus === 'pending' || $activateOnHumanApproval);
+            && ($hasCurrentActivationIntent
+                ? $activateOnHumanApproval
+                : $previousStatus === 'pending');
         $newStatus = match ($decision) {
             'approved' => $publishImmediately ? 'active' : 'archived',
             'rejected' => 'rejected',

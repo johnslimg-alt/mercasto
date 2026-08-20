@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
+use App\Models\AdModerationDecision;
 use App\Services\ListingDuplicateRiskService;
 use App\Services\ListingPolicySignalService;
 use App\Services\ListingQualityPreflightService;
@@ -138,6 +139,18 @@ class ApplyListingQualityPreflight
                     'ai_moderation_confidence' => null,
                     'ai_moderated_at' => null,
                 ])->saveQuietly();
+
+                AdModerationDecision::create([
+                    'ad_id' => $ad->id,
+                    'source' => 'system',
+                    'decision' => 'queued',
+                    'metadata' => [
+                        'rollout' => [
+                            'human_authoritative' => true,
+                            'activate_on_human_approval' => false,
+                        ],
+                    ],
+                ]);
 
                 // This is an edit of an already-existing listing, not a fresh
                 // submission. Human approval must return control to the seller
