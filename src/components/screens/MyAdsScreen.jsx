@@ -19,6 +19,14 @@ function requiresSellerCorrection(ad) {
     && ad?.seller_correction?.required === true;
 }
 
+const HUMAN_REVIEW_STATUSES = new Set(['queued', 'processing', 'manual_review', 'failed', 'admin_manual_review']);
+
+function awaitsHumanReview(ad) {
+  return ad?.status === 'archived'
+    && HUMAN_REVIEW_STATUSES.has(ad?.ai_moderation_status)
+    && !requiresSellerCorrection(ad);
+}
+
 function getPromoLabels(t) {
   return {
     boost_1_day: { name: t.pm_boost_1d_name || 'Subir 24 horas', totalMs: 1 * 24 * 60 * 60 * 1000, category: 'boost' },
@@ -98,10 +106,10 @@ export default function MyAdsScreen({
     paused: userAds.filter(ad => ad.status === 'paused').length,
     featured: userAds.filter(ad => ad.promoted || ad.is_featured).length,
     draft: userAds.filter(ad => ad.status === 'draft').length,
-    pending: userAds.filter(ad => ad.status === 'pending').length,
+    pending: userAds.filter(ad => ad.status === 'pending' || awaitsHumanReview(ad)).length,
     review_ready: userAds.filter(ad => ad.status === 'archived' && ad.ai_moderation_status === 'approved').length,
     needs_correction: userAds.filter(requiresSellerCorrection).length,
-    sold: userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad))).length,
+    sold: userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad) && !awaitsHumanReview(ad))).length,
     rejected: userAds.filter(ad => ad.status === 'rejected').length,
   }), [userAds]);
 
@@ -111,10 +119,10 @@ export default function MyAdsScreen({
     else if (filter === 'paused') list = userAds.filter(ad => ad.status === 'paused');
     else if (filter === 'featured') list = userAds.filter(ad => ad.promoted || ad.is_featured);
     else if (filter === 'draft') list = userAds.filter(ad => ad.status === 'draft');
-    else if (filter === 'pending') list = userAds.filter(ad => ad.status === 'pending');
+    else if (filter === 'pending') list = userAds.filter(ad => ad.status === 'pending' || awaitsHumanReview(ad));
     else if (filter === 'review_ready') list = userAds.filter(ad => ad.status === 'archived' && ad.ai_moderation_status === 'approved');
     else if (filter === 'needs_correction') list = userAds.filter(requiresSellerCorrection);
-    else if (filter === 'sold') list = userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad)));
+    else if (filter === 'sold') list = userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad) && !awaitsHumanReview(ad)));
     else if (filter === 'rejected') list = userAds.filter(ad => ad.status === 'rejected');
     else list = userAds;
 
@@ -315,7 +323,7 @@ export default function MyAdsScreen({
               onClick={() => setSelectedIds(allVisibleSelected ? new Set() : new Set(filteredAds.map(ad => ad.id)))}
               className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-600 dark:text-slate-300 mr-4 shrink-0 pb-3"
             >
-              {allVisibleSelected ? <CheckSquare className="w-4 h-4 text-[#84CC16]" /> : <Square className="w-4 h-4 text-slate-400" />}
+              {allVisibleSelected ? <CheckSquare className="w-4 h-4 text-[#84CC16]" /> : <Square className="w-4 h-4 text-slate-300" />}
               {t.select_all || 'Seleccionar todo'}
             </button>
           )}
@@ -332,6 +340,7 @@ export default function MyAdsScreen({
           const selected = selectedIds.has(ad.id);
           const promo = activePromotion(ad, t);
           const correction = requiresSellerCorrection(ad) ? ad.seller_correction : null;
+          const pendingHumanReview = awaitsHumanReview(ad);
           const CardBody = (
             <>
               {selectionMode && (
@@ -349,6 +358,7 @@ export default function MyAdsScreen({
                        ad.status === 'pending' ? (t.pending_status || 'En Moderación') :
                        ad.status === 'archived' && ad.ai_moderation_status === 'approved' ? (t.review_ready_status) :
                        correction ? (t.needs_correction_status) :
+                       pendingHumanReview ? (t.pending_status || 'En Moderación') :
                        ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived' ? (t.sold_status || 'Vendido') :
                        ad.status === 'rejected' ? (t.rejected_status || 'Rechazado') :
                        ad.status}
@@ -389,7 +399,7 @@ export default function MyAdsScreen({
             <div key={ad.id} data-testid={`dashboard-ad-${ad.id}`} className={`px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0 flex flex-col sm:flex-row gap-2.5 items-start sm:items-center ${selected ? 'bg-lime-50/70 dark:bg-lime-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}>
               {selectionMode ? (
                 <button type="button" aria-pressed={selected} onClick={() => toggleSelect(ad.id)} className="flex gap-2.5 flex-1 w-full text-left">{CardBody}</button>
-              ) : correction ? (
+              ) : correction || pendingHumanReview ? (
                 <div className="flex gap-2.5 flex-1 w-full">{CardBody}</div>
               ) : (
                 <Link to={`/?ad=${ad.id}`} className="flex gap-2.5 flex-1 w-full">{CardBody}</Link>
@@ -397,7 +407,7 @@ export default function MyAdsScreen({
 
               {!selectionMode && (
                 <div className="flex w-full sm:w-auto sm:min-w-0 sm:max-w-[60%] gap-1.5 mt-1 sm:mt-0 flex-wrap justify-end">
-                  {!correction && <Link to={`/?ad=${ad.id}`} data-testid={`view-ad-${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 text-[11px]"><ExternalLink className="w-3 h-3" /> {t.view || 'Ver'}</Link>}
+                  {!correction && !pendingHumanReview && <Link to={`/?ad=${ad.id}`} data-testid={`view-ad-${ad.id}`} className="btn-sm flex-1 sm:flex-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1 text-[11px]"><ExternalLink className="w-3 h-3" /> {t.view || 'Ver'}</Link>}
                   <Link to={`/anuncio/${ad.id}/editar`} data-testid={`edit-ad-${ad.id}`} className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${correction ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-200' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}><Pencil className="w-3 h-3" /> {correction ? (t.correct_and_resubmit) : (t.edit || 'Editar')}</Link>
                   {ad.status === 'active' && <button data-testid={`pause-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.pause || 'Pausar'}</button>}
                   {ad.status === 'paused' && <button data-testid={`reactivate-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}

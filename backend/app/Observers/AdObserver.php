@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\IndexNowController;
 use App\Jobs\GenerateAdEmbedding;
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
+use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Log;
@@ -81,7 +82,7 @@ class AdObserver
             );
 
         if ($submittedAgain || ($contentChanged && $isModerationItem)) {
-            $this->queueForModeration($ad);
+            $this->queueForModeration($ad, false);
         }
     }
 
@@ -112,7 +113,7 @@ class AdObserver
         GenerateAdEmbedding::dispatch($ad->id)->afterCommit();
     }
 
-    private function queueForModeration(Ad $ad): void
+    private function queueForModeration(Ad $ad, bool $activateOnApproval = true): void
     {
         // The application test suite uses the synchronous queue driver. Dispatching here
         // would perform an AI moderation request while unrelated factories are creating
@@ -140,6 +141,18 @@ class AdObserver
             'ai_moderated_at' => null,
         ])->saveQuietly();
 
-        ModerateAdWithAI::dispatch($ad->id)->afterCommit();
+        $cycle = AdModerationDecision::create([
+            'ad_id' => $ad->id,
+            'source' => 'system',
+            'decision' => 'queued',
+            'metadata' => [
+                'rollout' => [
+                    'human_authoritative' => true,
+                    'activate_on_human_approval' => $activateOnApproval,
+                ],
+            ],
+        ]);
+
+        ModerateAdWithAI::dispatch($ad->id, $activateOnApproval, $cycle->id)->afterCommit();
     }
 }

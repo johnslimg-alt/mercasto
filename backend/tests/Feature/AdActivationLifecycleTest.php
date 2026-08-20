@@ -46,6 +46,77 @@ class AdActivationLifecycleTest extends TestCase
         $this->assertSame('automatic_fresh_submission', $decision->metadata['activation_mode']);
     }
 
+    public function test_admin_approval_preserves_fresh_submission_activation_intent_after_assist_only_review(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        config(['marketplace.ad_lifetime_days' => 7]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create();
+        $ad = $this->createAd($seller, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'manual_review',
+        ]);
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'system',
+            'decision' => 'queued',
+            'metadata' => [
+                'rollout' => [
+                    'human_authoritative' => true,
+                    'activate_on_human_approval' => true,
+                ],
+            ],
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson("/api/admin/moderation/ads/{$ad->id}/decision", [
+                'decision' => 'approved',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'active')
+            ->assertJsonPath('activation_mode', 'automatic_fresh_submission');
+
+        $ad->refresh();
+        $this->assertSame('active', $ad->status);
+        $this->assertSame('approved', $ad->ai_moderation_status);
+        $this->assertTrue($ad->expires_at->equalTo(now()->addDays(7)));
+    }
+
+    public function test_admin_approval_ignores_stale_activation_intent_from_previous_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-05 12:00:00');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create();
+        $ad = $this->createAd($seller, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'manual_review',
+            'moderation_submitted_at' => now(),
+        ]);
+
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'system',
+            'decision' => 'queued',
+            'metadata' => ['rollout' => ['activate_on_human_approval' => true]],
+            'created_at' => now()->subHour(),
+            'updated_at' => now()->subHour(),
+        ]);
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'system',
+            'decision' => 'queued',
+            'metadata' => ['rollout' => ['activate_on_human_approval' => false]],
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson("/api/admin/moderation/ads/{$ad->id}/decision", ['decision' => 'approved'])
+            ->assertOk()
+            ->assertJsonPath('status', 'archived')
+            ->assertJsonPath('activation_mode', 'seller_confirmation_required');
+
+        $this->assertSame('archived', $ad->fresh()->status);
+    }
+
     public function test_admin_approval_of_archived_ad_requires_seller_confirmation(): void
     {
         Carbon::setTestNow('2026-08-05 12:00:00');

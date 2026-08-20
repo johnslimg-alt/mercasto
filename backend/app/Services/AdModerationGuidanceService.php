@@ -17,6 +17,10 @@ class AdModerationGuidanceService
         'regulated',
     ];
 
+    public function __construct(
+        private readonly ListingPolicyMatrixService $policyMatrix,
+    ) {}
+
     public function sellerCorrection(Ad $ad): ?array
     {
         if ($ad->status !== 'archived') {
@@ -40,8 +44,26 @@ class AdModerationGuidanceService
         }
 
         $decision = $this->latestManualReviewDecision($ad);
+        $policyReview = is_array($decision?->metadata['policy_review'] ?? null)
+            ? $decision->metadata['policy_review']
+            : [];
+
+        // Persisted deterministic/model policy holds are authoritative routing
+        // signals for the human queue. Never downgrade them into seller-facing
+        // "fix the photo/text" guidance that implies a simple edit clears them.
+        if (($policyReview['required'] ?? false) === true
+            || ! empty($policyReview['policy_ids'] ?? [])) {
+            return null;
+        }
+
         $flags = $this->normalizedFlags($decision);
         $flagText = implode(' ', $flags);
+
+        // Backward compatibility for older moderation records that predate the
+        // persisted policy_review payload but still contain high-risk AI flags.
+        if (($this->policyMatrix->assessment($flags)['requires_manual_review'] ?? false) === true) {
+            return null;
+        }
 
         if ($flagText === '' || $this->containsAny($flagText, self::ADMIN_ONLY_TERMS)) {
             return null;

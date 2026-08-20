@@ -1,13 +1,21 @@
 import esTranslations from '../constants/translations/es.js';
 import { mergeListingQualityValidationTranslations } from '../constants/listingQualityValidationTranslations.js';
+import { getListingPolicyReviewTranslations } from '../constants/listingPolicyReviewTranslations.js';
 import { loadFilterOptionLanguage } from './filterOptionTranslations.js';
 
 // Hebrew (he) and Yiddish (yi) are intentionally disabled and archived.
 export const SUPPORTED_LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
 export const RTL_LANGUAGES = new Set(['ar']);
 
+function mergeRuntimeListingTranslations(lang, translations) {
+  return {
+    ...mergeListingQualityValidationTranslations(lang, translations),
+    ...getListingPolicyReviewTranslations(lang),
+  };
+}
+
 const cache = {
-  es: mergeListingQualityValidationTranslations('es', esTranslations),
+  es: mergeRuntimeListingTranslations('es', esTranslations),
 };
 
 export function normalizeLanguage(language = 'es') {
@@ -19,7 +27,6 @@ export function getTranslations(language = 'es') {
   const lang = normalizeLanguage(language);
   return cache[lang] || cache['es'];
 }
-
 export async function loadLanguage(language) {
   const lang = normalizeLanguage(language);
   if (cache[lang]) {
@@ -29,7 +36,7 @@ export async function loadLanguage(language) {
 
   try {
     const module = await import(`../constants/translations/${lang}.js`);
-    cache[lang] = mergeListingQualityValidationTranslations(lang, module.default);
+    cache[lang] = mergeRuntimeListingTranslations(lang, module.default);
     await loadFilterOptionLanguage(lang);
     return cache[lang];
   } catch (error) {

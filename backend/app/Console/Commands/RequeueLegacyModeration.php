@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
+use App\Models\AdModerationDecision;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -86,7 +87,19 @@ class RequeueLegacyModeration extends Command
                     'ai_moderated_at' => null,
                 ])->saveQuietly();
 
-                ModerateAdWithAI::dispatch($ad->id, false)
+                $cycle = AdModerationDecision::create([
+                    'ad_id' => $ad->id,
+                    'source' => 'system',
+                    'decision' => 'queued',
+                    'metadata' => [
+                        'rollout' => [
+                            'human_authoritative' => true,
+                            'activate_on_human_approval' => false,
+                        ],
+                    ],
+                ]);
+
+                ModerateAdWithAI::dispatch($ad->id, false, $cycle->id)
                     ->delay(now()->addSeconds($index * $spacing))
                     ->afterCommit();
             });

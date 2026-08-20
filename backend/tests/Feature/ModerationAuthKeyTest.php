@@ -53,9 +53,14 @@ class ModerationAuthKeyTest extends TestCase
 
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
-        $this->assertSame('approved', $ad->ai_moderation_status);
+        $this->assertSame('manual_review', $ad->ai_moderation_status);
+        $this->assertNull($ad->expires_at);
         $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest()->firstOrFail();
-        $this->assertSame('seller_confirmation_required', $decision->metadata['activation_mode']);
+        $this->assertSame('manual_review', $decision->decision);
+        $this->assertSame('approved', $decision->metadata['rollout']['proposed_decision']);
+        $this->assertSame('manual_review', $decision->metadata['rollout']['authoritative_decision']);
+        $this->assertTrue($decision->metadata['rollout']['assist_only']);
+        $this->assertSame('human_confirmation_required', $decision->metadata['activation_mode']);
         $this->assertSame('qwen3-vl:4b-instruct', $decision->metadata['model']);
 
         Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/chat'
@@ -92,7 +97,7 @@ class ModerationAuthKeyTest extends TestCase
             || str_contains($request->url(), 'anthropic'));
     }
 
-    public function test_automatic_approval_starts_fresh_lifetime(): void
+    public function test_model_approval_never_starts_lifetime_during_assist_only_rollout(): void
     {
         config(['marketplace.ad_lifetime_days' => 7]);
         $this->fakeDecision([
@@ -104,8 +109,14 @@ class ModerationAuthKeyTest extends TestCase
         $ad = $this->legacyAd();
         app()->call([new ModerateAdWithAI($ad->id, true), 'handle']);
         $ad->refresh();
-        $this->assertSame('active', $ad->status);
-        $this->assertTrue($ad->expires_at->between(now()->addDays(7)->subMinute(), now()->addDays(7)->addMinute()));
+
+        $this->assertSame('archived', $ad->status);
+        $this->assertSame('manual_review', $ad->ai_moderation_status);
+        $this->assertNull($ad->expires_at);
+        $decision = AdModerationDecision::query()->where('ad_id', $ad->id)->latest()->firstOrFail();
+        $this->assertSame('approved', $decision->metadata['rollout']['proposed_decision']);
+        $this->assertSame('manual_review', $decision->metadata['rollout']['authoritative_decision']);
+        $this->assertSame('human_confirmation_required', $decision->metadata['activation_mode']);
     }
 
     public function test_local_provider_failure_goes_to_manual_review(): void
