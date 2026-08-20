@@ -131,7 +131,9 @@ jobs:
           echo 'courier_dns_resolves=yes'
 
           if ! sudo -n test -s /etc/letsencrypt/live/courier.mercasto.com/fullchain.pem; then
-            sudo -n certbot certonly \
+            docker run --rm \
+              -v /etc/letsencrypt:/etc/letsencrypt \
+              certbot/dns-cloudflare:v2.10.0 certonly \
               --dns-cloudflare \
               --dns-cloudflare-credentials "$CRED" \
               --dns-cloudflare-propagation-seconds 20 \
