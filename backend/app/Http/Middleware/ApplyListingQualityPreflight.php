@@ -16,7 +16,9 @@ class ApplyListingQualityPreflight
 {
     private const PREVIEW_HEADER = 'X-Mercasto-Quality-Preflight';
     private const BULK_TEXT_ERRORS = [
+        'title_too_short',
         'title_missing_letters',
+        'description_too_short',
         'description_missing_letters',
     ];
 
@@ -123,10 +125,9 @@ class ApplyListingQualityPreflight
     /**
      * Bulk import uses batched Ad::insert(), so model events cannot enforce the
      * same text-quality contract as the ordinary write endpoint. Keep the whole
-     * controller write inside a transaction, inspect the rows created by this
-     * request, and commit only when every imported title/description contains a
-     * Unicode letter. This is fail-closed and leaves no partially imported bad
-     * rows when one row violates the new hard-validation rule.
+     * controller write inside a transaction and lazily inspect rows created by
+     * this request. The first invalid text row fails the batch closed and rolls
+     * the transaction back, without materializing a large import in PHP memory.
      */
     private function guardBulkUpload(Request $request, Closure $next, int $userId): Response
     {
@@ -141,15 +142,12 @@ class ApplyListingQualityPreflight
                 return $response;
             }
 
-            $violations = [];
-            $errors = [];
-            $imported = Ad::query()
+            $violation = null;
+            foreach (Ad::query()
                 ->where('id', '>', $baselineId)
                 ->where('user_id', $userId)
-                ->orderBy('id')
-                ->get(['id', 'title', 'description', 'price', 'category']);
-
-            foreach ($imported as $ad) {
+                ->select(['id', 'title', 'description', 'price', 'category'])
+                ->lazyById(500, 'id') as $ad) {
                 $result = $this->preflight->evaluate([
                     'title' => $ad->title,
                     'description' => $ad->description,
@@ -162,29 +160,27 @@ class ApplyListingQualityPreflight
                     self::BULK_TEXT_ERRORS,
                 ));
 
-                if ($rowErrors === []) {
-                    continue;
+                if ($rowErrors !== []) {
+                    $violation = [
+                        'ad_id' => $ad->id,
+                        'errors' => $rowErrors,
+                    ];
+                    break;
                 }
-
-                $errors = array_merge($errors, $rowErrors);
-                $violations[] = [
-                    'ad_id' => $ad->id,
-                    'errors' => $rowErrors,
-                ];
             }
 
-            if ($violations !== []) {
+            if ($violation !== null) {
                 DB::rollBack();
 
                 return response()->json([
                     'message' => 'Bulk upload failed listing quality validation.',
                     'quality_preflight' => [
                         'passes_hard_validation' => false,
-                        'errors' => array_values(array_unique($errors)),
+                        'errors' => $violation['errors'],
                         'warnings' => [],
                     ],
                     'bulk_quality_preflight' => [
-                        'rejected_rows' => $violations,
+                        'rejected_rows' => [$violation],
                     ],
                 ], 422);
             }
