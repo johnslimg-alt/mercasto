@@ -98,6 +98,12 @@ assertContains(
   'nginx stale-module fallback preserves the Reef courier worker registration'
 );
 
+assertContains(
+  'public/sw.js',
+  "!key.startsWith('reef-courier-')",
+  'Mercasto root service-worker activation preserves Reef courier caches'
+);
+
 assertNotContains(
   'public/stale-module.js',
   "location.replace('/')",
