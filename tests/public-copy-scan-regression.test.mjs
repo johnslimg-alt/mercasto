@@ -22,7 +22,7 @@ function runFixture(defaultConf) {
   }
 }
 
-test('Docker embedded DNS resolver is not mistaken for 127.0.0.1', () => {
+test('Docker embedded DNS resolver directive is allowed', () => {
   const result = runFixture('resolver 127.0.0.11 valid=10s ipv6=off;\n');
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   assert.match(result.stdout, /public copy scan OK/);
@@ -30,6 +30,18 @@ test('Docker embedded DNS resolver is not mistaken for 127.0.0.1', () => {
 
 test('literal host loopback remains blocked in scanned configuration', () => {
   const result = runFixture('proxy_pass http://127.0.0.1:3000;\n');
+  assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stderr, /public copy scan found banned or review-required public text/);
+});
+
+test('Docker DNS address remains blocked when used as a local upstream URL', () => {
+  const result = runFixture('proxy_pass http://127.0.0.11:3000;\n');
+  assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stderr, /public copy scan found banned or review-required public text/);
+});
+
+test('other 127.0.0.1-prefixed loopback addresses are not globally exempted', () => {
+  const result = runFixture('proxy_pass http://127.0.0.10:3000;\n');
   assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
   assert.match(result.stderr, /public copy scan found banned or review-required public text/);
 });
