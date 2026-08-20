@@ -122,6 +122,14 @@ test('fails normally on a real unexpected HTTP status', async () => {
 });
 
 
+test('auth provider smoke uses the public production URL without bypassing origin lockdown', () => {
+  const smoke = readFileSync('scripts/auth-providers-smoke.sh', 'utf8');
+  assert.match(smoke, /BASE_URL=\"\$\{BASE_URL:-https:\/\/mercasto\.com\}\"/);
+  assert.match(smoke, /\"\$URL\"/);
+  assert.doesNotMatch(smoke, /--resolve/);
+  assert.doesNotMatch(smoke, /127\.0\.0\.1/);
+});
+
 test('workflow falls back only for the dedicated connectivity result', () => {
   const workflow = readFileSync('.github/workflows/autonomous-production-watch.yml', 'utf8');
   assert.match(workflow, /bash scripts\/public-production-watch\.sh external/);
