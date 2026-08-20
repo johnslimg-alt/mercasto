@@ -77,6 +77,11 @@ jobs:
 
           cat "$RUNNER_TEMP/mercasto-backend.env"             | docker exec -i mercasto_backend_container sh -lc 'umask 077; cat > /var/www/.env'
 
+      - name: Ensure shared Reef network
+        run: |
+          set -euo pipefail
+          docker network inspect automation-net >/dev/null 2>&1 || docker network create automation-net >/dev/null
+
       - name: Миграции
         run: |
           set -euo pipefail
