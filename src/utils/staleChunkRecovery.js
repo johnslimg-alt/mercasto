@@ -67,19 +67,34 @@ function recoveryUrl() {
   return url.href;
 }
 
+function isReefCourierRegistration(registration) {
+  const scriptUrls = [registration.active, registration.waiting, registration.installing]
+    .map((worker) => worker?.scriptURL || '');
+  return registration.scope.includes('/courier')
+    || scriptUrls.some((url) => url.includes('/courier-sw.js'));
+}
+
 async function clearStaleFrontendState() {
   const tasks = [];
 
   if ('caches' in window) {
     tasks.push(
-      window.caches.keys().then((keys) => Promise.all(keys.map((key) => window.caches.delete(key)))),
+      window.caches.keys().then((keys) => Promise.all(
+        keys
+          .filter((key) => !key.startsWith('reef-courier-'))
+          .map((key) => window.caches.delete(key)),
+      )),
     );
   }
 
   if (navigator.serviceWorker) {
     tasks.push(
       navigator.serviceWorker.getRegistrations().then((registrations) => (
-        Promise.all(registrations.map((registration) => registration.unregister()))
+        Promise.all(
+          registrations
+            .filter((registration) => !isReefCourierRegistration(registration))
+            .map((registration) => registration.unregister()),
+        )
       )),
     );
   }
