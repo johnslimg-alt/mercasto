@@ -33,11 +33,13 @@ test('active report and QR modals use guaranteed localization keys without fallb
   assert.match(qr, />\{t\.close_btn\}<\/button>/);
 });
 
-test('report reason and QR generation contracts remain unchanged', () => {
+test('report reason contracts stay stable and QR data never leaves the browser for generation', () => {
   assert.match(report, /LISTING_REPORT_REASONS\.map/);
   assert.match(userReport, /USER_REPORT_REASONS\.map/);
   assert.match(report, /onSubmit=\{handleReportAd\}/);
   assert.match(userReport, /onSubmit=\{handleUserReportSubmit\}/);
-  assert.match(qr, /api\.qrserver\.com\/v1\/create-qr-code\/\?size=250x250&data=/);
-  assert.match(qr, /encodeURIComponent\(qrModalData\)/);
+  assert.match(qr, /import QRCode from 'qrcode'/);
+  assert.match(qr, /QRCode\.toDataURL\(String\(qrModalData\)/);
+  assert.equal(qr.includes('api.qrserver.com'), false);
+  assert.equal(qr.includes('encodeURIComponent(qrModalData)'), false);
 });
