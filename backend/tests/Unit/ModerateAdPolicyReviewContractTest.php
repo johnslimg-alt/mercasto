@@ -20,6 +20,7 @@ class ModerateAdPolicyReviewContractTest extends TestCase
         $this->assertStringContainsString("'policy_review' => [", $source);
         $this->assertStringContainsString("'policy_ids' => \$policyIds", $source);
         $this->assertStringContainsString("'authoritative_action' => null", $source);
+        $this->assertStringContainsString("'activate_on_human_approval' => \$this->activateOnApproval", $source);
     }
 
     public function test_text_policy_evidence_is_captured_before_kill_switch_and_provider_calls(): void

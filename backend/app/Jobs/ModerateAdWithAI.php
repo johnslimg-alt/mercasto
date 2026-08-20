@@ -202,6 +202,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                         'mode' => (string) config('ai_moderation.rollout.mode', 'assist'),
                         'assist_only' => $assistOnly,
                         'human_authoritative' => true,
+                        'activate_on_human_approval' => $this->activateOnApproval,
                         'proposed_decision' => $proposedDecision,
                         'authoritative_decision' => $decision,
                     ],

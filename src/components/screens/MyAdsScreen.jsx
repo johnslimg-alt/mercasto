@@ -19,7 +19,7 @@ function requiresSellerCorrection(ad) {
     && ad?.seller_correction?.required === true;
 }
 
-const HUMAN_REVIEW_STATUSES = new Set(['queued', 'processing', 'manual_review', 'failed']);
+const HUMAN_REVIEW_STATUSES = new Set(['queued', 'processing', 'manual_review', 'failed', 'admin_manual_review']);
 
 function awaitsHumanReview(ad) {
   return ad?.status === 'archived'

@@ -47,7 +47,8 @@ class ApplyListingQualityPreflight
                         'passes_hard_validation' => false,
                         'errors' => ['incomplete_preview_payload'],
                         'warnings' => [],
-                    ], 422);
+                    ],
+                ], 422);
             }
 
             return $next($request);
@@ -123,7 +124,7 @@ class ApplyListingQualityPreflight
             && $response->isSuccessful()) {
             $ad = Ad::query()->find($excludeAdId);
             $alreadyQueued = $ad
-                && $ad->status === 'pending'
+                && in_array($ad->status, ['pending', 'archived'], true)
                 && $ad->ai_moderation_status === 'queued';
 
             if ($ad && ! $alreadyQueued) {

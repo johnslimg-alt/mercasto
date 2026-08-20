@@ -18,5 +18,6 @@ class ListingPolicyEditRequeueContractTest extends TestCase
         $this->assertStringContainsString("\$payload['moderation_status'] = 'queued'", $source);
         $this->assertStringContainsString("\$payload['ai_moderation_status'] = 'queued'", $source);
         $this->assertStringContainsString("\$payload['status'] = 'pending'", $source);
+        $this->assertStringContainsString("in_array(\$ad->status, ['pending', 'archived'], true)", $source);
     }
 }

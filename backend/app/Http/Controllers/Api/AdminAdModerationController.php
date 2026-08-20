@@ -124,7 +124,10 @@ class AdminAdModerationController extends Controller
             ], 422);
         }
 
-        $publishImmediately = $decision === 'approved' && $previousStatus === 'pending';
+        $latestAiDecision = $ad->moderationDecisions()->where('source', 'ai')->latest('id')->first();
+        $activateOnHumanApproval = (bool) data_get($latestAiDecision?->metadata, 'rollout.activate_on_human_approval', false);
+        $publishImmediately = $decision === 'approved'
+            && ($previousStatus === 'pending' || $activateOnHumanApproval);
         $newStatus = match ($decision) {
             'approved' => $publishImmediately ? 'active' : 'archived',
             'rejected' => 'rejected',
