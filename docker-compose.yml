@@ -55,6 +55,9 @@ services:
         max-file: "5"
     labels:
       - autoheal=true
+    networks:
+      - default
+      - automation-net
 
   mercasto-backend:
     build:
@@ -406,3 +409,8 @@ services:
 
 volumes:
   ollama_data:
+
+networks:
+  automation-net:
+    external: true
+    name: automation-net
