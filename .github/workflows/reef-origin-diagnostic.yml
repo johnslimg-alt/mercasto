@@ -1,0 +1,74 @@
+name: Reef Origin Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/reef-origin-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect isolated-origin prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "host=$(hostname)"
+          echo "== DNS tools =="
+          for cmd in getent dig nslookup curl openssl certbot docker; do
+            if command -v "$cmd" >/dev/null 2>&1; then echo "$cmd=yes"; else echo "$cmd=no"; fi
+          done
+
+          echo "== DNS resolution =="
+          for host in mercasto.com www.mercasto.com api.mercasto.com courier.mercasto.com; do
+            if getent ahostsv4 "$host" >/tmp/reef-dns.out 2>/dev/null; then
+              printf '%s=' "$host"
+              awk 'NR==1{print $1}' /tmp/reef-dns.out
+            else
+              echo "$host=unresolved"
+            fi
+          done
+
+          echo "== Current certificate SANs =="
+          cert=/etc/letsencrypt/live/mercasto.com/fullchain.pem
+          if [ -r "$cert" ]; then
+            openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null | sed -n '2,4p'
+          else
+            echo "mercasto_cert=unreadable"
+          fi
+
+          echo "== Reef runtime =="
+          if docker inspect reef-crm >/dev/null 2>&1; then
+            echo "reef_crm=present"
+            docker inspect -f 'status={{.State.Status}} networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' reef-crm
+          else
+            echo "reef_crm=absent"
+          fi
+          if docker network inspect automation-net >/dev/null 2>&1; then echo "automation_net=present"; else echo "automation_net=absent"; fi
+
+          echo "== Cloudflare/certbot credential presence (names only) =="
+          found=0
+          for path in \
+            /root/.secrets/cloudflare.ini \
+            /etc/letsencrypt/cloudflare.ini \
+            /etc/letsencrypt/credentials.ini \
+            /root/.cloudflare \
+            /var/www/mercasto/cloudflare.ini; do
+            if [ -e "$path" ]; then echo "credential_path=$path"; found=1; fi
+          done
+          if [ "$found" -eq 0 ]; then echo "credential_path=none-known"; fi
+
+          echo "== Environment key names only =="
+          for container in certbot mercasto_frontend_container; do
+            if docker inspect "$container" >/dev/null 2>&1; then
+              echo "container=$container"
+              docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$container" \
+                | sed 's/=.*//' \
+                | grep -Ei 'CLOUDFLARE|CF_|DNS|CERTBOT' \
+                | sort -u || true
+            fi
+          done
