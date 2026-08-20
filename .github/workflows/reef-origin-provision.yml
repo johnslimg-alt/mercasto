@@ -1,0 +1,144 @@
+name: Reef Origin Provision
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/reef-origin-provision.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: Provision courier DNS and certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZONE_NAME='mercasto.com'
+          TEMPLATE_NAME='api.mercasto.com'
+          COURIER_NAME='courier.mercasto.com'
+          CRED='/etc/letsencrypt/cloudflare.ini'
+          sudo -n test -r "$CRED"
+
+          read_ini_value() {
+            local key="$1"
+            sudo -n awk -F= -v wanted="$key" '
+              $1 ~ "^[[:space:]]*" wanted "[[:space:]]*$" {
+                value=$2
+                for (i=3; i<=NF; i++) value=value "=" $i
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+                print value
+                exit
+              }
+            ' "$CRED"
+          }
+
+          api_token="$(read_ini_value dns_cloudflare_api_token || true)"
+          api_key="$(read_ini_value dns_cloudflare_api_key || true)"
+          api_email="$(read_ini_value dns_cloudflare_email || true)"
+
+          if [ -n "$api_token" ]; then
+            auth_args=(-H "Authorization: Bearer $api_token")
+            echo 'cloudflare_auth=api_token'
+          elif [ -n "$api_key" ] && [ -n "$api_email" ]; then
+            auth_args=(-H "X-Auth-Email: $api_email" -H "X-Auth-Key: $api_key")
+            echo 'cloudflare_auth=global_key'
+          else
+            echo 'No supported Cloudflare credential keys found.' >&2
+            exit 1
+          fi
+
+          cf_get() {
+            curl -fsS --retry 3 --retry-all-errors \
+              "${auth_args[@]}" -H 'Content-Type: application/json' "$1"
+          }
+
+          zone_json="$(cf_get "https://api.cloudflare.com/client/v4/zones?name=${ZONE_NAME}&status=active")"
+          zone_id="$(ZONE_JSON="$zone_json" python3 - <<'PY'
+          import json, os
+          data=json.loads(os.environ['ZONE_JSON'])
+          assert data.get('success') and len(data.get('result', [])) == 1
+          print(data['result'][0]['id'])
+          PY
+          )"
+
+          template_json="$(cf_get "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?name=${TEMPLATE_NAME}")"
+          record_data="$(TEMPLATE_JSON="$template_json" python3 - <<'PY'
+          import json, os
+          data=json.loads(os.environ['TEMPLATE_JSON'])
+          assert data.get('success')
+          records=[r for r in data.get('result', []) if r.get('name') == 'api.mercasto.com' and r.get('type') in {'A','CNAME'}]
+          assert records, 'No A/CNAME template record found'
+          r=records[0]
+          print(r['type'])
+          print(r['content'])
+          PY
+          )"
+          record_type="$(printf '%s\n' "$record_data" | sed -n '1p')"
+          record_content="$(printf '%s\n' "$record_data" | sed -n '2p')"
+
+          payload="$(RECORD_TYPE="$record_type" RECORD_CONTENT="$record_content" python3 - <<'PY'
+          import json, os
+          print(json.dumps({
+              'type': os.environ['RECORD_TYPE'],
+              'name': 'courier.mercasto.com',
+              'content': os.environ['RECORD_CONTENT'],
+              'ttl': 1,
+              'proxied': True,
+          }))
+          PY
+          )"
+
+          existing_json="$(cf_get "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?name=${COURIER_NAME}")"
+          record_id="$(EXISTING_JSON="$existing_json" python3 - <<'PY'
+          import json, os
+          data=json.loads(os.environ['EXISTING_JSON'])
+          assert data.get('success')
+          exact=[r for r in data.get('result', []) if r.get('name') == 'courier.mercasto.com']
+          print(exact[0]['id'] if exact else '')
+          PY
+          )"
+
+          if [ -n "$record_id" ]; then
+            response="$(curl -fsS --retry 3 --retry-all-errors -X PUT \
+              "${auth_args[@]}" -H 'Content-Type: application/json' \
+              --data "$payload" \
+              "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records/${record_id}")"
+            action='updated'
+          else
+            response="$(curl -fsS --retry 3 --retry-all-errors -X POST \
+              "${auth_args[@]}" -H 'Content-Type: application/json' \
+              --data "$payload" \
+              "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records")"
+            action='created'
+          fi
+          RESPONSE="$response" python3 - <<'PY'
+          import json, os
+          data=json.loads(os.environ['RESPONSE'])
+          assert data.get('success'), data.get('errors')
+          PY
+          echo "courier_dns=$action type=$record_type proxied=true"
+
+          dns_ready=0
+          for _ in $(seq 1 30); do
+            if dig +short "$COURIER_NAME" @1.1.1.1 | grep -q .; then dns_ready=1; break; fi
+            sleep 2
+          done
+          test "$dns_ready" = 1
+          echo 'courier_dns_resolves=yes'
+
+          if ! sudo -n test -s /etc/letsencrypt/live/courier.mercasto.com/fullchain.pem; then
+            sudo -n certbot certonly \
+              --dns-cloudflare \
+              --dns-cloudflare-credentials "$CRED" \
+              --dns-cloudflare-propagation-seconds 20 \
+              --non-interactive --agree-tos --register-unsafely-without-email \
+              --cert-name courier.mercasto.com \
+              -d courier.mercasto.com
+          fi
+          sudo -n openssl x509 -in /etc/letsencrypt/live/courier.mercasto.com/fullchain.pem \
+            -noout -ext subjectAltName | grep -q 'DNS:courier.mercasto.com'
+          echo 'courier_certificate=ready'
