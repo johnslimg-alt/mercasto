@@ -66,6 +66,24 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         $covers->ensureCover($ad);
         $ad->refresh();
 
+        // Deterministic text-policy evidence must exist before any provider call
+        // or kill-switch return so outages can never erase the canonical policy IDs.
+        $textPolicyReview = $policySignals->assessListing([
+            'title' => $ad->title,
+            'description' => $ad->description,
+        ]);
+        $textPolicyIds = array_values((array) ($textPolicyReview['policy_ids'] ?? []));
+        $textPolicyMetadata = [
+            'policy_review' => [
+                'required' => (bool) ($textPolicyReview['requires_manual_review'] ?? false),
+                'policy_ids' => $textPolicyIds,
+                'text_policy_ids' => $textPolicyIds,
+                'model_policy_ids' => [],
+                'human_authoritative' => true,
+                'authoritative_action' => null,
+            ],
+        ];
+
         $ad->forceFill([
             'status' => 'archived',
             'moderation_submitted_at' => $ad->moderation_submitted_at ?: $ad->created_at ?: now(),
@@ -78,11 +96,11 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 $ad,
                 'La asistencia automática de moderación está desactivada. El anuncio requiere revisión humana.',
                 'manual_review',
-                [
+                array_merge([
                     'rollout_mode' => 'disabled',
                     'assist_only' => true,
                     'human_authoritative' => true,
-                ],
+                ], $textPolicyMetadata),
             );
             return;
         }
@@ -115,13 +133,9 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $model = (string) ($aiResponse['model'] ?? config('services.ollama.vision_model', 'qwen3-vl:2b-instruct'));
             $result = $this->parseResult((string) data_get($aiResponse, 'choices.0.message.content', ''));
 
-            $textPolicyReview = $policySignals->assessListing([
-                'title' => $ad->title,
-                'description' => $ad->description,
-            ]);
             $modelPolicyReview = $policyMatrix->assessment((array) ($result['flags'] ?? []));
             $policyIds = array_values(array_unique(array_merge(
-                (array) ($textPolicyReview['policy_ids'] ?? []),
+                $textPolicyIds,
                 (array) ($modelPolicyReview['policy_ids'] ?? []),
             )));
             $policyManualReview = (bool) ($textPolicyReview['requires_manual_review'] ?? false)
@@ -194,7 +208,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     'policy_review' => [
                         'required' => $policyManualReview,
                         'policy_ids' => $policyIds,
-                        'text_policy_ids' => array_values((array) ($textPolicyReview['policy_ids'] ?? [])),
+                        'text_policy_ids' => $textPolicyIds,
                         'model_policy_ids' => array_values((array) ($modelPolicyReview['policy_ids'] ?? [])),
                         'human_authoritative' => true,
                         'authoritative_action' => null,
@@ -224,15 +238,14 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 $ad,
                 'La revisión automática falló y el anuncio requiere revisión manual.',
                 'failed',
-                [
+                array_merge([
                     'rollout_mode' => (string) config('ai_moderation.rollout.mode', 'assist'),
                     'assist_only' => (bool) config('ai_moderation.assist_only', true),
                     'human_authoritative' => true,
-                ],
+                ], $textPolicyMetadata),
             );
         }
     }
-
 
     private function moderationImages(Ad $ad, array $imagePaths): array
     {
