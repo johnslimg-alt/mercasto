@@ -38,7 +38,7 @@ PATTERN='MVP|stack trace|stacktrace|En construcción|Página en construcción|Er
 ALLOWED_DOCKER_RESOLVER='^[^:]+:[0-9]+:[[:space:]]*resolver[[:space:]]+127\.0\.0\.11([[:space:]]+(valid=[0-9]+[smhd]|ipv6=(on|off)))*[[:space:]]*;[[:space:]]*$'
 
 echo "== Public copy/code scan =="
-matches="$(grep -RInE \
+matches="$(grep -RHInE \
   --exclude-dir=node_modules \
   --exclude-dir=vendor \
   --exclude-dir=storage \
