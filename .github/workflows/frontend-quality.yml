@@ -130,7 +130,21 @@ jobs:
         run: npm ci
       - name: Build frontend
         run: npm run build
+      - name: Stabilize Ubuntu apt mirror
+        run: |
+          for source_file in /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+            if [ -f "${source_file}" ]; then
+              sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "${source_file}"
+            fi
+          done
+          printf '%s\n' \
+            'Acquire::Retries "3";' \
+            'Acquire::http::Timeout "20";' \
+            'Acquire::https::Timeout "20";' \
+            | sudo tee /etc/apt/apt.conf.d/99mercasto-ci-network >/dev/null
       - name: Install WebKit
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: npx playwright install --with-deps webkit
       - name: Run WebKit public smoke
         run: bash scripts/frontend-quality-shard.sh webkit-public 4178
