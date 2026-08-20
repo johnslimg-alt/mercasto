@@ -10,13 +10,15 @@ permissions:
 
 jobs:
   diagnostic:
-    runs-on: [self-hosted, linux, docker]
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - name: Inspect isolated-origin prerequisites
         shell: bash
         run: |
           set -euo pipefail
+          test -d /var/www/mercasto
+          command -v docker >/dev/null
           echo "host=$(hostname)"
           echo "== DNS tools =="
           for cmd in getent dig nslookup curl openssl certbot docker; do
