@@ -115,8 +115,14 @@ class ModerateAdWithAITest extends TestCase
             return $request->url() === 'http://ollama.test/api/chat' && count($images) === 5;
         });
         $ad->refresh();
-        $this->assertSame('active', $ad->status);
-        $decision = $ad->moderationDecisions()->latest()->first();
+        $this->assertSame('archived', $ad->status);
+        $this->assertSame('manual_review', $ad->ai_moderation_status);
+        $this->assertNull($ad->expires_at);
+        $decision = $ad->moderationDecisions()->latest()->firstOrFail();
+        $this->assertSame('manual_review', $decision->decision);
+        $this->assertSame('approved', $decision->metadata['rollout']['proposed_decision']);
+        $this->assertSame('manual_review', $decision->metadata['rollout']['authoritative_decision']);
+        $this->assertSame('human_confirmation_required', $decision->metadata['activation_mode']);
         $this->assertSame(5, $decision->metadata['original_image_count']);
         $this->assertSame(5, $decision->metadata['reviewed_image_count']);
     }

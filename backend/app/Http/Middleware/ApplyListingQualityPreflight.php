@@ -2,7 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Jobs\ModerateAdWithAI;
+use App\Models\Ad;
 use App\Services\ListingDuplicateRiskService;
+use App\Services\ListingPolicySignalService;
 use App\Services\ListingQualityPreflightService;
 use Closure;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +19,7 @@ class ApplyListingQualityPreflight
     public function __construct(
         private ListingQualityPreflightService $preflight,
         private ListingDuplicateRiskService $duplicateRisk,
+        private ListingPolicySignalService $policySignals,
     ) {
     }
 
@@ -64,6 +68,24 @@ class ApplyListingQualityPreflight
             'photo_count' => count($existingImages) + $newImages,
         ]);
 
+        // Product-policy signals are review routing only. They never make an
+        // automatic legal/moderation decision and therefore do not change hard
+        // validation by themselves.
+        $policyReview = $this->policySignals->assessListing([
+            'title' => $request->input('title'),
+            'description' => $request->input('description'),
+        ]);
+        $result['policy_review'] = [
+            'required' => (bool) ($policyReview['requires_manual_review'] ?? false),
+            'policy_ids' => array_values((array) ($policyReview['policy_ids'] ?? [])),
+            'human_authoritative' => (bool) ($policyReview['human_authoritative'] ?? true),
+            'authoritative_action' => null,
+        ];
+        if ($result['policy_review']['required']) {
+            $result['warnings'][] = 'policy_manual_review';
+            $result['warnings'] = array_values(array_unique($result['warnings']));
+        }
+
         $userId = (int) $request->user('sanctum')->getAuthIdentifier();
         $excludeAdId = $isUpdate ? (int) basename($path) : null;
         if ($this->duplicateRisk->hasRisk($userId, [
@@ -92,10 +114,43 @@ class ApplyListingQualityPreflight
 
         $response = $next($request);
 
+        // A policy-matching edit must invalidate any earlier approval even when
+        // the controller would otherwise preserve an archived/paused approval.
+        // This closes the paused -> edit -> activate bypass: before the response
+        // leaves the write request, the listing is back in the moderation queue.
+        if ($isUpdate
+            && $excludeAdId
+            && $result['policy_review']['required']
+            && $response->isSuccessful()) {
+            $ad = Ad::query()->find($excludeAdId);
+            $alreadyQueued = $ad
+                && $ad->status === 'pending'
+                && $ad->ai_moderation_status === 'queued';
+
+            if ($ad && ! $alreadyQueued) {
+                $ad->forceFill([
+                    'status' => 'pending',
+                    'expires_at' => null,
+                    'reminder_sent_at' => null,
+                    'moderation_submitted_at' => now(),
+                    'ai_moderation_status' => 'queued',
+                    'ai_moderation_reason' => null,
+                    'ai_moderation_confidence' => null,
+                    'ai_moderated_at' => null,
+                ])->saveQuietly();
+
+                ModerateAdWithAI::dispatch($ad->id);
+            }
+        }
+
         if ($response instanceof JsonResponse && $response->isSuccessful()) {
             $payload = $response->getData(true);
             if (is_array($payload)) {
                 $payload['quality_preflight'] = $result;
+                if ($isUpdate && $result['policy_review']['required']) {
+                    $payload['moderation_status'] = 'queued';
+                    $payload['status'] = 'pending';
+                }
                 $response->setData($payload);
             }
         }
