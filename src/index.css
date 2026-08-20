@@ -1586,6 +1586,26 @@ html.dark .btn-lg.bg-white:hover {
     background: #0F172A !important;
   }
 
+  html.dark .leaflet-control-zoom a {
+    background-color: #1E293B;
+    border-color: #334155;
+    color: #F8FAFC;
+  }
+
+  html.dark .leaflet-control-zoom a:hover {
+    background-color: #334155;
+    color: #BEF264;
+  }
+
+  html.dark .leaflet-control-attribution {
+    background: rgba(15, 23, 42, 0.88);
+    color: #CBD5E1;
+  }
+
+  html.dark .leaflet-control-attribution a {
+    color: #BEF264;
+  }
+
   .leaflet-popup-card {
     display: flex;
     flex-direction: column;
