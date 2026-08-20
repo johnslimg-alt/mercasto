@@ -208,7 +208,7 @@ export default function EditAdScreen({ t, lang }) {
             .filter(Boolean);
           setError(messages.join(' ') || t.save_changes_error);
         } else {
-          setError(data?.message || t.save_changes_error);
+          setError(t.save_changes_error);
         }
         return;
       }
