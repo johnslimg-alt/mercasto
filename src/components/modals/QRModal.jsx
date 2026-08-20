@@ -1,12 +1,34 @@
+import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { QrCode, XCircle } from 'lucide-react';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 export default function QRModal({ qrModalData, setQrModalData, t }) {
     const isOpen = Boolean(qrModalData);
+    const [qrUrl, setQrUrl] = useState('');
     const closeModal = () => setQrModalData(null);
     const { dialogRef, initialFocusRef, handleKeyDown } = useModalFocusTrap({ isOpen, onClose: closeModal });
+
+    useEffect(() => {
+      let active = true;
+      if (!isOpen) {
+        setQrUrl('');
+        return () => { active = false; };
+      }
+
+      setQrUrl('');
+      QRCode.toDataURL(String(qrModalData), { width: 250, margin: 1 })
+        .then((dataUrl) => {
+          if (active) setQrUrl(dataUrl);
+        })
+        .catch(() => {
+          if (active) setQrUrl('');
+        });
+
+      return () => { active = false; };
+    }, [isOpen, qrModalData]);
+
     if (!isOpen) return null;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrModalData)}`;
 
     return (
       <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
@@ -16,8 +38,12 @@ export default function QRModal({ qrModalData, setQrModalData, t }) {
           <div className="w-12 h-12 bg-lime-100 dark:bg-lime-500/10 text-[#65A30D] dark:text-[#84CC16] rounded-2xl flex items-center justify-center mb-4"><QrCode size={28}/></div>
           <h2 id="qr-contact-title" className="text-[20px] font-bold text-slate-900 dark:text-white mb-2">{t.qr_contact_title}</h2>
           <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-6 text-center">{t.qr_contact_desc}</p>
-          <div className="p-4 bg-white border-2 border-slate-100 rounded-3xl shadow-sm mb-6">
-            <img src={qrUrl} alt={t.qr_contact_title} className="w-48 h-48" />
+          <div className="p-4 bg-white border-2 border-slate-100 rounded-3xl shadow-sm mb-6" aria-busy={!qrUrl}>
+            {qrUrl ? (
+              <img src={qrUrl} alt={t.qr_contact_title} className="w-48 h-48" />
+            ) : (
+              <div className="w-48 h-48" aria-hidden="true" />
+            )}
           </div>
           <button onClick={closeModal} className="btn-md w-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700">{t.close_btn}</button>
         </div>
