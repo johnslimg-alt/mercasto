@@ -22,6 +22,24 @@ class ModerateAdPolicyReviewContractTest extends TestCase
         $this->assertStringContainsString("'authoritative_action' => null", $source);
     }
 
+    public function test_text_policy_evidence_is_captured_before_kill_switch_and_provider_calls(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../../app/Jobs/ModerateAdWithAI.php');
+
+        $assessment = strpos($source, '$textPolicyReview = $policySignals->assessListing');
+        $killSwitch = strpos($source, "config('ai_moderation.enabled', true)");
+        $providerCall = strpos($source, '$ai->chatPro');
+
+        $this->assertNotFalse($assessment);
+        $this->assertNotFalse($killSwitch);
+        $this->assertNotFalse($providerCall);
+        $this->assertLessThan($killSwitch, $assessment);
+        $this->assertLessThan($providerCall, $assessment);
+        $this->assertStringContainsString('$textPolicyMetadata', $source);
+        $this->assertStringContainsString("'text_policy_ids' => \$textPolicyIds", $source);
+        $this->assertGreaterThanOrEqual(2, substr_count($source, '], $textPolicyMetadata)'));
+    }
+
     public function test_prompt_requests_canonical_policy_signal_ids(): void
     {
         $source = file_get_contents(__DIR__ . '/../../app/Jobs/ModerateAdWithAI.php');
