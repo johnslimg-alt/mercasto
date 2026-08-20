@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { mergeListingQualityValidationTranslations } from '../src/constants/listingQualityValidationTranslations.js';
 import { SUPPORTED_LANGUAGES } from '../src/utils/translations.js';
 
-const CODES = ['title_too_short','description_too_short','price_negative','incomplete_preview_payload','price_zero','contact_data_in_copy','keyword_stuffing','title_repeated_as_description','photo_recommended','duplicate_listing_risk'];
+const CODES = ['title_too_short','title_missing_letters','description_too_short','description_missing_letters','price_negative','incomplete_preview_payload','price_zero','contact_data_in_copy','keyword_stuffing','title_repeated_as_description','photo_recommended','duplicate_listing_risk'];
 const UI_KEYS = ['warning_title','blocked_title','continue','continue_hint','generic'];
 
 async function translationsFor(lang) {
-  return (await import(`../src/constants/translations/${lang}.js`)).default;
+  const base = (await import(`../src/constants/translations/${lang}.js`)).default;
+  return mergeListingQualityValidationTranslations(lang, base);
 }
 
 test('listing quality guidance covers all 11 active languages', async () => {
