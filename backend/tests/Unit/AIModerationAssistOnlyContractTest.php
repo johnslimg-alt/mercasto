@@ -11,9 +11,11 @@ class AIModerationAssistOnlyContractTest extends TestCase
         $source = file_get_contents(__DIR__ . '/../../config/ai_moderation.php');
 
         $this->assertStringContainsString("env('AI_MODERATION_ENABLED', true)", $source);
+        $this->assertStringContainsString("! env('AI_MODERATION_ENFORCEMENT_APPROVED', false)", $source);
         $this->assertStringContainsString("env('AI_MODERATION_ASSIST_ONLY', true)", $source);
         $this->assertStringContainsString("env('AI_MODERATION_ROLLOUT_MODE', 'assist')", $source);
         $this->assertStringContainsString("'human_authoritative' => true", $source);
+        $this->assertStringContainsString("'enforcement_approved' => (bool) env('AI_MODERATION_ENFORCEMENT_APPROVED', false)", $source);
         $this->assertStringContainsString("'destructive_model_only_actions' => false", $source);
     }
 
