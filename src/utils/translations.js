@@ -1,4 +1,5 @@
 import esTranslations from '../constants/translations/es.js';
+import { mergeListingQualityValidationTranslations } from '../constants/listingQualityValidationTranslations.js';
 import { loadFilterOptionLanguage } from './filterOptionTranslations.js';
 
 // Hebrew (he) and Yiddish (yi) are intentionally disabled and archived.
@@ -6,7 +7,7 @@ export const SUPPORTED_LANGUAGES = ['es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'i
 export const RTL_LANGUAGES = new Set(['ar']);
 
 const cache = {
-  es: esTranslations,
+  es: mergeListingQualityValidationTranslations('es', esTranslations),
 };
 
 export function normalizeLanguage(language = 'es') {
@@ -28,7 +29,7 @@ export async function loadLanguage(language) {
 
   try {
     const module = await import(`../constants/translations/${lang}.js`);
-    cache[lang] = module.default;
+    cache[lang] = mergeListingQualityValidationTranslations(lang, module.default);
     await loadFilterOptionLanguage(lang);
     return cache[lang];
   } catch (error) {
