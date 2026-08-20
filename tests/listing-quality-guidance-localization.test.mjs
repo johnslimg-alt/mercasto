@@ -32,6 +32,8 @@ test('seller create and edit UI consume backend machine codes without duplicatin
   assert.match(postScreen, /hasQualityWarnings \? t\.listing_quality_continue/);
   assert.match(editScreen, /data\?\.quality_preflight\?\.errors/);
   assert.match(editScreen, /t\[`listing_quality_\$\{code\}`\]/);
+  assert.match(app, /data\.rejected_rows\.slice\(0, 3\)/);
+  assert.match(app, /t\[`listing_quality_\$\{code\}`\]/);
   for (const implementationRule of ['keyword_stuffing', 'contact_data_in_copy', 'title_repeated_as_description']) {
     assert.equal(postScreen.includes(`code === '${implementationRule}'`), false);
   }

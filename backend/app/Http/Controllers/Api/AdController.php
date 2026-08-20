@@ -25,6 +25,7 @@ use App\Jobs\ProcessReferralRewardJob;
 use App\Mail\NewAdInCategory;
 use App\Models\User;
 use App\Services\AdModerationGuidanceService;
+use App\Services\ListingQualityPreflightService;
 use Illuminate\Support\Facades\Mail;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
@@ -1106,6 +1107,68 @@ class AdController extends Controller
         return response()->json(['message' => 'Anuncio eliminado exitosamente']);
     }
 
+    private function validateBulkListingQuality(string $path, string $extension, int $availableQuota): array
+    {
+        $quality = app(ListingQualityPreflightService::class);
+        $hardCodes = ['title_too_short', 'title_missing_letters', 'description_too_short', 'description_missing_letters'];
+        $rejected = [];
+        $seen = 0;
+        $check = function ($title, $description, $row) use ($quality, $hardCodes, &$rejected, &$seen, $availableQuota) {
+            if ($seen >= $availableQuota) return false;
+            $seen++;
+            $result = $quality->evaluate(['title' => (string) $title, 'description' => (string) $description]);
+            $errors = array_values(array_intersect($result['errors'], $hardCodes));
+            if ($errors !== []) {
+                $rejected[] = ['row' => $row, 'errors' => $errors, 'title' => mb_substr((string) $title, 0, 120)];
+            }
+            return true;
+        };
+
+        $extension = strtolower($extension);
+        if ($extension === 'xml') {
+            $reader = new \XMLReader();
+            if ($reader->open($path)) {
+                $row = 0;
+                while ($reader->read()) {
+                    if ($reader->nodeType === \XMLReader::ELEMENT && $reader->name === 'ad') {
+                        $row++;
+                        $node = new \SimpleXMLElement($reader->readOuterXml());
+                        if (!$check((string) $node->title, (string) $node->description, $row)) break;
+                        $reader->next();
+                    }
+                }
+                $reader->close();
+            }
+        } elseif ($extension === 'xlsx') {
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader('Xlsx');
+            $reader->setReadDataOnly(true);
+            $spreadsheet = $reader->load($path);
+            $worksheet = $spreadsheet->getActiveSheet();
+            foreach ($worksheet->getRowIterator(2) as $row) {
+                $cells = [];
+                $it = $row->getCellIterator();
+                $it->setIterateOnlyExistingCells(false);
+                foreach ($it as $cell) $cells[] = trim((string) $cell->getValue());
+                if (count($cells) >= 5 && $cells[0] !== '' && !$check($cells[0], $cells[2], $row->getRowIndex())) break;
+            }
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        } else {
+            $handle = fopen($path, 'r');
+            if ($handle !== false) {
+                fgetcsv($handle);
+                $row = 1;
+                while (($cells = fgetcsv($handle)) !== false) {
+                    $row++;
+                    if (count($cells) >= 5 && !$check($cells[0], $cells[2], $row)) break;
+                }
+                fclose($handle);
+            }
+        }
+
+        return $rejected;
+    }
+
     /**
      * Массовая загрузка объявлений через CSV (Для PRO пользователей)
      */
@@ -1140,6 +1203,15 @@ class AdController extends Controller
         $batch = [];
         $batchSize = 500; // Пакетная вставка для защиты от таймаута сервера (504 Gateway Timeout)
         $now = now();
+
+        $rejectedRows = $this->validateBulkListingQuality($path, $extension, $availableQuota);
+        if ($rejectedRows !== []) {
+            return response()->json([
+                'message' => 'bulk_listing_quality_failed',
+                'quality_errors' => array_values(array_unique(array_merge(...array_column($rejectedRows, 'errors')))),
+                'rejected_rows' => $rejectedRows,
+            ], 422);
+        }
 
         if (strtolower($extension) === 'xml') {
             // Оптимизация памяти (OOM): используем потоковый XMLReader вместо simplexml_load_file (который грузит файл в RAM целиком)
