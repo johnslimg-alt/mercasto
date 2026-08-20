@@ -47,8 +47,7 @@ class ApplyListingQualityPreflight
                         'passes_hard_validation' => false,
                         'errors' => ['incomplete_preview_payload'],
                         'warnings' => [],
-                    ],
-                ], 422);
+                    ], 422);
             }
 
             return $next($request);
@@ -139,7 +138,10 @@ class ApplyListingQualityPreflight
                     'ai_moderated_at' => null,
                 ])->saveQuietly();
 
-                ModerateAdWithAI::dispatch($ad->id);
+                // This is an edit of an already-existing listing, not a fresh
+                // submission. Human approval must return control to the seller
+                // instead of silently reactivating a previously paused item.
+                ModerateAdWithAI::dispatch($ad->id, false);
             }
         }
 
@@ -149,6 +151,7 @@ class ApplyListingQualityPreflight
                 $payload['quality_preflight'] = $result;
                 if ($isUpdate && $result['policy_review']['required']) {
                     $payload['moderation_status'] = 'queued';
+                    $payload['ai_moderation_status'] = 'queued';
                     $payload['status'] = 'pending';
                 }
                 $response->setData($payload);
