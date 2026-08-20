@@ -59,6 +59,12 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
+      - name: Ensure shared Reef network
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker network inspect automation-net >/dev/null 2>&1 || docker network create automation-net >/dev/null
+
       - name: Rebuild frontend only
         shell: bash
         run: |
