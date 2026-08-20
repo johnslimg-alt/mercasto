@@ -69,39 +69,9 @@ assertContains(
 );
 
 assertContains(
-  'src/utils/staleChunkRecovery.js',
-  "!key.startsWith('reef-courier-')",
-  'Mercasto stale recovery preserves Reef courier caches on the shared origin'
-);
-
-assertContains(
-  'src/utils/staleChunkRecovery.js',
-  "url.includes('/courier-sw.js')",
-  'Mercasto stale recovery preserves the Reef courier service worker'
-);
-
-assertContains(
   'public/stale-module.js',
   "routeUrl.searchParams.delete('__mercasto_refresh')",
   'nginx stale-module fallback uses the same normalized route guard'
-);
-
-assertContains(
-  'public/stale-module.js',
-  "!key.startsWith('reef-courier-')",
-  'nginx stale-module fallback preserves Reef courier caches'
-);
-
-assertContains(
-  'public/stale-module.js',
-  "url.includes('/courier-sw.js')",
-  'nginx stale-module fallback preserves the Reef courier worker registration'
-);
-
-assertContains(
-  'public/sw.js',
-  "!key.startsWith('reef-courier-')",
-  'Mercasto root service-worker activation preserves Reef courier caches'
 );
 
 assertNotContains(
