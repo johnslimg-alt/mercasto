@@ -23,9 +23,13 @@ class ListingQualityPreflightService
 
         if (mb_strlen($title) < 3) {
             $errors[] = 'title_too_short';
+        } elseif (!$this->containsLetter($title)) {
+            $errors[] = 'title_missing_letters';
         }
         if (mb_strlen($description) < 10) {
             $errors[] = 'description_too_short';
+        } elseif (!$this->containsLetter($description)) {
+            $errors[] = 'description_missing_letters';
         }
         if ($price !== null && $price < 0) {
             $errors[] = 'price_negative';
@@ -52,6 +56,11 @@ class ListingQualityPreflightService
             'errors' => array_values(array_unique($errors)),
             'warnings' => array_values(array_unique($warnings)),
         ];
+    }
+
+    private function containsLetter(string $text): bool
+    {
+        return preg_match('/\p{L}/u', $text) === 1;
     }
 
     private function containsContactData(string $text): bool

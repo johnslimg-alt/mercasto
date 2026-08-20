@@ -197,7 +197,21 @@ export default function EditAdScreen({ t, lang }) {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
         body: formData
       });
-      if (!res.ok) throw new Error('save_failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const codes = Array.isArray(data?.quality_preflight?.errors)
+          ? data.quality_preflight.errors
+          : [];
+        if (codes.length > 0) {
+          const messages = codes
+            .map(code => t[`listing_quality_${code}`] || t.listing_quality_generic)
+            .filter(Boolean);
+          setError(messages.join(' ') || t.save_changes_error);
+        } else {
+          setError(t.save_changes_error);
+        }
+        return;
+      }
       navigate(`/?ad=${id}`);
     } catch { setError(t.save_changes_error); }
     finally { setSaving(false); }
