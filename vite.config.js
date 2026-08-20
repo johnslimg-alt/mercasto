@@ -53,7 +53,6 @@ export default defineConfig({
           // Maps (Leaflet is heavy)
           if (
             id.includes('/leaflet/')
-            || id.includes('/leaflet-draw/')
             || id.includes('/leaflet.markercluster/')
             || id.includes('/react-leaflet/')
           ) {
