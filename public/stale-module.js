@@ -27,30 +27,17 @@ if (!robots) {
 }
 robots.setAttribute('content', 'noindex,nofollow,noarchive');
 
-const isReefCourierRegistration = (registration) => {
-  const scriptUrls = [registration.active, registration.waiting, registration.installing]
-    .map((worker) => worker?.scriptURL || '');
-  return registration.scope.includes('/courier')
-    || scriptUrls.some((url) => url.includes('/courier-sw.js'));
-};
-
 if (!recentlyRetried) {
   const refreshUrl = new URL(location.href);
   refreshUrl.searchParams.set('__mercasto_refresh', String(now));
 
   Promise.allSettled([
     globalThis.caches
-      ? caches.keys().then((keys) => Promise.all(
-        keys.filter((key) => !key.startsWith('reef-courier-')).map((key) => caches.delete(key)),
-      ))
+      ? caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
       : Promise.resolve(),
     navigator.serviceWorker
       ? navigator.serviceWorker.getRegistrations().then((registrations) => (
-        Promise.all(
-          registrations
-            .filter((registration) => !isReefCourierRegistration(registration))
-            .map((registration) => registration.unregister()),
-        )
+        Promise.all(registrations.map((registration) => registration.unregister()))
       ))
       : Promise.resolve(),
   ]).finally(() => location.replace(refreshUrl.href));
