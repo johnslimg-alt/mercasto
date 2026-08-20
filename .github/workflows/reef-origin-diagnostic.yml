@@ -20,11 +20,6 @@ jobs:
           test -d /var/www/mercasto
           command -v docker >/dev/null
           echo "host=$(hostname)"
-          echo "== DNS tools =="
-          for cmd in getent dig nslookup curl openssl certbot docker; do
-            if command -v "$cmd" >/dev/null 2>&1; then echo "$cmd=yes"; else echo "$cmd=no"; fi
-          done
-
           echo "== DNS resolution =="
           for host in mercasto.com www.mercasto.com api.mercasto.com courier.mercasto.com; do
             if getent ahostsv4 "$host" >/tmp/reef-dns.out 2>/dev/null; then
@@ -35,13 +30,24 @@ jobs:
             fi
           done
 
+          echo "== HTTPS reachability =="
+          for url in https://api.mercasto.com/ https://api.mercasto.com/api/auth/providers; do
+            code=$(curl -sS -o /tmp/reef-http.out -w '%{http_code}' --max-time 20 "$url" || true)
+            echo "$url status=$code"
+          done
+
           echo "== Current certificate SANs =="
           cert=/etc/letsencrypt/live/mercasto.com/fullchain.pem
-          if [ -r "$cert" ]; then
-            openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null | sed -n '2,4p'
+          if sudo -n test -r "$cert" 2>/dev/null; then
+            sudo -n openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null | sed -n '2,4p'
           else
             echo "mercasto_cert=unreadable"
           fi
+
+          echo "== Edge certificate names for api host =="
+          echo | openssl s_client -connect api.mercasto.com:443 -servername api.mercasto.com 2>/dev/null \
+            | openssl x509 -noout -subject -ext subjectAltName 2>/dev/null \
+            | sed -n '1,4p'
 
           echo "== Reef runtime =="
           if docker inspect reef-crm >/dev/null 2>&1; then
@@ -54,23 +60,7 @@ jobs:
 
           echo "== Cloudflare/certbot credential presence (names only) =="
           found=0
-          for path in \
-            /root/.secrets/cloudflare.ini \
-            /etc/letsencrypt/cloudflare.ini \
-            /etc/letsencrypt/credentials.ini \
-            /root/.cloudflare \
-            /var/www/mercasto/cloudflare.ini; do
-            if [ -e "$path" ]; then echo "credential_path=$path"; found=1; fi
+          for path in /root/.secrets/cloudflare.ini /etc/letsencrypt/cloudflare.ini /etc/letsencrypt/credentials.ini /root/.cloudflare /var/www/mercasto/cloudflare.ini; do
+            if sudo -n test -e "$path" 2>/dev/null; then echo "credential_path=$path"; found=1; fi
           done
           if [ "$found" -eq 0 ]; then echo "credential_path=none-known"; fi
-
-          echo "== Environment key names only =="
-          for container in certbot mercasto_frontend_container; do
-            if docker inspect "$container" >/dev/null 2>&1; then
-              echo "container=$container"
-              docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$container" \
-                | sed 's/=.*//' \
-                | grep -Ei 'CLOUDFLARE|CF_|DNS|CERTBOT' \
-                | sort -u || true
-            fi
-          done
