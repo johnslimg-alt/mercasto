@@ -119,6 +119,45 @@ class ModerateAdWithAITest extends TestCase
         ]);
     }
 
+    public function test_current_cycle_job_does_not_overwrite_existing_human_decision(): void
+    {
+        Storage::fake('public');
+        config(['ai_moderation.enabled' => false]);
+
+        $seller = User::factory()->create();
+        $ad = Ad::query()->create([
+            'user_id' => $seller->id,
+            'title' => 'Artículo usado',
+            'description' => 'Descripción permitida',
+            'price' => 100,
+            'location' => 'Veracruz',
+            'state' => 'Veracruz',
+            'city' => 'Veracruz',
+            'latitude' => 19.1738,
+            'longitude' => -96.1342,
+            'category' => 'general',
+            'condition' => 'usado',
+            'attributes' => ['subcategory' => 'general'],
+            'status' => 'archived',
+            'moderation_submitted_at' => now(),
+            'ai_moderation_status' => 'admin_manual_review',
+        ]);
+        $cycle = AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'system',
+            'decision' => 'queued',
+            'metadata' => ['rollout' => ['activate_on_human_approval' => false]],
+        ]);
+
+        app()->call([new ModerateAdWithAI($ad->id, false, $cycle->id), 'handle']);
+
+        $this->assertSame('admin_manual_review', $ad->fresh()->ai_moderation_status);
+        $this->assertDatabaseMissing('ad_moderation_decisions', [
+            'ad_id' => $ad->id,
+            'source' => 'ai',
+        ]);
+    }
+
     public function test_all_original_photos_are_sent_to_local_ai(): void
     {
         Storage::fake('public');

@@ -65,7 +65,10 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
     ): void
     {
         $ad = Ad::query()->with('user:id,name,email')->find($this->adId);
-        if (! $ad || ! in_array($ad->status, ['pending', 'archived'], true) || ! $this->isCurrentModerationCycle()) {
+        if (! $ad
+            || ! in_array($ad->status, ['pending', 'archived'], true)
+            || $ad->ai_moderation_status !== 'queued'
+            || ! $this->isCurrentModerationCycle()) {
             return;
         }
 
@@ -189,7 +192,8 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 default => 'archived',
             };
 
-            if (! $this->isCurrentModerationCycle()) {
+            $ad->refresh();
+            if (! $this->isCurrentModerationCycle() || $ad->ai_moderation_status !== 'processing') {
                 return;
             }
 
@@ -434,7 +438,8 @@ PROMPT;
 
     private function leaveForManualReview(Ad $ad, string $reason, string $aiStatus, array $metadata = []): void
     {
-        if (! $this->isCurrentModerationCycle()) {
+        $ad->refresh();
+        if (! $this->isCurrentModerationCycle() || $ad->ai_moderation_status !== 'processing') {
             return;
         }
 
