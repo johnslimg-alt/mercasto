@@ -1,0 +1,6 @@
+{
+  "request_id": "bootstrap-status-20260821T0103-0600",
+  "action": "status",
+  "confirm": "",
+  "tail_lines": 160
+}
