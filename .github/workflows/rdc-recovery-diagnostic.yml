@@ -1,0 +1,42 @@
+name: RDC Recovery Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rdc-recovery-diagnostic.yml'
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  diagnose:
+    name: Diagnose Desktop Commander on VPS
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 5
+    steps:
+      - name: Inspect RDC service and process state
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "HOST=$(hostname)"
+          echo "USER=$(whoami)"
+          echo "== matching systemd units =="
+          systemctl list-unit-files --type=service --no-legend 2>/dev/null | grep -Ei 'desktop|commander|mcp' || true
+          echo "== matching processes =="
+          ps -eo pid=,user=,etime=,args= | grep -Ei '[d]esktop-commander|[d]esktop commander|[m]cp\.desktopcommander|[n]px.*desktop-commander' || true
+          echo "== known unit details =="
+          for unit in desktop-commander.service desktop-commander-remote.service; do
+            if systemctl cat "$unit" >/dev/null 2>&1; then
+              echo "--- $unit ---"
+              systemctl show "$unit" --no-pager -p LoadState -p ActiveState -p SubState -p MainPID -p NRestarts -p User -p ExecStart || true
+              journalctl -u "$unit" -n 120 --no-pager 2>/dev/null || true
+            fi
+          done
+          echo "== persisted device config candidates =="
+          for home in /root /home/*; do
+            [ -d "$home/.desktop-commander-device" ] && find "$home/.desktop-commander-device" -maxdepth 2 -type f -printf '%p\n' 2>/dev/null || true
+          done
