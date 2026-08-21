@@ -30,8 +30,7 @@ jobs:
           id
           echo '=== DNS ==='
           getent ahostsv4 mercasto.com || true
-          getent ahostsv4 mcp.mercasto.com || true
-          command -v dig >/dev/null 2>&1 && { dig +short NS mercasto.com; dig +short A mcp.mercasto.com; } || true
+          command -v dig >/dev/null 2>&1 && dig +short NS mercasto.com || true
           echo '=== MCP UNITS ==='
           for u in mercasto-ssh-mcp.service mercasto-ssh-mcp-stdio.service desktop-commander.service remote-desktop-commander.service; do
             echo "-- $u --"
@@ -39,10 +38,8 @@ jobs:
           done
           echo '=== LISTENERS ==='
           ss -lntp 2>/dev/null | grep -E '(:80 |:443 |:8001 |:8765 |:8080 )' || true
-          echo '=== DOCKER EDGE ==='
-          docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null | head -40 || true
-          echo '=== NGINX MCP ROUTES ==='
-          nginx -T 2>/dev/null | grep -n -E 'server_name mcp\.mercasto\.com|proxy_pass http://127\.0\.0\.1:(8001|8765)' || true
+          echo '=== NGINX LOCAL MCP ROUTES ==='
+          nginx -T 2>/dev/null | grep -n -E 'proxy_pass http://127\.0\.0\.1:(8001|8765)' || true
           echo '=== LOCAL BACKENDS ==='
           for p in 8001 8765; do
             echo "-- 127.0.0.1:$p --"
