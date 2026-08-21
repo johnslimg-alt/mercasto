@@ -1,42 +1,84 @@
 name: RDC Recovery Diagnostic
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/rdc-recovery-diagnostic.yml'
+  issues:
+    types: [opened]
 
 permissions:
   contents: read
+  issues: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   diagnose:
+    if: >-
+      github.actor == 'johnslimg-alt' &&
+      github.event.issue.title == 'RDC_RECOVERY_DIAGNOSTIC'
     name: Diagnose Desktop Commander on VPS
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 5
     steps:
-      - name: Inspect RDC service and process state
+      - name: Inspect RDC without exposing secrets
         shell: bash
         run: |
           set -euo pipefail
-          echo "HOST=$(hostname)"
-          echo "USER=$(whoami)"
-          echo "== matching systemd units =="
-          systemctl list-unit-files --type=service --no-legend 2>/dev/null | grep -Ei 'desktop|commander|mcp' || true
-          echo "== matching processes =="
-          ps -eo pid=,user=,etime=,args= | grep -Ei '[d]esktop-commander|[d]esktop commander|[m]cp\.desktopcommander|[n]px.*desktop-commander' || true
-          echo "== known unit details =="
-          for unit in desktop-commander.service desktop-commander-remote.service; do
-            if systemctl cat "$unit" >/dev/null 2>&1; then
-              echo "--- $unit ---"
-              systemctl show "$unit" --no-pager -p LoadState -p ActiveState -p SubState -p MainPID -p NRestarts -p User -p ExecStart || true
-              journalctl -u "$unit" -n 120 --no-pager 2>/dev/null || true
+          report=/tmp/rdc-diagnostic.txt
+          : > "$report"
+          echo "HOST=$(hostname)" >> "$report"
+          echo "RUNNER_USER=$(whoami)" >> "$report"
+
+          unit=""
+          for candidate in desktop-commander.service desktop-commander-remote.service; do
+            if systemctl cat "$candidate" >/dev/null 2>&1; then
+              unit="$candidate"
+              break
             fi
           done
-          echo "== persisted device config candidates =="
+
+          if [ -n "$unit" ]; then
+            echo "UNIT=$unit" >> "$report"
+            systemctl show "$unit" --no-pager \
+              -p LoadState -p ActiveState -p SubState -p MainPID -p NRestarts -p User >> "$report" || true
+            log="$(journalctl -u "$unit" -n 500 --no-pager 2>/dev/null || true)"
+            printf 'ERR_NOT_CONNECTED=%s\n' "$(printf '%s' "$log" | grep -icF 'Not connected' || true)" >> "$report"
+            printf 'ERR_TERMINATED=%s\n' "$(printf '%s' "$log" | grep -icF 'terminated' || true)" >> "$report"
+            printf 'ERR_FETCH_FAILED=%s\n' "$(printf '%s' "$log" | grep -icF 'fetch failed' || true)" >> "$report"
+            printf 'ERR_SUBSCRIPTION_TIMEOUT=%s\n' "$(printf '%s' "$log" | grep -icF 'subscription timed out' || true)" >> "$report"
+            printf 'ERR_PRESENCE_TIMEOUT=%s\n' "$(printf '%s' "$log" | grep -icF 'Presence track not acknowledged' || true)" >> "$report"
+            printf 'ERR_CHANNEL=%s\n' "$(printf '%s' "$log" | grep -icF 'Channel error' || true)" >> "$report"
+            printf 'READY_MARKERS=%s\n' "$(printf '%s' "$log" | grep -icE 'Device ready|Channel subscribed' || true)" >> "$report"
+          else
+            echo "UNIT=none" >> "$report"
+          fi
+
+          pid_count="$(pgrep -fc '@wonderwhy-er/desktop-commander.*remote|desktop-commander.*remote' || true)"
+          echo "REMOTE_PROCESS_COUNT=$pid_count" >> "$report"
+
+          config_count=0
           for home in /root /home/*; do
-            [ -d "$home/.desktop-commander-device" ] && find "$home/.desktop-commander-device" -maxdepth 2 -type f -printf '%p\n' 2>/dev/null || true
+            if [ -f "$home/.desktop-commander-device/device.json" ]; then
+              config_count=$((config_count + 1))
+            fi
           done
+          echo "PERSISTED_DEVICE_CONFIGS=$config_count" >> "$report"
+
+          cat "$report"
+
+      - name: Return safe diagnostic result
+        if: always()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            let body = 'RDC diagnostic did not produce a report.';
+            try {
+              body = fs.readFileSync('/tmp/rdc-diagnostic.txt', 'utf8');
+            } catch (_) {}
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `RDC_DIAGNOSTIC_RESULT\n\n\`\`\`text\n${body}\n\`\`\``
+            });
