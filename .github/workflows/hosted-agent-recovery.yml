@@ -1,0 +1,103 @@
+name: Hosted Server Agent Recovery
+
+# Out-of-band recovery only: fixed service names, no arbitrary command input.
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-server-agent-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    name: Recover VPS control agents out of band
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.number == 832 &&
+       github.actor == 'johnslimg-alt' &&
+       github.event.comment.body == 'RUN:hosted_agent_recovery:MERCASTO')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Validate recovery secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_recovery_key
+          chmod 600 ~/.ssh/mercasto_recovery_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Restart self-hosted runners
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_recovery_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          units=(
+            actions.runner.johnslimg-alt-mercasto.srv1526037.service
+            actions.runner.johnslimg-alt-mercasto-mobile.srv1526037-mobile.service
+          )
+          for unit in "${units[@]}"; do
+            if systemctl list-unit-files --type=service --no-legend "$unit" 2>/dev/null | grep -q .; then
+              systemctl restart "$unit"
+            fi
+          done
+          REMOTE
+
+      - name: Repair Remote Desktop Commander
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_recovery_key "root@$SERVER_HOST" 'bash -s' < scripts/repair-rdc-agent.sh
+
+      - name: Verify recovered services
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_recovery_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          systemctl is-active --quiet remote-desktop-commander.service
+          for unit in \
+            actions.runner.johnslimg-alt-mercasto.srv1526037.service \
+            actions.runner.johnslimg-alt-mercasto-mobile.srv1526037-mobile.service; do
+            if systemctl list-unit-files --type=service --no-legend "$unit" 2>/dev/null | grep -q .; then
+              systemctl is-active --quiet "$unit"
+            fi
+          done
+          systemctl show remote-desktop-commander.service --no-pager \
+            -p ActiveState -p SubState -p MainPID -p NRestarts
+          REMOTE
+
+      - name: Remove SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/mercasto_recovery_key
