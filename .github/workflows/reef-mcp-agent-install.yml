@@ -18,7 +18,7 @@ jobs:
       github.event.issue.number == 832 &&
       github.actor == 'johnslimg-alt' &&
       github.event.comment.body == 'RUN:reef_mcp_agent_install:MERCASTO'
-    runs-on: [self-hosted, linux, docker]
+    runs-on: [self-hosted]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
