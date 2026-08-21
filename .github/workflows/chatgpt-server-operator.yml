@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -107,10 +108,30 @@ jobs:
           cd /var/www/mercasto
           bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
 
-      - name: Completion marker
+      - name: Report result to control issue
         if: always()
-        shell: bash
-        run: |
-          echo "request_id=${{ steps.request.outputs.request_id }}"
-          echo "operation=${{ steps.request.outputs.action }}"
-          echo "run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        uses: actions/github-script@v9
+        env:
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          OPERATION: ${{ steps.request.outputs.action }}
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const requestId = process.env.REQUEST_ID || 'validation-failed';
+            const operation = process.env.OPERATION || 'unknown';
+            const status = process.env.JOB_STATUS || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              'CHATGPT_SERVER_OPERATOR_RESULT',
+              `request_id=${requestId}`,
+              `operation=${operation}`,
+              `status=${status}`,
+              `run_id=${context.runId}`,
+              `run=${runUrl}`
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body
+            });
