@@ -1,0 +1,46 @@
+name: Reef MCP Agent Install
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: reef-mcp-agent-install
+  cancel-in-progress: false
+
+jobs:
+  install:
+    if: >-
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      github.event.comment.body == 'RUN:reef_mcp_agent_install:MERCASTO'
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install private Reef MCP agent
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n ops/reef-mcp-agent/install.sh
+          bash -n ops/reef-mcp-agent/reef-mcp-gate
+          bash ops/reef-mcp-agent/install.sh
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v9
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const status = process.env.JOB_STATUS || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body: `REEF_MCP_AGENT_INSTALL_RESULT\nstatus=${status}\nrun_id=${context.runId}\nrun=${runUrl}`
+            });
