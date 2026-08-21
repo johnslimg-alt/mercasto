@@ -1,0 +1,24 @@
+/*
+ * Keep these Leaflet theme overrides unlayered.
+ * MapV3 loads leaflet.css dynamically as unlayered vendor CSS, so placing these
+ * rules inside Tailwind's @layer base would make the vendor defaults win.
+ */
+html.dark .leaflet-control-zoom a {
+  background-color: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+html.dark .leaflet-control-zoom a:hover {
+  background-color: #334155;
+  color: #BEF264;
+}
+
+html.dark .leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.88);
+  color: #CBD5E1;
+}
+
+html.dark .leaflet-control-attribution a {
+  color: #BEF264;
+}
