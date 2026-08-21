@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: reef-mcp-agent-install
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   install:
