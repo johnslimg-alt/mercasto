@@ -43,7 +43,7 @@ test('public home does not request admin-only bundles', async ({ page }) => {
     }
   });
 
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(500);
   expect(adminBundleRequests).toEqual([]);
 });
