@@ -1,0 +1,44 @@
+name: RDC Repair
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: rdc-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: >-
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      github.event.comment.body == 'RUN:rdc_repair:MERCASTO'
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Repair Remote Desktop Commander agent
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/repair-rdc-agent.sh
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v9
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const status = process.env.JOB_STATUS || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body: `RDC_REPAIR_RESULT\nstatus=${status}\nrun_id=${context.runId}\nrun=${runUrl}`
+            });
