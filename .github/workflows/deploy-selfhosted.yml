@@ -82,6 +82,12 @@ jobs:
           set -euo pipefail
           docker network inspect automation-net >/dev/null 2>&1 || docker network create automation-net >/dev/null
 
+      - name: Ensure Reef courier TLS prerequisite
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/ensure-courier-origin-prereqs.sh
+
       - name: Миграции
         run: |
           set -euo pipefail
