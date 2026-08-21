@@ -13,7 +13,7 @@ env:
 
 concurrency:
   group: chatgpt-server-operator
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   operate:
