@@ -2,7 +2,9 @@ name: Server Operator
 
 on:
   push:
-    branches: [main]
+    branches: [chatgpt-ops]
+    paths:
+      - .ops/request.json
   workflow_dispatch:
     inputs:
       operation:
@@ -17,18 +19,109 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   operator:
     name: Server operator
     runs-on: [self-hosted, linux]
-    timeout-minutes: 10
+    timeout-minutes: 60
     steps:
-      - name: Push compatibility
+      - name: Checkout control branch
         if: github.event_name == 'push'
-        run: echo "Server Operator is manual-only; push is covered by Deploy and Production checks."
+        uses: actions/checkout@v6
+        with:
+          ref: chatgpt-ops
+          persist-credentials: false
+          fetch-depth: 1
 
-      - name: Run operation
+      - name: Validate push request
+        if: github.event_name == 'push'
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .ops/request.json
+          jq -e 'type == "object"' .ops/request.json >/dev/null
+          action="$(jq -r '.action // empty' .ops/request.json)"
+          confirm="$(jq -r '.confirm // empty' .ops/request.json)"
+          tail_lines="$(jq -r '.tail_lines // 160' .ops/request.json)"
+          request_id="$(jq -r '.request_id // empty' .ops/request.json)"
+
+          case "$action" in
+            status|verify_quick|security_smoke|seo_aeo_smoke|runner_health|logs_frontend|logs_backend|deploy_main|restart_frontend|restart_stack|align_media_caps|cleanup_docker)
+              ;;
+            *)
+              echo "Refusing unsupported operation: $action" >&2
+              exit 64
+              ;;
+          esac
+
+          case "$tail_lines" in
+            ''|*[!0-9]*) exit 64 ;;
+          esac
+          if [ "$tail_lines" -lt 1 ] || [ "$tail_lines" -gt 500 ]; then
+            exit 64
+          fi
+
+          case "$request_id" in
+            ''|*[!A-Za-z0-9._:-]*) exit 64 ;;
+          esac
+
+          case "$action" in
+            deploy_main|restart_frontend|restart_stack|align_media_caps|cleanup_docker)
+              test "$confirm" = "MERCASTO"
+              ;;
+          esac
+
+          echo "operation=$action" >> "$GITHUB_OUTPUT"
+          echo "confirm=$confirm" >> "$GITHUB_OUTPUT"
+          echo "tail_lines=$tail_lines" >> "$GITHUB_OUTPUT"
+          echo "request_id=$request_id" >> "$GITHUB_OUTPUT"
+          echo "Validated $request_id -> $action"
+
+      - name: Run push operation
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          OPERATION: ${{ steps.request.outputs.operation }}
+          CONFIRM: ${{ steps.request.outputs.confirm }}
+          TAIL_LINES: ${{ steps.request.outputs.tail_lines }}
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          test -f scripts/server-operator.sh
+          bash -n scripts/server-operator.sh
+          bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
+
+      - name: Report push result
+        if: always() && github.event_name == 'push'
+        uses: actions/github-script@v9
+        env:
+          REQUEST_ID: ${{ steps.request.outputs.request_id }}
+          OPERATION: ${{ steps.request.outputs.operation }}
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const requestId = process.env.REQUEST_ID || 'validation-failed';
+            const operation = process.env.OPERATION || 'unknown';
+            const status = process.env.JOB_STATUS || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body: [
+                'CHATGPT_SERVER_OPERATOR_RESULT',
+                `request_id=${requestId}`,
+                `operation=${operation}`,
+                `status=${status}`,
+                `run_id=${context.runId}`,
+                `run=${runUrl}`
+              ].join('\n')
+            });
+
+      - name: Run manual operation
         if: github.event_name != 'push'
         shell: bash
         run: |
