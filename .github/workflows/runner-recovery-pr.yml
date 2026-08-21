@@ -1,0 +1,21 @@
+name: Runner Recovery Probe
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted]
+    timeout-minutes: 5
+    steps:
+      - name: Runner health
+        shell: bash
+        run: |
+          set -euo pipefail
+          hostname
+          ps -eo pid,ppid,etime,args | grep '[R]unner.Listener' || true
+          systemctl list-units --type=service --all --no-legend 'actions.runner.*.service' || true
