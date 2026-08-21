@@ -233,24 +233,26 @@ function restoreIntentWhenReady() {
   );
   const current = destinationFrom(null);
 
-  // A newly requested protected route is briefly current before RequireAuth
-  // replaces it with /. Keep the intent until authentication actually exists.
-  if (current?.path === intent.path) {
-    if (hasAuthenticatedSession) finishIntent(intent);
-    return;
-  }
-
   if (!hasAuthenticatedSession) {
     authenticatedAt = 0;
     return;
   }
 
+  // Keep the protected intent alive for the same short settle window on every
+  // auth return, including when the browser is already sitting on /post. The
+  // registration handler writes auth_token before its final onboarding flag;
+  // clearing the intent immediately in that gap lets generic onboarding win.
   if (!authenticatedAt) {
     authenticatedAt = Date.now();
     return;
   }
 
   if (Date.now() - authenticatedAt < AUTH_SETTLE_MS) return;
+
+  if (current?.path === intent.path) {
+    finishIntent(intent);
+    return;
+  }
 
   originalReplaceState.call(window.history, intent.state ?? {}, '', intent.path);
   finishIntent(intent);
