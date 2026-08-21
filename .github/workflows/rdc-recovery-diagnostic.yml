@@ -1,8 +1,11 @@
 name: RDC Recovery Diagnostic
 
 on:
-  issues:
-    types: [opened]
+  workflow_run:
+    workflows:
+      - Autonomous Server Live Gate
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -11,74 +14,71 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+concurrency:
+  group: rdc-recovery-one-shot
+  cancel-in-progress: false
+
 jobs:
-  diagnose:
-    if: >-
-      github.event.issue.user.login == 'johnslimg-alt' &&
-      github.event.issue.title == 'RDC_RECOVERY_DIAGNOSTIC'
-    name: Diagnose Desktop Commander on VPS
+  recover:
+    name: Recover Desktop Commander on VPS
     runs-on: [self-hosted, linux, docker]
     timeout-minutes: 5
     steps:
-      - name: Inspect RDC without exposing secrets
+      - name: Inspect and restart exact RDC systemd service
         shell: bash
         run: |
           set -euo pipefail
-          report=/tmp/rdc-diagnostic.txt
+          report=/tmp/rdc-recovery-report.txt
           : > "$report"
           echo "HOST=$(hostname)" >> "$report"
           echo "RUNNER_USER=$(whoami)" >> "$report"
 
-          unit=""
-          for candidate in desktop-commander.service desktop-commander-remote.service; do
-            if systemctl cat "$candidate" >/dev/null 2>&1; then
-              unit="$candidate"
-              break
-            fi
+          mapfile -t units < <(
+            systemctl list-unit-files --type=service --no-legend 2>/dev/null \
+              | awk '{print $1}' \
+              | grep -Ei 'desktop[-_.]?commander|desktop.*commander|commander.*desktop' \
+              || true
+          )
+          echo "MATCHING_UNITS=${#units[@]}" >> "$report"
+          for unit in "${units[@]}"; do
+            echo "UNIT=$unit" >> "$report"
+            systemctl show "$unit" --no-pager -p LoadState -p ActiveState -p SubState -p MainPID -p NRestarts -p User >> "$report" || true
           done
 
-          if [ -n "$unit" ]; then
-            echo "UNIT=$unit" >> "$report"
-            systemctl show "$unit" --no-pager \
-              -p LoadState -p ActiveState -p SubState -p MainPID -p NRestarts -p User >> "$report" || true
-            log="$(journalctl -u "$unit" -n 500 --no-pager 2>/dev/null || true)"
-            printf 'ERR_NOT_CONNECTED=%s\n' "$(printf '%s' "$log" | grep -icF 'Not connected' || true)" >> "$report"
-            printf 'ERR_TERMINATED=%s\n' "$(printf '%s' "$log" | grep -icF 'terminated' || true)" >> "$report"
-            printf 'ERR_FETCH_FAILED=%s\n' "$(printf '%s' "$log" | grep -icF 'fetch failed' || true)" >> "$report"
-            printf 'ERR_SUBSCRIPTION_TIMEOUT=%s\n' "$(printf '%s' "$log" | grep -icF 'subscription timed out' || true)" >> "$report"
-            printf 'ERR_PRESENCE_TIMEOUT=%s\n' "$(printf '%s' "$log" | grep -icF 'Presence track not acknowledged' || true)" >> "$report"
-            printf 'ERR_CHANNEL=%s\n' "$(printf '%s' "$log" | grep -icF 'Channel error' || true)" >> "$report"
-            printf 'READY_MARKERS=%s\n' "$(printf '%s' "$log" | grep -icE 'Device ready|Channel subscribed' || true)" >> "$report"
+          if [ "${#units[@]}" -eq 1 ]; then
+            unit="${units[0]}"
+            if [ "$(id -u)" -eq 0 ]; then
+              systemctl restart "$unit"
+              restart_result=success-root
+            elif sudo -n systemctl restart "$unit" >/dev/null 2>&1; then
+              restart_result=success-sudo
+            else
+              restart_result=permission-denied
+            fi
+            echo "RESTART_RESULT=$restart_result" >> "$report"
+            sleep 3
+            systemctl show "$unit" --no-pager -p ActiveState -p SubState -p MainPID -p NRestarts >> "$report" || true
+          elif [ "${#units[@]}" -eq 0 ]; then
+            echo "RESTART_RESULT=no-exact-systemd-unit" >> "$report"
           else
-            echo "UNIT=none" >> "$report"
+            echo "RESTART_RESULT=ambiguous-units-not-touched" >> "$report"
           fi
 
-          pid_count="$(pgrep -fc '@wonderwhy-er/desktop-commander.*remote|desktop-commander.*remote' || true)"
-          echo "REMOTE_PROCESS_COUNT=$pid_count" >> "$report"
-
-          config_count=0
-          for home in /root /home/*; do
-            if [ -f "$home/.desktop-commander-device/device.json" ]; then
-              config_count=$((config_count + 1))
-            fi
-          done
-          echo "PERSISTED_DEVICE_CONFIGS=$config_count" >> "$report"
-
+          remote_count="$(pgrep -fc '@wonderwhy-er/desktop-commander.*remote|desktop-commander.*remote' || true)"
+          echo "REMOTE_PROCESS_COUNT=$remote_count" >> "$report"
           cat "$report"
 
-      - name: Return safe diagnostic result
+      - name: Report fixed recovery result
         if: always()
         uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
-            let body = 'RDC diagnostic did not produce a report.';
-            try {
-              body = fs.readFileSync('/tmp/rdc-diagnostic.txt', 'utf8');
-            } catch (_) {}
+            let body = 'RDC recovery did not produce a report.';
+            try { body = fs.readFileSync('/tmp/rdc-recovery-report.txt', 'utf8'); } catch (_) {}
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: `RDC_DIAGNOSTIC_RESULT\n\n\`\`\`text\n${body}\n\`\`\``
+              issue_number: 831,
+              body: `RDC_RECOVERY_RESULT\n\n\`\`\`text\n${body}\n\`\`\``
             });
