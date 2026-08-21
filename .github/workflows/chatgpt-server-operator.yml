@@ -1,0 +1,116 @@
+name: ChatGPT Server Operator
+
+on:
+  push:
+    branches:
+      - chatgpt-ops
+    paths:
+      - .ops/request.json
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: chatgpt-server-operator
+  cancel-in-progress: false
+
+jobs:
+  operate:
+    name: Run allowlisted server operation
+    runs-on: [self-hosted, linux, docker]
+    timeout-minutes: 60
+    steps:
+      - name: Read control request only
+        uses: actions/checkout@v6
+        with:
+          ref: chatgpt-ops
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .ops/request.json
+          jq -e 'type == "object"' .ops/request.json >/dev/null
+
+          action="$(jq -r '.action // empty' .ops/request.json)"
+          confirm="$(jq -r '.confirm // empty' .ops/request.json)"
+          tail_lines="$(jq -r '.tail_lines // 160' .ops/request.json)"
+          request_id="$(jq -r '.request_id // empty' .ops/request.json)"
+
+          case "$action" in
+            status|verify_quick|security_smoke|seo_aeo_smoke|runner_health|logs_frontend|logs_backend|deploy_main|restart_frontend|restart_stack|align_media_caps|cleanup_docker)
+              ;;
+            *)
+              echo "Refusing unknown operation: $action" >&2
+              exit 64
+              ;;
+          esac
+
+          case "$tail_lines" in
+            ''|*[!0-9]*)
+              echo "tail_lines must be an integer" >&2
+              exit 64
+              ;;
+          esac
+          if [ "$tail_lines" -lt 1 ] || [ "$tail_lines" -gt 500 ]; then
+            echo "tail_lines must be between 1 and 500" >&2
+            exit 64
+          fi
+
+          case "$request_id" in
+            ''|*[!A-Za-z0-9._:-]*)
+              echo "request_id must be a non-empty safe identifier" >&2
+              exit 64
+              ;;
+          esac
+
+          case "$action" in
+            deploy_main|restart_frontend|restart_stack|align_media_caps|cleanup_docker)
+              if [ "$confirm" != "MERCASTO" ]; then
+                echo "Mutating operation requires confirm=MERCASTO" >&2
+                exit 64
+              fi
+              ;;
+          esac
+
+          {
+            echo "action=$action"
+            echo "confirm=$confirm"
+            echo "tail_lines=$tail_lines"
+            echo "request_id=$request_id"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Validated request $request_id: $action"
+
+      - name: Verify production operator boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /var/www/mercasto/.git
+          test -f /var/www/mercasto/scripts/server-operator.sh
+          bash -n /var/www/mercasto/scripts/server-operator.sh
+
+      - name: Execute allowlisted production operation
+        shell: bash
+        env:
+          OPERATION: ${{ steps.request.outputs.action }}
+          CONFIRM: ${{ steps.request.outputs.confirm }}
+          TAIL_LINES: ${{ steps.request.outputs.tail_lines }}
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
+
+      - name: Completion marker
+        if: always()
+        shell: bash
+        run: |
+          echo "request_id=${{ steps.request.outputs.request_id }}"
+          echo "operation=${{ steps.request.outputs.action }}"
+          echo "run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
