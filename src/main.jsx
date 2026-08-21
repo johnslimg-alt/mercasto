@@ -13,6 +13,9 @@ import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 // Leaflet CSS is loaded lazily alongside the map bundle (see MapV3 loadLeaflet)
 // so it no longer bloats the render-blocking critical stylesheet.
 import './index.css'
+// This must stay unlayered: dynamically loaded Leaflet vendor CSS is unlayered too.
+// Our more-specific dark selectors then win the author cascade without !important.
+import './leaflet-dark-overrides.css'
 import './catalog-touch-targets.css'
 import './mobile-shell-touch-targets.css'
 import './header-focus.css'
