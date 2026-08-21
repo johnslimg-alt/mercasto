@@ -4,7 +4,7 @@ const protectedRoutes = ['/post', '/profile'];
 
 for (const route of protectedRoutes) {
   test(`anonymous ${route} keeps its return path and opens login`, async ({ page }) => {
-    await page.goto(route, { waitUntil: 'networkidle' });
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
 
     await expect(page).toHaveURL(new RegExp(`${route.replace('/', '\\/')}(?:[?#].*)?$`));
     await expect(page.getByRole('heading', { name: /Inicia sesión para continuar/i })).toBeVisible();
@@ -26,7 +26,7 @@ test('mobile protected routes remain layout-stable', async ({ page }, testInfo) 
   });
 
   for (const route of protectedRoutes) {
-    await page.goto(route, { waitUntil: 'networkidle' });
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /Inicia sesión para continuar/i })).toBeVisible();
     await page.waitForTimeout(800);
 
