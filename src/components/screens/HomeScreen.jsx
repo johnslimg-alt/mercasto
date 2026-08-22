@@ -19,7 +19,7 @@ const MapV3 = React.lazy(() => import('../common/MapV3'));
 
 import { sizedImage } from '../../utils/imageHelpers';
 import { localizedText } from '../../utils/localize';
-import { formatNumber } from '../../utils/localeFormat';
+import { formatMXN, formatNumber } from '../../utils/localeFormat';
 import { formatHomePropertiesLabel, getHomeMapCopy } from '../../utils/homeMapCopy';
 import { events } from '../../utils/analytics';
 import SkeletonCard from '../common/SkeletonCard';
@@ -346,7 +346,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                           localStorage.setItem('__mercasto_lcp_image', imgUrl);
                         } catch (e) {}
                       }
-                      const price = Number(ad.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+                      const price = formatMXN(ad.price || 0, lang, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                       const rating = getHomeRating(ad);
                       return (
                         <button
@@ -711,7 +711,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                                 </div>
                               </td>
                               <td className="px-4 py-3 hidden md:table-cell">{job.user_name || 'Empresa'}</td>
-                              <td className="px-4 py-3 font-medium">${Number(job.price || 0).toLocaleString()} MXN</td>
+                              <td className="px-4 py-3 font-medium">${formatNumber(job.price || 0, lang)} MXN</td>
                               <td className="px-4 py-3 hidden sm:table-cell">{job.state || job.location || 'México'}</td>
                               <td className="px-4 py-3 text-right">
                                 <button onClick={(e) => { e.stopPropagation(); handleViewAd(job); }} className="btn-sm bg-slate-900 text-white hover:bg-black">{t.view || 'Ver'}</button>
@@ -805,7 +805,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                         </div>
                         <p className="text-[13px] text-slate-600 mt-3 line-clamp-2">{srv.description}</p>
                         <div className="flex items-center justify-between mt-3">
-                          <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>${Number(srv.price || 0).toLocaleString()} MXN</strong></span>
+                          <span className="text-[13px]"><span className="text-slate-500">{t.from || 'Desde'}</span> <strong>${formatNumber(srv.price || 0, lang)} MXN</strong></span>
                           <button type="button" onClick={() => handleViewAd(srv)} className="btn-sm bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]">{t.view || 'Ver'}</button>
                         </div>
                       </div>
@@ -908,7 +908,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                           <img src={imgSrc} loading="lazy" className="w-full h-full object-cover" alt={car.title}/>
                         </div>
                         <div className="p-3 flex flex-col flex-1 min-h-[112px]">
-                          <div className="font-bold leading-tight line-clamp-1">${Number(car.price || 0).toLocaleString()} MXN</div>
+                          <div className="font-bold leading-tight line-clamp-1">${formatNumber(car.price || 0, lang)} MXN</div>
                           <div className="text-[13px] font-medium line-clamp-1 mt-0.5">{car.title}</div>
                           {rating.hasReviews && (
                             <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -970,7 +970,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                           </div>
                           <div className="p-2">
                             <div className="text-[13px] font-bold text-[#0F172A] dark:text-white leading-tight line-clamp-1">{localizedText(ad.title)}</div>
-                            <div className="text-[13px] font-semibold text-[#65A30D] dark:text-[#BEF264] mt-0.5">${Number(ad.price || 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">MXN</span></div>
+                            <div className="text-[13px] font-semibold text-[#65A30D] dark:text-[#BEF264] mt-0.5">${formatNumber(ad.price || 0, lang)} <span className="text-[10px] text-slate-400 font-normal">MXN</span></div>
                             <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{locationStr}</div>
                           </div>
                         </button>
