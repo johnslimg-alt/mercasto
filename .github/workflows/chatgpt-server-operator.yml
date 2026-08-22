@@ -11,19 +11,21 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
-concurrency:
-  group: chatgpt-server-operator
-  cancel-in-progress: true
-
 jobs:
   operate:
     name: Run allowlisted server operation
     if: >-
       github.event.issue.number == 832 &&
       github.actor == 'johnslimg-alt' &&
-      startsWith(github.event.comment.body, 'RUN:')
+      contains(
+        fromJSON('["RUN:status","RUN:verify_quick","RUN:security_smoke","RUN:seo_aeo_smoke","RUN:runner_health","RUN:logs_frontend","RUN:logs_backend","RUN:deploy_main:MERCASTO","RUN:restart_frontend:MERCASTO","RUN:restart_stack:MERCASTO","RUN:align_media_caps:MERCASTO","RUN:cleanup_docker:MERCASTO"]'),
+        github.event.comment.body
+      )
     runs-on: [self-hosted]
     timeout-minutes: 60
+    concurrency:
+      group: chatgpt-server-operator
+      cancel-in-progress: true
     steps:
       - name: Validate exact command
         id: request
