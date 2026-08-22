@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: hosted-server-agent-recovery
@@ -101,3 +102,17 @@ jobs:
         if: always()
         shell: bash
         run: rm -f ~/.ssh/mercasto_recovery_key
+
+      - name: Report recovery result
+        if: always() && github.event_name == 'issue_comment'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          body="$(printf 'HOSTED_AGENT_RECOVERY_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' \
+            "$JOB_STATUS" "$GITHUB_RUN_ID" "$RUN_URL")"
+          gh api "repos/$REPO/issues/832/comments" -f body="$body"
