@@ -1,0 +1,110 @@
+name: Hosted Server Runner Status
+
+# Read-only out-of-band diagnostics for the VPS GitHub runners.
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: hosted-server-runner-status
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Diagnose VPS GitHub runners out of band
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.number == 832 &&
+       github.actor == 'johnslimg-alt' &&
+       github.event.comment.body == 'RUN:hosted_runner_status')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate diagnostics secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_runner_status_key
+          chmod 600 ~/.ssh/mercasto_runner_status_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Read runner diagnostics
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_runner_status_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -u
+          echo '=== HOST ==='
+          hostname
+          uptime
+
+          units=(
+            actions.runner.johnslimg-alt-mercasto.srv1526037.service
+            actions.runner.johnslimg-alt-mercasto-mobile.srv1526037-mobile.service
+          )
+
+          echo '=== RUNNER UNITS ==='
+          for unit in "${units[@]}"; do
+            echo "-- $unit --"
+            systemctl show "$unit" --no-pager \
+              -p LoadState -p ActiveState -p SubState -p MainPID -p NRestarts \
+              -p ExecMainStartTimestamp -p WorkingDirectory 2>/dev/null || true
+          done
+
+          echo '=== RUNNER PROCESSES ==='
+          ps -eo pid=,ppid=,user=,etime=,args= | grep '[R]unner.Listener' || true
+
+          echo '=== GITHUB CONNECTIVITY ==='
+          getent ahostsv4 github.com | head -5 || true
+          curl -fsSI --connect-timeout 5 --max-time 15 https://github.com/ | head -12 || true
+          curl -fsSI --connect-timeout 5 --max-time 15 https://api.github.com/ | head -12 || true
+
+          echo '=== RECENT RUNNER JOURNAL ==='
+          for unit in "${units[@]}"; do
+            echo "-- $unit --"
+            journalctl -u "$unit" -n 80 --no-pager 2>/dev/null \
+              | sed -E 's/(token|authorization|credential|secret|password)([=: ]+)[^ ]+/\1\2***REDACTED***/Ig' \
+              || true
+          done
+          REMOTE
+
+      - name: Remove SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/mercasto_runner_status_key
+
+      - name: Report diagnostics result
+        if: always() && github.event_name == 'issue_comment'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          body="$(printf 'HOSTED_RUNNER_STATUS_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' \
+            "$JOB_STATUS" "$GITHUB_RUN_ID" "$RUN_URL")"
+          gh api "repos/$REPO/issues/832/comments" -f body="$body"
