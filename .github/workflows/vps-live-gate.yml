@@ -40,24 +40,53 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          docker compose ps
+          for attempt in 1 2 3; do
+            if docker compose ps; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "docker compose ps failed; retrying in 5s ($attempt/3)" >&2
+              sleep 5
+            fi
+          done
+          exit 1
 
       - name: Check nginx config inside frontend container
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          docker compose exec -T mercasto-frontend nginx -t
+          for attempt in 1 2 3; do
+            if docker compose exec -T mercasto-frontend nginx -t; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "nginx config check failed; retrying in 5s ($attempt/3)" >&2
+              sleep 5
+            fi
+          done
+          exit 1
 
       - name: Check backend artisan availability
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          docker compose exec -T mercasto-backend php artisan --version
+          for attempt in 1 2 3; do
+            if docker compose exec -T mercasto-backend php artisan --version; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "artisan availability check failed; retrying in 5s ($attempt/3)" >&2
+              sleep 5
+            fi
+          done
+          exit 1
 
       - name: Check production HTTP endpoints
         run: |
           set -euo pipefail
-          curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/mercasto-vps-home.html
-          curl -fsS --max-time 30 https://mercasto.com/api/auth/providers -o /tmp/mercasto-vps-auth-providers.json
+          curl -fsS --retry 3 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 30 \
+            https://mercasto.com/ -o /tmp/mercasto-vps-home.html
+          curl -fsS --retry 3 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 30 \
+            https://mercasto.com/api/auth/providers -o /tmp/mercasto-vps-auth-providers.json
           grep -Eiq '<title[^>]*>[^<]{10,90}</title>' /tmp/mercasto-vps-home.html
           grep -Eiq '"google"|"telegram"|"apple"|"sms"' /tmp/mercasto-vps-auth-providers.json

@@ -46,7 +46,20 @@ jobs:
           install -d -m 0700 ~/.ssh
           printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_runner_status_key
           chmod 600 ~/.ssh/mercasto_runner_status_key
-          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          scan_file="$(mktemp)"
+          trap 'rm -f "$scan_file"' EXIT
+          for attempt in 1 2 3 4; do
+            : > "$scan_file"
+            if ssh-keyscan -T 5 -H "$SERVER_HOST" > "$scan_file" 2>/dev/null && [ -s "$scan_file" ]; then
+              cat "$scan_file" >> ~/.ssh/known_hosts
+              break
+            fi
+            if [ "$attempt" -eq 4 ]; then
+              echo "Unable to read the VPS SSH host key after $attempt attempts." >&2
+              exit 1
+            fi
+            sleep 2
+          done
 
       - name: Read runner diagnostics
         shell: bash

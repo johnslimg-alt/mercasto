@@ -18,7 +18,7 @@ probe_json_error() {
   local body status
   body="$(mktemp)"
 
-  status="$(curl -sS --max-time 20 \
+  status="$(curl -sS --connect-timeout 10 --max-time 20 \
     -H 'Accept: application/json' \
     -o "$body" -w '%{http_code}' \
     "${BASE_URL}${path}" || true)"
@@ -45,14 +45,15 @@ probe_json_error() {
 require_cmd curl
 require_cmd docker
 require_cmd grep
+require_cmd timeout
 
-if [[ "$(docker inspect -f '{{.State.Running}}' "$BACKEND_CONTAINER" 2>/dev/null || true)" != "true" ]]; then
+if [[ "$(timeout 30s docker inspect -f '{{.State.Running}}' "$BACKEND_CONTAINER" 2>/dev/null || true)" != "true" ]]; then
   echo "backend container is not running: $BACKEND_CONTAINER" >&2
   exit 1
 fi
 
 echo "== Production error mode smoke =="
-runtime="$(docker exec "$BACKEND_CONTAINER" php artisan tinker --execute='echo "env=" . app()->environment() . PHP_EOL; echo "debug=" . (config("app.debug") ? "true" : "false") . PHP_EOL;' 2>&1)"
+runtime="$(timeout 60s docker exec "$BACKEND_CONTAINER" php artisan tinker --execute='echo "env=" . app()->environment() . PHP_EOL; echo "debug=" . (config("app.debug") ? "true" : "false") . PHP_EOL;' 2>&1)"
 printf '%s\n' "$runtime"
 
 grep -qx 'env=production' <<< "$runtime"
