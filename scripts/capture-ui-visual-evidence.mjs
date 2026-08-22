@@ -1,4 +1,4 @@
-import { chromium, devices, webkit } from 'playwright';
+import { chromium, devices, webkit } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
