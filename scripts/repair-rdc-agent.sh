@@ -18,7 +18,13 @@ echo "== Existing RDC processes/services =="
 pgrep -af 'desktop-commander.*remote|desktop-commander/dist/index.js' || true
 systemctl list-unit-files --no-legend 2>/dev/null | grep -Ei 'desktop.*commander|remote.*commander' || true
 
-cat >/tmp/remote-desktop-commander.service <<'EOF'
+TMP_UNIT="$(mktemp /tmp/remote-desktop-commander.service.XXXXXX)"
+cleanup() {
+  rm -f "$TMP_UNIT"
+}
+trap cleanup EXIT
+
+cat >"$TMP_UNIT" <<'EOF'
 [Unit]
 Description=Remote Desktop Commander VPS agent
 Wants=network-online.target
@@ -40,7 +46,7 @@ TimeoutStopSec=20
 WantedBy=multi-user.target
 EOF
 
-"${SUDO[@]}" install -o root -g root -m 0644 /tmp/remote-desktop-commander.service "$UNIT"
+"${SUDO[@]}" install -o root -g root -m 0644 "$TMP_UNIT" "$UNIT"
 "${SUDO[@]}" systemctl daemon-reload
 "${SUDO[@]}" systemctl enable "$SERVICE"
 
