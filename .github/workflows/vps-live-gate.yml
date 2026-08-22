@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: vps-live-gate-${{ github.event_name == 'push' && github.ref || format('run-{0}', github.run_id) }}
+  group: vps-live-gate-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
