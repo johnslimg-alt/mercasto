@@ -81,11 +81,14 @@ jobs:
           curl -fsSI --connect-timeout 5 --max-time 15 https://github.com/ | head -12 || true
           curl -fsSI --connect-timeout 5 --max-time 15 https://api.github.com/ | head -12 || true
 
-          echo '=== RECENT RUNNER JOURNAL ==='
+          echo '=== FILTERED RUNNER JOURNAL ==='
           for unit in "${units[@]}"; do
             echo "-- $unit --"
-            journalctl -u "$unit" -n 80 --no-pager 2>/dev/null \
+            journalctl -u "$unit" -n 160 --no-pager 2>/dev/null \
+              | grep -Ei 'runner|listener|session|connect|disconnect|error|fail|offline|online|job|oauth|github|http|tls|dns|network' \
               | sed -E 's/(token|authorization|credential|secret|password)([=: ]+)[^ ]+/\1\2***REDACTED***/Ig' \
+              | sed -E 's#https?://[^ ]+#<URL_REDACTED>#g; s/[A-Za-z0-9_=-]{32,}/***REDACTED***/g' \
+              | tail -80 \
               || true
           done
           REMOTE
