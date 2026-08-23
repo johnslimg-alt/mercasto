@@ -300,16 +300,14 @@ PY
     print_header "GitHub runner services"
     if command -v systemctl >/dev/null 2>&1; then
       mapfile -t runner_services < <(
-        systemctl list-units --type=service --all --no-legend 'actions.runner.*.service' 2>/dev/null \
-          | awk '{print $1}'
+        systemctl list-units --type=service --all --no-legend 'actions.runner.*.service' 2>/dev/null           | awk '{print $1}'
       )
       if [[ "${#runner_services[@]}" -eq 0 ]]; then
         echo "No systemd GitHub runner service found."
       else
         for service in "${runner_services[@]}"; do
           echo "-- $service --"
-          systemctl show "$service" --no-pager \
-            -p ActiveState -p SubState -p MainPID -p NRestarts
+          systemctl show "$service" --no-pager             -p ActiveState -p SubState -p MainPID -p NRestarts
         done
       fi
     else
