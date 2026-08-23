@@ -1,0 +1,97 @@
+name: Patch operator production sync sudo boundary
+
+on:
+  push:
+    branches:
+      - fix/854-operator-production-sync-sudo
+    paths:
+      - .github/workflows/patch-operator-production-sync-sudo.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/854-operator-production-sync-sudo
+          fetch-depth: 0
+
+      - name: Apply exact patch and regression contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          script = Path('scripts/server-operator.sh')
+          source = script.read_text()
+
+          replacements = [
+              (
+                  '  rm -f "$cache_dir/config.php" "$cache_dir/events.php"\n  find "$cache_dir" -maxdepth 1 -type f -name \'routes-*.php\' -delete\n',
+                  '  sudo -n rm -f backend/bootstrap/cache/*.php\n',
+              ),
+              (
+                  '    git fetch origin main --prune\n    git reset --hard origin/main\n    git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env\n',
+                  '    sudo -n git fetch origin\n    sudo -n git reset --hard origin/main\n    sudo -n git clean -fd\n',
+              ),
+          ]
+
+          for old, new in replacements:
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one patch target, found {count}: {old!r}')
+              source = source.replace(old, new, 1)
+
+          script.write_text(source)
+
+          test_file = Path('scripts/server-operator-permission-boundary.test.mjs')
+          test_file.write_text(r'''import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import test from 'node:test';
+
+          const source = readFileSync('scripts/server-operator.sh', 'utf8');
+
+          test('deploy_main uses the established narrow sudo boundary for root-owned production git state', () => {
+            const match = source.match(/\n  deploy_main\)\n([\s\S]*?)\n    ;;/);
+            assert.ok(match, 'deploy_main block must exist');
+            const block = match[1];
+
+            assert.match(block, /sudo -n git fetch origin/);
+            assert.match(block, /sudo -n git reset --hard origin\/main/);
+            assert.match(block, /sudo -n git clean -fd/);
+            assert.doesNotMatch(block, /^\s+git fetch origin/m);
+            assert.doesNotMatch(block, /^\s+git reset --hard origin\/main/m);
+            assert.doesNotMatch(block, /^\s+git clean -fd/m);
+          });
+
+          test('Laravel bootstrap cache cleanup uses the same narrow privileged file boundary', () => {
+            const match = source.match(/clear_laravel_bootstrap_caches\(\) \{([\s\S]*?)\n\}/);
+            assert.ok(match, 'cache cleanup helper must exist');
+            assert.match(match[1], /sudo -n rm -f backend\/bootstrap\/cache\/\*\.php/);
+          });
+
+          test('operator permission fix does not broaden filesystem ownership or mode', () => {
+            assert.doesNotMatch(source, /\bchown\s+-R\b/);
+            assert.doesNotMatch(source, /\bchmod\s+-R\b/);
+          });
+          ''')
+          PY
+
+          bash -n scripts/server-operator.sh
+          node --test scripts/server-operator-permission-boundary.test.mjs
+          git diff --check
+
+      - name: Commit product patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/server-operator.sh scripts/server-operator-permission-boundary.test.mjs
+          git diff --cached --check
+          git commit -m 'fix: allow operator to sync root-owned production checkout'
+          git push origin HEAD:fix/854-operator-production-sync-sudo
