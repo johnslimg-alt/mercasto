@@ -13,7 +13,6 @@ env:
 jobs:
   patch:
     runs-on: ubuntu-latest
-    if: github.actor == 'johnslimg-alt'
     steps:
       - uses: actions/checkout@v7
         with:
