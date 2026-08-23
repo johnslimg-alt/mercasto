@@ -139,7 +139,12 @@ fi
     const optimize = index('php artisan optimize');
     const reload = index('nginx -s reload');
     const verify = index('npm run verify:quick');
-    const diagnostics = `trace:\n${traceText}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`;
+    const diagnostics = `trace:
+${traceText}
+stdout:
+${result.stdout}
+stderr:
+${result.stderr}`;
 
     assert.ok(reset >= 0, `deploy must invoke git reset\n${diagnostics}`);
     assert.ok(cleared >= 0, `docker up must observe cleared bootstrap caches\n${diagnostics}`);
