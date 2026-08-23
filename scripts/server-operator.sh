@@ -70,10 +70,19 @@ compose_ps() {
   "${COMPOSE_PROD[@]}" ps
 }
 
+is_production_checkout() {
+  [ "$PROJECT_DIR" = "/var/www/mercasto" ]
+}
+
 clear_laravel_bootstrap_caches() {
   local cache_dir="$PROJECT_DIR/backend/bootstrap/cache"
 
   print_header "Clear stale Laravel bootstrap caches"
+  if is_production_checkout; then
+    sudo -n rm -f backend/bootstrap/cache/*.php
+    return
+  fi
+
   rm -f "$cache_dir/config.php" "$cache_dir/events.php"
   find "$cache_dir" -maxdepth 1 -type f -name 'routes-*.php' -delete
 }
@@ -210,9 +219,15 @@ case "$OPERATION" in
   deploy_main)
     require_confirm
     print_header "Sync main"
-    git fetch origin main --prune
-    git reset --hard origin/main
-    git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    if is_production_checkout; then
+      sudo -n git fetch origin
+      sudo -n git reset --hard origin/main
+      sudo -n git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    else
+      git fetch origin main --prune
+      git reset --hard origin/main
+      git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    fi
     clear_laravel_bootstrap_caches
     print_header "Build and start stack"
     "${COMPOSE_PROD[@]}" up -d --build --remove-orphans
@@ -285,14 +300,16 @@ PY
     print_header "GitHub runner services"
     if command -v systemctl >/dev/null 2>&1; then
       mapfile -t runner_services < <(
-        systemctl list-units --type=service --all --no-legend 'actions.runner.*.service' 2>/dev/null           | awk '{print $1}'
+        systemctl list-units --type=service --all --no-legend 'actions.runner.*.service' 2>/dev/null \
+          | awk '{print $1}'
       )
       if [[ "${#runner_services[@]}" -eq 0 ]]; then
         echo "No systemd GitHub runner service found."
       else
         for service in "${runner_services[@]}"; do
           echo "-- $service --"
-          systemctl show "$service" --no-pager             -p ActiveState -p SubState -p MainPID -p NRestarts
+          systemctl show "$service" --no-pager \
+            -p ActiveState -p SubState -p MainPID -p NRestarts
         done
       fi
     else
