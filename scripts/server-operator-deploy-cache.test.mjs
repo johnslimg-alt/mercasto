@@ -24,6 +24,19 @@ test('deploy clears stale Laravel caches before recreating containers', () => {
   assert.ok(reset >= 0 && reset < clear && clear < startStack, 'cache clear must happen after sync and before stack start');
 });
 
+test('production deploy uses the existing narrow sudo boundary for root-owned checkout mutation', () => {
+  assert.match(operator, /is_production_checkout\(\)/);
+  assert.match(operator, /\[ "\$PROJECT_DIR" = "\/var\/www\/mercasto" \]/);
+
+  const deploy = deployMainBlock();
+  assert.match(deploy, /sudo -n git fetch origin/);
+  assert.match(deploy, /sudo -n git reset --hard origin\/main/);
+  assert.match(deploy, /sudo -n git clean -fd -e runners\/data1 -e runners\/data2 -e runners\/data3 -e runners\/\.env/);
+  assert.match(operator, /sudo -n rm -f backend\/bootstrap\/cache\/\*\.php/);
+  assert.match(deploy, /else\n\s+git fetch origin main --prune/);
+  assert.doesNotMatch(operator, /chown\s+-R|chmod\s+-R/);
+});
+
 test('deploy refreshes Laravel caches after migrations and before verification', () => {
   assert.match(operator, /refresh_laravel_bootstrap_caches\(\)/);
   assert.match(operator, /php artisan optimize/);
@@ -126,12 +139,7 @@ fi
     const optimize = index('php artisan optimize');
     const reload = index('nginx -s reload');
     const verify = index('npm run verify:quick');
-    const diagnostics = `trace:
-${traceText}
-stdout:
-${result.stdout}
-stderr:
-${result.stderr}`;
+    const diagnostics = `trace:\n${traceText}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`;
 
     assert.ok(reset >= 0, `deploy must invoke git reset\n${diagnostics}`);
     assert.ok(cleared >= 0, `docker up must observe cleared bootstrap caches\n${diagnostics}`);
