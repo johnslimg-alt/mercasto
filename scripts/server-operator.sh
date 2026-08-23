@@ -74,8 +74,7 @@ clear_laravel_bootstrap_caches() {
   local cache_dir="$PROJECT_DIR/backend/bootstrap/cache"
 
   print_header "Clear stale Laravel bootstrap caches"
-  rm -f "$cache_dir/config.php" "$cache_dir/events.php"
-  find "$cache_dir" -maxdepth 1 -type f -name 'routes-*.php' -delete
+  sudo -n rm -f backend/bootstrap/cache/*.php
 }
 
 refresh_laravel_bootstrap_caches() {
@@ -210,9 +209,9 @@ case "$OPERATION" in
   deploy_main)
     require_confirm
     print_header "Sync main"
-    git fetch origin main --prune
-    git reset --hard origin/main
-    git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
+    sudo -n git fetch origin
+    sudo -n git reset --hard origin/main
+    sudo -n git clean -fd
     clear_laravel_bootstrap_caches
     print_header "Build and start stack"
     "${COMPOSE_PROD[@]}" up -d --build --remove-orphans
