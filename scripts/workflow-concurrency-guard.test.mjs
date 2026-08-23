@@ -60,3 +60,56 @@ test('production SEO live gate matches the localized title availability contract
   assert.doesNotMatch(workflow, /\{10,70\}/);
   assert.doesNotMatch(watch, /\{10,70\}/);
 });
+
+const serverOperatorCommands = [
+  'RUN:status',
+  'RUN:verify_quick',
+  'RUN:security_smoke',
+  'RUN:seo_aeo_smoke',
+  'RUN:runner_health',
+  'RUN:logs_frontend',
+  'RUN:logs_backend',
+  'RUN:deploy_main:MERCASTO',
+  'RUN:restart_frontend:MERCASTO',
+  'RUN:restart_stack:MERCASTO',
+  'RUN:align_media_caps:MERCASTO',
+  'RUN:cleanup_docker:MERCASTO',
+];
+
+function sortedUnique(values) {
+  return [...new Set(values)].sort();
+}
+
+test('server operator trigger matches only the explicit allowlisted commands', () => {
+  const source = readFileSync(`${workflowDir}/chatgpt-server-operator.yml`, 'utf8');
+  const triggerCommands = [...source.matchAll(/github\.event\.comment\.body == '([^']+)'/g)]
+    .map((match) => match[1]);
+  const commandMap = source.match(/const commands = \{([\s\S]*?)\n\s+\};/);
+  assert.ok(commandMap, 'server operator command map must exist');
+  const mappedCommands = [...commandMap[1].matchAll(/'([^']+)': \[/g)]
+    .map((match) => match[1]);
+
+  assert.deepEqual(sortedUnique(triggerCommands), [...serverOperatorCommands].sort());
+  assert.deepEqual(sortedUnique(mappedCommands), [...serverOperatorCommands].sort());
+  assert.doesNotMatch(source, /startsWith\(github\.event\.comment\.body,\s*['"]RUN:/);
+
+  for (const command of [
+    'RUN:hosted_runner_status',
+    'RUN:hosted_agent_recovery:MERCASTO',
+    'RUN:mcp_bridge_status',
+    'RUN:reef_mcp_agent_install:MERCASTO',
+    'RUN:unknown_command',
+  ]) {
+    assert.ok(!triggerCommands.includes(command), `${command} must not allocate the self-hosted operator job`);
+  }
+});
+
+test('server operator serializes valid jobs without cancelling active work', () => {
+  const source = readFileSync(`${workflowDir}/chatgpt-server-operator.yml`, 'utf8');
+  assert.doesNotMatch(source, /^concurrency:/m, 'operator must not use workflow-level concurrency');
+  assert.match(
+    source,
+    /^ {4}concurrency:\n {6}group: chatgpt-server-operator\n {6}cancel-in-progress: false/m,
+    'operator concurrency must remain job-scoped and non-cancelling',
+  );
+});
