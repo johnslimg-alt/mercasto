@@ -1,8 +1,6 @@
 name: Server Operator
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       operation:
@@ -24,12 +22,7 @@ jobs:
     runs-on: [self-hosted, linux]
     timeout-minutes: 10
     steps:
-      - name: Push compatibility
-        if: github.event_name == 'push'
-        run: echo "Server Operator is manual-only; push is covered by Deploy and Production checks."
-
       - name: Run operation
-        if: github.event_name != 'push'
         shell: bash
         run: |
           set -euo pipefail
