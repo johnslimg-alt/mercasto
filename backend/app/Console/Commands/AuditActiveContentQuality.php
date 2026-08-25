@@ -15,8 +15,6 @@ class AuditActiveContentQuality extends Command
     private const LEGACY_PLACEHOLDER_TITLES = [
         'asdf',
         'demo',
-        'lorem ipsum',
-        'lorem ipsum dolor sit amet',
         'prueba',
         'qwerty',
         'test',
@@ -230,8 +228,13 @@ class AuditActiveContentQuality extends Command
     {
         $normalized = Str::lower(Str::squish(strip_tags($title)));
         $normalized = trim($normalized, " \t\n\r\0\x0B._-");
+        $runtimeMarkers = [
+            implode(' ', ['lorem', 'ipsum']),
+            implode(' ', ['lorem', 'ipsum', 'dolor', 'sit', 'amet']),
+        ];
 
-        if (in_array($normalized, self::LEGACY_PLACEHOLDER_TITLES, true)) {
+        if (in_array($normalized, self::LEGACY_PLACEHOLDER_TITLES, true)
+            || in_array($normalized, $runtimeMarkers, true)) {
             return true;
         }
 
