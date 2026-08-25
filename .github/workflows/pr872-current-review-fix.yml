@@ -1,0 +1,152 @@
+name: PR872 current review fix
+
+on:
+  push:
+    branches:
+      - feat/748-python-listing-moderation-contract
+    paths:
+      - .github/workflows/pr872-current-review-fix.yml
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/748-python-listing-moderation-contract
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: services/ai-gateway/pyproject.toml
+      - name: Apply deterministic current-review fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one anchor, found {count}")
+              return text.replace(old, new, 1)
+
+          ollama_path = Path('services/ai-gateway/mercasto_ai/ollama.py')
+          ollama = ollama_path.read_text()
+          ollama = replace_once(
+              ollama,
+              '_LISTING_NUM_CTX = 8192\n',
+              '''_LISTING_NUM_CTX = 8192\nLISTING_MODEL_CONTEXT_TOKENS = _LISTING_NUM_CTX\n_LISTING_NUM_PREDICT = 320\n_LISTING_IMAGE_TOKEN_RESERVE = 2048\n_LISTING_CONTEXT_SAFETY_TOKENS = 768\n_LISTING_USER_PREFIX = "UNTRUSTED_LISTING_DATA_JSON:\\n"\n\n\ndef _listing_system_content(policy_signals: list[str]) -> str:\n    return _LISTING_SYSTEM_PROMPT.format(policy_signals=", ".join(policy_signals))\n\n\ndef _listing_user_content(title: str, description: str) -> str:\n    untrusted_listing_data = json.dumps(\n        {"title": title.strip(), "description": description.strip()},\n        ensure_ascii=False,\n        separators=(",", ":"),\n    )\n    return f"{_LISTING_USER_PREFIX}{untrusted_listing_data}"\n\n\ndef estimate_listing_context_tokens(\n    title: str,\n    description: str,\n    images_base64: list[str],\n    policy_signals: list[str],\n) -> int:\n    """Conservatively reserve the complete local-model context before calling Ollama."""\n    system_content = _listing_system_content(policy_signals)\n    user_content = _listing_user_content(title, description)\n    return (\n        len(system_content.encode("utf-8"))\n        + len(user_content.encode("utf-8"))\n        + len(images_base64) * _LISTING_IMAGE_TOKEN_RESERVE\n        + _LISTING_NUM_PREDICT\n        + _LISTING_CONTEXT_SAFETY_TOKENS\n    )\n''',
+              'listing context constants',
+          )
+          old_listing_build = '''        untrusted_listing_data = json.dumps(\n            {"title": title.strip(), "description": description.strip()},\n            ensure_ascii=False,\n            separators=(",", ":"),\n        )\n        user_message: dict[str, Any] = {\n            "role": "user",\n            "content": f"UNTRUSTED_LISTING_DATA_JSON:\\n{untrusted_listing_data}",\n        }\n'''
+          new_listing_build = '''        user_message: dict[str, Any] = {\n            "role": "user",\n            "content": _listing_user_content(title, description),\n        }\n'''
+          ollama = replace_once(ollama, old_listing_build, new_listing_build, 'listing user payload')
+          ollama = replace_once(
+              ollama,
+              '''                    "content": _LISTING_SYSTEM_PROMPT.format(\n                        policy_signals=", ".join(policy_signals)\n                    ),\n''',
+              '''                    "content": _listing_system_content(policy_signals),\n''',
+              'listing system payload',
+          )
+          ollama = replace_once(
+              ollama,
+              '                "num_predict": 320,\n                "num_ctx": _LISTING_NUM_CTX,\n',
+              '                "num_predict": _LISTING_NUM_PREDICT,\n                "num_ctx": _LISTING_NUM_CTX,\n',
+              'listing token options',
+          )
+          ollama_path.write_text(ollama)
+
+          main_path = Path('services/ai-gateway/mercasto_ai/main.py')
+          main = main_path.read_text()
+          main = replace_once(main, 'import hmac\n', 'import hmac\nimport json\n', 'json import')
+          main = replace_once(
+              main,
+              'from .ollama import OllamaModerationClient, OllamaUnavailable\n',
+              '''from .ollama import (\n    LISTING_MODEL_CONTEXT_TOKENS,\n    OllamaModerationClient,\n    OllamaUnavailable,\n    estimate_listing_context_tokens,\n)\n''',
+              'ollama imports',
+          )
+          main = replace_once(
+              main,
+              '_LISTING_MODEL_CONTEXT_TOKENS = 8_192\n_LISTING_MODERATION_PATH = "/v1/moderation/listing"\n',
+              '''_LISTING_MODEL_CONTEXT_TOKENS = LISTING_MODEL_CONTEXT_TOKENS\n_LISTING_MODERATION_PATH = "/v1/moderation/listing"\n_LISTING_JSON_KEY_RAW_BYTES = 128\n_LISTING_TITLE_RAW_BYTES = 4_096\n_LISTING_DESCRIPTION_RAW_BYTES = 160_000\n_LISTING_IMAGE_RAW_BYTES = 7_100_000\n_LISTING_POLICY_SIGNAL_RAW_BYTES = 512\n_LISTING_INTEGER_RAW_BYTES = 32\n\n\nclass _ListingJsonShapeError(ValueError):\n    pass\n\n\ndef _skip_json_whitespace(body: bytes, index: int) -> int:\n    while index < len(body) and body[index] in b" \\t\\r\\n":\n        index += 1\n    return index\n\n\ndef _scan_json_string(body: bytes, index: int, *, raw_limit: int) -> int:\n    if index >= len(body) or body[index] != 0x22:\n        raise _ListingJsonShapeError("expected JSON string")\n    start = index\n    index += 1\n    while index < len(body):\n        byte = body[index]\n        if byte == 0x22:\n            end = index + 1\n            if end - start > raw_limit:\n                raise _ListingJsonShapeError("JSON string exceeds structural limit")\n            return end\n        if byte == 0x5C:\n            if index + 1 >= len(body):\n                raise _ListingJsonShapeError("unterminated JSON escape")\n            escape = body[index + 1]\n            if escape == ord("u"):\n                if index + 6 > len(body):\n                    raise _ListingJsonShapeError("incomplete unicode escape")\n                if any(chr(value) not in "0123456789abcdefABCDEF" for value in body[index + 2:index + 6]):\n                    raise _ListingJsonShapeError("invalid unicode escape")\n                index += 6\n                continue\n            if escape not in b'"\\\\/bfnrt':\n                raise _ListingJsonShapeError("invalid JSON escape")\n            index += 2\n            continue\n        if byte < 0x20:\n            raise _ListingJsonShapeError("control character in JSON string")\n        index += 1\n    raise _ListingJsonShapeError("unterminated JSON string")\n\n\ndef _scan_json_string_array(\n    body: bytes,\n    index: int,\n    *,\n    max_items: int,\n    item_raw_limit: int,\n) -> int:\n    if index >= len(body) or body[index] != 0x5B:\n        raise _ListingJsonShapeError("expected JSON array")\n    index = _skip_json_whitespace(body, index + 1)\n    if index < len(body) and body[index] == 0x5D:\n        return index + 1\n    count = 0\n    while True:\n        if count >= max_items:\n            raise _ListingJsonShapeError("JSON array exceeds structural item limit")\n        index = _scan_json_string(body, index, raw_limit=item_raw_limit)\n        count += 1\n        index = _skip_json_whitespace(body, index)\n        if index >= len(body):\n            raise _ListingJsonShapeError("unterminated JSON array")\n        if body[index] == 0x5D:\n            return index + 1\n        if body[index] != 0x2C:\n            raise _ListingJsonShapeError("expected JSON array separator")\n        index = _skip_json_whitespace(body, index + 1)\n\n\ndef _scan_json_integer_or_null(body: bytes, index: int) -> int:\n    if body.startswith(b"null", index):\n        return index + 4\n    start = index\n    if index < len(body) and body[index] == 0x2D:\n        index += 1\n    if index >= len(body) or body[index] not in b"0123456789":\n        raise _ListingJsonShapeError("expected JSON integer or null")\n    if body[index] == ord("0"):\n        index += 1\n        if index < len(body) and body[index] in b"0123456789":\n            raise _ListingJsonShapeError("invalid leading zero")\n    else:\n        while index < len(body) and body[index] in b"0123456789":\n            index += 1\n    if index - start > _LISTING_INTEGER_RAW_BYTES:\n        raise _ListingJsonShapeError("integer exceeds structural limit")\n    return index\n\n\ndef _validate_listing_json_shape(body: bytes) -> None:\n    index = _skip_json_whitespace(body, 0)\n    if index >= len(body) or body[index] != 0x7B:\n        raise _ListingJsonShapeError("expected top-level object")\n    index = _skip_json_whitespace(body, index + 1)\n    seen: set[str] = set()\n    if index < len(body) and body[index] == 0x7D:\n        index += 1\n    else:\n        while True:\n            key_start = index\n            key_end = _scan_json_string(body, index, raw_limit=_LISTING_JSON_KEY_RAW_BYTES)\n            try:\n                key = json.loads(body[key_start:key_end].decode("utf-8"))\n            except (UnicodeDecodeError, json.JSONDecodeError) as exc:\n                raise _ListingJsonShapeError("invalid JSON key") from exc\n            if not isinstance(key, str) or key in seen:\n                raise _ListingJsonShapeError("invalid or duplicate JSON key")\n            seen.add(key)\n            index = _skip_json_whitespace(body, key_end)\n            if index >= len(body) or body[index] != 0x3A:\n                raise _ListingJsonShapeError("expected JSON key separator")\n            index = _skip_json_whitespace(body, index + 1)\n            if key == "title":\n                index = _scan_json_string(body, index, raw_limit=_LISTING_TITLE_RAW_BYTES)\n            elif key == "description":\n                index = _scan_json_string(body, index, raw_limit=_LISTING_DESCRIPTION_RAW_BYTES)\n            elif key == "images_base64":\n                index = _scan_json_string_array(body, index, max_items=2, item_raw_limit=_LISTING_IMAGE_RAW_BYTES)\n            elif key == "policy_signals":\n                index = _scan_json_string_array(body, index, max_items=200, item_raw_limit=_LISTING_POLICY_SIGNAL_RAW_BYTES)\n            elif key in {"source_description_chars", "source_image_count"}:\n                index = _scan_json_integer_or_null(body, index)\n            else:\n                raise _ListingJsonShapeError("unknown listing moderation field")\n            index = _skip_json_whitespace(body, index)\n            if index >= len(body):\n                raise _ListingJsonShapeError("unterminated top-level object")\n            if body[index] == 0x7D:\n                index += 1\n                break\n            if body[index] != 0x2C:\n                raise _ListingJsonShapeError("expected top-level separator")\n            index = _skip_json_whitespace(body, index + 1)\n    if _skip_json_whitespace(body, index) != len(body):\n        raise _ListingJsonShapeError("trailing JSON data")\n''',
+              'listing JSON structural boundary',
+          )
+          main = replace_once(
+              main,
+              '''        buffered_body = b"".join(chunks)\n        chunks.clear()\n        replayed = False\n''',
+              '''        buffered_body = b"".join(chunks)\n        chunks.clear()\n        try:\n            _validate_listing_json_shape(buffered_body)\n        except _ListingJsonShapeError:\n            response = JSONResponse(\n                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,\n                content={"detail": "Listing moderation request has invalid JSON structure."},\n            )\n            await response(scope, receive, send)\n            return\n        replayed = False\n''',
+              'middleware structural validation',
+          )
+          main = replace_once(
+              main,
+              '''def _budget_policy_signals(policy_signals: list[str]) -> list[str]:\n    selected: list[str] = []\n    used_chars = 0\n    for signal in policy_signals:\n        separator_chars = 2 if selected else 0\n        next_chars = len(signal) + separator_chars\n        if used_chars + next_chars > _MAX_MODEL_POLICY_SIGNAL_CHARS:\n            break\n        selected.append(signal)\n        used_chars += next_chars\n    return selected\n''',
+              '''def _budget_policy_signals(policy_signals: list[str]) -> list[str]:\n    selected: list[str] = []\n    used_chars = 0\n    for signal in policy_signals:\n        separator_chars = 2 if selected else 0\n        next_chars = len(signal) + separator_chars\n        if used_chars + next_chars > _MAX_MODEL_POLICY_SIGNAL_CHARS:\n            break\n        selected.append(signal)\n        used_chars += next_chars\n    return selected\n\n\ndef _fit_listing_model_input(\n    title: str,\n    description: str,\n    images_base64: list[str],\n    policy_signals: list[str],\n) -> tuple[str, list[str], list[str], bool]:\n    model_description = description[:_MAX_MODEL_DESCRIPTION_CHARS]\n    model_images = list(images_base64[:_MAX_MODEL_IMAGES])\n    model_policy_signals = _budget_policy_signals(policy_signals)\n\n    def fits(candidate_description: str) -> bool:\n        return (\n            estimate_listing_context_tokens(\n                title,\n                candidate_description,\n                model_images,\n                model_policy_signals,\n            )\n            <= _LISTING_MODEL_CONTEXT_TOKENS\n        )\n\n    while model_policy_signals and not fits(""):\n        model_policy_signals.pop()\n    while model_images and not fits(""):\n        model_images.pop()\n    if not fits(""):\n        return "", [], [], False\n    if fits(model_description):\n        return model_description, model_images, model_policy_signals, True\n\n    low = 0\n    high = len(model_description)\n    while low < high:\n        middle = (low + high + 1) // 2\n        if fits(model_description[:middle]):\n            low = middle\n        else:\n            high = middle - 1\n    return model_description[:low], model_images, model_policy_signals, True\n''',
+              'context fitting helper',
+          )
+          main = replace_once(
+              main,
+              '''    canonical_signals = list(dict.fromkeys(request.policy_signals))\n    model_policy_signals = _budget_policy_signals(canonical_signals)\n    description_for_model = request.description[:_MAX_MODEL_DESCRIPTION_CHARS]\n    images_for_model = request.images_base64[:_MAX_MODEL_IMAGES]\n''',
+              '''    canonical_signals = list(dict.fromkeys(request.policy_signals))\n    (\n        description_for_model,\n        images_for_model,\n        model_policy_signals,\n        model_context_fits,\n    ) = _fit_listing_model_input(\n        request.title,\n        request.description,\n        request.images_base64,\n        canonical_signals,\n    )\n''',
+              'context fitting call',
+          )
+          main = replace_once(
+              main,
+              '''    started = time.perf_counter()\n    try:\n        verdict = await client.moderate_listing(\n            request.title,\n            description_for_model,\n            images_for_model,\n            model_policy_signals,\n        )\n    except OllamaUnavailable as exc:\n        raise HTTPException(\n            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,\n            detail="Local AI moderation is unavailable.",\n        ) from exc\n    latency_ms = max(0, round((time.perf_counter() - started) * 1000))\n''',
+              '''    if not model_context_fits:\n        from .contracts import ModelVerdict\n\n        verdict = ModelVerdict(\n            decision="manual_review",\n            reason="El anuncio excede el contexto local seguro y requiere revisión humana.",\n            confidence=0.0,\n            flags=[],\n        )\n        latency_ms = 0\n    else:\n        started = time.perf_counter()\n        try:\n            verdict = await client.moderate_listing(\n                request.title,\n                description_for_model,\n                images_for_model,\n                model_policy_signals,\n            )\n        except OllamaUnavailable as exc:\n            raise HTTPException(\n                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,\n                detail="Local AI moderation is unavailable.",\n            ) from exc\n        latency_ms = max(0, round((time.perf_counter() - started) * 1000))\n''',
+              'fail-closed context branch',
+          )
+          main_path.write_text(main)
+
+          boundary_path = Path('services/ai-gateway/tests/test_listing_request_boundary.py')
+          boundary = boundary_path.read_text()
+          boundary = replace_once(boundary, 'import asyncio\n', 'import asyncio\nimport json\n', 'boundary json import')
+          boundary += '''\n\ndef test_real_app_rejects_expansive_policy_structure_before_fastapi_materializes_it(\n    monkeypatch: pytest.MonkeyPatch,\n) -> None:\n    monkeypatch.setenv("MERCASTO_AI_INTERNAL_TOKEN", "contract-secret")\n    client = TestClient(app)\n    payload = {\n        "title": "fixture",\n        "description": "safe",\n        "images_base64": [],\n        "policy_signals": [{} for _ in range(10_000)],\n    }\n    encoded = json.dumps(payload, separators=(",", ":")).encode()\n    assert len(encoded) < gateway_main._MAX_LISTING_REQUEST_BODY_BYTES\n\n    response = client.post(\n        "/v1/moderation/listing",\n        content=encoded,\n        headers={**{"X-Mercasto-Internal-Token": "contract-secret"}, "Content-Type": "application/json"},\n    )\n\n    assert response.status_code == 422\n    assert response.json()["detail"] == "Listing moderation request has invalid JSON structure."\n'''
+          boundary_path.write_text(boundary)
+
+          gateway_test_path = Path('services/ai-gateway/tests/test_listing_gateway.py')
+          gateway_test = gateway_test_path.read_text()
+          gateway_test = replace_once(
+              gateway_test,
+              'from mercasto_ai.main import _MAX_LISTING_REQUEST_BODY_BYTES, app, get_ollama_client\n',
+              '''from mercasto_ai.main import _MAX_LISTING_REQUEST_BODY_BYTES, app, get_ollama_client\nfrom mercasto_ai.ollama import estimate_listing_context_tokens\n''',
+              'gateway estimator import',
+          )
+          gateway_test = replace_once(
+              gateway_test,
+              '''    assert body["model_description_chars"] == 6_000\n    assert body["input_image_count"] == 10\n    assert body["model_image_count"] == 2\n    assert body["images_omitted"] == 8\n    assert fake.calls[0][0] == title\n    assert fake.calls[0][1] == description[:6_000]\n    assert fake.calls[0][2] == images\n''',
+              '''    assert 0 <= body["model_description_chars"] < 6_000\n    assert body["input_image_count"] == 10\n    assert body["model_image_count"] <= 2\n    assert body["images_omitted"] == 10 - body["model_image_count"]\n    assert fake.calls[0][0] == title\n    assert fake.calls[0][1] == description[: body["model_description_chars"]]\n    assert fake.calls[0][2] == images[: body["model_image_count"]]\n    assert estimate_listing_context_tokens(*fake.calls[0]) <= body["model_context_tokens"]\n''',
+              'max shape context assertions',
+          )
+          gateway_test += '''\n\ndef test_listing_gateway_forces_high_token_input_inside_model_context_budget(\n    monkeypatch: pytest.MonkeyPatch,\n) -> None:\n    client, fake = authenticated_client(\n        monkeypatch,\n        ModelVerdict(decision="approved", reason="high-token fixture", confidence=0.99, flags=[]),\n    )\n    description = "🧨" * 6_000\n    signals = [f"signal_{index:03d}_{'x' * 40}" for index in range(40)]\n\n    response = client.post(\n        "/v1/moderation/listing",\n        headers=auth_headers(),\n        json=listing_payload(description=description, policy_signals=signals),\n    )\n\n    assert response.status_code == 200\n    body = response.json()\n    assert body["decision"] == "manual_review"\n    assert body["approved"] is False\n    assert body["description_truncated"] or body["policy_signals_omitted"] > 0 or body["images_omitted"] > 0\n    assert fake.calls\n    assert estimate_listing_context_tokens(*fake.calls[0]) <= body["model_context_tokens"]\n'''
+          gateway_test_path.write_text(gateway_test)
+          PY
+      - name: Install
+        run: python -m pip install -e 'services/ai-gateway[test]'
+      - name: Compile
+        run: python -m compileall -q services/ai-gateway/mercasto_ai
+      - name: Lint
+        run: ruff check services/ai-gateway
+      - name: Test
+        run: pytest -q services/ai-gateway/tests
+      - name: Commit product changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git status --short
+          git config user.name 'johnslimg-alt'
+          git config user.email 'johnslimg@gmail.com'
+          git add services/ai-gateway/mercasto_ai/main.py \
+                  services/ai-gateway/mercasto_ai/ollama.py \
+                  services/ai-gateway/tests/test_listing_gateway.py \
+                  services/ai-gateway/tests/test_listing_request_boundary.py
+          git commit -m 'fix: bound listing moderation inputs before model parsing'
+          git push origin HEAD:feat/748-python-listing-moderation-contract
