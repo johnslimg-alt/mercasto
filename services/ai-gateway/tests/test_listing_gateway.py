@@ -209,7 +209,7 @@ def test_listing_gateway_passes_text_multiple_images_and_canonical_policy_vocabu
             "fraud-like",
             ModelVerdict(
                 decision="manual_review",
-                reason="Señал синтетическая fraud.",
+                reason="Señal sintética de fraude.",
                 confidence=0.86,
                 flags=["fraud"],
             ),
@@ -296,7 +296,7 @@ def test_listing_gateway_accepts_text_only_shadow_request(
     assert fake.calls[0][2] == []
 
 
-def test_listing_gateway_accepts_authoritative_marketplace_shape_and_bounds_model_context(
+def test_listing_gateway_represents_full_listing_with_bounded_preprocessed_model_input(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client, fake = authenticated_client(
@@ -309,13 +309,19 @@ def test_listing_gateway_accepts_authoritative_marketplace_shape_and_bounds_mode
         ),
     )
     title = "T" * 255
-    description = "D" * 13_000
-    images = [encoded_image(str(index)) for index in range(10)]
+    description = "D" * 12_000
+    images = [encoded_image("front"), encoded_image("back")]
 
     response = client.post(
         "/v1/moderation/listing",
         headers=auth_headers(),
-        json=listing_payload(title=title, description=description, images_base64=images),
+        json=listing_payload(
+            title=title,
+            description=description,
+            source_description_chars=5_000_000,
+            images_base64=images,
+            source_image_count=10,
+        ),
     )
 
     assert response.status_code == 200
@@ -323,14 +329,14 @@ def test_listing_gateway_accepts_authoritative_marketplace_shape_and_bounds_mode
     assert body["decision"] == "manual_review"
     assert body["approved"] is False
     assert body["description_truncated"] is True
-    assert body["input_description_chars"] == 13_000
+    assert body["input_description_chars"] == 5_000_000
     assert body["model_description_chars"] == 6_000
     assert body["input_image_count"] == 10
     assert body["model_image_count"] == 2
     assert body["images_omitted"] == 8
     assert fake.calls[0][0] == title
     assert fake.calls[0][1] == description[:6_000]
-    assert fake.calls[0][2] == images[:2]
+    assert fake.calls[0][2] == images
 
 
 def test_listing_gateway_bounds_policy_vocabulary_and_reports_omissions(
@@ -369,6 +375,27 @@ def test_listing_gateway_rejects_title_beyond_authoritative_limit_before_model_c
         "/v1/moderation/listing",
         headers=auth_headers(),
         json=listing_payload(title="T" * 256),
+    )
+
+    assert response.status_code == 422
+    assert fake.calls == []
+
+
+def test_listing_gateway_rejects_more_than_two_preprocessed_images_before_model_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, fake = authenticated_client(
+        monkeypatch,
+        ModelVerdict(decision="approved", reason="unused", confidence=0.99, flags=[]),
+    )
+
+    response = client.post(
+        "/v1/moderation/listing",
+        headers=auth_headers(),
+        json=listing_payload(
+            images_base64=[encoded_image("one"), encoded_image("two"), encoded_image("three")],
+            source_image_count=3,
+        ),
     )
 
     assert response.status_code == 422
