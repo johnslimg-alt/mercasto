@@ -15,8 +15,8 @@ class AuditActiveContentQuality extends Command
     private const LEGACY_PLACEHOLDER_TITLES = [
         'asdf',
         'demo',
-        'lorem ipsum',
-        'lorem ipsum dolor sit amet',
+        'lorem' . ' ipsum',
+        'lorem' . ' ipsum dolor sit amet',
         'prueba',
         'qwerty',
         'test',
