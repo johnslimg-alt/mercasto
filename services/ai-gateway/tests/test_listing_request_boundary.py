@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -69,3 +70,27 @@ def test_real_app_returns_413_when_actual_body_exceeds_understated_content_lengt
 
     assert response.status_code == 413
     assert response.json()["detail"] == "Listing moderation request body is too large."
+
+
+def test_real_app_rejects_expansive_policy_structure_before_fastapi_materializes_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MERCASTO_AI_INTERNAL_TOKEN", "contract-secret")
+    client = TestClient(app)
+    payload = {
+        "title": "fixture",
+        "description": "safe",
+        "images_base64": [],
+        "policy_signals": [{} for _ in range(10_000)],
+    }
+    encoded = json.dumps(payload, separators=(",", ":")).encode()
+    assert len(encoded) < gateway_main._MAX_LISTING_REQUEST_BODY_BYTES
+
+    response = client.post(
+        "/v1/moderation/listing",
+        content=encoded,
+        headers={**{"X-Mercasto-Internal-Token": "contract-secret"}, "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Listing moderation request has invalid JSON structure."

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from mercasto_ai.contracts import ModelVerdict
 from mercasto_ai.main import _MAX_LISTING_REQUEST_BODY_BYTES, app, get_ollama_client
+from mercasto_ai.ollama import estimate_listing_context_tokens
 
 CANONICAL_SIGNALS = ["weapon", "sexual_exploitation", "controlled_drug", "fraud"]
 
@@ -330,13 +331,14 @@ def test_listing_gateway_represents_full_listing_with_bounded_preprocessed_model
     assert body["approved"] is False
     assert body["description_truncated"] is True
     assert body["input_description_chars"] == 5_000_000
-    assert body["model_description_chars"] == 6_000
+    assert 0 <= body["model_description_chars"] < 6_000
     assert body["input_image_count"] == 10
-    assert body["model_image_count"] == 2
-    assert body["images_omitted"] == 8
+    assert body["model_image_count"] <= 2
+    assert body["images_omitted"] == 10 - body["model_image_count"]
     assert fake.calls[0][0] == title
-    assert fake.calls[0][1] == description[:6_000]
-    assert fake.calls[0][2] == images
+    assert fake.calls[0][1] == description[: body["model_description_chars"]]
+    assert fake.calls[0][2] == images[: body["model_image_count"]]
+    assert estimate_listing_context_tokens(*fake.calls[0]) <= body["model_context_tokens"]
 
 
 def test_listing_gateway_bounds_policy_vocabulary_and_reports_omissions(
@@ -418,3 +420,28 @@ def test_listing_gateway_rejects_noncanonical_signal_shape_before_model_call(
 
     assert response.status_code == 422
     assert fake.calls == []
+
+
+def test_listing_gateway_forces_high_token_input_inside_model_context_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, fake = authenticated_client(
+        monkeypatch,
+        ModelVerdict(decision="approved", reason="high-token fixture", confidence=0.99, flags=[]),
+    )
+    description = "🧨" * 6_000
+    signals = [f"signal_{index:03d}_{'x' * 40}" for index in range(40)]
+
+    response = client.post(
+        "/v1/moderation/listing",
+        headers=auth_headers(),
+        json=listing_payload(description=description, policy_signals=signals),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["decision"] == "manual_review"
+    assert body["approved"] is False
+    assert body["description_truncated"] or body["policy_signals_omitted"] > 0 or body["images_omitted"] > 0
+    assert fake.calls
+    assert estimate_listing_context_tokens(*fake.calls[0]) <= body["model_context_tokens"]

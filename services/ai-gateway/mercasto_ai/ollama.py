@@ -42,6 +42,42 @@ Devuelve exclusivamente este esquema JSON:
 """
 
 _LISTING_NUM_CTX = 8192
+LISTING_MODEL_CONTEXT_TOKENS = _LISTING_NUM_CTX
+_LISTING_NUM_PREDICT = 320
+_LISTING_IMAGE_TOKEN_RESERVE = 2048
+_LISTING_CONTEXT_SAFETY_TOKENS = 768
+_LISTING_USER_PREFIX = "UNTRUSTED_LISTING_DATA_JSON:\n"
+
+
+def _listing_system_content(policy_signals: list[str]) -> str:
+    return _LISTING_SYSTEM_PROMPT.format(policy_signals=", ".join(policy_signals))
+
+
+def _listing_user_content(title: str, description: str) -> str:
+    untrusted_listing_data = json.dumps(
+        {"title": title.strip(), "description": description.strip()},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return f"{_LISTING_USER_PREFIX}{untrusted_listing_data}"
+
+
+def estimate_listing_context_tokens(
+    title: str,
+    description: str,
+    images_base64: list[str],
+    policy_signals: list[str],
+) -> int:
+    """Conservatively reserve the complete local-model context before calling Ollama."""
+    system_content = _listing_system_content(policy_signals)
+    user_content = _listing_user_content(title, description)
+    return (
+        len(system_content.encode("utf-8"))
+        + len(user_content.encode("utf-8"))
+        + len(images_base64) * _LISTING_IMAGE_TOKEN_RESERVE
+        + _LISTING_NUM_PREDICT
+        + _LISTING_CONTEXT_SAFETY_TOKENS
+    )
 
 
 class OllamaUnavailable(RuntimeError):
@@ -97,14 +133,9 @@ class OllamaModerationClient:
         images_base64: list[str],
         policy_signals: list[str],
     ) -> ModelVerdict:
-        untrusted_listing_data = json.dumps(
-            {"title": title.strip(), "description": description.strip()},
-            ensure_ascii=False,
-            separators=(",", ":"),
-        )
         user_message: dict[str, Any] = {
             "role": "user",
-            "content": f"UNTRUSTED_LISTING_DATA_JSON:\n{untrusted_listing_data}",
+            "content": _listing_user_content(title, description),
         }
         if images_base64:
             user_message["images"] = images_base64
@@ -116,15 +147,13 @@ class OllamaModerationClient:
             "messages": [
                 {
                     "role": "system",
-                    "content": _LISTING_SYSTEM_PROMPT.format(
-                        policy_signals=", ".join(policy_signals)
-                    ),
+                    "content": _listing_system_content(policy_signals),
                 },
                 user_message,
             ],
             "options": {
                 "temperature": 0.1,
-                "num_predict": 320,
+                "num_predict": _LISTING_NUM_PREDICT,
                 "num_ctx": _LISTING_NUM_CTX,
             },
         }

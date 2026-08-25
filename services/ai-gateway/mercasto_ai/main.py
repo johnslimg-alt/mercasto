@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hmac
+import json
 import os
 import time
 from typing import Annotated
@@ -19,7 +20,12 @@ from .contracts import (
     normalize_listing_verdict,
     normalize_verdict,
 )
-from .ollama import OllamaModerationClient, OllamaUnavailable
+from .ollama import (
+    LISTING_MODEL_CONTEXT_TOKENS,
+    OllamaModerationClient,
+    OllamaUnavailable,
+    estimate_listing_context_tokens,
+)
 
 _GATEWAY_VERSION = "0.2.0"
 _MAX_PUBLIC_IMAGE_DECODED_BYTES = 4 * 1024 * 1024
@@ -29,8 +35,153 @@ _MAX_LISTING_REQUEST_BODY_BYTES = 18 * 1024 * 1024
 _MAX_MODEL_DESCRIPTION_CHARS = 6_000
 _MAX_MODEL_POLICY_SIGNAL_CHARS = 2_500
 _MAX_MODEL_IMAGES = 2
-_LISTING_MODEL_CONTEXT_TOKENS = 8_192
+_LISTING_MODEL_CONTEXT_TOKENS = LISTING_MODEL_CONTEXT_TOKENS
 _LISTING_MODERATION_PATH = "/v1/moderation/listing"
+_LISTING_JSON_KEY_RAW_BYTES = 128
+_LISTING_TITLE_RAW_BYTES = 4_096
+_LISTING_DESCRIPTION_RAW_BYTES = 160_000
+_LISTING_IMAGE_RAW_BYTES = 7_100_000
+_LISTING_POLICY_SIGNAL_RAW_BYTES = 512
+_LISTING_INTEGER_RAW_BYTES = 32
+
+
+class _ListingJsonShapeError(ValueError):
+    pass
+
+
+def _skip_json_whitespace(body: bytes, index: int) -> int:
+    while index < len(body) and body[index] in b" \t\r\n":
+        index += 1
+    return index
+
+
+def _scan_json_string(body: bytes, index: int, *, raw_limit: int) -> int:
+    if index >= len(body) or body[index] != 0x22:
+        raise _ListingJsonShapeError("expected JSON string")
+    start = index
+    index += 1
+    while index < len(body):
+        byte = body[index]
+        if byte == 0x22:
+            end = index + 1
+            if end - start > raw_limit:
+                raise _ListingJsonShapeError("JSON string exceeds structural limit")
+            return end
+        if byte == 0x5C:
+            if index + 1 >= len(body):
+                raise _ListingJsonShapeError("unterminated JSON escape")
+            escape = body[index + 1]
+            if escape == ord("u"):
+                if index + 6 > len(body):
+                    raise _ListingJsonShapeError("incomplete unicode escape")
+                if any(chr(value) not in "0123456789abcdefABCDEF" for value in body[index + 2:index + 6]):
+                    raise _ListingJsonShapeError("invalid unicode escape")
+                index += 6
+                continue
+            if escape not in b'"\\/bfnrt':
+                raise _ListingJsonShapeError("invalid JSON escape")
+            index += 2
+            continue
+        if byte < 0x20:
+            raise _ListingJsonShapeError("control character in JSON string")
+        index += 1
+    raise _ListingJsonShapeError("unterminated JSON string")
+
+
+def _scan_json_string_array(
+    body: bytes,
+    index: int,
+    *,
+    max_items: int,
+    item_raw_limit: int,
+) -> int:
+    if index >= len(body) or body[index] != 0x5B:
+        raise _ListingJsonShapeError("expected JSON array")
+    index = _skip_json_whitespace(body, index + 1)
+    if index < len(body) and body[index] == 0x5D:
+        return index + 1
+    count = 0
+    while True:
+        if count >= max_items:
+            raise _ListingJsonShapeError("JSON array exceeds structural item limit")
+        index = _scan_json_string(body, index, raw_limit=item_raw_limit)
+        count += 1
+        index = _skip_json_whitespace(body, index)
+        if index >= len(body):
+            raise _ListingJsonShapeError("unterminated JSON array")
+        if body[index] == 0x5D:
+            return index + 1
+        if body[index] != 0x2C:
+            raise _ListingJsonShapeError("expected JSON array separator")
+        index = _skip_json_whitespace(body, index + 1)
+
+
+def _scan_json_integer_or_null(body: bytes, index: int) -> int:
+    if body.startswith(b"null", index):
+        return index + 4
+    start = index
+    if index < len(body) and body[index] == 0x2D:
+        index += 1
+    if index >= len(body) or body[index] not in b"0123456789":
+        raise _ListingJsonShapeError("expected JSON integer or null")
+    if body[index] == ord("0"):
+        index += 1
+        if index < len(body) and body[index] in b"0123456789":
+            raise _ListingJsonShapeError("invalid leading zero")
+    else:
+        while index < len(body) and body[index] in b"0123456789":
+            index += 1
+    if index - start > _LISTING_INTEGER_RAW_BYTES:
+        raise _ListingJsonShapeError("integer exceeds structural limit")
+    return index
+
+
+def _validate_listing_json_shape(body: bytes) -> None:
+    index = _skip_json_whitespace(body, 0)
+    if index >= len(body) or body[index] != 0x7B:
+        raise _ListingJsonShapeError("expected top-level object")
+    index = _skip_json_whitespace(body, index + 1)
+    seen: set[str] = set()
+    if index < len(body) and body[index] == 0x7D:
+        index += 1
+    else:
+        while True:
+            key_start = index
+            key_end = _scan_json_string(body, index, raw_limit=_LISTING_JSON_KEY_RAW_BYTES)
+            try:
+                key = json.loads(body[key_start:key_end].decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise _ListingJsonShapeError("invalid JSON key") from exc
+            if not isinstance(key, str) or key in seen:
+                raise _ListingJsonShapeError("invalid or duplicate JSON key")
+            seen.add(key)
+            index = _skip_json_whitespace(body, key_end)
+            if index >= len(body) or body[index] != 0x3A:
+                raise _ListingJsonShapeError("expected JSON key separator")
+            index = _skip_json_whitespace(body, index + 1)
+            if key == "title":
+                index = _scan_json_string(body, index, raw_limit=_LISTING_TITLE_RAW_BYTES)
+            elif key == "description":
+                index = _scan_json_string(body, index, raw_limit=_LISTING_DESCRIPTION_RAW_BYTES)
+            elif key == "images_base64":
+                index = _scan_json_string_array(body, index, max_items=2, item_raw_limit=_LISTING_IMAGE_RAW_BYTES)
+            elif key == "policy_signals":
+                index = _scan_json_string_array(body, index, max_items=200, item_raw_limit=_LISTING_POLICY_SIGNAL_RAW_BYTES)
+            elif key in {"source_description_chars", "source_image_count"}:
+                index = _scan_json_integer_or_null(body, index)
+            else:
+                raise _ListingJsonShapeError("unknown listing moderation field")
+            index = _skip_json_whitespace(body, index)
+            if index >= len(body):
+                raise _ListingJsonShapeError("unterminated top-level object")
+            if body[index] == 0x7D:
+                index += 1
+                break
+            if body[index] != 0x2C:
+                raise _ListingJsonShapeError("expected top-level separator")
+            index = _skip_json_whitespace(body, index + 1)
+    if _skip_json_whitespace(body, index) != len(body):
+        raise _ListingJsonShapeError("trailing JSON data")
 
 
 def _validate_internal_token(token: str | None) -> None:
@@ -122,6 +273,15 @@ class ListingRequestBoundaryMiddleware:
 
         buffered_body = b"".join(chunks)
         chunks.clear()
+        try:
+            _validate_listing_json_shape(buffered_body)
+        except _ListingJsonShapeError:
+            response = JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={"detail": "Listing moderation request has invalid JSON structure."},
+            )
+            await response(scope, receive, send)
+            return
         replayed = False
 
         async def replay_receive() -> dict[str, object]:
@@ -196,6 +356,47 @@ def _budget_policy_signals(policy_signals: list[str]) -> list[str]:
     return selected
 
 
+def _fit_listing_model_input(
+    title: str,
+    description: str,
+    images_base64: list[str],
+    policy_signals: list[str],
+) -> tuple[str, list[str], list[str], bool]:
+    model_description = description[:_MAX_MODEL_DESCRIPTION_CHARS]
+    model_images = list(images_base64[:_MAX_MODEL_IMAGES])
+    model_policy_signals = _budget_policy_signals(policy_signals)
+
+    def fits(candidate_description: str) -> bool:
+        return (
+            estimate_listing_context_tokens(
+                title,
+                candidate_description,
+                model_images,
+                model_policy_signals,
+            )
+            <= _LISTING_MODEL_CONTEXT_TOKENS
+        )
+
+    while model_policy_signals and not fits(""):
+        model_policy_signals.pop()
+    while model_images and not fits(""):
+        model_images.pop()
+    if not fits(""):
+        return "", [], [], False
+    if fits(model_description):
+        return model_description, model_images, model_policy_signals, True
+
+    low = 0
+    high = len(model_description)
+    while low < high:
+        middle = (low + high + 1) // 2
+        if fits(model_description[:middle]):
+            low = middle
+        else:
+            high = middle - 1
+    return model_description[:low], model_images, model_policy_signals, True
+
+
 @app.post("/v1/moderation/image", response_model=ModerationResponse)
 async def moderate_image(
     request: ModerationRequest,
@@ -235,29 +436,48 @@ async def moderate_listing(
         )
 
     canonical_signals = list(dict.fromkeys(request.policy_signals))
-    model_policy_signals = _budget_policy_signals(canonical_signals)
-    description_for_model = request.description[:_MAX_MODEL_DESCRIPTION_CHARS]
-    images_for_model = request.images_base64[:_MAX_MODEL_IMAGES]
+    (
+        description_for_model,
+        images_for_model,
+        model_policy_signals,
+        model_context_fits,
+    ) = _fit_listing_model_input(
+        request.title,
+        request.description,
+        request.images_base64,
+        canonical_signals,
+    )
     input_description_chars = request.effective_source_description_chars
     input_image_count = request.effective_source_image_count
     description_truncated = input_description_chars > len(description_for_model)
     images_omitted = input_image_count - len(images_for_model)
     policy_signals_omitted = len(canonical_signals) - len(model_policy_signals)
 
-    started = time.perf_counter()
-    try:
-        verdict = await client.moderate_listing(
-            request.title,
-            description_for_model,
-            images_for_model,
-            model_policy_signals,
+    if not model_context_fits:
+        from .contracts import ModelVerdict
+
+        verdict = ModelVerdict(
+            decision="manual_review",
+            reason="El anuncio excede el contexto local seguro y requiere revisión humana.",
+            confidence=0.0,
+            flags=[],
         )
-    except OllamaUnavailable as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Local AI moderation is unavailable.",
-        ) from exc
-    latency_ms = max(0, round((time.perf_counter() - started) * 1000))
+        latency_ms = 0
+    else:
+        started = time.perf_counter()
+        try:
+            verdict = await client.moderate_listing(
+                request.title,
+                description_for_model,
+                images_for_model,
+                model_policy_signals,
+            )
+        except OllamaUnavailable as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Local AI moderation is unavailable.",
+            ) from exc
+        latency_ms = max(0, round((time.perf_counter() - started) * 1000))
 
     # Python is an assist-only boundary. Laravel supplies the policy vocabulary,
     # remains authoritative, and must never receive model-invented policy flags.
