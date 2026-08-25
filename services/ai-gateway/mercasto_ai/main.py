@@ -24,17 +24,13 @@ from .ollama import OllamaModerationClient, OllamaUnavailable
 _GATEWAY_VERSION = "0.2.0"
 _MAX_PUBLIC_IMAGE_DECODED_BYTES = 4 * 1024 * 1024
 _MAX_LISTING_IMAGE_DECODED_BYTES = 5 * 1024 * 1024
-_MAX_LISTING_DECODED_IMAGE_BYTES = 50 * 1024 * 1024
-_MAX_LISTING_REQUEST_BODY_BYTES = 72 * 1024 * 1024
+_MAX_LISTING_DECODED_IMAGE_BYTES = 10 * 1024 * 1024
+_MAX_LISTING_REQUEST_BODY_BYTES = 18 * 1024 * 1024
 _MAX_MODEL_DESCRIPTION_CHARS = 6_000
 _MAX_MODEL_POLICY_SIGNAL_CHARS = 2_500
 _MAX_MODEL_IMAGES = 2
 _LISTING_MODEL_CONTEXT_TOKENS = 8_192
 _LISTING_MODERATION_PATH = "/v1/moderation/listing"
-
-
-class _ListingPayloadTooLarge(RuntimeError):
-    pass
 
 
 def _validate_internal_token(token: str | None) -> None:
@@ -102,25 +98,40 @@ class ListingRequestBoundaryMiddleware:
                 await response(scope, receive, send)
                 return
 
+        chunks: list[bytes] = []
         received_bytes = 0
-
-        async def bounded_receive() -> dict[str, object]:
-            nonlocal received_bytes
+        while True:
             message = await receive()
-            if message["type"] == "http.request":
-                received_bytes += len(message.get("body", b""))
-                if received_bytes > _MAX_LISTING_REQUEST_BODY_BYTES:
-                    raise _ListingPayloadTooLarge
-            return message
+            if message["type"] == "http.disconnect":
+                return
+            if message["type"] != "http.request":
+                continue
 
-        try:
-            await self.app(scope, bounded_receive, send)
-        except _ListingPayloadTooLarge:
-            response = JSONResponse(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                content={"detail": "Listing moderation request body is too large."},
-            )
-            await response(scope, receive, send)
+            chunk = message.get("body", b"")
+            received_bytes += len(chunk)
+            if received_bytes > _MAX_LISTING_REQUEST_BODY_BYTES:
+                response = JSONResponse(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    content={"detail": "Listing moderation request body is too large."},
+                )
+                await response(scope, receive, send)
+                return
+            chunks.append(chunk)
+            if not message.get("more_body", False):
+                break
+
+        buffered_body = b"".join(chunks)
+        chunks.clear()
+        replayed = False
+
+        async def replay_receive() -> dict[str, object]:
+            nonlocal replayed
+            if replayed:
+                return {"type": "http.request", "body": b"", "more_body": False}
+            replayed = True
+            return {"type": "http.request", "body": buffered_body, "more_body": False}
+
+        await self.app(scope, replay_receive, send)
 
 
 app = FastAPI(
@@ -227,8 +238,10 @@ async def moderate_listing(
     model_policy_signals = _budget_policy_signals(canonical_signals)
     description_for_model = request.description[:_MAX_MODEL_DESCRIPTION_CHARS]
     images_for_model = request.images_base64[:_MAX_MODEL_IMAGES]
-    description_truncated = len(request.description) > len(description_for_model)
-    images_omitted = len(request.images_base64) - len(images_for_model)
+    input_description_chars = request.effective_source_description_chars
+    input_image_count = request.effective_source_image_count
+    description_truncated = input_description_chars > len(description_for_model)
+    images_omitted = input_image_count - len(images_for_model)
     policy_signals_omitted = len(canonical_signals) - len(model_policy_signals)
 
     started = time.perf_counter()
@@ -262,9 +275,9 @@ async def moderate_listing(
         gateway_version=_GATEWAY_VERSION,
         latency_ms=latency_ms,
         description_truncated=description_truncated,
-        input_description_chars=len(request.description),
+        input_description_chars=input_description_chars,
         model_description_chars=len(description_for_model),
-        input_image_count=len(request.images_base64),
+        input_image_count=input_image_count,
         model_image_count=len(images_for_model),
         images_omitted=images_omitted,
         input_policy_signal_count=len(canonical_signals),
