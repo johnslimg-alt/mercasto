@@ -26,7 +26,8 @@ def test_listing_ollama_payload_has_explicit_larger_context_budget() -> None:
     text = source.read_text()
 
     assert "_LISTING_NUM_CTX = 8192" in text
-    assert '"num_predict": 320' in text
+    assert "_LISTING_NUM_PREDICT = 320" in text
+    assert '"num_predict": _LISTING_NUM_PREDICT' in text
     assert '"num_ctx": _LISTING_NUM_CTX' in text
 
 
