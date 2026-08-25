@@ -13,7 +13,7 @@ env:
 
 jobs:
   patch:
-    if: github.event.head_commit.message != 'fix: avoid public-copy detector self-match'
+    if: "${{ github.event.head_commit.message != 'fix: avoid public-copy detector self-match' }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
