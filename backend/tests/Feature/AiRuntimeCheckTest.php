@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\LocalAiClient;
+use Illuminate\Http\Client\ConnectionException;
 use Mockery;
 use RuntimeException;
 use Tests\TestCase;
@@ -44,7 +45,7 @@ class AiRuntimeCheckTest extends TestCase
                 $attempt++;
 
                 if ($attempt === 1) {
-                    throw new RuntimeException('transient');
+                    throw new ConnectionException('transient');
                 }
 
                 return [
@@ -56,7 +57,7 @@ class AiRuntimeCheckTest extends TestCase
         $this->app->instance(LocalAiClient::class, $client);
 
         $this->artisan('ai:runtime-check', ['--attempts' => 2])
-            ->expectsOutputToContain('local AI runtime transport failure attempt=1/2 exception=RuntimeException')
+            ->expectsOutputToContain('local AI runtime transport failure attempt=1/2 exception=Illuminate\\Http\\Client\\ConnectionException')
             ->expectsOutputToContain('local AI runtime OK provider=ollama')
             ->assertExitCode(0);
     }
@@ -66,13 +67,26 @@ class AiRuntimeCheckTest extends TestCase
         $client = Mockery::mock(LocalAiClient::class);
         $client->shouldReceive('chatFlash')
             ->twice()
-            ->andThrow(new RuntimeException('unavailable'));
+            ->andThrow(new ConnectionException('unavailable'));
         $this->app->instance(LocalAiClient::class, $client);
 
         $this->artisan('ai:runtime-check', ['--attempts' => 2])
-            ->expectsOutputToContain('local AI runtime transport failure attempt=1/2 exception=RuntimeException')
-            ->expectsOutputToContain('local AI runtime transport failure attempt=2/2 exception=RuntimeException')
+            ->expectsOutputToContain('local AI runtime transport failure attempt=1/2 exception=Illuminate\\Http\\Client\\ConnectionException')
+            ->expectsOutputToContain('local AI runtime transport failure attempt=2/2 exception=Illuminate\\Http\\Client\\ConnectionException')
             ->expectsOutputToContain('local AI runtime check FAILED after 2 transport attempt(s)')
+            ->assertExitCode(1);
+    }
+
+    public function test_runtime_check_does_not_retry_non_transport_exception(): void
+    {
+        $client = Mockery::mock(LocalAiClient::class);
+        $client->shouldReceive('chatFlash')
+            ->once()
+            ->andThrow(new RuntimeException('permanent'));
+        $this->app->instance(LocalAiClient::class, $client);
+
+        $this->artisan('ai:runtime-check', ['--attempts' => 2])
+            ->expectsOutputToContain('local AI runtime check FAILED: RuntimeException')
             ->assertExitCode(1);
     }
 
@@ -113,11 +127,11 @@ class AiRuntimeCheckTest extends TestCase
         $client = Mockery::mock(LocalAiClient::class);
         $client->shouldReceive('chatFlash')
             ->times(3)
-            ->andThrow(new RuntimeException('unavailable'));
+            ->andThrow(new ConnectionException('unavailable'));
         $this->app->instance(LocalAiClient::class, $client);
 
         $this->artisan('ai:runtime-check', ['--attempts' => 99])
-            ->expectsOutputToContain('local AI runtime transport failure attempt=3/3 exception=RuntimeException')
+            ->expectsOutputToContain('local AI runtime transport failure attempt=3/3 exception=Illuminate\\Http\\Client\\ConnectionException')
             ->expectsOutputToContain('local AI runtime check FAILED after 3 transport attempt(s)')
             ->assertExitCode(1);
     }

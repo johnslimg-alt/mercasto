@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\LocalAiClient;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Throwable;
 
 class AiRuntimeCheck extends Command
@@ -37,7 +38,7 @@ class AiRuntimeCheck extends Command
                     'max_tokens' => 8,
                     'num_ctx' => 512,
                 ]);
-            } catch (Throwable $error) {
+            } catch (ConnectionException $error) {
                 $attemptElapsedMs = (int) round((hrtime(true) - $attemptStartedAt) / 1_000_000);
                 $this->error(sprintf(
                     'local AI runtime transport failure attempt=%d/%d exception=%s elapsed_ms=%d',
@@ -56,6 +57,12 @@ class AiRuntimeCheck extends Command
                 }
 
                 continue;
+            } catch (Throwable $error) {
+                $elapsedMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
+                $this->error('local AI runtime check FAILED: ' . $error::class);
+                $this->line('elapsed_ms=' . $elapsedMs);
+
+                return self::FAILURE;
             }
 
             if (($response['provider'] ?? null) !== 'ollama') {
