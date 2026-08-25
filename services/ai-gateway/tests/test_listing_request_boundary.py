@@ -80,7 +80,9 @@ def test_real_app_rejects_expansive_policy_structure_before_fastapi_materializes
     payload = {
         "title": "fixture",
         "description": "safe",
+        "source_description_chars": 4,
         "images_base64": [],
+        "source_image_count": 0,
         "policy_signals": [{} for _ in range(10_000)],
     }
     encoded = json.dumps(payload, separators=(",", ":")).encode()
@@ -90,6 +92,33 @@ def test_real_app_rejects_expansive_policy_structure_before_fastapi_materializes
         "/v1/moderation/listing",
         content=encoded,
         headers={**{"X-Mercasto-Internal-Token": "contract-secret"}, "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Listing moderation request has invalid JSON structure."
+
+
+@pytest.mark.parametrize("escaped_surrogate", [b"\\ud800", b"\\udc00"])
+def test_real_app_rejects_unpaired_unicode_surrogates_before_utf8_estimation(
+    monkeypatch: pytest.MonkeyPatch,
+    escaped_surrogate: bytes,
+) -> None:
+    monkeypatch.setenv("MERCASTO_AI_INTERNAL_TOKEN", "contract-secret")
+    client = TestClient(app)
+    encoded = (
+        b'{"title":"fixture","description":"'
+        + escaped_surrogate
+        + b'","source_description_chars":1,"images_base64":[],"source_image_count":0,'
+        + b'"policy_signals":["fraud"]}'
+    )
+
+    response = client.post(
+        "/v1/moderation/listing",
+        content=encoded,
+        headers={
+            "X-Mercasto-Internal-Token": "contract-secret",
+            "Content-Type": "application/json",
+        },
     )
 
     assert response.status_code == 422

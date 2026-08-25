@@ -42,10 +42,17 @@ def encoded_image(label: str = "fixture") -> str:
 
 
 def listing_payload(**overrides: object) -> dict[str, object]:
+    title = overrides.pop("title", "Artículo de prueba")
+    description = overrides.pop(
+        "description", "Descripción sintética para contrato de moderación."
+    )
+    images = overrides.pop("images_base64", [])
     payload: dict[str, object] = {
-        "title": "Artículo de prueba",
-        "description": "Descripción sintética para contrato de moderación.",
-        "images_base64": [encoded_image("one"), encoded_image("two")],
+        "title": title,
+        "description": description,
+        "source_description_chars": len(description) if isinstance(description, str) else 0,
+        "images_base64": images,
+        "source_image_count": len(images) if isinstance(images, list) else 0,
         "policy_signals": CANONICAL_SIGNALS,
     }
     payload.update(overrides)
@@ -108,7 +115,7 @@ def test_listing_gateway_rejects_declared_oversized_body_before_json_parsing(
     assert response.json()["detail"] == "Listing moderation request body is too large."
 
 
-def test_listing_gateway_passes_text_multiple_images_and_canonical_policy_vocabulary(
+def test_listing_gateway_accepts_images_but_defers_unbounded_visual_context_to_human(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client, fake = authenticated_client(
@@ -135,7 +142,8 @@ def test_listing_gateway_passes_text_multiple_images_and_canonical_policy_vocabu
 
     assert response.status_code == 200
     body = response.json()
-    assert body["decision"] == "approved"
+    assert body["decision"] == "manual_review"
+    assert body["approved"] is False
     assert body["flags"] == ["weapon"]
     assert body["provider"] == "ollama"
     assert body["model"] == "synthetic-qwen-vl"
@@ -147,15 +155,15 @@ def test_listing_gateway_passes_text_multiple_images_and_canonical_policy_vocabu
     assert body["input_description_chars"] == len("Texto del anuncio.")
     assert body["model_description_chars"] == len("Texto del anuncio.")
     assert body["input_image_count"] == 2
-    assert body["model_image_count"] == 2
-    assert body["images_omitted"] == 0
+    assert body["model_image_count"] == 0
+    assert body["images_omitted"] == 2
     assert body["input_policy_signal_count"] == 2
     assert body["model_policy_signal_count"] == 2
     assert body["policy_signals_omitted"] == 0
     assert body["model_context_tokens"] == 8192
     assert isinstance(body["latency_ms"], int)
     assert fake.calls == [
-        ("Producto permitido", "Texto del anuncio.", images, ["weapon", "fraud"])
+        ("Producto permitido", "Texto del anuncio.", [], ["weapon", "fraud"])
     ]
 
 
@@ -333,11 +341,11 @@ def test_listing_gateway_represents_full_listing_with_bounded_preprocessed_model
     assert body["input_description_chars"] == 5_000_000
     assert 0 <= body["model_description_chars"] < 6_000
     assert body["input_image_count"] == 10
-    assert body["model_image_count"] <= 2
-    assert body["images_omitted"] == 10 - body["model_image_count"]
+    assert body["model_image_count"] == 0
+    assert body["images_omitted"] == 10
     assert fake.calls[0][0] == title
     assert fake.calls[0][1] == description[: body["model_description_chars"]]
-    assert fake.calls[0][2] == images[: body["model_image_count"]]
+    assert fake.calls[0][2] == []
     assert estimate_listing_context_tokens(*fake.calls[0]) <= body["model_context_tokens"]
 
 
@@ -445,3 +453,36 @@ def test_listing_gateway_forces_high_token_input_inside_model_context_budget(
     assert body["description_truncated"] or body["policy_signals_omitted"] > 0 or body["images_omitted"] > 0
     assert fake.calls
     assert estimate_listing_context_tokens(*fake.calls[0]) <= body["model_context_tokens"]
+
+
+def test_listing_gateway_requires_explicit_source_provenance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, fake = authenticated_client(
+        monkeypatch,
+        ModelVerdict(decision="approved", reason="unused", confidence=0.99, flags=[]),
+    )
+    payload = listing_payload()
+    payload.pop("source_description_chars")
+    payload.pop("source_image_count")
+
+    response = client.post(
+        "/v1/moderation/listing",
+        headers=auth_headers(),
+        json=payload,
+    )
+
+    assert response.status_code == 422
+    assert fake.calls == []
+
+
+def test_listing_context_estimator_never_treats_unbounded_images_as_complete() -> None:
+    assert (
+        estimate_listing_context_tokens(
+            "fixture",
+            "safe",
+            [encoded_image("visual")],
+            ["fraud"],
+        )
+        > 8192
+    )

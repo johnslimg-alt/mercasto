@@ -74,8 +74,24 @@ def _scan_json_string(body: bytes, index: int, *, raw_limit: int) -> int:
             if escape == ord("u"):
                 if index + 6 > len(body):
                     raise _ListingJsonShapeError("incomplete unicode escape")
-                if any(chr(value) not in "0123456789abcdefABCDEF" for value in body[index + 2:index + 6]):
+                hex_digits = body[index + 2:index + 6]
+                if any(chr(value) not in "0123456789abcdefABCDEF" for value in hex_digits):
                     raise _ListingJsonShapeError("invalid unicode escape")
+                code_unit = int(hex_digits.decode("ascii"), 16)
+                if 0xD800 <= code_unit <= 0xDBFF:
+                    pair_index = index + 6
+                    if pair_index + 6 > len(body) or body[pair_index:pair_index + 2] != b"\\u":
+                        raise _ListingJsonShapeError("unpaired high unicode surrogate")
+                    low_digits = body[pair_index + 2:pair_index + 6]
+                    if any(chr(value) not in "0123456789abcdefABCDEF" for value in low_digits):
+                        raise _ListingJsonShapeError("invalid unicode surrogate escape")
+                    low_unit = int(low_digits.decode("ascii"), 16)
+                    if not 0xDC00 <= low_unit <= 0xDFFF:
+                        raise _ListingJsonShapeError("unpaired high unicode surrogate")
+                    index = pair_index + 6
+                    continue
+                if 0xDC00 <= code_unit <= 0xDFFF:
+                    raise _ListingJsonShapeError("unpaired low unicode surrogate")
                 index += 6
                 continue
             if escape not in b'"\\/bfnrt':
@@ -377,10 +393,12 @@ def _fit_listing_model_input(
             <= _LISTING_MODEL_CONTEXT_TOKENS
         )
 
-    while model_policy_signals and not fits(""):
-        model_policy_signals.pop()
+    # Images are removed first while visual-token cost is unproven; their
+    # omission is surfaced below and always forces manual_review.
     while model_images and not fits(""):
         model_images.pop()
+    while model_policy_signals and not fits(""):
+        model_policy_signals.pop()
     if not fits(""):
         return "", [], [], False
     if fits(model_description):

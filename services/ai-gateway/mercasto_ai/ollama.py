@@ -44,7 +44,10 @@ Devuelve exclusivamente este esquema JSON:
 _LISTING_NUM_CTX = 8192
 LISTING_MODEL_CONTEXT_TOKENS = _LISTING_NUM_CTX
 _LISTING_NUM_PREDICT = 320
-_LISTING_IMAGE_TOKEN_RESERVE = 2048
+# Qwen3-VL visual tokens depend on decoded dimensions. Until preprocessing
+# supplies a proven visual-token cap, any image deliberately overflows the
+# estimator so the fitter omits it and the endpoint forces human review.
+_LISTING_UNPROVEN_IMAGE_TOKEN_RESERVE = _LISTING_NUM_CTX + 1
 _LISTING_CONTEXT_SAFETY_TOKENS = 768
 _LISTING_USER_PREFIX = "UNTRUSTED_LISTING_DATA_JSON:\n"
 
@@ -74,7 +77,7 @@ def estimate_listing_context_tokens(
     return (
         len(system_content.encode("utf-8"))
         + len(user_content.encode("utf-8"))
-        + len(images_base64) * _LISTING_IMAGE_TOKEN_RESERVE
+        + (_LISTING_UNPROVEN_IMAGE_TOKEN_RESERVE if images_base64 else 0)
         + _LISTING_NUM_PREDICT
         + _LISTING_CONTEXT_SAFETY_TOKENS
     )

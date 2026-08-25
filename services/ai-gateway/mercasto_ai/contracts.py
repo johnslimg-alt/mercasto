@@ -18,31 +18,28 @@ class ModerationRequest(BaseModel):
 class ListingModerationRequest(BaseModel):
     title: str = Field(default="", max_length=255)
     description: str = Field(default="", max_length=12_000)
-    source_description_chars: int | None = Field(default=None, ge=0)
+    source_description_chars: int = Field(ge=0)
     images_base64: list[ListingImageBase64] = Field(default_factory=list, max_length=2)
-    source_image_count: int | None = Field(default=None, ge=0, le=10)
+    source_image_count: int = Field(ge=0, le=10)
     policy_signals: list[CanonicalSignal] = Field(min_length=1, max_length=200)
 
     @model_validator(mode="after")
     def validate_preprocessed_listing_shape(self) -> ListingModerationRequest:
         if not self.title.strip() and not self.description.strip() and not self.images_base64:
             raise ValueError("listing moderation requires text or at least one image")
-        if (
-            self.source_description_chars is not None
-            and self.source_description_chars < len(self.description)
-        ):
+        if self.source_description_chars < len(self.description):
             raise ValueError("source_description_chars cannot be smaller than description length")
-        if self.source_image_count is not None and self.source_image_count < len(self.images_base64):
+        if self.source_image_count < len(self.images_base64):
             raise ValueError("source_image_count cannot be smaller than supplied image count")
         return self
 
     @property
     def effective_source_description_chars(self) -> int:
-        return self.source_description_chars or len(self.description)
+        return self.source_description_chars
 
     @property
     def effective_source_image_count(self) -> int:
-        return self.source_image_count if self.source_image_count is not None else len(self.images_base64)
+        return self.source_image_count
 
 
 class ModelVerdict(BaseModel):
