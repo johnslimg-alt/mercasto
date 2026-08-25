@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from fastapi.testclient import TestClient
 
 import mercasto_ai.main as gateway_main
-from mercasto_ai.main import ListingRequestBoundaryMiddleware
+from mercasto_ai.main import ListingRequestBoundaryMiddleware, app
 
 
 def test_listing_request_boundary_counts_actual_bytes_when_header_understates_body(
@@ -47,3 +48,24 @@ def test_listing_request_boundary_counts_actual_bytes_when_header_understates_bo
 
     assert sent[0]["type"] == "http.response.start"
     assert sent[0]["status"] == 413
+
+
+def test_real_app_returns_413_when_actual_body_exceeds_understated_content_length(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MERCASTO_AI_INTERNAL_TOKEN", "contract-secret")
+    monkeypatch.setattr(gateway_main, "_MAX_LISTING_REQUEST_BODY_BYTES", 8)
+    client = TestClient(app)
+
+    response = client.post(
+        "/v1/moderation/listing",
+        content=b'{"title":"123456789"}',
+        headers={
+            "X-Mercasto-Internal-Token": "contract-secret",
+            "Content-Type": "application/json",
+            "Content-Length": "1",
+        },
+    )
+
+    assert response.status_code == 413
+    assert response.json()["detail"] == "Listing moderation request body is too large."
