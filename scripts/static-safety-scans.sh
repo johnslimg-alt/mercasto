@@ -57,6 +57,7 @@ node --test scripts/catalog-map-contract.test.mjs
 node --test tests/filter-url-state.test.mjs
 node --test tests/global-filter-options.test.mjs
 node --test scripts/server-operator-deploy-cache.test.mjs
+node --test scripts/server-operator-routing.test.mjs
 node --test scripts/manual-server-gate-self-hosted.test.mjs
 bash scripts/root-owned-checkout-workflow-gate.sh
 node --test scripts/automerge-workflow-guard.test.mjs
