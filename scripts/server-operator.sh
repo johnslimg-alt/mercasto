@@ -222,10 +222,12 @@ case "$OPERATION" in
     if is_production_checkout; then
       sudo -n git fetch origin
       sudo -n git reset --hard origin/main
+      sudo -n git switch -C main origin/main
       sudo -n git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
     else
       git fetch origin main --prune
       git reset --hard origin/main
+      git switch -C main origin/main
       git clean -fd -e runners/data1 -e runners/data2 -e runners/data3 -e runners/.env
     fi
     clear_laravel_bootstrap_caches
