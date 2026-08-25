@@ -92,7 +92,7 @@ jobs:
       - name: Verify local AI inference without user data
         run: |
           set -euo pipefail
-          docker exec mercasto_backend_container php artisan ai:runtime-check --timeout=45
+          docker exec mercasto_backend_container php artisan ai:runtime-check --timeout=45 --attempts=2
 
       - name: Prime local AI vision path without user data
         continue-on-error: true
