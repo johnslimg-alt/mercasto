@@ -66,6 +66,7 @@ const serverOperatorCommands = [
   'RUN:verify_quick',
   'RUN:security_smoke',
   'RUN:seo_aeo_smoke',
+  'RUN:content_quality_audit',
   'RUN:runner_health',
   'RUN:logs_frontend',
   'RUN:logs_backend',
@@ -112,4 +113,16 @@ test('server operator serializes valid jobs without cancelling active work', () 
     /^ {4}concurrency:\n {6}group: chatgpt-server-operator\n {6}cancel-in-progress: false/m,
     'operator concurrency must remain job-scoped and non-cancelling',
   );
+});
+
+test('content quality audit operator remains fixed and read-only', () => {
+  const source = readFileSync('scripts/server-operator.sh', 'utf8');
+  const match = source.match(/\n  content_quality_audit\)\n([\s\S]*?)\n    ;;/);
+  assert.ok(match, 'content_quality_audit operation must exist');
+  const block = match[1];
+  assert.match(
+    block,
+    /exec -T mercasto-backend php artisan ads:audit-active-content-quality --limit-groups=20/,
+  );
+  assert.doesNotMatch(block, /require_confirm|\brm\b|\bdelete\b|\bupdate\b|restart|up -d|migrate|reset --hard|git clean/);
 });

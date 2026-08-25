@@ -22,6 +22,7 @@ jobs:
         github.event.comment.body == 'RUN:verify_quick' ||
         github.event.comment.body == 'RUN:security_smoke' ||
         github.event.comment.body == 'RUN:seo_aeo_smoke' ||
+        github.event.comment.body == 'RUN:content_quality_audit' ||
         github.event.comment.body == 'RUN:runner_health' ||
         github.event.comment.body == 'RUN:logs_frontend' ||
         github.event.comment.body == 'RUN:logs_backend' ||
@@ -48,6 +49,7 @@ jobs:
               'RUN:verify_quick': ['verify_quick', '', '160'],
               'RUN:security_smoke': ['security_smoke', '', '160'],
               'RUN:seo_aeo_smoke': ['seo_aeo_smoke', '', '160'],
+              'RUN:content_quality_audit': ['content_quality_audit', '', '160'],
               'RUN:runner_health': ['runner_health', '', '160'],
               'RUN:logs_frontend': ['logs_frontend', '', '200'],
               'RUN:logs_backend': ['logs_backend', '', '200'],
