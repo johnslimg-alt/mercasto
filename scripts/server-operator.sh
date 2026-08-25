@@ -296,6 +296,11 @@ PY
     seo_aeo_probe
     ;;
 
+  content_quality_audit)
+    print_header "Active listing content quality audit"
+    "${COMPOSE_PROD[@]}" exec -T mercasto-backend php artisan ads:audit-active-content-quality --limit-groups=20
+    ;;
+
   runner_health)
     print_header "GitHub runner services"
     if command -v systemctl >/dev/null 2>&1; then
