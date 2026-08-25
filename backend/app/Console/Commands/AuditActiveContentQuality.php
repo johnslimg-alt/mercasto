@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Ad;
+use App\Services\ListingQualityPreflightService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
@@ -11,7 +12,19 @@ class AuditActiveContentQuality extends Command
     protected $signature = 'ads:audit-active-content-quality {--limit-groups=12 : Maximum diagnostic groups to print}';
     protected $description = 'Report active listing quality issues without changing production data.';
 
-    public function handle(): int
+    private const LEGACY_PLACEHOLDER_TITLES = [
+        'asdf',
+        'demo',
+        'lorem ipsum',
+        'lorem ipsum dolor sit amet',
+        'prueba',
+        'qwerty',
+        'test',
+        'testing',
+        'wrefrg',
+    ];
+
+    public function handle(ListingQualityPreflightService $preflight): int
     {
         $limitGroups = max(1, min(50, (int) $this->option('limit-groups')));
         $ads = Ad::query()
@@ -30,6 +43,16 @@ class AuditActiveContentQuality extends Command
             'missing_title' => 0,
             'missing_description' => 0,
             'short_description_lt_60' => 0,
+            'title_too_short' => 0,
+            'title_missing_letters' => 0,
+            'description_too_short' => 0,
+            'description_missing_letters' => 0,
+            'legacy_placeholder_title' => 0,
+            'copy_quality_candidates' => 0,
+            'genuine_copy_quality_candidates' => 0,
+            'catalog_refs_copy_quality_candidates' => 0,
+            'genuine_placeholder_title' => 0,
+            'catalog_refs_placeholder_title' => 0,
             'nonpositive_price' => 0,
             'missing_primary_image' => 0,
             'generated_cover' => 0,
@@ -46,6 +69,7 @@ class AuditActiveContentQuality extends Command
         $images = [];
         $fingerprints = [];
         $missingGeoLocations = [];
+        $copyQualityCandidates = [];
 
         foreach ($ads as $ad) {
             $category = trim((string) $ad->category) ?: '(none)';
@@ -74,6 +98,24 @@ class AuditActiveContentQuality extends Command
                 $summary['short_description_lt_60']++;
                 $categories[$category]['weak_description']++;
             }
+
+            $copyReasons = $this->copyQualityReasons($preflight, $ad, $title, $description);
+            foreach ($copyReasons as $reason) {
+                $summary[$reason]++;
+            }
+            if ($copyReasons !== []) {
+                $summary['copy_quality_candidates']++;
+                if ($ad->is_catalog_filler) {
+                    $summary['catalog_refs_copy_quality_candidates']++;
+                } else {
+                    $summary['genuine_copy_quality_candidates']++;
+                }
+                $copyQualityCandidates[$ad->id] = [
+                    'kind' => $ad->is_catalog_filler ? 'catalog' : 'genuine',
+                    'reasons' => $copyReasons,
+                ];
+            }
+
             if ((float) $ad->price <= 0) $summary['nonpositive_price']++;
             if ($ad->generated_cover) $summary['generated_cover']++;
 
@@ -128,6 +170,16 @@ class AuditActiveContentQuality extends Command
             ])->values()->all()
         );
 
+        $this->line('copy_quality_candidate_groups=' . count($copyQualityCandidates));
+        foreach (array_slice($copyQualityCandidates, 0, $limitGroups, true) as $id => $candidate) {
+            $this->line(sprintf(
+                'copy quality candidate id=%d kind=%s reasons=%s',
+                $id,
+                $candidate['kind'],
+                implode(',', $candidate['reasons'])
+            ));
+        }
+
         $this->line('missing_geo_location_groups=' . count($missingGeoLocations));
         foreach (array_slice($missingGeoLocations, 0, $limitGroups, true) as $location => $count) {
             $this->line('missing geo location=' . $location . ' count=' . $count);
@@ -143,6 +195,47 @@ class AuditActiveContentQuality extends Command
 
         $this->info('Active content quality audit completed in read-only mode.');
         return self::SUCCESS;
+    }
+
+    private function copyQualityReasons(
+        ListingQualityPreflightService $preflight,
+        Ad $ad,
+        string $title,
+        string $description
+    ): array {
+        $result = $preflight->evaluate([
+            'title' => $title,
+            'description' => $description,
+            'price' => $ad->price,
+            'category' => $ad->category,
+            'photo_count' => 0,
+        ]);
+
+        $trackedErrors = [
+            'title_too_short',
+            'title_missing_letters',
+            'description_too_short',
+            'description_missing_letters',
+        ];
+        $reasons = array_values(array_intersect($trackedErrors, $result['errors'] ?? []));
+
+        if ($this->isLegacyPlaceholderTitle($title)) {
+            $reasons[] = 'legacy_placeholder_title';
+        }
+
+        return array_values(array_unique($reasons));
+    }
+
+    private function isLegacyPlaceholderTitle(string $title): bool
+    {
+        $normalized = Str::lower(Str::squish(strip_tags($title)));
+        $normalized = trim($normalized, " \t\n\r\0\x0B._-");
+
+        if (in_array($normalized, self::LEGACY_PLACEHOLDER_TITLES, true)) {
+            return true;
+        }
+
+        return preg_match('/^(?:test|testing|demo|prueba)(?:[\s_-]*\d+)?$/u', $normalized) === 1;
     }
 
     private function hasExternalContact(object $user): bool

@@ -57,6 +57,63 @@ class ActiveContentQualityAuditTest extends TestCase
         $this->assertSame(2, Ad::query()->where('status', 'active')->count());
     }
 
+    public function test_audit_reports_canonical_and_known_placeholder_copy_without_exposing_text_or_mutating(): void
+    {
+        $user = User::factory()->create([
+            'whatsapp' => '521234567890',
+            'business_whatsapp' => null,
+            'telegram_username' => null,
+        ]);
+
+        $common = [
+            'user_id' => $user->id,
+            'description' => 'Descripción suficientemente detallada para representar un anuncio completo durante la auditoría de calidad.',
+            'price' => 1250,
+            'location' => 'Veracruz, Veracruz',
+            'state' => 'Veracruz',
+            'city' => 'Veracruz',
+            'latitude' => 19.1738,
+            'longitude' => -96.1342,
+            'category' => 'electronica',
+            'condition' => 'usado',
+            'attributes' => [],
+            'status' => 'active',
+            'ai_moderation_status' => 'approved',
+            'generated_cover' => false,
+        ];
+
+        $numeric = Ad::query()->create(array_merge($common, [
+            'title' => '1111',
+            'image_url' => json_encode(['/storage/ads/audit-numeric.svg']),
+            'is_catalog_filler' => true,
+        ]));
+        $legacy = Ad::query()->create(array_merge($common, [
+            'title' => 'wrefrg',
+            'image_url' => json_encode(['/storage/ads/audit-legacy.svg']),
+            'is_catalog_filler' => false,
+        ]));
+        $legitimate = Ad::query()->create(array_merge($common, [
+            'title' => 'BMW X5',
+            'image_url' => json_encode(['/storage/ads/audit-legitimate.svg']),
+            'is_catalog_filler' => false,
+        ]));
+
+        $before = Ad::query()->orderBy('id')->get(['id', 'title', 'description', 'status', 'is_catalog_filler'])->toArray();
+
+        $exit = Artisan::call('ads:audit-active-content-quality', ['--limit-groups' => 10]);
+        $output = Artisan::output();
+
+        $this->assertSame(0, $exit);
+        $this->assertStringContainsString('title_missing_letters', $output);
+        $this->assertStringContainsString('legacy_placeholder_title', $output);
+        $this->assertStringContainsString("copy quality candidate id={$numeric->id} kind=catalog reasons=title_missing_letters", $output);
+        $this->assertStringContainsString("copy quality candidate id={$legacy->id} kind=genuine reasons=legacy_placeholder_title", $output);
+        $this->assertStringNotContainsString("copy quality candidate id={$legitimate->id}", $output);
+        $this->assertStringNotContainsString('wrefrg', $output);
+        $this->assertStringNotContainsString('BMW X5', $output);
+        $this->assertSame($before, Ad::query()->orderBy('id')->get(['id', 'title', 'description', 'status', 'is_catalog_filler'])->toArray());
+    }
+
     public function test_legacy_global_image_rewrite_is_disabled(): void
     {
         $exit = Artisan::call('mercasto:fix-images');
