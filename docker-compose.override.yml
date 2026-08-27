@@ -10,6 +10,14 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      # Passport Mexico owns its vhost outside the Mercasto checkout for the
+      # same reason: another app must never make Mercasto source dirty.
+      - type: bind
+        source: /etc/mercasto-edge/passport.conf
+        target: /etc/nginx/conf.d/passport.conf
+        read_only: true
+        bind:
+          create_host_path: false
 
   mercasto-scheduler:
     depends_on:
