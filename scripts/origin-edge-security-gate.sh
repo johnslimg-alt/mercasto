@@ -35,6 +35,9 @@ if grep -Eq '^set_real_ip_from (0\.0\.0\.0/0|::/0);' "$NGINX"; then
   echo 'refusing globally trusted real-ip source' >&2
   exit 1
 fi
+grep -qF 'geo $realip_remote_addr $mercasto_cf_peer {' "$NGINX"
+grep -qF 'if ($mercasto_cf_peer = 0)' "$NGINX"
+grep -qF 'return 444;' "$NGINX"
 grep -qF 'limit_req_zone $binary_remote_addr zone=mercasto_api_per_ip:20m rate=30r/s;' "$NGINX"
 grep -qF 'limit_conn_zone $binary_remote_addr zone=mercasto_conn_per_ip:20m;' "$NGINX"
 grep -qF 'limit_req_status 429;' "$NGINX"
@@ -81,6 +84,21 @@ nginx_v4 = set(re.findall(r'^set_real_ip_from ([0-9.]+/[0-9]+);$', nginx, flags=
 nginx_v6 = set(re.findall(r'^set_real_ip_from ([0-9a-fA-F:]+/[0-9]+);$', nginx, flags=re.M))
 assert nginx_v4 == v4, (nginx_v4 ^ v4)
 assert nginx_v6 == v6, (nginx_v6 ^ v6)
+
+geo_match = re.search(
+    r'^geo \$realip_remote_addr \$mercasto_cf_peer \{(?P<body>.*?)^\}$',
+    nginx,
+    flags=re.M | re.S,
+)
+assert geo_match, 'missing Cloudflare peer geo guard'
+geo_body = geo_match.group('body')
+assert re.search(r'^\s*default\s+0;$', geo_body, flags=re.M), 'geo guard must default deny'
+geo_v4 = set(re.findall(r'^\s*([0-9.]+/[0-9]+)\s+1;$', geo_body, flags=re.M))
+geo_v6 = set(re.findall(r'^\s*([0-9a-fA-F:]+/[0-9]+)\s+1;$', geo_body, flags=re.M))
+assert geo_v4 == v4, ('geo IPv4 drift', geo_v4 ^ v4)
+assert geo_v6 == v6, ('geo IPv6 drift', geo_v6 ^ v6)
+assert 'if ($mercasto_cf_peer = 0)' in nginx
+assert 'return 444;' in nginx
 
 script = Path('ops/firewall/cloudflare-origin-lockdown.sh').read_text()
 assert 'iptables -F' not in script and 'ip6tables -F' not in script
