@@ -16,7 +16,7 @@ export CI=1
 export BASE_URL="${PLAYWRIGHT_BASE_URL:-${BASE_URL:-https://mercasto.com}}"
 export PLAYWRIGHT_HTML_OUTPUT_DIR="$report_dir"
 export PLAYWRIGHT_HTML_OPEN=never
-workers="${PLAYWRIGHT_WORKERS:-2}"
+workers="${PLAYWRIGHT_WORKERS:-1}"
 if [[ ! "$workers" =~ ^[1-9][0-9]*$ ]]; then
   echo "PLAYWRIGHT_WORKERS must be a positive integer, got: $workers" >&2
   exit 2
