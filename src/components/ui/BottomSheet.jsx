@@ -89,6 +89,18 @@ export default function BottomSheet({
     }
   }, [onClose]);
 
+  // Keep Escape dismissal reliable even if focus temporarily leaves the dialog subtree.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleWindowKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose?.();
+    };
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [isOpen, onClose]);
+
   // Drag-to-dismiss: if dragged down > 100px, close
   const handleTouchStart = useCallback((e) => {
     startY.current = e.touches[0].clientY;
