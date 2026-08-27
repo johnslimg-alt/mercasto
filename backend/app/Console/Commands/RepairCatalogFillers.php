@@ -82,7 +82,7 @@ class RepairCatalogFillers extends Command
         $this->info("Active catalog references: {$total}");
 
         if (! $this->option('apply')) {
-            $this->comment('Preview only. Pass --apply to replace legacy filler images with unique local editorial covers, approve editorial references, and restore structured geography from known legacy seed locations.');
+            $this->comment('Preview only. Pass --apply to preserve usable catalog photos, create a local editorial cover only when no usable photo exists, approve editorial references, and restore structured geography from known legacy seed locations.');
             return self::SUCCESS;
         }
 
@@ -90,19 +90,13 @@ class RepairCatalogFillers extends Command
         $geographyNormalized = 0;
         $query->orderBy('id')->chunkById(200, function ($ads) use (&$updated, &$geographyNormalized): void {
             foreach ($ads as $ad) {
-                $path = 'ads/catalog/reference-' . $ad->id . '.svg';
-                if (! Storage::disk('public')->put($path, $this->coverSvg($ad))) {
-                    throw new RuntimeException("Unable to write catalog cover for filler #{$ad->id}");
-                }
-
+                $photo = $this->usablePhoto($ad);
                 $attributes = is_array($ad->attributes) ? $ad->attributes : [];
                 $attributes['editorial_reference'] = true;
-                $attributes['catalog_cover_key'] = 'reference-' . $ad->id;
 
                 $repair = [
                     'attributes' => $attributes,
-                    'image_url' => json_encode([$path], JSON_UNESCAPED_SLASHES),
-                    'generated_cover' => true,
+                    'generated_cover' => false,
                     'ai_moderation_status' => 'approved',
                     'ai_moderation_reason' => 'Referencia editorial de catálogo validada por Mercasto; no corresponde a una publicación de usuario.',
                     'ai_moderation_confidence' => 1,
@@ -110,6 +104,20 @@ class RepairCatalogFillers extends Command
                     'expires_at' => null,
                     'reminder_sent_at' => null,
                 ];
+
+                if ($photo === null) {
+                    $path = 'ads/catalog/reference-' . $ad->id . '.svg';
+                    if (! Storage::disk('public')->put($path, $this->coverSvg($ad))) {
+                        throw new RuntimeException("Unable to write catalog cover for filler #{$ad->id}");
+                    }
+                    $attributes['catalog_cover_key'] = 'reference-' . $ad->id;
+                    $repair['attributes'] = $attributes;
+                    $repair['image_url'] = json_encode([$path], JSON_UNESCAPED_SLASHES);
+                    $repair['generated_cover'] = true;
+                } else {
+                    unset($attributes['catalog_cover_key']);
+                    $repair['attributes'] = $attributes;
+                }
 
                 $location = trim((string) $ad->location);
                 $city = trim((string) $ad->city);
@@ -145,6 +153,30 @@ class RepairCatalogFillers extends Command
 
         $this->info("Catalog filler repair complete: {$updated} active reference(s) normalized; {$geographyNormalized} legacy geography record(s) restored.");
         return self::SUCCESS;
+    }
+
+    private function usablePhoto(Ad $ad): ?string
+    {
+        $images = json_decode((string) $ad->getRawOriginal('image_url'), true);
+        $path = is_array($images) ? trim((string) ($images[0] ?? '')) : '';
+        if ($path === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $path) === 1) {
+            return $path;
+        }
+
+        $path = ltrim($path, '/');
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        if (! str_starts_with($path, 'ads/')
+            || str_contains($path, '..')
+            || ! in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)
+            || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return $path;
     }
 
     private function legacyGeography(string $location): ?array

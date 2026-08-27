@@ -13,48 +13,51 @@ class CatalogFillerRepairTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_repair_is_opt_in_and_never_changes_genuine_listings(): void
+    public function test_repair_is_opt_in_preserves_usable_photos_and_never_changes_genuine_listings(): void
     {
         Storage::fake('public');
         $user = User::factory()->create();
 
         $genuine = $this->makeAd($user, false, 'https://example.com/genuine.jpg', 'pending');
-        $first = $this->makeAd($user, true, 'https://images.unsplash.com/photo-legacy?sig=1', 'pending');
-        $second = $this->makeAd($user, true, 'https://images.unsplash.com/photo-legacy?sig=2', null);
-        $second->forceFill([
+        $external = $this->makeAd($user, true, 'https://images.unsplash.com/photo-legacy?sig=1', 'pending');
+        Storage::disk('public')->put('ads/catalog/photos/local.jpg', 'local-photo');
+        $local = $this->makeAd($user, true, 'ads/catalog/photos/local.jpg', null);
+        $fallback = $this->makeAd($user, true, 'ads/catalog/reference-stale.svg', null);
+        $local->forceFill([
             'location' => null,
             'city' => 'Boca del Río',
             'state' => 'Veracruz',
         ])->saveQuietly();
 
         $originalGenuine = $genuine->getRawOriginal('image_url');
-        $originalFirst = $first->getRawOriginal('image_url');
+        $originalExternal = $external->getRawOriginal('image_url');
+        $originalLocal = $local->getRawOriginal('image_url');
 
         $this->assertSame(0, Artisan::call('ads:repair-catalog-fillers'));
-        $this->assertSame($originalFirst, $first->fresh()->getRawOriginal('image_url'));
-        $this->assertSame('pending', $first->fresh()->ai_moderation_status);
-        $this->assertNull($second->fresh()->location);
+        $this->assertSame($originalExternal, $external->fresh()->getRawOriginal('image_url'));
+        $this->assertSame('pending', $external->fresh()->ai_moderation_status);
+        $this->assertNull($local->fresh()->location);
 
         $this->assertSame(0, Artisan::call('ads:repair-catalog-fillers', ['--apply' => true]));
 
-        $first = $first->fresh();
-        $second = $second->fresh();
+        $external = $external->fresh();
+        $local = $local->fresh();
+        $fallback = $fallback->fresh();
         $genuine = $genuine->fresh();
 
-        $firstImage = json_decode((string) $first->getRawOriginal('image_url'), true)[0] ?? null;
-        $secondImage = json_decode((string) $second->getRawOriginal('image_url'), true)[0] ?? null;
+        $this->assertSame($originalExternal, $external->getRawOriginal('image_url'));
+        $this->assertSame($originalLocal, $local->getRawOriginal('image_url'));
+        $this->assertFalse($external->generated_cover);
+        $this->assertFalse($local->generated_cover);
+        $this->assertSame('approved', $external->ai_moderation_status);
+        $this->assertSame('approved', $local->ai_moderation_status);
+        $this->assertSame('Boca del Río, Veracruz', $local->location);
 
-        $this->assertSame('approved', $first->ai_moderation_status);
-        $this->assertSame('approved', $second->ai_moderation_status);
-        $this->assertTrue($first->generated_cover);
-        $this->assertTrue($second->generated_cover);
-        $this->assertNotSame($firstImage, $secondImage);
-        $this->assertSame('ads/catalog/reference-' . $first->id . '.svg', $firstImage);
-        $this->assertSame('ads/catalog/reference-' . $second->id . '.svg', $secondImage);
-        $this->assertTrue(Storage::disk('public')->exists($firstImage));
-        $this->assertTrue(Storage::disk('public')->exists($secondImage));
-        $this->assertTrue((bool) ($first->attributes['editorial_reference'] ?? false));
-        $this->assertSame('Boca del Río, Veracruz', $second->location);
+        $fallbackImage = json_decode((string) $fallback->getRawOriginal('image_url'), true)[0] ?? null;
+        $this->assertSame('ads/catalog/reference-' . $fallback->id . '.svg', $fallbackImage);
+        $this->assertTrue(Storage::disk('public')->exists($fallbackImage));
+        $this->assertTrue($fallback->generated_cover);
+        $this->assertTrue((bool) ($fallback->attributes['editorial_reference'] ?? false));
 
         $this->assertSame($originalGenuine, $genuine->getRawOriginal('image_url'));
         $this->assertSame('pending', $genuine->ai_moderation_status);
