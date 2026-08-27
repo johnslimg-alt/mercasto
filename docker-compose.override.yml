@@ -1,4 +1,10 @@
 services:
+  mercasto-frontend:
+    volumes:
+      # Reef CRM shares the edge container but owns its hostname configuration
+      # outside the Mercasto checkout so git reset/deploy cannot silently delete it.
+      - /etc/mercasto-edge/reef-crm.conf:/etc/nginx/conf.d/reef-crm.conf:ro
+
   mercasto-scheduler:
     depends_on:
       redis:
