@@ -114,6 +114,7 @@ export default function SidebarFilters({
               {tr('state_label')}
             </label>
             <select
+              aria-label={tr('state_label') || 'State'}
               data-testid="sidebar-filter-state"
               value={selectedState}
               onChange={e => handleStateChange(e.target.value)}
@@ -130,6 +131,7 @@ export default function SidebarFilters({
               {tr('city_label')}
             </label>
             <select
+              aria-label={tr('city_label') || 'City'}
               data-testid="sidebar-filter-city"
               value={selectedCity}
               onChange={e => handleCityChange(e.target.value)}
@@ -149,9 +151,9 @@ export default function SidebarFilters({
       <div className="mb-6">
         <h4 className={sectionTitleClass}>{tr('price_mxn')}</h4>
         <div className="flex items-center gap-2">
-          <input data-testid="sidebar-filter-min-price" type="number" placeholder={tr('min')} value={minPrice} onChange={e => setMinPrice(e.target.value)} className={inputClass} />
+          <input aria-label={`${tr('price_mxn') || 'Price'} ${tr('min') || 'minimum'}`} data-testid="sidebar-filter-min-price" type="number" placeholder={tr('min')} value={minPrice} onChange={e => setMinPrice(e.target.value)} className={inputClass} />
           <span className="text-slate-400">-</span>
-          <input data-testid="sidebar-filter-max-price" type="number" placeholder={tr('max')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className={inputClass} />
+          <input aria-label={`${tr('price_mxn') || 'Price'} ${tr('max') || 'maximum'}`} data-testid="sidebar-filter-max-price" type="number" placeholder={tr('max')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className={inputClass} />
         </div>
       </div>
 
@@ -161,6 +163,7 @@ export default function SidebarFilters({
         {isMobile ? (
           <div className="relative">
             <select
+              aria-label={tr('condition') || 'Condition'}
               data-testid="sidebar-filter-condition"
               value={conditionFilter[0] || ''}
               onChange={e => {
@@ -192,7 +195,7 @@ export default function SidebarFilters({
         <div key={field.id} className="mb-6">
           <h4 className={sectionTitleClass}>{field.label}</h4>
           {field.type === 'select' ? (
-            <select data-testid={`sidebar-filter-${field.id}`} value={dynamicFilters[field.id] || ''} onChange={e => handleDynamicChange(field.id, e.target.value)} className={selectClass}>
+            <select aria-label={field.label} data-testid={`sidebar-filter-${field.id}`} value={dynamicFilters[field.id] || ''} onChange={e => handleDynamicChange(field.id, e.target.value)} className={selectClass}>
               <option value="">{tr('any')}</option>
               {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
@@ -200,6 +203,7 @@ export default function SidebarFilters({
             isMobile ? (
               <div className="relative">
                 <select
+                  aria-label={field.label}
                   data-testid={`sidebar-filter-${field.id}`}
                   value={dynamicFilters[field.id]?.[0] || ''}
                   onChange={e => {
