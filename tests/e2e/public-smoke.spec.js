@@ -56,8 +56,20 @@ function publicListingTitle(ad) {
 }
 
 async function firstPublicAd(request) {
-  const response = await request.get('/api/ads?page=1');
-  expect(response.ok(), 'public ads API should return a usable listing').toBe(true);
+  let response;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    response = await request.get('/api/ads?page=1');
+    if (response.ok()) break;
+    const status = response.status();
+    const transient = status === 429 || status >= 500;
+    if (!transient || attempt === 3) break;
+    await new Promise(resolve => setTimeout(resolve, attempt * 500));
+  }
+
+  expect(
+    response?.ok(),
+    `public ads API should return a usable listing, got ${response?.status() ?? 'no response'}`,
+  ).toBe(true);
   const ads = extractAds(await response.json());
   expect(ads.length, 'public ads API should expose at least one listing').toBeGreaterThan(0);
   expect(ads[0]?.id, 'first public listing should have an id').toBeTruthy();
@@ -73,7 +85,6 @@ async function expectHealthyPublicResponse(request, path) {
     `${path} should be OK or rate-limited, got ${status}`,
   ).toBe(true);
 }
-
 
 
 test('terms sidebar navigation scrolls to and marks the selected section', async ({ page }, testInfo) => {
@@ -182,7 +193,7 @@ test.describe('public launch smoke', () => {
     });
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    const firstCard = page.locator('.market-card').first();
+    const firstCard = page.locator('.ad-result-card').first();
     await expect(firstCard).toBeVisible();
     await firstCard.click();
     await expect(page).toHaveURL(/#ad-\d+$/);
