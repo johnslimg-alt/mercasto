@@ -3,6 +3,7 @@ services:
     volumes:
       # Reef CRM shares the edge container but owns its hostname configuration
       # outside the Mercasto checkout so git reset/deploy cannot silently delete it.
+      # The host file is a required production prerequisite; a missing source must fail visibly.
       - /etc/mercasto-edge/reef-crm.conf:/etc/nginx/conf.d/reef-crm.conf:ro
 
   mercasto-scheduler:
