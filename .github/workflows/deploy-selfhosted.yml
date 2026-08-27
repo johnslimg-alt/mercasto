@@ -153,6 +153,11 @@ jobs:
               add_service mercasto-ai-gateway
               UP_SERVICES="$UP_SERVICES ollama mercasto-ai-gateway"
             fi
+            # Compose-only changes can alter frontend mounts/networks without changing its image.
+            # Recreate the frontend so the new container configuration actually takes effect.
+            if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^docker-compose(\.override)?\.yml$'; then
+              UP_SERVICES="$UP_SERVICES mercasto-frontend"
+            fi
           fi
 
           if [ -n "$BUILD_SERVICES" ]; then
