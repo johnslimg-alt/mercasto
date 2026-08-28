@@ -771,6 +771,20 @@ function App() {
   }, [showAuthModal]);
 
   useEffect(() => {
+    if (!showAuthModal || authLoading) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setShowAuthModal(false);
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [showAuthModal, authLoading]);
+
+  useEffect(() => {
     if (!showAuthModal) return undefined;
     const frame = window.requestAnimationFrame(() => {
       const dialog = authModalDialogRef.current;
