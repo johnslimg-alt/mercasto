@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync('src/App.jsx', 'utf8');
+const headerSource = readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
 
 function between(start, end) {
   const from = source.indexOf(start);
@@ -12,8 +13,8 @@ function between(start, end) {
 }
 
 test('header search input changes do not navigate away before submit', () => {
-  const desktopLine = source.split('\n').find(line => line.includes('data-testid="desktop-search-input"')) || '';
-  const mobileLine = source.split('\n').find(line => line.includes('data-testid="mobile-search-input"')) || '';
+  const desktopLine = headerSource.split('\n').find(line => line.includes('data-testid="desktop-search-input"')) || '';
+  const mobileLine = headerSource.split('\n').find(line => line.includes('data-testid="mobile-search-input"')) || '';
   assert.ok(desktopLine.includes('setSearchQuery(v)'));
   assert.ok(mobileLine.includes('setSearchQuery(v)'));
   assert.ok(!desktopLine.includes("setCurrentTab('home')"));

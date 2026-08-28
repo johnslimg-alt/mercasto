@@ -18,6 +18,11 @@ const push = fs.readFileSync('src/components/ui/PushNotificationManager.jsx', 'u
 const toast = fs.readFileSync('src/components/ui/Toast.jsx', 'utf8');
 const cookieBanner = fs.readFileSync('src/components/CookieBanner.jsx', 'utf8');
 const pricingModal = fs.readFileSync('src/components/modals/PricingModal.jsx', 'utf8');
+const appHeader = fs.readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
+const appFooter = fs.readFileSync('src/components/shell/AppFooter.jsx', 'utf8');
+const mobileTabBar = fs.readFileSync('src/components/shell/MobileTabBar.jsx', 'utf8');
+const mercastoLogo = fs.readFileSync('src/components/shell/MercastoLogo.jsx', 'utf8');
+const appShell = [app, appHeader, appFooter, mobileTabBar, mercastoLogo].join('\n');
 
 async function translationsFor(lang) {
   return (await import(`../src/constants/translations/${lang}.js`)).default;
@@ -211,9 +216,9 @@ test('global App shell uses guaranteed localization keys without fallback litera
     "t.city || 'Ciudad'", "t.cancel || 'Cerrar'", "t.apply || 'Aplicar'", "t.close_btn || 'Cerrar'",
     "t.ai_brand_tagline || 'La plataforma de clasificados más moderna e inteligente con AI'",
     "t.ai_brand_short || t.ai_brand_tagline || 'AI classifieds'",
-  ]) assert.equal(app.includes(fallback), false, fallback);
-  assert.match(app, /placeholder=\{t\.search_placeholder\}/);
-  assert.match(app, /placeholder=\{t\.search_placeholder_short\}/);
+  ]) assert.equal(appShell.includes(fallback), false, fallback);
+  assert.match(appHeader, /placeholder=\{t\.search_placeholder\}/);
+  assert.match(appHeader, /placeholder=\{t\.search_placeholder_short\}/);
 });
 
 test('pricing modal uses guaranteed localization keys without fallback literals', async () => {

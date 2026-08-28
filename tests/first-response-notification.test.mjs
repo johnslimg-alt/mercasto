@@ -8,6 +8,8 @@ const app = fs.readFileSync('src/App.jsx', 'utf8');
 const sw = fs.readFileSync('public/sw.js', 'utf8');
 const chatScreen = fs.readFileSync('src/components/screens/ChatScreen.jsx', 'utf8');
 const notificationsScreen = fs.readFileSync('src/components/screens/NotificationsScreen.jsx', 'utf8');
+const appHeader = fs.readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
+const mobileTabBar = fs.readFileSync('src/components/shell/MobileTabBar.jsx', 'utf8');
 
 test('message delivery creates one actionable unread notification per conversation', () => {
   assert.match(chat, /where\('type', 'message'\)/);
@@ -30,15 +32,15 @@ test('in-app notification fans out to native and browser push with a deep link',
 });
 
 test('mobile notification entry opens the notifications route', () => {
-  assert.match(app, /user \? navigate\('\/notificaciones'\)/);
-  assert.doesNotMatch(app, /setDashboardTab\('notifications'\)/);
+  assert.match(mobileTabBar, /user \? navigate\('\/notificaciones'\)/);
+  assert.doesNotMatch(`${app}\n${mobileTabBar}`, /setDashboardTab\('notifications'\)/);
   assert.match(app, /!incoming\.replaces_unread/);
 });
 
 
 test('read actions synchronize the global unread indicator immediately', () => {
   assert.match(app, /mercasto:notifications-changed/);
-  assert.match(app, /\{unreadCount > 0 && <span/);
+  assert.match(`${appHeader}\n${mobileTabBar}`, /\{unreadCount > 0 && <span/);
   assert.match(chatScreen, /window\.dispatchEvent\(new Event\('mercasto:notifications-changed'\)\)/);
   assert.match(notificationsScreen, /window\.dispatchEvent\(new Event\('mercasto:notifications-changed'\)\)/);
 });

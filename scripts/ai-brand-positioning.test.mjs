@@ -38,9 +38,11 @@ test('every supported language carries the AI brand contract', async () => {
 
 test('shared application surfaces render the AI positioning', () => {
   const app = source('src/App.jsx');
-  assert.match(app, /data-testid="global-ai-brand-strip"/);
-  assert.match(app, /tagline=\{t\.ai_brand_short/);
-  assert.match(app, /tagline=\{t\.ai_brand_tagline\}/);
+  const header = source('src/components/shell/AppHeader.jsx');
+  const footer = source('src/components/shell/AppFooter.jsx');
+  assert.match(header, /data-testid="global-ai-brand-strip"/);
+  assert.match(`${header}\n${footer}`, /tagline=\{t\.ai_brand_short/);
+  assert.match(header, /\{t\.ai_brand_tagline\}/);
   assert.match(app, /auth-modal-ai-brand-message/);
   assert.match(app, /Mercasto \| \$\{t\.ai_brand_tagline/);
 

@@ -5,7 +5,10 @@ import { SUPPORTED_LANGUAGES } from '../src/utils/translations.js';
 
 const app = fs.readFileSync('src/App.jsx', 'utf8');
 const routeHelpers = fs.readFileSync('src/app/routeHelpers.jsx', 'utf8');
-const authAndLogoSources = `${app}\n${routeHelpers}`;
+const header = fs.readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
+const footer = fs.readFileSync('src/components/shell/AppFooter.jsx', 'utf8');
+const logo = fs.readFileSync('src/components/shell/MercastoLogo.jsx', 'utf8');
+const authAndLogoSources = [app, routeHelpers, header, footer, logo].join('\n');
 async function translationsFor(lang) {
   return (await import(`../src/constants/translations/${lang}.js`)).default;
 }
@@ -26,5 +29,5 @@ test('auth and logo surfaces do not use Spanish fallback literals', () => {
   assert.equal(authAndLogoSources.includes("tagline={t.ai_brand_short || 'Clasificados con IA'}"), false);
   assert.equal(authAndLogoSources.includes("t.footer_desc || 'La plataforma de clasificados más moderna e inteligente con AI para México.'"), false);
   assert.match(routeHelpers, /tagline \|\| t\.ai_brand_tagline/);
-  assert.match(app, /tagline=\{t\.ai_brand_short\}/);
+  assert.match(`${header}\n${footer}`, /tagline=\{t\.ai_brand_short\}/);
 });
