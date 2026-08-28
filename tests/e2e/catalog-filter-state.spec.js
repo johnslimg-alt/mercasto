@@ -82,7 +82,8 @@ test('mobile filter sheet persists canonical state and clear-all resets it', asy
   await expect(filterTrigger).toBeFocused();
   await filterTrigger.press('Enter');
 
-  let sheet = page.getByRole('dialog');
+  const mobileFilterSheet = () => page.getByRole('dialog').filter({ has: page.getByTestId('bottom-sheet-close') });
+  let sheet = mobileFilterSheet();
   const sheetClose = sheet.getByTestId('bottom-sheet-close');
   await expect(filterTrigger).toHaveAttribute('aria-expanded', 'true');
   await expect(sheetClose).toBeFocused();
@@ -94,7 +95,7 @@ test('mobile filter sheet persists canonical state and clear-all resets it', asy
   await expect(filterTrigger).toHaveAttribute('aria-expanded', 'false');
   await filterTrigger.press('Enter');
 
-  sheet = page.getByRole('dialog');
+  sheet = mobileFilterSheet();
   await sheet.getByTestId('sidebar-filter-listing_type').selectOption('Venta');
   await sheet.getByTestId('sidebar-filter-sort').selectOption('price_desc');
   await sheet.getByTestId('sidebar-filter-state').selectOption('Nuevo León');
@@ -106,7 +107,7 @@ test('mobile filter sheet persists canonical state and clear-all resets it', asy
 
   await page.reload();
   await page.getByTestId('catalog-mobile-filters').click();
-  const restoredSheet = page.getByRole('dialog');
+  const restoredSheet = mobileFilterSheet();
   await expect(restoredSheet.getByTestId('sidebar-filter-listing_type')).toHaveValue('Venta');
   await expect(restoredSheet.getByTestId('sidebar-filter-sort')).toHaveValue('price_desc');
   await expect(restoredSheet.getByTestId('sidebar-filter-city')).toHaveValue('Monterrey');
