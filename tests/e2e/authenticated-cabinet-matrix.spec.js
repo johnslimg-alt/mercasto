@@ -321,6 +321,8 @@ for (const viewport of viewports) {
     const errors = watchPageErrors(page);
     await installSession(page, await authenticate(request, 'admin'));
     await page.goto('/admin/marketing?section=dashboard');
+    await expect(page.getByTestId('admin-marketing-route-anchor')).toBeAttached();
+    await expect(page.getByText('Error 404', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Mercasto Marketing', { exact: true })).toBeVisible();
 
     for (const section of marketingSections) {

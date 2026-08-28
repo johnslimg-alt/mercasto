@@ -273,22 +273,22 @@ export default function SplitViewContainer({
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* TOOLBAR — Результаты + переключатель Grid / List              */}
       {/* ═══════════════════════════════════════════════════════════════ */}
-      <div className="sticky top-[64px] z-30 mb-4 flex items-center justify-between gap-3 bg-white dark:bg-slate-900 px-4 py-3 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-        <div className="flex items-center gap-3">
-          <h2 data-testid="catalog-results-title" className="text-[16px] md:text-[18px] font-bold text-slate-900 dark:text-white">
+      <div data-testid="catalog-results-toolbar" className="sticky top-[64px] z-30 mb-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:px-4 sm:py-3">
+        <div className="hidden min-w-0 items-center gap-3 sm:flex">
+          <h2 data-testid="catalog-results-title" className="shrink-0 text-[16px] font-bold text-slate-900 dark:text-white md:text-[18px]">
             {t.search_results}
           </h2>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-[12px] font-bold text-slate-600 dark:text-slate-400">
+          <span className="min-w-0 truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
             {genuineAds.length} {t.real_listings}{catalogReferenceCount > 0 ? ` · ${catalogReferenceCount} ${t.catalog_references}` : ''}
           </span>
         </div>
 
         {/* Grid / List Toggle */}
-        <div className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+        <div className="flex w-full items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800 sm:ml-auto sm:w-auto">
           <button
             data-testid="catalog-grid-view"
             onClick={() => setViewLayout('grid')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
+            className={`flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold transition-all sm:min-h-0 sm:flex-none ${
               viewLayout === 'grid'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
@@ -301,7 +301,7 @@ export default function SplitViewContainer({
           <button
             data-testid="catalog-list-view"
             onClick={() => setViewLayout('list')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${
+            className={`flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold transition-all sm:min-h-0 sm:flex-none ${
               viewLayout === 'list'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
