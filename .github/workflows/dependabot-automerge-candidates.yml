@@ -71,7 +71,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label automerge
+          gh api --method POST "repos/${GH_REPO}/issues/${PR_NUMBER}/labels" -f "labels[]=automerge"
 
       - name: Mark non-automerge major or unsupported update
         if: steps.decision.outputs.eligible != 'true'
@@ -81,4 +81,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label needs-manual-review
+          gh api --method POST "repos/${GH_REPO}/issues/${PR_NUMBER}/labels" -f "labels[]=needs-manual-review"
