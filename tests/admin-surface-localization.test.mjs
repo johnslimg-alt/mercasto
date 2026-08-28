@@ -103,11 +103,13 @@ test('admin identity and business verification components use localized admin co
 });
 
 test('admin route hides marketplace catalog search and category navigation', () => {
-  const source = fs.readFileSync('src/App.jsx', 'utf8');
-  assert.ok(source.includes("const isAdminRoute = location.pathname.startsWith('/admin')"));
-  assert.ok(source.includes('isAdminRoute ? "hidden" : "hidden lg:flex flex-1 items-center"'));
-  assert.ok(source.includes('isAdminRoute ? "hidden" : "mobile-search-row lg:hidden pt-7 pb-7"'));
-  assert.ok(source.includes('data-testid="header-category-bar" className={isAdminRoute ? "hidden"'));
+  const app = fs.readFileSync('src/App.jsx', 'utf8');
+  const header = fs.readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
+  assert.ok(app.includes("const isAdminRoute = location.pathname.startsWith('/admin')"));
+  assert.ok(app.includes('isAdminRoute={isAdminRoute}'));
+  assert.ok(header.includes('isAdminRoute ? "hidden" : "hidden lg:flex flex-1 items-center"'));
+  assert.ok(header.includes('isAdminRoute ? "hidden" : "mobile-search-row lg:hidden pt-7 pb-7"'));
+  assert.ok(header.includes('data-testid="header-category-bar" className={isAdminRoute ? "hidden"'));
 });
 
 test('admin dark safety layer covers legacy medium-light slate and gray surfaces', () => {

@@ -30,7 +30,7 @@ NODE
 
 grep -qF "const DISABLED_LANGUAGES = new Set(['he', 'yi'])" src/i18n.js
 grep -qF "'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar',   'ru', 'ja'" src/App.jsx
-grep -qF 'data-testid="desktop-language-select"' src/App.jsx
-grep -qF 'data-testid="mobile-language-select"' src/App.jsx
+grep -qF 'data-testid="desktop-language-select"' src/components/shell/AppHeader.jsx
+grep -qF 'data-testid="mobile-language-select"' src/components/shell/AppHeader.jsx
 
 echo "active language contract gate OK"
