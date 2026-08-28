@@ -210,11 +210,13 @@ class NormalizeCatalogFillerImages extends Command
 
     private function semanticKey(Ad $ad): string
     {
+        $titleText = Str::lower(Str::ascii((string) $ad->title));
         $text = Str::lower(Str::ascii(implode(' ', array_filter([(string) $ad->title, (string) $ad->subcategory, (string) $ad->description]))));
         $has = fn (array $needles): bool => collect($needles)->contains(fn ($needle) => str_contains($text, $needle));
+        $titleHas = fn (array $needles): bool => collect($needles)->contains(fn ($needle) => str_contains($titleText, $needle));
         return match ((string) $ad->category) {
             'motor' => $has(['cubreauto', 'cubre auto', 'funda exterior', 'funda para auto', 'funda para coche']) ? 'car_cover' : ($has(['funda', 'asiento', 'cubreasiento', 'cubre asiento', 'cubrevolante', 'tapete']) ? 'car_accessory' : ($has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car'))),
-            'electronica' => $this->electronicsKey($has),
+            'electronica' => $this->electronicsKey($has, $titleHas),
             'empleo' => $has(['limpieza']) ? 'cleaning' : ($has(['plomer']) ? 'plumbing' : ($has(['electric', 'repar', 'mantenimiento', 'constru']) ? 'repair' : ($has(['chofer', 'repartidor', 'conductor']) ? 'car' : 'office'))),
             'servicios' => $has(['plomer']) ? 'plumbing' : ($has(['limpi']) ? 'cleaning' : 'repair'),
             'inmobiliaria' => $has(['bodega', 'almacen', 'nave industrial', 'logistica']) ? 'warehouse' : ($has(['terreno']) ? 'land' : ($has(['departamento', 'interior']) ? 'interiors' : ($has(['local', 'oficina', 'comercial']) ? 'office' : 'houses'))),
@@ -237,14 +239,15 @@ class NormalizeCatalogFillerImages extends Command
         };
     }
 
-
     private function isManagedSource(string $path): bool
     {
         return str_starts_with($path, self::RECOVERED_PREFIX) || str_starts_with($path, self::CURATED_PREFIX);
     }
 
-    private function electronicsKey(callable $has): string
+    private function electronicsKey(callable $has, callable $titleHas): string
     {
+        if ($titleHas(['funda', 'mica', 'magsafe', 'spigen', 'otterbox', 'carcasa', 'powerbank', 'cargador', 'cable'])) return 'electronics_mobile_accessory';
+        if ($titleHas(['iphone', 'galaxy s', 'pixel', 'xiaomi', 'redmi', 'motorola', 'smartphone'])) return 'electronics_mobile';
         if ($has(['termostato', 'thermostat', 'smart home', 'domotica', 'homekit'])) return 'electronics_smart_home';
         if ($has(['drone', 'dji', 'autel'])) return 'electronics_drone';
         if ($has(['microfono'])) return 'electronics_microphone';
