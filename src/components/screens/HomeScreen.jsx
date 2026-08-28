@@ -33,6 +33,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
     const [homeToast, setHomeToast] = React.useState(null);
     const [reMapLoaded, setReMapLoaded] = React.useState(false);
     const homeToastTimerRef = React.useRef(null);
+    const reMapContainerRef = React.useRef(null);
     const [featuredAds, setFeaturedAds] = React.useState(() => {
       if (typeof window !== 'undefined') {
         if (window.__FEATURED_ADS_CACHE__) return window.__FEATURED_ADS_CACHE__;
@@ -54,6 +55,26 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
     const safeJobAds = React.useMemo(() => (Array.isArray(jobAds) ? jobAds : []), [jobAds]);
     const safeServiceAds = React.useMemo(() => (Array.isArray(serviceAds) ? serviceAds : []), [serviceAds]);
     const safeAutomotiveAds = React.useMemo(() => (Array.isArray(automotiveAds) ? automotiveAds : []), [automotiveAds]);
+
+    React.useEffect(() => {
+      const node = reMapContainerRef.current;
+      if (!node || reMapLoaded) return undefined;
+
+      if (typeof IntersectionObserver === 'undefined') {
+        const fallbackTimer = window.setTimeout(() => setReMapLoaded(true), 0);
+        return () => window.clearTimeout(fallbackTimer);
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setReMapLoaded(true);
+          observer.disconnect();
+        }
+      }, { rootMargin: '320px 0px' });
+
+      observer.observe(node);
+      return () => observer.disconnect();
+    }, [reMapLoaded]);
     const automotiveQuickYears = React.useMemo(() => {
       const currentYear = new Date().getFullYear();
       return Array.from({ length: 12 }, (_, index) => String(currentYear - index));
@@ -626,6 +647,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                 <div className="col-span-12 xl:col-span-4">
 
                   <div
+                    ref={reMapContainerRef}
                     className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900"
                     onMouseEnter={() => setReMapLoaded(true)}
                     onTouchStart={() => setReMapLoaded(true)}
