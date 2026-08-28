@@ -77,6 +77,25 @@ class NormalizeCatalogFillerImagesTest extends TestCase
         $this->assertSame($imagesAfterApply, array_map(fn (array $row) => $this->firstImage($row[0]->fresh()), $fillers));
     }
 
+    public function test_semantic_image_pools_do_not_share_sources_across_keys(): void
+    {
+        $pools = (new ReflectionClass(\App\Console\Commands\NormalizeCatalogFillerImages::class))->getConstant('POOLS');
+        $owners = [];
+
+        foreach ($pools as $semanticKey => $paths) {
+            foreach ($paths as $path) {
+                $this->assertArrayNotHasKey(
+                    $path,
+                    $owners,
+                    "Image {$path} is shared across semantic pools; duplicate encountered in {$semanticKey}."
+                );
+                $owners[$path] = $semanticKey;
+            }
+        }
+
+        $this->assertSame(array_sum(array_map('count', $pools)), count($owners));
+    }
+
     public function test_semantic_remap_refuses_non_recovered_active_filler(): void
     {
         Storage::fake('public');

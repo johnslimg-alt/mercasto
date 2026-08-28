@@ -42,8 +42,24 @@ class AuditCatalogCoverage extends Command
             if ($ad->ai_moderation_status !== 'approved') $errors[] = "filler #{$ad->id}: moderation not approved";
             if ($image !== '') {
                 $normalized = preg_replace('/\?.*$/', '', $image) ?: $image;
-                if (isset($seenImages[$normalized])) $errors[] = "duplicate filler image: #{$seenImages[$normalized]} and #{$ad->id}";
-                $seenImages[$normalized] = $ad->id;
+                $attributes = is_array($ad->attributes) ? $ad->attributes : [];
+                $semanticKey = trim((string) ($attributes['catalog_image_semantic_key'] ?? ''));
+                $imageSource = trim((string) ($attributes['catalog_image_source'] ?? ''));
+                if (isset($seenImages[$normalized])) {
+                    $previous = $seenImages[$normalized];
+                    $sameCuratedPool = $imageSource === 'curated-local'
+                        && $previous['source'] === 'curated-local'
+                        && $semanticKey !== ''
+                        && $previous['semantic_key'] === $semanticKey;
+                    if (! $sameCuratedPool) {
+                        $errors[] = "duplicate filler image across incompatible pools: #{$previous['id']} and #{$ad->id}";
+                    }
+                }
+                $seenImages[$normalized] = [
+                    'id' => $ad->id,
+                    'semantic_key' => $semanticKey,
+                    'source' => $imageSource,
+                ];
             }
         }
 
