@@ -51,16 +51,16 @@ export const subcategoriesMap = {
 };
 
 export const mockAds = [
-  { id: 1, title: 'MacBook Pro M2 2023 512GB', price: 25000, currency: 'MXN', location: 'Polanco, CDMX', category: 'informatica', image: '/placeholder-ad.svg', description: 'Computadora en perfecto estado, batería al 100%. Entrego con caja y accesorios originales.', type: 'particular', promoted: false },
-  { id: 2, title: 'Hermoso Departamento con vista panorámica', price: 280000, currency: 'MXN', location: 'Querétaro, Querétaro', category: 'inmobiliaria', image: '/placeholder-ad.svg', description: 'Totalmente amueblado. Amenidades incluyen piscina, gimnasio y seguridad 24/7.', type: 'pro', promoted: 'destacado' },
-  { id: 3, title: 'Honda Civic 2020 EX - Único dueño', price: 320000, currency: 'MXN', location: 'Monterrey, Nuevo León', category: 'motor', image: '/placeholder-ad.svg', description: 'Todos los mantenimientos en agencia. Listo para carretera.', type: 'particular', promoted: 'urgente' },
+  { id: 1, title: 'MacBook Pro M2 2023 512GB', price: 25000, currency: 'MXN', location: 'Polanco, CDMX', category: 'informatica', image: '/storage/ads/catalog/photos/recovered-f4acebeb76b4aa4407cdd511.jpg', description: 'Computadora en perfecto estado, batería al 100%. Entrego con caja y accesorios originales.', type: 'particular', promoted: false },
+  { id: 2, title: 'Hermoso Departamento con vista panorámica', price: 280000, currency: 'MXN', location: 'Querétaro, Querétaro', category: 'inmobiliaria', image: '/storage/ads/catalog/photos/recovered-473a1203217f61038f559dff.jpg', description: 'Totalmente amueblado. Amenidades incluyen piscina, gimnasio y seguridad 24/7.', type: 'pro', promoted: 'destacado' },
+  { id: 3, title: 'Honda Civic 2020 EX - Único dueño', price: 320000, currency: 'MXN', location: 'Monterrey, Nuevo León', category: 'motor', image: '/storage/ads/catalog/photos/recovered-c856c36a07bb7efa23ea7b6f.jpg', description: 'Todos los mantenimientos en agencia. Listo para carretera.', type: 'particular', promoted: 'urgente' },
 ];
 
 export const spotlightRealEstate = [
-  { type: 'BUY', color: 'bg-slate-900', price: '$1,850,000', specs: 'Casa 3 rec • 180m² • Jardín', location: 'Tlaquepaque • 2d ago', img: '/placeholder-ad.svg' },
-  { type: 'RENT', color: 'bg-[#84CC16]', price: '$18,500/mo', specs: 'Loft 1 bed • Colonia Roma', location: 'CDMX • 3h ago', img: '/placeholder-ad.svg', badge: { label: 'Urgent', color: 'bg-red-500 text-white' } },
-  { type: 'BUY', color: 'bg-slate-900', price: '$4,900,000', specs: 'Penthouse 4 bed • Vista ciudad', location: 'Monterrey • 6h ago', img: '/placeholder-ad.svg', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
-  { type: 'RENT', color: 'bg-[#84CC16]', price: '$12,000/mo', specs: 'Studio amueblado • Providencia', location: 'GDL • 1d ago', img: '/placeholder-ad.svg' }
+  { type: 'BUY', color: 'bg-slate-900', price: '$1,850,000', specs: 'Casa 3 rec • 180m² • Jardín', location: 'Tlaquepaque • 2d ago', img: '/storage/ads/catalog/photos/recovered-05c49ed1f379c7a4a53664f0.jpg' },
+  { type: 'RENT', color: 'bg-[#84CC16]', price: '$18,500/mo', specs: 'Loft 1 bed • Colonia Roma', location: 'CDMX • 3h ago', img: '/storage/ads/catalog/photos/recovered-115dd0a8d885487fec44deb5.jpg', badge: { label: 'Urgent', color: 'bg-red-500 text-white' } },
+  { type: 'BUY', color: 'bg-slate-900', price: '$4,900,000', specs: 'Penthouse 4 bed • Vista ciudad', location: 'Monterrey • 6h ago', img: '/storage/ads/catalog/photos/recovered-40156730d4b578610dcaca48.jpg', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
+  { type: 'RENT', color: 'bg-[#84CC16]', price: '$12,000/mo', specs: 'Studio amueblado • Providencia', location: 'GDL • 1d ago', img: '/storage/ads/catalog/photos/recovered-fb54e9a6632a7b7fd17f27f1.jpg' }
 ];
 
 export const jobsBoard = [
@@ -75,30 +75,30 @@ export const jobsBoard = [
 ];
 
 export const servicesMarketplace = [
-  { title: 'House Cleaning Pro', stars: '4.9 (342)', price: '$450', img: '/placeholder-ad.svg', desc: 'Deep cleaning, apartments & houses. Same-day availability in major cities.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
-  { title: 'AC Repair 24/7', stars: '4.8 (189)', price: '$650', img: '/placeholder-ad.svg', desc: 'Installation, maintenance, emergency repair. 1yr warranty.', badge: { label: 'Top', color: 'bg-blue-100 text-blue-700' } },
-  { title: 'Personal Trainer', stars: '5.0 (97)', price: '$300/hr', img: '/placeholder-ad.svg', desc: 'Home or gym sessions. Weight loss & strength programs.' },
-  { title: 'Event Photographer', stars: '4.7 (156)', price: '$2,500', img: '/placeholder-ad.svg', desc: 'Weddings, corporate, real estate. Drone included.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
-  { title: 'Plumber Expert', stars: '4.9 (423)', price: '$400', img: '/placeholder-ad.svg', desc: 'Leaks, installations, 24h emergency service across Mexico.' },
-  { title: 'Web Design Studio', stars: '5.0 (64)', price: '$8,900', img: '/placeholder-ad.svg', desc: 'Landing pages, e-commerce, SEO. 7-day delivery.', badge: { label: 'Top', color: 'bg-blue-100 text-blue-700' } },
-  { title: 'Dog Walker & Sitting', stars: '4.9 (201)', price: '$150', img: '/placeholder-ad.svg', desc: 'Daily walks, pet sitting, vet visits. Insured.' },
-  { title: 'Electrician Certified', stars: '4.8 (178)', price: '$500', img: '/placeholder-ad.svg', desc: 'Wiring, panels, smart home installation. Licensed.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } }
+  { title: 'House Cleaning Pro', stars: '4.9 (342)', price: '$450', img: '/storage/ads/catalog/photos/recovered-2b406670f8efed81f5396c61.jpg', desc: 'Deep cleaning, apartments & houses. Same-day availability in major cities.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
+  { title: 'AC Repair 24/7', stars: '4.8 (189)', price: '$650', img: '/storage/ads/catalog/photos/recovered-c666dbda1638d20c7a4e9ee9.jpg', desc: 'Installation, maintenance, emergency repair. 1yr warranty.', badge: { label: 'Top', color: 'bg-blue-100 text-blue-700' } },
+  { title: 'Personal Trainer', stars: '5.0 (97)', price: '$300/hr', img: '/storage/ads/catalog/photos/recovered-26f29a0075f9a39c72029ae8.jpg', desc: 'Home or gym sessions. Weight loss & strength programs.' },
+  { title: 'Event Photographer', stars: '4.7 (156)', price: '$2,500', img: '/storage/ads/catalog/photos/recovered-f7e57debaca0ca294529bca0.jpg', desc: 'Weddings, corporate, real estate. Drone included.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
+  { title: 'Plumber Expert', stars: '4.9 (423)', price: '$400', img: '/storage/ads/catalog/photos/recovered-ce255c0fcc8600c912d51d62.jpg', desc: 'Leaks, installations, 24h emergency service across Mexico.' },
+  { title: 'Web Design Studio', stars: '5.0 (64)', price: '$8,900', img: '/storage/ads/catalog/photos/recovered-a23eeeb4c6855bc0405ba291.jpg', desc: 'Landing pages, e-commerce, SEO. 7-day delivery.', badge: { label: 'Top', color: 'bg-blue-100 text-blue-700' } },
+  { title: 'Dog Walker & Sitting', stars: '4.9 (201)', price: '$150', img: '/storage/ads/catalog/photos/recovered-eec4f9bc06881f96035a4f9e.jpg', desc: 'Daily walks, pet sitting, vet visits. Insured.' },
+  { title: 'Electrician Certified', stars: '4.8 (178)', price: '$500', img: '/storage/ads/catalog/photos/recovered-633d60dd32902032533a651c.jpg', desc: 'Wiring, panels, smart home installation. Licensed.', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } }
 ];
 
 export const automotiveDeals = [
-  { price: '$235,000', title: 'Nissan Versa 2021 Advance', specs: '45,000 km • Auto • GDL', img: '/placeholder-ad.svg', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
-  { price: '$289,000', title: 'VW Jetta 2019 Comfortline', specs: '62,300 km • Auto • QRO', img: '/placeholder-ad.svg', badge: { label: 'Top seller', color: 'bg-blue-100 text-blue-700' } },
-  { price: '$345,000', title: 'Toyota Corolla 2020 Hybrid', specs: '38,100 km • Hybrid • GDL', img: '/placeholder-ad.svg', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
-  { price: '$285,000', title: 'Honda Civic 2019 Touring', specs: '71,200 km • Auto • Zapopan', img: '/placeholder-ad.svg' },
-  { price: '$195,000', title: 'Chevrolet Aveo 2022 LT', specs: '29,500 km • Manual • Puebla', img: '/placeholder-ad.svg', badge: { label: 'New', color: 'bg-[#84CC16] text-white' } },
-  { price: '$420,000', title: 'Mazda CX-5 2021 i Sport', specs: '41,000 km • SUV • GDL', img: '/placeholder-ad.svg', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } }
+  { price: '$235,000', title: 'Nissan Versa 2021 Advance', specs: '45,000 km • Auto • GDL', img: '/storage/ads/catalog/photos/recovered-0c5e529ea7aecc90df3592f9.jpg', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
+  { price: '$289,000', title: 'VW Jetta 2019 Comfortline', specs: '62,300 km • Auto • QRO', img: '/storage/ads/catalog/photos/recovered-167c9191d1d3fb88de26b3f7.jpg', badge: { label: 'Top seller', color: 'bg-blue-100 text-blue-700' } },
+  { price: '$345,000', title: 'Toyota Corolla 2020 Hybrid', specs: '38,100 km • Hybrid • GDL', img: '/storage/ads/catalog/photos/recovered-1e605173ceefe273cf5fb623.jpg', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } },
+  { price: '$285,000', title: 'Honda Civic 2019 Touring', specs: '71,200 km • Auto • Zapopan', img: '/storage/ads/catalog/photos/recovered-20b57014cf9b3b4b6bff1d5e.jpg' },
+  { price: '$195,000', title: 'Chevrolet Aveo 2022 LT', specs: '29,500 km • Manual • Puebla', img: '/storage/ads/catalog/photos/recovered-58b727098b297bb85efd6bb0.jpg', badge: { label: 'New', color: 'bg-[#84CC16] text-white' } },
+  { price: '$420,000', title: 'Mazda CX-5 2021 i Sport', specs: '41,000 km • SUV • GDL', img: '/storage/ads/catalog/photos/recovered-aa892041cac7d641c3163b0f.jpg', badge: { label: 'Verified', color: 'bg-emerald-100 text-emerald-700' } }
 ];
 
 export const recentlyViewed = [
-  { name: 'iPhone 15 Pro', price: '$18,999', img: '/placeholder-ad.svg' },
-  { name: '2BR Centro', price: '$32k/mo', img: '/placeholder-ad.svg' },
-  { name: 'Yamaha MT-07', price: '$145k', img: '/placeholder-ad.svg' },
-  { name: 'MacBook Air M2', price: '$24,500', img: '/placeholder-ad.svg' },
-  { name: 'Condo 3 bed', price: '$3.25M', img: '/placeholder-ad.svg' },
-  { name: 'Nike Air Max', price: '$1,850', img: '/placeholder-ad.svg' }
+  { name: 'iPhone 15 Pro', price: '$18,999', img: '/storage/ads/catalog/photos/curated-smartphone-pexels-11120521.jpg' },
+  { name: '2BR Centro', price: '$32k/mo', img: '/storage/ads/catalog/photos/recovered-473a1203217f61038f559dff.jpg' },
+  { name: 'Yamaha MT-07', price: '$145k', img: '/storage/ads/catalog/photos/recovered-3a31b29ad2b93183d0d43f9e.jpg' },
+  { name: 'MacBook Air M2', price: '$24,500', img: '/storage/ads/catalog/photos/recovered-f4acebeb76b4aa4407cdd511.jpg' },
+  { name: 'Condo 3 bed', price: '$3.25M', img: '/storage/ads/catalog/photos/recovered-99b4b8fd399e87831076ecea.jpg' },
+  { name: 'Nike Air Max', price: '$1,850', img: '/storage/ads/catalog/photos/recovered-2510d496d7aa3fe0a25938c0.jpg' }
 ];
