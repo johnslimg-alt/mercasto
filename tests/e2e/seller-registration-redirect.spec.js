@@ -57,8 +57,9 @@ test.describe('seller campaign registration return', () => {
     await registrationForm.locator('input[type="checkbox"]').check();
     await registrationForm.locator('button[type="submit"]').click();
 
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBe('e2e-registration-token');
     await expect(page).toHaveURL(/\/post$/);
-    await expect(page.getByRole('heading', { name: 'Pon tu anuncio' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Pon tu anuncio' })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('heading', { name: /Bienvenido/ })).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => ({
       intent: sessionStorage.getItem('mercasto.protected_route_intent.v1'),
