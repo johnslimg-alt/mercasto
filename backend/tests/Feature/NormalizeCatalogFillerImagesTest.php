@@ -130,7 +130,7 @@ class NormalizeCatalogFillerImagesTest extends TestCase
         return Ad::query()->create([
             'user_id' => $user->id,
             'title' => $title,
-            'description' => 'Publicación de prueba con descripción suficientemente completa para validar el remapeo semántico de imágenes.',
+            'description' => 'Publicación de prueba. Incluye caja, cargador y accesorios originales para validar que el título tenga prioridad semántica.',
             'price' => 2500,
             'location' => 'Veracruz, Veracruz',
             'category' => $category,
