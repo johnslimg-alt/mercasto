@@ -52,7 +52,7 @@ jobs:
           case "${UPDATE_TYPE}" in
             version-update:semver-patch|version-update:semver-minor)
               case "${PACKAGE_ECOSYSTEM}" in
-                npm|github-actions|docker)
+                npm|npm_and_yarn|github-actions|docker)
                   eligible=true
                   ;;
               esac
