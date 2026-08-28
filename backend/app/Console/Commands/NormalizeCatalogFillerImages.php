@@ -81,6 +81,8 @@ class NormalizeCatalogFillerImages extends Command
             'ads/catalog/photos/recovered-f4acebeb76b4aa4407cdd511.jpg',
         ],
         'electronics_mobile' => ['ads/catalog/photos/curated-smartphone-pexels-11120521.jpg'],
+        'electronics_mobile_accessory' => ['ads/catalog/photos/curated-mobile-accessories-pexels-13570129.jpg'],
+        'electronics_smart_home' => ['ads/catalog/photos/curated-smart-home-pexels-27638181.jpg'],
         'electronics_tablet' => ['ads/catalog/photos/curated-tablet-pexels-9052250.jpg'],
         'electronics_wearable' => ['ads/catalog/photos/curated-smartwatch-pexels-15228779.jpg'],
         'electronics_component' => ['ads/catalog/photos/curated-components-pexels-37113174.jpg'],
@@ -98,6 +100,8 @@ class NormalizeCatalogFillerImages extends Command
         'pet_dog' => ['ads/catalog/photos/recovered-06c5223204dc61cebeba2a8e.jpg'],
         'pet_cat' => ['ads/catalog/photos/recovered-9a28fd5d0ae947122abab45b.jpg'],
         'pet_general' => ['ads/catalog/photos/recovered-eec4f9bc06881f96035a4f9e.jpg'],
+        'pet_carrier' => ['ads/catalog/photos/curated-pet-carrier-pexels-10875389.jpg'],
+        'pet_feeder' => ['ads/catalog/photos/curated-pet-feeder-pexels-12928245.jpg'],
         'pet_aquarium' => ['ads/catalog/photos/curated-aquarium-pexels-18420707.jpg'],
         'land' => ['ads/catalog/photos/curated-land-pexels-37738120.jpg'],
         'warehouse' => ['ads/catalog/photos/curated-warehouse-pexels-4481326.jpg'],
@@ -217,7 +221,7 @@ class NormalizeCatalogFillerImages extends Command
             'hogar' => $has(['herramienta', 'taladro']) ? 'repair' : 'interiors',
             'moda' => 'fashion',
             'ocio' => $has(['bici']) ? 'bicycle' : ($has(['yoga']) ? 'yoga' : ($has(['surf', 'kayak']) ? 'water' : ($has(['camping', 'campana']) ? 'camping' : ($has(['consola', 'videojuego']) ? 'electronics' : ($has(['libro']) ? 'education' : ($has(['guitarra', 'musica']) ? 'concert' : 'sports')))))),
-            'mascotas' => $has(['acuario']) ? 'pet_aquarium' : ($has(['gato', 'arena', 'rascador', 'tunel', 'laser']) ? 'pet_cat' : ($has(['perro', 'raza mediana', 'arnes', 'cuerda', 'cama']) ? 'pet_dog' : 'pet_general')),
+            'mascotas' => $has(['acuario']) ? 'pet_aquarium' : ($has(['transportadora', 'transportador', 'carrier']) ? 'pet_carrier' : ($has(['alimentador', 'bebedero', 'fuente con filtro']) ? 'pet_feeder' : ($has(['gato', 'arena', 'rascador', 'tunel', 'laser']) ? 'pet_cat' : ($has(['perro', 'raza mediana', 'arnes', 'cuerda', 'cama']) ? 'pet_dog' : 'pet_general')))),
             'turismo' => $has(['auto', 'sedan', 'camioneta', 'suv']) ? 'car' : ($has(['moto', 'scooter']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : ($has(['yate', 'acuatica', 'waverunner']) ? 'water' : 'travel'))),
             'infantil' => 'kids',
             'boletos' => $has(['formula 1']) ? 'car' : ($has(['boxeo', 'pumas', 'futbol', 'estadio']) ? 'sports' : 'concert'),
@@ -241,6 +245,7 @@ class NormalizeCatalogFillerImages extends Command
 
     private function electronicsKey(callable $has): string
     {
+        if ($has(['termostato', 'thermostat', 'smart home', 'domotica', 'homekit'])) return 'electronics_smart_home';
         if ($has(['drone', 'dji', 'autel'])) return 'electronics_drone';
         if ($has(['audifon', 'headset', 'bocina', 'soundbar', 'microfono', 'sony wh', 'jbl', 'bose'])) return 'electronics_audio';
         if ($has(['smart tv', 'oled', 'qled', 'television', 'pantalla', 'proyector'])) return 'electronics_tv';
@@ -248,7 +253,8 @@ class NormalizeCatalogFillerImages extends Command
         if ($has(['watch', 'garmin', 'smartband', 'fenix', 'forerunner'])) return 'electronics_wearable';
         if ($has(['ram ', ' ram', 'ryzen', 'rtx', 'tarjeta grafica', 'procesador', 'motherboard', 'componente'])) return 'electronics_component';
         if ($has(['laptop', 'macbook', 'thinkpad', 'xps', 'zephyrus', 'teclado', 'mouse', 'monitor', 'webcam', 'soporte monitor'])) return 'electronics_computer';
-        if ($has(['iphone', 'galaxy s', 'pixel', 'xiaomi', 'redmi', 'motorola', 'smartphone', 'funda', 'mica', 'magsafe', 'spigen', 'otterbox', 'carcasa', 'powerbank', 'cargador', 'cable'])) return 'electronics_mobile';
+        if ($has(['funda', 'mica', 'magsafe', 'spigen', 'otterbox', 'carcasa', 'powerbank', 'cargador', 'cable'])) return 'electronics_mobile_accessory';
+        if ($has(['iphone', 'galaxy s', 'pixel', 'xiaomi', 'redmi', 'motorola', 'smartphone'])) return 'electronics_mobile';
         return 'electronics';
     }
 
