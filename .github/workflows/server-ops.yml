@@ -12,6 +12,12 @@ on:
           - status
           - verify_quick
           - fix_images
+          - normalize_catalog_images
+      confirm:
+        description: Type MERCASTO for production data mutations
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -34,4 +40,34 @@ jobs:
             docker compose exec -T mercasto-frontend npm run verify:quick
           elif [ "${{ github.event.inputs.operation }}" = "fix_images" ]; then
             docker compose exec -T mercasto-backend php artisan mercasto:fix-images
+          elif [ "${{ github.event.inputs.operation }}" = "normalize_catalog_images" ]; then
+            test "${{ github.event.inputs.confirm }}" = "MERCASTO" || { echo "normalize_catalog_images requires confirm=MERCASTO"; exit 64; }
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+            plan="$(docker compose exec -T mercasto-backend php artisan ads:normalize-catalog-filler-images)"
+            printf '%s\n' "$plan"
+            changes="$(printf '%s\n' "$plan" | sed -n 's/.*CATALOG_IMAGE_SEMANTIC_PLAN total=[0-9][0-9]* changes=\([0-9][0-9]*\).*/\1/p' | tail -1)"
+            case "$changes" in ''|*[!0-9]*) echo "Unable to parse semantic image plan"; exit 2;; esac
+            if [ "$changes" -eq 0 ]; then
+              echo "Catalog semantic images already normalized."
+              exit 0
+            fi
+
+            backup_dir=/var/www/mercasto/postgres-backups
+            mkdir -p "$backup_dir"
+            backup="$backup_dir/pre_catalog_semantic_$(date -u +%Y%m%d_%H%M%S).dump"
+            docker compose exec -T postgres sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup"
+            test -s "$backup"
+            test "$(stat -c %s "$backup")" -gt 1048576
+            docker compose exec -T postgres pg_restore -l < "$backup" >/dev/null
+            sha256sum "$backup"
+            ls -lh "$backup"
+
+            docker compose exec -T mercasto-backend php artisan ads:normalize-catalog-filler-images --apply
+
+            post="$(docker compose exec -T mercasto-backend php artisan ads:normalize-catalog-filler-images)"
+            printf '%s\n' "$post"
+            printf '%s\n' "$post" | grep -Eq 'CATALOG_IMAGE_SEMANTIC_PLAN total=[0-9]+ changes=0'
+            curl -fsS --max-time 30 https://mercasto.com/api/categories >/dev/null
+            echo "CATALOG_SEMANTIC_IMAGE_PRODUCTION_REMAP=PASS backup=$backup"
           fi
