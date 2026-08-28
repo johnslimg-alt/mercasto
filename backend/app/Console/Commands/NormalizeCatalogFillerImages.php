@@ -15,6 +15,7 @@ class NormalizeCatalogFillerImages extends Command
     protected $description = 'Assign local catalog filler photos by listing semantics without touching genuine user listings.';
 
     private const RECOVERED_PREFIX = 'ads/catalog/photos/recovered-';
+    private const CURATED_PREFIX = 'ads/catalog/photos/curated-';
 
     private const POOLS = [
         'car' => [
@@ -71,11 +72,21 @@ class NormalizeCatalogFillerImages extends Command
         ],
         'electronics' => [
             'ads/catalog/photos/recovered-12d10509270a4429f57a6d43.jpg',
-            'ads/catalog/photos/recovered-a897de92c84026f54ea1bb8d.jpg',
+            'ads/catalog/photos/recovered-f4acebeb76b4aa4407cdd511.jpg',
+        ],
+        'electronics_computer' => [
+            'ads/catalog/photos/recovered-12d10509270a4429f57a6d43.jpg',
             'ads/catalog/photos/recovered-deb5000b89dc7274f1189c59.jpg',
             'ads/catalog/photos/recovered-f4acebeb76b4aa4407cdd511.jpg',
             'ads/catalog/photos/recovered-fbca2b2bac34642ca4be2c1a.jpg',
         ],
+        'electronics_mobile' => ['ads/catalog/photos/curated-smartphone-pexels-11120521.jpg'],
+        'electronics_tablet' => ['ads/catalog/photos/curated-tablet-pexels-9052250.jpg'],
+        'electronics_wearable' => ['ads/catalog/photos/curated-smartwatch-pexels-15228779.jpg'],
+        'electronics_component' => ['ads/catalog/photos/curated-components-pexels-37113174.jpg'],
+        'electronics_drone' => ['ads/catalog/photos/curated-drone-pexels-7582198.jpg'],
+        'electronics_tv' => ['ads/catalog/photos/curated-tv-pexels-6527053.jpg'],
+        'electronics_audio' => ['ads/catalog/photos/curated-audio-pexels-3394648.jpg'],
         'cleaning' => ['ads/catalog/photos/recovered-2b406670f8efed81f5396c61.jpg'],
         'repair' => [
             'ads/catalog/photos/recovered-633d60dd32902032533a651c.jpg',
@@ -92,6 +103,13 @@ class NormalizeCatalogFillerImages extends Command
             'ads/catalog/photos/recovered-eec4f9bc06881f96035a4f9e.jpg',
         ],
         'pet_cat' => ['ads/catalog/photos/recovered-9a28fd5d0ae947122abab45b.jpg'],
+        'pet_general' => [
+            'ads/catalog/photos/recovered-06c5223204dc61cebeba2a8e.jpg',
+            'ads/catalog/photos/recovered-9a28fd5d0ae947122abab45b.jpg',
+            'ads/catalog/photos/recovered-eec4f9bc06881f96035a4f9e.jpg',
+        ],
+        'pet_aquarium' => ['ads/catalog/photos/curated-aquarium-pexels-18420707.jpg'],
+        'land' => ['ads/catalog/photos/curated-land-pexels-37738120.jpg'],
         'education' => [
             'ads/catalog/photos/recovered-9a8bc0e3cd2b00e7bd8b4e0a.jpg',
             'ads/catalog/photos/recovered-deb5000b89dc7274f1189c59.jpg',
@@ -187,7 +205,7 @@ class NormalizeCatalogFillerImages extends Command
         $plan = [];
         foreach ($ads as $ad) {
             $current = $this->firstImage($ad);
-            if (! str_starts_with($current, self::RECOVERED_PREFIX) || ! Storage::disk('public')->exists($current)) {
+            if (! $this->isManagedSource($current) || ! Storage::disk('public')->exists($current)) {
                 throw new RuntimeException("Ad {$ad->id} does not have a verified recovered local photo: {$current}");
             }
             $key = $this->semanticKey($ad);
@@ -212,18 +230,18 @@ class NormalizeCatalogFillerImages extends Command
         $has = fn (array $needles): bool => collect($needles)->contains(fn ($needle) => str_contains($text, $needle));
         return match ((string) $ad->category) {
             'motor' => $has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car'),
-            'electronica' => 'electronics',
+            'electronica' => $this->electronicsKey($has),
             'empleo' => $has(['limpieza']) ? 'cleaning' : ($has(['plomer']) ? 'plumbing' : ($has(['electric', 'repar', 'mantenimiento', 'constru']) ? 'repair' : ($has(['chofer', 'repartidor', 'conductor']) ? 'car' : 'office'))),
             'servicios' => $has(['plomer']) ? 'plumbing' : ($has(['limpi']) ? 'cleaning' : 'repair'),
-            'inmobiliaria' => $has(['departamento', 'interior']) ? 'interiors' : ($has(['local', 'oficina', 'comercial']) ? 'office' : 'houses'),
+            'inmobiliaria' => $has(['terreno']) ? 'land' : ($has(['departamento', 'interior']) ? 'interiors' : ($has(['local', 'oficina', 'comercial']) ? 'office' : 'houses')),
             'hogar' => $has(['herramienta', 'taladro']) ? 'repair' : 'interiors',
             'moda' => 'fashion',
             'ocio' => $has(['bici']) ? 'bicycle' : ($has(['yoga']) ? 'yoga' : ($has(['surf', 'kayak']) ? 'water' : ($has(['camping', 'campana']) ? 'camping' : ($has(['consola', 'videojuego']) ? 'electronics' : ($has(['libro']) ? 'education' : ($has(['guitarra', 'musica']) ? 'concert' : 'sports')))))),
-            'mascotas' => $has(['gato']) ? 'pet_cat' : 'pet_dog',
+            'mascotas' => $has(['acuario']) ? 'pet_aquarium' : ($has(['gato', 'arena', 'rascador', 'tunel', 'laser']) ? 'pet_cat' : ($has(['perro', 'raza mediana', 'arnes', 'cuerda', 'cama']) ? 'pet_dog' : 'pet_general')),
             'turismo' => $has(['auto', 'sedan', 'camioneta', 'suv']) ? 'car' : ($has(['moto', 'scooter']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : ($has(['yate', 'acuatica', 'waverunner']) ? 'water' : 'travel'))),
             'infantil' => 'kids',
             'boletos' => $has(['formula 1']) ? 'car' : ($has(['boxeo', 'pumas', 'futbol', 'estadio']) ? 'sports' : 'concert'),
-            'negocios' => $has(['maquinaria', 'cortadora', 'industrial', 'equipo']) ? 'equipment' : 'office',
+            'negocios' => $has(['maquinaria', 'cortadora', 'industrial', 'equipo', 'refrigerador', 'carretilla', 'proyector']) ? 'equipment' : 'office',
             'formacion' => $has(['yoga']) ? 'yoga' : ($has(['crossfit', 'deport']) ? 'sports' : ($has(['astronom']) ? 'night' : 'education')),
             'hospedaje' => 'houses',
             'retiros_bienestar' => 'yoga',
@@ -233,6 +251,25 @@ class NormalizeCatalogFillerImages extends Command
             'souvenirs' => 'fashion',
             default => 'office',
         };
+    }
+
+
+    private function isManagedSource(string $path): bool
+    {
+        return str_starts_with($path, self::RECOVERED_PREFIX) || str_starts_with($path, self::CURATED_PREFIX);
+    }
+
+    private function electronicsKey(callable $has): string
+    {
+        if ($has(['drone', 'dji', 'autel'])) return 'electronics_drone';
+        if ($has(['audifon', 'headset', 'bocina', 'soundbar', 'microfono', 'sony wh', 'jbl', 'bose'])) return 'electronics_audio';
+        if ($has(['smart tv', 'oled', 'qled', 'television', 'pantalla', 'proyector'])) return 'electronics_tv';
+        if ($has(['ipad', 'tablet', 'galaxy tab', 'lenovo tab'])) return 'electronics_tablet';
+        if ($has(['watch', 'garmin', 'smartband', 'fenix', 'forerunner'])) return 'electronics_wearable';
+        if ($has(['ram ', ' ram', 'ryzen', 'rtx', 'tarjeta grafica', 'procesador', 'motherboard', 'componente'])) return 'electronics_component';
+        if ($has(['laptop', 'macbook', 'thinkpad', 'xps', 'zephyrus', 'teclado', 'mouse', 'monitor', 'webcam', 'soporte monitor'])) return 'electronics_computer';
+        if ($has(['iphone', 'galaxy s', 'pixel', 'xiaomi', 'redmi', 'motorola', 'smartphone', 'funda', 'mica', 'magsafe', 'spigen', 'otterbox', 'carcasa', 'powerbank', 'cargador', 'cable'])) return 'electronics_mobile';
+        return 'electronics';
     }
 
     private function pick(string $key, int $id): string
