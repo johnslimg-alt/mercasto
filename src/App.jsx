@@ -19,6 +19,7 @@ import { useRefQueryParam } from './app/referralQuery';
 import { useSearchSuggestionState } from './app/useSearchSuggestionState';
 import { useLocationSearchState } from './app/useLocationSearchState';
 import { useViewedAdState } from './app/useViewedAdState';
+import { useShellMenuState } from './app/useShellMenuState';
 import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
@@ -717,9 +718,11 @@ function App() {
   const [emailForm, setEmailForm] = useState({ new_email: '', password: '' });
   const [emailLoading, setEmailLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showTabBarMenu, setShowTabBarMenu] = useState(false);
+  const {
+    showNotifications, setShowNotifications,
+    showProfileMenu, setShowProfileMenu,
+    showTabBarMenu, setShowTabBarMenu,
+  } = useShellMenuState();
   const [unreadCount, setUnreadCount] = useState(0);
   const [sliderAutoplay, setSliderAutoplay] = useState(() => localStorage.getItem('sliderAutoplay') !== 'false');
   const [notificationsForm, setNotificationsForm] = useState({ email_alerts: true, email_new_message: true, push_notifications: true, marketing: false });
