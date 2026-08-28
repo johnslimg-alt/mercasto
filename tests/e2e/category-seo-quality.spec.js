@@ -91,5 +91,12 @@ test('tourism category tiles stay on noindex filtered results instead of orphan 
   await page.goto('/turismo', { waitUntil: 'domcontentloaded' });
 
   await page.getByRole('button', { name: /Hoteles y Hospedaje/i }).click();
-  await expect(page).toHaveURL(/\/listings\?category=turismo&search=hospedaje/);
+  await expect.poll(() => page.evaluate(() => {
+    const url = new URL(window.location.href);
+    return {
+      pathname: url.pathname,
+      category: url.searchParams.get('category'),
+      search: url.searchParams.get('search'),
+    };
+  })).toEqual({ pathname: '/listings', category: 'turismo', search: 'hospedaje' });
 });
