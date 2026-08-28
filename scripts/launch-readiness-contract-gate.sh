@@ -59,6 +59,8 @@ grep -qF 'npx --no-install playwright test' "$E2E"
 grep -qF -- '--output="$results_dir"' "$E2E"
 grep -qF 'PLAYWRIGHT_HTML_OUTPUT_DIR' "$E2E"
 grep -qF '/tmp/mercasto-public-e2e-' "$E2E"
+grep -qF 'workers="${PLAYWRIGHT_WORKERS:-1}"' "$E2E"
+grep -qF 'report_dir="${PLAYWRIGHT_HTML_OUTPUT_DIR:-${ROOT_DIR}/playwright-report}"' "$E2E"
 
 for excluded in './.claude' './postgres-data' './postgres-backups'; do
   grep -qF -- "-path '$excluded' -prune" "$SCAN"
