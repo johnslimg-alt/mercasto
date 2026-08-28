@@ -18,8 +18,9 @@ class RecommendationService
             return $this->getTrendingRecommendations($limit, $excludeAdId);
         }
 
-        $cacheKey = "recommendations:user:{$user->id}:limit:{$limit}:exclude:{$excludeAdId}";
-        
+        $cacheVersion = $this->userCacheVersion((int) $user->id);
+        $cacheKey = "recommendations:user:{$user->id}:v:{$cacheVersion}:limit:{$limit}:exclude:{$excludeAdId}";
+
         return Cache::remember($cacheKey, 300, function () use ($user, $limit, $excludeAdId) {
             $recommendations = [];
 
@@ -45,11 +46,7 @@ class RecommendationService
                 $recommendations = array_merge($recommendations, $trending);
             }
 
-            // Remove duplicates and limit
-            $uniqueIds = array_unique(array_column($recommendations, 'id'));
-            $uniqueAds = array_intersect_key($recommendations, array_flip($uniqueIds));
-            
-            return array_slice(array_values($uniqueAds), 0, $limit);
+            return $this->deduplicateRecommendations($recommendations, $limit);
         });
     }
 
@@ -81,6 +78,7 @@ class RecommendationService
         // Get categories and states from reference ads
         $referenceAds = Ad::whereIn('id', $referenceIds)
             ->where('status', 'active')
+            ->where('is_catalog_filler', false)
             ->get(['id', 'category', 'state', 'price']);
 
         if ($referenceAds->isEmpty()) {
@@ -93,7 +91,8 @@ class RecommendationService
 
         // Find similar ads
         $query = Ad::where('status', 'active')
-            ->whereNotIn('id', array_merge($referenceIds, [$excludeAdId]))
+            ->where('is_catalog_filler', false)
+            ->whereNotIn('id', array_filter(array_merge($referenceIds, [$excludeAdId])))
             ->whereNotIn('id', function($query) use ($user) {
                 $query->select('ad_id')
                     ->from('favorites')
@@ -169,6 +168,7 @@ class RecommendationService
 
         $ads = Ad::whereIn('id', $recommendedIds)
             ->where('status', 'active')
+            ->where('is_catalog_filler', false)
             ->get();
 
         return $this->formatAds($ads, 'collaborative');
@@ -193,7 +193,8 @@ class RecommendationService
 
         $ads = Ad::whereIn('category', $preferredCategories)
             ->where('status', 'active')
-            ->where('id', '!=', $excludeAdId)
+            ->where('is_catalog_filler', false)
+            ->when($excludeAdId, fn ($query) => $query->where('id', '!=', $excludeAdId))
             ->whereNotIn('id', function($query) use ($user) {
                 $query->select('ad_id')
                     ->from('favorites')
@@ -216,7 +217,8 @@ class RecommendationService
         
         return Cache::remember($cacheKey, 600, function () use ($limit, $excludeAdId, $state) {
             $query = Ad::where('status', 'active')
-                ->where('id', '!=', $excludeAdId)
+                ->where('is_catalog_filler', false)
+                ->when($excludeAdId, fn ($builder) => $builder->where('id', '!=', $excludeAdId))
                 ->where('created_at', '>=', now()->subDays(30));
 
             if ($state) {
@@ -235,13 +237,23 @@ class RecommendationService
     /**
      * Track ad view for collaborative filtering
      */
-    public function trackView(int $adId, ?User $user, ?string $ipAddress = null, ?string $userAgent = null): void
+    public function trackView(int $adId, ?User $user): void
     {
-        if (!$user) {
-            return; // Only track authenticated users
+        if (! $user) {
+            return; // Only track authenticated users.
         }
 
-        // Prevent duplicate views within 1 hour
+        $isPublicGenuineAd = Ad::query()
+            ->whereKey($adId)
+            ->where('status', 'active')
+            ->where('is_catalog_filler', false)
+            ->exists();
+
+        if (! $isPublicGenuineAd) {
+            return;
+        }
+
+        // Prevent duplicate views within 1 hour.
         $recentView = DB::table('ad_views')
             ->where('ad_id', $adId)
             ->where('user_id', $user->id)
@@ -255,15 +267,44 @@ class RecommendationService
         DB::table('ad_views')->insert([
             'ad_id' => $adId,
             'user_id' => $user->id,
-            'ip_address' => $ipAddress,
-            'user_agent' => $userAgent,
             'viewed_at' => now(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        // Clear recommendation cache
-        Cache::forget("recommendations:user:{$user->id}");
+        $this->bumpUserCacheVersion((int) $user->id);
+    }
+
+    private function userCacheVersion(int $userId): int
+    {
+        return max(1, (int) Cache::get("recommendations:user:{$userId}:version", 1));
+    }
+
+    private function bumpUserCacheVersion(int $userId): void
+    {
+        $key = "recommendations:user:{$userId}:version";
+        Cache::put($key, $this->userCacheVersion($userId) + 1, now()->addDay());
+    }
+
+    private function deduplicateRecommendations(array $recommendations, int $limit): array
+    {
+        $seen = [];
+        $unique = [];
+
+        foreach ($recommendations as $recommendation) {
+            $id = (int) ($recommendation['id'] ?? 0);
+            if ($id <= 0 || isset($seen[$id])) {
+                continue;
+            }
+
+            $seen[$id] = true;
+            $unique[] = $recommendation;
+            if (count($unique) >= $limit) {
+                break;
+            }
+        }
+
+        return $unique;
     }
 
     /**

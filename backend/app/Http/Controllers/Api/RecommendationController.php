@@ -91,10 +91,8 @@ class RecommendationController extends Controller
         $user = $request->user();
         
         $this->recommendationService->trackView(
-            $adId,
-            $user,
-            $request->ip(),
-            $request->userAgent()
+            (int) $adId,
+            $user
         );
 
         return response()->json([
