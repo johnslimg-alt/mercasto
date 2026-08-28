@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Mercasto off-host media replication daily
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 UTC
+Persistent=true
+RandomizedDelaySec=10m
+Unit=mercasto-media-offsite-backup.service
+
+[Install]
+WantedBy=timers.target
