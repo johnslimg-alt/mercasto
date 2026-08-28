@@ -214,10 +214,10 @@ export default function CatalogScreen({
       )}
 
       <div className="mx-auto flex min-h-[calc(100vh-11rem)] max-w-[1440px] flex-col gap-6 px-4 py-6 pb-28 md:pb-8 lg:flex-row lg:px-6 lg:py-8">
-        <div className="mb-2 flex min-h-10 items-center justify-between lg:hidden">
-          <h1 className="text-[18px] font-bold text-slate-900 dark:text-white">
+        <div className="mb-2 flex min-h-12 items-center justify-between gap-3 lg:hidden">
+          <h1 className="min-w-0 pr-2 text-[16px] font-bold leading-tight text-slate-900 dark:text-white sm:text-[18px]">
             {t.search_results}
-            <span className="ml-1 text-[14px] font-normal text-slate-400">({safeServerAds.length})</span>
+            <span className="ml-1 whitespace-nowrap text-[12px] font-normal text-slate-400 sm:text-[14px]">({safeServerAds.length})</span>
           </h1>
           <button
             data-testid="catalog-mobile-filters"
