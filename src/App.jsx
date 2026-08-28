@@ -4537,7 +4537,7 @@ function App() {
                 {user?.avatar_url ? (
                   <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-full object-cover" alt=""/>
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500"><User size={18} /></div>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"><User size={18} /></div>
                 )}
               <span className="text-[13px] font-medium hidden lg:block">{user?.name || t.guest || 'Invitado'}</span>
               </button>
@@ -4670,6 +4670,7 @@ function App() {
               <Route path="/notificaciones" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><NotificationsScreen user={user} t={t} lang={lang} /></React.Suspense></RequireAuth>} />
               <Route path="/mensajes" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}><React.Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-lime-500 border-t-transparent animate-spin"/></div>}><ChatScreen user={user} lang={lang} t={t} /></React.Suspense></RequireAuth>} />
               <Route path="/profile" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal}>{renderUserDashboard()}</RequireAuth>} />
+              <Route path="/admin/marketing" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} admin><div data-testid="admin-marketing-route-anchor" className="min-h-screen bg-slate-100 dark:bg-slate-950" /></RequireAuth>} />
               <Route path="/admin" element={<RequireAuth user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} admin>{renderAdminScreen()}</RequireAuth>} />
               <Route path="/terms" element={<Navigate to="/terminos" replace />} />
               <Route path="/privacy" element={<Navigate to="/privacidad" replace />} />

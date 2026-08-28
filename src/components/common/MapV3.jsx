@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Crosshair, Maximize2, Search, X, Loader2, SlidersHorizontal, MapPin, Layers, Filter, Navigation, Locate } from 'lucide-react';
 import { filterConfig } from '../../constants/filterConfig';
 import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
@@ -1158,7 +1159,7 @@ function createPopupElement(ad, marker) {
         <button
           type="button"
           onClick={() => setOnlyWithCoords(v => !v)}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
+          className={`inline-flex min-h-12 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
             onlyWithCoords
               ? 'bg-[#84CC16] text-slate-950'
               : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -1170,7 +1171,7 @@ function createPopupElement(ad, marker) {
           data-testid="map-clear-filters"
           type="button"
           onClick={clearAllFilters}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/20 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/30 transition-colors"
+          className="inline-flex min-h-12 items-center gap-1.5 rounded-xl bg-red-500/20 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/30 transition-colors"
         >
           <X size={14} /> {t('common.reset')}
         </button>
@@ -1181,7 +1182,7 @@ function createPopupElement(ad, marker) {
         data-testid="map-search-area"
         type="button"
         onClick={handleSearchArea}
-        className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-[#a3e635] transition-colors"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2.5 text-sm font-black text-slate-950 transition-colors hover:bg-[#a3e635]"
       >
         <Crosshair size={16} /> {t('map.searchArea')}
       </button>
@@ -1296,7 +1297,7 @@ function createPopupElement(ad, marker) {
             type="button"
             onClick={getUserLocation}
             disabled={locating}
-            className="absolute bottom-3 left-3 z-[2] inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-2.5 text-xs font-black text-white shadow-lg hover:bg-blue-500 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute bottom-3 left-3 z-[5] inline-flex min-h-12 items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-2.5 text-xs font-black text-white shadow-lg hover:bg-blue-500 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('map.nearMe')}
           >
             {locating ? (
@@ -1313,7 +1314,7 @@ function createPopupElement(ad, marker) {
             data-testid="map-expand"
             type="button"
             onClick={handleExpandMap}
-            className="absolute bottom-3 right-3 z-[2] inline-flex items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg hover:scale-105 active:scale-95 transition-all"
+            className="absolute bottom-3 right-3 z-[5] inline-flex min-h-12 items-center gap-1.5 rounded-full bg-[#84CC16] px-3.5 py-2.5 text-xs font-black text-slate-950 shadow-lg hover:scale-105 active:scale-95 transition-all"
           >
             <Maximize2 size={13} /> {t('map.fullscreen')}
           </button>
@@ -1321,7 +1322,7 @@ function createPopupElement(ad, marker) {
       </div>
 
       {/* ===================== FULLSCREEN MAP MODAL ===================== */}
-      {expanded && (
+      {expanded && typeof document !== 'undefined' && createPortal(
         <div
           ref={fullscreenDialogRef}
           className="fixed inset-0 z-[9999] flex flex-col bg-slate-950"
@@ -1348,7 +1349,7 @@ function createPopupElement(ad, marker) {
               data-testid="map-filter-toggle"
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
+              className={`inline-flex min-h-12 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
                 showFilters
                   ? 'bg-[#84CC16] text-slate-950'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -1361,7 +1362,7 @@ function createPopupElement(ad, marker) {
               type="button"
               onClick={getUserLocation}
               disabled={locating}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed h-10 w-10 shrink-0 sm:w-auto sm:px-4 text-xs font-black transition-colors"
+              className="inline-flex h-12 w-12 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-xs font-black text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-4"
               title={t('map.nearMe')}
             >
               {locating ? (
@@ -1377,7 +1378,7 @@ function createPopupElement(ad, marker) {
               data-testid="map-close"
               type="button"
               onClick={closeFullscreenMap}
-              className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-colors sm:h-10 sm:w-auto sm:gap-2 sm:px-4"
+              className="ml-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-500/20 text-red-400 transition-colors hover:bg-red-500/30 hover:text-red-300 sm:w-auto sm:gap-2 sm:px-4"
               aria-label={t('map.closeMap')}
               title={t('map.closeEsc')}
             >
@@ -1420,14 +1421,14 @@ function createPopupElement(ad, marker) {
                   <button
                     type="button"
                     onClick={clearAllFilters}
-                    className="rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-slate-700 transition-colors"
+                    className="min-h-12 rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-300 transition-colors hover:bg-slate-700"
                   >
                     {t('map.clearFilters')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setExpanded(false)}
-                    className="rounded-lg bg-red-500/20 px-3 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-500/30 transition-colors"
+                    className="min-h-12 rounded-lg bg-red-500/20 px-3 py-1.5 text-[11px] font-bold text-red-400 transition-colors hover:bg-red-500/30"
                   >
                     <X size={14} className="inline mr-1" />
                     {t('common.close')}
@@ -1454,7 +1455,8 @@ function createPopupElement(ad, marker) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

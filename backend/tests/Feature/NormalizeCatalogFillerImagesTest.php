@@ -24,7 +24,7 @@ class NormalizeCatalogFillerImagesTest extends TestCase
         $user = User::factory()->create();
         $cases = [
             ['motor', 'Honda Civic 2020 impecable', 'car'],
-            ['motor', 'Fundas para Asientos Delanteros Universales', 'car_accessory'],
+            ['motor', 'Fundas para Asientos Delanteros Universales', 'car_seat_cover'],
             ['motor', 'Funda Cubreauto Premium con Forro Interior', 'car_cover'],
             ['motor', 'Moto BMW G310 GS Adventure', 'motorcycle'],
             ['ocio', 'Catamarán de Pesca Boston Whaler 250 Outrage', 'water_boat'],

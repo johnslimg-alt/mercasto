@@ -76,3 +76,22 @@ test('desktop language selector exposes a visible keyboard focus indicator', asy
   await languageSelect.selectOption('en');
   await expect(languageSelect).toHaveValue('en');
 });
+
+
+test('desktop guest account icon is circular', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+
+  const geometry = await page.getByTestId('desktop-account-button').locator('div').first().evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+      radius: parseFloat(getComputedStyle(element).borderRadius),
+    };
+  });
+
+  expect(Math.abs(geometry.width - geometry.height)).toBeLessThanOrEqual(1);
+  expect(geometry.radius).toBeGreaterThanOrEqual(geometry.width / 2);
+});
