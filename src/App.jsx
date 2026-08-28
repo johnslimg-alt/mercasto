@@ -17,6 +17,7 @@ import {
 } from './app/routeHelpers';
 import { useRefQueryParam } from './app/referralQuery';
 import { useSearchSuggestionState } from './app/useSearchSuggestionState';
+import { useLocationSearchState } from './app/useLocationSearchState';
 import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
@@ -799,14 +800,23 @@ function App() {
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
   const [adminReportsLoadError, setAdminReportsLoadError] = useState(false);
-  const [radius, setRadius] = useState(50);
-  const [searchLocation, setSearchLocation] = useState(null); // { lat, lng, name }
-  const [searchLocationInput, setSearchLocationInput] = useState('');
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
-  const [showMobileLocationPicker, setShowMobileLocationPicker] = useState(false);
-  const [locState, setLocState] = useState('');
-  const [locCity, setLocCity] = useState('');
-  const mobileSearchInputRef = useRef(null);
+  const {
+    locCity,
+    locState,
+    mobileSearchInputRef,
+    radius,
+    searchLocation,
+    searchLocationInput,
+    setLocCity,
+    setLocState,
+    setRadius,
+    setSearchLocation,
+    setSearchLocationInput,
+    setShowLocationPicker,
+    setShowMobileLocationPicker,
+    showLocationPicker,
+    showMobileLocationPicker,
+  } = useLocationSearchState();
   const skipFilterUrlSyncRef = useRef(false);
   const lastInternalFilterPathRef = useRef('');
   const skipCategoryFilterResetRef = useRef(false);
