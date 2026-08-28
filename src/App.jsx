@@ -16,6 +16,7 @@ import {
   AuthEntryRoute, LegacyAccountListingRoute, ReferralRedirect, RequireAuth,
 } from './app/routeHelpers';
 import { useRefQueryParam } from './app/referralQuery';
+import { useSearchSuggestionState } from './app/useSearchSuggestionState';
 import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
@@ -374,28 +375,23 @@ function App() {
   const [adsTotal, setAdsTotal] = useState(0);
   const [loadingAds, setLoadingAds] = useState(true);
   const [adsLoadError, setAdsLoadError] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [recentSearches, setRecentSearches] = useState(() => {
-    try {
-      const storedSearches = JSON.parse(localStorage.getItem('mercasto_recent_searches') || '[]');
-      if (!Array.isArray(storedSearches)) {
-        localStorage.removeItem('mercasto_recent_searches');
-        return [];
-      }
-      return storedSearches.filter(item => typeof item === 'string').slice(0, 5);
-    } catch {
-      localStorage.removeItem('mercasto_recent_searches');
-      return [];
-    }
-  });
-  const suggestionDebounceRef = useRef(null);
-  const suggestionAbortRef = useRef(null);
-  const suggestionSequenceRef = useRef(0);
-  const desktopSearchRef = useRef(null);
-  const mobileSearchRef = useRef(null);
+  const {
+    desktopSearchRef,
+    highlightedIndex,
+    mobileSearchRef,
+    recentSearches,
+    searchQuery,
+    setHighlightedIndex,
+    setRecentSearches,
+    setSearchQuery,
+    setShowSuggestions,
+    setSuggestions,
+    showSuggestions,
+    suggestionAbortRef,
+    suggestionDebounceRef,
+    suggestionSequenceRef,
+    suggestions,
+  } = useSearchSuggestionState();
   const [selectedState, setSelectedState] = useState('');
   const [activeCat, setActiveCat] = useState(''); // Фильтр по категории
   const [activeSub, setActiveSub] = useState(''); // Фильтр по подкатегории
