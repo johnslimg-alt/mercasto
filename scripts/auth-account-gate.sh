@@ -10,6 +10,7 @@ TWO_FACTOR="backend/app/Http/Controllers/Api/TwoFactorAuthenticationController.p
 DELETE_ACCOUNT="backend/app/Http/Controllers/Api/AccountDeletionController.php"
 PROFILE="backend/app/Http/Controllers/Api/ProfileController.php"
 APP="src/App.jsx"
+ROUTE_HELPERS="src/app/routeHelpers.jsx"
 PUBLIC_SMOKE="tests/e2e/public-smoke.spec.js"
 
 echo "== Auth and account launch gate =="
@@ -20,6 +21,7 @@ test -f "$TWO_FACTOR"
 test -f "$DELETE_ACCOUNT"
 test -f "$PROFILE"
 test -f "$APP"
+test -f "$ROUTE_HELPERS"
 test -f "$PUBLIC_SMOKE"
 
 # Public auth routes must be rate-limited.
@@ -126,7 +128,7 @@ grep -qF "handleLogout" "$APP"
 grep -qF "window.confirm(t.account_action_delete_confirm)" "$APP"
 
 # Browser auth/account deep links must resolve to real screens rather than the SPA 404 fallback.
-grep -qF 'function AuthEntryRoute' "$APP"
+grep -qF 'export function AuthEntryRoute' "$ROUTE_HELPERS"
 grep -qF '<Route path="/login" element={<AuthEntryRoute mode="login"' "$APP"
 grep -qF '<Route path="/register" element={<AuthEntryRoute mode="register"' "$APP"
 grep -qF '<Route path="/publish" element={<Navigate to="/post" replace />}' "$APP"
@@ -134,7 +136,7 @@ grep -qF '<Route path="/account/listings" element={<Navigate to="/profile?tab=my
 grep -qF '<Route path="/account/billing" element={<Navigate to="/profile?tab=transactions" replace />}' "$APP"
 grep -qF '<Route path="/account/promotions" element={<Navigate to="/tarifas" replace />}' "$APP"
 grep -qF '<Route path="/admin/login" element={<Navigate to="/admin" replace />}' "$APP"
-grep -qF 'function LegacyAccountListingRoute' "$APP"
+grep -qF 'export function LegacyAccountListingRoute' "$ROUTE_HELPERS"
 grep -qF "opens the matching authentication entry instead of a 404" "$PUBLIC_SMOKE"
 grep -qF "resolves to its protected browser destination" "$PUBLIC_SMOKE"
 
