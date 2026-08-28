@@ -28,6 +28,18 @@ class NormalizeCatalogFillerImagesTest extends TestCase
             ['servicios', 'Plomería 24/7 urgencias', 'plumbing'],
             ['moda', 'Camisa de Vestir Slim Fit', 'fashion'],
             ['mascotas', 'Rascador moderno para gato', 'pet_cat'],
+            ['mascotas', 'Acuario 100L con filtro', 'pet_aquarium'],
+            ['mascotas', 'Bebedero de fuente con filtro', 'pet_general'],
+            ['inmobiliaria', 'Terreno Comercial 500m2', 'land'],
+            ['negocios', 'Refrigerador comercial vitrina', 'equipment'],
+            ['electronica', 'Google Pixel 8 Pro', 'electronics_mobile'],
+            ['electronica', 'iPad Pro M1 11 pulgadas', 'electronics_tablet'],
+            ['electronica', 'Apple Watch Series 8 GPS', 'electronics_wearable'],
+            ['electronica', 'Tarjeta Gráfica RTX 3060', 'electronics_component'],
+            ['electronica', 'Dell XPS 13 Ultra', 'electronics_computer'],
+            ['electronica', 'Drone DJI Avata FPV', 'electronics_drone'],
+            ['electronica', 'Audífonos Sony WH-1000XM5', 'electronics_audio'],
+            ['electronica', 'Pantalla LG OLED 65 pulgadas 4K', 'electronics_tv'],
             ['empleo', 'Ingeniero Backend PHP', 'office'],
         ];
 
@@ -56,6 +68,11 @@ class NormalizeCatalogFillerImagesTest extends TestCase
         }
         $this->assertSame('ads/catalog/photos/recovered-genuine.jpg', $this->firstImage($genuine->fresh()));
         $this->assertArrayNotHasKey('catalog_image_semantic_key', $genuine->fresh()->attributes ?? []);
+
+        $imagesAfterApply = array_map(fn (array $row) => $this->firstImage($row[0]->fresh()), $fillers);
+        $this->assertSame(0, Artisan::call('ads:normalize-catalog-filler-images'));
+        $this->assertStringContainsString('changes=0', Artisan::output());
+        $this->assertSame($imagesAfterApply, array_map(fn (array $row) => $this->firstImage($row[0]->fresh()), $fillers));
     }
 
     public function test_semantic_remap_refuses_non_recovered_active_filler(): void
