@@ -22,6 +22,7 @@ import { useViewedAdState } from './app/useViewedAdState';
 import { useShellMenuState } from './app/useShellMenuState';
 import { useAuthSessionState } from './app/useAuthSessionState';
 import { useTransientModalState } from './app/useTransientModalState';
+import { useCatalogState } from './app/useCatalogState';
 import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
@@ -397,15 +398,12 @@ function App() {
     suggestionSequenceRef,
     suggestions,
   } = useSearchSuggestionState();
-  const [selectedState, setSelectedState] = useState('');
-  const [activeCat, setActiveCat] = useState(''); // Фильтр по категории
-  const [activeSub, setActiveSub] = useState(''); // Фильтр по подкатегории
-
-  // Состояния для динамической фильтрации (EAV JSON)
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [conditionFilter, setConditionFilter] = useState([]);
-  const [dynamicFilters, setDynamicFilters] = useState({});
+  const {
+    selectedState, setSelectedState, activeCat, setActiveCat, activeSub, setActiveSub,
+    minPrice, setMinPrice, maxPrice, setMaxPrice, conditionFilter, setConditionFilter,
+    dynamicFilters, setDynamicFilters, loadingMore, setLoadingMore, currentPage, setCurrentPage,
+    debouncedSearch, setDebouncedSearch, debouncedLocInput, setDebouncedLocInput, hasMore, setHasMore,
+  } = useCatalogState();
 
   const {
     viewedAd, setViewedAd, deepLinkAdMissing, setDeepLinkAdMissing,
@@ -733,7 +731,6 @@ function App() {
   const [searchAlerts, setSearchAlerts] = useState([]);
   const [loadingSearchAlerts, setLoadingSearchAlerts] = useState(false);
   const [savingSearchAlert, setSavingSearchAlert] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [userAds, setUserAds] = useState([]);
   const [userAdsLoading, setUserAdsLoading] = useState(true);
   const [userAdsLoadError, setUserAdsLoadError] = useState(false);
@@ -823,11 +820,8 @@ function App() {
   const skipFilterUrlSyncRef = useRef(false);
   const lastInternalFilterPathRef = useRef('');
   const skipCategoryFilterResetRef = useRef(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const adsAbortRef = useRef(null);
   const adsRequestSequenceRef = useRef(0);
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [debouncedLocInput, setDebouncedLocInput] = useState('');
 
   const buildHomeFilterPath = useCallback((overrides = {}) => {
     const nextSearch = overrides.search ?? debouncedSearch;
@@ -1072,7 +1066,6 @@ function App() {
     }
   }, [showAuthModal]);
 
-  const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
   const lastAdElementRef = useCallback(node => {
     if (loadingAds || loadingMore) return;
