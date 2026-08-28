@@ -29,7 +29,10 @@ class NormalizeCatalogFillerImages extends Command
         ],
         'car_accessory' => [
             'ads/catalog/photos/curated-car-seat-pexels-31306012.jpg',
-            'ads/catalog/photos/recovered-512315b9704fe486683de16b.jpg',
+            'ads/catalog/photos/curated-car-interior-pexels-7395365.jpg',
+        ],
+        'car_cover' => [
+            'ads/catalog/photos/curated-car-cover-pexels-10313690.jpg',
         ],
         'motorcycle' => [
             'ads/catalog/photos/recovered-2ad62fabd46a04e4b7fa0b97.jpg',
@@ -206,7 +209,7 @@ class NormalizeCatalogFillerImages extends Command
         $text = Str::lower(Str::ascii(implode(' ', array_filter([(string) $ad->title, (string) $ad->subcategory, (string) $ad->description]))));
         $has = fn (array $needles): bool => collect($needles)->contains(fn ($needle) => str_contains($text, $needle));
         return match ((string) $ad->category) {
-            'motor' => $has(['funda', 'asiento', 'cubreasiento', 'cubre asiento', 'cubrevolante', 'tapete']) ? 'car_accessory' : ($has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car')),
+            'motor' => $has(['cubreauto', 'cubre auto', 'funda exterior', 'funda para auto', 'funda para coche']) ? 'car_cover' : ($has(['funda', 'asiento', 'cubreasiento', 'cubre asiento', 'cubrevolante', 'tapete']) ? 'car_accessory' : ($has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car'))),
             'electronica' => $this->electronicsKey($has),
             'empleo' => $has(['limpieza']) ? 'cleaning' : ($has(['plomer']) ? 'plumbing' : ($has(['electric', 'repar', 'mantenimiento', 'constru']) ? 'repair' : ($has(['chofer', 'repartidor', 'conductor']) ? 'car' : 'office'))),
             'servicios' => $has(['plomer']) ? 'plumbing' : ($has(['limpi']) ? 'cleaning' : 'repair'),
