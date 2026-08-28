@@ -27,8 +27,10 @@ class NormalizeCatalogFillerImages extends Command
             'ads/catalog/photos/recovered-aa892041cac7d641c3163b0f.jpg',
             'ads/catalog/photos/recovered-c856c36a07bb7efa23ea7b6f.jpg',
         ],
+        'car_seat_cover' => [
+            'ads/catalog/photos/curated-car-seat-cover-pexels-30454739.jpg',
+        ],
         'car_accessory' => [
-            'ads/catalog/photos/curated-car-seat-pexels-31306012.jpg',
             'ads/catalog/photos/curated-car-interior-pexels-7395365.jpg',
         ],
         'car_cover' => [
@@ -213,7 +215,7 @@ class NormalizeCatalogFillerImages extends Command
         $text = Str::lower(Str::ascii(implode(' ', array_filter([(string) $ad->title, (string) $ad->subcategory, (string) $ad->description]))));
         $has = fn (array $needles): bool => collect($needles)->contains(fn ($needle) => str_contains($text, $needle));
         return match ((string) $ad->category) {
-            'motor' => $has(['cubreauto', 'cubre auto', 'funda exterior', 'funda para auto', 'funda para coche']) ? 'car_cover' : ($has(['funda', 'asiento', 'cubreasiento', 'cubre asiento', 'cubrevolante', 'tapete']) ? 'car_accessory' : ($has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car'))),
+            'motor' => $has(['cubreauto', 'cubre auto', 'funda exterior', 'funda para auto', 'funda para coche']) ? 'car_cover' : ($has(['funda para asiento', 'fundas para asiento', 'cubreasiento', 'cubre asiento', 'asientos impermeables', 'asientos de piel', 'asientos delanteros']) ? 'car_seat_cover' : ($has(['cubrevolante', 'tapete']) ? 'car_accessory' : ($has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car')))),
             'electronica' => $this->electronicsKey($has),
             'empleo' => $has(['limpieza']) ? 'cleaning' : ($has(['plomer']) ? 'plumbing' : ($has(['electric', 'repar', 'mantenimiento', 'constru']) ? 'repair' : ($has(['chofer', 'repartidor', 'conductor']) ? 'car' : 'office'))),
             'servicios' => $has(['plomer']) ? 'plumbing' : ($has(['limpi']) ? 'cleaning' : 'repair'),
