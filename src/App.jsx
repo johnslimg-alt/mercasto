@@ -18,6 +18,7 @@ import {
 import { useRefQueryParam } from './app/referralQuery';
 import { useSearchSuggestionState } from './app/useSearchSuggestionState';
 import { useLocationSearchState } from './app/useLocationSearchState';
+import { useViewedAdState } from './app/useViewedAdState';
 import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
@@ -403,10 +404,10 @@ function App() {
   const [conditionFilter, setConditionFilter] = useState([]);
   const [dynamicFilters, setDynamicFilters] = useState({});
 
-  const [viewedAd, setViewedAd] = useState(null);
-  const [deepLinkAdMissing, setDeepLinkAdMissing] = useState(false);
-  const [deepLinkAdLoadError, setDeepLinkAdLoadError] = useState(false);
-  const [deepLinkAdRetryNonce, setDeepLinkAdRetryNonce] = useState(0);
+  const {
+    viewedAd, setViewedAd, deepLinkAdMissing, setDeepLinkAdMissing,
+    deepLinkAdLoadError, setDeepLinkAdLoadError, deepLinkAdRetryNonce, setDeepLinkAdRetryNonce,
+  } = useViewedAdState();
   const [viewedCompany, setViewedCompany] = useState(null);
   const [companyAds, setCompanyAds] = useState([]);
   const [loadingCompanyAds, setLoadingCompanyAds] = useState(false);
