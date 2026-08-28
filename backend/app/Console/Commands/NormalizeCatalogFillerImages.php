@@ -28,7 +28,7 @@ class NormalizeCatalogFillerImages extends Command
             'ads/catalog/photos/recovered-c856c36a07bb7efa23ea7b6f.jpg',
         ],
         'car_seat_cover' => [
-            'ads/catalog/photos/curated-car-seat-cover-pexels-30454739.jpg',
+            'ads/catalog/photos/curated-car-seat-cover-pexels-30454739-1200.jpg',
         ],
         'car_accessory' => [
             'ads/catalog/photos/curated-car-interior-pexels-7395365.jpg',
