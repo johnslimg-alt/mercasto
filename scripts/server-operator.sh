@@ -173,6 +173,7 @@ run_verify_quick() {
   if command -v npm >/dev/null 2>&1; then
     npm run verify:quick
     bash scripts/offsite-backup-smoke.sh
+    bash scripts/media-offsite-backup-smoke.sh
     bash scripts/production-schema-drift-smoke.sh
     bash scripts/production-e2e-account-security-smoke.sh
     bash scripts/postgres-observability-activation-smoke.sh
@@ -193,6 +194,7 @@ run_verify_quick() {
   bash scripts/production-session-security-smoke.sh
   bash scripts/origin-edge-security-smoke.sh
   bash scripts/offsite-backup-smoke.sh
+  bash scripts/media-offsite-backup-smoke.sh
   bash scripts/production-schema-drift-smoke.sh
   bash scripts/postgres-observability-activation-smoke.sh
   bash scripts/listing-route-smoke.sh

@@ -8,14 +8,20 @@ for secret in /root/.secrets/mercasto-r2-backup.env /root/.secrets/mercasto-back
   test "$(stat -c %a "$secret")" = "600"
 done
 install -o root -g root -m 700 "$ROOT_DIR/ops/backups/mercasto-offsite-backup.py" /usr/local/sbin/mercasto-offsite-backup
+install -o root -g root -m 700 "$ROOT_DIR/ops/backups/mercasto-media-offsite-backup.py" /usr/local/sbin/mercasto-media-offsite-backup
 for unit in mercasto-offsite-backup.service mercasto-offsite-backup.timer \
   mercasto-offsite-backup-alert.service mercasto-offsite-restore-drill.service \
-  mercasto-offsite-restore-drill.timer; do
+  mercasto-offsite-restore-drill.timer mercasto-media-offsite-backup.service \
+  mercasto-media-offsite-backup.timer mercasto-media-offsite-backup-alert.service \
+  mercasto-media-offsite-restore-drill.service mercasto-media-offsite-restore-drill.timer; do
   install -o root -g root -m 644 "$ROOT_DIR/ops/systemd/$unit" "/etc/systemd/system/$unit"
 done
-install -d -o root -g root -m 700 /var/lib/mercasto-offsite-backup
+install -d -o root -g root -m 700 /var/lib/mercasto-offsite-backup /var/lib/mercasto-media-offsite-backup
 systemctl daemon-reload
-systemctl enable --now mercasto-offsite-backup.timer mercasto-offsite-restore-drill.timer
+systemctl enable --now mercasto-offsite-backup.timer mercasto-offsite-restore-drill.timer \
+  mercasto-media-offsite-backup.timer mercasto-media-offsite-restore-drill.timer
 systemctl is-active --quiet mercasto-offsite-backup.timer
 systemctl is-active --quiet mercasto-offsite-restore-drill.timer
-echo "offsite backup units installed"
+systemctl is-active --quiet mercasto-media-offsite-backup.timer
+systemctl is-active --quiet mercasto-media-offsite-restore-drill.timer
+echo "database and media offsite backup units installed"
