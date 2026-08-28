@@ -3,9 +3,7 @@
 namespace App\Services\AI;
 
 use App\Models\Ad;
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 /**
@@ -20,64 +18,57 @@ class FraudDetectionService
      */
     public function analyze(Ad $ad): array
     {
-        $score = 0;
-        $flags = [];
-
-        // Rule 1: Price anomaly detection (z-score method)
         $priceResult = $this->checkPriceAnomaly($ad);
-        $score += $priceResult['score'];
-        if ($priceResult['flag']) $flags[] = $priceResult['flag'];
-
-        // Rule 2: New account posting high-value items
         $accountResult = $this->checkAccountAge($ad);
-        $score += $accountResult['score'];
-        if ($accountResult['flag']) $flags[] = $accountResult['flag'];
-
-        // Rule 3: Suspicious text patterns
         $textResult = $this->checkSuspiciousText($ad);
-        $score += $textResult['score'];
-        if ($textResult['flags']) $flags = array_merge($flags, $textResult['flags']);
-
-        // Rule 4: Posting velocity (too many ads in short time)
         $velocityResult = $this->checkPostingVelocity($ad);
-        $score += $velocityResult['score'];
-        if ($velocityResult['flag']) $flags[] = $velocityResult['flag'];
-
-        // Rule 5: Image analysis (duplicates, stock photos)
         $imageResult = $this->checkImages($ad);
-        $score += $imageResult['score'];
-        if ($imageResult['flags']) $flags = array_merge($flags, $imageResult['flags']);
-
-        // Rule 6: Contact info in description (trying to go off-platform)
         $contactResult = $this->checkOffPlatformContact($ad);
-        $score += $contactResult['score'];
-        if ($contactResult['flag']) $flags[] = $contactResult['flag'];
 
-        // Cap score at 100
-        $score = min(100, max(0, $score));
+        $listingScore = min(100, max(0,
+            $priceResult['score']
+            + $textResult['score']
+            + $imageResult['score']
+            + $contactResult['score']
+        ));
+        $accountScore = min(100, max(0,
+            $accountResult['score'] + $velocityResult['score']
+        ));
+        $score = min(100, $listingScore + $accountScore);
 
-        // Update the ad
+        $reasonCodes = collect([
+            $priceResult['flag'] ?? null,
+            $accountResult['flag'] ?? null,
+            ...($textResult['flags'] ?? []),
+            $velocityResult['flag'] ?? null,
+            ...($imageResult['flags'] ?? []),
+            ...($contactResult['flags'] ?? []),
+        ])->filter()->unique()->values()->all();
+
+        // Persist privacy-minimized scores and reason codes only. This service
+        // is assist-only: it never mutates listing/account status or takes an
+        // authoritative moderation action from a risk score alone.
         $ad->update([
             'fraud_score' => $score,
-            'fraud_flags' => $flags,
+            'fraud_flags' => $reasonCodes,
             'last_fraud_check_at' => now(),
         ]);
 
-        // Auto-flag high-risk ads
-        if ($score >= 70 && $ad->status === 'active') {
-            $ad->update(['status' => 'under_review']);
-            Log::warning('Ad auto-flagged for review', [
-                'ad_id' => $ad->id,
-                'score' => $score,
-                'flags' => $flags,
-            ]);
-        }
+        $reviewThreshold = (int) config('fraud_risk.thresholds.review', 40);
 
         return [
             'ad_id' => $ad->id,
+            'mode' => (string) config('fraud_risk.mode', 'assist_only'),
+            'rules_version' => (string) config('fraud_risk.version', 'unknown'),
+            'risk_score' => $score,
             'fraud_score' => $score,
+            'listing_risk_score' => $listingScore,
+            'account_risk_score' => $accountScore,
             'risk_level' => $this->getRiskLevel($score),
-            'flags' => $flags,
+            'reason_codes' => $reasonCodes,
+            'flags' => $reasonCodes,
+            'requires_manual_review' => $score >= $reviewThreshold,
+            'authoritative_action' => null,
             'recommendation' => $this->getRecommendation($score),
         ];
     }
@@ -112,7 +103,7 @@ class FraudDetectionService
             $direction = $ad->price < $stats->avg_price ? 'too_low' : 'too_high';
             return [
                 'score' => 25,
-                'flag' => "price_anomaly_{$direction}: $" . number_format($ad->price) . " vs avg $" . number_format($stats->avg_price),
+                'flag' => "price_anomaly_{$direction}",
             ];
         }
 
@@ -141,7 +132,7 @@ class FraudDetectionService
         if ($accountAgeDays < 7 && $priceValue > 50000) {
             return [
                 'score' => 20,
-                'flag' => 'new_account_high_value: account ' . $accountAgeDays . ' days old, item $' . number_format($priceValue),
+                'flag' => 'new_account_high_value',
             ];
         }
 
@@ -154,7 +145,7 @@ class FraudDetectionService
             if ($recentAds > 10) {
                 return [
                     'score' => 20,
-                    'flag' => 'new_account_bulk_posting: ' . $recentAds . ' ads in 3 days',
+                    'flag' => 'new_account_bulk_posting',
                 ];
             }
         }
@@ -217,11 +208,11 @@ class FraudDetectionService
             ->count();
 
         if ($last24h > 20) {
-            return ['score' => 25, 'flag' => 'high_velocity: ' . $last24h . ' ads in 24h'];
+            return ['score' => 25, 'flag' => 'high_velocity'];
         }
 
         if ($last24h > 10) {
-            return ['score' => 10, 'flag' => 'elevated_velocity: ' . $last24h . ' ads in 24h'];
+            return ['score' => 10, 'flag' => 'elevated_velocity'];
         }
 
         return ['score' => 0, 'flag' => null];
@@ -261,58 +252,33 @@ class FraudDetectionService
         return ['score' => min($score, 25), 'flags' => $flags];
     }
 
-        // Check for duplicate images across different ads (potential scam)
-        $adImages = DB::table('ad_images')->where('ad_id', $ad->id)->pluck('image_url')->toArray();
-        
-        foreach ($adImages as $imageUrl) {
-            $duplicates = DB::table('ad_images')
-                ->where('image_url', $imageUrl)
-                ->whereHas('ad', fn($q) => $q->where('user_id', '!=', $ad->user_id))
-                ->count();
-
-            if ($duplicates > 0) {
-                $score += 15;
-                $flags[] = 'duplicate_image_across_users';
-                break;
-            }
-        }
-
-        return ['score' => min($score, 25), 'flags' => $flags];
-    }
-
     /**
      * Check for off-platform contact attempts
      */
     private function checkOffPlatformContact(Ad $ad): array
     {
         $text = ($ad->description ?? '') . ' ' . ($ad->title ?? '');
-        
-        // Phone number patterns
         $phonePatterns = [
-            '/\b\d{2,3}[-.\s]?\d{3,4}[-.\s]?\d{4}\b/', // Mexican phone
-            '/\b\+\d{1,3}[-.\s]?\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{4}\b/', // International
+            '/\b\d{2,3}[-.\s]?\d{3,4}[-.\s]?\d{4}\b/',
+            '/\b\+\d{1,3}[-.\s]?\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{4}\b/',
         ];
-
-        // Email patterns
         $emailPattern = '/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/';
 
         $score = 0;
-        $flag = null;
-
+        $flags = [];
         foreach ($phonePatterns as $pattern) {
             if (preg_match($pattern, $text)) {
                 $score += 15;
-                $flag = 'phone_in_description';
+                $flags[] = 'phone_in_description';
                 break;
             }
         }
-
         if (preg_match($emailPattern, $text)) {
             $score += 10;
-            $flag = ($flag ? $flag . ',' : '') . 'email_in_description';
+            $flags[] = 'email_in_description';
         }
 
-        return ['score' => $score, 'flag' => $flag];
+        return ['score' => min(25, $score), 'flags' => $flags];
     }
 
     /**
@@ -339,7 +305,7 @@ class FraudDetectionService
             $result = $this->analyze($ad);
             $results['analyzed']++;
             
-            if ($result['fraud_score'] >= 50) {
+            if ($result['risk_score'] >= (int) config('fraud_risk.thresholds.review', 40)) {
                 $results['flagged']++;
             } else {
                 $results['clean']++;
@@ -353,17 +319,18 @@ class FraudDetectionService
 
     private function getRiskLevel(int $score): string
     {
-        if ($score >= 70) return 'high';
-        if ($score >= 40) return 'medium';
-        if ($score >= 20) return 'low';
+        if ($score >= (int) config('fraud_risk.thresholds.high', 70)) return 'high';
+        if ($score >= (int) config('fraud_risk.thresholds.review', 40)) return 'medium';
+        if ($score >= (int) config('fraud_risk.thresholds.low', 20)) return 'low';
         return 'none';
     }
 
     private function getRecommendation(int $score): string
     {
-        if ($score >= 70) return 'Auto-flagged for manual review';
-        if ($score >= 40) return 'Monitor closely, verify user identity';
-        if ($score >= 20) return 'Minor concerns, normal processing';
-        return 'Clean listing';
+        if ($score >= (int) config('fraud_risk.thresholds.high', 70)) return 'Prioritize for human review';
+        if ($score >= (int) config('fraud_risk.thresholds.review', 40)) return 'Queue for human review';
+        if ($score >= (int) config('fraud_risk.thresholds.low', 20)) return 'Keep in assist-only observation';
+        return 'No elevated rule-based risk detected';
     }
+
 }
