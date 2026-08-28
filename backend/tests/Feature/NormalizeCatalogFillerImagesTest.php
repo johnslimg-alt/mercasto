@@ -24,6 +24,7 @@ class NormalizeCatalogFillerImagesTest extends TestCase
         $user = User::factory()->create();
         $cases = [
             ['motor', 'Honda Civic 2020 impecable', 'car'],
+            ['motor', 'Fundas para Asientos Delanteros Universales', 'car_accessory'],
             ['motor', 'Moto BMW G310 GS Adventure', 'motorcycle'],
             ['servicios', 'Plomería 24/7 urgencias', 'plumbing'],
             ['moda', 'Camisa de Vestir Slim Fit', 'fashion'],
@@ -31,6 +32,7 @@ class NormalizeCatalogFillerImagesTest extends TestCase
             ['mascotas', 'Acuario 100L con filtro', 'pet_aquarium'],
             ['mascotas', 'Bebedero de fuente con filtro', 'pet_general'],
             ['inmobiliaria', 'Terreno Comercial 500m2', 'land'],
+            ['inmobiliaria', 'Bodega logística amplia', 'warehouse'],
             ['negocios', 'Refrigerador comercial vitrina', 'equipment'],
             ['electronica', 'Google Pixel 8 Pro', 'electronics_mobile'],
             ['electronica', 'iPad Pro M1 11 pulgadas', 'electronics_tablet'],
