@@ -25,6 +25,7 @@ class NormalizeCatalogFillerImagesTest extends TestCase
         $cases = [
             ['motor', 'Honda Civic 2020 impecable', 'car'],
             ['motor', 'Fundas para Asientos Delanteros Universales', 'car_accessory'],
+            ['motor', 'Funda Cubreauto Premium con Forro Interior', 'car_cover'],
             ['motor', 'Moto BMW G310 GS Adventure', 'motorcycle'],
             ['servicios', 'Plomería 24/7 urgencias', 'plumbing'],
             ['moda', 'Camisa de Vestir Slim Fit', 'fashion'],
