@@ -49,10 +49,8 @@ class NormalizeCatalogFillerImages extends Command
             'ads/catalog/photos/recovered-1e04c4e7bda75d940a989985.jpg',
         ],
         'yoga' => ['ads/catalog/photos/recovered-18c6e66a25ed1f081e20bb8a.jpg'],
-        'water' => [
-            'ads/catalog/photos/recovered-3e206705763ff727b042859b.jpg',
-            'ads/catalog/photos/recovered-4504ed6aadb25fabfd412945.jpg',
-        ],
+        'water_boat' => ['ads/catalog/photos/recovered-3e206705763ff727b042859b.jpg'],
+        'water_sport' => ['ads/catalog/photos/recovered-4504ed6aadb25fabfd412945.jpg'],
         'travel' => [
             'ads/catalog/photos/recovered-6cf00fd06d52d7bc8a5cc3f7.jpg',
             'ads/catalog/photos/recovered-cae80da0707eca77f2663674.jpg',
@@ -90,7 +88,9 @@ class NormalizeCatalogFillerImages extends Command
         'electronics_component' => ['ads/catalog/photos/curated-components-pexels-37113174.jpg'],
         'electronics_drone' => ['ads/catalog/photos/curated-drone-pexels-7582198.jpg'],
         'electronics_tv' => ['ads/catalog/photos/curated-tv-pexels-6527053.jpg'],
-        'electronics_audio' => ['ads/catalog/photos/curated-audio-pexels-3394648.jpg'],
+        'electronics_headphones' => ['ads/catalog/photos/curated-audio-pexels-3394648.jpg'],
+        'electronics_speaker' => ['ads/catalog/photos/curated-audio-system-pexels-13348768.jpg'],
+        'electronics_microphone' => ['ads/catalog/photos/curated-microphone-pexels-11417436.jpg'],
         'cleaning' => ['ads/catalog/photos/recovered-2b406670f8efed81f5396c61.jpg'],
         'repair' => ['ads/catalog/photos/recovered-c666dbda1638d20c7a4e9ee9.jpg'],
         'plumbing' => ['ads/catalog/photos/recovered-ce255c0fcc8600c912d51d62.jpg'],
@@ -212,19 +212,21 @@ class NormalizeCatalogFillerImages extends Command
 
     private function semanticKey(Ad $ad): string
     {
+        $titleText = Str::lower(Str::ascii((string) $ad->title));
         $text = Str::lower(Str::ascii(implode(' ', array_filter([(string) $ad->title, (string) $ad->subcategory, (string) $ad->description]))));
         $has = fn (array $needles): bool => collect($needles)->contains(fn ($needle) => str_contains($text, $needle));
+        $titleHas = fn (array $needles): bool => collect($needles)->contains(fn ($needle) => str_contains($titleText, $needle));
         return match ((string) $ad->category) {
             'motor' => $has(['cubreauto', 'cubre auto', 'funda exterior', 'funda para auto', 'funda para coche']) ? 'car_cover' : ($has(['funda para asiento', 'fundas para asiento', 'cubreasiento', 'cubre asiento', 'asientos impermeables', 'asientos de piel', 'asientos delanteros']) ? 'car_seat_cover' : ($has(['cubrevolante', 'tapete']) ? 'car_accessory' : ($has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car')))),
-            'electronica' => $this->electronicsKey($has),
+            'electronica' => $this->electronicsKey($has, $titleHas),
             'empleo' => $has(['limpieza']) ? 'cleaning' : ($has(['plomer']) ? 'plumbing' : ($has(['electric', 'repar', 'mantenimiento', 'constru']) ? 'repair' : ($has(['chofer', 'repartidor', 'conductor']) ? 'car' : 'office'))),
             'servicios' => $has(['plomer']) ? 'plumbing' : ($has(['limpi']) ? 'cleaning' : 'repair'),
             'inmobiliaria' => $has(['bodega', 'almacen', 'nave industrial', 'logistica']) ? 'warehouse' : ($has(['terreno']) ? 'land' : ($has(['departamento', 'interior']) ? 'interiors' : ($has(['local', 'oficina', 'comercial']) ? 'office' : 'houses'))),
             'hogar' => $has(['herramienta', 'taladro']) ? 'repair' : 'interiors',
             'moda' => 'fashion',
-            'ocio' => $has(['bici']) ? 'bicycle' : ($has(['yoga']) ? 'yoga' : ($has(['surf', 'kayak']) ? 'water' : ($has(['camping', 'campana']) ? 'camping' : ($has(['consola', 'videojuego']) ? 'electronics' : ($has(['libro']) ? 'education' : ($has(['guitarra', 'musica']) ? 'concert' : 'sports')))))),
+            'ocio' => $has(['catamaran', 'barco', 'lancha', 'yate', 'bowrider', 'whaler']) ? 'water_boat' : ($has(['surf', 'windsurf', 'kayak', 'paddleboard', 'sup ', 'jet ski', 'jetski', 'waverunner', 'moto acuatica']) ? 'water_sport' : ($has(['bici']) ? 'bicycle' : ($has(['yoga']) ? 'yoga' : ($has(['camping', 'campana']) ? 'camping' : ($has(['consola', 'videojuego']) ? 'electronics' : ($has(['libro']) ? 'education' : ($has(['guitarra', 'musica']) ? 'concert' : 'sports'))))))),
             'mascotas' => $has(['acuario']) ? 'pet_aquarium' : ($has(['transportadora', 'transportador', 'carrier']) ? 'pet_carrier' : ($has(['alimentador', 'bebedero', 'fuente con filtro']) ? 'pet_feeder' : ($has(['gato', 'arena', 'rascador', 'tunel', 'laser']) ? 'pet_cat' : ($has(['perro', 'raza mediana', 'arnes', 'cuerda', 'cama']) ? 'pet_dog' : 'pet_general')))),
-            'turismo' => $has(['auto', 'sedan', 'camioneta', 'suv']) ? 'car' : ($has(['moto', 'scooter']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : ($has(['yate', 'acuatica', 'waverunner']) ? 'water' : 'travel'))),
+            'turismo' => $has(['catamaran', 'barco', 'lancha', 'yate']) ? 'water_boat' : ($has(['surf', 'windsurf', 'kayak', 'paddleboard', 'sup ', 'jet ski', 'jetski', 'waverunner', 'moto acuatica', 'acuatica']) ? 'water_sport' : ($has(['auto', 'sedan', 'camioneta', 'suv']) ? 'car' : ($has(['moto', 'scooter']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'travel')))),
             'infantil' => 'kids',
             'boletos' => $has(['formula 1']) ? 'car' : ($has(['boxeo', 'pumas', 'futbol', 'estadio']) ? 'sports' : 'concert'),
             'negocios' => $has(['maquinaria', 'cortadora', 'industrial', 'equipo', 'refrigerador', 'carretilla', 'proyector']) ? 'equipment' : 'office',
@@ -232,24 +234,27 @@ class NormalizeCatalogFillerImages extends Command
             'hospedaje' => 'houses',
             'retiros_bienestar' => 'yoga',
             'articulos_camping' => 'camping',
-            'renta_vehiculos' => $has(['yate']) ? 'water' : 'car',
+            'renta_vehiculos' => $has(['catamaran', 'barco', 'lancha', 'yate']) ? 'water_boat' : ($has(['jet ski', 'jetski', 'waverunner', 'moto acuatica']) ? 'water_sport' : 'car'),
             'boletos_turismo', 'atracciones_exp', 'tours', 'guias_servicios' => 'travel',
             'souvenirs' => 'fashion',
             default => 'office',
         };
     }
 
-
     private function isManagedSource(string $path): bool
     {
         return str_starts_with($path, self::RECOVERED_PREFIX) || str_starts_with($path, self::CURATED_PREFIX);
     }
 
-    private function electronicsKey(callable $has): string
+    private function electronicsKey(callable $has, callable $titleHas): string
     {
+        if ($titleHas(['funda', 'mica', 'magsafe', 'spigen', 'otterbox', 'carcasa', 'powerbank', 'cargador', 'cable'])) return 'electronics_mobile_accessory';
+        if ($titleHas(['iphone', 'galaxy s', 'pixel', 'xiaomi', 'redmi', 'motorola', 'smartphone'])) return 'electronics_mobile';
         if ($has(['termostato', 'thermostat', 'smart home', 'domotica', 'homekit'])) return 'electronics_smart_home';
         if ($has(['drone', 'dji', 'autel'])) return 'electronics_drone';
-        if ($has(['audifon', 'headset', 'bocina', 'soundbar', 'microfono', 'sony wh', 'jbl', 'bose'])) return 'electronics_audio';
+        if ($has(['microfono'])) return 'electronics_microphone';
+        if ($has(['audifon', 'headset', 'sony wh'])) return 'electronics_headphones';
+        if ($has(['bocina', 'soundbar', 'jbl', 'bose'])) return 'electronics_speaker';
         if ($has(['smart tv', 'oled', 'qled', 'television', 'pantalla', 'proyector'])) return 'electronics_tv';
         if ($has(['ipad', 'tablet', 'galaxy tab', 'lenovo tab'])) return 'electronics_tablet';
         if ($has(['watch', 'garmin', 'smartband', 'fenix', 'forerunner'])) return 'electronics_wearable';
