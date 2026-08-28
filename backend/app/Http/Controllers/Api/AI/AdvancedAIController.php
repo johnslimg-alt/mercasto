@@ -202,8 +202,8 @@ class AdvancedAIController extends Controller
      */
     public function getFlaggedAds(Request $request)
     {
-        $flagged = Ad::where('fraud_score', '>=', 40)
-            ->where('status', 'under_review')
+        $flagged = Ad::where('fraud_score', '>=', (int) config('fraud_risk.thresholds.review', 40))
+            ->whereIn('status', ['active', 'under_review'])
             ->orderByDesc('fraud_score')
             ->limit($request->input('limit', 50))
             ->get(['id', 'title', 'price', 'fraud_score', 'fraud_flags', 'last_fraud_check_at', 'user_id', 'created_at']);
