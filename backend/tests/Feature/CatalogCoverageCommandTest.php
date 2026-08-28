@@ -60,4 +60,41 @@ class CatalogCoverageCommandTest extends TestCase
         $this->artisan('ads:ensure-catalog-coverage', ['--minimum' => 2])->assertSuccessful();
         $this->assertSame($before, Ad::query()->where('is_catalog_filler', true)->count());
     }
+
+    public function test_audit_allows_curated_reuse_only_inside_one_semantic_pool(): void
+    {
+        Storage::fake('public');
+        Category::query()->firstOrCreate(
+            ['slug' => 'productos'],
+            ['name' => ['es' => 'Productos', 'en' => 'Goods'], 'icon' => 'ShoppingBag', 'sort_order' => 0]
+        );
+        $this->artisan('ads:ensure-catalog-coverage', ['--minimum' => 2])->assertSuccessful();
+
+        Storage::disk('public')->put('ads/catalog/shared-curated.jpg', 'image');
+        $ads = Ad::query()->where('is_catalog_filler', true)->where('status', 'active')->limit(2)->get();
+        $this->assertCount(2, $ads);
+
+        foreach ($ads as $ad) {
+            $ad->forceFill([
+                'image_url' => json_encode(['ads/catalog/shared-curated.jpg']),
+                'attributes' => [
+                    'catalog_image_source' => 'curated-local',
+                    'catalog_image_semantic_key' => 'sports',
+                ],
+            ])->save();
+        }
+
+        $this->artisan('ads:audit-catalog-coverage', ['--minimum' => 2])->assertSuccessful();
+
+        $ads[1]->forceFill([
+            'attributes' => [
+                'catalog_image_source' => 'curated-local',
+                'catalog_image_semantic_key' => 'travel',
+            ],
+        ])->save();
+
+        $this->artisan('ads:audit-catalog-coverage', ['--minimum' => 2])
+            ->expectsOutputToContain('duplicate filler image across incompatible pools')
+            ->assertFailed();
+    }
 }
