@@ -27,6 +27,7 @@ class NormalizeCatalogFillerImages extends Command
             'ads/catalog/photos/recovered-aa892041cac7d641c3163b0f.jpg',
             'ads/catalog/photos/recovered-c856c36a07bb7efa23ea7b6f.jpg',
         ],
+        'car_accessory' => ['ads/catalog/photos/curated-car-seat-pexels-31306012.jpg'],
         'motorcycle' => [
             'ads/catalog/photos/recovered-2ad62fabd46a04e4b7fa0b97.jpg',
             'ads/catalog/photos/recovered-3a31b29ad2b93183d0d43f9e.jpg',
@@ -110,6 +111,7 @@ class NormalizeCatalogFillerImages extends Command
         ],
         'pet_aquarium' => ['ads/catalog/photos/curated-aquarium-pexels-18420707.jpg'],
         'land' => ['ads/catalog/photos/curated-land-pexels-37738120.jpg'],
+        'warehouse' => ['ads/catalog/photos/curated-warehouse-pexels-4481326.jpg'],
         'education' => [
             'ads/catalog/photos/recovered-9a8bc0e3cd2b00e7bd8b4e0a.jpg',
             'ads/catalog/photos/recovered-deb5000b89dc7274f1189c59.jpg',
@@ -229,11 +231,11 @@ class NormalizeCatalogFillerImages extends Command
         $text = Str::lower(Str::ascii(implode(' ', array_filter([(string) $ad->title, (string) $ad->subcategory, (string) $ad->description]))));
         $has = fn (array $needles): bool => collect($needles)->contains(fn ($needle) => str_contains($text, $needle));
         return match ((string) $ad->category) {
-            'motor' => $has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car'),
+            'motor' => $has(['funda', 'asiento', 'cubreasiento', 'cubre asiento', 'cubrevolante', 'tapete']) ? 'car_accessory' : ($has(['moto', 'scooter', 'cuatrimoto']) ? 'motorcycle' : ($has(['bici']) ? 'bicycle' : 'car')),
             'electronica' => $this->electronicsKey($has),
             'empleo' => $has(['limpieza']) ? 'cleaning' : ($has(['plomer']) ? 'plumbing' : ($has(['electric', 'repar', 'mantenimiento', 'constru']) ? 'repair' : ($has(['chofer', 'repartidor', 'conductor']) ? 'car' : 'office'))),
             'servicios' => $has(['plomer']) ? 'plumbing' : ($has(['limpi']) ? 'cleaning' : 'repair'),
-            'inmobiliaria' => $has(['terreno']) ? 'land' : ($has(['departamento', 'interior']) ? 'interiors' : ($has(['local', 'oficina', 'comercial']) ? 'office' : 'houses')),
+            'inmobiliaria' => $has(['bodega', 'almacen', 'nave industrial', 'logistica']) ? 'warehouse' : ($has(['terreno']) ? 'land' : ($has(['departamento', 'interior']) ? 'interiors' : ($has(['local', 'oficina', 'comercial']) ? 'office' : 'houses'))),
             'hogar' => $has(['herramienta', 'taladro']) ? 'repair' : 'interiors',
             'moda' => 'fashion',
             'ocio' => $has(['bici']) ? 'bicycle' : ($has(['yoga']) ? 'yoga' : ($has(['surf', 'kayak']) ? 'water' : ($has(['camping', 'campana']) ? 'camping' : ($has(['consola', 'videojuego']) ? 'electronics' : ($has(['libro']) ? 'education' : ($has(['guitarra', 'musica']) ? 'concert' : 'sports')))))),
