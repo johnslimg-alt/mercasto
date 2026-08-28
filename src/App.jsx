@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import { trackPageView, events } from './utils/analytics';
-import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { getTranslations } from './utils/translations';
 import { localizedText } from './utils/localize';
 import { formatDate, formatDateTime, formatMXN, formatNumber } from './utils/localeFormat';
@@ -12,6 +12,17 @@ import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
 import { getVerticalCanonicalAlias, getVerticalSeo } from './constants/verticalSeo';
 import { getPublicSeo } from './constants/publicSeo';
+import {
+  AuthEntryRoute, LegacyAccountListingRoute, ReferralRedirect, RequireAuth,
+} from './app/routeHelpers';
+import { useRefQueryParam } from './app/referralQuery';
+import {
+  AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
+  AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
+  EmpleosLanding, ServiciosLanding, CategoryLanding, ProductosLanding, TurismoLanding, ProfileEditScreen,
+  TerminosScreen, PrivacidadScreen, CookiesScreen, NotFoundScreen, VerificarEmailScreen, StoresScreen,
+  NotificationsScreen, ChatScreen, ContactoScreen, AyudaScreen, GeoSourcePage, ReferralScreen,
+} from './app/lazyScreens';
 
 // Subcategory data is either an array of Spanish labels (canonical value == display label)
 // or an object keyed by a stable slug (canonical value == slug, label is translated).
@@ -61,17 +72,6 @@ async function getEcho() {
 const CookieBanner = React.lazy(() => import('./components/CookieBanner'));
 const SearchSuggestions = React.lazy(() => import('./components/common/SearchSuggestions'));
 import { useUI } from './contexts/UIContext';
-
-function LocalizedRouteLoadError({ translationKey }) {
-  const { lang, loadedLangVersion } = useUI();
-  void loadedLangVersion;
-  const copy = getTranslations(lang);
-  return (
-    <div className="flex h-screen items-center justify-center p-10 text-center mt-20 text-slate-500">
-      {copy[translationKey] || ''}
-    </div>
-  );
-}
 
 const SUPPORTED_LANGUAGES = new Set([
   'es', 'en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar',   'ru', 'ja',
@@ -152,106 +152,6 @@ class ErrorBoundary extends React.Component {
     }
     return this.props.children;
   }
-}
-
-function ProtectedRoutePlaceholder({ loading = false }) {
-  const { lang, loadedLangVersion } = useUI();
-  void loadedLangVersion;
-  const t = getTranslations(lang);
-  return (
-    <section
-      className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-12"
-      aria-live="polite"
-    >
-      <div className="flex min-h-56 w-full max-w-md flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white/90 p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950/90">
-        {loading ? (
-          <Loader2 className="h-8 w-8 animate-spin text-[#84CC16]" aria-label={t.shell_loading_session} />
-        ) : (
-          <>
-            <ShieldCheck className="mb-4 h-10 w-10 text-[#84CC16]" aria-hidden="true" />
-            <h1 className="text-xl font-black text-slate-900 dark:text-white">{t.shell_login_continue}</h1>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              {t.shell_login_continue_desc}
-            </p>
-          </>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function RequireAuth({ user, authReady, setAuthMode, setShowAuthModal, admin = false, children }) {
-  const hasToken = Boolean(localStorage.getItem('auth_token'));
-
-  useEffect(() => {
-    if (authReady && (!user || !hasToken)) {
-      setAuthMode('login');
-      setShowAuthModal(true);
-    }
-  }, [authReady, hasToken, setAuthMode, setShowAuthModal, user]);
-
-  if (!authReady) return <ProtectedRoutePlaceholder loading />;
-  if (!user || !hasToken) return <ProtectedRoutePlaceholder />;
-  if (admin && user.role !== 'admin') return <Navigate to="/profile" replace />;
-  return children;
-}
-
-function AuthEntryRoute({ mode, user, authReady, setAuthMode, setShowAuthModal, tagline }) {
-  const { lang, loadedLangVersion } = useUI();
-  void loadedLangVersion;
-  const t = getTranslations(lang);
-  const hasToken = Boolean(localStorage.getItem('auth_token'));
-  const isRegistration = mode === 'register';
-
-  useEffect(() => {
-    if (authReady && (!user || !hasToken)) {
-      setAuthMode(mode);
-      setShowAuthModal(true);
-    }
-  }, [authReady, hasToken, mode, setAuthMode, setShowAuthModal, user]);
-
-  if (!authReady) return <ProtectedRoutePlaceholder loading />;
-  if (user && hasToken) return <Navigate to="/profile" replace />;
-
-  return (
-    <section className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <ShieldCheck className="mx-auto mb-4 h-10 w-10 text-[#84CC16]" aria-hidden="true" />
-        <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-          {isRegistration ? `${t.register} · Mercasto` : `${t.login} · Mercasto`}
-        </h1>
-        <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full bg-lime-50 px-3 py-1.5 text-xs font-extrabold text-lime-800 dark:bg-lime-500/10 dark:text-lime-300">
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          {tagline || t.ai_brand_tagline}
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-          {isRegistration
-            ? t.auth_register_desc
-            : t.auth_login_desc}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            setAuthMode(mode);
-            setShowAuthModal(true);
-          }}
-          className="btn-lg mt-6 w-full bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]"
-        >
-          {isRegistration ? t.register : t.login}
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function LegacyAccountListingRoute({ suffix }) {
-  const { id } = useParams();
-  const safeId = encodeURIComponent(String(id || ''));
-  const target = suffix === 'photos'
-    ? `/anuncio/${safeId}/editar?section=photos`
-    : `/anuncio/${safeId}/editar`;
-
-  return <Navigate to={target} replace />;
 }
 
 // --- ЛОГОТИП И ИКОНКИ ---
@@ -437,73 +337,7 @@ const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio', priority = f
 
 // --- ДАННЫЕ И ПЕРЕВОДЫ ---
 
-const AdminScreen = React.lazy(() => import('./components/screens/AdminScreen'));
 
-let homeScreenModulePromise;
-let catalogScreenModulePromise;
-const loadHomeScreen = () => (homeScreenModulePromise ||= import('./components/screens/HomeScreen'));
-const loadCatalogScreen = () => (catalogScreenModulePromise ||= import('./components/screens/CatalogScreen'));
-const HomeScreen = React.lazy(loadHomeScreen);
-const CatalogScreen = React.lazy(loadCatalogScreen);
-
-// Start the route chunk as soon as App evaluates instead of waiting for the
-// first Suspense render. Other routes keep both public-feed chunks deferred.
-if (window.location.pathname === '/listings' || (window.location.pathname === '/' && window.location.search)) {
-  loadCatalogScreen();
-} else if (window.location.pathname === '/') {
-  loadHomeScreen();
-}
-
-const PostScreen = React.lazy(() => import('./components/screens/PostScreen'));
-const SellerLandingScreen = React.lazy(() => import('./components/screens/SellerLandingScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-
-const UserDashboard = React.lazy(() => import('./components/screens/UserDashboard'));
-
-// Безопасный импорт экранов (если файл не найден, React не выдаст белый экран, а покажет заглушку)
-const AdDetailScreen = React.lazy(() => import('./components/screens/AdDetailScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="error_loading_ad" /> })));
-const StorefrontScreen = React.lazy(() => import('./components/screens/StorefrontScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const EditAdScreen = React.lazy(() => import('./components/screens/EditAdScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const SellerProfileScreen = React.lazy(() => import('./components/screens/SellerProfileScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const AutosLanding = React.lazy(() => import('./components/screens/verticals/AutosLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const InmueblesLanding = React.lazy(() => import('./components/screens/verticals/InmueblesLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const EmpleosLanding = React.lazy(() => import('./components/screens/verticals/EmpleosLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const ServiciosLanding = React.lazy(() => import('./components/screens/verticals/ServiciosLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const CategoryLanding = React.lazy(() => import('./components/screens/verticals/CategoryLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const ProductosLanding = React.lazy(() => import('./components/screens/verticals/ProductosLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const TurismoLanding = React.lazy(() => import('./components/screens/verticals/TurismoLanding').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const ProfileEditScreen = React.lazy(() => import('./components/screens/ProfileEditScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const TerminosScreen = React.lazy(() => import('./components/screens/legal/TerminosScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const PrivacidadScreen = React.lazy(() => import('./components/screens/legal/PrivacidadScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const CookiesScreen = React.lazy(() => import('./components/screens/legal/CookiesScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const NotFoundScreen = React.lazy(() => import('./components/screens/NotFoundScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_not_found" /> })));
-const VerificarEmailScreen = React.lazy(() => import('./components/screens/VerificarEmailScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const StoresScreen = React.lazy(() => import('./components/screens/StoresScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const NotificationsScreen = React.lazy(() => import('./components/screens/NotificationsScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="notifications_load_error" /> })));
-const ChatScreen = React.lazy(() => import('./components/screens/ChatScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const ContactoScreen  = React.lazy(() => import('./components/screens/ContactoScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const AyudaScreen     = React.lazy(() => import('./components/screens/AyudaScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const GeoSourcePage = React.lazy(() => import('./components/screens/GeoSourcePage').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
-const ReferralScreen = React.lazy(() => import('./components/screens/ReferralScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="referral_load_error" /> })));
-
-function ReferralRedirect() {
-  const { code } = useParams();
-  const navigate = useNavigate();
-  React.useEffect(() => {
-    localStorage.setItem('pendingReferral', code);
-    navigate('/');
-  }, [code, navigate]);
-  return null;
-}
-
-function useRefQueryParam() {
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get('ref');
-    if (ref && ref.trim()) {
-      localStorage.setItem('pendingReferral', ref.trim().toUpperCase());
-    }
-  }, []);
-}
 
 export default function AppWrapper() {
   const { lang, loadedLangVersion } = useUI();
