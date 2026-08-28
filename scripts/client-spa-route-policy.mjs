@@ -3,6 +3,7 @@ export const protectedClientScreens = [
   { name: 'notifications-auth-gate', path: '/notificaciones', selector: 'input[name="email"]' },
   { name: 'profile-edit-auth-gate', path: '/perfil/editar', selector: 'input[name="email"]' },
   { name: 'referrals-auth-gate', path: '/referidos', selector: 'input[name="email"]' },
+  { name: 'admin-marketing-auth-gate', path: '/admin/marketing', selector: 'input[name="email"]' },
 ];
 
 export const publicClientScreens = [

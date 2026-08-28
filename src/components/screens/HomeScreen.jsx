@@ -648,6 +648,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                   <div
                     ref={reMapContainerRef}
+                    data-testid="home-real-estate-map-card"
                     className="market-card h-full min-h-[360px] overflow-hidden relative bg-slate-100 dark:bg-slate-900"
                     onMouseEnter={() => setReMapLoaded(true)}
                     onTouchStart={() => setReMapLoaded(true)}
@@ -669,7 +670,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                       </div>
                     )}
 
-                    <div className="absolute inset-x-4 bottom-4 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
+                    <div className="absolute inset-x-4 bottom-16 z-[3] rounded-xl border border-slate-200 bg-white/90 p-3 text-[12px] backdrop-blur dark:border-slate-700 dark:bg-slate-950/85">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-medium text-slate-800 dark:text-white">{formatHomePropertiesLabel(lang, selectedState)}</span>
                         <button type="button" onClick={() => { setSearchLocation?.(null); setSearchLocationInput?.(''); setSelectedState(''); executeSearch?.(null, ''); }} className="cursor-pointer font-semibold text-lime-800 dark:text-lime-400 hover:underline">{t.view_all_mexico} →</button>

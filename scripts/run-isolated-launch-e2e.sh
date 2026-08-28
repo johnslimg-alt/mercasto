@@ -243,7 +243,11 @@ fi
 
 if suite_enabled cabinets; then
   echo "== Authenticated cabinet navigation matrix =="
-  env "${base_env[@]}" npx playwright test tests/e2e/authenticated-cabinet-matrix.spec.js --config=playwright.cabinet.config.mjs --workers=1 --retries=0 --reporter=list
+  cabinet_args=()
+  if [[ -n "${E2E_CABINET_GREP:-}" ]]; then
+    cabinet_args+=(--grep "$E2E_CABINET_GREP")
+  fi
+  env "${base_env[@]}" npx playwright test tests/e2e/authenticated-cabinet-matrix.spec.js --config=playwright.cabinet.config.mjs --workers=1 --retries=0 --reporter=list "${cabinet_args[@]}"
 fi
 
 if suite_enabled auth; then
