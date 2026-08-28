@@ -21,6 +21,11 @@ on:
       - 'scripts/i18n-audit.mjs'
       - 'scripts/check-recovery-guards.mjs'
       - 'scripts/frontend-quality-shard.sh'
+      - 'scripts/public-ui-route-policy.mjs'
+      - 'scripts/public-ui-route-coverage-gate.mjs'
+      - 'scripts/client-spa-route-policy.mjs'
+      - 'scripts/client-spa-route-coverage-gate.mjs'
+      - 'scripts/public-ui-visual-evidence-gate.sh'
       - 'scripts/public-copy-scan.sh'
       - 'scripts/fix-public-copy-fallbacks.sh'
       - 'scripts/apply-production-hotfixes.sh'
@@ -41,6 +46,11 @@ on:
       - 'scripts/i18n-audit.mjs'
       - 'scripts/check-recovery-guards.mjs'
       - 'scripts/frontend-quality-shard.sh'
+      - 'scripts/public-ui-route-policy.mjs'
+      - 'scripts/public-ui-route-coverage-gate.mjs'
+      - 'scripts/client-spa-route-policy.mjs'
+      - 'scripts/client-spa-route-coverage-gate.mjs'
+      - 'scripts/public-ui-visual-evidence-gate.sh'
       - 'scripts/public-copy-scan.sh'
       - 'scripts/fix-public-copy-fallbacks.sh'
       - 'scripts/apply-production-hotfixes.sh'
@@ -72,6 +82,8 @@ jobs:
         run: npm run check:recovery
       - name: Audit translations
         run: npm run i18n:audit
+      - name: Verify public UI route coverage
+        run: bash scripts/public-ui-visual-evidence-gate.sh
       - name: Run frontend unit contracts
         run: node --test tests/*.test.mjs
       - name: Run frontend lint gate

@@ -38,7 +38,7 @@ const staleExplicit = [...explicitClientRoutes].filter(path => !literalReactRout
 
 assert.deepEqual(uncovered, [], `Unclassified literal React routes: ${uncovered.join(', ')}`);
 assert.deepEqual(staleExplicit, [], `Client route policy contains paths no longer present in App.jsx: ${staleExplicit.join(', ')}`);
-assert.equal(literalReactRoutes.length, 54, 'Literal React route count changed; classify every new/removed route deliberately.');
+assert.equal(literalReactRoutes.length, 55, 'Literal React route count changed; classify every new/removed route deliberately.');
 
 console.log(JSON.stringify({
   literalReactRoutes: literalReactRoutes.length,
