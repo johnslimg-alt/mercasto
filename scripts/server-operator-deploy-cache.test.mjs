@@ -78,6 +78,8 @@ test('mocked deploy enforces cache and upstream refresh order', () => {
   mkdirSync(join(fixture, 'scripts'), { recursive: true });
   writeFileSync(join(fixture, 'scripts', 'offsite-backup-smoke.sh'), '#!/usr/bin/env bash\nexit 0\n');
   chmodSync(join(fixture, 'scripts', 'offsite-backup-smoke.sh'), 0o755);
+  writeFileSync(join(fixture, 'scripts', 'media-offsite-backup-smoke.sh'), '#!/usr/bin/env bash\nexit 0\n');
+  chmodSync(join(fixture, 'scripts', 'media-offsite-backup-smoke.sh'), 0o755);
   writeFileSync(join(fixture, 'scripts', 'production-schema-drift-smoke.sh'), '#!/usr/bin/env bash\nexit 0\n');
   chmodSync(join(fixture, 'scripts', 'production-schema-drift-smoke.sh'), 0o755);
   writeFileSync(join(fixture, 'scripts', 'postgres-observability-activation-smoke.sh'), '#!/usr/bin/env bash\nexit 0\n');
