@@ -1,0 +1,38 @@
+name: Ephemeral VPS Capacity Probe
+
+on:
+  push:
+    branches:
+      - ops/probe-vps-capacity-rdc
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 3
+    steps:
+      - name: Probe capacity and RDC service
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "hostname=$(hostname)"
+          echo "nproc=$(nproc)"
+          echo "cpu_online=$(cat /sys/devices/system/cpu/online)"
+          echo "loadavg=$(cat /proc/loadavg)"
+          lscpu | grep -E '^(CPU\(s\)|Model name|Thread|Core|Socket|Virtualization|Hypervisor vendor):' || true
+          free -h
+          echo '--- vmstat ---'
+          vmstat 1 2 || true
+          echo '--- top cpu ---'
+          ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -15
+          echo '--- possible RDC services ---'
+          systemctl list-units --type=service --all --no-legend 2>/dev/null | grep -Ei 'desktop|commander|remote|mcp' || true
+          echo '--- possible RDC unit files ---'
+          systemctl list-unit-files --type=service --no-legend 2>/dev/null | grep -Ei 'desktop|commander|remote|mcp' || true
+          echo '--- possible RDC processes ---'
+          ps -ef | grep -Ei '[d]esktop.*commander|[r]emote.*desktop|[m]cp' || true
+          echo '--- docker status ---'
+          docker ps --format '{{.Names}}|{{.Status}}' || true
