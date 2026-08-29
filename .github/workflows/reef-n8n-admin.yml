@@ -1,4 +1,4 @@
-name: Reef n8n local-AI finalizer
+name: Reef source persistence
 
 on:
   push:
@@ -8,56 +8,35 @@ permissions:
   contents: read
 
 jobs:
-  finalize:
+  persist:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
-      - name: Remove legacy text model IDs and republish
+      - name: Commit only Reef workflow source
         shell: bash
         run: |
           set -Eeuo pipefail
-          WFID=Og5UJWua14sZ2wNx
-          SRC=/root/reef-crm/ops/n8n/workflows/reef-whatsapp-workflow.json
-          sudo -n python3 - "$SRC" <<'PY'
-          import sys
-          p=sys.argv[1]
-          s=open(p,encoding='utf-8').read()
-          for old in ['openai/gpt-oss-120b','gemini-3.7-flash','gemini-3.6-flash','glm-5.2','glm-5.3']:
-              s=s.replace(old,'nemotron-local')
-          open(p,'w',encoding='utf-8').write(s)
-          PY
-          sudo -n python3 -m json.tool "$SRC" >/dev/null
-          sudo -n cp "$SRC" /tmp/reef-local-ai.json
-          sudo -n chown "$(id -u):$(id -g)" /tmp/reef-local-ai.json
-          docker cp /tmp/reef-local-ai.json n8n:/tmp/reef-local-ai.json
-          docker exec n8n n8n import:workflow --input=/tmp/reef-local-ai.json
-          docker exec n8n n8n publish:workflow --id="$WFID"
-          docker restart n8n >/dev/null
-          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:5678/healthz >/dev/null 2>&1 && break; sleep 1; done
-      - name: Final verification
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          WFID=Og5UJWua14sZ2wNx
-          docker exec n8n n8n export:workflow --id="$WFID" --published --output=/tmp/reef-final.json --pretty
-          docker cp n8n:/tmp/reef-final.json /tmp/reef-final.json
-          python3 - <<'PY'
-          import json
-          d=json.load(open('/tmp/reef-final.json')); w=d[0] if isinstance(d,list) else d
-          targets={'Gemini 3.7 Flash Canary','Gemini 3.6 Flash Fallback','Groq GPT-OSS 120B','GLM-5.2 Analyst','Groq Repair'}
-          raw=json.dumps(w,ensure_ascii=False)
-          for n in w['nodes']:
-              if n.get('name') in targets:
-                  u=n.get('parameters',{}).get('url','')
-                  assert u=='http://reef-nemotron:8080/v1/chat/completions', (n['name'],u)
-                  assert not n.get('credentials'), n['name']
-          forbidden=['generativelanguage.googleapis.com','openai/gpt-oss-120b','gemini-3.7-flash','gemini-3.6-flash','glm-5.2','glm-5.3']
-          left=[x for x in forbidden if x in raw]
-          if left: raise SystemExit('legacy text AI remains: '+','.join(left))
-          print('TEXT_AI_LOCAL_OK')
-          print('VOICE_GROQ_WHISPER='+str('Groq Whisper' in raw))
-          PY
-          echo "CRM=$(curl -fsS http://127.0.0.1:3100/api/health)"
-          echo "N8N=$(curl -fsS http://127.0.0.1:5678/healthz)"
-          docker exec n8n node -e "fetch('http://reef-nemotron:8080/health').then(async r=>{console.log('NEMOTRON='+r.status+' '+await r.text());if(!r.ok)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
-          docker ps --filter name=reef-nemotron --format 'CONTAINER={{.Status}} PORTS={{.Ports}}'
+          REPO=/root/reef-crm
+          FILE=ops/n8n/workflows/reef-whatsapp-workflow.json
+          cd "$REPO"
+          echo '=== STATUS BEFORE ==='
+          sudo -n git status --short | head -80
+          sudo -n git diff -- "$FILE" | grep -E '^[-+].*(reef-nemotron|nemotron-local|generativelanguage|gpt-oss|glm-5)' | head -80 || true
+          BASE=$(sudo -n git rev-parse --abbrev-ref HEAD)
+          BR=fix/local-nemotron-ai-20260829
+          if sudo -n git show-ref --verify --quiet "refs/heads/$BR"; then
+            sudo -n git checkout "$BR"
+          else
+            sudo -n git checkout -b "$BR"
+          fi
+          sudo -n git add -- "$FILE"
+          if sudo -n git diff --cached --quiet; then
+            echo 'nothing_to_commit=yes'
+          else
+            sudo -n git -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Route Reef text AI to local Nemotron'
+          fi
+          sudo -n git push -u origin "$BR"
+          echo "base_branch=$BASE"
+          echo "pushed_branch=$BR"
+          echo '=== COMMITTED FILES ==='
+          sudo -n git show --name-only --format='%H %s' HEAD | head -20
