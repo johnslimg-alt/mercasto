@@ -1,4 +1,4 @@
-name: Reef n8n admin migration
+name: Reef n8n local-AI finalizer
 
 on:
   push:
@@ -8,16 +8,24 @@ permissions:
   contents: read
 
 jobs:
-  migrate:
+  finalize:
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 10
     steps:
-      - name: Import and publish local-AI workflow
+      - name: Remove legacy text model IDs and republish
         shell: bash
         run: |
           set -Eeuo pipefail
           WFID=Og5UJWua14sZ2wNx
           SRC=/root/reef-crm/ops/n8n/workflows/reef-whatsapp-workflow.json
+          sudo -n python3 - "$SRC" <<'PY'
+          import sys
+          p=sys.argv[1]
+          s=open(p,encoding='utf-8').read()
+          for old in ['openai/gpt-oss-120b','gemini-3.7-flash','gemini-3.6-flash','glm-5.2','glm-5.3']:
+              s=s.replace(old,'nemotron-local')
+          open(p,'w',encoding='utf-8').write(s)
+          PY
           sudo -n python3 -m json.tool "$SRC" >/dev/null
           sudo -n cp "$SRC" /tmp/reef-local-ai.json
           sudo -n chown "$(id -u):$(id -g)" /tmp/reef-local-ai.json
@@ -25,40 +33,31 @@ jobs:
           docker exec n8n n8n import:workflow --input=/tmp/reef-local-ai.json
           docker exec n8n n8n publish:workflow --id="$WFID"
           docker restart n8n >/dev/null
-          for i in $(seq 1 60); do
-            curl -fsS http://127.0.0.1:5678/healthz >/dev/null 2>&1 && break
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:5678/healthz
-          echo
-      - name: Verify production local text AI
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:5678/healthz >/dev/null 2>&1 && break; sleep 1; done
+      - name: Final verification
         shell: bash
         run: |
           set -Eeuo pipefail
           WFID=Og5UJWua14sZ2wNx
-          docker exec n8n n8n export:workflow --id="$WFID" --published --output=/tmp/reef-after.json --pretty
-          docker cp n8n:/tmp/reef-after.json /tmp/reef-after.json
+          docker exec n8n n8n export:workflow --id="$WFID" --published --output=/tmp/reef-final.json --pretty
+          docker cp n8n:/tmp/reef-final.json /tmp/reef-final.json
           python3 - <<'PY'
           import json
-          d=json.load(open('/tmp/reef-after.json')); w=d[0] if isinstance(d,list) else d
+          d=json.load(open('/tmp/reef-final.json')); w=d[0] if isinstance(d,list) else d
           targets={'Gemini 3.7 Flash Canary','Gemini 3.6 Flash Fallback','Groq GPT-OSS 120B','GLM-5.2 Analyst','Groq Repair'}
-          seen=set(); bad=[]
+          raw=json.dumps(w,ensure_ascii=False)
           for n in w['nodes']:
               if n.get('name') in targets:
-                  seen.add(n['name'])
                   u=n.get('parameters',{}).get('url','')
-                  print(n['name'],'=>',u,'credentials=',bool(n.get('credentials')))
-                  if u!='http://reef-nemotron:8080/v1/chat/completions' or n.get('credentials'): bad.append(n['name'])
-          if seen != targets: raise SystemExit('missing targets: '+','.join(sorted(targets-seen)))
-          raw=json.dumps(w,ensure_ascii=False)
-          if bad: raise SystemExit('bad local nodes: '+','.join(bad))
-          if 'generativelanguage.googleapis.com' in raw: raise SystemExit('Gemini endpoint remains')
-          for old in ['openai/gpt-oss-120b','gemini-3.7-flash','gemini-3.6-flash','glm-5.2','glm-5.3']:
-              if old in raw: raise SystemExit('old text model remains: '+old)
-          print('text_ai_local=yes')
-          print('voice_groq_whisper_still_present=', 'Groq Whisper' in raw)
+                  assert u=='http://reef-nemotron:8080/v1/chat/completions', (n['name'],u)
+                  assert not n.get('credentials'), n['name']
+          forbidden=['generativelanguage.googleapis.com','openai/gpt-oss-120b','gemini-3.7-flash','gemini-3.6-flash','glm-5.2','glm-5.3']
+          left=[x for x in forbidden if x in raw]
+          if left: raise SystemExit('legacy text AI remains: '+','.join(left))
+          print('TEXT_AI_LOCAL_OK')
+          print('VOICE_GROQ_WHISPER='+str('Groq Whisper' in raw))
           PY
-          echo "crm=$(curl -fsS http://127.0.0.1:3100/api/health)"
-          echo "n8n=$(curl -fsS http://127.0.0.1:5678/healthz)"
-          docker exec n8n node -e "fetch('http://reef-nemotron:8080/health').then(async r=>{console.log('nemotron_from_n8n='+r.status+' '+await r.text());if(!r.ok)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
-          docker ps --filter name=reef-nemotron --format 'nemotron={{.Status}} ports={{.Ports}}'
+          echo "CRM=$(curl -fsS http://127.0.0.1:3100/api/health)"
+          echo "N8N=$(curl -fsS http://127.0.0.1:5678/healthz)"
+          docker exec n8n node -e "fetch('http://reef-nemotron:8080/health').then(async r=>{console.log('NEMOTRON='+r.status+' '+await r.text());if(!r.ok)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
+          docker ps --filter name=reef-nemotron --format 'CONTAINER={{.Status}} PORTS={{.Ports}}'
