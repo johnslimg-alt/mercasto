@@ -12,22 +12,18 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 5
     steps:
-      - name: Check admin channel
+      - name: Inspect n8n network
         shell: bash
         run: |
-          set +e
-          echo '=== ID ==='
-          whoami
-          id
-          echo '=== SUDO ==='
-          sudo -n true; echo "sudo_noninteractive=$?"
-          echo '=== DOCKER ==='
-          docker ps --format '{{.Names}} {{.Status}}' | head -20
-          echo '=== REEF ACCESS ==='
-          sudo -n test -r /root/reef-crm/ops/n8n/workflows/reef-whatsapp-workflow.json; echo "reef_read=$?"
-          sudo -n test -r /root/automation-stack/n8n_data/database.sqlite; echo "n8n_db_read=$?"
-          echo '=== HEALTH ==='
-          curl -fsS http://127.0.0.1:3100/api/health || true
-          echo
-          curl -fsS http://127.0.0.1:5678/healthz || true
+          set -e
+          echo '=== N8N NETWORKS ==='
+          docker inspect n8n --format '{{json .NetworkSettings.Networks}}'
+          echo '=== HOST ROUTES ==='
+          ip -4 addr show | grep -E '^[0-9]+:|inet ' | head -80
+          echo '=== N8N ROUTE ==='
+          docker exec n8n sh -lc 'ip route 2>/dev/null || cat /proc/net/route'
+          echo '=== CURRENT NEMOTRON LISTENER ==='
+          ss -lntp 2>/dev/null | grep 11435 || true
+          echo '=== NEMOTRON HEALTH HOST ==='
+          curl -fsS --max-time 3 http://127.0.0.1:11435/health || true
           echo
