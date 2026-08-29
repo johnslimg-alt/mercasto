@@ -1,4 +1,4 @@
-name: Reef production status temporary
+name: Reef production reconcile temporary
 
 on:
   push:
@@ -8,20 +8,44 @@ permissions:
   contents: read
 
 jobs:
-  inspect:
+  reconcile:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Inspect Reef production git state safely
+      - name: Reconcile known Reef production hotfixes onto latest main
         shell: bash
         run: |
           set -Eeuo pipefail
           REPO=/root/reef-crm
-          echo 'HEAD='$(sudo -n git -C "$REPO" rev-parse --short HEAD)
-          echo 'BRANCH='$(sudo -n git -C "$REPO" branch --show-current)
-          echo '--- STATUS ---'
-          sudo -n git -C "$REPO" status --short --untracked-files=all | sed -E 's#(^.. )(.env.*|.*secret.*|.*credential.*|.*token.*|.*key.*)$#\1[REDACTED-SENSITIVE-PATH]#I' | head -200
-          echo '--- DIFF STAT ---'
-          sudo -n git -C "$REPO" diff --stat | head -100
-          echo '--- UNTRACKED SAFE SOURCE ---'
-          sudo -n git -C "$REPO" ls-files --others --exclude-standard | grep -E '^(src/|db/migrations/|scripts/|ops/n8n/workflows/|apps/|public/|deploy/)' | grep -Evi '(secret|credential|token|\.env|private|key)' | head -100 || true
+          WT=/tmp/reef-production-reconcile
+          BR=fix/reconcile-production-hotfixes-20260829
+          FILES=(
+            ops/n8n/workflows/reef-whatsapp-workflow.json
+            src/app/api/integrations/n8n/bot-state/route.ts
+            src/app/api/integrations/n8n/session/route.ts
+            src/app/globals.css
+            db/migrations/025_whatsapp_processing_lock.sql
+          )
+          sudo -n git -C "$REPO" fetch origin main
+          sudo -n git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1 || true
+          sudo -n git -C "$REPO" branch -D "$BR" >/dev/null 2>&1 || true
+          sudo -n git -C "$REPO" worktree add -b "$BR" "$WT" origin/main
+          for f in "${FILES[@]}"; do
+            if sudo -n test -f "$REPO/$f"; then
+              sudo -n mkdir -p "$WT/$(dirname "$f")"
+              sudo -n cp -a "$REPO/$f" "$WT/$f"
+            fi
+          done
+          echo '--- CHANGED ---'
+          sudo -n git -C "$WT" status --short
+          CHANGED=$(sudo -n git -C "$WT" status --short | wc -l)
+          if [ "$CHANGED" -eq 0 ]; then
+            echo 'nothing_to_reconcile=yes'
+            exit 0
+          fi
+          sudo -n git -C "$WT" add -- "${FILES[@]}"
+          sudo -n git -C "$WT" -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Reconcile Reef production hotfixes'
+          sudo -n git -C "$WT" push -u origin "$BR" --force-with-lease
+          echo '--- COMMIT ---'
+          sudo -n git -C "$WT" show --stat --oneline -1
+          sudo -n git -C "$REPO" worktree remove --force "$WT"
