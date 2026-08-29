@@ -4,41 +4,110 @@ on:
     paths:
       - '.github/workflows/reef-media-audit-temp.yml'
 jobs:
-  audit:
+  migrate:
     if: github.repository == 'johnslimg-alt/mercasto'
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
-      - name: Inspect Drive sync implementation safely
+      - name: Migrate Reef catalog photos to VPS
         shell: bash
         run: |
           set -euo pipefail
           sudo -n true
-          echo '=== sync shell ==='
-          sudo sed -n '1,180p' /root/automation-stack/scripts/reef_drive_sync.sh \
-            | sed -E 's#(TOKEN|SECRET|PASSWORD|CLIENT_SECRET|REFRESH_TOKEN|ACCESS_KEY)[^=]*=.*#\1=REDACTED#Ig'
-          echo '=== sync python ==='
-          sudo sed -n '1,320p' /root/automation-stack/scripts/reef_drive_sync.py \
-            | sed -E 's#(token|secret|password|client_secret|refresh_token|access_key)(["'"']?)[[:space:]]*[:=][[:space:]]*[^,} ]+#\1\2:REDACTED#Ig'
-          echo '=== catalog summary ==='
+          BASE=/root/automation-stack
+          CACHE="$BASE/reef_drive_cache"
+          CRED=/tmp/reef_drive_media_cred_$$.json
+          CTMP=/tmp/reef_drive_media_cred.json
+          cleanup(){ sudo rm -f "$CRED"; docker exec n8n rm -f "$CTMP" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          sudo cp "$CACHE/catalog.json" "$CACHE/catalog.json.pre-local-media-$stamp"
+          docker exec -u node n8n n8n export:credentials --id=CZYUGdiuFIHvixxM --decrypted --output="$CTMP" >/dev/null
+          docker cp n8n:"$CTMP" "$CRED" >/dev/null
+          sudo chmod 600 "$CRED"
+          sudo python3 - "$CRED" "$CACHE" <<'PY'
+          import json, mimetypes, os, shutil, sys, tempfile, urllib.parse, urllib.request
+          from pathlib import Path
+          cred_path=Path(sys.argv[1]); cache=Path(sys.argv[2]); catalog_path=cache/'catalog.json'
+          catalog=json.loads(catalog_path.read_text())
+          exported=json.loads(cred_path.read_text())
+          rec=exported[0] if isinstance(exported,list) else exported
+          data=rec.get('data',rec)
+          tok=data.get('oauthTokenData') or data.get('tokenData') or {}
+          if isinstance(tok,str): tok=json.loads(tok)
+          access=tok.get('access_token') or tok.get('accessToken')
+          refresh=tok.get('refresh_token') or tok.get('refreshToken') or data.get('refreshToken')
+          client_id=data.get('clientId') or data.get('client_id')
+          client_secret=data.get('clientSecret') or data.get('client_secret')
+          def refresh_access():
+              if not (refresh and client_id and client_secret): raise RuntimeError('Google OAuth refresh fields unavailable')
+              body=urllib.parse.urlencode({'client_id':client_id,'client_secret':client_secret,'refresh_token':refresh,'grant_type':'refresh_token'}).encode()
+              req=urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})
+              with urllib.request.urlopen(req,timeout=30) as r: return json.load(r)['access_token']
+          if not access: access=refresh_access()
+          photos=[]
+          def walk(x):
+              if isinstance(x,dict):
+                  ps=x.get('photos')
+                  if isinstance(ps,list):
+                      for p in ps:
+                          if isinstance(p,dict) and p.get('id'): photos.append(p)
+                  for v in x.values(): walk(v)
+              elif isinstance(x,list):
+                  for v in x: walk(v)
+          walk(catalog)
+          unique={p['id']:p for p in photos}
+          if not unique: raise RuntimeError('No catalog photos found')
+          media=cache/'media'; stage=cache/f'.media-stage-{os.getpid()}'
+          stage.mkdir(parents=True,exist_ok=True)
+          extmap={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif','image/avif':'.avif'}
+          total=0; manifest={}; retried=False
+          for idx,(fid,p) in enumerate(unique.items(),1):
+              mime=(p.get('mimeType') or 'image/jpeg').split(';')[0].lower()
+              ext=extmap.get(mime) or Path(p.get('name','')).suffix.lower() or '.bin'
+              url='https://www.googleapis.com/drive/v3/files/'+urllib.parse.quote(fid,safe='')+'?alt=media&supportsAllDrives=true'
+              def fetch(token):
+                  req=urllib.request.Request(url,headers={'Authorization':'Bearer '+token})
+                  return urllib.request.urlopen(req,timeout=90)
+              try: r=fetch(access)
+              except urllib.error.HTTPError as e:
+                  if e.code==401 and not retried:
+                      access=refresh_access(); retried=True; r=fetch(access)
+                  else: raise
+              with r:
+                  body=r.read(); ctype=(r.headers.get('Content-Type') or '').split(';')[0].lower()
+              if not body: raise RuntimeError(f'empty media {fid}')
+              if ctype and not ctype.startswith('image/'): raise RuntimeError(f'non-image media {fid}: {ctype}')
+              out=stage/(fid+ext); out.write_bytes(body); total+=len(body)
+              manifest[fid]={'file':out.name,'bytes':len(body),'mimeType':mime,'name':p.get('name','')}
+              if idx%25==0: print('downloaded',idx,'of',len(unique))
+          if media.exists(): shutil.rmtree(media)
+          stage.rename(media)
+          for p in photos:
+              m=manifest[p['id']]
+              p['url']='http://reef-catalog-api:8081/media/'+m['file']
+              p['localFile']=m['file']
+          catalog['mediaStorage']='local-vps'
+          catalog['googleDriveRuntimeDependency']=False
+          tmp=catalog_path.with_suffix('.json.tmp')
+          tmp.write_text(json.dumps(catalog,ensure_ascii=False,indent=2))
+          os.replace(tmp,catalog_path)
+          (cache/'media-manifest.json').write_text(json.dumps({'count':len(unique),'bytes':total,'files':manifest},ensure_ascii=False,indent=2))
+          print('MIGRATION_OK photos=',len(unique),'bytes=',total)
+          PY
+          echo '=== verify local catalog/media ==='
           sudo python3 - <<'PY'
           import json
           from pathlib import Path
-          p=Path('/root/automation-stack/reef_drive_cache/catalog.json')
-          d=json.loads(p.read_text())
-          print('catalog_bytes',p.stat().st_size)
-          print('top_keys',list(d) if isinstance(d,dict) else type(d).__name__)
-          def walk(x,path='root'):
-              if isinstance(x,dict):
-                  if isinstance(x.get('photos'),list):
-                      print('PHOTOSET',path,'key=',x.get('key'),'label=',x.get('label'),'folderId=',x.get('folderId'),'photos=',len(x['photos']))
-                      for ph in x['photos'][:3]:
-                          if isinstance(ph,dict): print(' PHOTO', {k:ph.get(k) for k in ('id','name','mimeType','url')})
-                  for k,v in x.items(): walk(v,path+'.'+str(k))
-              elif isinstance(x,list):
-                  for i,v in enumerate(x): walk(v,path+f'[{i}]')
-          walk(d)
+          p=Path('/root/automation-stack/reef_drive_cache/media-manifest.json')
+          m=json.loads(p.read_text())
+          files=list((p.parent/'media').glob('*'))
+          assert len(files)==m['count'], (len(files),m['count'])
+          assert sum(x.stat().st_size for x in files)==m['bytes']
+          print('LOCAL_FILES_OK',len(files),m['bytes'])
           PY
-          echo '=== timers ==='
-          systemctl is-enabled reef-drive-sync.timer || true
-          systemctl list-timers reef-drive-sync.timer --no-pager || true
+          sample=$(sudo find "$CACHE/media" -maxdepth 1 -type f | head -1)
+          sample_name=$(basename "$sample")
+          docker exec n8n node -e "fetch('http://reef-catalog-api:8081/media/$sample_name').then(async r=>{if(!r.ok)throw Error('n8n media '+r.status);let b=await r.arrayBuffer();console.log('N8N_MEDIA_OK',r.status,b.byteLength)})"
+          docker exec evolution-api node -e "fetch('http://reef-catalog-api:8081/media/$sample_name').then(async r=>{if(!r.ok)throw Error('evo media '+r.status);let b=await r.arrayBuffer();console.log('EVOLUTION_MEDIA_OK',r.status,b.byteLength)})"
+          docker exec n8n node -e "fetch('http://reef-catalog-api:8081/catalog.json').then(r=>r.json()).then(j=>{if(j.mediaStorage!=='local-vps')throw Error('catalog not local'); console.log('CATALOG_LOCAL_OK')})"
