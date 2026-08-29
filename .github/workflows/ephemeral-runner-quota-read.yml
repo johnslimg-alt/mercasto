@@ -1,0 +1,25 @@
+name: Ephemeral Runner Quota Read
+
+on:
+  push:
+    branches:
+      - ops/read-runner-quota-8vcpu
+
+permissions:
+  contents: read
+
+jobs:
+  read:
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 3
+    steps:
+      - name: Read runner resource controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          unit=actions.runner.johnslimg-alt-mercasto.srv1526037.service
+          echo "nproc=$(nproc)"
+          echo "loadavg=$(cat /proc/loadavg)"
+          systemctl show "$unit" -p ActiveState -p UnitFileState -p CPUQuotaPerSecUSec -p CPUWeight -p IOWeight -p MemoryMax -p TasksMax
+          echo '--- drop-ins ---'
+          systemctl cat "$unit" | grep -E '^(\[Service\]|CPUQuota=|CPUWeight=|IOWeight=|MemoryMax=|TasksMax=)' || true
