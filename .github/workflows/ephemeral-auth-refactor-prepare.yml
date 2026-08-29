@@ -23,19 +23,28 @@ jobs:
             wt=/tmp/mercasto-auth-ready
             cd "$repo"
             git fetch origin main --prune
+            if git worktree list --porcelain | grep -qF "worktree $wt"; then
+              git worktree remove --force "$wt"
+            else
+              rm -rf "$wt"
+            fi
             git worktree prune
-            rm -rf "$wt"
             git worktree add "$wt" refactor/app-auth-state
             cd "$wt"
             git rebase origin/main
             ln -s "$repo/node_modules" node_modules
+            trap "rm -f node_modules" EXIT
             node --test tests/*.test.mjs
             npm run check:static-safety
             npm run check:recovery
             bash scripts/public-ui-visual-evidence-gate.sh
             npm run build
-            npx eslint src/App.jsx src/app/useAuthSessionState.js tests/app-auth-session-state-extraction.test.mjs
+            auth_test=$(grep -l "App delegates auth session state while keeping auth effects in orchestration" tests/*.test.mjs | head -1)
+            test -n "$auth_test"
+            echo "auth_test=$auth_test"
+            npx eslint src/App.jsx src/app/useAuthSessionState.js "$auth_test"
             rm node_modules
+            trap - EXIT
             echo "HEAD=$(git rev-parse HEAD)"
             echo "BASE=$(git merge-base HEAD origin/main)"
             git status --short
