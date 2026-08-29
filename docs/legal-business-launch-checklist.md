@@ -2,12 +2,20 @@
 
 This checklist must be completed before public marketing. It does not replace legal advice; it records the product, policy and operational materials that must exist and be visible to users.
 
+## Current Mexico source baseline
+
+The current technical source/version review is recorded in `docs/legal/MEXICO_LEGAL_SOURCE_REVIEW_2026-08-28.md`.
+
+- Privacy baseline: current LFPDPPP published 2025-03-20, latest reform DOF 2025-11-14; the 2010 law is abrogated and must not be the sole baseline.
+- Recurring billing baseline: LFPC article 76 Bis VIII–IX, reform DOF 2025-12-12. Recurring billing remains NO-GO until disclosure, express consent, five-calendar-day renewal notice, immediate cancellation, and human legal/product approval are all verified.
+- The source review is technical evidence only and does not record counsel approval.
+
 ## Required public pages or policy surfaces
 
 | Area | Requirement | Status |
 | --- | --- | --- |
 | Terms of service | Clear marketplace terms for buyers, sellers and visitors | Technical evidence complete; human review pending |
-| Privacy policy | Data collection, account data, payments, analytics, support, retention | Technical evidence complete; human review pending |
+| Privacy policy | Data collection, account data, payments, analytics, support, retention | Technical evidence complete; current-law counsel review pending |
 | Cookie/analytics notice | Cookie/analytics disclosure and consent handling where applicable | Technical evidence complete; human review pending |
 | Refund/payment policy | Payment flow, failed payment, refunds, promotion credits, manual recovery | Public page and smoke complete; owner sign-off pending |
 | Moderation policy | Prohibited listings, reporting, takedown, repeat abuse handling | Public page and smoke complete; queue owner pending |
