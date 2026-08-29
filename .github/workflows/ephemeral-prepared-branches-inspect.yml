@@ -1,0 +1,50 @@
+name: Ephemeral Prepared Branches Inspect
+
+on:
+  push:
+    branches:
+      - ops/probe-vps-capacity-rdc
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_inspect_key
+          chmod 600 ~/.ssh/mercasto_inspect_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Inspect local prepared branches
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_inspect_key root@"$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /var/www/mercasto
+          git fetch origin main --prune
+          echo "origin_main=$(git rev-parse origin/main)"
+          git worktree list --porcelain
+          echo '--- prepared refs ---'
+          for b in refactor/app-auth-state refactor/app-transient-modal-state refactor/app-catalog-state; do
+            if git show-ref --verify --quiet "refs/heads/$b"; then
+              echo "$b=$(git rev-parse "$b") base=$(git merge-base "$b" origin/main)"
+            else
+              echo "$b=MISSING"
+            fi
+          done
+          echo '--- matching paths ---'
+          find /tmp /root -maxdepth 2 -type d \( -name 'mercasto-908*' -o -name 'mercasto-*auth*' -o -name 'mercasto-*catalog*' \) -print 2>/dev/null | sort | head -50 || true
+          REMOTE
