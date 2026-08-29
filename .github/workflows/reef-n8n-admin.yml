@@ -10,21 +10,34 @@ permissions:
 jobs:
   diagnose:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
-      - name: Allow internal n8n to Nemotron and test
+      - name: Start private Nemotron container
         shell: bash
         run: |
-          set -e
-          echo '=== UFW BEFORE ==='
-          sudo -n ufw status verbose || true
-          sudo -n ufw allow in on br-7c8bb24f2178 from 172.19.0.0/16 to 172.19.0.1 port 11435 proto tcp || true
-          echo '=== TEST HEALTH ==='
-          docker exec n8n node -e "fetch('http://172.19.0.1:11435/health').then(async r=>{console.log(r.status);console.log(await r.text())}).catch(e=>{console.error(e);process.exit(1)})"
-          echo '=== TEST JSON CHAT ==='
+          set -Eeuo pipefail
+          MODEL=$(sudo -n find /opt/reef-actions-runner/.cache/huggingface/hub -type f -name '*Nemotron*IQ4_XS.gguf' | head -1)
+          test -n "$MODEL"
+          echo "model_found=yes"
+          docker pull ghcr.io/ggml-org/llama.cpp:server
+          sudo -n pkill -u reefci -f '/.llama-app/llama serve' || true
+          docker rm -f reef-nemotron >/dev/null 2>&1 || true
+          docker run -d --name reef-nemotron --restart unless-stopped \
+            --network automation-net --cpuset-cpus=4-7 --cpu-shares=128 \
+            --memory=24g --memory-swap=24g --oom-score-adj=500 \
+            -v "$MODEL:/models/nemotron.gguf:ro" \
+            ghcr.io/ggml-org/llama.cpp:server \
+            -m /models/nemotron.gguf --host 0.0.0.0 --port 8080 \
+            --no-repack --cache-ram 0 --reasoning off -c 4096 -t 4 -tb 4 \
+            -b 512 -ub 128 -ctk q8_0 -ctv q8_0 --parallel 1 --poll 0
+          for i in $(seq 1 90); do
+            if docker exec n8n node -e "fetch('http://reef-nemotron:8080/health').then(r=>{if(!r.ok)process.exit(1);console.log('ok')}).catch(()=>process.exit(1))" >/tmp/nemotron-health 2>&1; then break; fi
+            sleep 2
+          done
+          cat /tmp/nemotron-health || true
           docker exec n8n node - <<'NODE'
           const body={model:'nemotron-local',messages:[{role:'system',content:'Return JSON only with key ok boolean.'},{role:'user',content:'Respond true.'}],temperature:0,max_tokens:40,response_format:{type:'json_object'}};
-          fetch('http://172.19.0.1:11435/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
-            .then(async r=>{console.log('status='+r.status); console.log(await r.text())})
-            .catch(e=>{console.error(e);process.exit(1)});
+          fetch('http://reef-nemotron:8080/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(async r=>{console.log('status='+r.status);console.log(await r.text());if(!r.ok)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)});
           NODE
+          echo '=== CONTAINER ==='
+          docker ps --filter name=reef-nemotron --format '{{.Names}} {{.Status}}'
