@@ -1,0 +1,36 @@
+name: Ephemeral Auth Journey Repro
+
+on:
+  push:
+    branches:
+      - ops/read-runner-quota-8vcpu
+
+permissions:
+  contents: read
+
+jobs:
+  repro:
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refactor/app-auth-state
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install chromium
+      - name: Run seller registration redirect only
+        run: |
+          set -euo pipefail
+          npx vite preview --host 127.0.0.1 --port 4185 >/tmp/mercasto-auth-repro-vite.log 2>&1 &
+          preview_pid=$!
+          trap 'kill $preview_pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:4185/ >/dev/null; then break; fi
+            sleep 0.25
+          done
+          PLAYWRIGHT_BASE_URL=http://127.0.0.1:4185 npx playwright test tests/e2e/seller-registration-redirect.spec.js --project=chromium-desktop --project=chromium-mobile --workers=1
