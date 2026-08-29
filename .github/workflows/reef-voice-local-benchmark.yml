@@ -1,4 +1,4 @@
-name: Reef local AI source persistence
+name: Reef local AI source rebase
 
 on:
   push:
@@ -8,33 +8,32 @@ permissions:
   contents: read
 
 jobs:
-  persist:
+  rebase:
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 8
     steps:
-      - name: Create clean Reef source branch with workflow only
+      - name: Recreate source branch from latest Reef main
         shell: bash
         run: |
           set -Eeuo pipefail
           REPO=/root/reef-crm
           FILE=ops/n8n/workflows/reef-whatsapp-workflow.json
           BR=fix/local-ai-private-inference-20260829
-          WT=/tmp/reef-local-ai-worktree
-          PATCH=/tmp/reef-local-ai-workflow.patch
+          WT=/tmp/reef-local-ai-rebase
+          PATCH=/tmp/reef-local-ai-current.patch
           sudo -n git -C "$REPO" diff --binary HEAD -- "$FILE" > "$PATCH"
           test -s "$PATCH"
+          sudo -n git -C "$REPO" fetch origin main
           sudo -n git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1 || true
           sudo -n git -C "$REPO" branch -D "$BR" >/dev/null 2>&1 || true
-          sudo -n git -C "$REPO" worktree add -b "$BR" "$WT" HEAD
-          sudo -n git -C "$WT" apply "$PATCH"
+          sudo -n git -C "$REPO" worktree add -b "$BR" "$WT" origin/main
+          sudo -n git -C "$WT" apply --3way "$PATCH"
           CHANGED=$(sudo -n git -C "$WT" status --short | awk '{print $2}')
           echo "changed_files=$CHANGED"
           test "$CHANGED" = "$FILE"
           sudo -n git -C "$WT" add -- "$FILE"
           sudo -n git -C "$WT" -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Route Reef AI inference fully local'
-          ORIGIN=$(sudo -n git -C "$WT" remote get-url origin | sed -E 's#https://[^/@]+@#https://***@#')
-          echo "origin=$ORIGIN"
-          sudo -n git -C "$WT" push -u origin "$BR"
-          echo "branch=$BR"
-          sudo -n git -C "$WT" show --stat --oneline --decorate -1
+          sudo -n git -C "$WT" push --force-with-lease origin "$BR"
+          echo branch="$BR"
+          sudo -n git -C "$WT" show --stat --oneline -1
           sudo -n git -C "$REPO" worktree remove --force "$WT"
