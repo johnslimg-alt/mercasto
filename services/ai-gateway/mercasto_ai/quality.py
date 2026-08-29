@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -21,7 +22,7 @@ class QualityObservation:
     @property
     def predicted_risk(self) -> bool:
         # In the assist-only rollout, any non-approved result is a conservative
-        # positive signal for human review.  This never makes an authoritative
+        # positive signal for human review. This never makes an authoritative
         # moderation decision by itself.
         return self.decision != "approved"
 
@@ -123,3 +124,24 @@ def render_report(observations: Iterable[QualityObservation]) -> dict[str, objec
             for category in categories
         },
     }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Measure privacy-safe moderation quality observations without enforcing decisions."
+    )
+    parser.add_argument("observations", type=Path, help="JSONL observations from a synthetic benchmark")
+    parser.add_argument("--output", type=Path, help="Optional path for the JSON report")
+    args = parser.parse_args()
+
+    report = render_report(load_jsonl(args.observations))
+    encoded = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    if args.output:
+        args.output.write_text(encoded, encoding="utf-8")
+    else:
+        print(encoded, end="")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
