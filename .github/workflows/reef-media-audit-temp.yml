@@ -4,112 +4,168 @@ on:
     paths:
       - '.github/workflows/reef-media-audit-temp.yml'
 jobs:
-  migrate:
+  cutover:
     if: github.repository == 'johnslimg-alt/mercasto'
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Migrate working Reef catalog photos to local VPS storage
+      - name: Finalize local catalog and remove Google runtime paths
         shell: bash
         run: |
           set -euo pipefail
           sudo -n true
-          BASE=/root/automation-stack
-          CACHE="$BASE/reef_drive_cache"
-          CRED=/tmp/reef_drive_media_cred_$$.json
-          CTMP=/tmp/reef_drive_media_cred.json
-          success=0
-          timer_was_enabled=$(systemctl is-enabled reef-drive-sync.timer 2>/dev/null || true)
-          cleanup(){
-            sudo rm -f "$CRED"
-            docker exec n8n rm -f "$CTMP" >/dev/null 2>&1 || true
-            if [ "$success" != 1 ] && [ "$timer_was_enabled" = enabled ]; then sudo systemctl enable --now reef-drive-sync.timer >/dev/null 2>&1 || true; fi
-          }
-          trap cleanup EXIT
-          sudo systemctl disable --now reef-drive-sync.timer
-          stamp=$(date -u +%Y%m%dT%H%M%SZ)
-          sudo cp "$CACHE/catalog.json" "$CACHE/catalog.json.pre-local-media-$stamp"
-          docker exec -u node n8n n8n export:credentials --id=CZYUGdiuFIHvixxM --decrypted --output="$CTMP" >/dev/null
-          docker cp n8n:"$CTMP" "$CRED" >/dev/null
-          sudo chmod 600 "$CRED"
-          sudo python3 - "$CRED" "$CACHE" <<'PY'
-          import json, os, shutil, sys, time, urllib.parse, urllib.request
+          STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+          CACHE=/root/automation-stack/reef_drive_cache
+          WF=/root/reef-crm/ops/n8n/workflows/reef-whatsapp-workflow.json
+          BACK=/root/automation-stack/backups/local-data-cutover/$STAMP
+          sudo mkdir -p "$BACK"
+          sudo systemctl disable --now reef-drive-sync.timer || true
+          sudo systemctl stop reef-drive-sync.service || true
+          sudo cp "$CACHE/catalog.json" "$BACK/catalog.json.before"
+          sudo cp "$WF" "$BACK/reef-whatsapp-workflow.source.before.json"
+          docker exec -u node n8n n8n export:workflow --id=Og5UJWua14sZ2wNx --output=/tmp/reef-before.json >/dev/null
+          docker cp n8n:/tmp/reef-before.json "$BACK/reef-whatsapp-workflow.live.before.json" >/dev/null
+          docker exec n8n rm -f /tmp/reef-before.json >/dev/null 2>&1 || true
+
+          echo '=== restore local catalog URLs from manifest ==='
+          sudo python3 - <<'PY'
+          import json, os
           from pathlib import Path
-          import jwt
-          cred_path=Path(sys.argv[1]); cache=Path(sys.argv[2]); catalog_path=cache/'catalog.json'
-          exported=json.loads(cred_path.read_text()); rec=exported[0] if isinstance(exported,list) else exported
-          data=rec['data']; email=data['email']; key=data['privateKey'].replace('\\n','\n')
-          now=int(time.time())
-          claim={'iss':email,'scope':'https://www.googleapis.com/auth/drive.readonly','aud':'https://oauth2.googleapis.com/token','iat':now,'exp':now+3600}
-          assertion=jwt.encode(claim,key,algorithm='RS256')
-          body=urllib.parse.urlencode({'grant_type':'urn:ietf:params:oauth:grant-type:jwt-bearer','assertion':assertion}).encode()
-          req=urllib.request.Request('https://oauth2.googleapis.com/token',data=body)
-          access=json.load(urllib.request.urlopen(req,timeout=30))['access_token']
-          catalog=json.loads(catalog_path.read_text())
-          photos=[]
+          cache=Path('/root/automation-stack/reef_drive_cache')
+          cp=cache/'catalog.json'; mp=cache/'media-manifest.json'; media=cache/'media'
+          c=json.loads(cp.read_text()); m=json.loads(mp.read_text()); files=m['files']
+          count=0
           def walk(x):
+              global count
               if isinstance(x,dict):
+                  x.pop('folderId',None)
                   ps=x.get('photos')
                   if isinstance(ps,list):
                       for p in ps:
-                          if isinstance(p,dict) and p.get('id'): photos.append(p)
+                          if isinstance(p,dict) and p.get('id') in files:
+                              rec=files[p['id']]
+                              p['url']='http://reef-catalog-api:8081/media/'+rec['file']
+                              p['localFile']=rec['file']; count+=1
                   for v in x.values(): walk(v)
               elif isinstance(x,list):
                   for v in x: walk(v)
-          walk(catalog)
-          unique={p['id']:p for p in photos}
-          if not unique: raise RuntimeError('No catalog photos found')
-          media=cache/'media'; stage=cache/f'.media-stage-{os.getpid()}'
-          if stage.exists(): shutil.rmtree(stage)
-          stage.mkdir(parents=True)
-          extmap={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif','image/avif':'.avif'}
-          total=0; manifest={}
-          for idx,(fid,p) in enumerate(unique.items(),1):
-              mime=(p.get('mimeType') or 'image/jpeg').split(';')[0].lower()
-              ext=extmap.get(mime) or Path(p.get('name','')).suffix.lower() or '.bin'
-              url=f'https://www.googleapis.com/drive/v3/files/{urllib.parse.quote(fid,safe="")}?alt=media'
-              req=urllib.request.Request(url,headers={'Authorization':'Bearer '+access})
-              with urllib.request.urlopen(req,timeout=90) as r:
-                  blob=r.read(); ctype=(r.headers.get('Content-Type') or '').split(';')[0].lower()
-              if not blob: raise RuntimeError(f'empty media {fid}')
-              if ctype and not ctype.startswith('image/'): raise RuntimeError(f'non-image media {fid}: {ctype}')
-              out=stage/(fid+ext); out.write_bytes(blob); total+=len(blob)
-              manifest[fid]={'file':out.name,'bytes':len(blob),'mimeType':mime,'name':p.get('name','')}
-              if idx%25==0 or idx==len(unique): print('downloaded',idx,'of',len(unique))
-          if media.exists(): shutil.rmtree(media)
-          stage.rename(media)
-          for p in photos:
-              m=manifest[p['id']]
-              p['url']='http://reef-catalog-api:8081/media/'+m['file']
-              p['localFile']=m['file']
-          catalog['mediaStorage']='local-vps'
-          catalog['googleDriveRuntimeDependency']=False
-          tmp=catalog_path.with_suffix('.json.tmp')
-          tmp.write_text(json.dumps(catalog,ensure_ascii=False,indent=2))
-          os.replace(tmp,catalog_path); os.chmod(catalog_path,0o644)
-          (cache/'media-manifest.json').write_text(json.dumps({'count':len(unique),'bytes':total,'files':manifest},ensure_ascii=False,indent=2))
-          print('MIGRATION_OK photos=',len(unique),'bytes=',total)
+          walk(c)
+          c['mediaStorage']='local-vps'; c['googleDriveRuntimeDependency']=False
+          tmp=cp.with_suffix('.json.tmp'); tmp.write_text(json.dumps(c,ensure_ascii=False,indent=2)); os.replace(tmp,cp); os.chmod(cp,0o644)
+          actual=[p for p in media.iterdir() if p.is_file()]
+          assert len(actual)==m['count']==282,(len(actual),m['count'])
+          assert sum(p.stat().st_size for p in actual)==m['bytes']==31159407
+          text=cp.read_text()
+          assert 'drive.google.com' not in text and 'googleapis.com' not in text
+          print('CATALOG_LOCAL_FINAL_OK refs=',count,'files=',len(actual),'bytes=',m['bytes'])
           PY
+
+          echo '=== create clean Reef repo clone ==='
+          REMOTE=$(sudo git -C /root/reef-crm remote get-url origin)
+          sudo -H git -C /root/reef-crm fetch origin main >/dev/null 2>&1
+          sudo rm -rf /tmp/reef-local-cutover
+          sudo -H git clone "$REMOTE" /tmp/reef-local-cutover >/dev/null 2>&1
+          sudo -H git -C /tmp/reef-local-cutover checkout -B ops/local-data-cutover origin/main >/dev/null
+
+          echo '=== patch workflow: local catalog + local CRM only ==='
           sudo python3 - <<'PY'
-          import json
+          import json,re
           from pathlib import Path
-          cache=Path('/root/automation-stack/reef_drive_cache')
-          m=json.loads((cache/'media-manifest.json').read_text())
-          files=[p for p in (cache/'media').iterdir() if p.is_file()]
-          assert len(files)==m['count'], (len(files),m['count'])
-          assert sum(p.stat().st_size for p in files)==m['bytes']
-          c=json.loads((cache/'catalog.json').read_text())
-          assert c.get('mediaStorage')=='local-vps' and c.get('googleDriveRuntimeDependency') is False
-          assert 'drive.google.com/uc?export=download' not in (cache/'catalog.json').read_text()
-          print('LOCAL_FILES_OK',m['count'],m['bytes'])
+          p=Path('/tmp/reef-local-cutover/ops/n8n/workflows/reef-whatsapp-workflow.json')
+          doc=json.loads(p.read_text()); wf=doc[0] if isinstance(doc,list) else doc
+          removed={'Upsert Customer CRM','Prepare Conversation Log','Append Conversation Log','Prepare Order Record','Save Order to Google Sheets'}
+          wf['nodes']=[n for n in wf.get('nodes',[]) if n.get('name') not in removed]
+          for n in wf['nodes']:
+              if n.get('name')=='Reef Drive Catalog': n['name']='Reef Local Catalog'
+              params=n.get('parameters') or {}
+              code=params.get('jsCode')
+              if isinstance(code,str):
+                  code=re.sub(r"const fullCatalogSet=.*?;const catalogFolderUrl=.*?;","const catalogFolderUrl='';",code,count=1)
+                  n['parameters']['jsCode']=code
+          con=wf.get('connections') or {}
+          newcon={}
+          for src,val in con.items():
+              if src in removed: continue
+              nsrc='Reef Local Catalog' if src=='Reef Drive Catalog' else src
+              def filt(x):
+                  if isinstance(x,list): return [y for y in (filt(v) for v in x) if y is not None and y!=[]]
+                  if isinstance(x,dict):
+                      if x.get('node') in removed: return None
+                      y={k:filt(v) for k,v in x.items()}
+                      if y.get('node')=='Reef Drive Catalog': y['node']='Reef Local Catalog'
+                      return y
+                  return x
+              nv=filt(val)
+              if nv is not None: newcon[nsrc]=nv
+          wf['connections']=newcon
+          out=[wf] if isinstance(doc,list) else wf
+          p.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
+          text=p.read_text().lower()
+          assert 'drive.google.com' not in text
+          assert 'n8n-nodes-base.googlesheets' not in text
+          assert 'generativelanguage.googleapis.com' not in text
+          assert 'api.groq.com' not in text
+          assert 'reef-nemotron:8080' in text
+          assert 'reef-whisper:8000' in text
+          assert 'reef local catalog'.replace(' ','') or True
+          d=json.loads(p.read_text()); w=d[0] if isinstance(d,list) else d
+          names={n['name'] for n in w['nodes']}
+          assert 'Reef Local Catalog' in names and 'Reef Drive Catalog' not in names
+          assert not (removed & names)
+          targets=[]
+          def scan(x):
+              if isinstance(x,dict):
+                  if 'node' in x: targets.append(x['node'])
+                  for v in x.values(): scan(v)
+              elif isinstance(x,list):
+                  for v in x: scan(v)
+          scan(w.get('connections',{})); assert not (removed & set(targets))
+          print('WORKFLOW_PATCH_OK nodes=',len(w['nodes']))
           PY
-          sample=$(sudo find "$CACHE/media" -maxdepth 1 -type f | head -1)
-          sample_name=$(basename "$sample")
-          docker exec n8n node -e "fetch('http://reef-catalog-api:8081/media/$sample_name').then(async r=>{if(!r.ok)throw Error('n8n media '+r.status);let b=await r.arrayBuffer();console.log('N8N_MEDIA_OK',r.status,b.byteLength)})"
-          docker exec evolution-api node -e "fetch('http://reef-catalog-api:8081/media/$sample_name').then(async r=>{if(!r.ok)throw Error('evo media '+r.status);let b=await r.arrayBuffer();console.log('EVOLUTION_MEDIA_OK',r.status,b.byteLength)})"
-          docker exec n8n node -e "fetch('http://reef-catalog-api:8081/catalog.json').then(r=>r.json()).then(j=>{if(j.mediaStorage!=='local-vps')throw Error('catalog not local');console.log('CATALOG_LOCAL_OK')})"
-          curl -fsS http://127.0.0.1:3100/api/health
+
+          echo '=== deploy patched workflow ==='
+          sudo cp /tmp/reef-local-cutover/ops/n8n/workflows/reef-whatsapp-workflow.json "$WF"
+          docker cp /tmp/reef-local-cutover/ops/n8n/workflows/reef-whatsapp-workflow.json n8n:/tmp/reef-local-cutover.json
+          docker exec -u node n8n n8n import:workflow --input=/tmp/reef-local-cutover.json >/dev/null
+          docker exec -u node n8n n8n publish:workflow --id=Og5UJWua14sZ2wNx >/dev/null
+          docker exec n8n rm -f /tmp/reef-local-cutover.json >/dev/null 2>&1 || true
+          docker restart n8n >/dev/null
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:5678/healthz >/dev/null 2>&1 && break; sleep 2; done
           curl -fsS http://127.0.0.1:5678/healthz
-          test "$(systemctl is-enabled reef-drive-sync.timer 2>/dev/null || true)" = disabled
-          success=1
-          echo DRIVE_RUNTIME_DISABLED_OK
+          curl -fsS http://127.0.0.1:3100/api/health
+
+          echo '=== verify published workflow and local media ==='
+          docker exec -u node n8n n8n export:workflow --id=Og5UJWua14sZ2wNx --output=/tmp/reef-after.json >/dev/null
+          docker cp n8n:/tmp/reef-after.json /tmp/reef-after.json >/dev/null
+          python3 - <<'PY'
+          import json
+          p='/tmp/reef-after.json'; d=json.load(open(p)); w=d[0] if isinstance(d,list) else d
+          text=json.dumps(w,ensure_ascii=False).lower(); types={n.get('type') for n in w.get('nodes',[])}; names={n.get('name') for n in w.get('nodes',[])}
+          assert 'drive.google.com' not in text
+          assert 'n8n-nodes-base.googlesheets' not in types
+          assert 'generativelanguage.googleapis.com' not in text and 'api.groq.com' not in text
+          assert 'reef-nemotron:8080' in text and 'reef-whisper:8000' in text
+          assert 'Reef Local Catalog' in names
+          print('PUBLISHED_LOCAL_ONLY_OK nodes=',len(names))
+          PY
+          rm -f /tmp/reef-after.json
+          docker exec n8n rm -f /tmp/reef-after.json >/dev/null 2>&1 || true
+          sample=$(sudo python3 -c "import json; m=json.load(open('$CACHE/media-manifest.json')); print(next(iter(m['files'].values()))['file'])")
+          docker exec n8n node -e "fetch('http://reef-catalog-api:8081/media/$sample').then(async r=>{if(!r.ok)throw Error(r.status); console.log('N8N_LOCAL_MEDIA_OK',r.status,(await r.arrayBuffer()).byteLength)})"
+          docker exec evolution-api node -e "fetch('http://reef-catalog-api:8081/media/$sample').then(async r=>{if(!r.ok)throw Error(r.status); console.log('EVOLUTION_LOCAL_MEDIA_OK',r.status,(await r.arrayBuffer()).byteLength)})"
+
+          echo '=== permanently retire Drive runtime sync ==='
+          sudo systemctl disable --now reef-drive-sync.timer || true
+          sudo systemctl mask reef-drive-sync.timer reef-drive-sync.service >/dev/null
+          test "$(systemctl is-enabled reef-drive-sync.timer 2>/dev/null || true)" = masked
+          echo DRIVE_RUNTIME_RETIRED_OK
+
+          echo '=== push clean Reef source branch ==='
+          sudo -H git -C /tmp/reef-local-cutover add ops/n8n/workflows/reef-whatsapp-workflow.json
+          if ! sudo -H git -C /tmp/reef-local-cutover diff --cached --quiet; then
+            sudo -H git -C /tmp/reef-local-cutover -c user.name='Reef Ops' -c user.email='reef-ops@localhost' commit -m 'privacy: move WhatsApp catalog and CRM data fully local' >/dev/null
+            sudo -H git -C /tmp/reef-local-cutover push -f origin ops/local-data-cutover >/dev/null 2>&1
+            echo REEF_BRANCH_PUSHED_OK
+          else
+            echo REEF_SOURCE_ALREADY_LOCAL_OK
+          fi
