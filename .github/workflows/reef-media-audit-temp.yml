@@ -1,0 +1,38 @@
+name: Reef media storage audit temp
+on:
+  push:
+    paths:
+      - '.github/workflows/reef-media-audit-temp.yml'
+jobs:
+  audit:
+    if: github.repository == 'johnslimg-alt/mercasto'
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Audit Reef Drive sync and catalog storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== identity ==='
+          id
+          sudo -n true
+          echo '=== drive sync logic (safe lines only) ==='
+          sudo grep -nE 'ROOT|DIR|PATH|drive|google|rclone|curl|wget|python|catalog|photo|image|media|download|sync' /root/automation-stack/scripts/reef_drive_sync.sh | sed -E 's#(token|secret|password|client_secret|refresh_token)[^ ]*#REDACTED#Ig' | head -160 || true
+          echo '=== catalog container ==='
+          docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep -E 'reef-catalog|n8n|evolution' || true
+          if docker inspect reef-catalog-api >/dev/null 2>&1; then
+            docker inspect reef-catalog-api --format 'mounts={{range .Mounts}}{{.Source}} -> {{.Destination}}; {{end}} networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+          fi
+          echo '=== local media candidates ==='
+          sudo find /root/automation-stack /srv /var/lib -maxdepth 4 -type d \( -iname '*catalog*' -o -iname '*drive*' -o -iname '*photo*' -o -iname '*media*' \) -print 2>/dev/null | head -120
+          echo '=== image counts under automation stack ==='
+          sudo python3 - <<'PY'
+          from pathlib import Path
+          roots=[Path('/root/automation-stack'),Path('/srv')]
+          exts={'.jpg','.jpeg','.png','.webp','.gif','.avif'}
+          for root in roots:
+              if not root.exists(): continue
+              files=[p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in exts]
+              print(root, 'images=',len(files),'bytes=',sum(p.stat().st_size for p in files))
+              for p in files[:20]: print('IMG',p,p.stat().st_size)
+          PY
