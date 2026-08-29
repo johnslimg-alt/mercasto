@@ -20,6 +20,7 @@ import { useSearchSuggestionState } from './app/useSearchSuggestionState';
 import { useLocationSearchState } from './app/useLocationSearchState';
 import { useViewedAdState } from './app/useViewedAdState';
 import { useShellMenuState } from './app/useShellMenuState';
+import { useAuthSessionState } from './app/useAuthSessionState';
 import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
@@ -474,16 +475,16 @@ function App() {
   };
   const initialAuthToken = localStorage.getItem('auth_token');
   const initialUser = initialAuthToken ? getSafeUser() : null;
-  const [authReady, setAuthReady] = useState(!initialAuthToken);
-  const [user, setUser] = useState(initialUser);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const {
+    authReady, setAuthReady, user, setUser, showAuthModal, setShowAuthModal,
+    authMode, setAuthMode, registrationConsentAccepted, setRegistrationConsentAccepted,
+    pendingPhoneRegistrationConsent, setPendingPhoneRegistrationConsent,
+    showOnboarding, setShowOnboarding, emailBannerDismissed, setEmailBannerDismissed,
+    emailBannerSent, setEmailBannerSent, resetToken, setResetToken, resetEmail, setResetEmail,
+    authLoading, setAuthLoading, requiresTwoFactor, setRequiresTwoFactor,
+    twoFactorEmail, setTwoFactorEmail, twoFactorChallengeToken, setTwoFactorChallengeToken,
+  } = useAuthSessionState(initialAuthToken, initialUser);
   useRefQueryParam();
-  const [authMode, setAuthMode] = useState('login');
-  const [registrationConsentAccepted, setRegistrationConsentAccepted] = useState(false);
-  const [pendingPhoneRegistrationConsent, setPendingPhoneRegistrationConsent] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
-  const [emailBannerSent, setEmailBannerSent] = useState(false);
 
   // Show onboarding once for organic registrations. High-intent protected-route
   // registrations continue to bypass it through protectedRouteReturn.
@@ -527,15 +528,9 @@ function App() {
       if (response.ok) localStorage.removeItem('onboarding_pending_sync');
     }).catch(() => {});
   }, [user]);
-  const [resetToken, setResetToken] = useState('');
-  const [resetEmail, setResetEmail] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
   const authModalDialogRef = useRef(null);
   const authModalOpenerRef = useRef(null);
   const authModalWasOpenRef = useRef(false);
-  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
-  const [twoFactorEmail, setTwoFactorEmail] = useState('');
-  const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState('');
 
   const getAuthModalFocusables = useCallback(() => {
     const dialog = authModalDialogRef.current;
