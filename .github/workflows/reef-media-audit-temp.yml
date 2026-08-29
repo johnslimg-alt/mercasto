@@ -18,8 +18,15 @@ jobs:
           CACHE="$BASE/reef_drive_cache"
           CRED=/tmp/reef_drive_media_cred_$$.json
           CTMP=/tmp/reef_drive_media_cred.json
-          cleanup(){ sudo rm -f "$CRED"; docker exec n8n rm -f "$CTMP" >/dev/null 2>&1 || true; }
+          success=0
+          timer_was_enabled=$(systemctl is-enabled reef-drive-sync.timer 2>/dev/null || true)
+          cleanup(){
+            sudo rm -f "$CRED"
+            docker exec n8n rm -f "$CTMP" >/dev/null 2>&1 || true
+            if [ "$success" != 1 ] && [ "$timer_was_enabled" = enabled ]; then sudo systemctl enable --now reef-drive-sync.timer >/dev/null 2>&1 || true; fi
+          }
           trap cleanup EXIT
+          sudo systemctl disable --now reef-drive-sync.timer
           stamp=$(date -u +%Y%m%dT%H%M%SZ)
           sudo cp "$CACHE/catalog.json" "$CACHE/catalog.json.pre-local-media-$stamp"
           docker exec -u node n8n n8n export:credentials --id=CZYUGdiuFIHvixxM --decrypted --output="$CTMP" >/dev/null
@@ -83,7 +90,6 @@ jobs:
           (cache/'media-manifest.json').write_text(json.dumps({'count':len(unique),'bytes':total,'files':manifest},ensure_ascii=False,indent=2))
           print('MIGRATION_OK photos=',len(unique),'bytes=',total)
           PY
-          echo '=== verify files/catalog ==='
           sudo python3 - <<'PY'
           import json
           from pathlib import Path
@@ -94,8 +100,7 @@ jobs:
           assert sum(p.stat().st_size for p in files)==m['bytes']
           c=json.loads((cache/'catalog.json').read_text())
           assert c.get('mediaStorage')=='local-vps' and c.get('googleDriveRuntimeDependency') is False
-          text=(cache/'catalog.json').read_text()
-          assert 'drive.google.com/uc?export=download' not in text
+          assert 'drive.google.com/uc?export=download' not in (cache/'catalog.json').read_text()
           print('LOCAL_FILES_OK',m['count'],m['bytes'])
           PY
           sample=$(sudo find "$CACHE/media" -maxdepth 1 -type f | head -1)
@@ -105,3 +110,6 @@ jobs:
           docker exec n8n node -e "fetch('http://reef-catalog-api:8081/catalog.json').then(r=>r.json()).then(j=>{if(j.mediaStorage!=='local-vps')throw Error('catalog not local');console.log('CATALOG_LOCAL_OK')})"
           curl -fsS http://127.0.0.1:3100/api/health
           curl -fsS http://127.0.0.1:5678/healthz
+          test "$(systemctl is-enabled reef-drive-sync.timer 2>/dev/null || true)" = disabled
+          success=1
+          echo DRIVE_RUNTIME_DISABLED_OK
