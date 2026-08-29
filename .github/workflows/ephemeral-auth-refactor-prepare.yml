@@ -10,48 +10,34 @@ permissions:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
-      - name: Install SSH key
-        shell: bash
-        env:
-          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_auth_key
-          chmod 600 ~/.ssh/mercasto_auth_key
-          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
-
       - name: Rebase, gate and push auth state refactor
         shell: bash
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/mercasto_auth_key root@"$SERVER_HOST" 'bash -s' <<'REMOTE'
-          set -euo pipefail
-          repo=/var/www/mercasto
-          wt=/tmp/mercasto-auth-ready
-          cd "$repo"
-          git fetch origin main --prune
-          git worktree prune
-          rm -rf "$wt"
-          git worktree add "$wt" refactor/app-auth-state
-          cd "$wt"
-          git rebase origin/main
-          ln -s "$repo/node_modules" node_modules
-          node --test tests/*.test.mjs
-          npm run check:static-safety
-          npm run check:recovery
-          bash scripts/public-ui-visual-evidence-gate.sh
-          npm run build
-          npx eslint src/App.jsx src/app/useAuthSessionState.js tests/app-auth-session-state-extraction.test.mjs
-          rm node_modules
-          echo "HEAD=$(git rev-parse HEAD)"
-          echo "BASE=$(git merge-base HEAD origin/main)"
-          git status --short
-          git push -u origin refactor/app-auth-state
-          REMOTE
+          sudo -n bash -lc '
+            set -euo pipefail
+            repo=/var/www/mercasto
+            wt=/tmp/mercasto-auth-ready
+            cd "$repo"
+            git fetch origin main --prune
+            git worktree prune
+            rm -rf "$wt"
+            git worktree add "$wt" refactor/app-auth-state
+            cd "$wt"
+            git rebase origin/main
+            ln -s "$repo/node_modules" node_modules
+            node --test tests/*.test.mjs
+            npm run check:static-safety
+            npm run check:recovery
+            bash scripts/public-ui-visual-evidence-gate.sh
+            npm run build
+            npx eslint src/App.jsx src/app/useAuthSessionState.js tests/app-auth-session-state-extraction.test.mjs
+            rm node_modules
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "BASE=$(git merge-base HEAD origin/main)"
+            git status --short
+            git push -u origin refactor/app-auth-state
+          '
