@@ -1,0 +1,52 @@
+name: Ephemeral Resize Runner Quota
+
+on:
+  push:
+    branches:
+      - ops/resize-runner-quota-8vcpu
+
+permissions:
+  contents: read
+
+jobs:
+  resize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_SSH_KEY"
+          test -n "$SERVER_HOST"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_quota_key
+          chmod 600 ~/.ssh/mercasto_quota_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Raise runner CPU quota conservatively
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_quota_key root@"$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          unit=actions.runner.johnslimg-alt-mercasto.srv1526037.service
+          dropin=/etc/systemd/system.control/${unit}.d/50-CPUQuota.conf
+          backup_dir=/root/mercasto-ops-backups
+          mkdir -p "$backup_dir"
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          cp -a "$dropin" "$backup_dir/50-CPUQuota.conf.pre-8vcpu-$stamp"
+          printf '[Service]\nCPUQuota=300%%\n' > "$dropin"
+          systemctl daemon-reload
+          systemctl restart "$unit"
+          sleep 3
+          echo "nproc=$(nproc)"
+          systemctl show "$unit" -p ActiveState -p UnitFileState -p CPUQuotaPerSecUSec -p CPUWeight -p IOWeight
+          grep -F 'CPUQuota=' "$dropin"
+          echo "backup=$backup_dir/50-CPUQuota.conf.pre-8vcpu-$stamp"
+          REMOTE
