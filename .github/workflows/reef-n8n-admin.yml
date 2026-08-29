@@ -10,34 +10,21 @@ permissions:
 jobs:
   diagnose:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 12
+    timeout-minutes: 8
     steps:
-      - name: Start private Nemotron container
+      - name: Verify local AI and n8n workflow CLI
         shell: bash
         run: |
           set -Eeuo pipefail
-          MODEL=$(sudo -n find -L /opt/reef-actions-runner/.cache/huggingface/hub -type f -name '*IQ4_XS.gguf' | head -1)
-          test -n "$MODEL"
-          echo "model_found=yes"
-          docker pull ghcr.io/ggml-org/llama.cpp:server
-          sudo -n pkill -u reefci -f '/.llama-app/llama serve' || true
-          docker rm -f reef-nemotron >/dev/null 2>&1 || true
-          docker run -d --name reef-nemotron --restart unless-stopped \
-            --network automation-net --cpuset-cpus=4-7 --cpu-shares=128 \
-            --memory=24g --memory-swap=24g --oom-score-adj=500 \
-            -v "$MODEL:/models/nemotron.gguf:ro" \
-            ghcr.io/ggml-org/llama.cpp:server \
-            -m /models/nemotron.gguf --host 0.0.0.0 --port 8080 \
-            --no-repack --cache-ram 0 --reasoning off -c 4096 -t 4 -tb 4 \
-            -b 512 -ub 128 -ctk q8_0 -ctv q8_0 --parallel 1 --poll 0
-          for i in $(seq 1 90); do
-            if docker exec n8n node -e "fetch('http://reef-nemotron:8080/health').then(r=>{if(!r.ok)process.exit(1);console.log('ok')}).catch(()=>process.exit(1))" >/tmp/nemotron-health 2>&1; then break; fi
-            sleep 2
-          done
-          cat /tmp/nemotron-health || true
-          docker exec n8n node - <<'NODE'
-          const body={model:'nemotron-local',messages:[{role:'system',content:'Return JSON only with key ok boolean.'},{role:'user',content:'Respond true.'}],temperature:0,max_tokens:40,response_format:{type:'json_object'}};
-          fetch('http://reef-nemotron:8080/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(async r=>{console.log('status='+r.status);console.log(await r.text());if(!r.ok)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)});
-          NODE
-          echo '=== CONTAINER ==='
+          echo '=== NEMOTRON CONTAINER ==='
           docker ps --filter name=reef-nemotron --format '{{.Names}} {{.Status}}'
+          echo '=== CHAT ==='
+          docker exec n8n node -e "(async()=>{const body={model:'nemotron-local',messages:[{role:'system',content:'Return JSON only with key ok boolean.'},{role:'user',content:'Respond true.'}],temperature:0,max_tokens:40,response_format:{type:'json_object'}};const r=await fetch('http://reef-nemotron:8080/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});console.log('status='+r.status);console.log(await r.text());if(!r.ok)process.exit(1)})().catch(e=>{console.error(e);process.exit(1)})"
+          echo '=== N8N VERSION ==='
+          docker exec n8n n8n --version
+          echo '=== N8N COMMANDS ==='
+          docker exec n8n n8n --help | grep -E 'export:workflow|import:workflow|publish|update:workflow' || true
+          echo '=== EXPORT HELP ==='
+          docker exec n8n n8n export:workflow --help | head -80
+          echo '=== IMPORT HELP ==='
+          docker exec n8n n8n import:workflow --help | head -80
