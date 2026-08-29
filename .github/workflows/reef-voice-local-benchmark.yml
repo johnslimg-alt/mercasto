@@ -1,0 +1,46 @@
+name: Reef voice local benchmark
+
+on:
+  push:
+    branches: [ops/reef-n8n-admin]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 8
+    steps:
+      - name: Inspect recent voice execution storage
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sudo -n python3 - <<'PY'
+          import sqlite3, json, os, re
+          db='/root/automation-stack/n8n_data/database.sqlite'
+          con=sqlite3.connect(db)
+          cur=con.cursor()
+          print('tables=', [r[0] for r in cur.execute("select name from sqlite_master where type='table' and name like 'execution%'")])
+          for t in ['execution_entity','execution_data']:
+              try:
+                  print(t, [r[1] for r in cur.execute(f'pragma table_info({t})')])
+              except Exception as e: print(t, 'ERR', type(e).__name__)
+          rows=cur.execute("select id,status,startedAt,stoppedAt from execution_entity where workflowId=? order by id desc limit 120",('Og5UJWua14sZ2wNx',)).fetchall()
+          voice=[]
+          for rid,status,started,stopped in rows:
+              r=cur.execute('select data from execution_data where executionId=?',(rid,)).fetchone()
+              if not r or not r[0]: continue
+              s=r[0]
+              if 'audioMessage' in s or 'Groq Whisper' in s or 'voice-media' in s:
+                  voice.append((rid,status,started,len(s),'base64' in s,'Groq Whisper' in s,'audioMessage' in s))
+          print('voice_candidates=',voice[:12])
+          print('count=',len(voice))
+          os.makedirs('/tmp/reef-voice-bench',exist_ok=True)
+          for rid,*_ in voice[:6]:
+              s=cur.execute('select data from execution_data where executionId=?',(rid,)).fetchone()[0]
+              open(f'/tmp/reef-voice-bench/execution-{rid}.txt','w').write(s)
+          print('saved_execution_payloads=',len(voice[:6]))
+          PY
+          echo 'container_n8n='$(docker ps --filter name=n8n --format '{{.Status}}')
+          echo 'container_nemotron='$(docker ps --filter name=reef-nemotron --format '{{.Status}}')
