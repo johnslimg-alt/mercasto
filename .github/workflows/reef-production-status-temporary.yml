@@ -1,0 +1,27 @@
+name: Reef production status temporary
+
+on:
+  push:
+    branches: [ops/reef-n8n-admin]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Inspect Reef production git state safely
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          REPO=/root/reef-crm
+          echo 'HEAD='$(sudo -n git -C "$REPO" rev-parse --short HEAD)
+          echo 'BRANCH='$(sudo -n git -C "$REPO" branch --show-current)
+          echo '--- STATUS ---'
+          sudo -n git -C "$REPO" status --short --untracked-files=all | sed -E 's#(^.. )(.env.*|.*secret.*|.*credential.*|.*token.*|.*key.*)$#\1[REDACTED-SENSITIVE-PATH]#I' | head -200
+          echo '--- DIFF STAT ---'
+          sudo -n git -C "$REPO" diff --stat | head -100
+          echo '--- UNTRACKED SAFE SOURCE ---'
+          sudo -n git -C "$REPO" ls-files --others --exclude-standard | grep -E '^(src/|db/migrations/|scripts/|ops/n8n/workflows/|apps/|public/|deploy/)' | grep -Evi '(secret|credential|token|\.env|private|key)' | head -100 || true
