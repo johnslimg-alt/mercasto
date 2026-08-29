@@ -1,0 +1,58 @@
+name: Post-deploy main checkout guard
+
+on:
+  workflow_run:
+    workflows: ["Deploy Mercasto"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  restore-main-checkout:
+    name: Restore production checkout to main
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 10
+    steps:
+      - name: Restore and verify production checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+
+          sudo -n git fetch origin main
+          remote_sha="$(sudo -n git rev-parse origin/main)"
+          if [ "$remote_sha" != "$EXPECTED_SHA" ]; then
+            echo "A newer main exists; skipping stale post-deploy repair."
+            exit 0
+          fi
+
+          dirty="$(sudo -n git status --porcelain --untracked-files=all)"
+          if [ -n "$dirty" ]; then
+            echo "Production checkout is dirty; refusing to overwrite local changes." >&2
+            exit 2
+          fi
+
+          sudo -n git checkout -B main origin/main
+          sudo -n git reset --hard origin/main
+          sudo -n git clean -fd
+
+          branch="$(sudo -n git branch --show-current)"
+          head_sha="$(sudo -n git rev-parse HEAD)"
+          origin_sha="$(sudo -n git rev-parse origin/main)"
+
+          test "$branch" = main
+          test "$head_sha" = "$origin_sha"
+          test "$head_sha" = "$EXPECTED_SHA"
+
+          curl -fsS --max-time 30 https://mercasto.com/ >/dev/null
+          curl -fsS --max-time 30 https://mercasto.com/api/categories >/dev/null
+          echo "PRODUCTION_MAIN_CHECKOUT_GUARD=PASS sha=$head_sha"
