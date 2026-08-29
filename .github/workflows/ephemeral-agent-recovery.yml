@@ -1,0 +1,48 @@
+name: Ephemeral Agent Recovery
+
+on:
+  push:
+    branches:
+      - ops/probe-vps-capacity-rdc
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_SSH_KEY"
+          test -n "$SERVER_HOST"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_recovery_key
+          chmod 600 ~/.ssh/mercasto_recovery_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Restart RDC and enable Mercasto runner
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_recovery_key root@"$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          rdc=remote-desktop-commander.service
+          runner=actions.runner.johnslimg-alt-mercasto.srv1526037.service
+          systemctl restart "$rdc"
+          systemctl enable --now "$runner"
+          sleep 3
+          echo "rdc_active=$(systemctl is-active "$rdc")"
+          echo "rdc_enabled=$(systemctl is-enabled "$rdc")"
+          echo "runner_active=$(systemctl is-active "$runner")"
+          echo "runner_enabled=$(systemctl is-enabled "$runner")"
+          systemctl --no-pager --full status "$rdc" "$runner" | sed -n '1,45p'
+          REMOTE
