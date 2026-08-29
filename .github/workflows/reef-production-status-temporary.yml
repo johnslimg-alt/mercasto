@@ -1,4 +1,4 @@
-name: Reef production reconcile temporary
+name: Reef courier GPS implementation temporary
 
 on:
   push:
@@ -8,44 +8,75 @@ permissions:
   contents: read
 
 jobs:
-  reconcile:
+  patch:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
-      - name: Reconcile known Reef production hotfixes onto latest main
+      - name: Build clean courier GPS fix branch
         shell: bash
         run: |
           set -Eeuo pipefail
           REPO=/root/reef-crm
-          WT=/tmp/reef-production-reconcile
-          BR=fix/reconcile-production-hotfixes-20260829
-          FILES=(
-            ops/n8n/workflows/reef-whatsapp-workflow.json
-            src/app/api/integrations/n8n/bot-state/route.ts
-            src/app/api/integrations/n8n/session/route.ts
-            src/app/globals.css
-            db/migrations/025_whatsapp_processing_lock.sql
-          )
+          WT=/tmp/reef-courier-gps-fix
+          BR=fix/courier-native-gps-20260829
           sudo -n git -C "$REPO" fetch origin main
           sudo -n git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1 || true
           sudo -n git -C "$REPO" branch -D "$BR" >/dev/null 2>&1 || true
           sudo -n git -C "$REPO" worktree add -b "$BR" "$WT" origin/main
-          for f in "${FILES[@]}"; do
-            if sudo -n test -f "$REPO/$f"; then
-              sudo -n mkdir -p "$WT/$(dirname "$f")"
-              sudo -n cp -a "$REPO/$f" "$WT/$f"
-            fi
-          done
-          echo '--- CHANGED ---'
-          sudo -n git -C "$WT" status --short
-          CHANGED=$(sudo -n git -C "$WT" status --short | wc -l)
-          if [ "$CHANGED" -eq 0 ]; then
-            echo 'nothing_to_reconcile=yes'
-            exit 0
-          fi
-          sudo -n git -C "$WT" add -- "${FILES[@]}"
-          sudo -n git -C "$WT" -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Reconcile Reef production hotfixes'
-          sudo -n git -C "$WT" push -u origin "$BR" --force-with-lease
-          echo '--- COMMIT ---'
-          sudo -n git -C "$WT" show --stat --oneline -1
+          sudo -n chown -R "$(id -u):$(id -g)" "$WT"
+
+          cd "$WT"
+          npm install --save-exact @capacitor/core@8.5.0 @capacitor/geolocation@8.2.2
+          cd apps/courier-native
+          npm install --save-exact @capacitor/geolocation@8.2.2
+          npx cap sync
+          cd "$WT"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/components/courier-app.tsx')
+          s=p.read_text()
+          s=s.replace('import { useCallback,useEffect,useRef,useState } from "react";\nimport { CourierChatPanel } from "./courier-chat-panel";', 'import { useCallback,useEffect,useRef,useState } from "react";\nimport { Capacitor } from "@capacitor/core";\nimport { Geolocation } from "@capacitor/geolocation";\nimport { CourierChatPanel } from "./courier-chat-panel";')
+          s=s.replace('type Lang="es"|"en";\ntype Item=', 'type Lang="es"|"en";\ntype GpsPosition={coords:{latitude:number;longitude:number;accuracy:number;speed?:number|null;heading?:number|null}};\ntype Item=')
+          s=s.replace('const [token,setToken]=useState(""),[me,setMe]=useState<Me|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[gps,setGps]=useState<string>(t.gpsOff),[gpsSyncedAt,setGpsSyncedAt]=useState<string>(""),[gpsError,setGpsError]=useState<string>("");const watch=useRef<number|null>(null),heartbeat=useRef<number|null>(null);', 'const [token,setToken]=useState(""),[me,setMe]=useState<Me|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[gps,setGps]=useState<string>(t.gpsOff),[gpsSyncedAt,setGpsSyncedAt]=useState<string>(""),[gpsError,setGpsError]=useState<string>("");const watch=useRef<string|number|null>(null),heartbeat=useRef<number|null>(null),gpsStarting=useRef(false);')
+          old=''' const stopGps=useCallback((update=true)=>{if(watch.current!=null){navigator.geolocation.clearWatch(watch.current);watch.current=null}if(heartbeat.current!=null){window.clearInterval(heartbeat.current);heartbeat.current=null}if(update)setGps(tr[lang].gpsOff)},[lang]);\n const sendPosition=useCallback(async(pos:GeolocationPosition)=>{try{await api("/api/courier/location",{method:"POST",body:JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed,heading:pos.coords.heading})});const now=new Date().toISOString();setGps(`${tr[lang].gpsActive} · ±${Math.round(pos.coords.accuracy)} m`);setGpsSyncedAt(now);setGpsError("");setMe(m=>m?{...m,courier:{...m.courier,lastLat:pos.coords.latitude,lastLng:pos.coords.longitude,lastAccuracy:pos.coords.accuracy,lastSeenAt:now}}:m)}catch(e){const message=e instanceof Error?e.message:tr[lang].error;setGpsError(message);setGps(`${tr[lang].gpsNo} · ${message}`)}},[api,lang]);\n const requestPosition=useCallback(()=>{if(!navigator.geolocation){setGps(tr[lang].gpsNo);return}setGps(tr[lang].gpsSearch);navigator.geolocation.getCurrentPosition(pos=>void sendPosition(pos),err=>{const message=err.code===1?tr[lang].gpsDenied:err.code===3?(lang==="es"?"GPS: tiempo agotado":"GPS timeout"):tr[lang].gpsNo;setGps(message);setGpsError(message)},{enableHighAccuracy:true,maximumAge:5000,timeout:30000})},[lang,sendPosition]);\n const startGps=useCallback(()=>{if(!navigator.geolocation){setGps(tr[lang].gpsNo);return}if(watch.current!=null)return;setGpsError("");setGps(tr[lang].gpsSearch);watch.current=navigator.geolocation.watchPosition(pos=>void sendPosition(pos),err=>{const message=err.code===1?tr[lang].gpsDenied:err.code===3?(lang==="es"?"GPS: tiempo agotado":"GPS timeout"):tr[lang].gpsNo;setGps(message);setGpsError(message)},{enableHighAccuracy:true,maximumAge:5000,timeout:30000});heartbeat.current=window.setInterval(requestPosition,45000);requestPosition()},[lang,requestPosition,sendPosition]);'''
+          new=''' const gpsFailure=useCallback((err:unknown)=>{const code=typeof err==="object"&&err!==null&&"code" in err?String((err as {code?:unknown}).code):"";const message=code==="1"||code.includes("PERMISSION")?tr[lang].gpsDenied:code==="3"||code.includes("TIMEOUT")?(lang==="es"?"GPS: tiempo agotado":"GPS timeout"):err instanceof Error&&err.message?err.message:tr[lang].gpsNo;setGps(message);setGpsError(message)},[lang]);\n const ensureNativeGpsPermission=useCallback(async()=>{if(!Capacitor.isNativePlatform())return true;try{const current=await Geolocation.checkPermissions();if(current.location==="granted"||current.coarseLocation==="granted")return true;const requested=await Geolocation.requestPermissions();return requested.location==="granted"||requested.coarseLocation==="granted"}catch(e){gpsFailure(e);return false}},[gpsFailure]);\n const stopGps=useCallback((update=true)=>{if(watch.current!=null){const current=watch.current;watch.current=null;if(Capacitor.isNativePlatform())void Geolocation.clearWatch({id:String(current)}).catch(()=>{});else navigator.geolocation?.clearWatch(Number(current))}if(heartbeat.current!=null){window.clearInterval(heartbeat.current);heartbeat.current=null}gpsStarting.current=false;if(update)setGps(tr[lang].gpsOff)},[lang]);\n const sendPosition=useCallback(async(pos:GpsPosition)=>{try{await api("/api/courier/location",{method:"POST",body:JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed??null,heading:pos.coords.heading??null})});const now=new Date().toISOString();setGps(`${tr[lang].gpsActive} · ±${Math.round(pos.coords.accuracy)} m`);setGpsSyncedAt(now);setGpsError("");setMe(m=>m?{...m,courier:{...m.courier,lastLat:pos.coords.latitude,lastLng:pos.coords.longitude,lastAccuracy:pos.coords.accuracy,lastSeenAt:now}}:m)}catch(e){const message=e instanceof Error?e.message:tr[lang].error;setGpsError(message);setGps(`${tr[lang].gpsNo} · ${message}`)}},[api,lang]);\n const requestPosition=useCallback(async()=>{setGps(tr[lang].gpsSearch);if(Capacitor.isNativePlatform()){if(!(await ensureNativeGpsPermission())){setGps(tr[lang].gpsDenied);return}try{const pos=await Geolocation.getCurrentPosition({enableHighAccuracy:true,maximumAge:5000,timeout:30000,enableLocationFallback:true});await sendPosition(pos)}catch(e){gpsFailure(e)}return}if(!navigator.geolocation){setGps(tr[lang].gpsNo);return}navigator.geolocation.getCurrentPosition(pos=>void sendPosition(pos),gpsFailure,{enableHighAccuracy:true,maximumAge:5000,timeout:30000})},[ensureNativeGpsPermission,gpsFailure,lang,sendPosition]);\n const startGps=useCallback(async()=>{if(watch.current!=null||gpsStarting.current)return;gpsStarting.current=true;setGpsError("");setGps(tr[lang].gpsSearch);try{if(Capacitor.isNativePlatform()){if(!(await ensureNativeGpsPermission())){setGps(tr[lang].gpsDenied);return}watch.current=await Geolocation.watchPosition({enableHighAccuracy:true,maximumAge:5000,timeout:30000,minimumUpdateInterval:10000,enableLocationFallback:true},(pos,err)=>{if(err){gpsFailure(err);return}if(pos)void sendPosition(pos)})}else{if(!navigator.geolocation){setGps(tr[lang].gpsNo);return}watch.current=navigator.geolocation.watchPosition(pos=>void sendPosition(pos),gpsFailure,{enableHighAccuracy:true,maximumAge:5000,timeout:30000})}heartbeat.current=window.setInterval(()=>void requestPosition(),45000);void requestPosition()}catch(e){gpsFailure(e)}finally{gpsStarting.current=false}},[ensureNativeGpsPermission,gpsFailure,lang,requestPosition,sendPosition]);'''
+          if old not in s:
+              raise SystemExit('GPS block not found')
+          s=s.replace(old,new)
+          s=s.replace('if(me?.courier.shiftActive)startGps();else stopGps()', 'if(me?.courier.shiftActive)void startGps();else stopGps()')
+          p.write_text(s)
+
+          manifest=Path('apps/courier-native/android/app/src/main/AndroidManifest.xml')
+          m=manifest.read_text()
+          needle='    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n'
+          if 'android.hardware.location.gps' not in m:
+              m=m.replace(needle,needle+'    <uses-feature android:name="android.hardware.location.gps" android:required="true" />\n')
+          manifest.write_text(m)
+
+          plist=Path('apps/courier-native/ios/App/App/Info.plist')
+          i=plist.read_text()
+          key='\t<key>NSLocationWhenInUseUsageDescription</key>\n\t<string>Reef uses your location for delivery and map functions.</string>\n'
+          if 'NSLocationAlwaysAndWhenInUseUsageDescription' not in i:
+              i=i.replace(key,key+'\t<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>\n\t<string>Reef uses your location for delivery and map functions.</string>\n')
+          plist.write_text(i)
+
+          smoke=Path('scripts/courier-gps-pin-source-smoke.sh')
+          q=smoke.read_text()
+          q=q.replace("grep -q 'setInterval(requestPosition,45000)' \"$ROOT/src/components/courier-app.tsx\"", "grep -q '@capacitor/geolocation' \"$ROOT/src/components/courier-app.tsx\"\ngrep -q 'requestPermissions' \"$ROOT/src/components/courier-app.tsx\"\ngrep -q 'setInterval(.*requestPosition.*,45000)' \"$ROOT/src/components/courier-app.tsx\"")
+          q=q.replace("grep -q 'https://crm.reefmotors.com/courier' \"$ROOT/src/components/sidebar.tsx\"", "grep -q 'android.hardware.location.gps' \"$ROOT/apps/courier-native/android/app/src/main/AndroidManifest.xml\"\ngrep -q 'NSLocationAlwaysAndWhenInUseUsageDescription' \"$ROOT/apps/courier-native/ios/App/App/Info.plist\"\ngrep -q 'https://crm.reefmotors.com/courier' \"$ROOT/src/components/sidebar.tsx\"")
+          smoke.write_text(q)
+          PY
+
+          npm run lint
+          npm run build
+          bash scripts/courier-gps-pin-source-smoke.sh
+          bash scripts/mobile-apps-source-smoke.sh
+          cd apps/courier-native/android && ./gradlew assembleDebug
+          cd "$WT"
+          git status --short
+          git add package.json package-lock.json src/components/courier-app.tsx scripts/courier-gps-pin-source-smoke.sh apps/courier-native
+          git -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Fix native courier GPS permissions and tracking'
+          git push -u origin "$BR" --force-with-lease
+          git show --stat --oneline -1
           sudo -n git -C "$REPO" worktree remove --force "$WT"
