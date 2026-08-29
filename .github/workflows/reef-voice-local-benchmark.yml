@@ -8,11 +8,11 @@ permissions:
   contents: read
 
 jobs:
-  inspect:
+  benchmark:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 12
+    timeout-minutes: 35
     steps:
-      - name: Extract recent voice samples privately
+      - name: Extract one real voice sample privately
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -23,55 +23,85 @@ jobs:
           import sqlite3
           db='/root/automation-stack/n8n_data/database.sqlite'
           con=sqlite3.connect(db); cur=con.cursor()
-          rows=cur.execute("""
-            select e.id,e.status,e.startedAt,length(d.data)
-            from execution_entity e join execution_data d on d.executionId=e.id
-            where e.workflowId=? and (d.data like '%audioMessage%' or d.data like '%Groq Whisper%')
-            order by e.id desc limit 12
-          """,('Og5UJWua14sZ2wNx',)).fetchall()
-          print('voice_execution_ids=',[(r[0],r[1],r[2],r[3]) for r in rows])
-          for rid,*_ in rows[:6]:
-              s=cur.execute('select data from execution_data where executionId=?',(rid,)).fetchone()[0]
-              open(f'/tmp/reef-voice-bench/execution-{rid}.txt','w').write(s)
-          print('payloads_saved=',min(6,len(rows)))
+          rid=cur.execute("""
+            select e.id from execution_entity e join execution_data d on d.executionId=e.id
+            where e.workflowId=? and d.data like '%audioMessage%' order by e.id desc limit 1
+          """,('Og5UJWua14sZ2wNx',)).fetchone()[0]
+          s=cur.execute('select data from execution_data where executionId=?',(rid,)).fetchone()[0]
+          open(f'/tmp/reef-voice-bench/execution-{rid}.txt','w').write(s)
+          open('/tmp/reef-voice-bench/id.txt','w').write(str(rid))
+          print('sample_execution_id=',rid)
           PY
-          for f in /tmp/reef-voice-bench/execution-*.txt; do
-            [ -e "$f" ] || continue
-            docker cp "$f" n8n:/tmp/$(basename "$f")
-          done
-          docker exec -i n8n node - <<'NODE'
-          const fs=require('fs');
+          RID=$(cat /tmp/reef-voice-bench/id.txt)
+          docker cp /tmp/reef-voice-bench/execution-$RID.txt n8n:/tmp/execution-$RID.txt
+          docker exec -i n8n node - "$RID" <<'NODE'
+          const fs=require('fs'); const id=process.argv[2];
           const {parse}=require('/usr/local/lib/node_modules/n8n/node_modules/.pnpm/flatted@3.4.2/node_modules/flatted');
-          const files=fs.readdirSync('/tmp').filter(x=>/^execution-\d+\.txt$/.test(x)).slice(0,6);
-          const pick=(rd,name)=>{
-            const runs=rd?.[name]; if(!Array.isArray(runs)||!runs.length)return null;
-            for(let i=runs.length-1;i>=0;i--){const a=runs[i]?.data?.main?.[0];if(Array.isArray(a)&&a[0])return {item:a[0],run:runs[i]};}
-            return null;
-          };
-          for(const fn of files){
-            const id=fn.match(/(\d+)/)[1];
-            try{
-              const obj=parse(fs.readFileSync('/tmp/'+fn,'utf8'));
-              const rd=obj?.resultData?.runData||{};
-              const gv=pick(rd,'Get Voice Base64');
-              const vb=pick(rd,'Voice to Binary');
-              const gw=pick(rd,'Groq Whisper');
-              const b64=gv?.item?.json?.base64||vb?.item?.binary?.data?.data||'';
-              const mime=gv?.item?.json?.mimetype||vb?.item?.binary?.data?.mimeType||'application/octet-stream';
-              const gt=String(gw?.item?.json?.text||'').trim();
-              if(b64){fs.writeFileSync(`/tmp/voice-${id}.bin`,Buffer.from(b64,'base64'));}
-              if(gt){fs.writeFileSync(`/tmp/groq-${id}.txt`,gt);}
-              const meta={id,hasAudio:!!b64,mime,audioBytes:b64?Buffer.byteLength(b64,'base64'):0,groqChars:gt.length,getVoiceMs:gv?.run?.executionTime||null,groqMs:gw?.run?.executionTime||null,groqError:!!gw?.run?.error};
-              fs.writeFileSync(`/tmp/meta-${id}.json`,JSON.stringify(meta));
-              console.log('sample_meta=',meta);
-            }catch(e){console.log('sample_parse_error=',id,e.name,String(e.message||'').slice(0,80));}
-          }
+          const obj=parse(fs.readFileSync(`/tmp/execution-${id}.txt`,'utf8'));
+          const rd=obj?.resultData?.runData||{};
+          const pick=(name)=>{const runs=rd[name]||[];for(let i=runs.length-1;i>=0;i--){const a=runs[i]?.data?.main?.[0];if(Array.isArray(a)&&a[0])return a[0];}return null};
+          const gv=pick('Get Voice Base64'), vb=pick('Voice to Binary');
+          const b64=gv?.json?.base64||vb?.binary?.data?.data||'';
+          const mime=gv?.json?.mimetype||vb?.binary?.data?.mimeType||'audio/mp4';
+          if(!b64) throw new Error('no voice payload in saved execution');
+          fs.writeFileSync(`/tmp/voice-${id}.bin`,Buffer.from(b64,'base64'));
+          console.log(JSON.stringify({id,mime,bytes:Buffer.byteLength(b64,'base64')}));
           NODE
-          for f in /tmp/voice-*.bin /tmp/groq-*.txt /tmp/meta-*.json; do
-            docker exec n8n test -f "$f" 2>/dev/null || continue
-            docker cp n8n:"$f" /tmp/reef-voice-bench/$(basename "$f")
-          done
-          echo 'local_samples='$(find /tmp/reef-voice-bench -maxdepth 1 -name 'voice-*.bin' | wc -l)
-          for f in /tmp/reef-voice-bench/voice-*.bin; do [ -e "$f" ] && file "$f"; done
-          echo 'crm='$(curl -fsS http://127.0.0.1:3100/api/health)
-          echo 'n8n='$(curl -fsS http://127.0.0.1:5678/healthz)
+          docker cp n8n:/tmp/voice-$RID.bin /tmp/reef-voice-bench/voice-$RID.bin
+          file /tmp/reef-voice-bench/voice-$RID.bin || true
+      - name: Build isolated faster-whisper benchmark image
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cat >/tmp/reef-voice-bench/Dockerfile <<'DOCKER'
+          FROM python:3.12-slim
+          RUN pip install --no-cache-dir faster-whisper==1.2.0
+          COPY bench.py /bench.py
+          ENTRYPOINT ["python","/bench.py"]
+          DOCKER
+          cat >/tmp/reef-voice-bench/bench.py <<'PY'
+          import os,time,json,re,unicodedata,difflib,gc
+          from faster_whisper import WhisperModel
+          work='/work'; audio=next(os.path.join(work,x) for x in os.listdir(work) if x.startswith('voice-') and x.endswith('.bin'))
+          models=['base','small','large-v3-turbo']; results=[]; texts={}
+          def norm(s):
+              s=unicodedata.normalize('NFKD',s.lower()); s=''.join(c for c in s if not unicodedata.combining(c));
+              return re.sub(r'[^\w\s]+',' ',s,flags=re.UNICODE).strip()
+          for name in models:
+              try:
+                  t=time.time(); model=WhisperModel(name,device='cpu',compute_type='int8',cpu_threads=4,num_workers=1,download_root='/models'); load=time.time()-t
+                  t=time.time(); segs,info=model.transcribe(audio,beam_size=5,vad_filter=True,condition_on_previous_text=False,temperature=0.0)
+                  text=' '.join(s.text.strip() for s in segs).strip(); sec=time.time()-t
+                  texts[name]=text; open(os.path.join(work,f'{name}.txt'),'w',encoding='utf-8').write(text)
+                  results.append({'model':name,'ok':True,'load_s':round(load,2),'transcribe_s':round(sec,2),'duration_s':round(float(info.duration or 0),2),'rtf':round(sec/max(float(info.duration or 0),0.001),3),'language':info.language,'language_p':round(float(info.language_probability or 0),3),'chars':len(text)})
+                  del model; gc.collect()
+              except Exception as e:
+                  results.append({'model':name,'ok':False,'error':type(e).__name__})
+          successful=[r['model'] for r in results if r.get('ok')]
+          sims=[]
+          if successful:
+              ref=successful[-1]; nr=norm(texts[ref])
+              for m in successful[:-1]:
+                  nm=norm(texts[m]); ratio=difflib.SequenceMatcher(None,nm,nr).ratio()
+                  wa=set(nm.split()); wb=set(nr.split()); jac=len(wa&wb)/max(1,len(wa|wb))
+                  sims.append({'model':m,'reference':ref,'char_similarity':round(ratio,3),'token_jaccard':round(jac,3)})
+          print('RESULTS='+json.dumps(results,ensure_ascii=False))
+          print('SIMILARITY='+json.dumps(sims,ensure_ascii=False))
+          PY
+          docker build -t reef-faster-whisper-bench:local /tmp/reef-voice-bench
+      - name: Run CPU-isolated benchmark
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sudo -n mkdir -p /root/automation-stack/faster-whisper-cache
+          START=$(date +%s)
+          docker run --rm --name reef-whisper-bench --cpuset-cpus=0-3 --memory=8g --memory-swap=8g \
+            -e OMP_NUM_THREADS=4 -e MKL_NUM_THREADS=4 \
+            -v /tmp/reef-voice-bench:/work \
+            -v /root/automation-stack/faster-whisper-cache:/models \
+            reef-faster-whisper-bench:local | tee /tmp/reef-voice-bench/results.log
+          END=$(date +%s)
+          echo total_benchmark_s=$((END-START))
+          echo crm=$(curl -fsS http://127.0.0.1:3100/api/health)
+          echo n8n=$(curl -fsS http://127.0.0.1:5678/healthz)
+          docker ps --filter name=reef-nemotron --format 'nemotron={{.Status}}'
