@@ -22,7 +22,7 @@ jobs:
           sudo -n cp "$SRC" /tmp/reef-local-ai.json
           sudo -n chown "$(id -u):$(id -g)" /tmp/reef-local-ai.json
           docker cp /tmp/reef-local-ai.json n8n:/tmp/reef-local-ai.json
-          docker exec n8n n8n import:workflow --input=/tmp/reef-local-ai.json --activeState=fromJson
+          docker exec n8n n8n import:workflow --input=/tmp/reef-local-ai.json
           docker exec n8n n8n publish:workflow --id="$WFID"
           docker restart n8n >/dev/null
           for i in $(seq 1 60); do
