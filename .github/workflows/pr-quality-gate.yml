@@ -13,6 +13,12 @@ jobs:
     name: PR quality gate
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Enforce workflow project boundary
+        run: python3 scripts/check-workflow-project-scope.py
+
       - name: Check PR body and title
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
