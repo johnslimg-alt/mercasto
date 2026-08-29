@@ -1,4 +1,4 @@
-name: Reef voice local benchmark
+name: Reef voice local deploy
 
 on:
   push:
@@ -8,100 +8,161 @@ permissions:
   contents: read
 
 jobs:
-  benchmark:
+  deploy:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
-      - name: Extract one real voice sample privately
+      - name: Build and start private local Whisper
         shell: bash
         run: |
           set -Eeuo pipefail
-          sudo -n rm -rf /tmp/reef-voice-bench
-          sudo -n mkdir -p /tmp/reef-voice-bench
-          sudo -n chown -R "$(id -u):$(id -g)" /tmp/reef-voice-bench
-          sudo -n python3 - <<'PY'
-          import sqlite3
-          db='/root/automation-stack/n8n_data/database.sqlite'
-          con=sqlite3.connect(db); cur=con.cursor()
-          rid=cur.execute("""
-            select e.id from execution_entity e join execution_data d on d.executionId=e.id
-            where e.workflowId=? and d.data like '%audioMessage%' order by e.id desc limit 1
-          """,('Og5UJWua14sZ2wNx',)).fetchone()[0]
-          s=cur.execute('select data from execution_data where executionId=?',(rid,)).fetchone()[0]
-          open(f'/tmp/reef-voice-bench/execution-{rid}.txt','w').write(s)
-          open('/tmp/reef-voice-bench/id.txt','w').write(str(rid))
-          print('sample_execution_id=',rid)
-          PY
-          RID=$(cat /tmp/reef-voice-bench/id.txt)
-          docker cp /tmp/reef-voice-bench/execution-$RID.txt n8n:/tmp/execution-$RID.txt
-          docker exec -i n8n node - "$RID" <<'NODE'
-          const fs=require('fs'); const id=process.argv[2];
-          const {parse}=require('/usr/local/lib/node_modules/n8n/node_modules/.pnpm/flatted@3.4.2/node_modules/flatted');
-          const obj=parse(fs.readFileSync(`/tmp/execution-${id}.txt`,'utf8'));
-          const rd=obj?.resultData?.runData||{};
-          const pick=(name)=>{const runs=rd[name]||[];for(let i=runs.length-1;i>=0;i--){const a=runs[i]?.data?.main?.[0];if(Array.isArray(a)&&a[0])return a[0];}return null};
-          const gv=pick('Get Voice Base64'), vb=pick('Voice to Binary');
-          const b64=gv?.json?.base64||vb?.binary?.data?.data||'';
-          const mime=gv?.json?.mimetype||vb?.binary?.data?.mimeType||'audio/mp4';
-          if(!b64) throw new Error('no voice payload in saved execution');
-          fs.writeFileSync(`/tmp/voice-${id}.bin`,Buffer.from(b64,'base64'));
-          console.log(JSON.stringify({id,mime,bytes:Buffer.byteLength(b64,'base64')}));
-          NODE
-          docker cp n8n:/tmp/voice-$RID.bin /tmp/reef-voice-bench/voice-$RID.bin
-          file /tmp/reef-voice-bench/voice-$RID.bin || true
-      - name: Build isolated faster-whisper benchmark image
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          cat >/tmp/reef-voice-bench/Dockerfile <<'DOCKER'
-          FROM python:3.12-slim
-          RUN pip install --no-cache-dir faster-whisper==1.2.0 requests
-          COPY bench.py /bench.py
-          ENTRYPOINT ["python","/bench.py"]
-          DOCKER
-          cat >/tmp/reef-voice-bench/bench.py <<'PY'
-          import os,time,json,re,unicodedata,difflib,gc
+          APP=/root/automation-stack/reef-whisper-local
+          CACHE=/root/automation-stack/faster-whisper-cache
+          sudo -n mkdir -p "$APP" "$CACHE"
+          sudo -n tee "$APP/server.py" >/dev/null <<'PY'
+          import os, tempfile, threading, time
+          from pathlib import Path
+          from fastapi import FastAPI, UploadFile, File, Form, HTTPException
           from faster_whisper import WhisperModel
-          work='/work'; audio=next(os.path.join(work,x) for x in os.listdir(work) if x.startswith('voice-') and x.endswith('.bin'))
-          models=['base','small','large-v3-turbo']; results=[]; texts={}
-          def norm(s):
-              s=unicodedata.normalize('NFKD',s.lower()); s=''.join(c for c in s if not unicodedata.combining(c));
-              return re.sub(r'[^\w\s]+',' ',s,flags=re.UNICODE).strip()
-          for name in models:
+
+          MODEL_NAME=os.getenv('WHISPER_MODEL','small')
+          MODEL_ROOT=os.getenv('WHISPER_MODEL_ROOT','/models')
+          THREADS=int(os.getenv('WHISPER_THREADS','4'))
+          model=WhisperModel(MODEL_NAME,device='cpu',compute_type='int8',cpu_threads=THREADS,num_workers=1,download_root=MODEL_ROOT)
+          lock=threading.Semaphore(1)
+          app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
+
+          @app.get('/health')
+          def health():
+              return {'status':'ok','model':MODEL_NAME}
+
+          @app.post('/v1/audio/transcriptions')
+          async def transcribe(file: UploadFile=File(...), model_name: str|None=Form(None, alias='model'), language: str|None=Form(None)):
+              data=await file.read()
+              if not data: raise HTTPException(400,'empty audio')
+              if len(data)>25*1024*1024: raise HTTPException(413,'audio too large')
+              suffix=Path(file.filename or 'voice.mp4').suffix or '.mp4'
+              path=None
               try:
-                  t=time.time(); model=WhisperModel(name,device='cpu',compute_type='int8',cpu_threads=4,num_workers=1,download_root='/models'); load=time.time()-t
-                  t=time.time(); segs,info=model.transcribe(audio,beam_size=5,vad_filter=True,condition_on_previous_text=False,temperature=0.0)
-                  text=' '.join(s.text.strip() for s in segs).strip(); sec=time.time()-t
-                  texts[name]=text; open(os.path.join(work,f'{name}.txt'),'w',encoding='utf-8').write(text)
-                  results.append({'model':name,'ok':True,'load_s':round(load,2),'transcribe_s':round(sec,2),'duration_s':round(float(info.duration or 0),2),'rtf':round(sec/max(float(info.duration or 0),0.001),3),'language':info.language,'language_p':round(float(info.language_probability or 0),3),'chars':len(text)})
-                  del model; gc.collect()
+                  with tempfile.NamedTemporaryFile(prefix='reef-voice-',suffix=suffix,delete=False) as f:
+                      f.write(data); path=f.name
+                  started=time.monotonic()
+                  with lock:
+                      segments,info=model.transcribe(path,language=(language or None),beam_size=5,vad_filter=True,condition_on_previous_text=False,temperature=0.0)
+                      text=' '.join(s.text.strip() for s in segments if s.text.strip()).strip()
+                  return {'text':text,'language':info.language,'duration':round(float(info.duration or 0),2),'processing_seconds':round(time.monotonic()-started,2)}
+              except HTTPException: raise
               except Exception as e:
-                  results.append({'model':name,'ok':False,'error':type(e).__name__})
-          successful=[r['model'] for r in results if r.get('ok')]
-          sims=[]
-          if successful:
-              ref=successful[-1]; nr=norm(texts[ref])
-              for m in successful[:-1]:
-                  nm=norm(texts[m]); ratio=difflib.SequenceMatcher(None,nm,nr).ratio()
-                  wa=set(nm.split()); wb=set(nr.split()); jac=len(wa&wb)/max(1,len(wa|wb))
-                  sims.append({'model':m,'reference':ref,'char_similarity':round(ratio,3),'token_jaccard':round(jac,3)})
-          print('RESULTS='+json.dumps(results,ensure_ascii=False))
-          print('SIMILARITY='+json.dumps(sims,ensure_ascii=False))
+                  print('transcription_error='+type(e).__name__,flush=True)
+                  raise HTTPException(500,'transcription failed')
+              finally:
+                  if path:
+                      try: os.unlink(path)
+                      except OSError: pass
           PY
-          docker build -t reef-faster-whisper-bench:local /tmp/reef-voice-bench
-      - name: Run CPU-isolated benchmark
+          sudo -n tee "$APP/Dockerfile" >/dev/null <<'DOCKER'
+          FROM python:3.12-slim
+          RUN pip install --no-cache-dir faster-whisper==1.2.0 requests fastapi==0.116.1 uvicorn==0.35.0 python-multipart==0.0.20
+          COPY server.py /app/server.py
+          WORKDIR /app
+          EXPOSE 8000
+          CMD ["uvicorn","server:app","--host","0.0.0.0","--port","8000","--workers","1","--no-access-log"]
+          DOCKER
+          sudo -n docker build -t reef-faster-whisper:small "$APP"
+          docker rm -f reef-whisper >/dev/null 2>&1 || true
+          docker run -d --name reef-whisper --restart unless-stopped \
+            --network automation-net --cpuset-cpus=0-3 --cpu-shares=128 \
+            --memory=4g --memory-swap=4g --oom-score-adj=500 \
+            -e WHISPER_MODEL=small -e WHISPER_MODEL_ROOT=/models -e WHISPER_THREADS=4 \
+            -e OMP_NUM_THREADS=4 -e MKL_NUM_THREADS=4 \
+            -v "$CACHE:/models" \
+            reef-faster-whisper:small
+          for i in $(seq 1 90); do
+            if docker exec n8n node -e "fetch('http://reef-whisper:8000/health').then(r=>{if(!r.ok)process.exit(1);return r.text()}).then(console.log).catch(()=>process.exit(1))" >/tmp/reef-whisper-health 2>&1; then break; fi
+            sleep 2
+          done
+          cat /tmp/reef-whisper-health
+          docker ps --filter name=reef-whisper --format 'whisper={{.Status}} ports={{.Ports}}'
+      - name: Test local Whisper on saved real voice
         shell: bash
         run: |
           set -Eeuo pipefail
-          sudo -n mkdir -p /root/automation-stack/faster-whisper-cache
-          START=$(date +%s)
-          docker run --rm --name reef-whisper-bench --cpuset-cpus=0-3 --memory=8g --memory-swap=8g \
-            -e OMP_NUM_THREADS=4 -e MKL_NUM_THREADS=4 \
-            -v /tmp/reef-voice-bench:/work \
-            -v /root/automation-stack/faster-whisper-cache:/models \
-            reef-faster-whisper-bench:local | tee /tmp/reef-voice-bench/results.log
-          END=$(date +%s)
-          echo total_benchmark_s=$((END-START))
-          echo crm=$(curl -fsS http://127.0.0.1:3100/api/health)
-          echo n8n=$(curl -fsS http://127.0.0.1:5678/healthz)
-          docker ps --filter name=reef-nemotron --format 'nemotron={{.Status}}'
+          SAMPLE=$(find /tmp/reef-voice-bench -maxdepth 1 -name 'voice-*.bin' | head -1 || true)
+          if [ -z "$SAMPLE" ]; then echo 'saved_sample_missing=yes'; exit 1; fi
+          docker cp "$SAMPLE" n8n:/tmp/reef-whisper-test.mp4
+          docker exec n8n node - <<'NODE'
+          const fs=require('fs');
+          (async()=>{
+            const data=fs.readFileSync('/tmp/reef-whisper-test.mp4');
+            const fd=new FormData(); fd.append('file',new Blob([data],{type:'audio/mp4'}),'voice.mp4'); fd.append('model','small');
+            const t=Date.now(); const r=await fetch('http://reef-whisper:8000/v1/audio/transcriptions',{method:'POST',body:fd});
+            const j=await r.json(); console.log(JSON.stringify({status:r.status,chars:String(j.text||'').length,language:j.language,duration:j.duration,processing_seconds:j.processing_seconds,wall_seconds:Math.round((Date.now()-t)/100)/10}));
+            if(!r.ok||!String(j.text||'').trim()) process.exit(1);
+          })().catch(e=>{console.error(e.name);process.exit(1)});
+          NODE
+      - name: Backup patch publish Reef voice workflow
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          WFID=Og5UJWua14sZ2wNx
+          SRC=/root/reef-crm/ops/n8n/workflows/reef-whatsapp-workflow.json
+          TS=$(date -u +%Y%m%dT%H%M%SZ)
+          BK=/root/reef-crm/backups/local-whisper-$TS
+          sudo -n mkdir -p "$BK"
+          sudo -n cp -a "$SRC" "$BK/source-before.json"
+          docker exec n8n n8n export:workflow --id="$WFID" --output=/tmp/reef-voice-current.json --pretty
+          docker exec n8n n8n export:workflow --id="$WFID" --published --output=/tmp/reef-voice-published.json --pretty
+          docker cp n8n:/tmp/reef-voice-current.json /tmp/reef-voice-current.json
+          docker cp n8n:/tmp/reef-voice-published.json /tmp/reef-voice-published.json
+          sudo -n cp /tmp/reef-voice-current.json "$BK/live-current-before.json"
+          sudo -n cp /tmp/reef-voice-published.json "$BK/live-published-before.json"
+          sudo -n python3 - "$SRC" <<'PY'
+          import json,sys
+          p=sys.argv[1]; data=json.load(open(p,encoding='utf-8')); w=data[0] if isinstance(data,list) else data
+          n=next((x for x in w['nodes'] if x.get('name')=='Groq Whisper'),None)
+          if not n: raise SystemExit('Groq Whisper node not found')
+          prm=n.setdefault('parameters',{})
+          prm['url']='http://reef-whisper:8000/v1/audio/transcriptions'
+          prm.pop('authentication',None); prm.pop('genericAuthType',None)
+          prm.setdefault('options',{})['timeout']=45000
+          n.pop('credentials',None)
+          bp=prm.get('bodyParameters',{}).get('parameters',[])
+          for x in bp:
+              if x.get('name')=='model': x['value']='small'
+          json.dump(data,open(p,'w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          print('voice_node_local=yes')
+          PY
+          sudo -n python3 -m json.tool "$SRC" >/dev/null
+          sudo -n cp "$SRC" "$BK/source-after.json"
+          sudo -n cp "$SRC" /tmp/reef-local-whisper.json
+          sudo -n chown "$(id -u):$(id -g)" /tmp/reef-local-whisper.json
+          docker cp /tmp/reef-local-whisper.json n8n:/tmp/reef-local-whisper.json
+          docker exec n8n n8n import:workflow --input=/tmp/reef-local-whisper.json
+          docker exec n8n n8n publish:workflow --id="$WFID"
+          docker restart n8n >/dev/null
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:5678/healthz >/dev/null 2>&1 && break; sleep 1; done
+          echo backup="$BK"
+      - name: Final production verification
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          WFID=Og5UJWua14sZ2wNx
+          docker exec n8n n8n export:workflow --id="$WFID" --published --output=/tmp/reef-voice-final.json --pretty
+          docker cp n8n:/tmp/reef-voice-final.json /tmp/reef-voice-final.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/reef-voice-final.json')); w=d[0] if isinstance(d,list) else d
+          n=next(x for x in w['nodes'] if x.get('name')=='Groq Whisper')
+          u=n.get('parameters',{}).get('url','')
+          assert u=='http://reef-whisper:8000/v1/audio/transcriptions',u
+          assert not n.get('credentials')
+          raw=json.dumps(w,ensure_ascii=False)
+          assert 'api.groq.com/openai/v1/audio/transcriptions' not in raw
+          print('VOICE_AI_LOCAL_OK')
+          print('voice_timeout_ms='+str(n.get('parameters',{}).get('options',{}).get('timeout')))
+          PY
+          echo CRM=$(curl -fsS http://127.0.0.1:3100/api/health)
+          echo N8N=$(curl -fsS http://127.0.0.1:5678/healthz)
+          docker exec n8n node -e "fetch('http://reef-whisper:8000/health').then(async r=>{console.log('WHISPER='+r.status+' '+await r.text());if(!r.ok)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
+          docker exec n8n node -e "fetch('http://reef-nemotron:8080/health').then(async r=>{console.log('NEMOTRON='+r.status+' '+await r.text());if(!r.ok)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
+          docker ps --filter name=reef-whisper --format 'WHISPER_CONTAINER={{.Status}} PORTS={{.Ports}}'
