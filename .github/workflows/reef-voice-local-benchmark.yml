@@ -1,4 +1,4 @@
-name: Reef voice local final verification
+name: Reef local AI source persistence
 
 on:
   push:
@@ -8,51 +8,33 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  persist:
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 8
     steps:
-      - name: Real n8n to local Whisper transcription test
+      - name: Create clean Reef source branch with workflow only
         shell: bash
         run: |
           set -Eeuo pipefail
-          SAMPLE=$(find /tmp/reef-voice-bench -maxdepth 1 -name 'voice-*.bin' | head -1 || true)
-          test -n "$SAMPLE"
-          docker cp "$SAMPLE" n8n:/tmp/reef-whisper-test.mp4
-          docker exec -i n8n node - <<'NODE'
-          const fs=require('fs');
-          (async()=>{
-            const data=fs.readFileSync('/tmp/reef-whisper-test.mp4');
-            const fd=new FormData();
-            fd.append('file',new Blob([data],{type:'audio/mp4'}),'voice.mp4');
-            fd.append('model','small');
-            const t=Date.now();
-            const r=await fetch('http://reef-whisper:8000/v1/audio/transcriptions',{method:'POST',body:fd});
-            const j=await r.json();
-            const out={status:r.status,chars:String(j.text||'').length,language:j.language,duration:j.duration,processing_seconds:j.processing_seconds,wall_seconds:Math.round((Date.now()-t)/100)/10};
-            console.log('REAL_VOICE_TEST='+JSON.stringify(out));
-            if(!r.ok||!String(j.text||'').trim()||out.chars<20) process.exit(1);
-          })().catch(e=>{console.error('real_voice_test_error='+e.name);process.exit(1)});
-          NODE
-          echo 'published_ports='$(docker port reef-whisper 2>/dev/null | wc -l)
-          test "$(docker port reef-whisper 2>/dev/null | wc -l)" = "0"
-          echo CRM=$(curl -fsS http://127.0.0.1:3100/api/health)
-          echo N8N=$(curl -fsS http://127.0.0.1:5678/healthz)
-      - name: Roll back voice workflow if real test fails
-        if: ${{ failure() }}
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          WFID=Og5UJWua14sZ2wNx
-          SRC=/root/reef-crm/ops/n8n/workflows/reef-whatsapp-workflow.json
-          BK=$(sudo -n find /root/reef-crm/backups -maxdepth 1 -type d -name 'local-whisper-*' | sort | tail -1)
-          test -n "$BK"
-          sudo -n cp "$BK/source-before.json" "$SRC"
-          sudo -n cp "$BK/live-published-before.json" /tmp/reef-whisper-rollback.json
-          sudo -n chown "$(id -u):$(id -g)" /tmp/reef-whisper-rollback.json
-          docker cp /tmp/reef-whisper-rollback.json n8n:/tmp/reef-whisper-rollback.json
-          docker exec n8n n8n import:workflow --input=/tmp/reef-whisper-rollback.json
-          docker exec n8n n8n publish:workflow --id="$WFID"
-          docker restart n8n >/dev/null
-          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:5678/healthz >/dev/null 2>&1 && break; sleep 1; done
-          echo ROLLBACK_DONE
+          REPO=/root/reef-crm
+          FILE=ops/n8n/workflows/reef-whatsapp-workflow.json
+          BR=fix/local-ai-private-inference-20260829
+          WT=/tmp/reef-local-ai-worktree
+          PATCH=/tmp/reef-local-ai-workflow.patch
+          sudo -n git -C "$REPO" diff --binary HEAD -- "$FILE" > "$PATCH"
+          test -s "$PATCH"
+          sudo -n git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1 || true
+          sudo -n git -C "$REPO" branch -D "$BR" >/dev/null 2>&1 || true
+          sudo -n git -C "$REPO" worktree add -b "$BR" "$WT" HEAD
+          sudo -n git -C "$WT" apply "$PATCH"
+          CHANGED=$(sudo -n git -C "$WT" status --short | awk '{print $2}')
+          echo "changed_files=$CHANGED"
+          test "$CHANGED" = "$FILE"
+          sudo -n git -C "$WT" add -- "$FILE"
+          sudo -n git -C "$WT" -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Route Reef AI inference fully local'
+          ORIGIN=$(sudo -n git -C "$WT" remote get-url origin | sed -E 's#https://[^/@]+@#https://***@#')
+          echo "origin=$ORIGIN"
+          sudo -n git -C "$WT" push -u origin "$BR"
+          echo "branch=$BR"
+          sudo -n git -C "$WT" show --stat --oneline --decorate -1
+          sudo -n git -C "$REPO" worktree remove --force "$WT"
