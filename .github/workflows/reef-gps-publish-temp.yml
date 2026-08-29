@@ -1,4 +1,4 @@
-name: Reef courier GPS publish temporary
+name: Reef courier GPS recover temporary
 
 on:
   push:
@@ -8,23 +8,43 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  recover:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
-      - name: Publish already validated courier GPS changes
+      - name: Recover validated courier GPS files into clean worktree
         shell: bash
         run: |
           set -Eeuo pipefail
-          WT=/tmp/reef-courier-gps-fix
-          test -e "$WT/.git"
+          REPO=/root/reef-crm
+          SRC=/tmp/reef-courier-gps-fix
+          WT=/tmp/reef-courier-gps-publish
+          BR=fix/courier-native-gps-20260829
+          test -f "$SRC/src/components/courier-app.tsx"
+          sudo -n git -C "$REPO" fetch origin main
+          sudo -n git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1 || true
+          sudo -n git -C "$REPO" branch -D "$BR" >/dev/null 2>&1 || true
+          sudo -n git -C "$REPO" worktree add -b "$BR" "$WT" origin/main
+          sudo -n cp "$SRC/package.json" "$WT/package.json"
+          sudo -n cp "$SRC/package-lock.json" "$WT/package-lock.json"
+          sudo -n cp "$SRC/src/components/courier-app.tsx" "$WT/src/components/courier-app.tsx"
+          sudo -n cp "$SRC/scripts/courier-gps-pin-source-smoke.sh" "$WT/scripts/courier-gps-pin-source-smoke.sh"
+          sudo -n rsync -a --delete \
+            --exclude node_modules --exclude .gradle --exclude build --exclude app/build \
+            "$SRC/apps/courier-native/" "$WT/apps/courier-native/"
+          sudo -n chown -R "$(id -u):$(id -g)" "$WT"
           cd "$WT"
+          npm ci
           npm audit --omit=dev --audit-level=high
-          (cd apps/courier-native && npm audit --omit=dev --audit-level=high)
+          (cd apps/courier-native && npm ci && npm audit --omit=dev --audit-level=high)
+          npm run lint
+          npm run build
           bash scripts/courier-gps-pin-source-smoke.sh
           bash scripts/mobile-apps-source-smoke.sh
+          echo '--- CHANGED ---'
           git status --short
           git add package.json package-lock.json src/components/courier-app.tsx scripts/courier-gps-pin-source-smoke.sh apps/courier-native
           git -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Fix native courier GPS permissions and tracking'
-          git push -u origin fix/courier-native-gps-20260829 --force-with-lease
+          git push -u origin "$BR" --force
           git show --stat --oneline -1
+          sudo -n git -C "$REPO" worktree remove --force "$WT"
