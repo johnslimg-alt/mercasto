@@ -4,7 +4,8 @@ set +x
 umask 077
 
 [ "${CONFIRM:-}" = "MERCASTO" ] || { echo "confirm=MERCASTO required"; exit 64; }
-cd "$(git rev-parse --show-toplevel)"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
 test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
 
 read_env() {
@@ -96,7 +97,9 @@ docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -
 curl -fsS --max-time 30 https://mercasto.com/api/categories >/dev/null
 curl -fsS --max-time 30 https://mercasto.com/ >/dev/null
 
-find /var/www/mercasto /root -xdev -type f \( -name '.env.backup*' -o -name '.env.bak*' -o -name '*.env.backup*' \) -print -delete 2>/dev/null | sed 's#.*#removed_plaintext_env_backup#'
+# Remove only plaintext backup copies owned by this Mercasto checkout. Never scan
+# or delete generic .env backup files elsewhere under /root or other projects.
+find "$REPO_ROOT" -xdev -type f \( -name '.env.backup*' -o -name '.env.bak*' -o -name '*.env.backup*' \) -print -delete 2>/dev/null | sed 's#.*#removed_plaintext_env_backup#'
 trap - ERR
 unset OLD_DB OLD_REDIS NEW_DB NEW_REDIS
 
