@@ -22,16 +22,15 @@ jobs:
           BR=fix/courier-native-gps-20260829
           test -f "$SRC/src/components/courier-app.tsx"
           sudo -n git -C "$REPO" fetch origin main
-          sudo -n git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1 || true
+          sudo -n rm -rf "$WT"
+          sudo -n git -C "$REPO" worktree prune --expire now
           sudo -n git -C "$REPO" branch -D "$BR" >/dev/null 2>&1 || true
           sudo -n git -C "$REPO" worktree add -b "$BR" "$WT" origin/main
           sudo -n cp "$SRC/package.json" "$WT/package.json"
           sudo -n cp "$SRC/package-lock.json" "$WT/package-lock.json"
           sudo -n cp "$SRC/src/components/courier-app.tsx" "$WT/src/components/courier-app.tsx"
           sudo -n cp "$SRC/scripts/courier-gps-pin-source-smoke.sh" "$WT/scripts/courier-gps-pin-source-smoke.sh"
-          sudo -n rsync -a --delete \
-            --exclude node_modules --exclude .gradle --exclude build --exclude app/build \
-            "$SRC/apps/courier-native/" "$WT/apps/courier-native/"
+          sudo -n rsync -a --delete --exclude node_modules --exclude .gradle --exclude build --exclude app/build "$SRC/apps/courier-native/" "$WT/apps/courier-native/"
           sudo -n chown -R "$(id -u):$(id -g)" "$WT"
           cd "$WT"
           npm ci
