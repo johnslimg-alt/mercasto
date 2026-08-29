@@ -12,18 +12,16 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 5
     steps:
-      - name: Inspect n8n network
+      - name: Test local Nemotron from n8n
         shell: bash
         run: |
           set -e
-          echo '=== N8N NETWORKS ==='
-          docker inspect n8n --format '{{json .NetworkSettings.Networks}}'
-          echo '=== HOST ROUTES ==='
-          ip -4 addr show | grep -E '^[0-9]+:|inet ' | head -80
-          echo '=== N8N ROUTE ==='
-          docker exec n8n sh -lc 'ip route 2>/dev/null || cat /proc/net/route'
-          echo '=== CURRENT NEMOTRON LISTENER ==='
-          ss -lntp 2>/dev/null | grep 11435 || true
-          echo '=== NEMOTRON HEALTH HOST ==='
-          curl -fsS --max-time 3 http://127.0.0.1:11435/health || true
-          echo
+          echo '=== HEALTH FROM N8N ==='
+          docker exec n8n node -e "fetch('http://172.19.0.1:11435/health').then(r=>r.text()).then(console.log)"
+          echo '=== JSON CHAT FROM N8N ==='
+          docker exec n8n node - <<'NODE'
+          const body={model:'nemotron-local',messages:[{role:'system',content:'Return JSON only with key ok boolean.'},{role:'user',content:'Respond true.'}],temperature:0,max_tokens:40,response_format:{type:'json_object'}};
+          fetch('http://172.19.0.1:11435/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
+            .then(async r=>{console.log('status='+r.status); console.log(await r.text())})
+            .catch(e=>{console.error(e);process.exit(1)});
+          NODE
