@@ -1,0 +1,58 @@
+name: Ephemeral Catalog Refactor Stacked Prepare
+
+on:
+  push:
+    branches:
+      - ops/prepare-catalog-stacked-921
+    paths:
+      - .github/workflows/ephemeral-prepare-catalog-stacked-921.yml
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: self-hosted
+    timeout-minutes: 25
+    steps:
+      - name: Checkout transient exact head
+        uses: actions/checkout@v7
+        with:
+          ref: refactor/app-transient-modal-state-v2
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply prepared catalog slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "fb7f70f02cfa2687e03d38e98971593c64f6ac44"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch /var/www/mercasto refs/heads/refactor/app-catalog-state:refs/remotes/local/catalog
+          git switch -c refactor/app-catalog-state-stacked
+          git cherry-pick 042d1b58ec7ffdbdb70705e72ea850147b5f092f
+
+      - name: Verify catalog slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          node --test tests/*.test.mjs
+          npm run check:static-safety
+          npm run check:recovery
+          npm run build
+          bash scripts/location-search-gate.sh
+          npx eslint src/App.jsx src/app/useCatalogState.js tests/app-catalog-state-extraction.test.mjs
+
+      - name: Push stacked evidence branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin HEAD:refs/heads/refactor/app-catalog-state-stacked
+          echo "CATALOG_STACKED_PREP=PASS head=$(git rev-parse HEAD)"
