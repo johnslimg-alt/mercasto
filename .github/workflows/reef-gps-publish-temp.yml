@@ -1,0 +1,30 @@
+name: Reef courier GPS publish temporary
+
+on:
+  push:
+    branches: [ops/reef-n8n-admin]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 8
+    steps:
+      - name: Publish already validated courier GPS changes
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          WT=/tmp/reef-courier-gps-fix
+          test -e "$WT/.git"
+          cd "$WT"
+          npm audit --omit=dev --audit-level=high
+          (cd apps/courier-native && npm audit --omit=dev --audit-level=high)
+          bash scripts/courier-gps-pin-source-smoke.sh
+          bash scripts/mobile-apps-source-smoke.sh
+          git status --short
+          git add package.json package-lock.json src/components/courier-app.tsx scripts/courier-gps-pin-source-smoke.sh apps/courier-native
+          git -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Fix native courier GPS permissions and tracking'
+          git push -u origin fix/courier-native-gps-20260829 --force-with-lease
+          git show --stat --oneline -1
