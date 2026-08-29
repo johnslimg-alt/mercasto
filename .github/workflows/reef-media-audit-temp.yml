@@ -9,30 +9,36 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 5
     steps:
-      - name: Audit Reef Drive sync and catalog storage
+      - name: Inspect Drive sync implementation safely
         shell: bash
         run: |
           set -euo pipefail
-          echo '=== identity ==='
-          id
           sudo -n true
-          echo '=== drive sync logic (safe lines only) ==='
-          sudo grep -nE 'ROOT|DIR|PATH|drive|google|rclone|curl|wget|python|catalog|photo|image|media|download|sync' /root/automation-stack/scripts/reef_drive_sync.sh | sed -E 's#(token|secret|password|client_secret|refresh_token)[^ ]*#REDACTED#Ig' | head -160 || true
-          echo '=== catalog container ==='
-          docker ps --format '{{.Names}} {{.Image}} {{.Status}}' | grep -E 'reef-catalog|n8n|evolution' || true
-          if docker inspect reef-catalog-api >/dev/null 2>&1; then
-            docker inspect reef-catalog-api --format 'mounts={{range .Mounts}}{{.Source}} -> {{.Destination}}; {{end}} networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-          fi
-          echo '=== local media candidates ==='
-          sudo find /root/automation-stack /srv /var/lib -maxdepth 4 -type d \( -iname '*catalog*' -o -iname '*drive*' -o -iname '*photo*' -o -iname '*media*' \) -print 2>/dev/null | head -120
-          echo '=== image counts under automation stack ==='
+          echo '=== sync shell ==='
+          sudo sed -n '1,180p' /root/automation-stack/scripts/reef_drive_sync.sh \
+            | sed -E 's#(TOKEN|SECRET|PASSWORD|CLIENT_SECRET|REFRESH_TOKEN|ACCESS_KEY)[^=]*=.*#\1=REDACTED#Ig'
+          echo '=== sync python ==='
+          sudo sed -n '1,320p' /root/automation-stack/scripts/reef_drive_sync.py \
+            | sed -E 's#(token|secret|password|client_secret|refresh_token|access_key)(["'"']?)[[:space:]]*[:=][[:space:]]*[^,} ]+#\1\2:REDACTED#Ig'
+          echo '=== catalog summary ==='
           sudo python3 - <<'PY'
+          import json
           from pathlib import Path
-          roots=[Path('/root/automation-stack'),Path('/srv')]
-          exts={'.jpg','.jpeg','.png','.webp','.gif','.avif'}
-          for root in roots:
-              if not root.exists(): continue
-              files=[p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in exts]
-              print(root, 'images=',len(files),'bytes=',sum(p.stat().st_size for p in files))
-              for p in files[:20]: print('IMG',p,p.stat().st_size)
+          p=Path('/root/automation-stack/reef_drive_cache/catalog.json')
+          d=json.loads(p.read_text())
+          print('catalog_bytes',p.stat().st_size)
+          print('top_keys',list(d) if isinstance(d,dict) else type(d).__name__)
+          def walk(x,path='root'):
+              if isinstance(x,dict):
+                  if isinstance(x.get('photos'),list):
+                      print('PHOTOSET',path,'key=',x.get('key'),'label=',x.get('label'),'folderId=',x.get('folderId'),'photos=',len(x['photos']))
+                      for ph in x['photos'][:3]:
+                          if isinstance(ph,dict): print(' PHOTO', {k:ph.get(k) for k in ('id','name','mimeType','url')})
+                  for k,v in x.items(): walk(v,path+'.'+str(k))
+              elif isinstance(x,list):
+                  for i,v in enumerate(x): walk(v,path+f'[{i}]')
+          walk(d)
           PY
+          echo '=== timers ==='
+          systemctl is-enabled reef-drive-sync.timer || true
+          systemctl list-timers reef-drive-sync.timer --no-pager || true
