@@ -16,7 +16,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          MODEL=$(sudo -n find /opt/reef-actions-runner/.cache/huggingface/hub -type f -name '*Nemotron*IQ4_XS.gguf' | head -1)
+          MODEL=$(sudo -n find -L /opt/reef-actions-runner/.cache/huggingface/hub -type f -name '*IQ4_XS.gguf' | head -1)
           test -n "$MODEL"
           echo "model_found=yes"
           docker pull ghcr.io/ggml-org/llama.cpp:server
