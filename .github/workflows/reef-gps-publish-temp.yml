@@ -12,7 +12,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 12
     steps:
-      - name: Publish validated courier GPS changes from isolated clone
+      - name: Publish validated courier GPS changes from current GitHub main
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -22,9 +22,9 @@ jobs:
           BR=fix/courier-native-gps-20260829
           test -f "$SNAP/src/components/courier-app.tsx"
           sudo -n rm -rf "$CLONE"
-          sudo -n git -C "$REPO" fetch origin main
-          sudo -n git clone --no-hardlinks "$REPO" "$CLONE" >/dev/null
-          sudo -n git -C "$CLONE" checkout -B "$BR" origin/main
+          REMOTE=$(sudo -n git -C "$REPO" remote get-url origin)
+          sudo -n git clone "$REMOTE" "$CLONE" >/dev/null 2>&1
+          sudo -n git -C "$CLONE" checkout -B "$BR" origin/main >/dev/null
           sudo -n cp "$SNAP/package.json" "$CLONE/package.json"
           sudo -n cp "$SNAP/package-lock.json" "$CLONE/package-lock.json"
           sudo -n cp "$SNAP/src/components/courier-app.tsx" "$CLONE/src/components/courier-app.tsx"
@@ -43,7 +43,5 @@ jobs:
           git status --short
           git add package.json package-lock.json src/components/courier-app.tsx scripts/courier-gps-pin-source-smoke.sh apps/courier-native
           git -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Fix native courier GPS permissions and tracking'
-          REMOTE=$(sudo -n git -C "$REPO" remote get-url origin)
-          git remote set-url origin "$REMOTE"
-          git push -u origin "$BR" --force
+          git push -u origin "$BR" --force >/dev/null
           git show --stat --oneline -1
