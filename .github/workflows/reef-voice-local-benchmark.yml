@@ -20,7 +20,7 @@ jobs:
           sudo -n mkdir -p /tmp/reef-voice-bench
           sudo -n chown -R "$(id -u):$(id -g)" /tmp/reef-voice-bench
           sudo -n python3 - <<'PY'
-          import sqlite3, os
+          import sqlite3
           db='/root/automation-stack/n8n_data/database.sqlite'
           con=sqlite3.connect(db); cur=con.cursor()
           rows=cur.execute("""
@@ -39,7 +39,7 @@ jobs:
             [ -e "$f" ] || continue
             docker cp "$f" n8n:/tmp/$(basename "$f")
           done
-          docker exec n8n node - <<'NODE'
+          docker exec -i n8n node - <<'NODE'
           const fs=require('fs');
           const {parse}=require('/usr/local/lib/node_modules/n8n/node_modules/.pnpm/flatted@3.4.2/node_modules/flatted');
           const files=fs.readdirSync('/tmp').filter(x=>/^execution-\d+\.txt$/.test(x)).slice(0,6);
@@ -64,7 +64,7 @@ jobs:
               const meta={id,hasAudio:!!b64,mime,audioBytes:b64?Buffer.byteLength(b64,'base64'):0,groqChars:gt.length,getVoiceMs:gv?.run?.executionTime||null,groqMs:gw?.run?.executionTime||null,groqError:!!gw?.run?.error};
               fs.writeFileSync(`/tmp/meta-${id}.json`,JSON.stringify(meta));
               console.log('sample_meta=',meta);
-            }catch(e){console.log('sample_parse_error=',id,e.name);}
+            }catch(e){console.log('sample_parse_error=',id,e.name,String(e.message||'').slice(0,80));}
           }
           NODE
           for f in /tmp/voice-*.bin /tmp/groq-*.txt /tmp/meta-*.json; do
