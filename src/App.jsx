@@ -21,6 +21,7 @@ import { useLocationSearchState } from './app/useLocationSearchState';
 import { useViewedAdState } from './app/useViewedAdState';
 import { useShellMenuState } from './app/useShellMenuState';
 import { useAuthSessionState } from './app/useAuthSessionState';
+import { useTransientModalState } from './app/useTransientModalState';
 import {
   AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
@@ -636,8 +637,15 @@ function App() {
   const [analyticsLoadError, setAnalyticsLoadError] = useState(false);
   const [analyticsDays, setAnalyticsDays] = useState(7);
   const [dashboardPage, setDashboardPage] = useState(1);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showCouponModal, setShowCouponModal] = useState(false);
+  const {
+    showProfileModal, setShowProfileModal,
+    showCouponModal, setShowCouponModal,
+    showReportModal, setShowReportModal,
+    reportingAd, setReportingAd,
+    showUserReportModal, setShowUserReportModal,
+    showAiModal, setShowAiModal,
+    qrModalData, setQrModalData,
+  } = useTransientModalState();
   const [couponInput, setCouponInput] = useState('');
   const [availableProviders, setAvailableProviders] = useState({ google: false, twitter: false, telegram: false, telegram_bot_id: null, sms: false });
 
@@ -763,13 +771,10 @@ function App() {
   const [couponForm, setCouponForm] = useState({ code: '', credits: 100, max_uses: 10 });
   const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [adminCouponsLoadError, setAdminCouponsLoadError] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportingAd, setReportingAd] = useState(null);
   const [reportForm, setReportForm] = useState({ reason: '', comments: '' });
   const [adminReports, setAdminReports] = useState([]);
   const [adminUserReports, setAdminUserReports] = useState([]);
   const [adminReportTab, setAdminReportTab] = useState('ads');
-  const [showUserReportModal, setShowUserReportModal] = useState(false);
   const [userReportForm, setUserReportForm] = useState({ reason: '', comments: '' });
   const [authPhone, setAuthPhone] = useState('');
 
@@ -792,7 +797,6 @@ function App() {
   const [adminAnalyticsLoadError, setAdminAnalyticsLoadError] = useState(false);
 
   // --- AI COMMAND CENTER STATE ---
-  const [showAiModal, setShowAiModal] = useState(false);
   const [aiAgentType, setAiAgentType] = useState('postgresql');
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiResult, setAiResult] = useState(null);
@@ -1145,7 +1149,6 @@ function App() {
     impressionObserverRef.current?.disconnect();
   }, [flushAdImpressions]);
 
-  const [qrModalData, setQrModalData] = useState(null);
   const fileInputRef = useRef(null);
   const [adStatusFilter, setAdStatusFilter] = useState('active');
   const [companyForm, setCompanyForm] = useState({
