@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Decision = Literal["approved", "manual_review", "rejected"]
 PublicImageBase64 = Annotated[str, Field(min_length=16, max_length=6_000_000)]
@@ -40,6 +40,43 @@ class ListingModerationRequest(BaseModel):
     @property
     def effective_source_image_count(self) -> int:
         return self.source_image_count
+
+
+class FraudRiskRequest(BaseModel):
+    """Privacy-minimized aggregate signals only; raw PII/content is forbidden."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    account_age_days: int = Field(ge=0, le=36_500)
+    listings_24h: int = Field(ge=0, le=500)
+    edits_24h: int = Field(default=0, ge=0, le=1_000)
+    reports_30d: int = Field(default=0, ge=0, le=100)
+    failed_flows_24h: int = Field(default=0, ge=0, le=1_000)
+    duplicate_media_accounts: int = Field(default=0, ge=0, le=100)
+    duplicate_text_accounts: int = Field(default=0, ge=0, le=100)
+    contact_pattern_hits: int = Field(default=0, ge=0, le=100)
+    suspicious_url_count: int = Field(default=0, ge=0, le=100)
+    keyword_stuffing_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    price_zscore: float | None = Field(default=None, ge=0.0, le=20.0)
+
+
+class FraudRiskResponse(BaseModel):
+    mode: Literal["shadow_assist"] = "shadow_assist"
+    authoritative: Literal[False] = False
+    rules_version: str = Field(min_length=1, max_length=80)
+    risk_score: int = Field(ge=0, le=100)
+    listing_risk_score: int = Field(ge=0, le=100)
+    account_risk_score: int = Field(ge=0, le=100)
+    risk_level: Literal["none", "low", "medium", "high"]
+    reason_codes: list[CanonicalSignal] = Field(default_factory=list, max_length=30)
+    requires_manual_review: bool
+    recommendation: Literal[
+        "observe",
+        "keep_in_assist_only_observation",
+        "queue_for_human_review",
+        "prioritize_human_review",
+    ]
+    authoritative_action: Literal[None] = None
 
 
 class ModelVerdict(BaseModel):
