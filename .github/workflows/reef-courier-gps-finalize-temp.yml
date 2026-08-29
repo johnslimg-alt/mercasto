@@ -1,0 +1,36 @@
+name: Reef courier GPS finalize temporary
+
+on:
+  push:
+    branches: [ops/reef-n8n-admin]
+
+permissions:
+  contents: read
+
+jobs:
+  finalize:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 15
+    steps:
+      - name: Install Java, build APK and publish Reef branch
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          WT=/tmp/reef-courier-gps-fix
+          test -d "$WT/.git" -o -f "$WT/.git"
+          if ! command -v java >/dev/null 2>&1; then
+            sudo -n apt-get update -qq
+            sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openjdk-17-jdk-headless
+          fi
+          java -version
+          cd "$WT/apps/courier-native/android"
+          ./gradlew assembleDebug
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          cd "$WT"
+          npm audit --omit=dev --audit-level=high
+          git status --short
+          git add package.json package-lock.json src/components/courier-app.tsx scripts/courier-gps-pin-source-smoke.sh apps/courier-native
+          git -c user.name='Reef Ops' -c user.email='ops@reefmotors.com' commit -m 'Fix native courier GPS permissions and tracking'
+          git push -u origin fix/courier-native-gps-20260829 --force-with-lease
+          echo APK_BYTES=$(stat -c%s apps/courier-native/android/app/build/outputs/apk/debug/app-debug.apk)
+          git show --stat --oneline -1
