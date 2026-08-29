@@ -10,37 +10,68 @@ permissions:
 jobs:
   inspect:
     runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
-      - name: Inspect recent voice execution storage
+      - name: Extract recent voice samples privately
         shell: bash
         run: |
           set -Eeuo pipefail
+          sudo -n rm -rf /tmp/reef-voice-bench
+          sudo -n mkdir -p /tmp/reef-voice-bench
+          sudo -n chown -R "$(id -u):$(id -g)" /tmp/reef-voice-bench
           sudo -n python3 - <<'PY'
-          import sqlite3, json, os, re
+          import sqlite3, os
           db='/root/automation-stack/n8n_data/database.sqlite'
-          con=sqlite3.connect(db)
-          cur=con.cursor()
-          print('tables=', [r[0] for r in cur.execute("select name from sqlite_master where type='table' and name like 'execution%'")])
-          for t in ['execution_entity','execution_data']:
-              try:
-                  print(t, [r[1] for r in cur.execute(f'pragma table_info({t})')])
-              except Exception as e: print(t, 'ERR', type(e).__name__)
-          rows=cur.execute("select id,status,startedAt,stoppedAt from execution_entity where workflowId=? order by id desc limit 120",('Og5UJWua14sZ2wNx',)).fetchall()
-          voice=[]
-          for rid,status,started,stopped in rows:
-              r=cur.execute('select data from execution_data where executionId=?',(rid,)).fetchone()
-              if not r or not r[0]: continue
-              s=r[0]
-              if 'audioMessage' in s or 'Groq Whisper' in s or 'voice-media' in s:
-                  voice.append((rid,status,started,len(s),'base64' in s,'Groq Whisper' in s,'audioMessage' in s))
-          print('voice_candidates=',voice[:12])
-          print('count=',len(voice))
-          os.makedirs('/tmp/reef-voice-bench',exist_ok=True)
-          for rid,*_ in voice[:6]:
+          con=sqlite3.connect(db); cur=con.cursor()
+          rows=cur.execute("""
+            select e.id,e.status,e.startedAt,length(d.data)
+            from execution_entity e join execution_data d on d.executionId=e.id
+            where e.workflowId=? and (d.data like '%audioMessage%' or d.data like '%Groq Whisper%')
+            order by e.id desc limit 12
+          """,('Og5UJWua14sZ2wNx',)).fetchall()
+          print('voice_execution_ids=',[(r[0],r[1],r[2],r[3]) for r in rows])
+          for rid,*_ in rows[:6]:
               s=cur.execute('select data from execution_data where executionId=?',(rid,)).fetchone()[0]
               open(f'/tmp/reef-voice-bench/execution-{rid}.txt','w').write(s)
-          print('saved_execution_payloads=',len(voice[:6]))
+          print('payloads_saved=',min(6,len(rows)))
           PY
-          echo 'container_n8n='$(docker ps --filter name=n8n --format '{{.Status}}')
-          echo 'container_nemotron='$(docker ps --filter name=reef-nemotron --format '{{.Status}}')
+          for f in /tmp/reef-voice-bench/execution-*.txt; do
+            [ -e "$f" ] || continue
+            docker cp "$f" n8n:/tmp/$(basename "$f")
+          done
+          docker exec n8n node - <<'NODE'
+          const fs=require('fs');
+          const {parse}=require('/usr/local/lib/node_modules/n8n/node_modules/.pnpm/flatted@3.4.2/node_modules/flatted');
+          const files=fs.readdirSync('/tmp').filter(x=>/^execution-\d+\.txt$/.test(x)).slice(0,6);
+          const pick=(rd,name)=>{
+            const runs=rd?.[name]; if(!Array.isArray(runs)||!runs.length)return null;
+            for(let i=runs.length-1;i>=0;i--){const a=runs[i]?.data?.main?.[0];if(Array.isArray(a)&&a[0])return {item:a[0],run:runs[i]};}
+            return null;
+          };
+          for(const fn of files){
+            const id=fn.match(/(\d+)/)[1];
+            try{
+              const obj=parse(fs.readFileSync('/tmp/'+fn,'utf8'));
+              const rd=obj?.resultData?.runData||{};
+              const gv=pick(rd,'Get Voice Base64');
+              const vb=pick(rd,'Voice to Binary');
+              const gw=pick(rd,'Groq Whisper');
+              const b64=gv?.item?.json?.base64||vb?.item?.binary?.data?.data||'';
+              const mime=gv?.item?.json?.mimetype||vb?.item?.binary?.data?.mimeType||'application/octet-stream';
+              const gt=String(gw?.item?.json?.text||'').trim();
+              if(b64){fs.writeFileSync(`/tmp/voice-${id}.bin`,Buffer.from(b64,'base64'));}
+              if(gt){fs.writeFileSync(`/tmp/groq-${id}.txt`,gt);}
+              const meta={id,hasAudio:!!b64,mime,audioBytes:b64?Buffer.byteLength(b64,'base64'):0,groqChars:gt.length,getVoiceMs:gv?.run?.executionTime||null,groqMs:gw?.run?.executionTime||null,groqError:!!gw?.run?.error};
+              fs.writeFileSync(`/tmp/meta-${id}.json`,JSON.stringify(meta));
+              console.log('sample_meta=',meta);
+            }catch(e){console.log('sample_parse_error=',id,e.name);}
+          }
+          NODE
+          for f in /tmp/voice-*.bin /tmp/groq-*.txt /tmp/meta-*.json; do
+            docker exec n8n test -f "$f" 2>/dev/null || continue
+            docker cp n8n:"$f" /tmp/reef-voice-bench/$(basename "$f")
+          done
+          echo 'local_samples='$(find /tmp/reef-voice-bench -maxdepth 1 -name 'voice-*.bin' | wc -l)
+          for f in /tmp/reef-voice-bench/voice-*.bin; do [ -e "$f" ] && file "$f"; done
+          echo 'crm='$(curl -fsS http://127.0.0.1:3100/api/health)
+          echo 'n8n='$(curl -fsS http://127.0.0.1:5678/healthz)
