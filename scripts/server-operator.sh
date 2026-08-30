@@ -234,7 +234,7 @@ case "$OPERATION" in
     fi
     clear_laravel_bootstrap_caches
     print_header "Build and start stack"
-    "${COMPOSE_PROD[@]}" up -d --build --remove-orphans
+    "${COMPOSE_PROD[@]}" up -d --build --remove-orphans --renew-anon-volumes
     nginx_config_test
     print_header "Run migrations"
     "${COMPOSE_PROD[@]}" exec -T mercasto-backend php artisan migrate --force

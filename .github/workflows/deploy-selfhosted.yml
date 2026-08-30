@@ -133,35 +133,65 @@ jobs:
             esac
           }
 
+          add_up_service() {
+            case " $UP_SERVICES " in
+              *" $1 "*) ;;
+              *) UP_SERVICES="$UP_SERVICES $1" ;;
+            esac
+          }
+
+          PHP_RUNTIME_SERVICES="mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
           BUILD_SERVICES=""
           UP_SERVICES=""
           NGINX_CONFIG_RELOAD=0
+          PHP_DEPENDENCY_REFRESH=0
+
+          # The PHP services share one source tree but each owns an anonymous
+          # /var/www/vendor volume. If those snapshots diverge, a cache built by
+          # one runtime can crash the others. Force a full refresh on any live
+          # parity failure, even when the triggering commit did not touch Composer.
+          if ! bash scripts/php-runtime-dependency-parity-smoke.sh; then
+            echo "::warning::PHP runtime dependency parity is unhealthy; forcing a full PHP runtime refresh."
+            PHP_DEPENDENCY_REFRESH=1
+          fi
 
           if [ -z "$CHANGED_FILES" ]; then
-            BUILD_SERVICES="mercasto-frontend mercasto-backend mercasto-ai-gateway"
-            UP_SERVICES="mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb ollama mercasto-ai-gateway"
+            add_service mercasto-frontend
+            add_service mercasto-ai-gateway
+            add_up_service mercasto-frontend
+            add_up_service ollama
+            add_up_service mercasto-ai-gateway
+            PHP_DEPENDENCY_REFRESH=1
           else
             echo "$CHANGED_FILES"
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(Dockerfile|src/|public/|index.html|package\.json|package-lock\.json|vite\.config|tailwind\.config|postcss\.config|scripts/verify-vite-dist\.mjs)'; then
               add_service mercasto-frontend
-              UP_SERVICES="$UP_SERVICES mercasto-frontend"
+              add_up_service mercasto-frontend
             fi
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(default\.conf|security_headers\.conf)$'; then
               NGINX_CONFIG_RELOAD=1
             fi
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/Dockerfile|backend/composer\.(json|lock)|backend/package(-lock)?\.json|backend/vite\.config)'; then
-              add_service mercasto-backend
-              UP_SERVICES="$UP_SERVICES mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
+              PHP_DEPENDENCY_REFRESH=1
             fi
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(services/ai-gateway/|docker-compose(\.override)?\.yml$)'; then
               add_service mercasto-ai-gateway
-              UP_SERVICES="$UP_SERVICES ollama mercasto-ai-gateway"
+              add_up_service ollama
+              add_up_service mercasto-ai-gateway
             fi
-            # Compose-only changes can alter frontend mounts/networks without changing its image.
-            # Recreate the frontend so the new container configuration actually takes effect.
+            # Compose changes can alter PHP mounts or image ownership, so renew
+            # the runtime dependency volumes as part of the same atomic refresh.
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^docker-compose(\.override)?\.yml$'; then
-              UP_SERVICES="$UP_SERVICES mercasto-frontend"
+              add_up_service mercasto-frontend
+              PHP_DEPENDENCY_REFRESH=1
             fi
+          fi
+
+          if [ "$PHP_DEPENDENCY_REFRESH" -eq 1 ]; then
+            for service in $PHP_RUNTIME_SERVICES; do
+              add_service "$service"
+              add_up_service "$service"
+            done
           fi
 
           if [ -n "$BUILD_SERVICES" ]; then
@@ -208,14 +238,22 @@ jobs:
           esac
 
           FRONTEND_UP=0
+          PHP_REFRESH_SERVICES=""
           OTHER_UP_SERVICES=""
           for service in $UP_SERVICES; do
             if [ "$service" = "mercasto-frontend" ]; then
               FRONTEND_UP=1
+            elif [ "$PHP_DEPENDENCY_REFRESH" -eq 1 ] && [[ " $PHP_RUNTIME_SERVICES " == *" $service "* ]]; then
+              PHP_REFRESH_SERVICES="$PHP_REFRESH_SERVICES $service"
             else
               OTHER_UP_SERVICES="$OTHER_UP_SERVICES $service"
             fi
           done
+
+          if [ -n "$PHP_REFRESH_SERVICES" ]; then
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps \
+              --force-recreate --renew-anon-volumes $PHP_REFRESH_SERVICES
+          fi
 
           if [ -n "$OTHER_UP_SERVICES" ]; then
             docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps $OTHER_UP_SERVICES
@@ -225,7 +263,7 @@ jobs:
             docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --force-recreate mercasto-frontend
           fi
 
-          if [ -z "$OTHER_UP_SERVICES" ] && [ "$FRONTEND_UP" -eq 0 ]; then
+          if [ -z "$PHP_REFRESH_SERVICES" ] && [ -z "$OTHER_UP_SERVICES" ] && [ "$FRONTEND_UP" -eq 0 ]; then
             echo "No service restart required for changed files."
           fi
 
@@ -261,6 +299,20 @@ jobs:
           docker exec mercasto_backend_container php artisan up
           docker restart mercasto_backend_container mercasto_worker_container mercasto_scheduler_container mercasto_reverb_container || true
           docker start mercasto_reverb_container || true
+
+          parity_ok=0
+          for attempt in $(seq 1 20); do
+            if bash scripts/php-runtime-dependency-parity-smoke.sh; then
+              parity_ok=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$parity_ok" -ne 1 ]; then
+            echo "PHP runtime dependency parity did not recover after deploy." >&2
+            exit 1
+          fi
+
           docker exec mercasto_backend_container getent hosts mercasto-reverb >/dev/null 2>&1 || {
             docker network disconnect mercasto_default mercasto_reverb_container 2>/dev/null || true
             docker network connect --alias mercasto-reverb --alias mercasto_reverb_container mercasto_default mercasto_reverb_container || true
