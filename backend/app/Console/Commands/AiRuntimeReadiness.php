@@ -15,7 +15,7 @@ class AiRuntimeReadiness extends Command
     public function handle(): int
     {
         $baseUrl = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
-        $model = trim((string) config('services.ollama.chat_model', 'qwen2.5:1.5b'));
+        $model = trim((string) config('services.ollama.chat_model', 'qwen3.8:9b-local'));
         $host = (string) (parse_url($baseUrl, PHP_URL_HOST) ?: 'invalid');
 
         if ($baseUrl === '' || $model === '') {
