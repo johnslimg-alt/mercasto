@@ -43,7 +43,7 @@ jobs:
             docker compose exec -T mercasto-backend php artisan mercasto:fix-images
           elif [ "${{ github.event.inputs.operation }}" = "rotate_internal_secrets" ]; then
             test "${{ github.event.inputs.confirm }}" = "MERCASTO" || { echo "rotate_internal_secrets requires confirm=MERCASTO"; exit 64; }
-            CONFIRM="${{ github.event.inputs.confirm }}" bash scripts/rotate-internal-secrets.sh
+            sudo -n env CONFIRM="${{ github.event.inputs.confirm }}" bash scripts/rotate-internal-secrets.sh
           elif [ "${{ github.event.inputs.operation }}" = "normalize_catalog_images" ]; then
             test "${{ github.event.inputs.confirm }}" = "MERCASTO" || { echo "normalize_catalog_images requires confirm=MERCASTO"; exit 64; }
             test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
