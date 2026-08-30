@@ -44,10 +44,9 @@ if "./backend" in body or "/var/www" in body:
     raise SystemExit("Python AI gateway must not mount Laravel source/storage")
 
 deploy_required = [
-    'BUILD_SERVICES="mercasto-frontend mercasto-backend mercasto-ai-gateway"',
-    'UP_SERVICES="mercasto-frontend mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb ollama mercasto-ai-gateway"',
     'add_service mercasto-ai-gateway',
-    'UP_SERVICES="$UP_SERVICES ollama mercasto-ai-gateway"',
+    'add_up_service ollama',
+    'add_up_service mercasto-ai-gateway',
     'bash scripts/ensure-local-ai-models.sh',
     'services/ai-gateway/',
     'docker-compose(\\.override)?\\.yml$',
