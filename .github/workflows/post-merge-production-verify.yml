@@ -76,7 +76,17 @@ jobs:
       - name: Preload local AI model without user data
         run: |
           set -euo pipefail
-          docker exec mercasto_backend_container php artisan ai:runtime-preload --timeout=90
+          for attempt in 1 2 3; do
+            if docker exec mercasto_backend_container php artisan ai:runtime-preload --timeout=120; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Local AI preload attempt $attempt failed; retrying after cold-start backoff."
+              sleep 10
+            fi
+          done
+          echo "Local AI preload did not recover after 3 attempts." >&2
+          exit 1
 
       - name: Run quick production smoke suite
         run: |
