@@ -22,3 +22,12 @@ test('internal secret rotation identifies failed post-checks and retries transie
   assert.match(script, /STEP=public-home/);
   assert.doesNotMatch(script, /eval/);
 });
+
+test('internal secret rotation invalidates stale Laravel config before recreate and rollback', () => {
+  assert.match(script, /invalidate_config_cache\(\)/);
+  assert.match(script, /backend\/bootstrap\/cache\/config\.php/);
+  assert.match(script, /STEP=config-cache-invalidate\ninvalidate_config_cache\nSTEP=container-recreate/);
+  assert.match(script, /write_pair \"\$BACKEND_ENV\" \"\$OLD_DB\" \"\$OLD_REDIS\"\n  invalidate_config_cache/);
+  assert.match(script, /STEP=config-cache-refresh\nretry_cmd 6 2 refresh_config_cache\nSTEP=migrations/);
+  assert.match(script, /refresh_config_cache\(\).*php artisan config:cache/);
+});

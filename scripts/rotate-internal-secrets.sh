@@ -66,6 +66,14 @@ retry_cmd() {
 check_migrations() { docker compose exec -T mercasto-backend php artisan migrate:status >/dev/null 2>&1; }
 check_redis_auth() { docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -qx PONG; }
 check_public_url() { curl -fsS --max-time 15 "$1" >/dev/null; }
+refresh_config_cache() { docker compose exec -T mercasto-backend php artisan config:cache >/dev/null 2>&1; }
+invalidate_config_cache() {
+  local cache="$REPO_ROOT/backend/bootstrap/cache/config.php"
+  case "$cache" in
+    "$REPO_ROOT"/backend/bootstrap/cache/config.php) rm -f -- "$cache" ;;
+    *) return 1 ;;
+  esac
+}
 
 ROOT_ENV=.env
 BACKEND_ENV=backend/.env
@@ -92,6 +100,7 @@ rollback() {
   set +e
   write_pair "$ROOT_ENV" "$OLD_DB" "$OLD_REDIS"
   write_pair "$BACKEND_ENV" "$OLD_DB" "$OLD_REDIS"
+  invalidate_config_cache >/dev/null 2>&1 || true
   printf 'ALTER ROLE "%s" PASSWORD '\''%s'\'';\n' "$DB_USER" "$OLD_DB" | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1
   docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null 2>&1
   reload_frontend_upstream >/dev/null 2>&1 || true
@@ -104,6 +113,8 @@ printf 'ALTER ROLE "%s" PASSWORD '\''%s'\'';\n' "$DB_USER" "$NEW_DB" | docker co
 STEP=env-update
 write_pair "$ROOT_ENV" "$NEW_DB" "$NEW_REDIS"
 write_pair "$BACKEND_ENV" "$NEW_DB" "$NEW_REDIS"
+STEP=config-cache-invalidate
+invalidate_config_cache
 STEP=container-recreate
 docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null
 
@@ -119,6 +130,8 @@ done
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_db_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_backend_container)" = healthy
+STEP=config-cache-refresh
+retry_cmd 6 2 refresh_config_cache
 STEP=migrations
 retry_cmd 6 2 check_migrations
 STEP=redis-auth
