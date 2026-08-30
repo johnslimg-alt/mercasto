@@ -51,8 +51,25 @@ reload_frontend_upstream() {
   docker compose exec -T mercasto-frontend nginx -s reload >/dev/null
 }
 
+retry_cmd() {
+  local attempts="$1" delay="$2" i=1
+  shift 2
+  while [ "$i" -le "$attempts" ]; do
+    if "$@"; then return 0; fi
+    [ "$i" -ge "$attempts" ] && break
+    sleep "$delay"
+    i=$((i + 1))
+  done
+  return 1
+}
+
+check_migrations() { docker compose exec -T mercasto-backend php artisan migrate:status >/dev/null 2>&1; }
+check_redis_auth() { docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -qx PONG; }
+check_public_url() { curl -fsS --max-time 15 "$1" >/dev/null; }
+
 ROOT_ENV=.env
 BACKEND_ENV=backend/.env
+STEP=backup
 DB_USER="$(read_env "$ROOT_ENV" DB_USERNAME || true)"; DB_USER="${DB_USER:-mercasto_user}"
 DB_NAME="$(read_env "$ROOT_ENV" DB_DATABASE || true)"; DB_NAME="${DB_NAME:-mercasto}"
 OLD_DB="$(read_env "$ROOT_ENV" DB_PASSWORD)"
@@ -71,7 +88,7 @@ sha256sum "$backup" | sed 's#  .*#  [verified-backup]#'
 rollback() {
   rc=$?
   trap - ERR
-  echo "Internal secret rotation failed; restoring prior credentials."
+  echo "Internal secret rotation failed at step=${STEP:-unknown}; restoring prior credentials."
   set +e
   write_pair "$ROOT_ENV" "$OLD_DB" "$OLD_REDIS"
   write_pair "$BACKEND_ENV" "$OLD_DB" "$OLD_REDIS"
@@ -82,11 +99,15 @@ rollback() {
 }
 trap rollback ERR
 
+STEP=database-role-update
 printf 'ALTER ROLE "%s" PASSWORD '\''%s'\'';\n' "$DB_USER" "$NEW_DB" | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" >/dev/null
+STEP=env-update
 write_pair "$ROOT_ENV" "$NEW_DB" "$NEW_REDIS"
 write_pair "$BACKEND_ENV" "$NEW_DB" "$NEW_REDIS"
+STEP=container-recreate
 docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null
 
+STEP=container-health
 for _ in $(seq 1 36); do
   db="$(docker inspect -f '{{.State.Health.Status}}' mercasto_db_container 2>/dev/null || echo starting)"
   redis="$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container 2>/dev/null || echo starting)"
@@ -98,11 +119,16 @@ done
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_db_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_backend_container)" = healthy
-docker compose exec -T mercasto-backend php artisan migrate:status >/dev/null
-docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -qx PONG
-reload_frontend_upstream
-curl -fsS --max-time 30 https://mercasto.com/api/categories >/dev/null
-curl -fsS --max-time 30 https://mercasto.com/ >/dev/null
+STEP=migrations
+retry_cmd 6 2 check_migrations
+STEP=redis-auth
+retry_cmd 6 2 check_redis_auth
+STEP=frontend-reload
+retry_cmd 10 2 reload_frontend_upstream
+STEP=public-categories
+retry_cmd 12 5 check_public_url https://mercasto.com/api/categories
+STEP=public-home
+retry_cmd 12 5 check_public_url https://mercasto.com/
 
 # Remove only plaintext backup copies owned by this Mercasto checkout. Never scan
 # or delete generic .env backup files elsewhere under /root or other projects.

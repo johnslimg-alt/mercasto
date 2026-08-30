@@ -10,3 +10,15 @@ test('internal secret rotation deletes legacy env backups only inside the Mercas
   assert.doesNotMatch(script, /find\s+\/root(?:\s|$)/);
   assert.doesNotMatch(script, /find\s+\/var\/www(?:\s|$)/);
 });
+
+test('internal secret rotation identifies failed post-checks and retries transient readiness', () => {
+  assert.match(script, /failed at step=\$\{STEP:-unknown\}/);
+  assert.match(script, /retry_cmd\(\)/);
+  assert.match(script, /trap rollback ERR\n\nSTEP=database-role-update\nprintf 'ALTER ROLE/);
+  assert.match(script, /STEP=frontend-reload/);
+  assert.match(script, /retry_cmd 10 2 reload_frontend_upstream/);
+  assert.match(script, /STEP=public-categories/);
+  assert.match(script, /retry_cmd 12 5 check_public_url https:\/\/mercasto\.com\/api\/categories/);
+  assert.match(script, /STEP=public-home/);
+  assert.doesNotMatch(script, /eval/);
+});
