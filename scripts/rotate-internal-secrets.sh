@@ -8,6 +8,12 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
 
+CURRENT_STAGE=init
+stage() {
+  CURRENT_STAGE="$1"
+  echo "INTERNAL_SECRET_ROTATION_STAGE=$CURRENT_STAGE"
+}
+
 read_env() {
   python3 - "$1" "$2" <<'PY'
 from pathlib import Path
@@ -51,6 +57,20 @@ reload_frontend_upstream() {
   docker compose exec -T mercasto-frontend nginx -s reload >/dev/null
 }
 
+wait_public_smoke() {
+  local attempt
+  for attempt in $(seq 1 18); do
+    if curl -fsS --connect-timeout 3 --max-time 5 https://mercasto.com/api/categories >/dev/null 2>&1 \
+      && curl -fsS --connect-timeout 3 --max-time 5 https://mercasto.com/ >/dev/null 2>&1; then
+      echo "INTERNAL_SECRET_ROTATION_PUBLIC_SMOKE=PASS attempt=$attempt"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "INTERNAL_SECRET_ROTATION_PUBLIC_SMOKE=FAIL attempts=18" >&2
+  return 1
+}
+
 ROOT_ENV=.env
 BACKEND_ENV=backend/.env
 DB_USER="$(read_env "$ROOT_ENV" DB_USERNAME || true)"; DB_USER="${DB_USER:-mercasto_user}"
@@ -61,6 +81,7 @@ NEW_DB="$(openssl rand -hex 32)"
 NEW_REDIS="$(openssl rand -hex 32)"
 
 test -n "$OLD_DB"; test -n "$OLD_REDIS"
+stage backup
 backup="postgres-backups/pre_secret_rotation_$(date -u +%Y%m%d_%H%M%S).dump"
 docker compose exec -T postgres sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup"
 test -s "$backup"
@@ -71,7 +92,7 @@ sha256sum "$backup" | sed 's#  .*#  [verified-backup]#'
 rollback() {
   rc=$?
   trap - ERR
-  echo "Internal secret rotation failed; restoring prior credentials."
+  echo "Internal secret rotation failed at stage=$CURRENT_STAGE; restoring prior credentials."
   set +e
   write_pair "$ROOT_ENV" "$OLD_DB" "$OLD_REDIS"
   write_pair "$BACKEND_ENV" "$OLD_DB" "$OLD_REDIS"
@@ -82,11 +103,15 @@ rollback() {
 }
 trap rollback ERR
 
+stage credentials
 printf 'ALTER ROLE "%s" PASSWORD '\''%s'\'';\n' "$DB_USER" "$NEW_DB" | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" >/dev/null
 write_pair "$ROOT_ENV" "$NEW_DB" "$NEW_REDIS"
 write_pair "$BACKEND_ENV" "$NEW_DB" "$NEW_REDIS"
+
+stage recreate
 docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null
 
+stage container_health
 for _ in $(seq 1 36); do
   db="$(docker inspect -f '{{.State.Health.Status}}' mercasto_db_container 2>/dev/null || echo starting)"
   redis="$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container 2>/dev/null || echo starting)"
@@ -98,12 +123,20 @@ done
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_db_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_backend_container)" = healthy
-docker compose exec -T mercasto-backend php artisan migrate:status >/dev/null
-docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -qx PONG
-reload_frontend_upstream
-curl -fsS --max-time 30 https://mercasto.com/api/categories >/dev/null
-curl -fsS --max-time 30 https://mercasto.com/ >/dev/null
 
+stage database_check
+docker compose exec -T mercasto-backend php artisan migrate:status >/dev/null
+
+stage redis_check
+docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -qx PONG
+
+stage frontend_reload
+reload_frontend_upstream
+
+stage public_smoke
+wait_public_smoke
+
+stage cleanup
 # Remove only plaintext backup copies owned by this Mercasto checkout. Never scan
 # or delete generic .env backup files elsewhere under /root or other projects.
 find "$REPO_ROOT" -xdev -type f \( -name '.env.backup*' -o -name '.env.bak*' -o -name '*.env.backup*' \) -print -delete 2>/dev/null | sed 's#.*#removed_plaintext_env_backup#'
