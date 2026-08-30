@@ -19,6 +19,9 @@ jobs:
       - name: Enforce workflow project boundary
         run: python3 scripts/check-workflow-project-scope.py
 
+      - name: Enforce deploy network safety
+        run: python3 scripts/check-deploy-network-safety.py
+
       - name: Check PR body and title
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}

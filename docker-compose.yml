@@ -411,6 +411,12 @@ volumes:
   ollama_data:
 
 networks:
+  # This network is long-lived production infrastructure shared by the Mercasto
+  # services. Compose must attach to it, never remove/recreate it during a
+  # partial service rollout.
+  default:
+    external: true
+    name: mercasto_default
   automation-net:
     external: true
     name: automation-net
