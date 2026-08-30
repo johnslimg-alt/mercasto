@@ -24,12 +24,22 @@ PY
 }
 
 write_pair() {
-  FILE="$1" DB_VALUE="$2" REDIS_VALUE="$3" python3 - <<'PY'
+  local target="$1" db_value="$2" redis_value="$3"
+  local tmp owner group mode stage rc
+
+  case "$target" in
+    "$ROOT_ENV"|"$BACKEND_ENV") ;;
+    *) echo "Refusing to write unexpected env target" >&2; return 64 ;;
+  esac
+
+  tmp="$(mktemp "${TMPDIR:-/tmp}/mercasto-env.XXXXXX")"
+  TARGET="$target" OUTPUT="$tmp" DB_VALUE="$db_value" REDIS_VALUE="$redis_value" python3 - <<'PY'
 from pathlib import Path
 import os
-p = Path(os.environ['FILE'])
+src = Path(os.environ['TARGET'])
+dst = Path(os.environ['OUTPUT'])
 values = {'DB_PASSWORD': os.environ['DB_VALUE'], 'REDIS_PASSWORD': os.environ['REDIS_VALUE']}
-lines = p.read_text(errors='ignore').splitlines()
+lines = src.read_text(errors='ignore').splitlines()
 out, seen = [], set()
 for line in lines:
     if line and not line.lstrip().startswith('#') and '=' in line:
@@ -42,8 +52,30 @@ for line in lines:
 for key, value in values.items():
     if key not in seen:
         out.append(f'{key}={value}')
-p.write_text('\n'.join(out) + '\n')
+dst.write_text('\n'.join(out) + '\n')
 PY
+
+  if [ -w "$target" ]; then
+    cat "$tmp" > "$target"
+    rc=$?
+    rm -f "$tmp"
+    return "$rc"
+  fi
+
+  owner="$(stat -c '%U' "$target")"
+  group="$(stat -c '%G' "$target")"
+  mode="$(stat -c '%a' "$target")"
+  stage="${target}.rotate.$$"
+  if ! sudo -n install -o "$owner" -g "$group" -m "$mode" "$tmp" "$stage"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  if ! sudo -n mv -f "$stage" "$target"; then
+    sudo -n rm -f "$stage" >/dev/null 2>&1 || true
+    rm -f "$tmp"
+    return 1
+  fi
+  rm -f "$tmp"
 }
 
 ROOT_ENV=.env
