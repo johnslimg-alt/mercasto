@@ -73,7 +73,7 @@ services:
       - "DB_HOST=postgres"
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
-      - "OLLAMA_TEXT_MODEL=qwen2.5:1.5b"
+      - "OLLAMA_TEXT_MODEL=qwen3.8:9b-local"
       - "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct"
     depends_on:
       postgres:
@@ -81,13 +81,13 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    # Fast runtime healthcheck. Full DB smoke runs in CI; artisan/tinker is too slow for Docker health.
+    # Runtime health must prove Laravel can authenticate to PostgreSQL.
     healthcheck:
-      test: ["CMD-SHELL", "php -r 'exit(extension_loaded(\"pdo_pgsql\") ? 0 : 1);' || exit 1"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "php", "/var/www/health-db.php"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 15s
     # УЛУЧШЕНИЕ 2: deploy policy для self-hosted
     deploy:
       resources:
@@ -117,7 +117,7 @@ services:
       - "DB_HOST=postgres"
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
-      - "OLLAMA_TEXT_MODEL=qwen2.5:1.5b"
+      - "OLLAMA_TEXT_MODEL=qwen3.8:9b-local"
       - "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct"
     depends_on:
       postgres:
@@ -234,12 +234,13 @@ services:
     container_name: mercasto_ollama
     expose:
       - "11434"
-    cpus: "2.0"
-    mem_limit: 5g
+    cpus: "8.0"
+    mem_limit: 14g
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
     volumes:
       - ollama_data:/root/.ollama
+      - /opt/reef-models/Qwen3.8-9B-Q4_K_M.gguf:/models/Qwen3.8-9B-Q4_K_M.gguf:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "ollama", "list"]

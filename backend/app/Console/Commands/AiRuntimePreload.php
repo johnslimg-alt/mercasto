@@ -15,7 +15,7 @@ class AiRuntimePreload extends Command
     public function handle(): int
     {
         $baseUrl = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
-        $model = trim((string) config('services.ollama.chat_model', 'qwen2.5:1.5b'));
+        $model = trim((string) config('services.ollama.chat_model', 'qwen3.8:9b-local'));
         $keepAlive = config('services.ollama.keep_alive', '24h');
         $timeout = max(30, min(180, (int) $this->option('timeout')));
         $startedAt = hrtime(true);
@@ -32,6 +32,7 @@ class AiRuntimePreload extends Command
                 ->post($baseUrl . '/api/generate', [
                     'model' => $model,
                     'stream' => false,
+                    'think' => false,
                     'keep_alive' => $keepAlive,
                 ]);
         } catch (Throwable $error) {
