@@ -14,7 +14,7 @@ class LocalAiClientRoutingTest extends TestCase
 
         config([
             'services.ollama.base_url' => 'http://ollama.test',
-            'services.ollama.chat_model' => 'qwen2.5:1.5b',
+            'services.ollama.chat_model' => 'qwen3.8:9b-local',
             'services.ollama.vision_model' => 'qwen3-vl:4b-instruct',
             'services.ollama.keep_alive' => '24h',
         ]);
@@ -24,7 +24,7 @@ class LocalAiClientRoutingTest extends TestCase
     {
         Http::fake([
             'http://ollama.test/api/chat' => Http::response([
-                'model' => 'qwen2.5:1.5b',
+                'model' => 'qwen3.8:9b-local',
                 'message' => ['content' => 'OK'],
             ]),
         ]);
@@ -33,8 +33,9 @@ class LocalAiClientRoutingTest extends TestCase
             ['role' => 'user', 'content' => 'Health check'],
         ], ['max_tokens' => 8, 'num_ctx' => 512]);
 
-        Http::assertSent(fn ($request): bool => $request['model'] === 'qwen2.5:1.5b'
-            && data_get($request->data(), 'messages.0.images') === null);
+        Http::assertSent(fn ($request): bool => $request['model'] === 'qwen3.8:9b-local'
+            && data_get($request->data(), 'messages.0.images') === null
+            && $request['think'] === false);
     }
 
     public function test_image_requests_use_the_dedicated_vision_model(): void

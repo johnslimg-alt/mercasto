@@ -78,10 +78,10 @@ return [
 
     'ollama' => [
         'url' => env('OLLAMA_URL', 'http://mercasto_ollama:11434'),
-        'model' => env('OLLAMA_TEXT_MODEL', 'qwen2.5:1.5b'),
+        'model' => env('OLLAMA_TEXT_MODEL', 'qwen3.8:9b-local'),
         'timeout' => env('OLLAMA_TIMEOUT', 60),
         'base_url' => env('OLLAMA_BASE_URL', 'http://ollama:11434'),
-        'chat_model' => env('OLLAMA_TEXT_MODEL', 'qwen2.5:1.5b'),
+        'chat_model' => env('OLLAMA_TEXT_MODEL', 'qwen3.8:9b-local'),
         'vision_model' => env('OLLAMA_VISION_MODEL', 'qwen3-vl:4b-instruct'),
         'keep_alive' => env('OLLAMA_KEEP_ALIVE', '24h'),
     ],

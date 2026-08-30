@@ -40,7 +40,7 @@ class LocalAiClient
         });
         $defaultModel = $hasImages
             ? (string) config('services.ollama.vision_model', 'qwen3-vl:4b-instruct')
-            : (string) config('services.ollama.chat_model', 'qwen2.5:1.5b');
+            : (string) config('services.ollama.chat_model', 'qwen3.8:9b-local');
         $model = (string) Arr::get($options, 'model', $defaultModel);
         if ($baseUrl === '' || $model === '') {
             throw new RuntimeException('Local Ollama AI is not configured.');
@@ -50,6 +50,7 @@ class LocalAiClient
             'model' => $model,
             'messages' => $messages,
             'stream' => false,
+            'think' => false,
             'keep_alive' => Arr::get($options, 'keep_alive', config('services.ollama.keep_alive', '24h')),
             'options' => [
                 'temperature' => Arr::get($options, 'temperature', 0.2),
