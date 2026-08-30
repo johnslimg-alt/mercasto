@@ -289,9 +289,10 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-mercasto_user} -d ${DB_DATABASE:-mercasto}"]
-      interval: 60s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 10s
     logging:
       driver: "json-file"
       options:
@@ -334,9 +335,10 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
-      interval: 60s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 10s
     logging:
       driver: "json-file"
       options:
