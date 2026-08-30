@@ -63,6 +63,16 @@ retry_cmd() {
   return 1
 }
 
+clear_laravel_config_cache() {
+  # Laravel's cached config embeds DB/Redis credentials. Remove it before
+  # recreating services so the new processes read the just-written .env files.
+  rm -f "$REPO_ROOT/backend/bootstrap/cache/config.php"
+}
+
+cache_laravel_config() {
+  docker compose exec -T mercasto-backend php artisan config:cache >/dev/null
+}
+
 check_migrations() { docker compose exec -T mercasto-backend php artisan migrate:status >/dev/null 2>&1; }
 check_redis_auth() { docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -qx PONG; }
 check_public_url() { curl -fsS --max-time 15 "$1" >/dev/null; }
@@ -92,6 +102,7 @@ rollback() {
   set +e
   write_pair "$ROOT_ENV" "$OLD_DB" "$OLD_REDIS"
   write_pair "$BACKEND_ENV" "$OLD_DB" "$OLD_REDIS"
+  clear_laravel_config_cache
   printf 'ALTER ROLE "%s" PASSWORD '\''%s'\'';\n' "$DB_USER" "$OLD_DB" | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1
   docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null 2>&1
   reload_frontend_upstream >/dev/null 2>&1 || true
@@ -104,6 +115,7 @@ printf 'ALTER ROLE "%s" PASSWORD '\''%s'\'';\n' "$DB_USER" "$NEW_DB" | docker co
 STEP=env-update
 write_pair "$ROOT_ENV" "$NEW_DB" "$NEW_REDIS"
 write_pair "$BACKEND_ENV" "$NEW_DB" "$NEW_REDIS"
+clear_laravel_config_cache
 STEP=container-recreate
 docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null
 
@@ -123,6 +135,8 @@ STEP=migrations
 retry_cmd 6 2 check_migrations
 STEP=redis-auth
 retry_cmd 6 2 check_redis_auth
+STEP=config-cache
+retry_cmd 6 2 cache_laravel_config
 STEP=frontend-reload
 retry_cmd 10 2 reload_frontend_upstream
 STEP=public-categories
