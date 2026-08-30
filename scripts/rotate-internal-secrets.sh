@@ -63,7 +63,7 @@ retry_cmd() {
   return 1
 }
 
-check_migrations() { docker compose exec -T mercasto-backend php artisan migrate:status >/dev/null 2>&1; }
+check_backend_db() { docker compose exec -T mercasto-backend php /var/www/health-db.php >/dev/null 2>&1; }
 check_redis_auth() { docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -qx PONG; }
 check_public_url() { curl -fsS --max-time 15 "$1" >/dev/null; }
 
@@ -119,8 +119,8 @@ done
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_db_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_backend_container)" = healthy
-STEP=migrations
-retry_cmd 6 2 check_migrations
+STEP=backend-db
+retry_cmd 12 5 check_backend_db
 STEP=redis-auth
 retry_cmd 6 2 check_redis_auth
 STEP=frontend-reload
