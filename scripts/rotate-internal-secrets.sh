@@ -46,6 +46,11 @@ p.write_text('\n'.join(out) + '\n')
 PY
 }
 
+reload_frontend_upstream() {
+  docker compose exec -T mercasto-frontend nginx -t >/dev/null
+  docker compose exec -T mercasto-frontend nginx -s reload >/dev/null
+}
+
 ROOT_ENV=.env
 BACKEND_ENV=backend/.env
 DB_USER="$(read_env "$ROOT_ENV" DB_USERNAME || true)"; DB_USER="${DB_USER:-mercasto_user}"
@@ -72,6 +77,7 @@ rollback() {
   write_pair "$BACKEND_ENV" "$OLD_DB" "$OLD_REDIS"
   printf 'ALTER ROLE "%s" PASSWORD '\''%s'\'';\n' "$DB_USER" "$OLD_DB" | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1
   docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null 2>&1
+  reload_frontend_upstream >/dev/null 2>&1 || true
   exit "$rc"
 }
 trap rollback ERR
@@ -94,6 +100,7 @@ test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container)" 
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_backend_container)" = healthy
 docker compose exec -T mercasto-backend php artisan migrate:status >/dev/null
 docker compose exec -T redis redis-cli -a "$NEW_REDIS" ping 2>/dev/null | grep -qx PONG
+reload_frontend_upstream
 curl -fsS --max-time 30 https://mercasto.com/api/categories >/dev/null
 curl -fsS --max-time 30 https://mercasto.com/ >/dev/null
 
