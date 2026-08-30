@@ -20,5 +20,19 @@ test('internal secret rotation identifies failed post-checks and retries transie
   assert.match(script, /STEP=public-categories/);
   assert.match(script, /retry_cmd 12 5 check_public_url https:\/\/mercasto\.com\/api\/categories/);
   assert.match(script, /STEP=public-home/);
-  assert.doesNotMatch(script, /eval/);
+  assert.doesNotMatch(script, /\beval\b/);
+});
+
+test('internal secret rotation invalidates cached Laravel credentials before recreate and rollback', () => {
+  assert.match(script, /clear_laravel_config_cache\(\)/);
+  assert.match(script, /rm -f "\$REPO_ROOT\/backend\/bootstrap\/cache\/config\.php"/);
+  assert.match(
+    script,
+    /write_pair "\$BACKEND_ENV" "\$NEW_DB" "\$NEW_REDIS"\nclear_laravel_config_cache\nSTEP=container-recreate/,
+  );
+  assert.match(
+    script,
+    /write_pair "\$BACKEND_ENV" "\$OLD_DB" "\$OLD_REDIS"\n  clear_laravel_config_cache/,
+  );
+  assert.match(script, /STEP=config-cache\nretry_cmd 6 2 cache_laravel_config/);
 });
