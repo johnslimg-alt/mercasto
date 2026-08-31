@@ -7,8 +7,10 @@ DEPLOY="$ROOT_DIR/.github/workflows/deploy-selfhosted.yml"
 BOOTSTRAP="$ROOT_DIR/scripts/ensure-local-ai-models.sh"
 CLIENT="$ROOT_DIR/backend/app/Services/LocalAiClient.php"
 SERVICES="$ROOT_DIR/backend/config/services.php"
+GATEWAY_CLIENT="$ROOT_DIR/backend/app/Services/AiModerationGatewayClient.php"
+MODERATION_JOB="$ROOT_DIR/backend/app/Jobs/ModerateAdWithAI.php"
 
-python3 - "$COMPOSE" "$DEPLOY" "$BOOTSTRAP" "$CLIENT" "$SERVICES" <<'PY'
+python3 - "$COMPOSE" "$DEPLOY" "$BOOTSTRAP" "$CLIENT" "$SERVICES" "$GATEWAY_CLIENT" "$MODERATION_JOB" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -18,6 +20,8 @@ deploy = Path(sys.argv[2]).read_text()
 bootstrap = Path(sys.argv[3]).read_text()
 client = Path(sys.argv[4]).read_text()
 services = Path(sys.argv[5]).read_text()
+gateway_client = Path(sys.argv[6]).read_text()
+moderation_job = Path(sys.argv[7]).read_text()
 match = re.search(r"(?ms)^  mercasto-ai-gateway:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n|^volumes:\n)", compose)
 if not match:
     raise SystemExit("mercasto-ai-gateway service missing")
@@ -43,6 +47,21 @@ for marker in required:
 for forbidden in ("ports:", "DB_HOST=", "DB_PASSWORD=", "REDIS_HOST=", "REDIS_PASSWORD="):
     if forbidden in body:
         raise SystemExit(f"forbidden private AI runtime setting: {forbidden}")
+
+for service_name in ("mercasto-backend", "mercasto-worker"):
+    service_match = re.search(
+        rf"(?ms)^  {re.escape(service_name)}:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n|^volumes:\n)",
+        compose,
+    )
+    if not service_match:
+        raise SystemExit(f"{service_name} service missing")
+    service_body = service_match.group("body")
+    for service_marker in (
+        "AI_MODERATION_GATEWAY_URL=http://mercasto-ai-gateway:8080",
+        "MERCASTO_AI_INTERNAL_TOKEN=${MERCASTO_AI_INTERNAL_TOKEN:-}",
+    ):
+        if service_marker not in service_body:
+            raise SystemExit(f"{service_name} missing AI gateway wiring: {service_marker}")
 
 if "./backend" in body or "/var/www" in body:
     raise SystemExit("Python AI gateway must not mount Laravel source/storage")
@@ -94,6 +113,29 @@ for name, text in (("compose", compose), ("bootstrap", bootstrap), ("client", cl
         raise SystemExit(f"legacy Qwen 1.5B runtime default remains in {name}")
 if "'think' => false" not in client:
     raise SystemExit("Local AI client must disable Qwen thinking")
+
+for marker in (
+    "X-Mercasto-Internal-Token",
+    "/v1/moderation/listing",
+    "mercasto-ai-gateway",
+    "private Mercasto runtime",
+    "($data['authoritative'] ?? null) !== false",
+    "($data['rollout_mode'] ?? null) !== 'shadow_assist'",
+):
+    if marker not in gateway_client:
+        raise SystemExit(f"Laravel AI moderation gateway contract missing: {marker}")
+
+for marker in (
+    "AiModerationGatewayClient $aiGateway",
+    "$aiGateway->moderateListing",
+    "policySignals: $canonicalPolicySignals",
+    "'adapter' => 'python_gateway'",
+):
+    if marker not in moderation_job:
+        raise SystemExit(f"listing moderation does not use Python gateway boundary: {marker}")
+for forbidden in ("LocalAiClient $ai", "$ai->chatPro", "/api/chat"):
+    if forbidden in moderation_job:
+        raise SystemExit(f"listing moderation direct Ollama bypass remains: {forbidden}")
 
 print("python AI private runtime gate OK")
 PY

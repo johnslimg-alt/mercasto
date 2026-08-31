@@ -22,7 +22,8 @@ class AIModerationAssistOnlyContractTest extends TestCase
     {
         $source = file_get_contents(__DIR__ . '/../../app/Jobs/ModerateAdWithAI.php');
         $this->assertStringContainsString("config('ai_moderation.assist_only', true)", $source);
-        $this->assertStringContainsString('$proposedDecision = $this->safeDecision', $source);
+        $this->assertStringContainsString('$gatewayResponse = $aiGateway->moderateListing', $source);
+        $this->assertStringContainsString("\$proposedDecision = (string) \$result['decision'];", $source);
         $this->assertStringContainsString("if (\$assistOnly && \$decision !== 'manual_review')", $source);
         $this->assertStringContainsString("'authoritative_decision' => \$decision", $source);
     }

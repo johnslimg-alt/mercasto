@@ -21,19 +21,22 @@ class ModerateAdWithAITest extends TestCase
     {
         Storage::fake('public');
         config([
-            'services.ollama.base_url' => 'http://ollama.test',
-            'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
-            'services.ollama.keep_alive' => '24h',
+            'services.ai_moderation_gateway.url' => 'http://ai-gateway.test',
+            'services.ai_moderation_gateway.token' => 'test-internal-token',
         ]);
         Http::fake([
-            'http://ollama.test/api/chat' => Http::response([
+            'http://ai-gateway.test/v1/moderation/listing' => Http::response([
+                'decision' => 'manual_review',
+                'reason' => 'Contenido permitido, pero faltan datos.',
+                'confidence' => 0.60,
+                'flags' => ['insufficient_detail'],
+                'provider' => 'ollama',
                 'model' => 'qwen3-vl:4b-instruct',
-                'message' => ['role' => 'assistant', 'content' => json_encode([
-                    'decision' => 'approved',
-                    'reason' => 'Contenido permitido, pero faltan datos.',
-                    'confidence' => 0.60,
-                    'flags' => ['insufficient_detail'],
-                ])],
+                'runtime' => 'private_local',
+                'gateway_version' => '0.2.0',
+                'latency_ms' => 42,
+                'rollout_mode' => 'shadow_assist',
+                'authoritative' => false,
             ]),
         ]);
 
@@ -58,8 +61,8 @@ class ModerateAdWithAITest extends TestCase
 
         app()->call([new ModerateAdWithAI($ad->id), 'handle']);
 
-        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/chat'
-            && $request['keep_alive'] === '24h');
+        Http::assertSent(fn (Request $request) => $request->url() === 'http://ai-gateway.test/v1/moderation/listing'
+            && $request->hasHeader('X-Mercasto-Internal-Token', 'test-internal-token'));
 
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
@@ -158,21 +161,29 @@ class ModerateAdWithAITest extends TestCase
         ]);
     }
 
-    public function test_all_original_photos_are_sent_to_local_ai(): void
+    public function test_multi_photo_listing_is_bounded_by_gateway_and_kept_for_human_review(): void
     {
         Storage::fake('public');
         config([
-            'services.ollama.base_url' => 'http://ollama.test',
-            'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
-            'services.ollama.keep_alive' => '24h',
+            'services.ai_moderation_gateway.url' => 'http://ai-gateway.test',
+            'services.ai_moderation_gateway.token' => 'test-internal-token',
         ]);
         Http::fake([
-            'http://ollama.test/api/chat' => Http::response([
+            'http://ai-gateway.test/v1/moderation/listing' => Http::response([
+                'decision' => 'manual_review',
+                'reason' => 'La muestra visual es coherente, pero hay medios omitidos.',
+                'confidence' => 0.96,
+                'flags' => [],
+                'provider' => 'ollama',
                 'model' => 'qwen3-vl:4b-instruct',
-                'message' => ['role' => 'assistant', 'content' => json_encode([
-                    'decision' => 'approved', 'reason' => 'Texto e imágenes coherentes.',
-                    'confidence' => 0.96, 'flags' => [],
-                ])],
+                'runtime' => 'private_local',
+                'gateway_version' => '0.2.0',
+                'latency_ms' => 55,
+                'rollout_mode' => 'shadow_assist',
+                'authoritative' => false,
+                'input_image_count' => 5,
+                'model_image_count' => 2,
+                'images_omitted' => 3,
             ]),
         ]);
 
@@ -198,8 +209,11 @@ class ModerateAdWithAITest extends TestCase
         app()->call([new ModerateAdWithAI($ad->id), 'handle']);
 
         Http::assertSent(function (Request $request) {
-            $images = data_get($request->data(), 'messages.1.images', []);
-            return $request->url() === 'http://ollama.test/api/chat' && count($images) === 5;
+            $images = data_get($request->data(), 'images_base64', []);
+            return $request->url() === 'http://ai-gateway.test/v1/moderation/listing'
+                && count($images) === 2
+                && (int) $request['source_image_count'] === 5
+                && $request->hasHeader('X-Mercasto-Internal-Token', 'test-internal-token');
         });
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
@@ -207,10 +221,13 @@ class ModerateAdWithAITest extends TestCase
         $this->assertNull($ad->expires_at);
         $decision = $ad->moderationDecisions()->latest()->firstOrFail();
         $this->assertSame('manual_review', $decision->decision);
-        $this->assertSame('approved', $decision->metadata['rollout']['proposed_decision']);
+        $this->assertSame('manual_review', $decision->metadata['rollout']['proposed_decision']);
         $this->assertSame('manual_review', $decision->metadata['rollout']['authoritative_decision']);
         $this->assertSame('human_confirmation_required', $decision->metadata['activation_mode']);
         $this->assertSame(5, $decision->metadata['original_image_count']);
         $this->assertSame(5, $decision->metadata['reviewed_image_count']);
+        $this->assertSame(2, $decision->metadata['gateway']['model_image_count']);
+        $this->assertSame(3, $decision->metadata['gateway']['images_omitted']);
+        $this->assertSame('python_gateway', $decision->metadata['runtime']['adapter']);
     }
 }

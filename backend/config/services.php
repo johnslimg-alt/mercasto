@@ -90,6 +90,12 @@ return [
         'keep_alive' => env('OLLAMA_KEEP_ALIVE', '24h'),
     ],
 
+    'ai_moderation_gateway' => [
+        'url' => env('AI_MODERATION_GATEWAY_URL', 'http://mercasto-ai-gateway:8080'),
+        'token' => env('MERCASTO_AI_INTERNAL_TOKEN'),
+        'timeout' => (int) env('AI_MODERATION_GATEWAY_TIMEOUT', 150),
+    ],
+
 
     'webpush' => [
         'vapid_public_key' => env('VAPID_PUBLIC_KEY'),

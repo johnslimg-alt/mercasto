@@ -8,7 +8,7 @@ use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
 use App\Services\ListingPolicyMatrixService;
 use App\Services\ListingPolicySignalService;
-use App\Services\LocalAiClient;
+use App\Services\AiModerationGatewayClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -59,7 +59,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
     public function handle(
         AdIllustrativeCoverService $covers,
-        LocalAiClient $ai,
+        AiModerationGatewayClient $aiGateway,
         ListingPolicySignalService $policySignals,
         ListingPolicyMatrixService $policyMatrix,
     ): void
@@ -112,8 +112,15 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'manual_review',
                 array_merge([
                     'rollout_mode' => 'disabled',
+                    'technical_status' => 'disabled',
                     'assist_only' => true,
                     'human_authoritative' => true,
+                    'runtime' => [
+                        'provider' => 'none',
+                        'adapter' => 'disabled',
+                        'contract_version' => 'ai-moderation-assist-v1',
+                        'runtime_ms' => 0,
+                    ],
                     'rollout' => [
                         'mode' => 'disabled',
                         'assist_only' => true,
@@ -124,6 +131,8 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             );
             return;
         }
+
+        $attemptStartedAt = hrtime(true);
 
         try {
             $assistOnly = (bool) config('ai_moderation.assist_only', true);
@@ -139,19 +148,32 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 ->values()
                 ->all();
 
-            $messages = [
-                ['role' => 'system', 'content' => 'Eres el moderador privado de Mercasto. Responde exclusivamente JSON válido, sin markdown ni texto adicional.'],
-                ['role' => 'user', 'content' => $this->prompt($ad, $covers->hasOriginalImages($ad), $canonicalPolicySignals), 'images' => $aiImages],
+            if ($videoFrames !== []) {
+                $aiImages = array_merge(
+                    array_slice($images, 0, 1),
+                    array_slice($videoFrames, 0, 1),
+                    array_slice($images, 1),
+                    array_slice($videoFrames, 1),
+                );
+            }
+            $sourceMediaCount = min(10, count($originalImages) + (! empty($ad->video_url) ? 1 : 0));
+            $gatewayResponse = $aiGateway->moderateListing(
+                title: (string) $ad->title,
+                description: (string) $ad->description,
+                imagesBase64: $aiImages,
+                sourceImageCount: $sourceMediaCount,
+                policySignals: $canonicalPolicySignals,
+                timeoutSeconds: $runtimeBudget,
+            );
+            $provider = (string) $gatewayResponse['provider'];
+            $model = (string) $gatewayResponse['model'];
+            $runtimeMs = (int) ($gatewayResponse['latency_ms'] ?? max(0, (int) round((hrtime(true) - $attemptStartedAt) / 1_000_000)));
+            $result = [
+                'decision' => (string) $gatewayResponse['decision'],
+                'reason' => (string) ($gatewayResponse['reason'] ?? ''),
+                'confidence' => (float) $gatewayResponse['confidence'],
+                'flags' => array_values((array) ($gatewayResponse['flags'] ?? [])),
             ];
-
-            $aiResponse = $ai->chatPro($messages, [
-                'temperature' => 0.1,
-                'max_tokens' => 320,
-                'timeout' => $runtimeBudget,
-                'num_ctx' => 4096,
-            ]);
-            $model = (string) ($aiResponse['model'] ?? config('services.ollama.vision_model', 'qwen3-vl:2b-instruct'));
-            $result = $this->parseResult((string) data_get($aiResponse, 'choices.0.message.content', ''));
 
             $modelPolicyReview = $policyMatrix->assessment((array) ($result['flags'] ?? []));
             $policyIds = array_values(array_unique(array_merge(
@@ -162,11 +184,18 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 || (bool) ($modelPolicyReview['requires_manual_review'] ?? false);
             $result['policy_ids'] = $policyIds;
 
-            $proposedDecision = $this->safeDecision($result['decision'], $result['confidence']);
+            $proposedDecision = (string) $result['decision'];
             $result['proposed_decision'] = $proposedDecision;
             $decision = $proposedDecision;
             $reason = trim((string) ($result['reason'] ?? 'Sin explicación del modelo.'));
             $confidence = max(0, min(1, (float) ($result['confidence'] ?? 0)));
+            $gatewayIncomplete = (bool) ($gatewayResponse['description_truncated'] ?? false)
+                || (int) ($gatewayResponse['images_omitted'] ?? 0) > 0
+                || (int) ($gatewayResponse['policy_signals_omitted'] ?? 0) > 0;
+            if ($gatewayIncomplete) {
+                $decision = 'manual_review';
+                $reason = 'La asistencia automática usó una entrada acotada y requiere revisión humana completa. ' . $reason;
+            }
             if ($policyManualReview) {
                 $decision = 'manual_review';
                 $reason = 'La matriz interna de políticas detectó señales que requieren revisión humana. ' . $reason;
@@ -216,6 +245,29 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'confidence' => $confidence,
                 'metadata' => [
                     'model' => $model,
+                    'provider' => $provider,
+                    'runtime' => [
+                        'provider' => $provider,
+                        'adapter' => 'python_gateway',
+                        'execution' => (string) ($gatewayResponse['runtime'] ?? 'private_local'),
+                        'model' => $model,
+                        'gateway_version' => (string) ($gatewayResponse['gateway_version'] ?? ''),
+                        'contract_version' => 'ai-moderation-assist-v1',
+                        'runtime_ms' => $runtimeMs,
+                        'budget_seconds' => $runtimeBudget,
+                    ],
+                    'gateway' => [
+                        'version' => (string) ($gatewayResponse['gateway_version'] ?? ''),
+                        'rollout_mode' => (string) ($gatewayResponse['rollout_mode'] ?? 'shadow_assist'),
+                        'authoritative' => false,
+                        'description_truncated' => (bool) ($gatewayResponse['description_truncated'] ?? false),
+                        'input_description_chars' => (int) ($gatewayResponse['input_description_chars'] ?? mb_strlen((string) $ad->description)),
+                        'model_description_chars' => (int) ($gatewayResponse['model_description_chars'] ?? 0),
+                        'input_image_count' => (int) ($gatewayResponse['input_image_count'] ?? $sourceMediaCount),
+                        'model_image_count' => (int) ($gatewayResponse['model_image_count'] ?? 0),
+                        'images_omitted' => (int) ($gatewayResponse['images_omitted'] ?? 0),
+                        'policy_signals_omitted' => (int) ($gatewayResponse['policy_signals_omitted'] ?? 0),
+                    ],
                     'had_original_images' => $covers->hasOriginalImages($ad),
                     'original_image_count' => count($originalImages),
                     'reviewed_image_count' => count($images),
@@ -259,6 +311,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'ad_id' => $ad->id,
                 'error' => $error->getMessage(),
             ]);
+            Cache::put('ai_moderation:provider_unavailable', 'private_gateway_failed', 60);
 
             $this->leaveForManualReview(
                 $ad,
@@ -266,6 +319,16 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 'failed',
                 array_merge([
                     'rollout_mode' => (string) config('ai_moderation.rollout.mode', 'assist'),
+                    'technical_status' => 'failed',
+                    'runtime' => [
+                        'provider' => 'private_gateway',
+                        'adapter' => 'python_gateway',
+                        'model' => null,
+                        'gateway_version' => null,
+                        'contract_version' => 'ai-moderation-assist-v1',
+                        'runtime_ms' => max(0, (int) round((hrtime(true) - $attemptStartedAt) / 1_000_000)),
+                        'budget_seconds' => max(30, min(150, (int) config('ai_moderation.max_runtime_seconds', 150))),
+                    ],
                     'assist_only' => (bool) config('ai_moderation.assist_only', true),
                     'human_authoritative' => true,
                     'rollout' => [
@@ -355,85 +418,6 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             ]);
             return [];
         }
-    }
-
-    private function prompt(Ad $ad, bool $hasOriginalImages, array $canonicalPolicySignals): string
-    {
-        $attributes = json_encode($ad->attributes ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $photoNotice = $hasOriginalImages
-            ? 'Se adjuntan fotografías originales del vendedor.'
-            : 'El vendedor NO agregó fotografías originales. La imagen visible es una portada ilustrativa de Mercasto y no prueba el estado ni la apariencia del producto.';
-        $policySignals = implode(', ', $canonicalPolicySignals);
-
-        return <<<PROMPT
-Eres el moderador de seguridad de Mercasto, un mercado de anuncios clasificados en México.
-Analiza texto, atributos, TODAS las fotografías originales adjuntas y, cuando existan, fotogramas representativos del video. {$photoNotice}
-
-Devuelve exclusivamente JSON válido con esta forma:
-{"decision":"approved|manual_review|rejected","reason":"explicación breve y concreta en español","confidence":0.0,"flags":["..."]}
-
-Reglas:
-- Rechaza contenido sexual explícito, explotación, drogas ilegales, armas o explosivos, documentos falsos, bienes robados, fraude evidente, suplantación, odio, amenazas o instrucciones delictivas.
-- Rechaza fotos que contradigan claramente el producto, incluyan datos extremadamente sensibles o contenido prohibido.
-- Usa manual_review ante dudas, posible estafa, precio incoherente, descripción insuficiente, afirmaciones médicas/financieras delicadas, producto regulado o discrepancia entre texto y foto.
-- La ausencia de foto por sí sola NO es motivo de rechazo; puede aprobarse si el texto es claro y permitido.
-- No inventes hechos. Si no puedes determinarlo con seguridad, usa manual_review.
-- approved solo con alta confianza; rejected solo con evidencia clara.
-- Para señales de política usa, cuando corresponda, exclusivamente estos IDs canónicos en flags: {$policySignals}.
-- Si detectas una señal de política pero no estás seguro del ID, usa manual_review y explica la duda en reason en vez de inventar un flag.
-
-ID: {$ad->id}
-Título: {$ad->title}
-Descripción: {$ad->description}
-Categoría: {$ad->category}
-Subcategoría: {$ad->subcategory}
-Precio MXN: {$ad->price}
-Ubicación: {$ad->location}, {$ad->state}
-Condición: {$ad->condition}
-Atributos: {$attributes}
-PROMPT;
-    }
-
-    private function parseResult(string $raw): array
-    {
-        $raw = trim(preg_replace('/^```(?:json)?|```$/m', '', $raw) ?? $raw);
-        $decoded = json_decode($raw, true);
-
-        if (! is_array($decoded) && preg_match('/\{.*\}/s', $raw, $matches)) {
-            $decoded = json_decode($matches[0], true);
-        }
-
-        if (! is_array($decoded)) {
-            throw new \RuntimeException('Local AI returned invalid JSON.');
-        }
-
-        $decision = strtolower((string) ($decoded['decision'] ?? $decoded['status'] ?? 'manual_review'));
-        if ($decision === 'active') {
-            $decision = 'approved';
-        }
-        if (! in_array($decision, ['approved', 'manual_review', 'rejected'], true)) {
-            $decision = 'manual_review';
-        }
-
-        return [
-            'decision' => $decision,
-            'reason' => (string) ($decoded['reason'] ?? ''),
-            'confidence' => is_numeric($decoded['confidence'] ?? null) ? (float) $decoded['confidence'] : 0.0,
-            'flags' => is_array($decoded['flags'] ?? null) ? array_values($decoded['flags']) : [],
-        ];
-    }
-
-    private function safeDecision(string $decision, float $confidence): string
-    {
-        if ($decision === 'approved' && $confidence >= 0.85) {
-            return 'approved';
-        }
-
-        if ($decision === 'rejected' && $confidence >= 0.90) {
-            return 'rejected';
-        }
-
-        return 'manual_review';
     }
 
     private function leaveForManualReview(Ad $ad, string $reason, string $aiStatus, array $metadata = []): void

@@ -234,11 +234,79 @@ class AdminAdModerationController extends Controller
         $payload['has_original_images'] = $covers->hasOriginalImages($ad);
         $payload['illustrative_cover'] = (bool) $ad->generated_cover;
 
-        if (! $full && isset($payload['moderation_decisions']) && is_array($payload['moderation_decisions'])) {
-            $payload['moderation_decisions'] = array_slice($payload['moderation_decisions'], 0, 5);
-        }
+        $decisions = isset($payload['moderation_decisions']) && is_array($payload['moderation_decisions'])
+            ? $payload['moderation_decisions']
+            : [];
+        $payload['ai_assist'] = $this->presentAiAssist($ad, $decisions);
+        $payload['moderation_decisions'] = array_map(
+            fn (array $decision) => $this->presentDecisionHistory($decision),
+            $full ? $decisions : array_slice($decisions, 0, 5),
+        );
 
         return $payload;
+    }
+
+    private function presentAiAssist(Ad $ad, array $decisions): array
+    {
+        $latestAi = collect($decisions)->first(
+            fn (array $decision): bool => ($decision['source'] ?? null) === 'ai'
+        );
+        $metadata = is_array($latestAi['metadata'] ?? null) ? $latestAi['metadata'] : [];
+        $runtime = is_array($metadata['runtime'] ?? null) ? $metadata['runtime'] : [];
+        $rollout = is_array($metadata['rollout'] ?? null) ? $metadata['rollout'] : [];
+        $policy = is_array($metadata['policy_review'] ?? null) ? $metadata['policy_review'] : [];
+        $gateway = is_array($metadata['gateway'] ?? null) ? $metadata['gateway'] : [];
+
+        return [
+            'feature_enabled' => (bool) config('ai_moderation.enabled', true),
+            'status' => $ad->ai_moderation_status,
+            'reason' => $ad->ai_moderation_reason,
+            'confidence' => $ad->ai_moderation_confidence === null
+                ? null
+                : (float) $ad->ai_moderation_confidence,
+            'technical_status' => $metadata['technical_status'] ?? null,
+            'runtime' => [
+                'provider' => $runtime['provider'] ?? ($metadata['provider'] ?? null),
+                'adapter' => $runtime['adapter'] ?? null,
+                'model' => $runtime['model'] ?? ($metadata['model'] ?? null),
+                'execution' => $runtime['execution'] ?? null,
+                'gateway_version' => $runtime['gateway_version'] ?? ($gateway['version'] ?? null),
+                'contract_version' => $runtime['contract_version'] ?? null,
+                'runtime_ms' => isset($runtime['runtime_ms']) ? (int) $runtime['runtime_ms'] : null,
+                'budget_seconds' => isset($runtime['budget_seconds']) ? (int) $runtime['budget_seconds'] : null,
+            ],
+            'rollout' => [
+                'mode' => $rollout['mode'] ?? ($metadata['rollout_mode'] ?? (string) config('ai_moderation.rollout.mode', 'assist')),
+                'assist_only' => (bool) ($rollout['assist_only'] ?? ($metadata['assist_only'] ?? true)),
+                'human_authoritative' => true,
+                'proposed_decision' => $rollout['proposed_decision'] ?? data_get($metadata, 'result.proposed_decision'),
+                'authoritative_decision' => $rollout['authoritative_decision'] ?? ($latestAi['decision'] ?? null),
+            ],
+            'policy_ids' => array_values(array_filter((array) ($policy['policy_ids'] ?? []), 'is_string')),
+            'media' => [
+                'original_images' => isset($metadata['original_image_count']) ? (int) $metadata['original_image_count'] : null,
+                'reviewed_images' => isset($metadata['reviewed_image_count']) ? (int) $metadata['reviewed_image_count'] : null,
+                'reviewed_video_frames' => isset($metadata['reviewed_video_frame_count']) ? (int) $metadata['reviewed_video_frame_count'] : null,
+                'model_media' => isset($gateway['model_image_count']) ? (int) $gateway['model_image_count'] : null,
+                'omitted_media' => isset($gateway['images_omitted']) ? (int) $gateway['images_omitted'] : null,
+                'video_manual_review_required' => (bool) ($metadata['video_manual_review_required'] ?? false),
+            ],
+        ];
+    }
+
+    private function presentDecisionHistory(array $decision): array
+    {
+        return [
+            'id' => $decision['id'] ?? null,
+            'source' => $decision['source'] ?? null,
+            'decision' => $decision['decision'] ?? null,
+            'reason' => $decision['reason'] ?? null,
+            'confidence' => isset($decision['confidence']) ? (float) $decision['confidence'] : null,
+            'moderator_id' => $decision['moderator_id'] ?? null,
+            'moderator' => $decision['moderator'] ?? null,
+            'created_at' => $decision['created_at'] ?? null,
+            'updated_at' => $decision['updated_at'] ?? null,
+        ];
     }
 
     private function authorizeAdmin(Request $request): void

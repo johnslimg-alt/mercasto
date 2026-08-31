@@ -366,6 +366,7 @@ function AdReview({ detail, reason, setReason, actionLoading, submitDecision, re
   const ai = statusInfo(detail.ai_moderation_status, t);
   const attributes = detail.attributes && typeof detail.attributes === 'object' ? detail.attributes : {};
   const decisions = Array.isArray(detail.moderation_decisions) ? detail.moderation_decisions : [];
+  const assist = detail.ai_assist && typeof detail.ai_assist === 'object' ? detail.ai_assist : null;
 
   return (
     <div className="space-y-5">
@@ -425,6 +426,37 @@ function AdReview({ detail, reason, setReason, actionLoading, submitDecision, re
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {Object.entries(attributes).map(([key, value]) => <InfoRow key={key} label={key.replaceAll('_', ' ')} value={Array.isArray(value) ? value.join(', ') : String(value ?? '')} />)}
           </div>
+        </section>
+      )}
+
+      {assist && (
+        <section data-testid="admin-ai-assist-evidence" className="rounded-3xl border border-blue-200 bg-blue-50/60 p-5 dark:border-blue-900/60 dark:bg-blue-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-black uppercase tracking-wide text-blue-700 dark:text-blue-300">{t('aiAssist.title')}</h3>
+            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-extrabold text-blue-700 shadow-sm dark:bg-slate-900 dark:text-blue-300">
+              {assist.rollout?.human_authoritative ? t('aiAssist.humanAuthoritative') : t('aiAssist.advisory')}
+            </span>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t('aiAssist.description')}</p>
+          <dl className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <InfoRow label={t('aiAssist.provider')} value={assist.runtime?.provider || '—'} />
+            <InfoRow label={t('aiAssist.model')} value={assist.runtime?.model || '—'} />
+            <InfoRow label={t('aiAssist.gatewayVersion')} value={assist.runtime?.gateway_version || '—'} />
+            <InfoRow label={t('aiAssist.runtime')} value={assist.runtime?.runtime_ms !== null && assist.runtime?.runtime_ms !== undefined ? `${assist.runtime.runtime_ms} ms` : '—'} />
+            <InfoRow label={t('aiAssist.mode')} value={assist.feature_enabled ? (assist.rollout?.mode || 'assist') : t('aiAssist.disabled')} />
+            <InfoRow label={t('aiAssist.proposed')} value={assist.rollout?.proposed_decision ? decisionLabel(assist.rollout.proposed_decision, t) : '—'} />
+            <InfoRow label={t('aiAssist.finalRoute')} value={assist.rollout?.authoritative_decision ? decisionLabel(assist.rollout.authoritative_decision, t) : '—'} />
+            <InfoRow label={t('aiAssist.policyIds')} value={Array.isArray(assist.policy_ids) && assist.policy_ids.length ? assist.policy_ids.join(', ') : t('aiAssist.none')} />
+            <InfoRow label={t('aiAssist.images')} value={assist.media?.original_images !== null && assist.media?.original_images !== undefined ? `${assist.media.reviewed_images ?? 0}/${assist.media.original_images}` : '—'} />
+            <InfoRow label={t('aiAssist.modelMedia')} value={assist.media?.model_media ?? '—'} />
+            <InfoRow label={t('aiAssist.omittedMedia')} value={assist.media?.omitted_media ?? '—'} />
+            <InfoRow label={t('aiAssist.videoFrames')} value={assist.media?.reviewed_video_frames ?? '—'} />
+          </dl>
+          {(assist.technical_status === 'failed' || assist.technical_status === 'disabled' || assist.media?.video_manual_review_required) && (
+            <p className="mt-3 rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              {assist.technical_status === 'disabled' ? t('aiAssist.disabledNote') : t('aiAssist.manualFallback')}
+            </p>
+          )}
         </section>
       )}
 
