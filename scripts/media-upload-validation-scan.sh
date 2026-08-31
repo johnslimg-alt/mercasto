@@ -65,8 +65,15 @@ grep -qF 'ImageManager::usingDriver(Driver::class)' "$IMAGE_MODERATION_SERVICE"
 # Specialized moderation stays active for documents and listing media.
 grep -qF 'PreScreenKycDocumentWithAI::dispatch' "$PROFILE_CONTROLLER"
 grep -qF 'crossCheckCsfWithAi' "$BUSINESS_CONTROLLER"
-grep -qF "'images' => \$aiImages" "$AD_MODERATION_JOB"
+grep -qF 'imagesBase64: $aiImages' "$AD_MODERATION_JOB"
+grep -qF 'sourceImageCount: $sourceMediaCount' "$AD_MODERATION_JOB"
+grep -qF 'policySignals: $canonicalPolicySignals' "$AD_MODERATION_JOB"
 grep -qF 'array_merge($images, $videoFrames)' "$AD_MODERATION_JOB"
 grep -qF 'moderationVideoFrames' "$AD_MODERATION_JOB"
+
+if grep -qF "'images' => \$aiImages" "$AD_MODERATION_JOB"; then
+  echo "legacy direct listing moderation media payload detected" >&2
+  exit 1
+fi
 
 echo "media upload validation scan OK"

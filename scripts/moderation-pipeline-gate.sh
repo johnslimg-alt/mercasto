@@ -24,12 +24,21 @@ if grep -qF 'generateContent?key=' "$JOB"; then
 fi
 
 grep -qF 'GenerateAdEmbedding::dispatch($ad->id)->afterCommit();' "$OBSERVER"
-grep -qF 'use App\Services\LocalAiClient;' "$JOB"
-grep -qF 'LocalAiClient $ai' "$JOB"
-grep -qF "config('services.ollama.vision_model'" "$JOB"
-grep -qF "'vision_model'" "$CONFIG"
+grep -qF 'use App\Services\AiModerationGatewayClient;' "$JOB"
+grep -qF 'AiModerationGatewayClient $aiGateway' "$JOB"
+grep -qF "'ai_moderation_gateway'" "$CONFIG"
+grep -qF "'url' => env('AI_MODERATION_GATEWAY_URL', 'http://mercasto-ai-gateway:8080')" "$CONFIG"
+grep -qF "'token' => env('MERCASTO_AI_INTERNAL_TOKEN')" "$CONFIG"
+grep -qF 'AI_MODERATION_GATEWAY_URL=http://mercasto-ai-gateway:8080' "$COMPOSE"
+grep -qF 'MERCASTO_AI_INTERNAL_TOKEN=${MERCASTO_AI_INTERNAL_TOKEN:-}' "$COMPOSE"
 grep -qF 'OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct' "$COMPOSE"
-grep -qF "'images' => \$aiImages" "$JOB"
+grep -qF 'imagesBase64: $aiImages' "$JOB"
+grep -qF 'sourceImageCount: $sourceMediaCount' "$JOB"
+grep -qF 'policySignals: $canonicalPolicySignals' "$JOB"
+if grep -Eq 'LocalAiClient|services\.ollama\.vision_model|chatPro\(' "$JOB"; then
+  echo "Direct local-model client returned to listing moderation job" >&2
+  exit 1
+fi
 grep -qF 'private function moderationImages(Ad $ad, array $imagePaths): array' "$JOB"
 grep -qF 'private function moderationVideoFrames(Ad $ad): array' "$JOB"
 grep -qF 'count($originalImages) - count($images)' "$JOB"
