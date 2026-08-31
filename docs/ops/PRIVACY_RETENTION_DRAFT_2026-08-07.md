@@ -40,6 +40,19 @@ The transition keeps legacy values only as short-window **read-match compatibili
 
 This is data minimization, not pruning. It does not authorize deletion or change any `PENDING LEGAL/OWNER` retention window below.
 
+### Registration identity checkpoint — 2026-08-31
+
+A second aggregate-only format audit covers registration-abuse and consent identifiers. No IP value, consent payload, email, or account identifier was selected or printed.
+
+| Dataset | Total | >30d | >90d | Raw IP-shaped rows | Pseudonymous fingerprint rows |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `users.ip_address` | 211 | 204 | 7 | 5 | 205 |
+| `user_consents.ip_hash` | 18 | 0 | 0 | 0 | 18 |
+
+The five raw-IP-shaped `users.ip_address` rows are historical; the newest observed raw-shaped row predates the current 30-day window. Existing registration code already stopped creating raw values and used a 45-character legacy SHA-256 pseudonym. New email, phone, OAuth, and Telegram registrations now move to a purpose-scoped `registration-account` keyed HMAC fingerprint while the daily anti-abuse query temporarily matches the new HMAC, the legacy 45-character SHA-256 pseudonym, and historical raw representation read-only. New writes persist only the keyed fingerprint.
+
+Versioned registration consent evidence likewise moves from an unkeyed SHA-256 IP pseudonym to a separate `registration-consent` keyed HMAC. No historical consent row is rewritten or deleted by this change. The existing five raw user rows and all older pseudonyms remain governed by the owner/legal retention decision rather than application rollout.
+
 ## Draft retention matrix
 
 All windows below are **engineering candidates only**. `PENDING LEGAL/OWNER` means the value is not approved for production enforcement.

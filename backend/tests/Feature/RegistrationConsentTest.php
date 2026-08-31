@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Support\PrivacyFingerprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -42,7 +43,7 @@ class RegistrationConsentTest extends TestCase
             'consent_type' => 'age_confirmation',
             'document_version' => config('legal.registration_consent.age_confirmation_version'),
             'source' => 'mobile',
-            'ip_hash' => hash('sha256', '203.0.113.10'),
+            'ip_hash' => PrivacyFingerprint::ip('203.0.113.10', 'registration-consent'),
             'user_agent_hash' => hash('sha256', 'MercastoMobile/1.0'),
         ]);
         $this->assertDatabaseHas('user_consents', [
@@ -57,12 +58,67 @@ class RegistrationConsentTest extends TestCase
         ]);
 
         $user = User::findOrFail($userId);
+        $this->assertSame(
+            PrivacyFingerprint::ip('203.0.113.10', 'registration-account', 45),
+            $user->ip_address,
+        );
+        $this->assertNotSame('203.0.113.10', $user->ip_address);
+        $this->assertNotSame(substr(hash('sha256', '203.0.113.10'), 0, 45), $user->ip_address);
         $this->assertCount(3, $user->consents);
         $this->assertSame(
             '2026-08-03 21:30:00',
             $user->consents->first()->client_accepted_at->utc()->format('Y-m-d H:i:s'),
         );
         $this->assertNotNull($user->consents->first()->accepted_at);
+    }
+
+    public function test_registration_daily_limit_honors_legacy_ip_fingerprints(): void
+    {
+        Mail::fake();
+        $ip = '203.0.113.99';
+        $legacy = substr(hash('sha256', $ip), 0, 45);
+
+        User::factory()->count(3)->create([
+            'ip_address' => $legacy,
+            'created_at' => now()->subMinutes(10),
+        ]);
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson('/api/register', [
+                'name' => 'Rate Limit Test',
+                'email' => 'rate-limit@example.com',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                ...$this->registrationConsent(),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ip_address');
+
+        $this->assertDatabaseMissing('users', ['email' => 'rate-limit@example.com']);
+    }
+
+    public function test_registration_daily_limit_honors_historical_raw_ip_rows(): void
+    {
+        Mail::fake();
+        $ip = '203.0.113.100';
+
+        User::factory()->count(3)->create([
+            'ip_address' => $ip,
+            'created_at' => now()->subMinutes(10),
+        ]);
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson('/api/register', [
+                'name' => 'Raw Legacy Rate Limit Test',
+                'email' => 'raw-rate-limit@example.com',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                ...$this->registrationConsent(),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ip_address');
+
+        $this->assertDatabaseMissing('users', ['email' => 'raw-rate-limit@example.com']);
     }
 
     public function test_registration_without_consent_is_rejected(): void
