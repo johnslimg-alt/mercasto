@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserConsent;
+use App\Support\PrivacyFingerprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -36,15 +37,19 @@ class AuthController extends Controller
         ]);
         $registrationConsent = $this->validateRegistrationConsent($request);
 
-        // GDPR/LFPDPPP Compliance: Хешируем IP-адрес (PII) перед сохранением/поиском в БД
-        // Ограничиваем до 45 символов для соответствия varchar(45) в таблице users
-        $ip = substr(hash('sha256', $request->ip()), 0, 45);
+        // Persist only a purpose-scoped keyed fingerprint. During rollout, match the
+        // legacy SHA-256 and raw representation read-only so the daily abuse limit cannot reset.
+        $rawIp = trim((string) $request->ip());
+        $ip = PrivacyFingerprint::ip($rawIp, 'registration-account', 45);
+        $legacyIp = PrivacyFingerprint::legacySha256($rawIp);
+        $legacyIp = $legacyIp === null ? null : substr($legacyIp, 0, 45);
+        $ipCandidates = array_values(array_unique(array_filter([$ip, $legacyIp, $rawIp])));
         // Защита от Privilege Escalation (Уязвимость "Бесплатный PRO"): жестко фиксируем начальную роль
         $role = 'individual';
 
         // Ограничение: защита от спама, не более 3 регистраций с одного IP в сутки
         // (Чтобы не блокировать пользователей NAT: офисы, университеты, публичный Wi-Fi)
-        $recentAccounts = User::where('ip_address', $ip)
+        $recentAccounts = User::whereIn('ip_address', $ipCandidates)
             ->where('created_at', '>=', now()->subDay())
             ->count();
             
@@ -217,7 +222,7 @@ class AuthController extends Controller
         array $consent,
     ): void {
         $acceptedAt = now();
-        $ipHash = hash('sha256', (string) $request->ip());
+        $ipHash = PrivacyFingerprint::ip($request->ip(), 'registration-consent');
         $userAgent = trim((string) $request->userAgent());
         $userAgentHash = $userAgent === '' ? null : hash('sha256', $userAgent);
 
@@ -403,7 +408,7 @@ class AuthController extends Controller
                 $user->email = $phoneNumber . '@mercasto.local';
                 $user->password = Hash::make(Str::random(16));
                 $user->role = 'individual';
-                $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                $user->ip_address = PrivacyFingerprint::ip($request->ip(), 'registration-account', 45);
                 $user->save();
                 $this->recordRegistrationConsents($user, $request, $registrationConsent);
 
@@ -761,7 +766,7 @@ class AuthController extends Controller
                     $user->{"{$provider}_id"} = $socialUser->id;
                     $user->avatar_url = $socialUser->avatar;
                     $user->role = 'individual';
-                    $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                    $user->ip_address = PrivacyFingerprint::ip($request->ip(), 'registration-account', 45);
                     $user->email_verified_at = now(); // Automatically verify email for social registrations
                     $user->save();
                     $this->recordRegistrationConsents($user, $request, $registrationConsent);
@@ -896,7 +901,7 @@ class AuthController extends Controller
                     $user->telegram_id = $socialUser->id;
                     $user->avatar_url = $socialUser->avatar;
                     $user->role = 'individual';
-                    $user->ip_address = substr(hash('sha256', $request->ip()), 0, 45);
+                    $user->ip_address = PrivacyFingerprint::ip($request->ip(), 'registration-account', 45);
                     $user->email_verified_at = now(); // Automatically verify email for Telegram
                     $user->save();
                     $this->recordRegistrationConsents($user, $request, $registrationConsent);

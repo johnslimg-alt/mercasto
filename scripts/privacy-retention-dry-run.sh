@@ -74,6 +74,22 @@ SELECT 'email_trackings' AS dataset,
        count(*) FILTER (WHERE ip_address ~ '^[0-9a-f]{45}$' OR ip_address ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
 FROM email_trackings;
 
+SELECT 'users.ip_address' AS dataset,
+       count(*) AS total,
+       count(*) FILTER (WHERE created_at < now() - interval '30 days') AS older_30d,
+       count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' OR ip_address LIKE '%:%') AS rows_with_raw_ip,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9a-f]{45}$' OR ip_address ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
+FROM users;
+
+SELECT 'user_consents.ip_hash' AS dataset,
+       count(*) AS total,
+       count(*) FILTER (WHERE created_at < now() - interval '30 days') AS older_30d,
+       count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d,
+       count(*) FILTER (WHERE ip_hash ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' OR ip_hash LIKE '%:%') AS rows_with_raw_ip,
+       count(*) FILTER (WHERE ip_hash ~ '^[0-9a-f]{45}$' OR ip_hash ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
+FROM user_consents;
+
 SELECT 'personal_access_tokens' AS dataset,
        count(*) AS total,
        count(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at < now()) AS expired,
