@@ -32,28 +32,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'index.html'
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'vite.config.*'
-      - 'tailwind.config.*'
-      - 'playwright.config.*'
-      - '.github/workflows/frontend-quality.yml'
-      - 'tests/**'
-      - 'scripts/i18n-audit.mjs'
-      - 'scripts/check-recovery-guards.mjs'
-      - 'scripts/frontend-quality-shard.sh'
-      - 'scripts/public-ui-route-policy.mjs'
-      - 'scripts/public-ui-route-coverage-gate.mjs'
-      - 'scripts/client-spa-route-policy.mjs'
-      - 'scripts/client-spa-route-coverage-gate.mjs'
-      - 'scripts/public-ui-visual-evidence-gate.sh'
-      - 'scripts/public-copy-scan.sh'
-      - 'scripts/fix-public-copy-fallbacks.sh'
-      - 'scripts/apply-production-hotfixes.sh'
 
 permissions:
   contents: read
@@ -66,8 +44,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scope:
+    name: Frontend quality scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_frontend: ${{ steps.scope.outputs.run_frontend }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Detect frontend-relevant changes
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run_frontend=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          printf '%s\n' "$files"
+
+          if printf '%s\n' "$files" | grep -Eq '^(index\.html$|src/|public/|package\.json$|package-lock\.json$|vite\.config\.|tailwind\.config\.|playwright\.config\.|tests/|\.github/workflows/frontend-quality\.yml$|scripts/(i18n-audit\.mjs|check-recovery-guards\.mjs|frontend-quality-shard\.sh|public-ui-route-policy\.mjs|public-ui-route-coverage-gate\.mjs|client-spa-route-policy\.mjs|client-spa-route-coverage-gate\.mjs|public-ui-visual-evidence-gate\.sh|public-copy-scan\.sh|fix-public-copy-fallbacks\.sh|apply-production-hotfixes\.sh)$)'; then
+            echo "run_frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_frontend=false" >> "$GITHUB_OUTPUT"
+          fi
+
   static:
     name: Static build checks
+    needs: scope
+    if: needs.scope.outputs.run_frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -165,18 +178,31 @@ jobs:
     name: Build and recovery checks
     if: ${{ always() }}
     needs:
+      - scope
       - static
       - browser
       - webkit
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify all frontend quality shards
+      - name: Verify frontend scope and quality shards
         env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          RUN_FRONTEND: ${{ needs.scope.outputs.run_frontend }}
           STATIC_RESULT: ${{ needs.static.result }}
           BROWSER_RESULT: ${{ needs.browser.result }}
           WEBKIT_RESULT: ${{ needs.webkit.result }}
         run: |
-          test "${STATIC_RESULT}" = 'success'
-          test "${BROWSER_RESULT}" = 'success'
-          test "${WEBKIT_RESULT}" = 'success'
+          set -euo pipefail
+          test "${SCOPE_RESULT}" = 'success'
+
+          if [ "${RUN_FRONTEND}" = 'true' ]; then
+            test "${STATIC_RESULT}" = 'success'
+            test "${BROWSER_RESULT}" = 'success'
+            test "${WEBKIT_RESULT}" = 'success'
+          else
+            test "${RUN_FRONTEND}" = 'false'
+            test "${STATIC_RESULT}" = 'skipped'
+            test "${BROWSER_RESULT}" = 'skipped'
+            test "${WEBKIT_RESULT}" = 'skipped'
+          fi
