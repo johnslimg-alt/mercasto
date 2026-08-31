@@ -86,10 +86,14 @@ const moderationSourcePath = path.join(root, 'src/components/admin/adminModerati
 if (fs.existsSync(moderationSourcePath)) {
   const source = fs.readFileSync(moderationSourcePath, 'utf8');
   const marker = 'const resources = ';
+  const assistMarker = 'const aiAssistResources = ';
+  const entriesMarker = '\n\nObject.entries(resources)';
   const start = source.indexOf(marker);
-  const end = source.indexOf('\n\nObject.entries(resources)');
+  const assistStart = source.indexOf(assistMarker);
+  const entriesStart = source.indexOf(entriesMarker);
+  const end = assistStart !== -1 ? assistStart : entriesStart;
 
-  if (start === -1 || end === -1) {
+  if (start === -1 || end === -1 || entriesStart === -1) {
     failed = true;
     console.error('adminModerationI18n.js: unable to locate translation resources');
   } else {
@@ -100,6 +104,27 @@ if (fs.existsSync(moderationSourcePath)) {
     } catch (error) {
       failed = true;
       console.error(`adminModerationI18n.js: invalid resources object: ${error.message}`);
+    }
+
+    if (moderationResources && assistStart !== -1) {
+      const assistExpression = source.slice(assistStart + assistMarker.length, entriesStart).trim().replace(/;$/, '');
+      try {
+        const assistResources = Function(`"use strict"; return (${assistExpression});`)();
+        for (const language of expectedLanguages) {
+          moderationResources[language] = {
+            ...(moderationResources[language] || {}),
+            aiAssist: assistResources[language] || {},
+          };
+        }
+        const unsupportedAssist = Object.keys(assistResources).filter((language) => !expectedLanguages.includes(language));
+        if (unsupportedAssist.length) {
+          failed = true;
+          console.error(`admin moderation AI assist: unexpected languages=${unsupportedAssist.join(',')}`);
+        }
+      } catch (error) {
+        failed = true;
+        console.error(`adminModerationI18n.js: invalid AI assist resources object: ${error.message}`);
+      }
     }
 
     if (moderationResources) {
