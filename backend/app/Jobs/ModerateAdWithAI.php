@@ -6,9 +6,9 @@ use App\Events\NewNotification;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
+use App\Services\AiModerationGatewayClient;
 use App\Services\ListingPolicyMatrixService;
 use App\Services\ListingPolicySignalService;
-use App\Services\AiModerationGatewayClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,12 +24,14 @@ use Intervention\Image\ImageManager;
 use Symfony\Component\Process\Process;
 use Throwable;
 
-class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
+class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $timeout = 180;
+
     public int $uniqueFor = 600;
 
     public ?int $moderationCycleId = null;
@@ -38,18 +40,17 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         public int $adId,
         public bool $activateOnApproval = true,
         ?int $moderationCycleId = null,
-    )
-    {
+    ) {
         $this->moderationCycleId = $moderationCycleId;
     }
 
     public function uniqueId(): string
     {
         if ($this->moderationCycleId) {
-            return $this->adId . ':cycle:' . $this->moderationCycleId;
+            return $this->adId.':cycle:'.$this->moderationCycleId;
         }
 
-        return $this->adId . ':' . ($this->activateOnApproval ? 'activate' : 'review');
+        return $this->adId.':'.($this->activateOnApproval ? 'activate' : 'review');
     }
 
     public function backoff(): array
@@ -62,8 +63,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
         AiModerationGatewayClient $aiGateway,
         ListingPolicySignalService $policySignals,
         ListingPolicyMatrixService $policyMatrix,
-    ): void
-    {
+    ): void {
         $ad = Ad::query()->with('user:id,name,email')->find($this->adId);
         if (! $ad
             || ! in_array($ad->status, ['pending', 'archived'], true)
@@ -129,6 +129,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     ],
                 ], $textPolicyMetadata),
             );
+
             return;
         }
 
@@ -160,10 +161,19 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $gatewayResponse = $aiGateway->moderateListing(
                 title: (string) $ad->title,
                 description: (string) $ad->description,
+                structuredContext: [
+                    'category' => $ad->category,
+                    'subcategory' => $ad->subcategory,
+                    'price' => $ad->price,
+                    'location' => $ad->location,
+                    'state' => $ad->state,
+                    'city' => $ad->city,
+                    'condition' => $ad->condition,
+                    'attributes' => $ad->attributes ?? [],
+                ],
                 imagesBase64: $aiImages,
                 sourceImageCount: $sourceMediaCount,
                 policySignals: $canonicalPolicySignals,
-                timeoutSeconds: $runtimeBudget,
             );
             $provider = (string) $gatewayResponse['provider'];
             $model = (string) $gatewayResponse['model'];
@@ -194,25 +204,25 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                 || (int) ($gatewayResponse['policy_signals_omitted'] ?? 0) > 0;
             if ($gatewayIncomplete) {
                 $decision = 'manual_review';
-                $reason = 'La asistencia automática usó una entrada acotada y requiere revisión humana completa. ' . $reason;
+                $reason = 'La asistencia automática usó una entrada acotada y requiere revisión humana completa. '.$reason;
             }
             if ($policyManualReview) {
                 $decision = 'manual_review';
-                $reason = 'La matriz interna de políticas detectó señales que requieren revisión humana. ' . $reason;
+                $reason = 'La matriz interna de políticas detectó señales que requieren revisión humana. '.$reason;
             }
 
             $unreviewedImages = max(0, count($originalImages) - count($images));
             if ($unreviewedImages > 0) {
                 $decision = 'manual_review';
-                $reason = "{$unreviewedImages} fotografía(s) no pudieron analizarse automáticamente. " . $reason;
+                $reason = "{$unreviewedImages} fotografía(s) no pudieron analizarse automáticamente. ".$reason;
             }
             if (! empty($ad->video_url) && $videoFrames === []) {
                 $decision = 'manual_review';
-                $reason = 'No fue posible extraer fotogramas del video para la revisión automática. Revisión visual manual requerida. ' . $reason;
+                $reason = 'No fue posible extraer fotogramas del video para la revisión automática. Revisión visual manual requerida. '.$reason;
             }
             if ($assistOnly && $decision !== 'manual_review') {
                 $decision = 'manual_review';
-                $reason = 'La IA propone ' . $proposedDecision . ', pero el modo assist-only exige decisión humana. ' . $reason;
+                $reason = 'La IA propone '.$proposedDecision.', pero el modo assist-only exige decisión humana. '.$reason;
             }
 
             $newStatus = match ($decision) {
@@ -350,7 +360,9 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
         foreach ($imagePaths as $imagePath) {
             try {
-                if (! $disk->exists($imagePath)) continue;
+                if (! $disk->exists($imagePath)) {
+                    continue;
+                }
                 $image = $manager->decode($disk->get($imagePath));
                 $image->scaleDown(width: 768, height: 768);
                 $payloads[] = base64_encode((string) $image->encodeUsingFileExtension('webp', quality: 65));
@@ -368,10 +380,14 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
     private function moderationVideoFrames(Ad $ad): array
     {
-        if (empty($ad->video_url)) return [];
+        if (empty($ad->video_url)) {
+            return [];
+        }
 
         $disk = Storage::disk('public');
-        if (! $disk->exists($ad->video_url)) return [];
+        if (! $disk->exists($ad->video_url)) {
+            return [];
+        }
 
         $videoPath = $disk->path($ad->video_url);
         $probe = new Process([
@@ -392,9 +408,11 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
 
             foreach ($times as $time) {
                 $base = tempnam(sys_get_temp_dir(), 'mercasto-video-review-');
-                if ($base === false) continue;
+                if ($base === false) {
+                    continue;
+                }
                 @unlink($base);
-                $framePath = $base . '.jpg';
+                $framePath = $base.'.jpg';
                 try {
                     $extract = new Process([
                         'ffmpeg', '-y', '-ss', (string) $time, '-i', $videoPath,
@@ -403,19 +421,23 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
                     ]);
                     $extract->setTimeout(30);
                     $extract->mustRun();
-                    if (! is_file($framePath) || filesize($framePath) === 0) continue;
+                    if (! is_file($framePath) || filesize($framePath) === 0) {
+                        continue;
+                    }
                     $image = $manager->decode(file_get_contents($framePath));
                     $frames[] = base64_encode((string) $image->encodeUsingFileExtension('webp', quality: 65));
                 } finally {
                     @unlink($framePath);
                 }
             }
+
             return $frames;
         } catch (Throwable $error) {
             Log::warning('Local AI moderation could not extract video frames', [
                 'ad_id' => $ad->id,
                 'error' => $error->getMessage(),
             ]);
+
             return [];
         }
     }
@@ -445,8 +467,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             ->where('created_at', '>=', $attemptStartedAt)
             ->get()
             ->contains(
-                fn (AdModerationDecision $decision) =>
-                    ($decision->metadata['technical_status'] ?? null) === $aiStatus
+                fn (AdModerationDecision $decision) => ($decision->metadata['technical_status'] ?? null) === $aiStatus
             );
 
         if (! $alreadyRecorded) {
@@ -495,7 +516,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $notification = [
                 'user_id' => $ad->user_id,
                 'title' => 'Tu anuncio fue revisado',
-                'message' => 'Tu anuncio "' . $ad->title . '" fue aprobado. Confirma que sigue disponible y revisa las opciones de renovación desde tu perfil.',
+                'message' => 'Tu anuncio "'.$ad->title.'" fue aprobado. Confirma que sigue disponible y revisa las opciones de renovación desde tu perfil.',
                 'type' => 'seller_reactivation_ready',
                 'data' => json_encode(['ad_id' => $ad->id], JSON_THROW_ON_ERROR),
                 'link' => '/profile?tab=my_ads&filter=review_ready',
@@ -519,7 +540,7 @@ class ModerateAdWithAI implements ShouldQueue, ShouldBeUnique
             $notification = [
                 'user_id' => $ad->user_id,
                 'title' => 'Anuncio aprobado!',
-                'message' => 'Tu anuncio "' . $ad->title . '" fue revisado y ya está visible.',
+                'message' => 'Tu anuncio "'.$ad->title.'" fue revisado y ya está visible.',
                 'is_read' => false,
                 'created_at' => now(),
                 'updated_at' => now(),

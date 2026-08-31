@@ -53,6 +53,7 @@ def test_listing_prompt_keeps_seller_instructions_out_of_system_contract(
         client.moderate_listing(
             "Producto",
             malicious,
+            {"category": "autos", "price": "100", "attributes_json": "{}"},
             ["synthetic-image"],
             ["weapon", "fraud"],
         )
@@ -66,4 +67,7 @@ def test_listing_prompt_keeps_seller_instructions_out_of_system_contract(
     assert "weapon, fraud" in system_message
     assert user_message.startswith("UNTRUSTED_LISTING_DATA_JSON:\n")
     payload = json.loads(user_message.split("\n", 1)[1])
-    assert payload == {"title": "Producto", "description": malicious}
+    assert payload["title"] == "Producto"
+    assert payload["description"] == malicious
+    assert payload["structured_context"]["category"] == "autos"
+    assert payload["structured_context"]["price"] == "100"

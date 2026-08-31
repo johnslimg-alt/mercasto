@@ -17,16 +17,17 @@ class FakeListingOllamaClient:
 
     def __init__(self, verdict: ModelVerdict) -> None:
         self.verdict = verdict
-        self.calls: list[tuple[str, str, list[str], list[str]]] = []
+        self.calls: list[tuple[str, str, dict[str, str], list[str], list[str]]] = []
 
     async def moderate_listing(
         self,
         title: str,
         description: str,
+        structured_context: dict[str, str],
         images_base64: list[str],
         policy_signals: list[str],
     ) -> ModelVerdict:
-        self.calls.append((title, description, images_base64, policy_signals))
+        self.calls.append((title, description, structured_context, images_base64, policy_signals))
         return self.verdict
 
 
@@ -51,6 +52,16 @@ def listing_payload(**overrides: object) -> dict[str, object]:
         "title": title,
         "description": description,
         "source_description_chars": len(description) if isinstance(description, str) else 0,
+        "structured_context": {
+            "category": "autos",
+            "subcategory": "sedanes",
+            "price": "125000",
+            "location": "Veracruz, Veracruz",
+            "state": "Veracruz",
+            "city": "Veracruz",
+            "condition": "usado",
+            "attributes_json": '{"transmission":"automatic"}',
+        },
         "images_base64": images,
         "source_image_count": len(images) if isinstance(images, list) else 0,
         "policy_signals": CANONICAL_SIGNALS,
@@ -115,7 +126,7 @@ def test_listing_gateway_rejects_declared_oversized_body_before_json_parsing(
     assert response.json()["detail"] == "Listing moderation request body is too large."
 
 
-def test_listing_gateway_accepts_images_but_defers_unbounded_visual_context_to_human(
+def test_listing_gateway_preserves_bounded_visual_input_for_local_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client, fake = authenticated_client(
@@ -142,8 +153,8 @@ def test_listing_gateway_accepts_images_but_defers_unbounded_visual_context_to_h
 
     assert response.status_code == 200
     body = response.json()
-    assert body["decision"] == "manual_review"
-    assert body["approved"] is False
+    assert body["decision"] == "approved"
+    assert body["approved"] is True
     assert body["flags"] == ["weapon"]
     assert body["provider"] == "ollama"
     assert body["model"] == "synthetic-qwen-vl"
@@ -155,16 +166,19 @@ def test_listing_gateway_accepts_images_but_defers_unbounded_visual_context_to_h
     assert body["input_description_chars"] == len("Texto del anuncio.")
     assert body["model_description_chars"] == len("Texto del anuncio.")
     assert body["input_image_count"] == 2
-    assert body["model_image_count"] == 0
-    assert body["images_omitted"] == 2
+    assert body["model_image_count"] == 2
+    assert body["images_omitted"] == 0
     assert body["input_policy_signal_count"] == 2
     assert body["model_policy_signal_count"] == 2
     assert body["policy_signals_omitted"] == 0
     assert body["model_context_tokens"] == 8192
     assert isinstance(body["latency_ms"], int)
-    assert fake.calls == [
-        ("Producto permitido", "Texto del anuncio.", [], ["weapon", "fraud"])
-    ]
+    assert len(fake.calls) == 1
+    assert fake.calls[0][0] == "Producto permitido"
+    assert fake.calls[0][1] == "Texto del anuncio."
+    assert fake.calls[0][2]["category"] == "autos"
+    assert fake.calls[0][3] == images
+    assert fake.calls[0][4] == ["weapon", "fraud"]
 
 
 @pytest.mark.parametrize(
@@ -302,7 +316,7 @@ def test_listing_gateway_accepts_text_only_shadow_request(
     assert response.status_code == 200
     assert response.json()["input_image_count"] == 0
     assert response.json()["model_image_count"] == 0
-    assert fake.calls[0][2] == []
+    assert fake.calls[0][3] == []
 
 
 def test_listing_gateway_represents_full_listing_with_bounded_preprocessed_model_input(
@@ -341,11 +355,11 @@ def test_listing_gateway_represents_full_listing_with_bounded_preprocessed_model
     assert body["input_description_chars"] == 5_000_000
     assert 0 <= body["model_description_chars"] < 6_000
     assert body["input_image_count"] == 10
-    assert body["model_image_count"] == 0
-    assert body["images_omitted"] == 10
+    assert 1 <= body["model_image_count"] <= 2
+    assert body["images_omitted"] == 10 - body["model_image_count"]
     assert fake.calls[0][0] == title
     assert fake.calls[0][1] == description[: body["model_description_chars"]]
-    assert fake.calls[0][2] == []
+    assert fake.calls[0][3] == images[: body["model_image_count"]]
     assert estimate_listing_context_tokens(*fake.calls[0]) <= body["model_context_tokens"]
 
 
@@ -370,7 +384,7 @@ def test_listing_gateway_bounds_policy_vocabulary_and_reports_omissions(
     assert body["input_policy_signal_count"] == 80
     assert 0 < body["model_policy_signal_count"] < 80
     assert body["policy_signals_omitted"] == 80 - body["model_policy_signal_count"]
-    assert fake.calls[0][3] == signals[: body["model_policy_signal_count"]]
+    assert fake.calls[0][4] == signals[: body["model_policy_signal_count"]]
 
 
 def test_listing_gateway_rejects_title_beyond_authoritative_limit_before_model_call(
@@ -476,13 +490,14 @@ def test_listing_gateway_requires_explicit_source_provenance(
     assert fake.calls == []
 
 
-def test_listing_context_estimator_never_treats_unbounded_images_as_complete() -> None:
+def test_listing_context_estimator_keeps_preprocessed_visual_input_inside_budget() -> None:
     assert (
         estimate_listing_context_tokens(
             "fixture",
             "safe",
+            {"category": "autos", "attributes_json": "{}"},
             [encoded_image("visual")],
             ["fraud"],
         )
-        > 8192
+        < 8192
     )

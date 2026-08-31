@@ -36,6 +36,7 @@ required = [
     "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct",
     "MERCASTO_AI_INTERNAL_TOKEN=${MERCASTO_AI_INTERNAL_TOKEN:-}",
     "ollama:\n        condition: service_healthy",
+    "http://127.0.0.1:8080/health",
     "cpus: '0.50'",
     "memory: 256M",
     "autoheal=true",
@@ -58,10 +59,13 @@ for service_name in ("mercasto-backend", "mercasto-worker"):
     service_body = service_match.group("body")
     for service_marker in (
         "AI_MODERATION_GATEWAY_URL=http://mercasto-ai-gateway:8080",
+        "AI_MODERATION_GATEWAY_TIMEOUT=${AI_MODERATION_GATEWAY_TIMEOUT:-150}",
         "MERCASTO_AI_INTERNAL_TOKEN=${MERCASTO_AI_INTERNAL_TOKEN:-}",
     ):
         if service_marker not in service_body:
             raise SystemExit(f"{service_name} missing AI gateway wiring: {service_marker}")
+    if service_name == "mercasto-worker" and "mercasto-ai-gateway:\n        condition: service_healthy" not in service_body:
+        raise SystemExit("worker must wait for a healthy private AI gateway")
 
 if "./backend" in body or "/var/www" in body:
     raise SystemExit("Python AI gateway must not mount Laravel source/storage")
@@ -73,6 +77,8 @@ deploy_required = [
     'bash scripts/ensure-local-ai-models.sh',
     'services/ai-gateway/',
     'docker-compose(\\.override)?\\.yml$',
+    'COMPOSE_ENV_FILE="/var/www/mercasto/.env"',
+    'Verify private AI deployment credential',
 ]
 for marker in deploy_required:
     if marker not in deploy:
@@ -121,6 +127,8 @@ for marker in (
     "private Mercasto runtime",
     "($data['authoritative'] ?? null) !== false",
     "($data['rollout_mode'] ?? null) !== 'shadow_assist'",
+    "config('services.ai_moderation_gateway.timeout', 150)",
+    "'structured_context' => $contextForGateway",
 ):
     if marker not in gateway_client:
         raise SystemExit(f"Laravel AI moderation gateway contract missing: {marker}")
@@ -128,6 +136,7 @@ for marker in (
 for marker in (
     "AiModerationGatewayClient $aiGateway",
     "$aiGateway->moderateListing",
+    "structuredContext: [",
     "policySignals: $canonicalPolicySignals",
     "'adapter' => 'python_gateway'",
 ):

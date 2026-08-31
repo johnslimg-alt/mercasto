@@ -62,7 +62,11 @@ class ModerateAdWithAITest extends TestCase
         app()->call([new ModerateAdWithAI($ad->id), 'handle']);
 
         Http::assertSent(fn (Request $request) => $request->url() === 'http://ai-gateway.test/v1/moderation/listing'
-            && $request->hasHeader('X-Mercasto-Internal-Token', 'test-internal-token'));
+            && $request->hasHeader('X-Mercasto-Internal-Token', 'test-internal-token')
+            && $request['structured_context']['category'] === 'general'
+            && $request['structured_context']['price'] === '100'
+            && $request['structured_context']['condition'] === 'usado'
+            && str_contains((string) $request['structured_context']['attributes_json'], 'subcategory'));
 
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
@@ -73,7 +77,6 @@ class ModerateAdWithAITest extends TestCase
             'decision' => 'manual_review',
         ]);
     }
-
 
     public function test_superseded_moderation_cycle_job_is_a_noop(): void
     {
@@ -210,6 +213,7 @@ class ModerateAdWithAITest extends TestCase
 
         Http::assertSent(function (Request $request) {
             $images = data_get($request->data(), 'images_base64', []);
+
             return $request->url() === 'http://ai-gateway.test/v1/moderation/listing'
                 && count($images) === 2
                 && (int) $request['source_image_count'] === 5

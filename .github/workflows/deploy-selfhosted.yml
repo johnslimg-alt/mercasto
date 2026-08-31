@@ -77,6 +77,15 @@ jobs:
 
           cat "$RUNNER_TEMP/mercasto-backend.env"             | docker exec -i mercasto_backend_container sh -lc 'umask 077; cat > /var/www/.env'
 
+      - name: Verify private AI deployment credential
+        run: |
+          set -euo pipefail
+          test -r /var/www/mercasto/.env
+          if ! grep -Eq '^MERCASTO_AI_INTERNAL_TOKEN=.+$' /var/www/mercasto/.env; then
+            echo "MERCASTO_AI_INTERNAL_TOKEN is required in the private production compose env." >&2
+            exit 1
+          fi
+
       - name: Ensure shared automation network
         run: |
           set -euo pipefail
@@ -118,7 +127,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -s "$COMPOSE_ENV_FILE"
 
           CHANGED_FILES=""
@@ -290,7 +299,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -s "$COMPOSE_ENV_FILE"
 
           docker exec mercasto_backend_container php artisan optimize:clear
@@ -496,7 +505,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -s "$COMPOSE_ENV_FILE"
 
           docker compose --env-file "$COMPOSE_ENV_FILE" exec -T -e DEPLOY_SHA="$DEPLOY_SHA" mercasto-frontend sh -lc '
@@ -546,7 +555,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -s "$COMPOSE_ENV_FILE"
 
           for attempt in 1 2 3; do

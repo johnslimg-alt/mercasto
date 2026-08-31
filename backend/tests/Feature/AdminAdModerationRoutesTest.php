@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AdminAdModerationRoutesTest extends TestCase
@@ -121,6 +121,7 @@ class AdminAdModerationRoutesTest extends TestCase
         $this->assertNotEmpty($moderationQueries);
         $this->assertStringContainsString('laravel_row', implode(' ', $moderationQueries));
     }
+
     public function test_admin_detail_exposes_normalized_ai_assist_without_raw_model_metadata(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -222,4 +223,51 @@ class AdminAdModerationRoutesTest extends TestCase
         $this->assertStringNotContainsString('NEVER_EXPOSE_MODEL_PAYLOAD', $response->getContent());
     }
 
+    public function test_admin_ai_assist_ignores_evidence_from_superseded_moderation_cycle(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create();
+        $ad = Ad::withoutEvents(fn () => Ad::query()->create([
+            'user_id' => $seller->id,
+            'title' => 'Reintento actual',
+            'description' => 'Descripción de prueba',
+            'price' => 100,
+            'location' => 'Veracruz, Veracruz',
+            'state' => 'Veracruz',
+            'city' => 'Veracruz',
+            'latitude' => 19.1738,
+            'longitude' => -96.1342,
+            'category' => 'general',
+            'subcategory' => 'general',
+            'condition' => 'usado',
+            'attributes' => [],
+            'status' => 'archived',
+            'ai_moderation_status' => 'queued',
+            'moderation_submitted_at' => now(),
+        ]));
+
+        $staleDecision = AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'ai',
+            'decision' => 'manual_review',
+            'reason' => 'Evidencia de ciclo anterior',
+            'metadata' => [
+                'runtime' => ['model' => 'stale-model', 'provider' => 'ollama'],
+                'policy_review' => ['policy_ids' => ['fraud_scam']],
+                'rollout' => ['proposed_decision' => 'rejected'],
+            ],
+        ]);
+        $staleDecision->forceFill([
+            'created_at' => now()->subMinutes(10),
+            'updated_at' => now()->subMinutes(10),
+        ])->saveQuietly();
+
+        $this->actingAs($admin)
+            ->getJson("/api/admin/moderation/ads/{$ad->id}")
+            ->assertOk()
+            ->assertJsonPath('ai_assist.status', 'queued')
+            ->assertJsonPath('ai_assist.runtime.model', null)
+            ->assertJsonPath('ai_assist.rollout.proposed_decision', null)
+            ->assertJsonCount(0, 'ai_assist.policy_ids');
+    }
 }

@@ -15,10 +15,22 @@ class ModerationRequest(BaseModel):
     image_base64: PublicImageBase64
 
 
+class ListingStructuredContext(BaseModel):
+    category: str = Field(default="", max_length=120)
+    subcategory: str = Field(default="", max_length=120)
+    price: str = Field(default="", max_length=64)
+    location: str = Field(default="", max_length=255)
+    state: str = Field(default="", max_length=120)
+    city: str = Field(default="", max_length=120)
+    condition: str = Field(default="", max_length=80)
+    attributes_json: str = Field(default="{}", max_length=4_000)
+
+
 class ListingModerationRequest(BaseModel):
     title: str = Field(default="", max_length=255)
     description: str = Field(default="", max_length=12_000)
     source_description_chars: int = Field(ge=0)
+    structured_context: ListingStructuredContext = Field(default_factory=ListingStructuredContext)
     images_base64: list[ListingImageBase64] = Field(default_factory=list, max_length=2)
     source_image_count: int = Field(ge=0, le=10)
     policy_signals: list[CanonicalSignal] = Field(min_length=1, max_length=200)

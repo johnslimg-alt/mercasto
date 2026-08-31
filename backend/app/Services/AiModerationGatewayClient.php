@@ -10,10 +10,10 @@ class AiModerationGatewayClient
     public function moderateListing(
         string $title,
         string $description,
+        array $structuredContext,
         array $imagesBase64,
         int $sourceImageCount,
         array $policySignals,
-        int $timeoutSeconds,
     ): array {
         $baseUrl = rtrim((string) config('services.ai_moderation_gateway.url', 'http://mercasto-ai-gateway:8080'), '/');
         $token = (string) config('services.ai_moderation_gateway.token', '');
@@ -24,6 +24,8 @@ class AiModerationGatewayClient
 
         $sourceDescriptionChars = mb_strlen($description);
         $descriptionForGateway = mb_substr($description, 0, 12000);
+        $contextForGateway = $this->normalizeStructuredContext($structuredContext);
+        $timeoutSeconds = max(5, min(180, (int) config('services.ai_moderation_gateway.timeout', 150)));
         $imagesForGateway = array_values(array_slice(array_filter($imagesBase64, 'is_string'), 0, 2));
         $signals = array_values(array_slice(array_unique(array_filter($policySignals, 'is_string')), 0, 200));
         if ($signals === []) {
@@ -32,18 +34,20 @@ class AiModerationGatewayClient
 
         $response = Http::acceptJson()->asJson()
             ->withHeaders(['X-Mercasto-Internal-Token' => $token])
-            ->timeout(max(30, min(180, $timeoutSeconds + 5)))
-            ->post($baseUrl . '/v1/moderation/listing', [
+            ->connectTimeout(min(10, $timeoutSeconds))
+            ->timeout($timeoutSeconds)
+            ->post($baseUrl.'/v1/moderation/listing', [
                 'title' => mb_substr($title, 0, 255),
                 'description' => $descriptionForGateway,
                 'source_description_chars' => $sourceDescriptionChars,
+                'structured_context' => $contextForGateway,
                 'images_base64' => $imagesForGateway,
                 'source_image_count' => max($sourceImageCount, count($imagesForGateway)),
                 'policy_signals' => $signals,
             ]);
 
         if ($response->failed()) {
-            throw new RuntimeException('Private AI moderation gateway failed with status ' . $response->status() . '.');
+            throw new RuntimeException('Private AI moderation gateway failed with status '.$response->status().'.');
         }
 
         $data = $response->json();
@@ -62,6 +66,37 @@ class AiModerationGatewayClient
         }
 
         return $data;
+    }
+
+    private function normalizeStructuredContext(array $context): array
+    {
+        $attributes = $context['attributes'] ?? [];
+        $attributesJson = json_encode($attributes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (! is_string($attributesJson)) {
+            $attributesJson = '{}';
+        } elseif (mb_strlen($attributesJson) > 4000) {
+            $attributesJson = json_encode([
+                'truncated' => true,
+                'preview' => mb_substr($attributesJson, 0, 3500),
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{"truncated":true}';
+        }
+
+        $bounds = [
+            'category' => 120,
+            'subcategory' => 120,
+            'price' => 64,
+            'location' => 255,
+            'state' => 120,
+            'city' => 120,
+            'condition' => 80,
+        ];
+        $normalized = [];
+        foreach ($bounds as $key => $limit) {
+            $normalized[$key] = mb_substr((string) ($context[$key] ?? ''), 0, $limit);
+        }
+        $normalized['attributes_json'] = $attributesJson;
+
+        return $normalized;
     }
 
     private function assertPrivateGatewayUrl(string $url): void

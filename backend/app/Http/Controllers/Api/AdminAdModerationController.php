@@ -11,6 +11,7 @@ use App\Models\AdModerationDecision;
 use App\Services\AdIllustrativeCoverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -173,7 +174,7 @@ class AdminAdModerationController extends Controller
         $moderationStatus = match ($decision) {
             'approved' => 'approved',
             'changes_requested' => 'admin_changes_requested',
-            default => 'admin_' . $decision,
+            default => 'admin_'.$decision,
         };
 
         DB::transaction(function () use ($ad, $request, $decision, $reason, $newStatus, $previousStatus, $publishImmediately, $moderationStatus) {
@@ -248,9 +249,21 @@ class AdminAdModerationController extends Controller
 
     private function presentAiAssist(Ad $ad, array $decisions): array
     {
-        $latestAi = collect($decisions)->first(
-            fn (array $decision): bool => ($decision['source'] ?? null) === 'ai'
-        );
+        $submittedAt = $ad->moderation_submitted_at;
+        $latestAi = collect($decisions)->first(function (array $decision) use ($submittedAt): bool {
+            if (($decision['source'] ?? null) !== 'ai') {
+                return false;
+            }
+            if (! $submittedAt) {
+                return true;
+            }
+            $createdAt = $decision['created_at'] ?? null;
+            if (! is_string($createdAt) || trim($createdAt) === '') {
+                return false;
+            }
+
+            return Carbon::parse($createdAt)->greaterThanOrEqualTo($submittedAt);
+        });
         $metadata = is_array($latestAi['metadata'] ?? null) ? $latestAi['metadata'] : [];
         $runtime = is_array($metadata['runtime'] ?? null) ? $metadata['runtime'] : [];
         $rollout = is_array($metadata['rollout'] ?? null) ? $metadata['rollout'] : [];
@@ -322,7 +335,7 @@ class AdminAdModerationController extends Controller
                 return;
             }
 
-            $link = '/anuncio/' . $ad->id . '/editar';
+            $link = '/anuncio/'.$ad->id.'/editar';
             $now = now();
             $existing = DB::table('user_notifications')
                 ->where('user_id', $seller->id)
@@ -361,7 +374,7 @@ class AdminAdModerationController extends Controller
                     $seller,
                     1,
                     [$reason],
-                    rtrim((string) config('app.frontend_url', config('app.url')), '/') . $link,
+                    rtrim((string) config('app.frontend_url', config('app.url')), '/').$link,
                 ));
             }
         } catch (Throwable $error) {
@@ -418,7 +431,7 @@ class AdminAdModerationController extends Controller
             $notification = [
                 'user_id' => $ad->user_id,
                 'title' => 'Anuncio aprobado!',
-                'message' => 'Tu anuncio "' . $ad->title . '" fue revisado y ya está visible.',
+                'message' => 'Tu anuncio "'.$ad->title.'" fue revisado y ya está visible.',
                 'is_read' => false,
                 'created_at' => now(),
                 'updated_at' => now(),

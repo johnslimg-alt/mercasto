@@ -76,7 +76,7 @@ services:
       - "OLLAMA_TEXT_MODEL=qwen3.8:9b-local"
       - "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct"
       - "AI_MODERATION_GATEWAY_URL=http://mercasto-ai-gateway:8080"
-      - "AI_MODERATION_GATEWAY_TIMEOUT=${AI_MODERATION_MAX_RUNTIME_SECONDS:-150}"
+      - "AI_MODERATION_GATEWAY_TIMEOUT=${AI_MODERATION_GATEWAY_TIMEOUT:-150}"
       - "MERCASTO_AI_INTERNAL_TOKEN=${MERCASTO_AI_INTERNAL_TOKEN:-}"
     depends_on:
       postgres:
@@ -123,12 +123,14 @@ services:
       - "OLLAMA_TEXT_MODEL=qwen3.8:9b-local"
       - "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct"
       - "AI_MODERATION_GATEWAY_URL=http://mercasto-ai-gateway:8080"
-      - "AI_MODERATION_GATEWAY_TIMEOUT=${AI_MODERATION_MAX_RUNTIME_SECONDS:-150}"
+      - "AI_MODERATION_GATEWAY_TIMEOUT=${AI_MODERATION_GATEWAY_TIMEOUT:-150}"
       - "MERCASTO_AI_INTERNAL_TOKEN=${MERCASTO_AI_INTERNAL_TOKEN:-}"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      mercasto-ai-gateway:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -222,6 +224,12 @@ services:
       ollama:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=10)"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
