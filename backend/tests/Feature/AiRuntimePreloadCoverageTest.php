@@ -18,7 +18,7 @@ class AiRuntimePreloadCoverageTest extends TestCase
 
     public function test_post_merge_verifier_preloads_before_smoke_and_inference(): void
     {
-        $workflow = file_get_contents(base_path('../.github/workflows/post-merge-production-verify.yml'));
+        $workflow = file_get_contents(dirname(__DIR__, 3).'/.github/workflows/post-merge-production-verify.yml');
 
         $this->assertIsString($workflow);
         $preload = strpos($workflow, 'php artisan ai:runtime-preload --timeout=120');

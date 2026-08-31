@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class AdTest extends TestCase
@@ -93,6 +94,7 @@ class AdTest extends TestCase
     public function test_authenticated_user_can_create_ad_without_exact_coordinates()
     {
         Storage::fake('public');
+        Cache::flush();
         Http::fake([
             'https://nominatim.openstreetmap.org/*' => Http::response([], 503),
             '*' => Http::response([], 422),
@@ -122,6 +124,7 @@ class AdTest extends TestCase
 
     public function test_authenticated_user_can_change_location_without_exact_coordinates()
     {
+        Cache::flush();
         Http::fake([
             'https://nominatim.openstreetmap.org/*' => Http::response([], 503),
             '*' => Http::response([], 422),

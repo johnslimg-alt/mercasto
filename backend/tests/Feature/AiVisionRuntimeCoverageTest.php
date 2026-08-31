@@ -8,7 +8,7 @@ class AiVisionRuntimeCoverageTest extends TestCase
 {
     public function test_post_merge_vision_prime_precedes_strict_probe_and_catalog_audits(): void
     {
-        $workflow = file_get_contents(base_path('../.github/workflows/post-merge-production-verify.yml'));
+        $workflow = file_get_contents(dirname(__DIR__, 3).'/.github/workflows/post-merge-production-verify.yml');
 
         $this->assertIsString($workflow);
         $preload = strpos($workflow, 'php artisan ai:runtime-preload --timeout=120');
