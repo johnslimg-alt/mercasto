@@ -67,7 +67,7 @@ class AiModerationGatewayClient
     private function assertPrivateGatewayUrl(string $url): void
     {
         $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-        $allowed = ['mercasto-ai-gateway', 'mercasto_ai_gateway', 'localhost', '127.0.0.1', '::1'];
+        $allowed = ['mercasto-ai-gateway', 'mercasto_ai_gateway'];
         if (app()->environment('testing') && str_ends_with($host, '.test')) {
             return;
         }
