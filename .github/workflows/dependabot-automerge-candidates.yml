@@ -11,7 +11,6 @@ on:
 permissions:
   contents: read
   pull-requests: read
-  issues: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -21,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  label-safe-dependabot-update:
-    name: Label safe Dependabot PRs for automerge
+  classify-safe-dependabot-update:
+    name: Classify safe Dependabot PRs
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -38,17 +37,11 @@ jobs:
         id: decision
         env:
           UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
-          DEPENDENCY_TYPE: ${{ steps.metadata.outputs.dependency-type }}
           PACKAGE_ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
         run: |
           set -euo pipefail
 
-          echo "update_type=${UPDATE_TYPE}"
-          echo "dependency_type=${DEPENDENCY_TYPE}"
-          echo "package_ecosystem=${PACKAGE_ECOSYSTEM}"
-
           eligible=false
-
           case "${UPDATE_TYPE}" in
             version-update:semver-patch|version-update:semver-minor)
               case "${PACKAGE_ECOSYSTEM}" in
@@ -59,26 +52,33 @@ jobs:
               ;;
           esac
 
-          # Production dependency updates stay gated by PR checks and automerge,
-          # but major updates are never labeled automatically.
+          echo "update_type=${UPDATE_TYPE}"
+          echo "package_ecosystem=${PACKAGE_ECOSYSTEM}"
           echo "eligible=${eligible}" >> "$GITHUB_OUTPUT"
 
-      - name: Add automerge label
-        if: steps.decision.outputs.eligible == 'true'
+      - name: Write trusted classification artifact
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          ELIGIBLE: ${{ steps.decision.outputs.eligible }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          PACKAGE_ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
         run: |
           set -euo pipefail
-          gh api --method POST "repos/${GH_REPO}/issues/${PR_NUMBER}/labels" -f "labels[]=automerge"
+          mkdir -p candidate
+          jq -n \
+            --argjson pr "$PR_NUMBER" \
+            --arg head "$HEAD_SHA" \
+            --arg eligible "$ELIGIBLE" \
+            --arg update_type "$UPDATE_TYPE" \
+            --arg package_ecosystem "$PACKAGE_ECOSYSTEM" \
+            '{pr:$pr,head:$head,eligible:($eligible == "true"),update_type:$update_type,package_ecosystem:$package_ecosystem}' \
+            > candidate/classification.json
 
-      - name: Mark non-automerge major or unsupported update
-        if: steps.decision.outputs.eligible != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          gh api --method POST "repos/${GH_REPO}/issues/${PR_NUMBER}/labels" -f "labels[]=needs-manual-review"
+      - name: Upload trusted classification artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependabot-candidate
+          path: candidate/classification.json
+          if-no-files-found: error
+          retention-days: 1
