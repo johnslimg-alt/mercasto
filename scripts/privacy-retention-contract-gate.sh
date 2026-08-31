@@ -15,9 +15,11 @@ bash -n "$DRY_RUN"
 grep -qF 'BEGIN TRANSACTION READ ONLY;' "$DRY_RUN"
 grep -qF "SET LOCAL statement_timeout = '10s';" "$DRY_RUN"
 grep -qF "SET LOCAL lock_timeout = '2s';" "$DRY_RUN"
-for table in ad_impressions ad_views ad_clicks user_notifications ad_moderation_decisions email_trackings personal_access_tokens payments; do
+for table in ad_impressions ad_views ad_clicks contact_clicks banner_impressions user_notifications ad_moderation_decisions email_trackings personal_access_tokens payments; do
   grep -qF "$table" "$DRY_RUN"
 done
+grep -qF 'rows_with_raw_ip' "$DRY_RUN"
+grep -qF 'rows_with_pseudonymous_fingerprint' "$DRY_RUN"
 
 if grep -Eiq '(^|[^[:alnum:]_])(delete|update|insert|truncate|drop|alter|create|grant|revoke|vacuum|analyze|refresh|copy)[[:space:]]' "$DRY_RUN"; then
   echo "FAIL: privacy retention dry run contains a mutating SQL verb" >&2

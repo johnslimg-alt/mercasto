@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PrivacyFingerprint;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -67,7 +68,7 @@ class EmailTracking extends Model
                 'recipient_id' => $email->recipient_id,
                 'event' => 'opened',
                 'tracking_id' => $trackingId,
-                'ip_address' => $ip,
+                'ip_address' => PrivacyFingerprint::ip($ip, 'email-tracking'),
                 'user_agent' => $userAgent,
                 'language' => $email->language,
             ]);
@@ -89,7 +90,7 @@ class EmailTracking extends Model
                 'event' => 'clicked',
                 'tracking_id' => $trackingId,
                 'link_url' => $url,
-                'ip_address' => $ip,
+                'ip_address' => PrivacyFingerprint::ip($ip, 'email-tracking'),
                 'user_agent' => $userAgent,
                 'language' => $email->language,
             ]);

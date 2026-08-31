@@ -19,6 +19,27 @@ Production evidence was collected with aggregate counts only; no IP address, tok
 | `personal_access_tokens` | 919 | 0 expired; 28 never used; 0 never-used >90d | active credentials; raw token values must never be reported |
 | `payments` | 32 | 0 >365d | financial/refund/audit evidence; no short-term automated pruning |
 
+## Data-minimization update — 2026-08-31
+
+A fresh aggregate-only format audit corrected an important distinction in the original inventory: a non-null `ip_address` column does not necessarily contain a raw network address. No identifier value was selected or printed during this audit.
+
+Current production shape before this hardening change:
+
+| Dataset | Total | >30d | >90d | Raw IP-shaped rows | Pseudonymous fingerprint rows |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `ad_impressions` | 14,798 | 14,527 | 51 | 0 | 14,798 |
+| `ad_views` | 2,995 | 2,995 | 11 | 0 | 2,995 |
+| `ad_clicks` | 1 | 1 | 0 | 0 | 1 |
+| `contact_clicks` | 10 | 10 | 0 | 10 | 0 |
+| `banner_impressions` | 0 | 0 | 0 | 0 | 0 |
+| `email_trackings` | 0 | 0 | 0 | 0 | 0 |
+
+The 64-character values in the three `ad_*` telemetry tables are legacy unkeyed SHA-256 pseudonyms, not raw IP addresses. They still permit cross-dataset correlation and are weaker against guessing than keyed fingerprints, so new telemetry is being moved to APP_KEY-backed, purpose-scoped HMAC-SHA256 fingerprints. `contact_clicks` uses a 45-character HMAC truncation only because its existing schema is `varchar(45)`; this still provides a 180-bit pseudonymous identifier. Existing raw `contact_clicks` rows are left untouched pending the approved retention decision.
+
+The transition keeps legacy values only as short-window **read-match compatibility** for anti-fraud/deduplication. New writes never persist the legacy SHA-256 form or raw IP in these internal telemetry paths. Banner click logs also stop writing raw IP. Transient network-address use that is required for request rate limiting or explicit external payment/analytics provider contracts is outside this at-rest telemetry change and is not silently altered here.
+
+This is data minimization, not pruning. It does not authorize deletion or change any `PENDING LEGAL/OWNER` retention window below.
+
 ## Draft retention matrix
 
 All windows below are **engineering candidates only**. `PENDING LEGAL/OWNER` means the value is not approved for production enforcement.
