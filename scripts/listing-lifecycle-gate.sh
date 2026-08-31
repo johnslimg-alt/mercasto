@@ -48,7 +48,20 @@ grep -qF "'expires_at' => null," "$CONTROLLER"
 grep -qF "'expires_at' => Ad::freshExpiry()," "$CONTROLLER"
 grep -qF "'expires_at' => \$newStatus === 'active' ? Ad::freshExpiry() : null," backend/app/Jobs/ModerateAdWithAI.php
 grep -qF 'public static function freshExpiry(): Carbon' backend/app/Models/Ad.php
-if grep -qF 'now()->addDays(30)' "$CONTROLLER"; then
+if python3 - "$CONTROLLER" <<'PY_EXPIRY'
+import re
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).read_text()
+legacy_expiry = re.search(
+    r"[\"']expires_at[\"']\s*=>.{0,160}?addDays\(\s*30\s*\)",
+    source,
+    flags=re.DOTALL,
+)
+sys.exit(0 if legacy_expiry else 1)
+PY_EXPIRY
+then
   echo "Legacy 30-day listing expiry remains in AdController" >&2
   exit 1
 fi
