@@ -98,21 +98,46 @@ class AdController extends Controller
         $query = trim(collect([$location, $state, 'México'])->filter()->implode(', '));
 
         if ($query !== '') {
-            $apiKey = config('services.google.maps_api_key');
-            if ($apiKey) {
-                try {
-                    $response = Http::timeout(5)->get('https://maps.googleapis.com/maps/api/geocode/json', [
-                        'address' => $query,
-                        'key' => $apiKey,
-                    ]);
+            try {
+                $coords = Cache::remember('osm-geocode:'.sha1(Str::lower($query)), now()->addDays(30), function () use ($query) {
+                    return Cache::lock('osm-nominatim-geocode-lock', 10)->block(3, function () use ($query) {
+                        $lastRequestAt = (float) Cache::get('osm-nominatim-last-request-at', 0);
+                        $delay = 1.0 - (microtime(true) - $lastRequestAt);
+                        if ($delay > 0) {
+                            usleep((int) ceil($delay * 1_000_000));
+                        }
 
-                    if ($response->successful() && !empty($response->json('results'))) {
-                        $geometry = $response->json('results.0.geometry.location');
-                        return [(float) $geometry['lat'], (float) $geometry['lng']];
-                    }
-                } catch (\Throwable $e) {
-                    // Fall through to local Mexico centroids if the paid provider is unavailable.
+                        $baseUrl = rtrim((string) config('services.openstreetmap.nominatim_url'), '/');
+                        try {
+                            $response = Http::timeout(5)
+                                ->withHeaders([
+                                    'User-Agent' => (string) config('services.openstreetmap.user_agent'),
+                                    'Accept-Language' => 'es-MX,es;q=0.9',
+                                ])
+                                ->get($baseUrl.'/search', [
+                                    'q' => $query,
+                                    'format' => 'jsonv2',
+                                    'limit' => 1,
+                                    'countrycodes' => 'mx',
+                                    'addressdetails' => 0,
+                                ]);
+                        } finally {
+                            Cache::put('osm-nominatim-last-request-at', microtime(true), now()->addMinutes(5));
+                        }
+
+                        if (!$response->successful() || empty($response->json('0.lat')) || empty($response->json('0.lon'))) {
+                            return null;
+                        }
+
+                        return [(float) $response->json('0.lat'), (float) $response->json('0.lon')];
+                    });
+                });
+
+                if (is_array($coords) && count($coords) === 2) {
+                    return $coords;
                 }
+            } catch (\Throwable $e) {
+                // Fall through to local Mexico centroids if OpenStreetMap geocoding is unavailable.
             }
         }
 

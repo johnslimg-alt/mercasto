@@ -264,19 +264,22 @@ export default function MercastoMapPreview({
     }
 
     const isDark = document.documentElement.classList.contains('dark');
-    const tileUrl = isDark 
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
-      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-    L.tileLayer(tileUrl, {
+    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       crossOrigin: true,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
-    })
-      .on('tileerror', () => {
-        if (mountedRef.current && instanceRef.current === map) setLoadFailed(true);
-      })
-      .addTo(map);
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+    });
+
+    tileLayer.on('add', () => {
+      const tileContainer = tileLayer.getContainer();
+      if (tileContainer) {
+        tileContainer.style.filter = isDark ? 'brightness(0.58) contrast(1.18) saturate(0.72)' : '';
+      }
+    });
+    tileLayer.on('tileerror', () => {
+      if (mountedRef.current && instanceRef.current === map) setLoadFailed(true);
+    });
+    tileLayer.addTo(map);
 
     const markerGroup = L.featureGroup();
 
