@@ -21,6 +21,25 @@ strip_key() {
   mv "$tmp" "$target"
 }
 
+reload_frontend_upstream() {
+  docker compose exec -T mercasto-frontend nginx -t >/dev/null
+  docker compose exec -T mercasto-frontend nginx -s reload >/dev/null
+}
+
+retry_cmd() {
+  local attempts="$1" delay="$2" i=1
+  shift 2
+  while [ "$i" -le "$attempts" ]; do
+    if "$@"; then return 0; fi
+    [ "$i" -ge "$attempts" ] && break
+    sleep "$delay"
+    i=$((i + 1))
+  done
+  return 1
+}
+
+check_public_url() { curl -fsS --max-time 15 "$1" >/dev/null; }
+
 strip_key "$REPO_ROOT/.env"
 strip_key "$REPO_ROOT/backend/.env"
 rm -f "$REPO_ROOT/backend/bootstrap/cache/config.php"
@@ -33,9 +52,12 @@ for _ in $(seq 1 60); do
 done
 [[ "$(docker inspect --format '{{.State.Health.Status}}' mercasto_backend_container)" == healthy ]]
 
+retry_cmd 10 2 reload_frontend_upstream
+
 docker compose exec -T mercasto-backend php artisan tinker --execute='if (config("services.google.maps_api_key") !== null) { exit(2); }' >/dev/null
 ! grep -Eq '^(GOOGLE_MAPS_API_KEY|VITE_GOOGLE_MAPS_API_KEY)=' "$REPO_ROOT/.env" "$REPO_ROOT/backend/.env" 2>/dev/null
-curl -fsS --max-time 30 https://mercasto.com/ >/dev/null
-curl -fsS --max-time 30 https://mercasto.com/api/categories >/dev/null
+retry_cmd 12 5 check_public_url https://mercasto.com/api/categories
+retry_cmd 12 5 check_public_url https://mercasto.com/
+retry_cmd 12 5 check_public_url https://mercasto.com/api/auth/providers
 
 echo 'OSM_ONLY_MAP_PROVIDER=PASS'

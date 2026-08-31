@@ -34,6 +34,10 @@ test('legacy Google Maps key cleanup is scoped and confirmation-gated', () => {
   assert.match(script, /REPO_ROOT\/\.env/);
   assert.match(script, /REPO_ROOT\/backend\/\.env/);
   assert.doesNotMatch(script, /find \/root|find \/var\/www/);
+  assert.match(script, /nginx -t/);
+  assert.match(script, /nginx -s reload/);
+  assert.match(script, /retry_cmd 12 5 check_public_url https:\/\/mercasto\.com\/api\/categories/);
+  assert.match(script, /retry_cmd 12 5 check_public_url https:\/\/mercasto\.com\/api\/auth\/providers/);
   assert.match(script, /OSM_ONLY_MAP_PROVIDER=PASS/);
   assert.match(workflow, /remove_legacy_google_maps_key/);
 });
