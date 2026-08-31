@@ -110,7 +110,7 @@ jobs:
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
           case "$author_login" in
-            johnslimg-alt|github-actions[bot])
+            johnslimg-alt|github-actions[bot]|app/dependabot)
               ;;
             *)
               echo "Refusing untrusted author: $author_login"
@@ -155,8 +155,37 @@ jobs:
               ;;
           esac
 
-      - name: Squash merge eligible PR
+      - name: Require exact-head quality workflows
+        id: gates
         if: steps.eligible.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ steps.eligible.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+
+          runs="$(gh api "repos/${GH_REPO}/actions/runs?head_sha=${HEAD_SHA}&per_page=100")"
+          for workflow in "PR Quality Gate" "Production checks" "Frontend Quality Gate"; do
+            state="$(printf '%s' "$runs" | jq -r --arg workflow "$workflow" '
+              [.workflow_runs[]
+                | select(.name == $workflow)
+                | select(.event == "pull_request" or .event == "pull_request_target")
+              ]
+              | sort_by(.created_at)
+              | last
+              | if . == null then "missing" else (.status + ":" + (.conclusion // "")) end
+            ')"
+            echo "$workflow => $state"
+            if [ "$state" != "completed:success" ]; then
+              echo "Core quality workflows are not all green on exact head $HEAD_SHA."
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Squash merge eligible PR
+        if: steps.eligible.outputs.eligible == 'true' && steps.gates.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.resolve.outputs.pr }}
@@ -170,7 +199,7 @@ jobs:
             --match-head-commit "$HEAD_SHA"
 
       - name: Dispatch post-merge production checks
-        if: steps.eligible.outputs.eligible == 'true'
+        if: steps.eligible.outputs.eligible == 'true' && steps.gates.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

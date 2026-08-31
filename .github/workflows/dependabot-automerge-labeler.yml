@@ -1,0 +1,106 @@
+name: Dependabot Automerge Labeler
+
+on:
+  workflow_run:
+    workflows:
+      - Dependabot Automerge Candidates
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  issues: write
+
+env:
+  GH_REPO: ${{ github.repository }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  apply-classification:
+    name: Apply trusted Dependabot automerge classification
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download trusted classification artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dependabot-candidate
+          path: candidate
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Validate classification against current PR head
+        id: validate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_HEAD: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          file=candidate/classification.json
+          test -s "$file"
+
+          pr="$(jq -r '.pr' "$file")"
+          artifact_head="$(jq -r '.head' "$file")"
+          eligible="$(jq -r '.eligible' "$file")"
+
+          case "$pr" in
+            ''|*[!0-9]*)
+              echo "Invalid PR number in classification artifact: $pr"
+              exit 2
+              ;;
+          esac
+          if ! printf '%s' "$artifact_head" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Invalid head SHA in classification artifact."
+            exit 2
+          fi
+
+          data="$(gh pr view "$pr" --repo "$GH_REPO" --json state,isDraft,author,headRefOid)"
+          state="$(jq -r '.state' <<<"$data")"
+          draft="$(jq -r '.isDraft' <<<"$data")"
+          author="$(jq -r '.author.login // ""' <<<"$data")"
+          current_head="$(jq -r '.headRefOid' <<<"$data")"
+
+          if [ "$author" != "app/dependabot" ]; then
+            echo "Refusing non-Dependabot PR author: $author"
+            exit 3
+          fi
+          if [ "$state" != "OPEN" ] || [ "$draft" = "true" ]; then
+            echo "PR is no longer an open non-draft candidate."
+            echo "apply=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$artifact_head" != "$current_head" ] || [ "$artifact_head" != "$WORKFLOW_HEAD" ]; then
+            echo "Classification is stale; refusing to label a moved head."
+            echo "apply=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
+          echo "apply=true" >> "$GITHUB_OUTPUT"
+
+      - name: Apply safe automerge label
+        if: steps.validate.outputs.apply == 'true' && steps.validate.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.validate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          gh api --method DELETE "repos/${GH_REPO}/issues/${PR_NUMBER}/labels/needs-manual-review" >/dev/null 2>&1 || true
+          gh api --method POST "repos/${GH_REPO}/issues/${PR_NUMBER}/labels" -f "labels[]=automerge"
+
+      - name: Mark unsupported update for manual review
+        if: steps.validate.outputs.apply == 'true' && steps.validate.outputs.eligible != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.validate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          gh api --method DELETE "repos/${GH_REPO}/issues/${PR_NUMBER}/labels/automerge" >/dev/null 2>&1 || true
+          gh api --method POST "repos/${GH_REPO}/issues/${PR_NUMBER}/labels" -f "labels[]=needs-manual-review"
