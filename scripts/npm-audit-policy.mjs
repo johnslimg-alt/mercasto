@@ -7,7 +7,7 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 
 const packageLock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
 
 const expected = {
-  reactRouterDom: '7.18.2',
+  reactRouterDom: '7.18.3',
   braceExpansion: '5.0.9',
 };
 
