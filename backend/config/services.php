@@ -39,7 +39,11 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('APP_URL').'/api/auth/google/callback',
-        'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
+    'openstreetmap' => [
+        'nominatim_url' => env('OSM_NOMINATIM_URL', 'https://nominatim.openstreetmap.org'),
+        'user_agent' => env('OSM_NOMINATIM_USER_AGENT', 'Mercasto/1.0 (+https://mercasto.com)'),
     ],
 
     'apple' => [

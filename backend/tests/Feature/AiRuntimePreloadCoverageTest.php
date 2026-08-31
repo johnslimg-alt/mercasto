@@ -21,10 +21,10 @@ class AiRuntimePreloadCoverageTest extends TestCase
         $workflow = file_get_contents(base_path('../.github/workflows/post-merge-production-verify.yml'));
 
         $this->assertIsString($workflow);
-        $preload = strpos($workflow, 'php artisan ai:runtime-preload --timeout=90');
+        $preload = strpos($workflow, 'php artisan ai:runtime-preload --timeout=120');
         $smoke = strpos($workflow, 'npm run verify:quick');
         $readiness = strpos($workflow, 'php artisan ai:runtime-readiness');
-        $inference = strpos($workflow, 'php artisan ai:runtime-check --timeout=45');
+        $inference = strpos($workflow, 'php artisan ai:runtime-check --timeout=45 --attempts=2');
 
         $this->assertNotFalse($preload);
         $this->assertNotFalse($smoke);

@@ -11,8 +11,8 @@ class AiVisionRuntimeCoverageTest extends TestCase
         $workflow = file_get_contents(base_path('../.github/workflows/post-merge-production-verify.yml'));
 
         $this->assertIsString($workflow);
-        $preload = strpos($workflow, 'php artisan ai:runtime-preload --timeout=90');
-        $text = strpos($workflow, 'php artisan ai:runtime-check --timeout=45');
+        $preload = strpos($workflow, 'php artisan ai:runtime-preload --timeout=120');
+        $text = strpos($workflow, 'php artisan ai:runtime-check --timeout=45 --attempts=2');
         $prime = strpos($workflow, 'php artisan ai:vision-runtime-check --timeout=120');
         $vision = strpos($workflow, 'php artisan ai:vision-runtime-check --timeout=60');
         $catalog = strpos($workflow, 'php artisan ads:ensure-catalog-coverage');
