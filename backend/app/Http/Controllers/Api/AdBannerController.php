@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdBanner;
 use App\Models\AdPlacement;
 use App\Models\BannerImpression;
+use App\Support\PrivacyFingerprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -316,7 +317,7 @@ class AdBannerController extends Controller
                 BannerImpression::create([
                     'banner_id' => $banner->id,
                     'user_id' => $request->user()?->id,
-                    'ip_address' => $request->ip(),
+                    'ip_address' => PrivacyFingerprint::ip($request->ip(), 'banner-impression'),
                     'placement_slug' => $validated['placement'],
                     'category_slug' => $validated['category'] ?? null,
                     'state' => $validated['state'] ?? null,
@@ -356,9 +357,13 @@ class AdBannerController extends Controller
             return response()->json(['error' => 'Banner not found'], 404);
         }
 
-        // Обновляем последний impression для этого IP/юзера
+        // Обновляем последний impression для этого IP/юзера. Raw-IP matching is
+        // kept only for pre-hardening rows; new rows use the keyed fingerprint.
+        $rawIp = trim((string) $request->ip());
+        $ipFingerprint = PrivacyFingerprint::ip($rawIp, 'banner-impression');
+        $ipCandidates = array_values(array_unique(array_filter([$ipFingerprint, $rawIp])));
         $impression = BannerImpression::where('banner_id', $id)
-            ->where('ip_address', $request->ip())
+            ->whereIn('ip_address', $ipCandidates)
             ->latest()
             ->first();
 
@@ -370,7 +375,6 @@ class AdBannerController extends Controller
 
         Log::info('Banner clicked', [
             'banner_id' => $id,
-            'ip' => $request->ip(),
             'user_id' => $request->user()?->id,
         ]);
 

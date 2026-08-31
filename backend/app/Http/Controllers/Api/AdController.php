@@ -26,6 +26,7 @@ use App\Mail\NewAdInCategory;
 use App\Models\User;
 use App\Services\AdModerationGuidanceService;
 use App\Services\ListingQualityPreflightService;
+use App\Support\PrivacyFingerprint;
 use Illuminate\Support\Facades\Mail;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
@@ -1448,12 +1449,18 @@ class AdController extends Controller
             }
 
             // Доверяем только Laravel proxy handling, а не клиентским заголовкам напрямую.
-            $clientIpHash = hash('sha256', (string) $request->ip()); // GDPR Compliance: Анонимизируем IP-адрес
+            $clientIp = $request->ip();
+            $clientIpHash = PrivacyFingerprint::ip($clientIp, 'ad-view');
+            $clientIpCandidates = array_values(array_unique(array_filter([
+                $clientIpHash,
+                PrivacyFingerprint::legacySha256($clientIp),
+            ])));
 
-            // Защита от накрутки: засчитываем только 1 уникальный просмотр с IP в течение часа
+            // Защита от накрутки: засчитываем только 1 уникальный просмотр с IP в течение часа.
+            // Legacy SHA-256 remains read-only match compatibility during the transition.
             $recentView = DB::table('ad_views')
                 ->where('ad_id', $ad->id)
-                ->where('ip_address', $clientIpHash)
+                ->whereIn('ip_address', $clientIpCandidates)
                 ->where('created_at', '>=', now()->subHour())
                 ->exists();
 
@@ -1488,10 +1495,15 @@ class AdController extends Controller
 
         $adIds = collect($validated['ad_ids'])->unique()->values();
         $placement = $validated['placement'] ?? 'feed';
-        $clientIpHash = hash('sha256', (string) $request->ip());
+        $clientIp = $request->ip();
+        $clientIpHash = PrivacyFingerprint::ip($clientIp, 'ad-impression');
+        $clientIpCandidates = array_values(array_unique(array_filter([
+            $clientIpHash,
+            PrivacyFingerprint::legacySha256($clientIp),
+        ])));
         $seenRecently = DB::table('ad_impressions')
             ->whereIn('ad_id', $adIds)
-            ->where('ip_address', $clientIpHash)
+            ->whereIn('ip_address', $clientIpCandidates)
             ->where('placement', $placement)
             ->where('created_at', '>=', now()->subHours(6))
             ->pluck('ad_id')
@@ -1823,12 +1835,17 @@ class AdController extends Controller
             ]);
         }
 
-        $clientIpHash = hash('sha256', (string) $request->ip()); // GDPR Compliance
+        $clientIp = $request->ip();
+        $clientIpHash = PrivacyFingerprint::ip($clientIp, 'ad-click');
+        $clientIpCandidates = array_values(array_unique(array_filter([
+            $clientIpHash,
+            PrivacyFingerprint::legacySha256($clientIp),
+        ])));
 
-        // Защита от накрутки конверсии: 1 уникальный клик (WhatsApp/Telegram) с IP раз в 15 минут
+        // Защита от накрутки конверсии: 1 уникальный клик (WhatsApp/Telegram) с IP раз в 15 минут.
         $recentClick = DB::table('ad_clicks')
             ->where('ad_id', $ad->id)
-            ->where('ip_address', $clientIpHash)
+            ->whereIn('ip_address', $clientIpCandidates)
             ->where('channel', $request->channel)
             ->where('created_at', '>=', now()->subMinutes(15))
             ->exists();
@@ -2594,9 +2611,12 @@ class AdController extends Controller
             return response()->json(['error' => 'Ad not found'], 404);
         }
 
-        // Rate limiting: max 10 contact clicks per IP per hour
-        $ip = $request->ip();
-        $recentClicks = \App\Models\ContactClick::where('ip_address', $ip)
+        // Rate limiting: max 10 contact clicks per IP per hour. Existing raw-IP rows
+        // are match-only compatibility; new rows persist only a keyed fingerprint.
+        $ip = trim((string) $request->ip());
+        $ipFingerprint = PrivacyFingerprint::ip($ip, 'contact-click', 45);
+        $ipCandidates = array_values(array_unique(array_filter([$ipFingerprint, $ip])));
+        $recentClicks = \App\Models\ContactClick::whereIn('ip_address', $ipCandidates)
             ->where('created_at', '>', now()->subHour())
             ->count();
 
@@ -2611,7 +2631,7 @@ class AdController extends Controller
             'ad_id' => $ad->id,
             'user_id' => auth()->id(),
             'channel' => $request->channel,
-            'ip_address' => $ip,
+            'ip_address' => $ipFingerprint,
             'user_agent' => substr($request->userAgent() ?? '', 0, 255),
         ]);
 

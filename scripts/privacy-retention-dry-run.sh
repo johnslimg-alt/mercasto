@@ -15,21 +15,41 @@ SELECT 'ad_impressions' AS dataset,
        count(*) AS total,
        count(*) FILTER (WHERE created_at < now() - interval '30 days') AS older_30d,
        count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d,
-       count(*) FILTER (WHERE ip_address IS NOT NULL) AS rows_with_direct_identifier
+       count(*) FILTER (WHERE ip_address ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' OR ip_address LIKE '%:%') AS rows_with_raw_ip,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9a-f]{45}$' OR ip_address ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
 FROM ad_impressions;
 
 SELECT 'ad_views' AS dataset,
        count(*) AS total,
        count(*) FILTER (WHERE created_at < now() - interval '30 days') AS older_30d,
-       count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d
+       count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' OR ip_address LIKE '%:%') AS rows_with_raw_ip,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9a-f]{45}$' OR ip_address ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
 FROM ad_views;
 
 SELECT 'ad_clicks' AS dataset,
        count(*) AS total,
        count(*) FILTER (WHERE created_at < now() - interval '30 days') AS older_30d,
        count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d,
-       count(*) FILTER (WHERE ip_address IS NOT NULL) AS rows_with_direct_identifier
+       count(*) FILTER (WHERE ip_address ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' OR ip_address LIKE '%:%') AS rows_with_raw_ip,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9a-f]{45}$' OR ip_address ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
 FROM ad_clicks;
+
+SELECT 'contact_clicks' AS dataset,
+       count(*) AS total,
+       count(*) FILTER (WHERE created_at < now() - interval '30 days') AS older_30d,
+       count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' OR ip_address LIKE '%:%') AS rows_with_raw_ip,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9a-f]{45}$' OR ip_address ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
+FROM contact_clicks;
+
+SELECT 'banner_impressions' AS dataset,
+       count(*) AS total,
+       count(*) FILTER (WHERE created_at < now() - interval '30 days') AS older_30d,
+       count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' OR ip_address LIKE '%:%') AS rows_with_raw_ip,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9a-f]{45}$' OR ip_address ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
+FROM banner_impressions;
 
 SELECT 'user_notifications' AS dataset,
        count(*) AS total,
@@ -50,7 +70,8 @@ SELECT 'email_trackings' AS dataset,
        count(*) AS total,
        count(*) FILTER (WHERE created_at < now() - interval '30 days') AS older_30d,
        count(*) FILTER (WHERE created_at < now() - interval '90 days') AS older_90d,
-       count(*) FILTER (WHERE ip_address IS NOT NULL) AS rows_with_direct_identifier
+       count(*) FILTER (WHERE ip_address ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' OR ip_address LIKE '%:%') AS rows_with_raw_ip,
+       count(*) FILTER (WHERE ip_address ~ '^[0-9a-f]{45}$' OR ip_address ~ '^[0-9a-f]{64}$') AS rows_with_pseudonymous_fingerprint
 FROM email_trackings;
 
 SELECT 'personal_access_tokens' AS dataset,

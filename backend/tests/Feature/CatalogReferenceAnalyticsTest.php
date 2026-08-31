@@ -4,9 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Ad;
 use App\Models\User;
+use App\Support\PrivacyFingerprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CatalogReferenceAnalyticsTest extends TestCase
@@ -30,13 +32,70 @@ class CatalogReferenceAnalyticsTest extends TestCase
         $catalog = $this->makeAd(true);
         $genuine = $this->makeAd(false);
 
-        $this->postJson('/api/ads/impressions', [
-            'ad_ids' => [$catalog->id, $genuine->id],
-            'placement' => 'feed',
-        ])->assertOk()->assertJson(['recorded' => 1]);
+        $ip = '203.0.113.42';
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson('/api/ads/impressions', [
+                'ad_ids' => [$catalog->id, $genuine->id],
+                'placement' => 'feed',
+            ])->assertOk()->assertJson(['recorded' => 1]);
 
         $this->assertDatabaseMissing('ad_impressions', ['ad_id' => $catalog->id]);
-        $this->assertDatabaseHas('ad_impressions', ['ad_id' => $genuine->id]);
+        $this->assertDatabaseHas('ad_impressions', [
+            'ad_id' => $genuine->id,
+            'ip_address' => PrivacyFingerprint::ip($ip, 'ad-impression'),
+        ]);
+        $this->assertDatabaseMissing('ad_impressions', ['ip_address' => $ip]);
+        $this->assertDatabaseMissing('ad_impressions', ['ip_address' => hash('sha256', $ip)]);
+    }
+
+    public function test_genuine_view_persists_keyed_fingerprint_and_honors_legacy_dedupe(): void
+    {
+        $ad = $this->makeAd(false);
+        $ip = '203.0.113.43';
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson("/api/ads/{$ad->id}/view")
+            ->assertOk();
+
+        $this->assertDatabaseHas('ad_views', [
+            'ad_id' => $ad->id,
+            'ip_address' => PrivacyFingerprint::ip($ip, 'ad-view'),
+        ]);
+        $this->assertDatabaseMissing('ad_views', ['ip_address' => $ip]);
+
+        DB::table('ad_views')->where('ad_id', $ad->id)->delete();
+        DB::table('ad_views')->insert([
+            'ad_id' => $ad->id,
+            'user_id' => null,
+            'ip_address' => hash('sha256', $ip),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $viewsBefore = (int) $ad->fresh()->views;
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson("/api/ads/{$ad->id}/view")
+            ->assertOk()
+            ->assertJson(['ignored' => true]);
+
+        $this->assertSame($viewsBefore, (int) $ad->fresh()->views);
+        $this->assertDatabaseCount('ad_views', 1);
+    }
+
+    public function test_genuine_click_persists_keyed_fingerprint(): void
+    {
+        $ad = $this->makeAd(false);
+        $ip = '203.0.113.44';
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson("/api/ads/{$ad->id}/click", ['channel' => 'share'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('ad_clicks', [
+            'ad_id' => $ad->id,
+            'ip_address' => PrivacyFingerprint::ip($ip, 'ad-click'),
+        ]);
+        $this->assertDatabaseMissing('ad_clicks', ['ip_address' => $ip]);
     }
 
     public function test_catalog_reference_click_is_ignored(): void
