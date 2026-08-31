@@ -2,11 +2,11 @@
 
 Mercasto treats `npm audit` findings as a policy gate rather than running `npm audit fix --force` blindly.
 
-## GHSA-qwww-vcr4-c8h2 — React Router
+## React Router exact pin
 
-The reported issue affects React Server Components action processing. Mercasto is a browser-only React SPA built with Vite and declarative `Routes`; it does not import React Router server, RSC, server-action, static-handler, or server-renderer APIs.
+Mercasto is a browser-only React SPA built with Vite and declarative `Routes`; it does not import React Router server, RSC, server-action, static-handler, or server-renderer APIs.
 
-`react-router-dom` is pinned to `7.18.2` because that release fixes the broader open-redirect, XSS, deserialization, route-matching, and single-fetch advisories present in older 7.x releases. The audit policy fails if RSC/server APIs appear or if the pin changes. Remove this exception as soon as a compatible patched release exists.
+`react-router-dom` is pinned to `7.18.3`. The 7.18.3 update was reviewed after the previous 7.18.2 security pin: the current npm audit policy reports no React Router advisory for this runtime, and the source guard still fails if RSC/server APIs appear. Keeping an exact pin ensures future router upgrades require an explicit security review instead of silently floating through a semver range.
 
 ## GHSA-4x5r-pxfx-6jf8 — Babel 7
 
