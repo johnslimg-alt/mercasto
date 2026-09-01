@@ -26,7 +26,10 @@ class AIModerationAssistOnlyContractTest extends TestCase
         $this->assertStringContainsString("\$this->onQueue('ai-moderation')", $job);
         $this->assertStringContainsString('$gatewayTimeoutCap = $this->timeout - 15', $job);
         $this->assertStringContainsString('if ($gatewayTimeoutCap < 5)', $job);
-        $this->assertStringContainsString('min($configuredTimeout, $maxTimeoutSeconds)', $client);
+        $this->assertStringContainsString(
+            'min($configuredTimeout, $maxTimeoutSeconds, $moderationRuntimeBudget)',
+            $client,
+        );
     }
 
     public function test_job_keeps_model_decision_as_proposal(): void
