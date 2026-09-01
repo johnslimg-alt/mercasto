@@ -46,7 +46,7 @@ class AiModerationGatewayClient
                 'source_description_chars' => $sourceDescriptionChars,
                 'structured_context' => $contextForGateway,
                 'images_base64' => $imagesForGateway,
-                'source_image_count' => min(10, max($sourceImageCount, $candidateImageCount)),
+                'source_image_count' => min(13, max($sourceImageCount, $candidateImageCount)),
                 'policy_signals' => $signals,
             ]);
 
@@ -55,15 +55,29 @@ class AiModerationGatewayClient
         }
 
         $data = $response->json();
-        if (! is_array($data)
-            || ($data['provider'] ?? null) !== 'ollama'
-            || ($data['runtime'] ?? null) !== 'private_local'
+        if (! is_array($data)) {
+            throw new RuntimeException('Private AI moderation gateway returned an invalid contract.');
+        }
+
+        $modelExecuted = $data['model_executed'] ?? null;
+        $executedContractValid = $modelExecuted === true
+            && ($data['provider'] ?? null) === 'ollama'
+            && ($data['runtime'] ?? null) === 'private_local'
+            && is_string($data['model'] ?? null)
+            && trim((string) ($data['model'] ?? '')) !== '';
+        $skippedContractValid = $modelExecuted === false
+            && ($data['provider'] ?? null) === 'none'
+            && ($data['runtime'] ?? null) === 'skipped'
+            && ($data['model'] ?? null) === null
+            && (int) ($data['latency_ms'] ?? -1) === 0;
+
+        if (! is_bool($modelExecuted)
+            || (! $executedContractValid && ! $skippedContractValid)
             || ($data['authoritative'] ?? null) !== false
             || ($data['rollout_mode'] ?? null) !== 'shadow_assist'
             || ! in_array($data['decision'] ?? null, ['approved', 'manual_review', 'rejected'], true)
-            || ! is_string($data['model'] ?? null)
-            || trim((string) ($data['model'] ?? '')) === ''
             || ! is_string($data['gateway_version'] ?? null)
+            || ! is_numeric($data['latency_ms'] ?? null)
             || ! is_numeric($data['confidence'] ?? null)
             || ! is_array($data['flags'] ?? null)) {
             throw new RuntimeException('Private AI moderation gateway returned an invalid contract.');

@@ -443,7 +443,8 @@ function AdReview({ detail, reason, setReason, actionLoading, submitDecision, re
             <InfoRow label={t('aiAssist.model')} value={assist.runtime?.model || '—'} />
             <InfoRow label={t('aiAssist.gatewayVersion')} value={assist.runtime?.gateway_version || '—'} />
             <InfoRow label={t('aiAssist.runtime')} value={assist.runtime?.runtime_ms !== null && assist.runtime?.runtime_ms !== undefined ? `${assist.runtime.runtime_ms} ms` : '—'} />
-            <InfoRow label={t('aiAssist.mode')} value={assist.feature_enabled ? (assist.rollout?.mode || 'assist') : t('aiAssist.disabled')} />
+            <InfoRow label={t('aiAssist.mode')} value={assist.rollout?.mode || 'assist'} />
+            <InfoRow label={t('aiAssist.disabled')} value={assist.feature_enabled ? t('no') : t('yes')} />
             <InfoRow label={t('aiAssist.proposed')} value={assist.rollout?.proposed_decision ? decisionLabel(assist.rollout.proposed_decision, t) : '—'} />
             <InfoRow label={t('aiAssist.finalRoute')} value={assist.rollout?.authoritative_decision ? decisionLabel(assist.rollout.authoritative_decision, t) : '—'} />
             <InfoRow label={t('aiAssist.policyIds')} value={Array.isArray(assist.policy_ids) && assist.policy_ids.length ? assist.policy_ids.join(', ') : t('aiAssist.none')} />
@@ -452,7 +453,7 @@ function AdReview({ detail, reason, setReason, actionLoading, submitDecision, re
             <InfoRow label={t('aiAssist.omittedMedia')} value={assist.media?.omitted_media ?? '—'} />
             <InfoRow label={t('aiAssist.videoFrames')} value={assist.media?.reviewed_video_frames ?? '—'} />
           </dl>
-          {(assist.technical_status === 'failed' || assist.technical_status === 'disabled' || assist.media?.video_manual_review_required) && (
+          {(assist.technical_status === 'failed' || assist.technical_status === 'disabled' || assist.runtime?.execution === 'skipped' || assist.media?.video_manual_review_required) && (
             <p className="mt-3 rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
               {assist.technical_status === 'disabled' ? t('aiAssist.disabledNote') : t('aiAssist.manualFallback')}
             </p>

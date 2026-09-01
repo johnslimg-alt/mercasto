@@ -515,6 +515,7 @@ async def moderate_listing(
     description_truncated = input_description_chars > len(description_for_model)
     images_omitted = input_image_count - len(images_for_model)
     policy_signals_omitted = len(canonical_signals) - len(model_policy_signals)
+    model_executed = model_context_fits
 
     if not model_context_fits:
         from .contracts import ModelVerdict
@@ -555,7 +556,10 @@ async def moderate_listing(
 
     return ListingModerationResponse(
         **normalized.model_dump(),
-        model=client.model,
+        provider="ollama" if model_executed else "none",
+        model=client.model if model_executed else None,
+        runtime="private_local" if model_executed else "skipped",
+        model_executed=model_executed,
         gateway_version=_GATEWAY_VERSION,
         latency_ms=latency_ms,
         description_truncated=description_truncated,

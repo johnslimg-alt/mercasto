@@ -40,3 +40,11 @@ test('admin moderation renders normalized AI-assist evidence only', () => {
   assert.equal(ui.includes('metadata.result'), false);
   assert.equal(ui.includes('raw_private_sentinel'), false);
 });
+
+test('admin evidence keeps historical rollout separate from current feature state', () => {
+  const ui = fs.readFileSync('src/components/admin/AdminModerationCenter.jsx', 'utf8');
+  assert.match(ui, /label=\{t\('aiAssist\.mode'\)\} value=\{assist\.rollout\?\.mode \|\| 'assist'\}/);
+  assert.match(ui, /label=\{t\('aiAssist\.disabled'\)\} value=\{assist\.feature_enabled \? t\('no'\) : t\('yes'\)\}/);
+  assert.doesNotMatch(ui, /assist\.feature_enabled \? \(assist\.rollout\?\.mode/);
+  assert.match(ui, /assist\.runtime\?\.execution === 'skipped'/);
+});

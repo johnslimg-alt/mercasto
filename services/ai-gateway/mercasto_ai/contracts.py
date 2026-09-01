@@ -32,7 +32,7 @@ class ListingModerationRequest(BaseModel):
     source_description_chars: int = Field(ge=0)
     structured_context: ListingStructuredContext = Field(default_factory=ListingStructuredContext)
     images_base64: list[ListingImageBase64] = Field(default_factory=list, max_length=2)
-    source_image_count: int = Field(ge=0, le=10)
+    source_image_count: int = Field(ge=0, le=13)
     policy_signals: list[CanonicalSignal] = Field(min_length=1, max_length=200)
 
     @model_validator(mode="after")
@@ -70,9 +70,10 @@ class ModerationResponse(BaseModel):
 
 
 class ListingModerationResponse(ModerationResponse):
-    provider: Literal["ollama"] = "ollama"
-    model: str
-    runtime: Literal["private_local"] = "private_local"
+    provider: Literal["ollama", "none"] = "ollama"
+    model: str | None
+    runtime: Literal["private_local", "skipped"] = "private_local"
+    model_executed: bool
     gateway_version: str
     latency_ms: int = Field(ge=0)
     rollout_mode: Literal["shadow_assist"] = "shadow_assist"
@@ -80,9 +81,9 @@ class ListingModerationResponse(ModerationResponse):
     description_truncated: bool = False
     input_description_chars: int = Field(ge=0)
     model_description_chars: int = Field(ge=0)
-    input_image_count: int = Field(ge=0, le=10)
+    input_image_count: int = Field(ge=0, le=13)
     model_image_count: int = Field(ge=0, le=2)
-    images_omitted: int = Field(ge=0, le=10)
+    images_omitted: int = Field(ge=0, le=13)
     input_policy_signal_count: int = Field(ge=0, le=200)
     model_policy_signal_count: int = Field(ge=0, le=200)
     policy_signals_omitted: int = Field(ge=0, le=200)
