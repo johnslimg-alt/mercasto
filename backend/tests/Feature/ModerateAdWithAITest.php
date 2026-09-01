@@ -6,10 +6,12 @@ use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Models\User;
+use Illuminate\Contracts\Queue\Job as QueueJobContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -22,6 +24,26 @@ class ModerateAdWithAITest extends TestCase
         $job = new ModerateAdWithAI(123);
 
         $this->assertSame('ai-moderation', $job->queue);
+    }
+
+    public function test_legacy_default_queue_payload_is_migrated_before_moderation_runs(): void
+    {
+        $rawBody = '{"uuid":"legacy-moderation-fixture"}';
+        $underlying = \Mockery::mock(QueueJobContract::class);
+        $underlying->shouldReceive('getQueue')->once()->andReturn('default');
+        $underlying->shouldReceive('getConnectionName')->once()->andReturn('redis');
+        $underlying->shouldReceive('getRawBody')->once()->andReturn($rawBody);
+        $underlying->shouldReceive('delete')->once();
+
+        $connection = \Mockery::mock();
+        $connection->shouldReceive('pushRaw')->once()->with($rawBody, 'ai-moderation')->andReturn('migrated');
+        Queue::shouldReceive('connection')->once()->with('redis')->andReturn($connection);
+
+        $job = new ModerateAdWithAI(999999);
+        $job->setJob($underlying);
+        app()->call([$job, 'handle']);
+
+        $this->assertTrue(true);
     }
 
     public function test_low_confidence_approval_remains_for_manual_review(): void
@@ -83,6 +105,37 @@ class ModerateAdWithAITest extends TestCase
             'source' => 'ai',
             'decision' => 'manual_review',
         ]);
+    }
+
+    public function test_gateway_failure_runtime_metadata_uses_a_single_elapsed_clock(): void
+    {
+        Storage::fake('public');
+        config([
+            'services.ai_moderation_gateway.url' => 'http://ai-gateway.test',
+            'services.ai_moderation_gateway.token' => 'test-internal-token',
+        ]);
+        Http::fake([
+            'http://ai-gateway.test/v1/moderation/listing' => Http::response([], 503),
+        ]);
+
+        $seller = User::factory()->create();
+        $ad = Ad::query()->create([
+            'user_id' => $seller->id, 'title' => 'Artículo usado',
+            'description' => 'Descripción permitida', 'price' => 100,
+            'location' => 'Veracruz', 'state' => 'Veracruz', 'city' => 'Veracruz',
+            'latitude' => 19.1738, 'longitude' => -96.1342, 'category' => 'general',
+            'condition' => 'usado', 'attributes' => ['subcategory' => 'general'],
+            'status' => 'pending', 'moderation_submitted_at' => now(),
+            'ai_moderation_status' => 'queued',
+        ]);
+
+        app()->call([new ModerateAdWithAI($ad->id), 'handle']);
+
+        $decision = $ad->moderationDecisions()->where('source', 'ai')->latest()->firstOrFail();
+        $runtimeMs = (int) data_get($decision->metadata, 'runtime.runtime_ms');
+        $this->assertSame('failed', data_get($decision->metadata, 'technical_status'));
+        $this->assertGreaterThanOrEqual(0, $runtimeMs);
+        $this->assertLessThan(10_000, $runtimeMs);
     }
 
     public function test_superseded_moderation_cycle_job_is_a_noop(): void

@@ -65,6 +65,25 @@ class AiModerationGatewayClientTest extends TestCase
         });
     }
 
+    public function test_media_provenance_uses_pre_slice_candidate_count(): void
+    {
+        Http::fake([
+            'http://ai-gateway.test/v1/moderation/listing' => Http::response([
+                'decision' => 'manual_review', 'reason' => 'Revisión humana.', 'confidence' => 0.7,
+                'flags' => [], 'provider' => 'ollama', 'model' => 'qwen3-vl:test',
+                'runtime' => 'private_local', 'gateway_version' => '0.2.0', 'latency_ms' => 12,
+                'rollout_mode' => 'shadow_assist', 'authoritative' => false,
+            ]),
+        ]);
+
+        app(AiModerationGatewayClient::class)->moderateListing(
+            'x', 'y', [], ['frame-1', 'frame-2', 'frame-3'], 1, ['fraud_scam']
+        );
+
+        Http::assertSent(fn (Request $request): bool => count((array) $request['images_base64']) === 2
+            && (int) $request['source_image_count'] === 3);
+    }
+
     public function test_external_gateway_host_is_rejected_before_http(): void
     {
         config(['services.ai_moderation_gateway.url' => 'https://api.example.com']);

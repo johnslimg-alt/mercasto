@@ -294,6 +294,32 @@ def test_listing_gateway_matches_authoritative_listing_confidence_thresholds(
     assert response.json()["decision"] == expected
 
 
+def test_listing_gateway_accepts_multibyte_structured_context_within_schema_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, fake = authenticated_client(
+        monkeypatch,
+        ModelVerdict(
+            decision="manual_review",
+            reason="Contexto multibyte requiere revisión.",
+            confidence=0.72,
+            flags=[],
+        ),
+    )
+    payload = listing_payload(images_base64=[])
+    payload["structured_context"]["attributes_json"] = "😀" * 2000
+
+    response = client.post(
+        "/v1/moderation/listing",
+        headers=auth_headers(),
+        json=payload,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["decision"] == "manual_review"
+    assert fake.calls == []
+
+
 def test_listing_gateway_accepts_text_only_shadow_request(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

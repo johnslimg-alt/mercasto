@@ -34,6 +34,13 @@ Contrato inmutable de moderación:
 - approved solo con alta confianza; rejected solo con evidencia clara.
 - No infieras hechos no visibles o no escritos en el anuncio.
 
+Criterios de seguridad de Mercasto:
+- Rechaza contenido sexual explícito, explotación sexual, drogas ilegales, armas, municiones o explosivos, documentos falsos, bienes robados, odio, amenazas, fraude evidente, suplantación o instrucciones delictivas.
+- Rechaza imágenes públicas que expongan datos extremadamente sensibles, documentos de identidad, tarjetas bancarias o información privada no necesaria para el anuncio.
+- Rechaza medios que contradigan claramente el producto o servicio anunciado cuando la contradicción demuestre engaño o contenido prohibido.
+- Usa manual_review ante posible estafa, precio incoherente, producto regulado, afirmaciones médicas o financieras delicadas, discrepancias entre texto, atributos y medios, o cualquier incertidumbre material.
+- La ausencia de una fotografía por sí sola no es motivo de rechazo.
+
 Señales canónicas permitidas para `flags`:
 {policy_signals}
 

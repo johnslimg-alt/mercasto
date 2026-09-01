@@ -28,7 +28,9 @@ class AiModerationGatewayClient
         $contextForGateway = $this->normalizeStructuredContext($structuredContext);
         $configuredTimeout = max(5, min(180, (int) config('services.ai_moderation_gateway.timeout', 150)));
         $timeoutSeconds = max(5, min($configuredTimeout, $maxTimeoutSeconds));
-        $imagesForGateway = array_values(array_slice(array_filter($imagesBase64, 'is_string'), 0, 2));
+        $imageCandidates = array_values(array_filter($imagesBase64, 'is_string'));
+        $candidateImageCount = count($imageCandidates);
+        $imagesForGateway = array_values(array_slice($imageCandidates, 0, 2));
         $signals = array_values(array_slice(array_unique(array_filter($policySignals, 'is_string')), 0, 200));
         if ($signals === []) {
             throw new RuntimeException('Canonical moderation policy signals are not configured.');
@@ -44,7 +46,7 @@ class AiModerationGatewayClient
                 'source_description_chars' => $sourceDescriptionChars,
                 'structured_context' => $contextForGateway,
                 'images_base64' => $imagesForGateway,
-                'source_image_count' => max($sourceImageCount, count($imagesForGateway)),
+                'source_image_count' => min(10, max($sourceImageCount, $candidateImageCount)),
                 'policy_signals' => $signals,
             ]);
 

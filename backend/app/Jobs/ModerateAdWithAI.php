@@ -18,6 +18,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
@@ -65,6 +66,14 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
         ListingPolicySignalService $policySignals,
         ListingPolicyMatrixService $policyMatrix,
     ): void {
+        if ($this->job && $this->job->getQueue() !== 'ai-moderation') {
+            Queue::connection($this->job->getConnectionName())
+                ->pushRaw($this->job->getRawBody(), 'ai-moderation');
+            $this->job->delete();
+
+            return;
+        }
+
         $ad = Ad::query()->with('user:id,name,email')->find($this->adId);
         if (! $ad
             || ! in_array($ad->status, ['pending', 'archived'], true)
@@ -344,7 +353,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                         'model' => null,
                         'gateway_version' => null,
                         'contract_version' => 'ai-moderation-assist-v1',
-                        'runtime_ms' => max(0, (int) round((hrtime(true) - $attemptStartedAt) / 1_000_000)),
+                        'runtime_ms' => max(0, (int) round((microtime(true) - $attemptStartedAt) * 1000)),
                         'budget_seconds' => max(30, min(150, (int) config('ai_moderation.max_runtime_seconds', 150))),
                     ],
                     'assist_only' => (bool) config('ai_moderation.assist_only', true),

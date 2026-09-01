@@ -31,6 +31,25 @@ def test_listing_ollama_payload_has_explicit_larger_context_budget() -> None:
     assert '"num_ctx": _LISTING_NUM_CTX' in text
 
 
+def test_listing_system_prompt_contains_explicit_mercasto_policy_criteria() -> None:
+    source = Path(__file__).parents[1] / "mercasto_ai" / "ollama.py"
+    text = source.read_text()
+
+    for marker in (
+        "explotación sexual",
+        "drogas ilegales",
+        "armas, municiones o explosivos",
+        "documentos falsos",
+        "bienes robados",
+        "datos extremadamente sensibles",
+        "precio incoherente",
+        "producto regulado",
+        "afirmaciones médicas o financieras",
+        "discrepancias entre texto, atributos y medios",
+    ):
+        assert marker in text
+
+
 def test_listing_prompt_keeps_seller_instructions_out_of_system_contract(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

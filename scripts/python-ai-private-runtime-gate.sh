@@ -9,8 +9,9 @@ CLIENT="$ROOT_DIR/backend/app/Services/LocalAiClient.php"
 SERVICES="$ROOT_DIR/backend/config/services.php"
 GATEWAY_CLIENT="$ROOT_DIR/backend/app/Services/AiModerationGatewayClient.php"
 MODERATION_JOB="$ROOT_DIR/backend/app/Jobs/ModerateAdWithAI.php"
+ROTATE="$ROOT_DIR/scripts/rotate-internal-secrets.sh"
 
-python3 - "$COMPOSE" "$DEPLOY" "$BOOTSTRAP" "$CLIENT" "$SERVICES" "$GATEWAY_CLIENT" "$MODERATION_JOB" <<'PY'
+python3 - "$COMPOSE" "$DEPLOY" "$BOOTSTRAP" "$CLIENT" "$SERVICES" "$GATEWAY_CLIENT" "$MODERATION_JOB" "$ROTATE" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -22,6 +23,7 @@ client = Path(sys.argv[4]).read_text()
 services = Path(sys.argv[5]).read_text()
 gateway_client = Path(sys.argv[6]).read_text()
 moderation_job = Path(sys.argv[7]).read_text()
+rotate = Path(sys.argv[8]).read_text()
 match = re.search(r"(?ms)^  mercasto-ai-gateway:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n|^volumes:\n)", compose)
 if not match:
     raise SystemExit("mercasto-ai-gateway service missing")
@@ -155,6 +157,17 @@ for marker in (
 for forbidden in ("LocalAiClient $ai", "$ai->chatPro", "/api/chat"):
     if forbidden in moderation_job:
         raise SystemExit(f"listing moderation direct Ollama bypass remains: {forbidden}")
+
+for marker in (
+    "getQueue() !== 'ai-moderation'",
+    "pushRaw($this->job->getRawBody(), 'ai-moderation')",
+    "microtime(true) - $attemptStartedAt",
+):
+    if marker not in moderation_job:
+        raise SystemExit(f"moderation rollout compatibility contract missing: {marker}")
+
+if rotate.count("mercasto-moderation-worker") < 2 or "mercasto_moderation_worker_container" not in rotate:
+    raise SystemExit("secret rotation must recreate, roll back, and health-check the moderation worker")
 
 print("python AI private runtime gate OK")
 PY

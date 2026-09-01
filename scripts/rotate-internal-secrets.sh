@@ -102,7 +102,7 @@ rollback() {
   write_pair "$BACKEND_ENV" "$OLD_DB" "$OLD_REDIS"
   invalidate_config_cache >/dev/null 2>&1 || true
   printf 'ALTER ROLE "%s" PASSWORD '\''%s'\'';\n' "$DB_USER" "$OLD_DB" | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1
-  docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null 2>&1
+  docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-moderation-worker mercasto-scheduler mercasto-reverb >/dev/null 2>&1
   reload_frontend_upstream >/dev/null 2>&1 || true
   exit "$rc"
 }
@@ -116,20 +116,22 @@ write_pair "$BACKEND_ENV" "$NEW_DB" "$NEW_REDIS"
 STEP=config-cache-invalidate
 invalidate_config_cache
 STEP=container-recreate
-docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb >/dev/null
+docker compose up -d --force-recreate postgres redis db-backup mercasto-backend mercasto-worker mercasto-moderation-worker mercasto-scheduler mercasto-reverb >/dev/null
 
 STEP=container-health
 for _ in $(seq 1 36); do
   db="$(docker inspect -f '{{.State.Health.Status}}' mercasto_db_container 2>/dev/null || echo starting)"
   redis="$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container 2>/dev/null || echo starting)"
   backend="$(docker inspect -f '{{.State.Health.Status}}' mercasto_backend_container 2>/dev/null || echo starting)"
-  [ "$db" = healthy ] && [ "$redis" = healthy ] && [ "$backend" = healthy ] && break
+  moderation_worker="$(docker inspect -f '{{.State.Status}}' mercasto_moderation_worker_container 2>/dev/null || echo starting)"
+  [ "$db" = healthy ] && [ "$redis" = healthy ] && [ "$backend" = healthy ] && [ "$moderation_worker" = running ] && break
   sleep 5
 done
 
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_db_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_redis_container)" = healthy
 test "$(docker inspect -f '{{.State.Health.Status}}' mercasto_backend_container)" = healthy
+test "$(docker inspect -f '{{.State.Status}}' mercasto_moderation_worker_container)" = running
 STEP=config-cache-refresh
 retry_cmd 6 2 refresh_config_cache
 STEP=backend-db
