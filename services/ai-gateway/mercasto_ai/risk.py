@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Annotated, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -12,6 +12,7 @@ from .main import require_internal_token
 RiskBand = Literal["low", "medium", "high", "critical"]
 RiskAction = Literal["allow", "observe", "manual_review", "urgent_review"]
 RolloutMode = Literal["shadow_assist"]
+RiskEngine = Literal["deterministic_rules"]
 
 
 class AccountRiskFeatures(BaseModel):
@@ -35,6 +36,9 @@ class ListingRiskFeatures(BaseModel):
     duplicate_media_ads: int = Field(ge=0, le=10000)
     resolved_reports_90d: int = Field(ge=0, le=10000)
     prior_admin_rejections: int = Field(ge=0, le=10000)
+    price_z_score: float = Field(ge=0.0, le=100.0)
+    suspicious_keyword_score: int = Field(ge=0, le=100)
+    no_images_high_value: bool = False
 
 
 class RiskSubject(BaseModel):
@@ -52,6 +56,7 @@ class RiskScore(BaseModel):
     band: RiskBand
     reason_codes: list[str] = Field(default_factory=list, max_length=30)
     rules_version: str
+    engine: RiskEngine = "deterministic_rules"
     rollout_mode: RolloutMode = "shadow_assist"
     authoritative: Literal[False] = False
     recommended_action: RiskAction
@@ -78,7 +83,7 @@ def _env_int(name: str, default: int, minimum: int = 0, maximum: int = 100000) -
     return max(minimum, min(maximum, value))
 
 
-def _env_float(name: str, default: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+def _env_float(name: str, default: float, minimum: float = 0.0, maximum: float = 100.0) -> float:
     raw = os.getenv(name)
     if raw is None or raw.strip() == "":
         return default
@@ -108,32 +113,61 @@ class RiskRules:
     duplicate_high: int
     token_share_high: float
     contact_patterns_high: int
+    price_z_high: float
+    price_z_medium: float
+    keyword_score_high: int
+    keyword_score_medium: int
     rules_version: str
 
     @classmethod
     def from_env(cls) -> "RiskRules":
-        medium = _env_int("RISK_MEDIUM_SCORE", 25, 1, 98)
-        high = max(medium + 1, _env_int("RISK_HIGH_SCORE", 50, 2, 99))
-        critical = max(high + 1, _env_int("RISK_CRITICAL_SCORE", 75, 3, 100))
+        medium = _env_int("RISK_MEDIUM_SCORE", 20, 1, 98)
+        high = max(medium + 1, _env_int("RISK_HIGH_SCORE", 40, 2, 99))
+        critical = max(high + 1, _env_int("RISK_CRITICAL_SCORE", 70, 3, 100))
+        ads_1h_high = _env_int("RISK_ADS_1H_HIGH", 6, 1, 1000)
+        ads_1h_medium = min(
+            ads_1h_high,
+            _env_int("RISK_ADS_1H_MEDIUM", 3, 1, 1000),
+        )
+        recipients_1h_high = _env_int("RISK_RECIPIENTS_1H_HIGH", 15, 1, 10000)
+        recipients_1h_medium = min(
+            recipients_1h_high,
+            _env_int("RISK_RECIPIENTS_1H_MEDIUM", 8, 1, 10000),
+        )
+        price_z_high = _env_float("RISK_PRICE_Z_HIGH", 3.0, 0.1, 100.0)
+        price_z_medium = min(
+            price_z_high,
+            _env_float("RISK_PRICE_Z_MEDIUM", 2.0, 0.1, 100.0),
+        )
+        keyword_score_high = _env_int("RISK_KEYWORD_SCORE_HIGH", 20, 1, 100)
+        keyword_score_medium = min(
+            keyword_score_high,
+            _env_int("RISK_KEYWORD_SCORE_MEDIUM", 10, 1, 100),
+        )
         return cls(
             medium_score=medium,
             high_score=high,
             critical_score=critical,
             account_new_days=_env_int("RISK_ACCOUNT_NEW_DAYS", 7, 1, 365),
             account_very_new_days=_env_int("RISK_ACCOUNT_VERY_NEW_DAYS", 1, 0, 30),
-            ads_1h_high=_env_int("RISK_ADS_1H_HIGH", 6, 1, 1000),
-            ads_1h_medium=_env_int("RISK_ADS_1H_MEDIUM", 3, 1, 1000),
+            ads_1h_high=ads_1h_high,
+            ads_1h_medium=ads_1h_medium,
             ads_24h_high=_env_int("RISK_ADS_24H_HIGH", 20, 1, 10000),
             messages_1h_high=_env_int("RISK_MESSAGES_1H_HIGH", 30, 1, 10000),
-            recipients_1h_high=_env_int("RISK_RECIPIENTS_1H_HIGH", 15, 1, 10000),
-            recipients_1h_medium=_env_int("RISK_RECIPIENTS_1H_MEDIUM", 8, 1, 10000),
+            recipients_1h_high=recipients_1h_high,
+            recipients_1h_medium=recipients_1h_medium,
             reports_high=_env_int("RISK_RESOLVED_REPORTS_HIGH", 3, 1, 1000),
             violations_high=_env_int("RISK_VIOLATIONS_HIGH", 3, 1, 1000),
             rejections_high=_env_int("RISK_ADMIN_REJECTIONS_HIGH", 5, 1, 1000),
             duplicate_high=_env_int("RISK_DUPLICATE_ADS_HIGH", 3, 1, 1000),
             token_share_high=_env_float("RISK_TOKEN_SHARE_HIGH", 0.30, 0.05, 1.0),
             contact_patterns_high=_env_int("RISK_CONTACT_PATTERNS_HIGH", 3, 1, 1000),
-            rules_version=os.getenv("RISK_RULES_VERSION", "risk-rules-v1").strip() or "risk-rules-v1",
+            price_z_high=price_z_high,
+            price_z_medium=price_z_medium,
+            keyword_score_high=keyword_score_high,
+            keyword_score_medium=keyword_score_medium,
+            rules_version=os.getenv("RISK_RULES_VERSION", "risk-rules-v1").strip()
+            or "risk-rules-v1",
         )
 
 
@@ -263,6 +297,24 @@ def score_listing(features: ListingRiskFeatures, rules: RiskRules | None = None)
     elif features.prior_admin_rejections > 0:
         score += 5
         reasons.append("prior_admin_rejection")
+
+    if features.price_z_score >= rules.price_z_high:
+        score += 20
+        reasons.append("price_anomaly_high")
+    elif features.price_z_score >= rules.price_z_medium:
+        score += 8
+        reasons.append("price_anomaly_elevated")
+
+    if features.suspicious_keyword_score >= rules.keyword_score_high:
+        score += 18
+        reasons.append("suspicious_keyword_density_high")
+    elif features.suspicious_keyword_score >= rules.keyword_score_medium:
+        score += 8
+        reasons.append("suspicious_keyword_density_elevated")
+
+    if features.no_images_high_value:
+        score += 8
+        reasons.append("no_images_high_value")
 
     return _result(score, reasons, rules)
 
