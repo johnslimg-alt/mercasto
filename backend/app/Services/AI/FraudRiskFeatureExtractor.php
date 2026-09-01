@@ -11,9 +11,11 @@ class FraudRiskFeatureExtractor
 {
     public function forAd(Ad $ad): array
     {
-        $ad->loadMissing('user');
-        $user = $ad->user;
         $userId = (int) $ad->user_id;
+        $user = DB::table('users')
+            ->select(['id', 'created_at', 'email_verified_at', 'phone_verified', 'is_verified', 'kyc_status'])
+            ->where('id', $userId)
+            ->first();
         $sinceHour = now()->subHour();
         $sinceDay = now()->subDay();
         $since90Days = now()->subDays(90);
@@ -24,7 +26,12 @@ class FraudRiskFeatureExtractor
                 'account_age_days' => $user?->created_at
                     ? min(36500, max(0, Carbon::parse($user->created_at)->diffInDays(now())))
                     : 36500,
-                'verified_any' => (bool) ($user?->account_verified ?? false),
+                'verified_any' => (bool) (
+                    $user?->email_verified_at
+                    || $user?->phone_verified
+                    || $user?->is_verified
+                    || $user?->kyc_status === 'approved'
+                ),
                 'ads_1h' => $this->cap(Ad::query()->where('user_id', $userId)->where('created_at', '>=', $sinceHour)->count(), 10000),
                 'ads_24h' => $this->cap(Ad::query()->where('user_id', $userId)->where('created_at', '>=', $sinceDay)->count(), 100000),
                 'messages_1h' => $this->tableCount('messages', function ($query) use ($userId, $sinceHour) {
