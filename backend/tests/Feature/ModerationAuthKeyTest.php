@@ -36,6 +36,7 @@ class ModerationAuthKeyTest extends TestCase
                 'provider' => 'ollama',
                 'model' => 'qwen3-vl:4b-instruct',
                 'runtime' => 'private_local',
+                'model_executed' => true,
                 'gateway_version' => '0.2.0',
                 'latency_ms' => 25,
                 'rollout_mode' => 'shadow_assist',

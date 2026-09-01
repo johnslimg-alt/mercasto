@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
+import mercasto_ai.main as gateway_main
 from mercasto_ai.contracts import ModelVerdict
 from mercasto_ai.main import app, get_ollama_client
-import mercasto_ai.main as gateway_main
 
 
 class FakeClient:
