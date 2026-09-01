@@ -27,7 +27,8 @@ class AiModerationGatewayClient
         $descriptionForGateway = mb_substr($description, 0, 12000);
         $contextForGateway = $this->normalizeStructuredContext($structuredContext);
         $configuredTimeout = max(5, min(180, (int) config('services.ai_moderation_gateway.timeout', 150)));
-        $timeoutSeconds = max(5, min($configuredTimeout, $maxTimeoutSeconds));
+        $moderationRuntimeBudget = max(30, min(150, (int) config('ai_moderation.max_runtime_seconds', 150)));
+        $timeoutSeconds = max(5, min($configuredTimeout, $maxTimeoutSeconds, $moderationRuntimeBudget));
         $imageCandidates = array_values(array_filter($imagesBase64, 'is_string'));
         $candidateImageCount = count($imageCandidates);
         $imagesForGateway = array_values(array_slice($imageCandidates, 0, 2));
