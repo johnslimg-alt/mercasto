@@ -247,17 +247,34 @@ jobs:
           esac
 
           FRONTEND_UP=0
+          MODERATION_WORKER_UP=0
+          GATEWAY_UP=0
           PHP_REFRESH_SERVICES=""
           OTHER_UP_SERVICES=""
           for service in $UP_SERVICES; do
             if [ "$service" = "mercasto-frontend" ]; then
               FRONTEND_UP=1
+            elif [ "$service" = "mercasto-moderation-worker" ]; then
+              MODERATION_WORKER_UP=1
+            elif [ "$service" = "mercasto-ai-gateway" ]; then
+              GATEWAY_UP=1
+              OTHER_UP_SERVICES="$OTHER_UP_SERVICES $service"
             elif [ "$PHP_DEPENDENCY_REFRESH" -eq 1 ] && [[ " $PHP_RUNTIME_SERVICES " == *" $service "* ]]; then
               PHP_REFRESH_SERVICES="$PHP_REFRESH_SERVICES $service"
             else
               OTHER_UP_SERVICES="$OTHER_UP_SERVICES $service"
             fi
           done
+
+          # Never let moderation jobs run while an updated gateway is being
+          # replaced. The dedicated worker is restarted only after dependencies
+          # are up and Compose can enforce its service_healthy contract.
+          if [ "$GATEWAY_UP" -eq 1 ]; then
+            MODERATION_WORKER_UP=1
+          fi
+          if [ "$MODERATION_WORKER_UP" -eq 1 ]; then
+            docker compose --env-file "$COMPOSE_ENV_FILE" stop mercasto-moderation-worker >/dev/null 2>&1 || true
+          fi
 
           if [ -n "$PHP_REFRESH_SERVICES" ]; then
             docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps \
@@ -268,11 +285,16 @@ jobs:
             docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps $OTHER_UP_SERVICES
           fi
 
+          if [ "$MODERATION_WORKER_UP" -eq 1 ]; then
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build \
+              --force-recreate --renew-anon-volumes mercasto-moderation-worker
+          fi
+
           if [ "$FRONTEND_UP" -eq 1 ]; then
             docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --force-recreate mercasto-frontend
           fi
 
-          if [ -z "$PHP_REFRESH_SERVICES" ] && [ -z "$OTHER_UP_SERVICES" ] && [ "$FRONTEND_UP" -eq 0 ]; then
+          if [ -z "$PHP_REFRESH_SERVICES" ] && [ -z "$OTHER_UP_SERVICES" ] && [ "$MODERATION_WORKER_UP" -eq 0 ] && [ "$FRONTEND_UP" -eq 0 ]; then
             echo "No service restart required for changed files."
           fi
 
