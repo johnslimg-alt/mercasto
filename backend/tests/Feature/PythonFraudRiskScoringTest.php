@@ -24,15 +24,6 @@ class PythonFraudRiskScoringTest extends TestCase
             'fraud_risk.python.timeout_seconds' => 3,
             'services.ai_moderation_gateway.token' => 'risk-test-token',
         ]);
-        Http::fake([
-            'http://mercasto-ai-gateway:8080/v1/risk/batch' => Http::response([
-                'subjects' => [[
-                    'subject_id' => 1,
-                    'account' => $this->score(32, 'medium', ['publication_velocity_high'], 'observe'),
-                    'listing' => $this->score(22, 'medium', ['exact_duplicate_ads_repeated'], 'observe'),
-                ]],
-            ], 200),
-        ]);
 
         $seller = User::factory()->create([
             'email' => 'sensitive-user@example.test',
@@ -51,6 +42,16 @@ class PythonFraudRiskScoringTest extends TestCase
             'condition' => 'usado',
             'attributes' => [],
             'status' => 'active',
+        ]);
+
+        Http::fake([
+            'http://mercasto-ai-gateway:8080/v1/risk/batch' => Http::response([
+                'subjects' => [[
+                    'subject_id' => $ad->id,
+                    'account' => $this->score(32, 'medium', ['publication_velocity_high'], 'observe'),
+                    'listing' => $this->score(22, 'medium', ['exact_duplicate_ads_repeated'], 'observe'),
+                ]],
+            ], 200),
         ]);
 
         $this->assertInstanceOf(PythonFraudDetectionService::class, app(FraudDetectionService::class));
