@@ -149,4 +149,14 @@ class AiModerationGatewayClientTest extends TestCase
         $parameterNames = array_map(fn ($parameter) => $parameter->getName(), $method->getParameters());
         $this->assertNotContains('timeoutSeconds', $parameterNames);
     }
+
+    public function test_gateway_timeout_is_capped_by_moderation_runtime_budget(): void
+    {
+        $source = file_get_contents(app_path('Services/AiModerationGatewayClient.php'));
+        $this->assertStringContainsString("config('ai_moderation.max_runtime_seconds', 150)", $source);
+        $this->assertStringContainsString(
+            'min($configuredTimeout, $maxTimeoutSeconds, $moderationRuntimeBudget)',
+            $source,
+        );
+    }
 }
