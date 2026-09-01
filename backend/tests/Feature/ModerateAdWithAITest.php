@@ -17,6 +17,13 @@ class ModerateAdWithAITest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_job_is_routed_to_dedicated_ai_moderation_queue(): void
+    {
+        $job = new ModerateAdWithAI(123);
+
+        $this->assertSame('ai-moderation', $job->queue);
+    }
+
     public function test_low_confidence_approval_remains_for_manual_review(): void
     {
         Storage::fake('public');

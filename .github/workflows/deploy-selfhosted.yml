@@ -149,7 +149,7 @@ jobs:
             esac
           }
 
-          PHP_RUNTIME_SERVICES="mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"
+          PHP_RUNTIME_SERVICES="mercasto-backend mercasto-worker mercasto-moderation-worker mercasto-scheduler mercasto-reverb"
           BUILD_SERVICES=""
           UP_SERVICES=""
           NGINX_CONFIG_RELOAD=0
@@ -306,7 +306,7 @@ jobs:
           docker exec mercasto_backend_container php artisan optimize
           docker exec mercasto_backend_container php artisan queue:restart
           docker exec mercasto_backend_container php artisan up
-          docker restart mercasto_backend_container mercasto_worker_container mercasto_scheduler_container mercasto_reverb_container || true
+          docker restart mercasto_backend_container mercasto_worker_container mercasto_moderation_worker_container mercasto_scheduler_container mercasto_reverb_container || true
           docker start mercasto_reverb_container || true
 
           parity_ok=0
@@ -598,7 +598,7 @@ jobs:
         run: |
           cd /var/www/mercasto
           docker exec mercasto_backend_container php artisan up || true
-          docker start mercasto_backend_container mercasto_reverb_container mercasto_frontend_container mercasto_worker_container mercasto_scheduler_container || true
+          docker start mercasto_backend_container mercasto_reverb_container mercasto_frontend_container mercasto_worker_container mercasto_moderation_worker_container mercasto_scheduler_container || true
 
       - name: Очистка
         if: always()

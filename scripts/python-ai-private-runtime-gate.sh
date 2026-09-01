@@ -49,7 +49,7 @@ for forbidden in ("ports:", "DB_HOST=", "DB_PASSWORD=", "REDIS_HOST=", "REDIS_PA
     if forbidden in body:
         raise SystemExit(f"forbidden private AI runtime setting: {forbidden}")
 
-for service_name in ("mercasto-backend", "mercasto-worker"):
+for service_name in ("mercasto-backend", "mercasto-moderation-worker"):
     service_match = re.search(
         rf"(?ms)^  {re.escape(service_name)}:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n|^volumes:\n)",
         compose,
@@ -66,6 +66,16 @@ for service_name in ("mercasto-backend", "mercasto-worker"):
             raise SystemExit(f"{service_name} missing AI gateway wiring: {service_marker}")
     if service_name == "mercasto-worker" and "mercasto-ai-gateway:\n        condition: service_healthy" not in service_body:
         raise SystemExit("worker must wait for a healthy private AI gateway")
+
+general_worker_match = re.search(r"(?ms)^  mercasto-worker:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n|^volumes:\n)", compose)
+if not general_worker_match:
+    raise SystemExit("mercasto-worker service missing")
+general_worker = general_worker_match.group("body")
+if "mercasto-ai-gateway" in general_worker or "AI_MODERATION_GATEWAY_URL" in general_worker:
+    raise SystemExit("general worker must stay independent of private AI health")
+moderation_worker = re.search(r"(?ms)^  mercasto-moderation-worker:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n|^volumes:\n)", compose)
+if not moderation_worker or "--queue=ai-moderation" not in moderation_worker.group("body") or "condition: service_healthy" not in moderation_worker.group("body"):
+    raise SystemExit("dedicated AI moderation worker contract missing")
 
 if "./backend" in body or "/var/www" in body:
     raise SystemExit("Python AI gateway must not mount Laravel source/storage")

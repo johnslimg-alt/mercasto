@@ -42,6 +42,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
         ?int $moderationCycleId = null,
     ) {
         $this->moderationCycleId = $moderationCycleId;
+        $this->onQueue('ai-moderation');
     }
 
     public function uniqueId(): string
@@ -136,6 +137,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
         $attemptStartedAt = hrtime(true);
 
         try {
+            $attemptStartedAt = microtime(true);
             $assistOnly = (bool) config('ai_moderation.assist_only', true);
             $runtimeBudget = max(30, min(150, (int) config('ai_moderation.max_runtime_seconds', 150)));
             $originalImages = $covers->originalImages($ad);
@@ -158,6 +160,11 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 );
             }
             $sourceMediaCount = min(10, count($originalImages) + (! empty($ad->video_url) ? 1 : 0));
+            $gatewayTimeoutCap = $this->timeout - 15 - (int) ceil(microtime(true) - $attemptStartedAt);
+            if ($gatewayTimeoutCap < 5) {
+                throw new \RuntimeException('AI moderation runtime budget exhausted before gateway call.');
+            }
+
             $gatewayResponse = $aiGateway->moderateListing(
                 title: (string) $ad->title,
                 description: (string) $ad->description,
@@ -174,6 +181,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 imagesBase64: $aiImages,
                 sourceImageCount: $sourceMediaCount,
                 policySignals: $canonicalPolicySignals,
+                maxTimeoutSeconds: $gatewayTimeoutCap,
             );
             $provider = (string) $gatewayResponse['provider'];
             $model = (string) $gatewayResponse['model'];

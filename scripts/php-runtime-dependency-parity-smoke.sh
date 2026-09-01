@@ -5,6 +5,7 @@ DOCKER_BIN="${DOCKER_BIN:-docker}"
 RUNTIME_CONTAINERS=(
   mercasto_backend_container
   mercasto_worker_container
+  mercasto_moderation_worker_container
   mercasto_scheduler_container
   mercasto_reverb_container
 )

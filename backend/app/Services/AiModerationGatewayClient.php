@@ -14,6 +14,7 @@ class AiModerationGatewayClient
         array $imagesBase64,
         int $sourceImageCount,
         array $policySignals,
+        int $maxTimeoutSeconds = 150,
     ): array {
         $baseUrl = rtrim((string) config('services.ai_moderation_gateway.url', 'http://mercasto-ai-gateway:8080'), '/');
         $token = (string) config('services.ai_moderation_gateway.token', '');
@@ -25,7 +26,8 @@ class AiModerationGatewayClient
         $sourceDescriptionChars = mb_strlen($description);
         $descriptionForGateway = mb_substr($description, 0, 12000);
         $contextForGateway = $this->normalizeStructuredContext($structuredContext);
-        $timeoutSeconds = max(5, min(180, (int) config('services.ai_moderation_gateway.timeout', 150)));
+        $configuredTimeout = max(5, min(180, (int) config('services.ai_moderation_gateway.timeout', 150)));
+        $timeoutSeconds = max(5, min($configuredTimeout, $maxTimeoutSeconds));
         $imagesForGateway = array_values(array_slice(array_filter($imagesBase64, 'is_string'), 0, 2));
         $signals = array_values(array_slice(array_unique(array_filter($policySignals, 'is_string')), 0, 200));
         if ($signals === []) {
