@@ -24,22 +24,28 @@ class ModerationAuthKeyTest extends TestCase
         Storage::fake('public');
         Cache::flush();
         config([
-            'services.ollama.base_url' => 'http://ollama.test',
-            'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
+            'services.ai_moderation_gateway.url' => 'http://ai-gateway.test',
+            'services.ai_moderation_gateway.token' => 'test-internal-token',
         ]);
     }
 
     private function fakeDecision(array $decision): void
     {
         Http::fake([
-            'http://ollama.test/api/chat' => Http::response([
+            'http://ai-gateway.test/v1/moderation/listing' => Http::response(array_merge($decision, [
+                'provider' => 'ollama',
                 'model' => 'qwen3-vl:4b-instruct',
-                'message' => ['role' => 'assistant', 'content' => json_encode($decision)],
-            ], 200),
+                'runtime' => 'private_local',
+                'model_executed' => true,
+                'gateway_version' => '0.2.0',
+                'latency_ms' => 25,
+                'rollout_mode' => 'shadow_assist',
+                'authoritative' => false,
+            ]), 200),
         ]);
     }
 
-    public function test_review_only_approval_uses_local_ollama(): void
+    public function test_review_only_approval_uses_private_python_gateway(): void
     {
         $this->fakeDecision([
             'decision' => 'approved',
@@ -63,8 +69,8 @@ class ModerationAuthKeyTest extends TestCase
         $this->assertSame('human_confirmation_required', $decision->metadata['activation_mode']);
         $this->assertSame('qwen3-vl:4b-instruct', $decision->metadata['model']);
 
-        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/chat'
-            && $request['model'] === 'qwen3-vl:4b-instruct');
+        Http::assertSent(fn (Request $request) => $request->url() === 'http://ai-gateway.test/v1/moderation/listing'
+            && $request->hasHeader('X-Mercasto-Internal-Token', 'test-internal-token'));
         Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'googleapis.com')
             || str_contains($request->url(), 'deepseek')
             || str_contains($request->url(), 'anthropic'));
@@ -86,11 +92,12 @@ class ModerationAuthKeyTest extends TestCase
         app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
 
         Http::assertSent(function (Request $request) {
-            $image = data_get($request->data(), 'messages.1.images.0');
-            return $request->url() === 'http://ollama.test/api/chat'
+            $image = data_get($request->data(), 'images_base64.0');
+            return $request->url() === 'http://ai-gateway.test/v1/moderation/listing'
                 && is_string($image)
                 && $image !== ''
-                && base64_decode($image, true) !== false;
+                && base64_decode($image, true) !== false
+                && $request->hasHeader('X-Mercasto-Internal-Token', 'test-internal-token');
         });
         Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'googleapis.com')
             || str_contains($request->url(), 'deepseek')
@@ -119,9 +126,9 @@ class ModerationAuthKeyTest extends TestCase
         $this->assertSame('human_confirmation_required', $decision->metadata['activation_mode']);
     }
 
-    public function test_local_provider_failure_goes_to_manual_review(): void
+    public function test_private_gateway_failure_goes_to_manual_review(): void
     {
-        Http::fake(['http://ollama.test/api/chat' => Http::response(['error' => 'down'], 503)]);
+        Http::fake(['http://ai-gateway.test/v1/moderation/listing' => Http::response(['detail' => 'down'], 503)]);
         $ad = $this->legacyAd();
         app()->call([new ModerateAdWithAI($ad->id, false), 'handle']);
         $ad->refresh();

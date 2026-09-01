@@ -38,7 +38,7 @@ class ModerateAdPolicyReviewContractTest extends TestCase
 
         $assessment = strpos($source, '$textPolicyReview = $policySignals->assessListing');
         $killSwitch = strpos($source, "config('ai_moderation.enabled', true)");
-        $providerCall = strpos($source, '$ai->chatPro');
+        $providerCall = strpos($source, '$aiGateway->moderateListing');
 
         $this->assertNotFalse($assessment);
         $this->assertNotFalse($killSwitch);
@@ -50,12 +50,15 @@ class ModerateAdPolicyReviewContractTest extends TestCase
         $this->assertGreaterThanOrEqual(2, substr_count($source, '], $textPolicyMetadata)'));
     }
 
-    public function test_prompt_requests_canonical_policy_signal_ids(): void
+    public function test_private_gateway_receives_only_canonical_policy_signal_ids(): void
     {
-        $source = file_get_contents(__DIR__ . '/../../app/Jobs/ModerateAdWithAI.php');
+        $job = file_get_contents(__DIR__ . '/../../app/Jobs/ModerateAdWithAI.php');
+        $client = file_get_contents(__DIR__ . '/../../app/Services/AiModerationGatewayClient.php');
 
-        $this->assertStringContainsString('canonicalPolicySignals', $source);
-        $this->assertStringContainsString('exclusivamente estos IDs canónicos en flags', $source);
-        $this->assertStringContainsString('en vez de inventar un flag', $source);
+        $this->assertStringContainsString('canonicalPolicySignals', $job);
+        $this->assertStringContainsString('policySignals: $canonicalPolicySignals', $job);
+        $this->assertStringContainsString("'policy_signals' => \$signals", $client);
+        $this->assertStringContainsString("(\$data['authoritative'] ?? null) !== false", $client);
+        $this->assertStringContainsString("(\$data['rollout_mode'] ?? null) !== 'shadow_assist'", $client);
     }
 }

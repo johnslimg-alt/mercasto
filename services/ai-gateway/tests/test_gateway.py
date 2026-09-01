@@ -159,3 +159,16 @@ def test_gateway_rejects_invalid_base64_before_local_ai(monkeypatch: pytest.Monk
 
     assert response.status_code == 422
     assert fake.calls == []
+
+
+def test_health_requires_internal_credential_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MERCASTO_AI_INTERNAL_TOKEN", raising=False)
+    response = TestClient(app).get("/health")
+    assert response.status_code == 503
+
+
+def test_health_is_ready_when_internal_credential_is_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MERCASTO_AI_INTERNAL_TOKEN", "contract-secret")
+    response = TestClient(app).get("/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"

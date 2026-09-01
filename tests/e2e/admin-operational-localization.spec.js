@@ -486,3 +486,57 @@ for (const lang of ['es', 'en', 'ru']) {
     await expect(page.getByTestId('admin-kyc-empty')).toHaveText(ADMIN_SURFACE_COPY[lang].admin_no_kyc);
   });
 }
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+]) {
+  test(`smart moderation exposes normalized AI assist evidence on ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-desktop');
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await installAdmin(page, 'en');
+    await mockApi(page);
+    const pending = {
+      id: 74801,
+      title: 'Gateway QA listing',
+      description: 'Synthetic moderation evidence fixture',
+      price: 1250,
+      status: 'archived',
+      moderation_submitted_at: '2026-08-31T17:00:00Z',
+      waiting_seconds: 120,
+      ai_moderation_status: 'manual_review',
+      images: [],
+      attributes: {},
+      moderation_decisions: [],
+      ai_assist: {
+        feature_enabled: true,
+        technical_status: null,
+        runtime: { provider: 'ollama', model: 'qwen3-vl:test', gateway_version: '0.2.0', runtime_ms: 47 },
+        rollout: { mode: 'assist', human_authoritative: true, proposed_decision: 'approved', authoritative_decision: 'manual_review' },
+        policy_ids: ['fraud_scam'],
+        media: { original_images: 3, reviewed_images: 3, model_media: 2, omitted_media: 1, reviewed_video_frames: 0, video_manual_review_required: false },
+      },
+      user: { id: 77, name: 'QA Seller', email: 'seller@example.test', is_verified: true },
+    };
+    await page.route('**/api/admin/moderation/ads**', async route => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith('/admin/moderation/ads/74801')) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pending) });
+      }
+      if (path.endsWith('/admin/moderation/ads')) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [pending], total: 1 }) });
+      }
+      return route.fallback();
+    });
+    await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('admin-smart-moderation-open').click();
+    await page.getByRole('button', { name: /Gateway QA listing/ }).click();
+    const evidence = page.getByTestId('admin-ai-assist-evidence');
+    await expect(evidence).toBeVisible();
+    await expect(evidence).toContainText('Human decision');
+    await expect(evidence).toContainText('0.2.0');
+    await expect(evidence).toContainText('qwen3-vl:test');
+    await expect(evidence).toContainText('fraud_scam');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  });
+}

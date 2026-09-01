@@ -42,6 +42,7 @@ _LISTING_TITLE_RAW_BYTES = 4_096
 _LISTING_DESCRIPTION_RAW_BYTES = 160_000
 _LISTING_IMAGE_RAW_BYTES = 7_100_000
 _LISTING_POLICY_SIGNAL_RAW_BYTES = 512
+_LISTING_CONTEXT_VALUE_RAW_BYTES = 24_000
 _LISTING_INTEGER_RAW_BYTES = 32
 
 
@@ -132,6 +133,39 @@ def _scan_json_string_array(
         index = _skip_json_whitespace(body, index + 1)
 
 
+def _scan_listing_context_object(body: bytes, index: int) -> int:
+    if index >= len(body) or body[index] != 0x7B:
+        raise _ListingJsonShapeError("expected structured_context object")
+    index = _skip_json_whitespace(body, index + 1)
+    allowed = {"category", "subcategory", "price", "location", "state", "city", "condition", "attributes_json"}
+    seen: set[str] = set()
+    if index < len(body) and body[index] == 0x7D:
+        return index + 1
+    while True:
+        key_start = index
+        key_end = _scan_json_string(body, index, raw_limit=_LISTING_JSON_KEY_RAW_BYTES)
+        try:
+            key = json.loads(body[key_start:key_end].decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise _ListingJsonShapeError("invalid structured_context key") from exc
+        if not isinstance(key, str) or key not in allowed or key in seen:
+            raise _ListingJsonShapeError("invalid or duplicate structured_context key")
+        seen.add(key)
+        index = _skip_json_whitespace(body, key_end)
+        if index >= len(body) or body[index] != 0x3A:
+            raise _ListingJsonShapeError("expected structured_context key separator")
+        index = _skip_json_whitespace(body, index + 1)
+        index = _scan_json_string(body, index, raw_limit=_LISTING_CONTEXT_VALUE_RAW_BYTES)
+        index = _skip_json_whitespace(body, index)
+        if index >= len(body):
+            raise _ListingJsonShapeError("unterminated structured_context object")
+        if body[index] == 0x7D:
+            return index + 1
+        if body[index] != 0x2C:
+            raise _ListingJsonShapeError("expected structured_context separator")
+        index = _skip_json_whitespace(body, index + 1)
+
+
 def _scan_json_integer_or_null(body: bytes, index: int) -> int:
     if body.startswith(b"null", index):
         return index + 4
@@ -179,6 +213,8 @@ def _validate_listing_json_shape(body: bytes) -> None:
                 index = _scan_json_string(body, index, raw_limit=_LISTING_TITLE_RAW_BYTES)
             elif key == "description":
                 index = _scan_json_string(body, index, raw_limit=_LISTING_DESCRIPTION_RAW_BYTES)
+            elif key == "structured_context":
+                index = _scan_listing_context_object(body, index)
             elif key == "images_base64":
                 index = _scan_json_string_array(body, index, max_items=2, item_raw_limit=_LISTING_IMAGE_RAW_BYTES)
             elif key == "policy_signals":
@@ -339,6 +375,11 @@ OllamaClient = Annotated[OllamaModerationClient, Depends(get_ollama_client)]
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    if not os.getenv("MERCASTO_AI_INTERNAL_TOKEN", "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Internal AI authentication is not configured.",
+        )
     return {"status": "ok", "service": "mercasto-ai-gateway"}
 
 
@@ -375,6 +416,7 @@ def _budget_policy_signals(policy_signals: list[str]) -> list[str]:
 def _fit_listing_model_input(
     title: str,
     description: str,
+    structured_context: dict[str, str],
     images_base64: list[str],
     policy_signals: list[str],
 ) -> tuple[str, list[str], list[str], bool]:
@@ -387,20 +429,22 @@ def _fit_listing_model_input(
             estimate_listing_context_tokens(
                 title,
                 candidate_description,
+                structured_context,
                 model_images,
                 model_policy_signals,
             )
             <= _LISTING_MODEL_CONTEXT_TOKENS
         )
 
-    # Images are removed first while visual-token cost is unproven; their
-    # omission is surfaced below and always forces manual_review.
-    while model_images and not fits(""):
-        model_images.pop()
+    # Preserve at least one bounded visual input whenever the listing supplied
+    # media. Canonical policy vocabulary is reduced before visual evidence; any
+    # omission is surfaced below and forces human review.
     while model_policy_signals and not fits(""):
         model_policy_signals.pop()
+    while len(model_images) > 1 and not fits(""):
+        model_images.pop()
     if not fits(""):
-        return "", [], [], False
+        return "", [], model_policy_signals, False
     if fits(model_description):
         return model_description, model_images, model_policy_signals, True
 
@@ -462,6 +506,7 @@ async def moderate_listing(
     ) = _fit_listing_model_input(
         request.title,
         request.description,
+        request.structured_context.model_dump(),
         request.images_base64,
         canonical_signals,
     )
@@ -470,6 +515,7 @@ async def moderate_listing(
     description_truncated = input_description_chars > len(description_for_model)
     images_omitted = input_image_count - len(images_for_model)
     policy_signals_omitted = len(canonical_signals) - len(model_policy_signals)
+    model_executed = model_context_fits
 
     if not model_context_fits:
         from .contracts import ModelVerdict
@@ -487,6 +533,7 @@ async def moderate_listing(
             verdict = await client.moderate_listing(
                 request.title,
                 description_for_model,
+                request.structured_context.model_dump(),
                 images_for_model,
                 model_policy_signals,
             )
@@ -509,7 +556,10 @@ async def moderate_listing(
 
     return ListingModerationResponse(
         **normalized.model_dump(),
-        model=client.model,
+        provider="ollama" if model_executed else "none",
+        model=client.model if model_executed else None,
+        runtime="private_local" if model_executed else "skipped",
+        model_executed=model_executed,
         gateway_version=_GATEWAY_VERSION,
         latency_ms=latency_ms,
         description_truncated=description_truncated,

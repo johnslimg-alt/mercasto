@@ -11,6 +11,7 @@ const operator = readFileSync('scripts/server-operator.sh', 'utf8');
 const runtimes = [
   'mercasto-backend',
   'mercasto-worker',
+  'mercasto-moderation-worker',
   'mercasto-scheduler',
   'mercasto-reverb',
 ];
@@ -47,11 +48,11 @@ exit 64
   }
 }
 
-test('runtime parity smoke accepts four identical PHP dependency snapshots', () => {
+test('runtime parity smoke accepts five identical PHP dependency snapshots', () => {
   const result = runFixture();
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /PHP_RUNTIME_PARITY=PASS laravel=v13\.29\.0/);
-  assert.equal((result.stdout.match(/PHP_RUNTIME_PARITY_MEMBER/g) || []).length, 4);
+  assert.equal((result.stdout.match(/PHP_RUNTIME_PARITY_MEMBER/g) || []).length, 5);
 });
 
 test('runtime parity smoke rejects a stale runtime vendor snapshot', () => {
@@ -67,7 +68,7 @@ test('runtime parity smoke rejects a restarting runtime before reading vendor st
 });
 
 test('production deploy refreshes every PHP runtime vendor volume atomically', () => {
-  assert.match(deploy, /PHP_RUNTIME_SERVICES="mercasto-backend mercasto-worker mercasto-scheduler mercasto-reverb"/);
+  assert.match(deploy, /PHP_RUNTIME_SERVICES="mercasto-backend mercasto-worker mercasto-moderation-worker mercasto-scheduler mercasto-reverb"/);
   assert.match(deploy, /PHP_DEPENDENCY_REFRESH=1/);
   assert.match(deploy, /bash scripts\/php-runtime-dependency-parity-smoke\.sh/);
   assert.match(deploy, /--force-recreate --renew-anon-volumes \$PHP_REFRESH_SERVICES/);

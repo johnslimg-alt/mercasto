@@ -6,10 +6,12 @@ use App\Jobs\ModerateAdWithAI;
 use App\Models\Ad;
 use App\Models\AdModerationDecision;
 use App\Models\User;
+use Illuminate\Contracts\Queue\Job as QueueJobContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -17,165 +19,156 @@ class ModerateAdWithAITest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_job_is_routed_to_dedicated_ai_moderation_queue(): void
+    {
+        $job = new ModerateAdWithAI(123);
+        $this->assertSame('ai-moderation', $job->queue);
+    }
+
+    public function test_legacy_default_queue_payload_is_migrated_before_moderation_runs(): void
+    {
+        $rawBody = '{"uuid":"legacy-moderation-fixture"}';
+        $underlying = \Mockery::mock(QueueJobContract::class);
+        $underlying->shouldReceive('getQueue')->once()->andReturn('default');
+        $underlying->shouldReceive('getConnectionName')->once()->andReturn('redis');
+        $underlying->shouldReceive('getRawBody')->once()->andReturn($rawBody);
+        $underlying->shouldReceive('delete')->once();
+        $connection = \Mockery::mock();
+        $connection->shouldReceive('pushRaw')->once()->with($rawBody, 'ai-moderation')->andReturn('migrated');
+        Queue::shouldReceive('connection')->once()->with('redis')->andReturn($connection);
+        $job = new ModerateAdWithAI(999999);
+        $job->setJob($underlying);
+        app()->call([$job, 'handle']);
+        $this->assertTrue(true);
+    }
+
     public function test_low_confidence_approval_remains_for_manual_review(): void
     {
         Storage::fake('public');
         config([
-            'services.ollama.base_url' => 'http://ollama.test',
-            'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
-            'services.ollama.keep_alive' => '24h',
+            'services.ai_moderation_gateway.url' => 'http://ai-gateway.test',
+            'services.ai_moderation_gateway.token' => 'test-internal-token',
         ]);
         Http::fake([
-            'http://ollama.test/api/chat' => Http::response([
-                'model' => 'qwen3-vl:4b-instruct',
-                'message' => ['role' => 'assistant', 'content' => json_encode([
-                    'decision' => 'approved',
-                    'reason' => 'Contenido permitido, pero faltan datos.',
-                    'confidence' => 0.60,
-                    'flags' => ['insufficient_detail'],
-                ])],
+            'http://ai-gateway.test/v1/moderation/listing' => Http::response([
+                'decision' => 'manual_review', 'reason' => 'Contenido permitido, pero faltan datos.',
+                'confidence' => 0.60, 'flags' => ['insufficient_detail'],
+                'provider' => 'ollama', 'model' => 'qwen3-vl:4b-instruct',
+                'runtime' => 'private_local', 'model_executed' => true,
+                'gateway_version' => '0.2.0', 'latency_ms' => 42,
+                'rollout_mode' => 'shadow_assist', 'authoritative' => false,
             ]),
         ]);
-
         $seller = User::factory()->create();
         $ad = Ad::query()->create([
-            'user_id' => $seller->id,
-            'title' => 'Artículo usado',
-            'description' => 'Descripción permitida',
-            'price' => 100,
-            'location' => 'Veracruz',
-            'state' => 'Veracruz',
-            'city' => 'Veracruz',
-            'latitude' => 19.1738,
-            'longitude' => -96.1342,
-            'category' => 'general',
-            'condition' => 'usado',
-            'attributes' => ['subcategory' => 'general'],
-            'status' => 'pending',
-            'moderation_submitted_at' => now(),
-            'ai_moderation_status' => 'queued',
+            'user_id' => $seller->id, 'title' => 'Artículo usado', 'description' => 'Descripción permitida',
+            'price' => 100, 'location' => 'Veracruz', 'state' => 'Veracruz', 'city' => 'Veracruz',
+            'latitude' => 19.1738, 'longitude' => -96.1342, 'category' => 'general', 'condition' => 'usado',
+            'attributes' => ['subcategory' => 'general'], 'status' => 'pending',
+            'moderation_submitted_at' => now(), 'ai_moderation_status' => 'queued',
         ]);
-
         app()->call([new ModerateAdWithAI($ad->id), 'handle']);
-
-        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/chat'
-            && $request['keep_alive'] === '24h');
-
+        Http::assertSent(fn (Request $request) => $request->url() === 'http://ai-gateway.test/v1/moderation/listing'
+            && $request->hasHeader('X-Mercasto-Internal-Token', 'test-internal-token')
+            && $request['structured_context']['category'] === 'general'
+            && $request['structured_context']['price'] === '100'
+            && $request['structured_context']['condition'] === 'usado'
+            && str_contains((string) $request['structured_context']['attributes_json'], 'subcategory'));
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
         $this->assertSame('manual_review', $ad->ai_moderation_status);
-        $this->assertDatabaseHas('ad_moderation_decisions', [
-            'ad_id' => $ad->id,
-            'source' => 'ai',
-            'decision' => 'manual_review',
-        ]);
+        $this->assertDatabaseHas('ad_moderation_decisions', ['ad_id' => $ad->id, 'source' => 'ai', 'decision' => 'manual_review']);
     }
 
+    public function test_gateway_failure_runtime_metadata_uses_a_single_elapsed_clock(): void
+    {
+        Storage::fake('public');
+        config([
+            'services.ai_moderation_gateway.url' => 'http://ai-gateway.test',
+            'services.ai_moderation_gateway.token' => 'test-internal-token',
+        ]);
+        Http::fake(['http://ai-gateway.test/v1/moderation/listing' => Http::response([], 503)]);
+        $seller = User::factory()->create();
+        $ad = Ad::query()->create([
+            'user_id' => $seller->id, 'title' => 'Artículo usado', 'description' => 'Descripción permitida',
+            'price' => 100, 'location' => 'Veracruz', 'state' => 'Veracruz', 'city' => 'Veracruz',
+            'latitude' => 19.1738, 'longitude' => -96.1342, 'category' => 'general', 'condition' => 'usado',
+            'attributes' => ['subcategory' => 'general'], 'status' => 'pending',
+            'moderation_submitted_at' => now(), 'ai_moderation_status' => 'queued',
+        ]);
+        app()->call([new ModerateAdWithAI($ad->id), 'handle']);
+        $decision = $ad->moderationDecisions()->where('source', 'ai')->latest()->firstOrFail();
+        $runtimeMs = (int) data_get($decision->metadata, 'runtime.runtime_ms');
+        $this->assertSame('failed', data_get($decision->metadata, 'technical_status'));
+        $this->assertGreaterThanOrEqual(0, $runtimeMs);
+        $this->assertLessThan(10_000, $runtimeMs);
+    }
 
     public function test_superseded_moderation_cycle_job_is_a_noop(): void
     {
         Storage::fake('public');
         config(['ai_moderation.enabled' => false]);
-
         $seller = User::factory()->create();
         $ad = Ad::query()->create([
-            'user_id' => $seller->id,
-            'title' => 'Artículo usado',
-            'description' => 'Descripción permitida',
-            'price' => 100,
-            'location' => 'Veracruz',
-            'state' => 'Veracruz',
-            'city' => 'Veracruz',
-            'latitude' => 19.1738,
-            'longitude' => -96.1342,
-            'category' => 'general',
-            'condition' => 'usado',
-            'attributes' => ['subcategory' => 'general'],
-            'status' => 'archived',
-            'moderation_submitted_at' => now(),
-            'ai_moderation_status' => 'queued',
+            'user_id' => $seller->id, 'title' => 'Artículo usado', 'description' => 'Descripción permitida',
+            'price' => 100, 'location' => 'Veracruz', 'state' => 'Veracruz', 'city' => 'Veracruz',
+            'latitude' => 19.1738, 'longitude' => -96.1342, 'category' => 'general', 'condition' => 'usado',
+            'attributes' => ['subcategory' => 'general'], 'status' => 'archived',
+            'moderation_submitted_at' => now(), 'ai_moderation_status' => 'queued',
         ]);
         $oldCycle = AdModerationDecision::query()->create([
-            'ad_id' => $ad->id,
-            'source' => 'system',
-            'decision' => 'queued',
+            'ad_id' => $ad->id, 'source' => 'system', 'decision' => 'queued',
             'metadata' => ['rollout' => ['activate_on_human_approval' => true]],
         ]);
         AdModerationDecision::query()->create([
-            'ad_id' => $ad->id,
-            'source' => 'system',
-            'decision' => 'queued',
+            'ad_id' => $ad->id, 'source' => 'system', 'decision' => 'queued',
             'metadata' => ['rollout' => ['activate_on_human_approval' => false]],
         ]);
-
         app()->call([new ModerateAdWithAI($ad->id, true, $oldCycle->id), 'handle']);
-
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
         $this->assertSame('queued', $ad->ai_moderation_status);
-        $this->assertDatabaseMissing('ad_moderation_decisions', [
-            'ad_id' => $ad->id,
-            'source' => 'ai',
-        ]);
+        $this->assertDatabaseMissing('ad_moderation_decisions', ['ad_id' => $ad->id, 'source' => 'ai']);
     }
 
     public function test_current_cycle_job_does_not_overwrite_existing_human_decision(): void
     {
         Storage::fake('public');
         config(['ai_moderation.enabled' => false]);
-
         $seller = User::factory()->create();
         $ad = Ad::query()->create([
-            'user_id' => $seller->id,
-            'title' => 'Artículo usado',
-            'description' => 'Descripción permitida',
-            'price' => 100,
-            'location' => 'Veracruz',
-            'state' => 'Veracruz',
-            'city' => 'Veracruz',
-            'latitude' => 19.1738,
-            'longitude' => -96.1342,
-            'category' => 'general',
-            'condition' => 'usado',
-            'attributes' => ['subcategory' => 'general'],
-            'status' => 'archived',
-            'moderation_submitted_at' => now(),
-            'ai_moderation_status' => 'admin_manual_review',
+            'user_id' => $seller->id, 'title' => 'Artículo usado', 'description' => 'Descripción permitida',
+            'price' => 100, 'location' => 'Veracruz', 'state' => 'Veracruz', 'city' => 'Veracruz',
+            'latitude' => 19.1738, 'longitude' => -96.1342, 'category' => 'general', 'condition' => 'usado',
+            'attributes' => ['subcategory' => 'general'], 'status' => 'archived',
+            'moderation_submitted_at' => now(), 'ai_moderation_status' => 'admin_manual_review',
         ]);
         $cycle = AdModerationDecision::query()->create([
-            'ad_id' => $ad->id,
-            'source' => 'system',
-            'decision' => 'queued',
+            'ad_id' => $ad->id, 'source' => 'system', 'decision' => 'queued',
             'metadata' => ['rollout' => ['activate_on_human_approval' => false]],
         ]);
-
         app()->call([new ModerateAdWithAI($ad->id, false, $cycle->id), 'handle']);
-
         $this->assertSame('admin_manual_review', $ad->fresh()->ai_moderation_status);
-        $this->assertDatabaseMissing('ad_moderation_decisions', [
-            'ad_id' => $ad->id,
-            'source' => 'ai',
-        ]);
+        $this->assertDatabaseMissing('ad_moderation_decisions', ['ad_id' => $ad->id, 'source' => 'ai']);
     }
 
-    public function test_all_original_photos_are_sent_to_local_ai(): void
+    public function test_multi_photo_listing_is_bounded_by_gateway_and_kept_for_human_review(): void
     {
         Storage::fake('public');
         config([
-            'services.ollama.base_url' => 'http://ollama.test',
-            'services.ollama.chat_model' => 'qwen3-vl:4b-instruct',
-            'services.ollama.keep_alive' => '24h',
+            'services.ai_moderation_gateway.url' => 'http://ai-gateway.test',
+            'services.ai_moderation_gateway.token' => 'test-internal-token',
         ]);
         Http::fake([
-            'http://ollama.test/api/chat' => Http::response([
-                'model' => 'qwen3-vl:4b-instruct',
-                'message' => ['role' => 'assistant', 'content' => json_encode([
-                    'decision' => 'approved', 'reason' => 'Texto e imágenes coherentes.',
-                    'confidence' => 0.96, 'flags' => [],
-                ])],
+            'http://ai-gateway.test/v1/moderation/listing' => Http::response([
+                'decision' => 'manual_review', 'reason' => 'La muestra visual es coherente, pero hay medios omitidos.',
+                'confidence' => 0.96, 'flags' => [], 'provider' => 'ollama', 'model' => 'qwen3-vl:4b-instruct',
+                'runtime' => 'private_local', 'model_executed' => true,
+                'gateway_version' => '0.2.0', 'latency_ms' => 55,
+                'rollout_mode' => 'shadow_assist', 'authoritative' => false,
+                'input_image_count' => 5, 'model_image_count' => 2, 'images_omitted' => 3,
             ]),
         ]);
-
         $paths = [];
         for ($index = 1; $index <= 5; $index++) {
             $file = UploadedFile::fake()->image("photo-{$index}.jpg", 640, 480);
@@ -183,7 +176,6 @@ class ModerateAdWithAITest extends TestCase
             Storage::disk('public')->put($path, file_get_contents($file->getRealPath()));
             $paths[] = $path;
         }
-
         $seller = User::factory()->create();
         $ad = Ad::query()->create([
             'user_id' => $seller->id, 'title' => 'Cámara con accesorios',
@@ -194,12 +186,12 @@ class ModerateAdWithAITest extends TestCase
             'image_url' => json_encode($paths), 'status' => 'pending',
             'moderation_submitted_at' => now(), 'ai_moderation_status' => 'queued',
         ]);
-
         app()->call([new ModerateAdWithAI($ad->id), 'handle']);
-
         Http::assertSent(function (Request $request) {
-            $images = data_get($request->data(), 'messages.1.images', []);
-            return $request->url() === 'http://ollama.test/api/chat' && count($images) === 5;
+            $images = data_get($request->data(), 'images_base64', []);
+            return $request->url() === 'http://ai-gateway.test/v1/moderation/listing'
+                && count($images) === 2 && (int) $request['source_image_count'] === 5
+                && $request->hasHeader('X-Mercasto-Internal-Token', 'test-internal-token');
         });
         $ad->refresh();
         $this->assertSame('archived', $ad->status);
@@ -207,10 +199,13 @@ class ModerateAdWithAITest extends TestCase
         $this->assertNull($ad->expires_at);
         $decision = $ad->moderationDecisions()->latest()->firstOrFail();
         $this->assertSame('manual_review', $decision->decision);
-        $this->assertSame('approved', $decision->metadata['rollout']['proposed_decision']);
+        $this->assertSame('manual_review', $decision->metadata['rollout']['proposed_decision']);
         $this->assertSame('manual_review', $decision->metadata['rollout']['authoritative_decision']);
         $this->assertSame('human_confirmation_required', $decision->metadata['activation_mode']);
         $this->assertSame(5, $decision->metadata['original_image_count']);
         $this->assertSame(5, $decision->metadata['reviewed_image_count']);
+        $this->assertSame(2, $decision->metadata['gateway']['model_image_count']);
+        $this->assertSame(3, $decision->metadata['gateway']['images_omitted']);
+        $this->assertSame('python_gateway', $decision->metadata['runtime']['adapter']);
     }
 }
