@@ -74,7 +74,7 @@ export default function AdminFraudRiskOverlay() {
     if (!silent) setLoading(true);
     setError('');
     try {
-      const response = await fetch(`${API_URL}/admin/risk/ads?limit=50`, { headers });
+      const response = await fetch(`${API_URL}/admin/moderation/ads?mode=risk&limit=50`, { headers });
       if (!response.ok) throw new Error(t('error'));
       const payload = await response.json();
       setItems(Array.isArray(payload?.data) ? payload.data : []);
@@ -99,9 +99,10 @@ export default function AdminFraudRiskOverlay() {
     setError('');
     setNotice('');
     try {
-      const response = await fetch(`${API_URL}/admin/risk/ads/${adId}/analyze`, {
+      const response = await fetch(`${API_URL}/admin/moderation/ads/${adId}/retry-ai`, {
         method: 'POST',
-        headers,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'risk' }),
       });
       if (!response.ok) throw new Error(t('error'));
       const payload = await response.json();
@@ -120,10 +121,10 @@ export default function AdminFraudRiskOverlay() {
     setError('');
     setNotice('');
     try {
-      const response = await fetch(`${API_URL}/admin/risk/batch`, {
+      const response = await fetch(`${API_URL}/admin/moderation/process-pending`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit: 50 }),
+        body: JSON.stringify({ mode: 'risk', limit: 50 }),
       });
       if (!response.ok) throw new Error(t('error'));
       const payload = await response.json();
