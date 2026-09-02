@@ -24,7 +24,7 @@ class FraudRiskFeatureExtractor
         return [
             'account' => [
                 'account_age_days' => $user?->created_at
-                    ? min(36500, max(0, Carbon::parse($user->created_at)->diffInDays(now())))
+                    ? min(36500, max(0, (int) floor(Carbon::parse($user->created_at)->diffInDays(now()))))
                     : 36500,
                 'verified_any' => (bool) (
                     $user?->email_verified_at
@@ -45,11 +45,7 @@ class FraudRiskFeatureExtractor
                     },
                     100000,
                 ),
-                'resolved_user_reports_90d' => $this->tableCount('user_reports', function ($query) use ($userId, $since90Days) {
-                    $query->where('reported_user_id', $userId)
-                        ->where('status', 'resolved')
-                        ->where('created_at', '>=', $since90Days);
-                }, 10000),
+                'resolved_user_reports_90d' => $this->resolvedUserReportsForUser($userId, $since90Days),
                 'resolved_ad_reports_90d' => $this->resolvedAdReportsForUser($userId, $since90Days),
                 'violations_90d' => $this->tableCount('user_violations', function ($query) use ($userId, $since90Days) {
                     $query->where('user_id', $userId)->where('created_at', '>=', $since90Days);
@@ -62,11 +58,7 @@ class FraudRiskFeatureExtractor
                 'contact_pattern_count' => $this->contactPatternCount($ad),
                 'exact_duplicate_ads' => $this->exactDuplicateCount($ad),
                 'duplicate_media_ads' => $this->duplicateMediaCount($ad),
-                'resolved_reports_90d' => $this->tableCount('reports', function ($query) use ($ad, $since90Days) {
-                    $query->where('ad_id', $ad->id)
-                        ->where('status', 'resolved')
-                        ->where('created_at', '>=', $since90Days);
-                }, 10000),
+                'resolved_reports_90d' => $this->resolvedReportsForAd((int) $ad->id, $since90Days),
                 'prior_admin_rejections' => $this->tableCount('ad_moderation_decisions', function ($query) use ($ad) {
                     $query->where('ad_id', $ad->id)
                         ->where('source', 'admin')
@@ -79,9 +71,24 @@ class FraudRiskFeatureExtractor
         ];
     }
 
+    private function resolvedUserReportsForUser(int $userId, $since): int
+    {
+        if (! $this->hasResolvedReportLifecycle('user_reports')) {
+            return 0;
+        }
+
+        $count = DB::table('user_reports')
+            ->where('reported_user_id', $userId)
+            ->where('status', 'resolved')
+            ->where('created_at', '>=', $since)
+            ->count();
+
+        return $this->cap($count, 10000);
+    }
+
     private function resolvedAdReportsForUser(int $userId, $since): int
     {
-        if (! Schema::hasTable('reports') || ! Schema::hasTable('ads')) {
+        if (! $this->hasResolvedReportLifecycle('reports') || ! Schema::hasTable('ads')) {
             return 0;
         }
 
@@ -93,6 +100,28 @@ class FraudRiskFeatureExtractor
             ->count();
 
         return $this->cap($count, 10000);
+    }
+
+    private function resolvedReportsForAd(int $adId, $since): int
+    {
+        if (! $this->hasResolvedReportLifecycle('reports')) {
+            return 0;
+        }
+
+        $count = DB::table('reports')
+            ->where('ad_id', $adId)
+            ->where('status', 'resolved')
+            ->where('created_at', '>=', $since)
+            ->count();
+
+        return $this->cap($count, 10000);
+    }
+
+    private function hasResolvedReportLifecycle(string $table): bool
+    {
+        return Schema::hasTable($table)
+            && Schema::hasColumn($table, 'status')
+            && Schema::hasColumn($table, 'created_at');
     }
 
     private function adminRejectionsForUser(int $userId, $since): int
@@ -187,26 +216,18 @@ class FraudRiskFeatureExtractor
 
     private function duplicateMediaCount(Ad $ad): int
     {
-        if (! Schema::hasTable('image_hashes')) {
+        $mediaReference = trim((string) ($ad->image_url ?? ''));
+        if ($mediaReference === '') {
             return 0;
         }
 
-        $hashes = DB::table('image_hashes')
-            ->where('ad_id', $ad->id)
-            ->pluck('phash')
-            ->filter(fn ($hash): bool => is_string($hash) && trim($hash) !== '')
-            ->unique()
-            ->values();
-
-        if ($hashes->isEmpty()) {
-            return 0;
-        }
-
-        $count = DB::table('image_hashes')
-            ->whereIn('phash', $hashes->all())
-            ->where('ad_id', '!=', $ad->id)
-            ->distinct()
-            ->count('ad_id');
+        // Use the existing listing media reference as an ephemeral exact-match
+        // feature. Only the aggregate count crosses the Python boundary; no new
+        // persistent media fingerprint is created before #504 retention approval.
+        $count = Ad::query()
+            ->where('id', '!=', $ad->id)
+            ->where('image_url', $mediaReference)
+            ->count();
 
         return $this->cap($count, 10000);
     }
