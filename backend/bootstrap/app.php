@@ -22,9 +22,6 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware(['api', 'auth:sanctum'])
                 ->prefix('/api/admin')
                 ->group(base_path('routes/admin-reports.php'));
-            Route::middleware(['api', 'auth:sanctum'])
-                ->prefix('/api/admin')
-                ->group(base_path('routes/admin-risk.php'));
             require base_path('routes/marketing.php');
             require base_path('routes/support.php');
         },
