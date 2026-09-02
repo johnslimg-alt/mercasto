@@ -189,7 +189,7 @@ export default function AdminFraudRiskOverlay() {
             {error && <div className="mx-4 mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 md:mx-6 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">{error}</div>}
             {notice && <div className="mx-4 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 md:mx-6 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">{notice}</div>}
 
-            <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
               {loading ? (
                 <div className="py-20 text-center text-sm font-semibold text-slate-500">{t('loading')}</div>
               ) : items.length === 0 ? (
@@ -257,7 +257,7 @@ export default function AdminFraudRiskOverlay() {
                   })}
                 </div>
               )}
-            </main>
+            </div>
           </div>
         </div>
       )}
