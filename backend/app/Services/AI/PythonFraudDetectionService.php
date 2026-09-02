@@ -76,10 +76,19 @@ class PythonFraudDetectionService extends FraudDetectionService
     {
         try {
             $fallback = parent::analyze($ad);
+            $score = max(0, min(100, (int) ($fallback['risk_score'] ?? 0)));
+            unset($fallback['recommendation']);
 
             return array_merge($fallback, [
+                'mode' => 'shadow_assist',
                 'provider' => 'php_fallback',
                 'runtime' => 'local_php',
+                'engine' => 'local_php_rules',
+                'risk_score' => $score,
+                'fraud_score' => $score,
+                'risk_level' => $this->riskLevel($score),
+                'requires_manual_review' => $score >= (int) config('fraud_risk.thresholds.review', 40),
+                'recommended_action' => $this->recommendedAction($score),
                 'degraded' => true,
                 'fallback_reason' => $reason,
                 'authoritative_action' => null,
