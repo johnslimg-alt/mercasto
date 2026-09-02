@@ -120,7 +120,7 @@ class RiskRules:
     rules_version: str
 
     @classmethod
-    def from_env(cls) -> "RiskRules":
+    def from_env(cls) -> RiskRules:
         medium = _env_int("RISK_MEDIUM_SCORE", 20, 1, 98)
         high = max(medium + 1, _env_int("RISK_HIGH_SCORE", 40, 2, 99))
         critical = max(high + 1, _env_int("RISK_CRITICAL_SCORE", 70, 3, 100))
