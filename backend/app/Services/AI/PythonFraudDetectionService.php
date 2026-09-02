@@ -8,6 +8,8 @@ use Throwable;
 
 class PythonFraudDetectionService extends FraudDetectionService
 {
+    private const BATCH_STATUSES = ['active', 'pending', 'under_review', 'archived'];
+
     public function __construct(
         private FraudRiskFeatureExtractor $features,
         private FraudRiskGatewayClient $gateway,
@@ -27,41 +29,7 @@ class PythonFraudDetectionService extends FraudDetectionService
                 $features['listing'],
             );
 
-            $account = $subject['account'];
-            $listing = $subject['listing'];
-            $score = min(100, (int) $account['risk_score'] + (int) $listing['risk_score']);
-            $reasonCodes = array_values(array_unique([
-                ...$account['reason_codes'],
-                ...$listing['reason_codes'],
-            ]));
-
-            $ad->forceFill([
-                'fraud_score' => $score,
-                'fraud_flags' => $reasonCodes,
-                'last_fraud_check_at' => now(),
-            ])->saveQuietly();
-
-            return [
-                'ad_id' => $ad->id,
-                'mode' => 'shadow_assist',
-                'provider' => 'python_private',
-                'runtime' => 'private_local',
-                'engine' => 'deterministic_rules',
-                'rules_version' => $account['rules_version'],
-                'risk_score' => $score,
-                'fraud_score' => $score,
-                'listing_risk_score' => (int) $listing['risk_score'],
-                'account_risk_score' => (int) $account['risk_score'],
-                'listing_risk' => $listing,
-                'account_risk' => $account,
-                'risk_level' => $this->riskLevel($score),
-                'reason_codes' => $reasonCodes,
-                'flags' => $reasonCodes,
-                'requires_manual_review' => $score >= (int) config('fraud_risk.thresholds.review', 40),
-                'authoritative_action' => null,
-                'recommended_action' => $this->recommendedAction($score),
-                'degraded' => false,
-            ];
+            return $this->applySubjectResult($ad, $subject);
         } catch (Throwable $exception) {
             Log::warning('Private fraud risk scoring unavailable; using fail-open fallback.', [
                 'ad_id' => $ad->id,
@@ -70,6 +38,123 @@ class PythonFraudDetectionService extends FraudDetectionService
 
             return $this->fallback($ad, 'private_risk_gateway_unavailable');
         }
+    }
+
+    public function batchAnalyze(int $limit = 100): array
+    {
+        $limit = max(1, min(100, $limit));
+        $ads = Ad::query()
+            ->where(function ($query) {
+                $query->whereNull('last_fraud_check_at')
+                    ->orWhere('last_fraud_check_at', '<', now()->subDays(7));
+            })
+            ->whereIn('status', self::BATCH_STATUSES)
+            ->orderByRaw('CASE WHEN status IN (\'pending\', \'under_review\', \'archived\') THEN 0 ELSE 1 END')
+            ->orderBy('created_at')
+            ->limit($limit)
+            ->get();
+
+        if ($ads->isEmpty()) {
+            return $this->summarize([]);
+        }
+
+        if (! (bool) config('fraud_risk.python.enabled', true)) {
+            return $this->summarize(array_map(
+                fn (Ad $ad): array => $this->fallback($ad, 'python_risk_disabled'),
+                $ads->all(),
+            ));
+        }
+
+        try {
+            $requestSubjects = [];
+            foreach ($ads as $ad) {
+                $features = $this->features->forAd($ad);
+                $requestSubjects[] = [
+                    'subject_id' => (int) $ad->id,
+                    'account' => $features['account'],
+                    'listing' => $features['listing'],
+                ];
+            }
+
+            // One bounded private request for the whole admin batch prevents a
+            // stalled gateway from multiplying the per-request timeout by N ads.
+            $responseSubjects = $this->gateway->scoreBatch($requestSubjects);
+            $results = [];
+            foreach ($ads->values() as $index => $ad) {
+                $subject = $responseSubjects[$index] ?? null;
+                if (! is_array($subject) || (int) ($subject['subject_id'] ?? 0) !== (int) $ad->id) {
+                    throw new \RuntimeException('Private fraud risk batch response order is invalid.');
+                }
+                $results[] = $this->applySubjectResult($ad, $subject);
+            }
+
+            return $this->summarize($results);
+        } catch (Throwable $exception) {
+            Log::warning('Private fraud risk batch unavailable; using one local fail-open pass.', [
+                'ad_count' => $ads->count(),
+                'exception' => $exception::class,
+            ]);
+
+            return $this->summarize(array_map(
+                fn (Ad $ad): array => $this->fallback($ad, 'private_risk_gateway_unavailable'),
+                $ads->all(),
+            ));
+        }
+    }
+
+    private function applySubjectResult(Ad $ad, array $subject): array
+    {
+        $account = $subject['account'];
+        $listing = $subject['listing'];
+        $score = min(100, (int) $account['risk_score'] + (int) $listing['risk_score']);
+        $reasonCodes = array_values(array_unique([
+            ...$account['reason_codes'],
+            ...$listing['reason_codes'],
+        ]));
+
+        $ad->forceFill([
+            'fraud_score' => $score,
+            'fraud_flags' => $reasonCodes,
+            'last_fraud_check_at' => now(),
+        ])->saveQuietly();
+
+        return [
+            'ad_id' => $ad->id,
+            'mode' => 'shadow_assist',
+            'provider' => 'python_private',
+            'runtime' => 'private_local',
+            'engine' => 'deterministic_rules',
+            'rules_version' => $account['rules_version'],
+            'risk_score' => $score,
+            'fraud_score' => $score,
+            'listing_risk_score' => (int) $listing['risk_score'],
+            'account_risk_score' => (int) $account['risk_score'],
+            'listing_risk' => $listing,
+            'account_risk' => $account,
+            'risk_level' => $this->riskLevel($score),
+            'reason_codes' => $reasonCodes,
+            'flags' => $reasonCodes,
+            'requires_manual_review' => $score >= (int) config('fraud_risk.thresholds.review', 40),
+            'authoritative_action' => null,
+            'recommended_action' => $this->recommendedAction($score),
+            'degraded' => false,
+        ];
+    }
+
+    private function summarize(array $details): array
+    {
+        $threshold = (int) config('fraud_risk.thresholds.review', 40);
+        $flagged = count(array_filter(
+            $details,
+            fn (array $result): bool => (int) ($result['risk_score'] ?? 0) >= $threshold,
+        ));
+
+        return [
+            'analyzed' => count($details),
+            'flagged' => $flagged,
+            'clean' => count($details) - $flagged,
+            'details' => array_values($details),
+        ];
     }
 
     private function fallback(Ad $ad, string $reason): array
