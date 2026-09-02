@@ -42,8 +42,11 @@ def listing(**overrides: object) -> ListingRiskFeatures:
     return ListingRiskFeatures(**values)
 
 
-def combined_score(a: AccountRiskFeatures, l: ListingRiskFeatures) -> int:
-    return min(100, score_account(a).risk_score + score_listing(l).risk_score)
+def combined_score(account_features: AccountRiskFeatures, listing_features: ListingRiskFeatures) -> int:
+    return min(
+        100,
+        score_account(account_features).risk_score + score_listing(listing_features).risk_score,
+    )
 
 
 def test_synthetic_fixture_quality_metrics() -> None:
@@ -79,7 +82,10 @@ def test_synthetic_fixture_quality_metrics() -> None:
         ),
     ]
 
-    predictions = [combined_score(a, l) >= REVIEW_SCORE for _, a, l in fixtures]
+    predictions = [
+        combined_score(account_features, listing_features) >= REVIEW_SCORE
+        for _, account_features, listing_features in fixtures
+    ]
     labels = [label for label, _, _ in fixtures]
     tp = sum(pred and label for pred, label in zip(predictions, labels, strict=True))
     fp = sum(pred and not label for pred, label in zip(predictions, labels, strict=True))
