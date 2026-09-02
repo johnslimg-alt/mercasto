@@ -70,13 +70,47 @@ class PythonFraudRiskBatchHardeningTest extends TestCase
         }
     }
 
-    public function test_batch_gateway_outage_short_circuits_after_first_failed_chunk(): void
+    public function test_new_pending_moderation_item_precedes_older_regular_archive(): void
     {
         $this->configurePython();
         $seller = User::factory()->create(['created_at' => now()->subDays(30)]);
-        foreach (range(1, 21) as $index) {
-            $this->ad($seller, 'pending', 0, false, $index);
-        }
+        $archived = $this->ad($seller, 'archived', 0, false, 90);
+        $archived->forceFill([
+            'created_at' => now()->subYear(),
+            'moderation_submitted_at' => now()->subYear(),
+            'ai_moderation_status' => 'approved',
+        ])->saveQuietly();
+        $pending = $this->ad($seller, 'pending', 0, false, 91);
+        $scoredId = null;
+
+        Http::fake(function (Request $request) use (&$scoredId) {
+            $subject = $request->data()['subjects'][0] ?? [];
+            $scoredId = (int) ($subject['subject_id'] ?? 0);
+
+            return Http::response([
+                'subjects' => [[
+                    'subject_id' => $scoredId,
+                    'account' => $this->score(),
+                    'listing' => $this->score(),
+                ]],
+            ], 200);
+        });
+
+        $result = app(FraudDetectionService::class)->batchAnalyze(1);
+
+        $this->assertSame(1, $result['analyzed']);
+        $this->assertSame($pending->id, $scoredId);
+        $this->assertNotNull($pending->fresh()->last_fraud_check_at);
+        $this->assertNull($archived->fresh()->last_fraud_check_at);
+    }
+
+    public function test_batch_gateway_outage_short_circuits_and_keeps_python_retry_eligible(): void
+    {
+        $this->configurePython();
+        $seller = User::factory()->create(['created_at' => now()->subDays(30)]);
+        $ads = collect(range(1, 21))->map(
+            fn (int $index) => $this->ad($seller, 'pending', 0, false, $index)
+        );
 
         Http::fake([
             'http://mercasto-ai-gateway:8080/v1/risk/batch' => Http::response(['error' => 'down'], 503),
@@ -91,7 +125,10 @@ class PythonFraudRiskBatchHardeningTest extends TestCase
             $this->assertContains($detail['provider'], ['php_fallback', 'neutral_fallback']);
             $this->assertNull($detail['authoritative_action']);
         }
-        $this->assertSame(0, Ad::query()->where('status', '!=', 'pending')->count());
+        foreach ($ads as $ad) {
+            $this->assertSame('pending', $ad->fresh()->status);
+            $this->assertNull($ad->fresh()->last_fraud_check_at);
+        }
     }
 
     private function configurePython(): void
