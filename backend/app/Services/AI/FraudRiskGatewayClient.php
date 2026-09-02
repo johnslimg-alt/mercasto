@@ -7,6 +7,8 @@ use RuntimeException;
 
 class FraudRiskGatewayClient
 {
+    private const MAX_BATCH_SUBJECTS = 100;
+
     private const ACCOUNT_KEYS = [
         'account_age_days',
         'verified_any',
@@ -35,8 +37,19 @@ class FraudRiskGatewayClient
 
     public function scoreOne(int $subjectId, array $account, array $listing): array
     {
-        if ($subjectId <= 0) {
-            throw new RuntimeException('Risk subject id must be positive.');
+        $subjects = $this->scoreBatch([[
+            'subject_id' => $subjectId,
+            'account' => $account,
+            'listing' => $listing,
+        ]]);
+
+        return $subjects[0];
+    }
+
+    public function scoreBatch(array $subjects): array
+    {
+        if ($subjects === [] || count($subjects) > self::MAX_BATCH_SUBJECTS) {
+            throw new RuntimeException('Risk batch subject count is out of bounds.');
         }
 
         $baseUrl = rtrim((string) config('fraud_risk.python.url', config('services.ai_moderation_gateway.url')), '/');
@@ -46,48 +59,75 @@ class FraudRiskGatewayClient
             throw new RuntimeException('Internal AI gateway credential is not configured.');
         }
 
-        $timeout = max(1, min(10, (int) config('fraud_risk.python.timeout_seconds', 3)));
-        $payload = [
-            'subjects' => [[
+        $expectedIds = [];
+        $payloadSubjects = [];
+        foreach ($subjects as $subject) {
+            if (! is_array($subject)) {
+                throw new RuntimeException('Risk batch subject must be an array.');
+            }
+            $subjectId = (int) ($subject['subject_id'] ?? 0);
+            if ($subjectId <= 0 || isset($expectedIds[$subjectId])) {
+                throw new RuntimeException('Risk batch subject ids must be unique positive integers.');
+            }
+            $account = $subject['account'] ?? null;
+            $listing = $subject['listing'] ?? null;
+            if (! is_array($account) || ! is_array($listing)) {
+                throw new RuntimeException('Risk batch subject features are invalid.');
+            }
+
+            $expectedIds[$subjectId] = true;
+            $payloadSubjects[] = [
                 'subject_id' => $subjectId,
                 'account' => $this->whitelist($account, self::ACCOUNT_KEYS),
                 'listing' => $this->whitelist($listing, self::LISTING_KEYS),
-            ]],
-        ];
+            ];
+        }
 
+        $timeout = max(1, min(10, (int) config('fraud_risk.python.timeout_seconds', 3)));
         $response = Http::acceptJson()
             ->asJson()
             ->withHeaders(['X-Mercasto-Internal-Token' => $token])
             ->connectTimeout(min(2, $timeout))
             ->timeout($timeout)
-            ->post($baseUrl.'/v1/risk/batch', $payload);
+            ->post($baseUrl.'/v1/risk/batch', ['subjects' => $payloadSubjects]);
 
         if ($response->failed()) {
             throw new RuntimeException('Private fraud risk gateway failed with status '.$response->status().'.');
         }
 
         $data = $response->json();
-        $subjects = is_array($data) ? ($data['subjects'] ?? null) : null;
-        if (! is_array($subjects) || count($subjects) !== 1 || ! is_array($subjects[0] ?? null)) {
+        $responseSubjects = is_array($data) ? ($data['subjects'] ?? null) : null;
+        if (! is_array($responseSubjects) || count($responseSubjects) !== count($payloadSubjects)) {
             throw new RuntimeException('Private fraud risk gateway returned an invalid batch contract.');
         }
 
-        $subject = $subjects[0];
-        if ((int) ($subject['subject_id'] ?? 0) !== $subjectId) {
-            throw new RuntimeException('Private fraud risk gateway returned the wrong subject.');
+        $validatedById = [];
+        foreach ($responseSubjects as $subject) {
+            if (! is_array($subject)) {
+                throw new RuntimeException('Private fraud risk gateway returned an invalid subject.');
+            }
+            $subjectId = (int) ($subject['subject_id'] ?? 0);
+            if (! isset($expectedIds[$subjectId]) || isset($validatedById[$subjectId])) {
+                throw new RuntimeException('Private fraud risk gateway returned an unexpected subject.');
+            }
+
+            $accountScore = $this->validatedScore($subject['account'] ?? null);
+            $listingScore = $this->validatedScore($subject['listing'] ?? null);
+            if ($accountScore['rules_version'] !== $listingScore['rules_version']) {
+                throw new RuntimeException('Private fraud risk gateway returned inconsistent rule versions.');
+            }
+
+            $validatedById[$subjectId] = [
+                'subject_id' => $subjectId,
+                'account' => $accountScore,
+                'listing' => $listingScore,
+            ];
         }
 
-        $accountScore = $this->validatedScore($subject['account'] ?? null);
-        $listingScore = $this->validatedScore($subject['listing'] ?? null);
-        if ($accountScore['rules_version'] !== $listingScore['rules_version']) {
-            throw new RuntimeException('Private fraud risk gateway returned inconsistent rule versions.');
-        }
-
-        return [
-            'subject_id' => $subjectId,
-            'account' => $accountScore,
-            'listing' => $listingScore,
-        ];
+        return array_map(
+            fn (array $subject): array => $validatedById[(int) $subject['subject_id']],
+            $payloadSubjects,
+        );
     }
 
     private function validatedScore(mixed $value): array
