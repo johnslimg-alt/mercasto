@@ -8,6 +8,7 @@ use RuntimeException;
 class FraudRiskGatewayClient
 {
     private const MAX_BATCH_SUBJECTS = 100;
+    private const GATEWAY_BATCH_SUBJECTS = 10;
 
     private const ACCOUNT_KEYS = [
         'account_age_days',
@@ -83,6 +84,32 @@ class FraudRiskGatewayClient
             ];
         }
 
+        $validatedById = [];
+        foreach (array_chunk($payloadSubjects, self::GATEWAY_BATCH_SUBJECTS) as $chunk) {
+            // The Python contract accepts at most ten subjects. A gateway error
+            // throws immediately, so an outage costs at most one network timeout
+            // instead of multiplying the timeout by every listing in the batch.
+            foreach ($this->requestChunk($baseUrl, $token, $chunk) as $subject) {
+                $subjectId = (int) $subject['subject_id'];
+                if (isset($validatedById[$subjectId])) {
+                    throw new RuntimeException('Private fraud risk gateway returned a duplicate subject.');
+                }
+                $validatedById[$subjectId] = $subject;
+            }
+        }
+
+        if (count($validatedById) !== count($payloadSubjects)) {
+            throw new RuntimeException('Private fraud risk gateway returned an incomplete batch contract.');
+        }
+
+        return array_map(
+            fn (array $subject): array => $validatedById[(int) $subject['subject_id']],
+            $payloadSubjects,
+        );
+    }
+
+    private function requestChunk(string $baseUrl, string $token, array $payloadSubjects): array
+    {
         $timeout = max(1, min(10, (int) config('fraud_risk.python.timeout_seconds', 3)));
         $response = Http::acceptJson()
             ->asJson()
@@ -101,13 +128,17 @@ class FraudRiskGatewayClient
             throw new RuntimeException('Private fraud risk gateway returned an invalid batch contract.');
         }
 
-        $validatedById = [];
+        $expectedIds = array_fill_keys(array_map(
+            fn (array $subject): int => (int) $subject['subject_id'],
+            $payloadSubjects,
+        ), true);
+        $validated = [];
         foreach ($responseSubjects as $subject) {
             if (! is_array($subject)) {
                 throw new RuntimeException('Private fraud risk gateway returned an invalid subject.');
             }
             $subjectId = (int) ($subject['subject_id'] ?? 0);
-            if (! isset($expectedIds[$subjectId]) || isset($validatedById[$subjectId])) {
+            if (! isset($expectedIds[$subjectId]) || isset($validated[$subjectId])) {
                 throw new RuntimeException('Private fraud risk gateway returned an unexpected subject.');
             }
 
@@ -117,17 +148,14 @@ class FraudRiskGatewayClient
                 throw new RuntimeException('Private fraud risk gateway returned inconsistent rule versions.');
             }
 
-            $validatedById[$subjectId] = [
+            $validated[$subjectId] = [
                 'subject_id' => $subjectId,
                 'account' => $accountScore,
                 'listing' => $listingScore,
             ];
         }
 
-        return array_map(
-            fn (array $subject): array => $validatedById[(int) $subject['subject_id']],
-            $payloadSubjects,
-        );
+        return array_values($validated);
     }
 
     private function validatedScore(mixed $value): array
