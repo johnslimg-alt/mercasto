@@ -1,0 +1,44 @@
+name: Refresh Browserslist Lock
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/refresh-browserslist-lock.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'feat/python-risk-scoring' &&
+      github.actor == 'johnslimg-alt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/python-risk-scoring
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Refresh fixed Browserslist resolution
+        run: |
+          set -euo pipefail
+          npm pkg set overrides.browserslist=4.28.7
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          node -e "const lock=require('./package-lock.json'); const p=lock.packages['node_modules/browserslist']; if (!p || p.version !== '4.28.7') process.exit(1)"
+      - name: Commit lock refresh and remove one-shot workflow
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/refresh-browserslist-lock.yml
+          git add package.json package-lock.json
+          git commit -m 'deps: update browserslist to 4.28.7'
+          git push origin HEAD:feat/python-risk-scoring
