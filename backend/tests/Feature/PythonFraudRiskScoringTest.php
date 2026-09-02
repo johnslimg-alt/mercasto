@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Api\AdminAdModerationController;
+use App\Http\Controllers\Api\RiskAwareAdminAdModerationController;
 use App\Models\Ad;
 use App\Models\User;
 use App\Services\AI\FraudDetectionService;
@@ -128,7 +130,7 @@ class PythonFraudRiskScoringTest extends TestCase
         $this->assertSame('active', $ad->status);
     }
 
-    public function test_admin_risk_feed_is_private_and_exposes_only_aggregated_risk_evidence(): void
+    public function test_admin_risk_feed_reuses_private_moderation_route_and_exposes_only_aggregated_evidence(): void
     {
         $seller = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
@@ -149,13 +151,18 @@ class PythonFraudRiskScoringTest extends TestCase
             'last_fraud_check_at' => now(),
         ]);
 
-        $this->getJson('/api/admin/risk/ads')->assertUnauthorized();
+        $this->assertInstanceOf(
+            RiskAwareAdminAdModerationController::class,
+            app(AdminAdModerationController::class),
+        );
+
+        $this->getJson('/api/admin/moderation/ads?mode=risk')->assertUnauthorized();
 
         Sanctum::actingAs($seller);
-        $this->getJson('/api/admin/risk/ads')->assertForbidden();
+        $this->getJson('/api/admin/moderation/ads?mode=risk')->assertForbidden();
 
         Sanctum::actingAs($admin);
-        $response = $this->getJson('/api/admin/risk/ads');
+        $response = $this->getJson('/api/admin/moderation/ads?mode=risk');
         $response->assertOk()
             ->assertJsonPath('authoritative', false)
             ->assertJsonPath('mode', 'shadow_assist')
@@ -164,6 +171,38 @@ class PythonFraudRiskScoringTest extends TestCase
             ->assertJsonPath('data.0.fraud_flags.0', 'duplicate_media_repeated');
         $response->assertJsonMissingPath('data.0.user.email');
         $response->assertJsonMissingPath('data.0.user.phone_number');
+    }
+
+    public function test_risk_retry_mode_never_changes_active_listing_status_and_default_retry_contract_stays_intact(): void
+    {
+        config(['fraud_risk.python.enabled' => false]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create(['created_at' => now()->subDays(30)]);
+        $ad = Ad::query()->create([
+            'user_id' => $seller->id,
+            'title' => 'URGENTE REPLICA',
+            'description' => 'western union 555 123 4567',
+            'price' => 0,
+            'location' => 'Veracruz',
+            'state' => 'Veracruz',
+            'city' => 'Veracruz',
+            'category' => 'general',
+            'condition' => 'usado',
+            'attributes' => [],
+            'status' => 'active',
+        ]);
+
+        Sanctum::actingAs($admin);
+        $this->postJson("/api/admin/moderation/ads/{$ad->id}/retry-ai", ['mode' => 'risk'])
+            ->assertOk()
+            ->assertJsonPath('listing.status', 'active')
+            ->assertJsonPath('listing.status_unchanged', true)
+            ->assertJsonPath('analysis.authoritative_action', null);
+        $this->assertSame('active', $ad->fresh()->status);
+
+        $this->postJson("/api/admin/moderation/ads/{$ad->id}/retry-ai")
+            ->assertStatus(422);
+        $this->assertSame('active', $ad->fresh()->status);
     }
 
     private function score(int $riskScore, string $band, array $reasons, string $action): array
