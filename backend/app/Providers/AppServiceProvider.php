@@ -11,7 +11,9 @@ use App\Models\User;
 use App\Observers\AdObserver;
 use App\Observers\UserMetaRegistrationObserver;
 use App\Services\AI\FraudDetectionService;
+use App\Services\AI\FraudRiskFeatureExtractor;
 use App\Services\AI\PythonFraudDetectionService;
+use App\Services\AI\SellerMediaAwareFraudRiskFeatureExtractor;
 use App\Support\MailLocale;
 use App\Support\MailTranslations;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(FraudRiskFeatureExtractor::class, SellerMediaAwareFraudRiskFeatureExtractor::class);
         $this->app->bind(FraudDetectionService::class, PythonFraudDetectionService::class);
         $this->app->bind(AdminAdModerationController::class, RiskAwareAdminAdModerationController::class);
     }
