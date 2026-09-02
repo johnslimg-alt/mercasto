@@ -10,6 +10,14 @@ class PythonFraudDetectionService extends FraudDetectionService
 {
     private const BATCH_STATUSES = ['active', 'pending', 'under_review', 'archived'];
 
+    private const UNFINISHED_MODERATION_STATUSES = [
+        'queued',
+        'processing',
+        'manual_review',
+        'failed',
+        'admin_manual_review',
+    ];
+
     public function __construct(
         private FraudRiskFeatureExtractor $features,
         private FraudRiskGatewayClient $gateway,
@@ -43,14 +51,21 @@ class PythonFraudDetectionService extends FraudDetectionService
     public function batchAnalyze(int $limit = 100): array
     {
         $limit = max(1, min(100, $limit));
+        $unfinished = "'".implode("','", self::UNFINISHED_MODERATION_STATUSES)."'";
         $ads = Ad::query()
             ->where(function ($query) {
                 $query->whereNull('last_fraud_check_at')
                     ->orWhere('last_fraud_check_at', '<', now()->subDays(7));
             })
             ->whereIn('status', self::BATCH_STATUSES)
-            ->orderByRaw('CASE WHEN status IN (\'pending\', \'under_review\', \'archived\') THEN 0 ELSE 1 END')
-            ->orderBy('created_at')
+            ->orderByRaw("CASE
+                WHEN status = 'pending' THEN 0
+                WHEN status = 'under_review' THEN 1
+                WHEN status = 'archived' AND ai_moderation_status IN ({$unfinished}) THEN 2
+                WHEN status = 'active' THEN 3
+                ELSE 4
+            END")
+            ->orderByRaw('COALESCE(moderation_submitted_at, created_at) ASC')
             ->limit($limit)
             ->get();
 
@@ -76,8 +91,9 @@ class PythonFraudDetectionService extends FraudDetectionService
                 ];
             }
 
-            // One bounded private request for the whole admin batch prevents a
-            // stalled gateway from multiplying the per-request timeout by N ads.
+            // The client chunks the bounded admin batch to the Python contract's
+            // ten-subject maximum. A gateway error stops at the first failed
+            // chunk so an outage never multiplies the network timeout by N ads.
             $responseSubjects = $this->gateway->scoreBatch($requestSubjects);
             $results = [];
             foreach ($ads->values() as $index => $ad) {
@@ -159,8 +175,17 @@ class PythonFraudDetectionService extends FraudDetectionService
 
     private function fallback(Ad $ad, string $reason): array
     {
+        // `last_fraud_check_at` is the retry selector for the Python experiment.
+        // A local score is still useful during an outage, but must not make the
+        // missed private evaluation look fresh and suppress retry for seven days.
+        $previousFraudCheckAt = $ad->getRawOriginal('last_fraud_check_at');
+        $keepPythonRetryEligible = $reason === 'private_risk_gateway_unavailable';
+
         try {
             $fallback = parent::analyze($ad);
+            if ($keepPythonRetryEligible) {
+                $ad->forceFill(['last_fraud_check_at' => $previousFraudCheckAt])->saveQuietly();
+            }
             $score = max(0, min(100, (int) ($fallback['risk_score'] ?? 0)));
             unset($fallback['recommendation']);
 
