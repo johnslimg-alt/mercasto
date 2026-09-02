@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'version' => '2026-09-01-python-shadow-1',
+    'version' => '2026-09-01-python-shadow-2',
     'mode' => 'shadow_assist',
     'python' => [
         'enabled' => (bool) env('FRAUD_RISK_PYTHON_ENABLED', true),
