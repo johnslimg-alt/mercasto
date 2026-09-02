@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Events\NewNotification;
+use App\Http\Controllers\Api\AdminAdModerationController;
+use App\Http\Controllers\Api\RiskAwareAdminAdModerationController;
 use App\Listeners\DispatchNativePushFromNotification;
 use App\Models\Ad;
 use App\Models\User;
@@ -25,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(FraudDetectionService::class, PythonFraudDetectionService::class);
+        $this->app->bind(AdminAdModerationController::class, RiskAwareAdminAdModerationController::class);
     }
 
     public function boot(): void
