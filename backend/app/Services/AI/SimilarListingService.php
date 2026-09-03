@@ -52,7 +52,6 @@ class SimilarListingService
                     [$embedding, (float) config('semantic_discovery.similar.max_distance', 0.45)]
                 );
             $this->applyPriceAndCondition($query, $source);
-
             $this->orderByLocality($query, $source);
 
             return $query
@@ -72,15 +71,7 @@ class SimilarListingService
         }
 
         $result = collect();
-        $tiers = [
-            ['locality' => 'city', 'condition' => true, 'price' => true],
-            ['locality' => 'state', 'condition' => true, 'price' => true],
-            ['locality' => null, 'condition' => true, 'price' => true],
-            ['locality' => null, 'condition' => false, 'price' => true],
-            ['locality' => null, 'condition' => false, 'price' => false],
-        ];
-
-        foreach ($tiers as $tier) {
+        foreach (['city', 'state', null] as $locality) {
             if ($result->count() >= $needed) {
                 break;
             }
@@ -90,16 +81,14 @@ class SimilarListingService
                     $excludeIds,
                     $result->pluck('id')->map(fn ($id): int => (int) $id)->all(),
                 ))));
+            $this->applyPriceAndCondition($query, $source);
 
-            if ($tier['price']) {
-                $this->applyPriceBand($query, $source);
-            }
-            if ($tier['condition'] && trim((string) $source->condition) !== '') {
-                $query->where('ads.condition', $source->condition);
-            }
-            if ($tier['locality'] === 'city' && trim((string) $source->city) !== '') {
+            if ($locality === 'city' && trim((string) $source->city) !== '') {
                 $query->whereRaw('LOWER(ads.city) = ?', [mb_strtolower(trim((string) $source->city), 'UTF-8')]);
-            } elseif ($tier['locality'] === 'state' && trim((string) $source->state) !== '') {
+                if (trim((string) $source->state) !== '') {
+                    $query->whereRaw('LOWER(ads.state) = ?', [mb_strtolower(trim((string) $source->state), 'UTF-8')]);
+                }
+            } elseif ($locality === 'state' && trim((string) $source->state) !== '') {
                 $query->whereRaw('LOWER(ads.state) = ?', [mb_strtolower(trim((string) $source->state), 'UTF-8')]);
             }
 
