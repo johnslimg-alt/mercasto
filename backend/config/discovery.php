@@ -7,6 +7,7 @@ return [
         'candidate_limit' => (int) env('DISCOVERY_CANDIDATE_LIMIT', 96),
         'page_size' => 16,
         'max_pages' => (int) env('DISCOVERY_MAX_PAGES', 6),
+        'timeout_seconds' => (int) env('DISCOVERY_EMBEDDING_TIMEOUT', 5),
         'model' => env('DISCOVERY_EMBEDDING_MODEL', 'nomic-embed-text:latest'),
         'dimensions' => 768,
         'index' => 'hnsw/vector_cosine_ops',
