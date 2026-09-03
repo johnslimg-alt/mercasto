@@ -104,6 +104,60 @@ class PythonFraudRiskBatchHardeningTest extends TestCase
         $this->assertNull($archived->fresh()->last_fraud_check_at);
     }
 
+    public function test_batch_advances_past_already_scored_pending_rows_until_moderation_changes(): void
+    {
+        $this->configurePython();
+        $seller = User::factory()->create(['created_at' => now()->subDays(30)]);
+
+        $alreadyScored = $this->ad($seller, 'pending', 0, false, 101);
+        $alreadyScored->forceFill([
+            'created_at' => now()->subDays(2),
+            'moderation_submitted_at' => now()->subHour(),
+            'last_fraud_check_at' => now()->subMinute(),
+        ])->saveQuietly();
+
+        $unscored = $this->ad($seller, 'pending', 0, false, 102);
+        $unscored->forceFill([
+            'created_at' => now()->subDay(),
+            'moderation_submitted_at' => now()->subMinutes(30),
+            'last_fraud_check_at' => null,
+        ])->saveQuietly();
+
+        $scoredId = null;
+        Http::fake(function (Request $request) use (&$scoredId) {
+            $subject = $request->data()['subjects'][0] ?? [];
+            $scoredId = (int) ($subject['subject_id'] ?? 0);
+
+            return Http::response([
+                'subjects' => [[
+                    'subject_id' => $scoredId,
+                    'account' => $this->score(),
+                    'listing' => $this->score(),
+                ]],
+            ], 200);
+        });
+
+        $result = app(FraudDetectionService::class)->batchAnalyze(1);
+
+        $this->assertSame(1, $result['analyzed']);
+        $this->assertSame($unscored->id, $scoredId);
+        $this->assertNotNull($unscored->fresh()->last_fraud_check_at);
+        $this->assertNotNull($alreadyScored->fresh()->last_fraud_check_at);
+
+        $alreadyScored->forceFill([
+            'moderation_submitted_at' => now()->addMinute(),
+        ])->saveQuietly();
+        $unscored->forceFill([
+            'last_fraud_check_at' => now(),
+        ])->saveQuietly();
+        $scoredId = null;
+
+        $second = app(FraudDetectionService::class)->batchAnalyze(1);
+
+        $this->assertSame(1, $second['analyzed']);
+        $this->assertSame($alreadyScored->id, $scoredId);
+    }
+
     public function test_batch_gateway_outage_short_circuits_and_keeps_python_retry_eligible(): void
     {
         $this->configurePython();
