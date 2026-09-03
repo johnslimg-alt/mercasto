@@ -94,6 +94,26 @@ export default function AdminFraudRiskOverlay() {
     }
   }, [headers, page, t, token, visible]);
 
+  const loadSummary = useCallback(async () => {
+    if (!visible || !token) return;
+    try {
+      const response = await fetch(`${API_URL}/admin/moderation/ads?mode=risk&per_page=1&page=1`, { headers });
+      if (!response.ok) return;
+      const payload = await response.json();
+      setTotal(Math.max(0, Number(payload?.total ?? 0)));
+      setThreshold(Number(payload?.review_threshold ?? 40));
+    } catch {
+      // Badge prefetch is best effort; the detailed overlay reports load errors.
+    }
+  }, [headers, token, visible]);
+
+  useEffect(() => {
+    if (!visible || !token) return undefined;
+    loadSummary();
+    const interval = window.setInterval(loadSummary, 60000);
+    return () => window.clearInterval(interval);
+  }, [loadSummary, token, visible]);
+
   useEffect(() => {
     if (!visible || !open) return undefined;
     load();
@@ -143,18 +163,14 @@ export default function AdminFraudRiskOverlay() {
       });
       if (!response.ok) throw new Error(t('error'));
       const payload = await response.json();
-      const baseNotice = t('batchDone', { count: Number(payload?.analyzed || 0) });
-      const providers = Array.isArray(payload?.providers) ? payload.providers.filter(Boolean).join(', ') : '';
-      setNotice(payload?.degraded
-        ? `${baseNotice} · ${t('degraded')}${providers ? ` · ${providers}` : ''}`
-        : baseNotice);
-      await load(true, 1);
+      setNotice(payload?.queued ? t('running') : t('batchDone', { count: Number(payload?.analyzed || 0) }));
+      await loadSummary();
     } catch (batchError) {
       setError(batchError?.message || t('error'));
     } finally {
       setBatchRunning(false);
     }
-  }, [batchRunning, headers, load, t]);
+  }, [batchRunning, headers, loadSummary, t]);
 
   if (!visible) return null;
 
