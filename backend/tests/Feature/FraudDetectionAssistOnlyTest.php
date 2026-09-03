@@ -42,10 +42,11 @@ class FraudDetectionAssistOnlyTest extends TestCase
         $this->assertSame('shadow_assist', $result['mode']);
         $this->assertSame('php_fallback', $result['provider']);
         $this->assertTrue($result['degraded']);
+        $this->assertSame('python_risk_disabled', $result['fallback_reason']);
         $this->assertNull($result['authoritative_action']);
         $this->assertSame($result['risk_score'], (int) $ad->fraud_score);
         $this->assertContains('phone_in_description', $ad->fraud_flags);
         $this->assertContains('email_in_description', $ad->fraud_flags);
-        $this->assertNotNull($ad->last_fraud_check_at);
+        $this->assertNull($ad->last_fraud_check_at);
     }
 }
