@@ -29,9 +29,30 @@ class PythonFraudRiskAsyncBatchTest extends TestCase
             ->assertJsonPath('mode', 'shadow_assist')
             ->assertJsonPath('authoritative', false);
 
-        Queue::assertPushedOn('ai-moderation', ScoreFraudRiskBatch::class, function (ScoreFraudRiskBatch $job): bool {
-            return $job->limit === 100;
+        Queue::assertPushedOn('ai-moderation', ScoreFraudRiskBatch::class);
+        Queue::assertPushed(ScoreFraudRiskBatch::class, fn (ScoreFraudRiskBatch $job): bool => $job->limit === 100);
+    }
+
+    public function test_distinct_admin_batch_requests_are_each_queued(): void
+    {
+        Queue::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+        Sanctum::actingAs($admin);
+
+        $this->postJson('/api/admin/moderation/process-pending', ['mode' => 'risk', 'limit' => 1])
+            ->assertStatus(202);
+        $this->postJson('/api/admin/moderation/process-pending', ['mode' => 'risk', 'limit' => 100])
+            ->assertStatus(202);
+
+        Queue::assertPushed(ScoreFraudRiskBatch::class, 2);
+        $limits = [];
+        Queue::assertPushed(ScoreFraudRiskBatch::class, function (ScoreFraudRiskBatch $job) use (&$limits): bool {
+            $limits[] = $job->limit;
+
+            return true;
         });
+        sort($limits);
+        $this->assertSame([1, 100], $limits);
     }
 
     public function test_risk_batch_job_clamps_limit_before_queue_execution(): void
@@ -39,6 +60,5 @@ class PythonFraudRiskAsyncBatchTest extends TestCase
         $job = new ScoreFraudRiskBatch(999);
 
         $this->assertSame(100, $job->limit);
-        $this->assertSame('fraud-risk-batch', $job->uniqueId());
     }
 }
