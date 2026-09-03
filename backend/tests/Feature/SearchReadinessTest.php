@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Ad;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -15,12 +14,9 @@ class SearchReadinessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_semantic_search_accepts_q_alias_and_falls_back_when_ollama_is_unavailable(): void
+    public function test_semantic_search_accepts_q_alias_and_keeps_exact_match_without_ai_call(): void
     {
-        config(['services.ollama.base_url' => 'http://ollama.test']);
-        Http::fake([
-            'http://ollama.test/api/embeddings' => Http::response(['error' => 'unavailable'], 503),
-        ]);
+        Http::preventStrayRequests();
 
         $ad = $this->activeAd('Bicicleta urbana', 'Lista para rodar por la ciudad.');
         $this->activeAd('Teléfono Android', 'Equipo en buen estado.');
@@ -29,19 +25,17 @@ class SearchReadinessTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.id', $ad->id);
+            ->assertJsonPath('data.0.id', $ad->id)
+            ->assertJsonPath('discovery.mode', 'exact')
+            ->assertJsonPath('discovery.exact_first', true)
+            ->assertJsonPath('discovery.semantic_authoritative', false);
 
-        Http::assertSent(fn (Request $request) => $request->url() === 'http://ollama.test/api/embeddings');
+        Http::assertNothingSent();
     }
 
-    public function test_vector_query_failure_falls_back_to_keyword_search_without_pg_trgm(): void
+    public function test_search_alias_keeps_known_item_precision_without_vector_call(): void
     {
-        config(['services.ollama.base_url' => 'http://ollama.test']);
-        Http::fake([
-            'http://ollama.test/api/embeddings' => Http::response([
-                'embedding' => [0.1, 0.2, 0.3],
-            ]),
-        ]);
+        Http::preventStrayRequests();
 
         $ad = $this->activeAd('iPhone 14 Pro', 'Smartphone de 256 GB.');
 
@@ -49,16 +43,15 @@ class SearchReadinessTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.id', $ad->id);
-    }
+            ->assertJsonPath('data.0.id', $ad->id)
+            ->assertJsonPath('discovery.mode', 'exact');
 
+        Http::assertNothingSent();
+    }
 
     public function test_keyword_fallback_prioritizes_title_matches_over_description_only_matches(): void
     {
-        config(['services.ollama.base_url' => 'http://ollama.test']);
-        Http::fake([
-            'http://ollama.test/api/embeddings' => Http::response(['error' => 'unavailable'], 503),
-        ]);
+        Http::preventStrayRequests();
 
         $descriptionOnly = $this->activeAd('Departamento céntrico', 'Casa amplia con patio.');
         $titleMatch = $this->activeAd('Casa pequeña', 'Propiedad lista para habitar.');
@@ -68,7 +61,8 @@ class SearchReadinessTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('total', 2)
             ->assertJsonPath('data.0.id', $titleMatch->id)
-            ->assertJsonPath('data.1.id', $descriptionOnly->id);
+            ->assertJsonPath('data.1.id', $descriptionOnly->id)
+            ->assertJsonPath('discovery.mode', 'exact');
     }
 
     public function test_suggestions_return_active_exact_titles_and_are_bounded(): void
@@ -90,7 +84,7 @@ class SearchReadinessTest extends TestCase
 
     public function test_suggestion_query_length_is_bounded(): void
     {
-        $this->getJson('/api/search/suggestions?q=' . str_repeat('a', 81))
+        $this->getJson('/api/search/suggestions?q='.str_repeat('a', 81))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('q');
     }
@@ -125,7 +119,7 @@ class SearchReadinessTest extends TestCase
     {
         Http::preventStrayRequests();
 
-        $this->getJson('/api/search/semantic?q=' . str_repeat('a', 101))
+        $this->getJson('/api/search/semantic?q='.str_repeat('a', 101))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('q');
     }
