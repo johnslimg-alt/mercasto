@@ -102,9 +102,6 @@ class PythonFraudDetectionService extends FraudDetectionService
                 ];
             }
 
-            // The client chunks the bounded admin batch to the Python contract's
-            // ten-subject maximum. A gateway error stops at the first failed
-            // chunk so an outage never multiplies the network timeout by N ads.
             $responseSubjects = $this->gateway->scoreBatch($requestSubjects);
             $results = [];
             foreach ($ads->values() as $index => $ad) {
@@ -133,11 +130,10 @@ class PythonFraudDetectionService extends FraudDetectionService
     {
         $account = $subject['account'];
         $listing = $subject['listing'];
-        $score = min(100, (int) $account['risk_score'] + (int) $listing['risk_score']);
-        $reasonCodes = array_values(array_unique([
-            ...$account['reason_codes'],
-            ...$listing['reason_codes'],
-        ]));
+        $combined = $subject['combined'];
+        $score = (int) $combined['risk_score'];
+        $reasonCodes = array_values(array_unique($combined['reason_codes']));
+        $recommendedAction = $combined['recommended_action'];
 
         $ad->forceFill([
             'fraud_score' => $score,
@@ -151,29 +147,29 @@ class PythonFraudDetectionService extends FraudDetectionService
             'provider' => 'python_private',
             'runtime' => 'private_local',
             'engine' => 'deterministic_rules',
-            'rules_version' => $account['rules_version'],
+            'rules_version' => $combined['rules_version'],
             'risk_score' => $score,
             'fraud_score' => $score,
             'listing_risk_score' => (int) $listing['risk_score'],
             'account_risk_score' => (int) $account['risk_score'],
             'listing_risk' => $listing,
             'account_risk' => $account,
-            'risk_level' => $this->riskLevel($score),
+            'combined_risk' => $combined,
+            'risk_level' => $combined['band'],
             'reason_codes' => $reasonCodes,
             'flags' => $reasonCodes,
-            'requires_manual_review' => $score >= (int) config('fraud_risk.thresholds.review', 40),
+            'requires_manual_review' => in_array($recommendedAction, ['manual_review', 'urgent_review'], true),
             'authoritative_action' => null,
-            'recommended_action' => $this->recommendedAction($score),
+            'recommended_action' => $recommendedAction,
             'degraded' => false,
         ];
     }
 
     private function summarize(array $details): array
     {
-        $threshold = (int) config('fraud_risk.thresholds.review', 40);
         $flagged = count(array_filter(
             $details,
-            fn (array $result): bool => (int) ($result['risk_score'] ?? 0) >= $threshold,
+            fn (array $result): bool => (bool) ($result['requires_manual_review'] ?? false),
         ));
         $providers = array_values(array_unique(array_filter(
             array_map(
@@ -206,9 +202,6 @@ class PythonFraudDetectionService extends FraudDetectionService
 
     private function fallback(Ad $ad, string $reason): array
     {
-        // `last_fraud_check_at` is the retry selector for the Python experiment.
-        // A local score is still useful during an outage, but must not make the
-        // missed private evaluation look fresh and suppress retry for seven days.
         $previousFraudCheckAt = $ad->getRawOriginal('last_fraud_check_at');
         $keepPythonRetryEligible = $reason === 'private_risk_gateway_unavailable';
 
