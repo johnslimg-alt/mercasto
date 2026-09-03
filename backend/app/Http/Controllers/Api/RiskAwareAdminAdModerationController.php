@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Jobs\ScoreFraudRiskBatch;
 use App\Models\Ad;
 use App\Services\AI\FraudDetectionService;
 use App\Services\AdIllustrativeCoverService;
@@ -102,22 +103,16 @@ class RiskAwareAdminAdModerationController extends AdminAdModerationController
         $validated = $request->validate([
             'limit' => 'nullable|integer|min:1|max:100',
         ]);
-        $result = $this->fraudDetection->batchAnalyze((int) ($validated['limit'] ?? 50));
+        $limit = (int) ($validated['limit'] ?? 50);
+        ScoreFraudRiskBatch::dispatch($limit);
 
         return response()->json([
             'success' => true,
+            'queued' => true,
+            'limit' => $limit,
             'mode' => 'shadow_assist',
             'authoritative' => false,
-            'analyzed' => (int) ($result['analyzed'] ?? 0),
-            'flagged' => (int) ($result['flagged'] ?? 0),
-            'clean' => (int) ($result['clean'] ?? 0),
-            'degraded' => (bool) ($result['degraded'] ?? false),
-            'providers' => array_values(array_filter(
-                (array) ($result['providers'] ?? []),
-                'is_string',
-            )),
-            'python_analyzed' => (int) ($result['python_analyzed'] ?? 0),
-        ]);
+        ], 202);
     }
 
     private function authorizeRiskAdmin(Request $request): void
