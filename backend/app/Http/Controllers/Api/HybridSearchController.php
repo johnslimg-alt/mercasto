@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Ad;
 use App\Services\AI\OllamaClient;
 use App\Support\SqlLikePattern;
 use Illuminate\Http\Request;
@@ -30,7 +31,7 @@ class HybridSearchController extends SearchController
             'condition' => 'nullable',
         ]);
         $q = trim((string) ($validated['search'] ?? $validated['q'] ?? ''));
-        if (mb_strlen($q) < 2 || DB::connection()->getDriverName() !== 'pgsql') {
+        if (mb_strlen($q) < 2 || DB::connection()->getDriverName() !== 'pgsql' || ! $this->hasHybridCoverage()) {
             return parent::semanticSearch($request);
         }
 
@@ -48,20 +49,26 @@ class HybridSearchController extends SearchController
             $threshold = (float) config('semantic_retrieval.minimum_similarity', 0.30);
             $maximumDistance = max(0.0, min(1.0, 1.0 - $threshold));
 
-            $query = \App\Models\Ad::with('user:id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp')
-                ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
-                ->selectRaw('ads.*, (embeddings.embedding <=> ?::vector) AS vec_distance', [$vector])
+            $query = Ad::with('user:id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp')
+                ->leftJoin('embeddings', 'ads.id', '=', 'embeddings.ad_id')
+                ->selectRaw('ads.*, CASE WHEN embeddings.embedding IS NULL THEN NULL ELSE (embeddings.embedding <=> ?::vector) END AS vec_distance', [$vector])
                 ->where('ads.status', 'active')
                 ->where('ads.is_catalog_filler', false)
                 ->where(function ($scope) use ($titleLike, $descriptionLike, $term, $vector, $maximumDistance) {
                     $scope->whereRaw($titleLike, [$term])
                         ->orWhereRaw($descriptionLike, [$term])
-                        ->orWhereRaw('(embeddings.embedding <=> ?::vector) <= ?', [$vector, $maximumDistance]);
+                        ->orWhere(function ($semantic) use ($vector, $maximumDistance) {
+                            $semantic->whereNotNull('embeddings.embedding')
+                                ->whereRaw('(embeddings.embedding <=> ?::vector) <= ?', [$vector, $maximumDistance]);
+                        });
                 });
 
             $this->applyHybridFilters($query, $validated);
             $query->orderByRaw("CASE WHEN {$titleLike} THEN 0 WHEN {$descriptionLike} THEN 1 ELSE 2 END", [$term, $term])
-                ->orderBy('vec_distance')
+                ->orderByRaw(
+                    "CASE WHEN {$titleLike} OR {$descriptionLike} THEN 0 ELSE COALESCE((embeddings.embedding <=> ?::vector), 2) END",
+                    [$term, $term, $vector],
+                )
                 ->orderByDesc('ads.created_at');
 
             $results = $query->paginate(16);
@@ -74,12 +81,27 @@ class HybridSearchController extends SearchController
                 'strategy' => 'hybrid_exact_first',
                 'semantic_coverage' => true,
                 'embedding_runtime' => 'private_local',
+                'fallback_used' => false,
                 'latency_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             ];
 
             return response()->json($payload);
         } catch (Throwable) {
             return parent::semanticSearch($request);
+        }
+    }
+
+    private function hasHybridCoverage(): bool
+    {
+        try {
+            return DB::table('embeddings')
+                ->join('ads', 'ads.id', '=', 'embeddings.ad_id')
+                ->where('ads.status', 'active')
+                ->where('ads.is_catalog_filler', false)
+                ->whereNotNull('embeddings.embedding')
+                ->exists();
+        } catch (Throwable) {
+            return false;
         }
     }
 
