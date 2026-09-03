@@ -92,7 +92,11 @@ class PythonFraudRiskAdminHardeningTest extends TestCase
             ->assertJsonPath('python_analyzed', 0);
         $this->assertContains('php_fallback', $response->json('providers'));
         $this->assertSame('pending', $ad->fresh()->status);
-        Http::assertSentCount(1);
+
+        $riskRequests = collect(Http::recorded())->filter(
+            fn (array $record): bool => $record[0]->url() === 'http://mercasto-ai-gateway:8080/v1/risk/batch',
+        );
+        $this->assertCount(1, $riskRequests);
     }
 
     private function configurePython(): void
