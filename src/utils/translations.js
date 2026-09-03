@@ -1,6 +1,7 @@
 import esTranslations from '../constants/translations/es.js';
 import { mergeListingQualityValidationTranslations } from '../constants/listingQualityValidationTranslations.js';
 import { getListingPolicyReviewTranslations } from '../constants/listingPolicyReviewTranslations.js';
+import { getTwoFactorReauthTranslations } from '../constants/twoFactorReauthTranslations.js';
 import { loadFilterOptionLanguage } from './filterOptionTranslations.js';
 
 // Hebrew (he) and Yiddish (yi) are intentionally disabled and archived.
@@ -11,6 +12,7 @@ function mergeRuntimeListingTranslations(lang, translations) {
   return {
     ...mergeListingQualityValidationTranslations(lang, translations),
     ...getListingPolicyReviewTranslations(lang),
+    ...getTwoFactorReauthTranslations(lang),
   };
 }
 
