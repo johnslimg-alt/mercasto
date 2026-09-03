@@ -55,17 +55,18 @@ class PythonFraudDetectionService extends FraudDetectionService
         $ads = Ad::query()
             ->whereIn('status', self::BATCH_STATUSES)
             ->where(function ($query) {
-                $query->whereIn('status', ['pending', 'under_review'])
-                    ->orWhere(function ($archived) {
-                        $archived->where('status', 'archived')
-                            ->whereIn('ai_moderation_status', self::UNFINISHED_MODERATION_STATUSES);
-                    })
-                    ->orWhere(function ($stale) {
-                        $stale->whereIn('status', ['active', 'archived'])
-                            ->where(function ($age) {
-                                $age->whereNull('last_fraud_check_at')
-                                    ->orWhere('last_fraud_check_at', '<', now()->subDays(7));
-                            });
+                $query->whereNull('last_fraud_check_at')
+                    ->orWhere('last_fraud_check_at', '<', now()->subDays(7))
+                    ->orWhere(function ($resubmitted) {
+                        $resubmitted->where(function ($moderation) {
+                            $moderation->whereIn('status', ['pending', 'under_review'])
+                                ->orWhere(function ($archived) {
+                                    $archived->where('status', 'archived')
+                                        ->whereIn('ai_moderation_status', self::UNFINISHED_MODERATION_STATUSES);
+                                });
+                        })
+                            ->whereNotNull('moderation_submitted_at')
+                            ->whereColumn('moderation_submitted_at', '>', 'last_fraud_check_at');
                     });
             })
             ->orderByRaw("CASE
