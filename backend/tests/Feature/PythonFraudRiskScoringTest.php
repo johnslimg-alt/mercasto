@@ -52,6 +52,7 @@ class PythonFraudRiskScoringTest extends TestCase
                     'subject_id' => $ad->id,
                     'account' => $this->score(32, 'medium', ['publication_velocity_high'], 'observe'),
                     'listing' => $this->score(22, 'medium', ['exact_duplicate_ads_repeated'], 'observe'),
+                    'combined' => $this->score(54, 'critical', ['publication_velocity_high', 'exact_duplicate_ads_repeated'], 'urgent_review'),
                 ]],
             ], 200),
         ]);
@@ -68,6 +69,9 @@ class PythonFraudRiskScoringTest extends TestCase
         $this->assertSame(54, $result['risk_score']);
         $this->assertSame(32, $result['account_risk_score']);
         $this->assertSame(22, $result['listing_risk_score']);
+        $this->assertSame('critical', $result['risk_level']);
+        $this->assertSame('urgent_review', $result['recommended_action']);
+        $this->assertTrue($result['requires_manual_review']);
         $this->assertSame('active', $ad->status);
         $this->assertSame(54, (int) $ad->fraud_score);
         $this->assertSame(
