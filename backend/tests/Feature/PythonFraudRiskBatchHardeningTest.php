@@ -25,6 +25,7 @@ class PythonFraudRiskBatchHardeningTest extends TestCase
                 'subject_id' => $ad->id,
                 'account' => $this->score(),
                 'listing' => $this->score(),
+                'combined' => $this->score(),
             ]],
         ], 200));
 
@@ -55,6 +56,7 @@ class PythonFraudRiskBatchHardeningTest extends TestCase
                     'subject_id' => $subject['subject_id'],
                     'account' => $this->score(),
                     'listing' => $this->score(),
+                    'combined' => $this->score(),
                 ], $subjects),
             ], 200);
         });
@@ -92,6 +94,7 @@ class PythonFraudRiskBatchHardeningTest extends TestCase
                     'subject_id' => $scoredId,
                     'account' => $this->score(),
                     'listing' => $this->score(),
+                    'combined' => $this->score(),
                 ]],
             ], 200);
         });
@@ -133,6 +136,7 @@ class PythonFraudRiskBatchHardeningTest extends TestCase
                     'subject_id' => $scoredId,
                     'account' => $this->score(),
                     'listing' => $this->score(),
+                    'combined' => $this->score(),
                 ]],
             ], 200);
         });
