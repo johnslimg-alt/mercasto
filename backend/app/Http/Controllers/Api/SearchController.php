@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use App\Models\Ad;
+use App\Support\SqlLikePattern;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Throwable;
 
 class SearchController extends Controller
@@ -35,14 +36,14 @@ class SearchController extends Controller
             $ollamaHost = rtrim((string) config('services.ollama.base_url', 'http://ollama:11434'), '/');
 
             try {
-                $response = Http::timeout(15)->post($ollamaHost . '/api/embeddings', [
+                $response = Http::timeout(15)->post($ollamaHost.'/api/embeddings', [
                     'model' => 'nomic-embed-text',
                     'prompt' => $q,
                 ]);
                 $embedding = $response->successful() ? $response->json('embedding') : null;
 
                 if (is_array($embedding) && $embedding !== []) {
-                    $embeddingString = '[' . implode(',', $embedding) . ']';
+                    $embeddingString = '['.implode(',', $embedding).']';
 
                     $query = Ad::with('user:id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp')
                         ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
@@ -76,7 +77,7 @@ class SearchController extends Controller
     private function keywordSearch(Request $request, string $q)
     {
         $normalizedQ = mb_strtolower($q, 'UTF-8');
-        $term = '%' . $normalizedQ . '%';
+        $term = SqlLikePattern::contains($normalizedQ);
         $supportsTrigram = $this->supportsTrigram();
         $titleLike = $this->caseInsensitiveContainsExpression('ads.title');
         $descriptionLike = $this->caseInsensitiveContainsExpression('ads.description');
@@ -94,7 +95,7 @@ class SearchController extends Controller
             ->orderByDesc('ads.created_at');
 
         $exactResults = $exactQuery->paginate(16);
-        if (!$supportsTrigram || $exactResults->total() >= self::MIN_EXACT_KEYWORD_RESULTS) {
+        if (! $supportsTrigram || $exactResults->total() >= self::MIN_EXACT_KEYWORD_RESULTS) {
             return response()->json($exactResults);
         }
 
@@ -136,10 +137,10 @@ class SearchController extends Controller
         }
 
         $normalizedQuery = mb_strtolower($q, 'UTF-8');
-        $cacheKey = 'suggestions:v2:' . md5($normalizedQuery);
+        $cacheKey = 'suggestions:v2:'.md5($normalizedQuery);
 
         $suggestions = Cache::remember($cacheKey, 300, function () use ($normalizedQuery) {
-            $term = '%' . $normalizedQuery . '%';
+            $term = SqlLikePattern::contains($normalizedQuery);
             $titleLike = $this->caseInsensitiveContainsExpression('title');
             $stateLike = $this->caseInsensitiveContainsExpression('state');
             $locationLike = $this->caseInsensitiveContainsExpression('location');
@@ -183,6 +184,7 @@ class SearchController extends Controller
                 ->pluck('location')
                 ->map(function ($loc) {
                     $parts = explode(',', $loc);
+
                     return trim($parts[0]);
                 })
                 ->filter(fn ($l) => str_contains(mb_strtolower($l, 'UTF-8'), $normalizedQuery))
@@ -194,8 +196,8 @@ class SearchController extends Controller
                 ->where('status', 'active')
                 ->whereNotNull('attributes')
                 ->where(function ($query) use ($term) {
-                    $query->whereRaw("LOWER(attributes->>'marca') LIKE ?", [$term])
-                          ->orWhereRaw("LOWER(attributes->>'brand') LIKE ?", [$term]);
+                    $query->whereRaw(SqlLikePattern::clause("LOWER(attributes->>'marca') LIKE ?"), [$term])
+                        ->orWhereRaw(SqlLikePattern::clause("LOWER(attributes->>'brand') LIKE ?"), [$term]);
                 })
                 ->selectRaw("COALESCE(attributes->>'marca', attributes->>'brand') as brand")
                 ->distinct()
@@ -216,13 +218,13 @@ class SearchController extends Controller
                 $fuzzy = DB::table('ads')
                     ->where('status', 'active')
                     ->whereRaw('title %> ?', [$normalizedQuery])
-                    ->whereRaw('title NOT ILIKE ?', [$term])
+                    ->whereRaw(SqlLikePattern::clause('title NOT ILIKE ?'), [$term])
                     ->selectRaw('title, word_similarity(?, title) AS sim', [$normalizedQuery])
                     ->distinct()
                     ->orderByRaw('sim DESC')
                     ->limit(4)
                     ->pluck('title')
-                    ->map(fn ($title) => '~' . $title);
+                    ->map(fn ($title) => '~'.$title);
             }
 
             return $exact->merge($fuzzy)->take(8)->values();
@@ -236,35 +238,39 @@ class SearchController extends Controller
      */
     private function applyCommonFilters($query, Request $request, string $tablePrefix = '')
     {
-        $prefix = $tablePrefix ? $tablePrefix . '.' : '';
+        $prefix = $tablePrefix ? $tablePrefix.'.' : '';
 
         if ($request->filled('category')) {
-            $query->where($prefix . 'category', $request->category);
+            $query->where($prefix.'category', $request->category);
         }
         if ($request->filled('state')) {
             $state = trim((string) $request->state);
             if ($state !== '') {
-                $query->whereRaw($prefix . 'state ILIKE ?', [$state]);
+                $query->whereRaw(
+                    SqlLikePattern::clause($prefix.'state ILIKE ?'),
+                    [SqlLikePattern::escape($state)],
+                );
             }
         }
         if ($request->filled('min_price')) {
-            $query->where($prefix . 'price', '>=', $request->min_price);
+            $query->where($prefix.'price', '>=', $request->min_price);
         }
         if ($request->filled('max_price')) {
-            $query->where($prefix . 'price', '<=', $request->max_price);
+            $query->where($prefix.'price', '<=', $request->max_price);
         }
         if ($request->filled('condition')) {
             $conditions = is_array($request->condition) ? $request->condition : explode(',', (string) $request->condition);
-            $query->whereIn($prefix . 'condition', $conditions);
+            $query->whereIn($prefix.'condition', $conditions);
         }
     }
 
-
     private function caseInsensitiveContainsExpression(string $column): string
     {
-        return DB::connection()->getDriverName() === 'pgsql'
-            ? "{$column} ILIKE ?"
-            : "LOWER({$column}) LIKE ?";
+        return SqlLikePattern::clause(
+            DB::connection()->getDriverName() === 'pgsql'
+                ? "{$column} ILIKE ?"
+                : "LOWER({$column}) LIKE ?",
+        );
     }
 
     private function hasGenuineSemanticCoverage(): bool
@@ -310,5 +316,3 @@ class SearchController extends Controller
         return (string) ($rawName ?: $fallback);
     }
 }
-
-
