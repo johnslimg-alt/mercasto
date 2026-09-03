@@ -82,6 +82,24 @@ class QueryLikeAndFilterSafetyTest extends TestCase
         );
     }
 
+    public function test_unknown_benign_filter_key_is_dropped_by_allowlist(): void
+    {
+        $first = $this->activeAd('Toyota tres', 'Filtro conocido.');
+        $first->forceFill(['category' => 'motor', 'attributes' => ['marca' => 'Toyota']])->saveQuietly();
+        $second = $this->activeAd('Honda cuatro', 'Filtro conocido.');
+        $second->forceFill(['category' => 'motor', 'attributes' => ['marca' => 'Honda']])->saveQuietly();
+
+        $response = $this->getJson('/api/ads?category=motor&'.http_build_query([
+            'filters' => ['future_field' => 'Toyota'],
+        ]));
+
+        $response->assertOk()->assertJsonPath('total', 2);
+        $this->assertEqualsCanonicalizing(
+            [$first->id, $second->id],
+            collect($response->json('data'))->pluck('id')->all(),
+        );
+    }
+
     public function test_business_directory_search_treats_wildcards_as_literals(): void
     {
         $literal = User::factory()->create([
