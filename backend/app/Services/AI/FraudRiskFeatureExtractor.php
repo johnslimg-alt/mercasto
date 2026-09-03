@@ -80,7 +80,7 @@ class FraudRiskFeatureExtractor
         $count = DB::table('user_reports')
             ->where('reported_user_id', $userId)
             ->where('status', 'resolved')
-            ->where('created_at', '>=', $since)
+            ->where('resolved_at', '>=', $since)
             ->count();
 
         return $this->cap($count, 10000);
@@ -96,7 +96,7 @@ class FraudRiskFeatureExtractor
             ->join('ads', 'ads.id', '=', 'reports.ad_id')
             ->where('ads.user_id', $userId)
             ->where('reports.status', 'resolved')
-            ->where('reports.created_at', '>=', $since)
+            ->where('reports.resolved_at', '>=', $since)
             ->count();
 
         return $this->cap($count, 10000);
@@ -111,7 +111,7 @@ class FraudRiskFeatureExtractor
         $count = DB::table('reports')
             ->where('ad_id', $adId)
             ->where('status', 'resolved')
-            ->where('created_at', '>=', $since)
+            ->where('resolved_at', '>=', $since)
             ->count();
 
         return $this->cap($count, 10000);
@@ -121,7 +121,7 @@ class FraudRiskFeatureExtractor
     {
         return Schema::hasTable($table)
             && Schema::hasColumn($table, 'status')
-            && Schema::hasColumn($table, 'created_at');
+            && Schema::hasColumn($table, 'resolved_at');
     }
 
     private function adminRejectionsForUser(int $userId, $since): int
