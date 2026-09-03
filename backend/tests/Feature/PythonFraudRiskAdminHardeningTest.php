@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ScoreFraudRiskBatch;
 use App\Models\Ad;
 use App\Models\User;
 use App\Services\AI\FraudDetectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -32,6 +34,7 @@ class PythonFraudRiskAdminHardeningTest extends TestCase
                     'subject_id' => $ad->id,
                     'account' => $this->score(),
                     'listing' => $this->score(),
+                    'combined' => $this->score(),
                 ]],
             ], 200),
         ]);
@@ -70,13 +73,9 @@ class PythonFraudRiskAdminHardeningTest extends TestCase
         $this->assertCount(1, $response->json('data'));
     }
 
-    public function test_degraded_admin_batch_surfaces_provider_and_keeps_status_unchanged(): void
+    public function test_admin_batch_returns_immediately_and_preserves_listing_status(): void
     {
-        $this->configurePython();
-        Http::fake([
-            'http://mercasto-ai-gateway:8080/v1/risk/batch' => Http::response(['error' => 'down'], 503),
-        ]);
-
+        Queue::fake();
         $admin = User::factory()->create(['role' => 'admin']);
         $seller = User::factory()->create(['created_at' => now()->subDays(30)]);
         $ad = $this->ad($seller, ['status' => 'pending']);
@@ -87,17 +86,13 @@ class PythonFraudRiskAdminHardeningTest extends TestCase
             'limit' => 1,
         ]);
 
-        $response->assertOk()
+        $response->assertStatus(202)
             ->assertJsonPath('success', true)
-            ->assertJsonPath('degraded', true)
-            ->assertJsonPath('python_analyzed', 0);
-        $this->assertContains('php_fallback', $response->json('providers'));
+            ->assertJsonPath('queued', true)
+            ->assertJsonPath('limit', 1)
+            ->assertJsonPath('authoritative', false);
+        Queue::assertPushedOn('ai-moderation', ScoreFraudRiskBatch::class);
         $this->assertSame('pending', $ad->fresh()->status);
-
-        $riskRequests = collect(Http::recorded())->filter(
-            fn (array $record): bool => $record[0]->url() === 'http://mercasto-ai-gateway:8080/v1/risk/batch',
-        );
-        $this->assertCount(1, $riskRequests);
     }
 
     private function configurePython(): void
