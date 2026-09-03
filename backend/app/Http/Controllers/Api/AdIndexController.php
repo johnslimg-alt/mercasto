@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Ad;
 use App\Support\AdQueryFilters;
+use App\Support\SqlLikePattern;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -25,14 +26,14 @@ class AdIndexController extends Controller
             return response()->json(['message' => 'Límite de paginación excedido para proteger la base de datos.'], 400);
         }
 
-        $query = Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS);
+        $query = Ad::with('user:'.self::PUBLIC_AD_USER_COLUMNS);
 
         if ($request->filled('lat') && $request->filled('lng') && $request->filled('radius')) {
             $lat = (float) $request->lat;
             $lng = (float) $request->lng;
             $radius = (int) $request->radius;
 
-            $haversine = "( 6371 * acos( greatest(-1.0, least(1.0, cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ) ) )";
+            $haversine = '( 6371 * acos( greatest(-1.0, least(1.0, cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ) ) )';
 
             $query->selectRaw("*, {$haversine} AS distance", [$lat, $lng, $lat])
                 ->where('status', 'active')
@@ -52,14 +53,17 @@ class AdIndexController extends Controller
         }
 
         if ($request->filled('subcategory')) {
-            $query->whereRaw('subcategory ILIKE ?', [(string) $request->subcategory]);
+            $query->whereRaw(
+                SqlLikePattern::clause('subcategory ILIKE ?'),
+                [SqlLikePattern::escape((string) $request->subcategory)],
+            );
         }
 
         if ($request->filled('search')) {
             $search = trim((string) $request->search);
 
             if ($search !== '') {
-                $like = '%' . mb_strtolower($search, 'UTF-8') . '%';
+                $like = SqlLikePattern::contains(mb_strtolower($search, 'UTF-8'));
                 $titleLike = $this->caseInsensitiveContainsExpression('title');
                 $descriptionLike = $this->caseInsensitiveContainsExpression('description');
 
@@ -90,10 +94,13 @@ class AdIndexController extends Controller
 
                 $query->where(function ($q) use ($locationParts): void {
                     foreach ($locationParts as $index => $part) {
-                        $like = '%' . $part . '%';
+                        $like = SqlLikePattern::contains((string) $part);
                         $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
 
-                        $q->{$method}('location ILIKE ? OR state ILIKE ?', [$like, $like]);
+                        $q->{$method}(
+                            SqlLikePattern::clause('location ILIKE ?').' OR '.SqlLikePattern::clause('state ILIKE ?'),
+                            [$like, $like],
+                        );
                     }
                 });
             }
@@ -108,8 +115,8 @@ class AdIndexController extends Controller
                 $locationLike = $this->caseInsensitiveContainsExpression('location');
 
                 $query->where(function ($q) use ($normalizedState, $stateLike, $locationLike): void {
-                    $q->whereRaw($stateLike, [$normalizedState])
-                        ->orWhereRaw($locationLike, ['%' . $normalizedState . '%']);
+                    $q->whereRaw($stateLike, [SqlLikePattern::escape($normalizedState)])
+                        ->orWhereRaw($locationLike, [SqlLikePattern::contains($normalizedState)]);
                 });
             }
         }
@@ -123,10 +130,10 @@ class AdIndexController extends Controller
 
             $query->where(function ($q) use ($cityParts): void {
                 foreach ($cityParts as $index => $part) {
-                    $like = '%' . $part . '%';
+                    $like = SqlLikePattern::contains((string) $part);
                     $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
 
-                    $q->{$method}('location ILIKE ?', [$like]);
+                    $q->{$method}(SqlLikePattern::clause('location ILIKE ?'), [$like]);
                 }
             });
         }
@@ -193,9 +200,11 @@ class AdIndexController extends Controller
 
     private function caseInsensitiveContainsExpression(string $column): string
     {
-        return DB::connection()->getDriverName() === 'pgsql'
-            ? "{$column} ILIKE ?"
-            : "LOWER({$column}) LIKE ?";
+        return SqlLikePattern::clause(
+            DB::connection()->getDriverName() === 'pgsql'
+                ? "{$column} ILIKE ?"
+                : "LOWER({$column}) LIKE ?",
+        );
     }
 
     /**
@@ -207,7 +216,7 @@ class AdIndexController extends Controller
         $cacheKey = 'ads_featured_block';
 
         $ads = Cache::remember($cacheKey, 120, function () {
-            return Ad::with('user:' . self::PUBLIC_AD_USER_COLUMNS)
+            return Ad::with('user:'.self::PUBLIC_AD_USER_COLUMNS)
                 ->where('status', 'active')
                 ->where('promoted', 'destacado')
                 ->where(function ($query) {
