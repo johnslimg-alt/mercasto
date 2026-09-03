@@ -31,6 +31,25 @@ class QueryLikeAndFilterSafetyTest extends TestCase
             ->assertJsonPath('data.0.id', $underscore->id);
     }
 
+    public function test_catalog_search_treats_mixed_special_characters_as_plain_text(): void
+    {
+        $literal = $this->activeAd(
+            'Referencia !%_.*[x](a+b)? exacta',
+            'Los símbolos son parte del texto.',
+        );
+        $this->activeAd(
+            'Referencia diferente sin símbolos especiales',
+            'Control negativo.',
+        );
+
+        $needle = '!%_.*[x](a+b)?';
+
+        $this->getJson('/api/ads?search='.rawurlencode($needle))
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.id', $literal->id);
+    }
+
     public function test_location_filters_treat_like_metacharacters_as_literals(): void
     {
         $literal = $this->activeAd('Casa literal', 'Ubicación especial.');
