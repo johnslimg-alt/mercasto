@@ -2,27 +2,35 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Lang;
 use App\Events\NewNotification;
+use App\Http\Controllers\Api\AdminAdModerationController;
+use App\Http\Controllers\Api\RiskAwareAdminAdModerationController;
 use App\Listeners\DispatchNativePushFromNotification;
-use Illuminate\Support\Facades\Event;
 use App\Models\Ad;
 use App\Models\User;
 use App\Observers\AdObserver;
 use App\Observers\UserMetaRegistrationObserver;
+use App\Services\AI\FraudDetectionService;
+use App\Services\AI\FraudRiskFeatureExtractor;
+use App\Services\AI\PythonFraudDetectionService;
+use App\Services\AI\SellerMediaAwareFraudRiskFeatureExtractor;
 use App\Support\MailLocale;
 use App\Support\MailTranslations;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->bind(FraudRiskFeatureExtractor::class, SellerMediaAwareFraudRiskFeatureExtractor::class);
+        $this->app->bind(FraudDetectionService::class, PythonFraudDetectionService::class);
+        $this->app->bind(AdminAdModerationController::class, RiskAwareAdminAdModerationController::class);
     }
 
     public function boot(): void
