@@ -21,16 +21,25 @@ class RiskAwareAdminAdModerationController extends AdminAdModerationController
         }
 
         $this->authorizeRiskAdmin($request);
-        $limit = max(1, min(100, (int) $request->integer('limit', 50)));
+        $perPage = max(1, min(100, (int) $request->integer(
+            'per_page',
+            $request->integer('limit', 50),
+        )));
+        $requestedPage = max(1, (int) $request->integer('page', 1));
         $threshold = (int) config('fraud_risk.thresholds.review', 40);
 
-        $ads = Ad::query()
+        $query = Ad::query()
             ->with('user:id,name,is_verified')
             ->where('fraud_score', '>=', $threshold)
-            ->whereIn('status', ['active', 'pending', 'under_review', 'archived'])
+            ->whereIn('status', ['active', 'pending', 'under_review', 'archived']);
+        $total = (clone $query)->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min($requestedPage, $lastPage);
+
+        $ads = $query
             ->orderByDesc('fraud_score')
             ->orderByDesc('last_fraud_check_at')
-            ->limit($limit)
+            ->forPage($page, $perPage)
             ->get([
                 'id',
                 'user_id',
@@ -48,6 +57,10 @@ class RiskAwareAdminAdModerationController extends AdminAdModerationController
 
         return response()->json([
             'data' => $ads,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'last_page' => $lastPage,
             'review_threshold' => $threshold,
             'mode' => 'shadow_assist',
             'authoritative' => false,
@@ -98,6 +111,12 @@ class RiskAwareAdminAdModerationController extends AdminAdModerationController
             'analyzed' => (int) ($result['analyzed'] ?? 0),
             'flagged' => (int) ($result['flagged'] ?? 0),
             'clean' => (int) ($result['clean'] ?? 0),
+            'degraded' => (bool) ($result['degraded'] ?? false),
+            'providers' => array_values(array_filter(
+                (array) ($result['providers'] ?? []),
+                'is_string',
+            )),
+            'python_analyzed' => (int) ($result['python_analyzed'] ?? 0),
         ]);
     }
 
