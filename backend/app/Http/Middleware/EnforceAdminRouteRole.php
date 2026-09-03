@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnforceAdminRouteRole
@@ -11,11 +12,9 @@ class EnforceAdminRouteRole
     public function handle(Request $request, Closure $next): Response
     {
         if ($this->requiresAdmin($request)) {
-            abort_unless(
-                $request->user() && $request->user()->role === 'admin',
-                403,
-                'Acceso denegado',
-            );
+            $user = $request->user() ?: Auth::guard('sanctum')->user();
+            abort_unless($user, 401, 'Unauthenticated.');
+            abort_unless($user->role === 'admin', 403, 'Acceso denegado');
         }
 
         return $next($request);
