@@ -128,10 +128,15 @@ class HybridSearchService
             $query->where($column('category'), $filters['category']);
         }
         if (($filters['state'] ?? '') !== '') {
-            $query->whereRaw(
-                SqlLikePattern::clause($column('state').' ILIKE ?'),
-                [SqlLikePattern::escape((string) $filters['state'])],
-            );
+            $state = trim((string) $filters['state']);
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                $query->whereRaw(
+                    SqlLikePattern::clause($column('state').' ILIKE ?'),
+                    [SqlLikePattern::escape($state)],
+                );
+            } else {
+                $query->whereRaw('LOWER('.$column('state').') = ?', [mb_strtolower($state, 'UTF-8')]);
+            }
         }
         if (isset($filters['min_price'])) {
             $query->where($column('price'), '>=', $filters['min_price']);
@@ -163,6 +168,7 @@ class HybridSearchService
         return Cache::remember('search:pg_trgm_available', 3600, static function (): bool {
             try {
                 $row = DB::selectOne("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') AS available");
+
                 return filter_var($row->available ?? false, FILTER_VALIDATE_BOOL);
             } catch (Throwable) {
                 return false;
