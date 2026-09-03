@@ -203,7 +203,10 @@ class PythonFraudDetectionService extends FraudDetectionService
     private function fallback(Ad $ad, string $reason): array
     {
         $previousFraudCheckAt = $ad->getRawOriginal('last_fraud_check_at');
-        $keepPythonRetryEligible = $reason === 'private_risk_gateway_unavailable';
+        $keepPythonRetryEligible = in_array($reason, [
+            'private_risk_gateway_unavailable',
+            'python_risk_disabled',
+        ], true);
 
         try {
             $fallback = parent::analyze($ad);
@@ -238,6 +241,7 @@ class PythonFraudDetectionService extends FraudDetectionService
                 is_array($ad->fraud_flags) ? $ad->fraud_flags : [],
                 'is_string',
             ));
+            $recommendedAction = $this->recommendedAction($score);
 
             return [
                 'ad_id' => $ad->id,
@@ -253,9 +257,9 @@ class PythonFraudDetectionService extends FraudDetectionService
                 'risk_level' => $this->riskLevel($score),
                 'reason_codes' => $flags,
                 'flags' => $flags,
-                'requires_manual_review' => false,
+                'requires_manual_review' => in_array($recommendedAction, ['manual_review', 'urgent_review'], true),
                 'authoritative_action' => null,
-                'recommended_action' => 'allow',
+                'recommended_action' => $recommendedAction,
                 'degraded' => true,
                 'fallback_reason' => $reason,
             ];
