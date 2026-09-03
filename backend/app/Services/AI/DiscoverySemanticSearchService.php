@@ -9,9 +9,9 @@ use Throwable;
 
 class DiscoverySemanticSearchService extends SemanticSearchService
 {
-    public function __construct(OllamaClient $ollama)
+    public function __construct(private OllamaClient $discoveryOllama)
     {
-        parent::__construct($ollama);
+        parent::__construct($discoveryOllama);
     }
 
     public function search(
@@ -45,6 +45,33 @@ class DiscoverySemanticSearchService extends SemanticSearchService
         ]);
 
         return $result;
+    }
+
+    public function generateEmbedding(Ad $ad): bool
+    {
+        $embedding = $this->discoveryOllama->embed($this->discoveryText($ad));
+        $dimensions = max(1, (int) config('discovery.semantic.dimensions', 768));
+        if (! is_array($embedding) || count($embedding) !== $dimensions) {
+            return false;
+        }
+
+        DB::statement(
+            <<<'SQL'
+                INSERT INTO embeddings (ad_id, embedding, created_at, updated_at)
+                VALUES (?, ?::vector, NOW(), NOW())
+                ON CONFLICT (ad_id)
+                DO UPDATE SET embedding = EXCLUDED.embedding, updated_at = NOW()
+            SQL,
+            [$ad->id, '['.implode(',', $embedding).']']
+        );
+
+        Log::info('Discovery embedding refreshed', [
+            'ad_id' => $ad->id,
+            'dimensions' => count($embedding),
+            'model' => (string) config('discovery.semantic.model'),
+        ]);
+
+        return true;
     }
 
     public function findSimilar(Ad $ad, int $limit = 10): array
@@ -114,5 +141,29 @@ class DiscoverySemanticSearchService extends SemanticSearchService
 
             return $item;
         })->filter()->values()->all();
+    }
+
+    private function discoveryText(Ad $ad): string
+    {
+        $parts = [
+            $ad->title,
+            $ad->description,
+            $ad->category,
+            $ad->subcategory,
+            $ad->condition,
+            $ad->location,
+            $ad->city,
+            $ad->state,
+        ];
+        foreach ((array) $ad->attributes as $key => $value) {
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                $parts[] = $key.': '.$value;
+            }
+        }
+
+        return implode(' | ', array_values(array_filter(
+            array_map(fn ($value) => trim(strip_tags((string) $value)), $parts),
+            fn ($value) => $value !== '',
+        )));
     }
 }
