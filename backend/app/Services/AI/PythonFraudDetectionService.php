@@ -53,11 +53,21 @@ class PythonFraudDetectionService extends FraudDetectionService
         $limit = max(1, min(100, $limit));
         $unfinished = "'".implode("','", self::UNFINISHED_MODERATION_STATUSES)."'";
         $ads = Ad::query()
-            ->where(function ($query) {
-                $query->whereNull('last_fraud_check_at')
-                    ->orWhere('last_fraud_check_at', '<', now()->subDays(7));
-            })
             ->whereIn('status', self::BATCH_STATUSES)
+            ->where(function ($query) {
+                $query->whereIn('status', ['pending', 'under_review'])
+                    ->orWhere(function ($archived) {
+                        $archived->where('status', 'archived')
+                            ->whereIn('ai_moderation_status', self::UNFINISHED_MODERATION_STATUSES);
+                    })
+                    ->orWhere(function ($stale) {
+                        $stale->whereIn('status', ['active', 'archived'])
+                            ->where(function ($age) {
+                                $age->whereNull('last_fraud_check_at')
+                                    ->orWhere('last_fraud_check_at', '<', now()->subDays(7));
+                            });
+                    });
+            })
             ->orderByRaw("CASE
                 WHEN status = 'pending' THEN 0
                 WHEN status = 'under_review' THEN 1
@@ -164,11 +174,31 @@ class PythonFraudDetectionService extends FraudDetectionService
             $details,
             fn (array $result): bool => (int) ($result['risk_score'] ?? 0) >= $threshold,
         ));
+        $providers = array_values(array_unique(array_filter(
+            array_map(
+                fn (array $result): ?string => is_string($result['provider'] ?? null)
+                    ? $result['provider']
+                    : null,
+                $details,
+            ),
+        )));
+        $degraded = count(array_filter(
+            $details,
+            fn (array $result): bool => (bool) ($result['degraded'] ?? false),
+        )) > 0;
+        $pythonAnalyzed = count(array_filter(
+            $details,
+            fn (array $result): bool => ($result['provider'] ?? null) === 'python_private'
+                && ! (bool) ($result['degraded'] ?? false),
+        ));
 
         return [
             'analyzed' => count($details),
             'flagged' => $flagged,
             'clean' => count($details) - $flagged,
+            'degraded' => $degraded,
+            'providers' => $providers,
+            'python_analyzed' => $pythonAnalyzed,
             'details' => array_values($details),
         ];
     }
