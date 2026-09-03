@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Events\NewNotification;
 use App\Http\Controllers\Api\AdminAdModerationController;
+use App\Http\Controllers\Api\BusinessProfileController;
 use App\Http\Controllers\Api\RiskAwareAdminAdModerationController;
+use App\Http\Controllers\Api\SafeBusinessProfileController;
 use App\Listeners\DispatchNativePushFromNotification;
 use App\Models\Ad;
 use App\Models\User;
@@ -31,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(FraudRiskFeatureExtractor::class, SellerMediaAwareFraudRiskFeatureExtractor::class);
         $this->app->bind(FraudDetectionService::class, PythonFraudDetectionService::class);
         $this->app->bind(AdminAdModerationController::class, RiskAwareAdminAdModerationController::class);
+        $this->app->bind(BusinessProfileController::class, SafeBusinessProfileController::class);
     }
 
     public function boot(): void
