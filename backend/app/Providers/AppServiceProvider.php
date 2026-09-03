@@ -14,11 +14,13 @@ use App\Http\Controllers\Api\SearchController;
 use App\Listeners\DispatchNativePushFromNotification;
 use App\Models\Ad;
 use App\Models\User;
-use App\Observers\AdObserver;
+use App\Observers\DiscoveryAdObserver;
 use App\Observers\UserMetaRegistrationObserver;
+use App\Services\AI\DiscoveryOllamaClient;
 use App\Services\AI\DiscoverySemanticSearchService;
 use App\Services\AI\FraudDetectionService;
 use App\Services\AI\FraudRiskFeatureExtractor;
+use App\Services\AI\OllamaClient;
 use App\Services\AI\PythonFraudDetectionService;
 use App\Services\AI\SellerMediaAwareFraudRiskFeatureExtractor;
 use App\Services\AI\SemanticSearchService;
@@ -40,6 +42,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(FraudDetectionService::class, PythonFraudDetectionService::class);
         $this->app->bind(AdminAdModerationController::class, RiskAwareAdminAdModerationController::class);
         $this->app->bind(BusinessProfileController::class, SafeBusinessProfileController::class);
+        $this->app->bind(OllamaClient::class, DiscoveryOllamaClient::class);
         $this->app->bind(SemanticSearchService::class, DiscoverySemanticSearchService::class);
         $this->app->bind(SearchController::class, HybridSearchController::class);
         $this->app->bind(AdController::class, DiscoveryAdController::class);
@@ -162,7 +165,7 @@ class AppServiceProvider extends ServiceProvider
         );
 
         // Register model observers.
-        Ad::observe(AdObserver::class);
+        Ad::observe(DiscoveryAdObserver::class);
         User::observe(UserMetaRegistrationObserver::class);
     }
 }
