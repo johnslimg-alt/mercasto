@@ -54,7 +54,7 @@ class AdIndexController extends Controller
 
         if ($request->filled('subcategory')) {
             $query->whereRaw(
-                SqlLikePattern::clause('subcategory ILIKE ?'),
+                $this->caseInsensitiveContainsExpression('subcategory'),
                 [SqlLikePattern::escape((string) $request->subcategory)],
             );
         }
@@ -92,15 +92,14 @@ class AdIndexController extends Controller
                     ->unique()
                     ->values();
 
-                $query->where(function ($q) use ($locationParts): void {
+                $locationLike = $this->caseInsensitiveContainsExpression('location');
+                $stateLike = $this->caseInsensitiveContainsExpression('state');
+                $query->where(function ($q) use ($locationParts, $locationLike, $stateLike): void {
                     foreach ($locationParts as $index => $part) {
-                        $like = SqlLikePattern::contains((string) $part);
+                        $like = SqlLikePattern::contains(mb_strtolower((string) $part, 'UTF-8'));
                         $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
 
-                        $q->{$method}(
-                            SqlLikePattern::clause('location ILIKE ?').' OR '.SqlLikePattern::clause('state ILIKE ?'),
-                            [$like, $like],
-                        );
+                        $q->{$method}("{$locationLike} OR {$stateLike}", [$like, $like]);
                     }
                 });
             }
@@ -127,13 +126,14 @@ class AdIndexController extends Controller
                 ->filter()
                 ->unique()
                 ->values();
+            $locationLike = $this->caseInsensitiveContainsExpression('location');
 
-            $query->where(function ($q) use ($cityParts): void {
+            $query->where(function ($q) use ($cityParts, $locationLike): void {
                 foreach ($cityParts as $index => $part) {
-                    $like = SqlLikePattern::contains((string) $part);
+                    $like = SqlLikePattern::contains(mb_strtolower((string) $part, 'UTF-8'));
                     $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
 
-                    $q->{$method}(SqlLikePattern::clause('location ILIKE ?'), [$like]);
+                    $q->{$method}($locationLike, [$like]);
                 }
             });
         }
