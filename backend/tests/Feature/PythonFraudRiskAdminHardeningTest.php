@@ -15,13 +15,14 @@ class PythonFraudRiskAdminHardeningTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_recent_pending_listing_is_rescored_without_waiting_for_seven_day_cooldown(): void
+    public function test_recent_pending_resubmission_is_rescored_without_waiting_for_seven_day_cooldown(): void
     {
         $this->configurePython();
         $seller = User::factory()->create(['created_at' => now()->subDays(30)]);
         $ad = $this->ad($seller, [
             'status' => 'pending',
-            'last_fraud_check_at' => now(),
+            'last_fraud_check_at' => now()->subMinute(),
+            'moderation_submitted_at' => now(),
             'ai_moderation_status' => 'queued',
         ]);
 
