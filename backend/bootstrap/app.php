@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             Route::middleware(['api', 'auth:sanctum'])->delete('/api/user', [AccountDeletionController::class, 'delete']);
-            Route::middleware(['api', 'auth:sanctum', 'admin'])
+            Route::middleware(['api', 'auth:sanctum'])
                 ->prefix('/api/admin')
                 ->group(base_path('routes/admin-reports.php'));
             require base_path('routes/marketing.php');
