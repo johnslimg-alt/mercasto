@@ -11,6 +11,8 @@ class QueryLikeAndFilterSafetyTest extends TestCase
 {
     use RefreshDatabase;
 
+    private ?User $seller = null;
+
     public function test_catalog_search_treats_percent_and_underscore_as_literals(): void
     {
         $percent = $this->activeAd('Oferta 100% real', 'Precio especial.');
@@ -64,12 +66,14 @@ class QueryLikeAndFilterSafetyTest extends TestCase
     public function test_business_directory_search_treats_wildcards_as_literals(): void
     {
         $literal = User::factory()->create([
+            'email' => 'query-safety-business-literal@example.test',
             'role' => 'business',
             'business_profile_enabled' => true,
             'business_name' => 'Tienda 50% real',
             'business_description' => 'Accesorios',
         ]);
         User::factory()->create([
+            'email' => 'query-safety-business-control@example.test',
             'role' => 'business',
             'business_profile_enabled' => true,
             'business_name' => 'Tienda 500 real',
@@ -84,8 +88,12 @@ class QueryLikeAndFilterSafetyTest extends TestCase
 
     private function activeAd(string $title, string $description): Ad
     {
+        $this->seller ??= User::factory()->create([
+            'email' => 'query-safety-seller@example.test',
+        ]);
+
         return Ad::query()->create([
-            'user_id' => User::factory()->create()->id,
+            'user_id' => $this->seller->id,
             'title' => $title,
             'description' => $description,
             'price' => 2500,
