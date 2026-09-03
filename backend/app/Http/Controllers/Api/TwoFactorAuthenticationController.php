@@ -33,10 +33,7 @@ class TwoFactorAuthenticationController extends Controller
             })->all()),
         ])->save();
 
-        $currentToken = $request->user()->currentAccessToken();
-        if ($currentToken) {
-            $user->tokens()->where('id', '!=', $currentToken->id)->delete();
-        }
+        $this->revokeOtherTokens($request);
 
         $qrCodeUrl = $google2fa->getQRCodeUrl(
             config('app.name'),
@@ -95,17 +92,15 @@ class TwoFactorAuthenticationController extends Controller
 
         $verified = $password !== '' && Hash::check($password, (string) $user->password);
         $recoveryCodes = json_decode((string) $user->two_factor_recovery_codes, true) ?? [];
-        $usedRecoveryIndex = null;
 
         if (! $verified && $code !== '') {
             $google2fa = new Google2FA();
             $verified = $google2fa->verifyKey((string) $user->two_factor_secret, $code);
 
             if (! $verified) {
-                foreach ($recoveryCodes as $index => $recoveryCode) {
+                foreach ($recoveryCodes as $recoveryCode) {
                     if (is_string($recoveryCode) && hash_equals($recoveryCode, $code)) {
                         $verified = true;
-                        $usedRecoveryIndex = $index;
                         break;
                     }
                 }
@@ -118,22 +113,28 @@ class TwoFactorAuthenticationController extends Controller
             ]);
         }
 
-        if ($usedRecoveryIndex !== null) {
-            unset($recoveryCodes[$usedRecoveryIndex]);
-        }
-
         $user->forceFill([
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
         ])->save();
 
-        // A sensitive security downgrade invalidates every other session.
-        $currentToken = $request->user()->currentAccessToken();
-        if ($currentToken) {
-            $user->tokens()->where('id', '!=', $currentToken->id)->delete();
-        }
+        // A sensitive security downgrade invalidates every other persisted session.
+        $this->revokeOtherTokens($request);
 
         return response()->json(['message' => 'Two-factor authentication has been disabled.']);
+    }
+
+    private function revokeOtherTokens(Request $request): void
+    {
+        $user = $request->user();
+        $currentToken = $user->currentAccessToken();
+        $currentTokenId = is_object($currentToken) && isset($currentToken->id)
+            ? (int) $currentToken->id
+            : null;
+
+        if ($currentTokenId) {
+            $user->tokens()->where('id', '!=', $currentTokenId)->delete();
+        }
     }
 }
