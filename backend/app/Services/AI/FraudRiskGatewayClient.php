@@ -86,9 +86,6 @@ class FraudRiskGatewayClient
 
         $validatedById = [];
         foreach (array_chunk($payloadSubjects, self::GATEWAY_BATCH_SUBJECTS) as $chunk) {
-            // The Python contract accepts at most ten subjects. A gateway error
-            // throws immediately, so an outage costs at most one network timeout
-            // instead of multiplying the timeout by every listing in the batch.
             foreach ($this->requestChunk($baseUrl, $token, $chunk) as $subject) {
                 $subjectId = (int) $subject['subject_id'];
                 if (isset($validatedById[$subjectId])) {
@@ -144,7 +141,9 @@ class FraudRiskGatewayClient
 
             $accountScore = $this->validatedScore($subject['account'] ?? null);
             $listingScore = $this->validatedScore($subject['listing'] ?? null);
-            if ($accountScore['rules_version'] !== $listingScore['rules_version']) {
+            $combinedScore = $this->validatedScore($subject['combined'] ?? null);
+            if ($accountScore['rules_version'] !== $listingScore['rules_version']
+                || $accountScore['rules_version'] !== $combinedScore['rules_version']) {
                 throw new RuntimeException('Private fraud risk gateway returned inconsistent rule versions.');
             }
 
@@ -152,6 +151,7 @@ class FraudRiskGatewayClient
                 'subject_id' => $subjectId,
                 'account' => $accountScore,
                 'listing' => $listingScore,
+                'combined' => $combinedScore,
             ];
         }
 
