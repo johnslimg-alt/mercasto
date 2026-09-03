@@ -5,6 +5,7 @@ import { ADMIN_FRAUD_RISK_NAMESPACE } from './adminFraudRiskI18n';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
+const PAGE_SIZE = 50;
 
 const readAdmin = () => {
   try {
@@ -46,6 +47,9 @@ export default function AdminFraudRiskOverlay() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [threshold, setThreshold] = useState(40);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [batchRunning, setBatchRunning] = useState(false);
   const [analyzingId, setAnalyzingId] = useState(null);
@@ -69,22 +73,26 @@ export default function AdminFraudRiskOverlay() {
     setIsAdmin(readAdmin());
   }, [location.pathname]);
 
-  const load = useCallback(async (silent = false) => {
+  const load = useCallback(async (silent = false, targetPage = page) => {
     if (!visible || !token) return;
     if (!silent) setLoading(true);
     setError('');
     try {
-      const response = await fetch(`${API_URL}/admin/moderation/ads?mode=risk&limit=50`, { headers });
+      const requestedPage = Math.max(1, Number(targetPage || 1));
+      const response = await fetch(`${API_URL}/admin/moderation/ads?mode=risk&per_page=${PAGE_SIZE}&page=${requestedPage}`, { headers });
       if (!response.ok) throw new Error(t('error'));
       const payload = await response.json();
       setItems(Array.isArray(payload?.data) ? payload.data : []);
       setThreshold(Number(payload?.review_threshold ?? 40));
+      setTotal(Math.max(0, Number(payload?.total ?? 0)));
+      setPage(Math.max(1, Number(payload?.page ?? requestedPage)));
+      setLastPage(Math.max(1, Number(payload?.last_page ?? 1)));
     } catch (loadError) {
       setError(loadError?.message || t('error'));
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [headers, t, token, visible]);
+  }, [headers, page, t, token, visible]);
 
   useEffect(() => {
     if (!visible || !open) return undefined;
@@ -92,6 +100,13 @@ export default function AdminFraudRiskOverlay() {
     const interval = window.setInterval(() => load(true), 60000);
     return () => window.clearInterval(interval);
   }, [load, open, visible]);
+
+  const changePage = useCallback((nextPage) => {
+    const bounded = Math.max(1, Math.min(lastPage, Number(nextPage || 1)));
+    if (bounded === page) return;
+    setPage(bounded);
+    load(false, bounded);
+  }, [lastPage, load, page]);
 
   const analyze = useCallback(async (adId) => {
     if (!adId || analyzingId !== null) return;
@@ -124,12 +139,16 @@ export default function AdminFraudRiskOverlay() {
       const response = await fetch(`${API_URL}/admin/moderation/process-pending`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'risk', limit: 50 }),
+        body: JSON.stringify({ mode: 'risk', limit: PAGE_SIZE }),
       });
       if (!response.ok) throw new Error(t('error'));
       const payload = await response.json();
-      setNotice(t('batchDone', { count: Number(payload?.analyzed || 0) }));
-      await load(true);
+      const baseNotice = t('batchDone', { count: Number(payload?.analyzed || 0) });
+      const providers = Array.isArray(payload?.providers) ? payload.providers.filter(Boolean).join(', ') : '';
+      setNotice(payload?.degraded
+        ? `${baseNotice} · ${t('degraded')}${providers ? ` · ${providers}` : ''}`
+        : baseNotice);
+      await load(true, 1);
     } catch (batchError) {
       setError(batchError?.message || t('error'));
     } finally {
@@ -151,7 +170,7 @@ export default function AdminFraudRiskOverlay() {
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-300 text-slate-950" aria-hidden="true">⚑</span>
         <span className="hidden sm:inline">{t('score')}</span>
-        {items.length > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">{items.length}</span>}
+        {total > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">{total}</span>}
       </button>
 
       {open && (
@@ -178,7 +197,7 @@ export default function AdminFraudRiskOverlay() {
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('total', { count: items.length })}</span>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('total', { count: total })}</span>
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">{t('threshold', { score: threshold })}</span>
               </div>
             </header>
@@ -195,67 +214,91 @@ export default function AdminFraudRiskOverlay() {
               ) : items.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">{t('empty')}</div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  {items.map((item) => {
-                    const score = Math.max(0, Math.min(100, Number(item?.fraud_score || 0)));
-                    const flags = Array.isArray(item?.fraud_flags) ? item.fraud_flags.filter(Boolean) : [];
-                    const latest = analysisById[item.id];
-                    const provider = latest?.analysis?.provider;
-                    const degraded = Boolean(latest?.analysis?.degraded);
-                    return (
-                      <article key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-400">{t('ad', { id: item.id })}</p>
-                            <h3 className="mt-1 line-clamp-2 text-base font-black text-slate-950 dark:text-white">{item.title || t('unknown')}</h3>
-                            <p className="mt-1 text-xs text-slate-500">{item.user?.name || t('unknown')} · {item.status || t('unknown')}</p>
-                          </div>
-                          <div className={`shrink-0 rounded-2xl px-3 py-2 text-center ${scoreClasses(score)}`} aria-label={t('scoreAria', { score })}>
-                            <div className="text-2xl font-black leading-none">{score}</div>
-                            <div className="mt-1 text-[10px] font-extrabold uppercase">{t('score')}</div>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" aria-hidden="true">
-                          <div className="h-full rounded-full bg-current text-amber-500" style={{ width: `${score}%` }} />
-                        </div>
-
-                        <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                          <Info label={t('checked')} value={formatDate(item.last_fraud_check_at, locale, t('unknown'))} />
-                          <Info label={t('seller')} value={item.user?.is_verified ? `${item.user?.name || t('unknown')} ✓` : (item.user?.name || t('unknown'))} />
-                        </dl>
-
-                        <div className="mt-4">
-                          <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500">{t('reasons')}</p>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {flags.length ? flags.map((flag) => (
-                              <span key={flag} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{flag}</span>
-                            )) : <span className="text-xs text-slate-500">{t('noReasons')}</span>}
-                          </div>
-                        </div>
-
-                        {latest && (
-                          <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs dark:bg-slate-950">
-                            <div className="flex flex-wrap items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
-                              <span>{t('provider')}: {provider === 'python_private' ? t('normal') : t('fallback')}</span>
-                              {degraded && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900 dark:bg-amber-950 dark:text-amber-200">{t('degraded')}</span>}
-                              {latest?.listing?.status_unchanged && <span className="text-emerald-700 dark:text-emerald-300">{t('unchanged')}</span>}
+                <>
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    {items.map((item) => {
+                      const score = Math.max(0, Math.min(100, Number(item?.fraud_score || 0)));
+                      const flags = Array.isArray(item?.fraud_flags) ? item.fraud_flags.filter(Boolean) : [];
+                      const latest = analysisById[item.id];
+                      const provider = latest?.analysis?.provider;
+                      const degraded = Boolean(latest?.analysis?.degraded);
+                      return (
+                        <article key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-400">{t('ad', { id: item.id })}</p>
+                              <h3 className="mt-1 line-clamp-2 text-base font-black text-slate-950 dark:text-white">{item.title || t('unknown')}</h3>
+                              <p className="mt-1 text-xs text-slate-500">{item.user?.name || t('unknown')} · {item.status || t('unknown')}</p>
+                            </div>
+                            <div className={`shrink-0 rounded-2xl px-3 py-2 text-center ${scoreClasses(score)}`} aria-label={t('scoreAria', { score })}>
+                              <div className="text-2xl font-black leading-none">{score}</div>
+                              <div className="mt-1 text-[10px] font-extrabold uppercase">{t('score')}</div>
                             </div>
                           </div>
-                        )}
 
-                        <button
-                          type="button"
-                          disabled={analyzingId !== null}
-                          onClick={() => analyze(item.id)}
-                          className="mt-4 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-extrabold text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
-                        >
-                          {analyzingId === item.id ? t('analyzing') : t('analyze')}
-                        </button>
-                      </article>
-                    );
-                  })}
-                </div>
+                          <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" aria-hidden="true">
+                            <div className="h-full rounded-full bg-current text-amber-500" style={{ width: `${score}%` }} />
+                          </div>
+
+                          <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                            <Info label={t('checked')} value={formatDate(item.last_fraud_check_at, locale, t('unknown'))} />
+                            <Info label={t('seller')} value={item.user?.is_verified ? `${item.user?.name || t('unknown')} ✓` : (item.user?.name || t('unknown'))} />
+                          </dl>
+
+                          <div className="mt-4">
+                            <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500">{t('reasons')}</p>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {flags.length ? flags.map((flag) => (
+                                <span key={flag} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{flag}</span>
+                              )) : <span className="text-xs text-slate-500">{t('noReasons')}</span>}
+                            </div>
+                          </div>
+
+                          {latest && (
+                            <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs dark:bg-slate-950">
+                              <div className="flex flex-wrap items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
+                                <span>{t('provider')}: {provider === 'python_private' ? t('normal') : t('fallback')}</span>
+                                {degraded && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900 dark:bg-amber-950 dark:text-amber-200">{t('degraded')}</span>}
+                                {latest?.listing?.status_unchanged && <span className="text-emerald-700 dark:text-emerald-300">{t('unchanged')}</span>}
+                              </div>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            disabled={analyzingId !== null}
+                            onClick={() => analyze(item.id)}
+                            className="mt-4 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-extrabold text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+                          >
+                            {analyzingId === item.id ? t('analyzing') : t('analyze')}
+                          </button>
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  {lastPage > 1 && (
+                    <nav className="mt-6 flex items-center justify-center gap-3" aria-label={t('pagination')}>
+                      <button
+                        type="button"
+                        disabled={page <= 1 || loading}
+                        onClick={() => changePage(page - 1)}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
+                      >
+                        {t('previous')}
+                      </button>
+                      <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{t('page', { page, total: lastPage })}</span>
+                      <button
+                        type="button"
+                        disabled={page >= lastPage || loading}
+                        onClick={() => changePage(page + 1)}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
+                      >
+                        {t('next')}
+                      </button>
+                    </nav>
+                  )}
+                </>
               )}
             </div>
           </div>
