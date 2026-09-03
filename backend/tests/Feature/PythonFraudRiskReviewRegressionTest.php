@@ -65,6 +65,7 @@ class PythonFraudRiskReviewRegressionTest extends TestCase
                     'subject_id' => $ad->id,
                     'account' => $this->score(),
                     'listing' => $this->score(),
+                    'combined' => $this->score(),
                 ]],
             ], 200),
         ]);
