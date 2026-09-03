@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserConsent;
 use App\Support\PrivacyFingerprint;
+use App\Support\SecureOneTimeCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -352,16 +353,17 @@ class AuthController extends Controller
         $request->validate(['phone_number' => 'required|string|min:10|max:20']);
 
         $phoneNumber = preg_replace('/[^0-9+]/', '', $request->phone_number);
-        $code = random_int(100000, 999999); // Используем криптографически надежный генератор
+        $code = (string) random_int(100000, 999999);
 
         $twilioSid = config('services.twilio.sid');
         $twilioToken = config('services.twilio.token');
         $twilioFrom = config('services.twilio.from');
 
-        if (!$twilioSid || !$twilioToken || !$twilioFrom) {
+        if (! $twilioSid || ! $twilioToken || ! $twilioFrom) {
             Log::warning('Phone auth SMS provider is not configured', [
                 'phone_hash' => hash('sha256', $phoneNumber),
             ]);
+
             return response()->json(['message' => 'La autenticación por SMS no está disponible en este momento.'], 503);
         }
 
@@ -376,10 +378,16 @@ class AuthController extends Controller
                 'phone_hash' => hash('sha256', $phoneNumber),
                 'error' => $e->getMessage(),
             ]);
+
             return response()->json(['message' => 'No pudimos enviar el SMS. Intenta de nuevo más tarde.'], 503);
         }
 
-        Cache::put('phone_auth_' . $phoneNumber, $code, now()->addMinutes(10));
+        $cacheKey = SecureOneTimeCode::cacheKey('phone-auth', $phoneNumber);
+        Cache::put(
+            $cacheKey,
+            SecureOneTimeCode::hash($code, 'phone-auth'),
+            now()->addMinutes(10),
+        );
 
         return response()->json(['message' => 'Código SMS enviado.']);
     }
@@ -392,20 +400,22 @@ class AuthController extends Controller
         $request->validate(['phone_number' => 'required|string|min:10|max:20', 'code' => 'required|string|size:6']);
 
         $phoneNumber = preg_replace('/[^0-9+]/', '', $request->phone_number);
-        $cachedCode = Cache::get('phone_auth_' . $phoneNumber);
+        $cacheKey = SecureOneTimeCode::cacheKey('phone-auth', $phoneNumber);
+        $cachedHash = Cache::get($cacheKey);
 
-        if (!$cachedCode || $cachedCode != $request->code) {
+        if (! SecureOneTimeCode::verify((string) $request->code, $cachedHash, 'phone-auth')) {
             throw ValidationException::withMessages(['code' => ['Código SMS inválido o expirado.']]);
         }
+
         $user = User::where('phone_number', $phoneNumber)->first();
         $isNewUser = $user === null;
-        if (!$user) {
+        if (! $user) {
             $registrationConsent = $this->validateRegistrationConsent($request);
             $user = DB::transaction(function () use ($phoneNumber, $request, $registrationConsent) {
                 $user = new User();
                 $user->phone_number = $phoneNumber;
-                $user->name = 'Usuario ' . substr($phoneNumber, -4);
-                $user->email = $phoneNumber . '@mercasto.local';
+                $user->name = 'Usuario '.substr($phoneNumber, -4);
+                $user->email = $phoneNumber.'@mercasto.local';
                 $user->password = Hash::make(Str::random(16));
                 $user->role = 'individual';
                 $user->ip_address = PrivacyFingerprint::ip($request->ip(), 'registration-account', 45);
@@ -416,7 +426,7 @@ class AuthController extends Controller
             });
         }
 
-        Cache::forget('phone_auth_' . $phoneNumber);
+        Cache::forget($cacheKey);
 
         return response()->json([
             'message' => 'Inicio de sesión exitoso',
