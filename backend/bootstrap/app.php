@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             Route::middleware(['api', 'auth:sanctum'])->delete('/api/user', [AccountDeletionController::class, 'delete']);
-            Route::middleware(['api', 'auth:sanctum'])
+            Route::middleware(['api', 'auth:sanctum', 'admin'])
                 ->prefix('/api/admin')
                 ->group(base_path('routes/admin-reports.php'));
             require base_path('routes/marketing.php');
@@ -34,7 +34,11 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->alias([
             'last-active' => \App\Http\Middleware\UpdateLastActive::class,
+            'admin' => \App\Http\Middleware\EnforceAdminRouteRole::class,
         ]);
+        // This centralized boundary automatically protects every /api/admin/* route
+        // plus legacy admin-equivalent mutation paths before controller code runs.
+        $middleware->prependToGroup('api', \App\Http\Middleware\EnforceAdminRouteRole::class);
         $middleware->prependToGroup('api', \App\Http\Middleware\SecurityAuditMiddleware::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\RejectUnsafeXmlUpload::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\ApplyListingQualityPreflight::class);
