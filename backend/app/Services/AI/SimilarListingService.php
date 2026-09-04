@@ -136,7 +136,7 @@ class SimilarListingService
         $this->applyPriceBand($query, $source);
         $aliases = $this->conditionAliases($source->condition);
         if ($aliases !== []) {
-            $query->whereIn('ads.condition', $aliases);
+            $query->whereIn(DB::raw('LOWER(TRIM(ads.condition))'), $aliases);
         }
     }
 
@@ -213,40 +213,69 @@ class SimilarListingService
     {
         [$city, $state] = $this->sourceLocality($source);
         $cityNormalized = mb_strtolower(trim($city), 'UTF-8');
-        $stateNormalized = mb_strtolower(trim($state), 'UTF-8');
+        $stateAliases = $this->stateAliases($state);
 
         if ($locality === 'city' && $cityNormalized !== '') {
-            $legacyExact = $stateNormalized !== ''
-                ? $cityNormalized.','.$stateNormalized
-                : $cityNormalized;
-            $query->where(function (Builder $scope) use ($cityNormalized, $stateNormalized, $legacyExact) {
-                $scope->where(function (Builder $explicit) use ($cityNormalized, $stateNormalized) {
+            $legacyExact = $stateAliases !== []
+                ? array_map(fn (string $alias): string => $cityNormalized.','.$alias, $stateAliases)
+                : [$cityNormalized];
+            $query->where(function (Builder $scope) use ($cityNormalized, $stateAliases, $legacyExact) {
+                $scope->where(function (Builder $explicit) use ($cityNormalized, $stateAliases) {
                     $explicit->whereRaw('LOWER(TRIM(ads.city)) = ?', [$cityNormalized]);
-                    if ($stateNormalized !== '') {
-                        $explicit->whereRaw('LOWER(TRIM(ads.state)) = ?', [$stateNormalized]);
+                    if ($stateAliases !== []) {
+                        $explicit->whereIn(DB::raw('LOWER(TRIM(ads.state))'), $stateAliases);
                     }
                 })->orWhere(function (Builder $legacy) use ($legacyExact) {
                     $legacy->whereRaw("TRIM(COALESCE(ads.city, '')) = ''")
-                        ->whereRaw("LOWER(REPLACE(TRIM(ads.location), ', ', ',')) = ?", [$legacyExact]);
+                        ->whereIn(DB::raw("LOWER(REPLACE(TRIM(ads.location), ', ', ','))"), $legacyExact);
                 });
             });
 
             return;
         }
 
-        if ($locality === 'state' && $stateNormalized !== '') {
-            $stateSuffix = '%,'.$stateNormalized;
-            $query->where(function (Builder $scope) use ($stateNormalized, $stateSuffix) {
-                $scope->whereRaw('LOWER(TRIM(ads.state)) = ?', [$stateNormalized])
-                    ->orWhere(function (Builder $legacy) use ($stateNormalized, $stateSuffix) {
+        if ($locality === 'state' && $stateAliases !== []) {
+            $query->where(function (Builder $scope) use ($stateAliases) {
+                $scope->whereIn(DB::raw('LOWER(TRIM(ads.state))'), $stateAliases)
+                    ->orWhere(function (Builder $legacy) use ($stateAliases) {
                         $legacy->whereRaw("TRIM(COALESCE(ads.state, '')) = ''")
-                            ->where(function (Builder $location) use ($stateNormalized, $stateSuffix) {
-                                $location->whereRaw("LOWER(REPLACE(TRIM(ads.location), ', ', ',')) = ?", [$stateNormalized])
-                                    ->orWhereRaw("LOWER(REPLACE(TRIM(ads.location), ', ', ',')) LIKE ?", [$stateSuffix]);
+                            ->where(function (Builder $location) use ($stateAliases) {
+                                $location->whereRaw('1 = 0');
+                                foreach ($stateAliases as $alias) {
+                                    $location->orWhereRaw(
+                                        "LOWER(REPLACE(TRIM(ads.location), ', ', ',')) = ?",
+                                        [$alias]
+                                    )->orWhereRaw(
+                                        "LOWER(REPLACE(TRIM(ads.location), ', ', ',')) LIKE ? ESCAPE '!'",
+                                        ['%,'.$this->escapeLike($alias)]
+                                    );
+                                }
                             });
                     });
             });
         }
+    }
+
+    private function stateAliases(mixed $state): array
+    {
+        $value = mb_strtolower(trim((string) $state), 'UTF-8');
+
+        return match ($value) {
+            'ciudad de méxico', 'ciudad de mexico', 'cdmx', 'distrito federal', 'df' => [
+                'ciudad de méxico',
+                'ciudad de mexico',
+                'cdmx',
+                'distrito federal',
+                'df',
+            ],
+            '' => [],
+            default => [$value],
+        };
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $value);
     }
 
     private function semanticEnabled(): bool
