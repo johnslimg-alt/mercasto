@@ -43,6 +43,7 @@ class SemanticDiscoveryBenchmark extends Command
                 ->join('ads', 'ads.id', '=', 'embeddings.ad_id')
                 ->where('ads.status', 'active')
                 ->where('ads.is_catalog_filler', false)
+                ->where(fn ($query) => $query->whereNull('ads.expires_at')->orWhere('ads.expires_at', '>', now()))
                 ->whereNotNull('embeddings.embedding')
                 ->select(['ads.id', 'ads.category'])
                 ->selectRaw('embeddings.embedding::text as embedding_text')
@@ -103,8 +104,8 @@ SQL, [
             'execution_ms' => round($executionMs, 3),
             'actual_rows' => (int) ($root['Actual Rows'] ?? 0),
             'total_cost' => round((float) ($root['Total Cost'] ?? 0.0), 3),
-            'shared_hit_blocks' => $this->sumPlanMetric($root, 'Shared Hit Blocks'),
-            'shared_read_blocks' => $this->sumPlanMetric($this->rootOnly($root), 'Shared Read Blocks'),
+            'shared_hit_blocks' => (int) ($root['Shared Hit Blocks'] ?? 0),
+            'shared_read_blocks' => (int) ($root['Shared Read Blocks'] ?? 0),
             'node_types' => array_values(array_unique($this->nodeTypes($root))),
             'peak_memory_bytes' => memory_get_peak_usage(true),
             'elapsed_ms' => (int) round((hrtime(true) - $started) / 1_000_000),
@@ -123,18 +124,6 @@ SQL, [
         return self::SUCCESS;
     }
 
-    private function sumPlanMetric(array $node, string $key): int
-    {
-        $sum = (int) ($node[$key] ?? 0);
-        foreach ((array) ($node['Plans'] ?? []) as $child) {
-            if (is_array($child)) {
-                $sum += $this->sumPlanMetric($child, $key);
-            }
-        }
-
-        return $sum;
-    }
-
     private function nodeTypes(array $node): array
     {
         $types = isset($node['Node Type']) ? [(string) $node['Node Type']] : [];
@@ -145,10 +134,5 @@ SQL, [
         }
 
         return $types;
-    }
-
-    private function rootOnly(array $node): array
-    {
-        return $node;
     }
 }
