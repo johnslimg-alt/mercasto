@@ -6,6 +6,9 @@ return [
     'timeout_seconds' => (int) env('LISTING_AUTOFILL_TIMEOUT_SECONDS', 20),
     'max_images' => 2,
     'max_hint_chars' => 2000,
+    // Keep taxonomy + prompt + up to two visual inputs inside the local 8k context.
+    // If the live taxonomy exceeds this budget, autofill fails soft and manual listing remains available.
+    'max_taxonomy_json_bytes' => 16000,
     'min_field_confidence' => 0.55,
     'subcategories' => [
         'motor' => ['Compactos', 'SUV', 'Pickup', 'Sedán', 'Hatchback', 'Coupé', 'Deportivos', 'Clásicos', 'Eléctricos', 'Accesorios', 'Camiones', 'Autobuses', 'Motos', 'Scooters', 'Cuatrimotos', 'UTV', 'Motos de agua', 'Refacciones', 'Cascos', 'Equipamiento', 'Bicicletas eléctricas', 'Patines eléctricos', 'Monociclos eléctricos', 'Karts de golf', 'Micro autos'],
