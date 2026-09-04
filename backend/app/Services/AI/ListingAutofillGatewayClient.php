@@ -16,6 +16,12 @@ class ListingAutofillGatewayClient
             throw new RuntimeException('Internal AI gateway credential is not configured.');
         }
 
+        $taxonomyJson = json_encode($taxonomy, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $maximumTaxonomyBytes = max(1024, min(65536, (int) config('listing_autofill.max_taxonomy_json_bytes', 16000)));
+        if (! is_string($taxonomyJson) || strlen($taxonomyJson) > $maximumTaxonomyBytes) {
+            throw new RuntimeException('Listing autofill taxonomy exceeds the local model context budget.');
+        }
+
         $timeout = max(1, min(30, (int) config('listing_autofill.timeout_seconds', 20)));
         $response = Http::acceptJson()
             ->asJson()
