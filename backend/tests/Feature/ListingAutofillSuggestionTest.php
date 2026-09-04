@@ -26,25 +26,21 @@ class ListingAutofillSuggestionTest extends TestCase
         ]);
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-        $categoryId = DB::table('categories')->insertGetId([
-            'slug' => 'motor',
-            'name' => json_encode(['es' => 'Autos', 'en' => 'Cars']),
-            'icon' => 'car',
-            'sort_order' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('category_attributes')->insert([
-            'category_id' => $categoryId,
-            'key' => 'marca',
-            'label' => json_encode(['es' => 'Marca']),
-            'type' => 'select',
-            'options' => json_encode([['value' => 'Nissan'], ['value' => 'Toyota']]),
-            'required' => false,
-            'sort_order' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+
+        $categoryId = (int) DB::table('categories')->where('slug', 'motor')->value('id');
+        $this->assertGreaterThan(0, $categoryId, 'Seeded motor category is required by the autofill contract fixture.');
+        DB::table('category_attributes')->updateOrInsert(
+            ['category_id' => $categoryId, 'key' => 'marca'],
+            [
+                'label' => json_encode(['es' => 'Marca']),
+                'type' => 'select',
+                'options' => json_encode([['value' => 'Nissan'], ['value' => 'Toyota']]),
+                'required' => false,
+                'sort_order' => 1,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ],
+        );
 
         Http::fake([
             'http://mercasto-ai-gateway:8080/v1/autofill/listing' => Http::response($this->gatewayResponse(), 200),
