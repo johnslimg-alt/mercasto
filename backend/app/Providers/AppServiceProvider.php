@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Events\NewNotification;
 use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\AdminAdModerationController;
+use App\Http\Controllers\Api\AiDescriptionController;
+use App\Http\Controllers\Api\AutofillAwareAiDescriptionController;
 use App\Http\Controllers\Api\BusinessProfileController;
 use App\Http\Controllers\Api\ConstrainedSimilarAdController;
 use App\Http\Controllers\Api\HybridSearchController;
@@ -40,6 +42,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(BusinessProfileController::class, SafeBusinessProfileController::class);
         $this->app->bind(SearchController::class, HybridSearchController::class);
         $this->app->bind(AdController::class, ConstrainedSimilarAdController::class);
+        $this->app->bind(AiDescriptionController::class, AutofillAwareAiDescriptionController::class);
     }
 
     public function boot(): void
