@@ -80,6 +80,64 @@ class ConstrainedSimilarListingsTest extends TestCase
         }
     }
 
+    public function test_state_is_prioritized_when_source_city_is_missing(): void
+    {
+        config([
+            'semantic_discovery.enabled' => false,
+            'semantic_discovery.similar.limit' => 1,
+        ]);
+
+        $source = $this->ad(['state' => 'Veracruz', 'city' => null]);
+        $state = $this->ad(['title' => 'Mismo estado', 'state' => 'Veracruz', 'city' => 'Xalapa']);
+        $this->ad(['title' => 'Más reciente remoto', 'state' => 'Puebla', 'city' => 'Puebla']);
+
+        $ids = collect($this->getJson("/api/ads/{$source->id}/similar")->assertOk()->json())
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        $this->assertSame([$state->id], $ids);
+    }
+
+    public function test_deterministic_fallback_uses_id_as_stable_timestamp_tie_breaker(): void
+    {
+        config([
+            'semantic_discovery.enabled' => false,
+            'semantic_discovery.similar.limit' => 2,
+        ]);
+        $this->travelTo(now()->startOfSecond());
+
+        $source = $this->ad();
+        $first = $this->ad(['title' => 'Primero']);
+        $second = $this->ad(['title' => 'Segundo']);
+
+        $ids = collect($this->getJson("/api/ads/{$source->id}/similar")->assertOk()->json())
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        $this->assertSame([$second->id, $first->id], $ids);
+    }
+
+    public function test_semantic_query_keeps_vector_distance_as_leading_order_inside_locality_tiers(): void
+    {
+        $source = file_get_contents(app_path('Services/AI/SimilarListingService.php'));
+        $this->assertIsString($source);
+        $semanticStart = strpos($source, 'private function semanticCandidates');
+        $deterministicStart = strpos($source, 'private function deterministicCandidates');
+        $this->assertNotFalse($semanticStart);
+        $this->assertNotFalse($deterministicStart);
+
+        $semanticBody = substr($source, $semanticStart, $deterministicStart - $semanticStart);
+        $vectorOrder = strpos($semanticBody, "->orderBy('vec_distance')");
+        $recencyOrder = strpos($semanticBody, "->orderByDesc('ads.created_at')");
+
+        $this->assertNotFalse($vectorOrder);
+        $this->assertNotFalse($recencyOrder);
+        $this->assertLessThan($recencyOrder, $vectorOrder);
+        $this->assertStringNotContainsString("orderByRaw('CASE", $semanticBody);
+    }
+
     public function test_similar_endpoint_is_bounded_and_never_returns_source(): void
     {
         config([
