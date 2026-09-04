@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 from fastapi.testclient import TestClient
 
 from mercasto_ai.autofill import (
@@ -154,6 +152,6 @@ def test_prompt_contract_forbids_sensitive_and_ownership_inference() -> None:
         "garantía",
         "ubicación exif",
         "no adivines",
+        "taxonomy",
     ):
         assert marker in prompt
-    assert json.dumps(taxonomy(), ensure_ascii=False)
