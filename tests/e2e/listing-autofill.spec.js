@@ -104,7 +104,7 @@ test('text-only autofill stays suggestion-only until seller applies fields', asy
   test.skip(!['chromium', 'chromium-mobile'].includes(testInfo.project.name));
   const requests = await prepare(page);
 
-  await page.getByTestId('listing-autofill-short-text').fill('Used Nissan Versa 2022');
+  await page.getByTestId('listing-autofill-text').fill('Used Nissan Versa 2022');
   await page.getByTestId('listing-autofill-run').click();
   const suggestions = page.getByTestId('listing-autofill-suggestions');
   await expect(suggestions).toBeVisible();
@@ -132,7 +132,7 @@ test('photo-only and mixed autofill send only new seller media', async ({ page }
   await expect(page.getByTestId('listing-autofill-suggestions')).toBeVisible();
   expect(requests[0]).toContain('icon-192x192.png');
 
-  await page.getByTestId('listing-autofill-short-text').fill('Nissan Versa with one seller photo');
+  await page.getByTestId('listing-autofill-text').fill('Nissan Versa with one seller photo');
   await page.getByTestId('listing-autofill-run').click();
   expect(requests).toHaveLength(2);
   expect(requests[1]).toContain('Nissan Versa with one seller photo');
@@ -142,7 +142,7 @@ test('photo-only and mixed autofill send only new seller media', async ({ page }
 test('low-confidence suggestions expose no apply action', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium');
   await prepare(page, 'low');
-  await page.getByTestId('listing-autofill-short-text').fill('Ambiguous object');
+  await page.getByTestId('listing-autofill-text').fill('Ambiguous object');
   await page.getByTestId('listing-autofill-run').click();
   const suggestions = page.getByTestId('listing-autofill-suggestions');
   await expect(suggestions).toBeVisible();
@@ -152,7 +152,7 @@ test('low-confidence suggestions expose no apply action', async ({ page }, testI
 test('gateway failure leaves the manual publish flow usable on mobile', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile');
   await prepare(page, 'unavailable');
-  await page.getByTestId('listing-autofill-short-text').fill('Manual fallback listing');
+  await page.getByTestId('listing-autofill-text').fill('Manual fallback listing');
   await page.getByTestId('listing-autofill-run').click();
   await expect(page.getByText(/Suggestions are unavailable|Autofill unavailable/i)).toBeVisible();
 
