@@ -17,7 +17,7 @@ if (window.location.pathname === '/listings' || (window.location.pathname === '/
   loadHomeScreen();
 }
 
-export const PostScreen = React.lazy(() => import('../components/screens/PostScreen'));
+export const PostScreen = React.lazy(() => import('../components/screens/PostScreenWithAutofill'));
 export const SellerLandingScreen = React.lazy(() => import('../components/screens/SellerLandingScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="route_load_error" /> })));
 export const UserDashboard = React.lazy(() => import('../components/screens/UserDashboard'));
 export const AdDetailScreen = React.lazy(() => import('../components/screens/AdDetailScreen').catch(() => ({ default: () => <LocalizedRouteLoadError translationKey="error_loading_ad" /> })));
