@@ -1,0 +1,44 @@
+name: Temporary autofill route inventory export
+
+on:
+  push:
+    branches:
+      - feat/listing-autofill-assist
+    paths:
+      - '.github/workflows/tmp-export-autofill-routes.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    if: github.repository == 'johnslimg-alt/mercasto' && github.actor == 'johnslimg-alt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/listing-autofill-assist
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, pdo_sqlite, sqlite3, gd, zip, bcmath, pcntl
+          coverage: none
+      - run: cd backend && composer install --no-interaction --prefer-dist --no-progress
+      - run: bash scripts/export-route-inventory.sh
+      - name: Commit generated inventory and remove this one-shot workflow
+        run: |
+          git config user.name 'johnslimg-alt'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/tmp-export-autofill-routes.yml
+          git add docs/route-inventory-generated.md docs/route-inventory-signatures.json
+          git commit -m 'docs: refresh route inventory for listing autofill'
+          git push origin HEAD:feat/listing-autofill-assist
