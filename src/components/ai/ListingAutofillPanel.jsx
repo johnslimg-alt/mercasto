@@ -24,6 +24,7 @@ export default function ListingAutofillPanel({
   form,
   images,
   lang,
+  resolveSubcategory,
   onApplyCategory,
   onApplySubcategory,
   onApplyAttribute,
@@ -36,6 +37,10 @@ export default function ListingAutofillPanel({
   const newPhotos = useMemo(() => (images || []).filter((image) => image?.source === 'new' && image?.file instanceof File), [images]);
   const canAnalyze = shortText.trim().length > 0 || newPhotos.length > 0;
   const category = suggestions?.category?.value || null;
+  const canonicalSubcategory = useMemo(
+    () => resolveSubcategory?.(category, suggestions?.subcategory_hint?.value) || null,
+    [category, resolveSubcategory, suggestions?.subcategory_hint?.value],
+  );
 
   const run = async () => {
     if (!canAnalyze) return;
@@ -72,7 +77,7 @@ export default function ListingAutofillPanel({
       {suggestions && (
         <div className="mt-4 space-y-2" data-testid="listing-autofill-suggestions">
           <SuggestionRow label={copy.category} suggestion={suggestions.category} copy={copy} onApply={() => onApplyCategory?.(category)} />
-          <SuggestionRow label={copy.subcategory} suggestion={suggestions.subcategory_hint} copy={copy} disabled={!category} onApply={() => onApplySubcategory?.(category, suggestions.subcategory_hint?.value)} />
+          <SuggestionRow label={copy.subcategory} suggestion={suggestions.subcategory_hint} copy={copy} disabled={!canonicalSubcategory} onApply={() => onApplySubcategory?.(category, canonicalSubcategory)} />
           <SuggestionRow label={copy.titleField} suggestion={suggestions.title} copy={copy} onApply={() => onApplyTitle?.(suggestions.title.value)} />
           <SuggestionRow label={copy.description} suggestion={suggestions.description} copy={copy} onApply={() => onApplyDescription?.(suggestions.description.value)} />
           {Object.keys(suggestions.attributes || {}).length > 0 && (
