@@ -2,11 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from mercasto_ai.autofill import (
-    AutofillField,
-    ListingAutofillProposal,
-    _canonicalize,
-)
+from mercasto_ai.autofill import AutofillField, ListingAutofillProposal, _canonicalize
 from mercasto_ai.combined import app
 
 
