@@ -11,13 +11,13 @@ class SimilarListingPostMergeHardeningTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_condition_aliases_match_legacy_and_current_values(): void
+    public function test_condition_aliases_match_legacy_current_and_mixed_case_values(): void
     {
         config(['semantic_discovery.enabled' => false, 'semantic_discovery.similar.limit' => 4]);
 
-        $source = $this->ad(['condition' => 'usado']);
-        $legacyUsed = $this->ad(['title' => 'Legacy used', 'condition' => 'used']);
-        $currentUsed = $this->ad(['title' => 'Current usado', 'condition' => 'usado']);
+        $source = $this->ad(['condition' => ' Used ']);
+        $legacyUsed = $this->ad(['title' => 'Legacy used', 'condition' => 'USED']);
+        $currentUsed = $this->ad(['title' => 'Current usado', 'condition' => ' usado ']);
         $new = $this->ad(['title' => 'Nuevo incompatible', 'condition' => 'nuevo']);
 
         $ids = $this->similarIds($source);
