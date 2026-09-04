@@ -42,23 +42,41 @@ class SimilarListingService
                 return collect();
             }
 
-            $query = $this->eligible($source)
-                ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
-                ->select('ads.*')
-                ->selectRaw('(embeddings.embedding <=> ?::vector) AS vec_distance', [$embedding])
-                ->whereNotNull('embeddings.embedding')
-                ->whereRaw(
-                    '(embeddings.embedding <=> ?::vector) <= ?',
-                    [$embedding, (float) config('semantic_discovery.similar.max_distance', 0.45)]
-                );
-            $this->applyPriceAndCondition($query, $source);
-            $this->orderByLocality($query, $source);
+            $result = collect();
+            foreach ($this->localityTiers($source) as $locality) {
+                if ($result->count() >= $limit) {
+                    break;
+                }
 
-            return $query
-                ->orderBy('vec_distance')
-                ->orderByDesc('ads.created_at')
-                ->limit($limit)
-                ->get();
+                $excludeIds = $result->pluck('id')->map(fn ($id): int => (int) $id)->all();
+                $query = $this->eligible($source)
+                    ->join('embeddings', 'ads.id', '=', 'embeddings.ad_id')
+                    ->select('ads.*')
+                    ->selectRaw('(embeddings.embedding <=> ?::vector) AS vec_distance', [$embedding])
+                    ->whereNotNull('embeddings.embedding')
+                    ->whereRaw(
+                        '(embeddings.embedding <=> ?::vector) <= ?',
+                        [$embedding, (float) config('semantic_discovery.similar.max_distance', 0.45)]
+                    );
+                if ($excludeIds !== []) {
+                    $query->whereNotIn('ads.id', $excludeIds);
+                }
+                $this->applyPriceAndCondition($query, $source);
+                $this->applyLocalityConstraint($query, $source, $locality);
+
+                // Keep vector distance as the leading order so PostgreSQL/pgvector
+                // can use the HNSW nearest-neighbor index inside each bounded
+                // locality tier. Locality preference comes from the tier order.
+                $batch = $query
+                    ->orderBy('vec_distance')
+                    ->orderByDesc('ads.created_at')
+                    ->orderByDesc('ads.id')
+                    ->limit($limit - $result->count())
+                    ->get();
+                $result = $result->merge($batch)->unique('id')->values();
+            }
+
+            return $result->take($limit)->values();
         } catch (Throwable) {
             return collect();
         }
@@ -71,29 +89,25 @@ class SimilarListingService
         }
 
         $result = collect();
-        foreach (['city', 'state', null] as $locality) {
+        foreach ($this->localityTiers($source) as $locality) {
             if ($result->count() >= $needed) {
                 break;
             }
 
-            $query = $this->eligible($source)
-                ->whereNotIn('ads.id', array_values(array_unique(array_merge(
-                    $excludeIds,
-                    $result->pluck('id')->map(fn ($id): int => (int) $id)->all(),
-                ))));
-            $this->applyPriceAndCondition($query, $source);
-
-            if ($locality === 'city' && trim((string) $source->city) !== '') {
-                $query->whereRaw('LOWER(ads.city) = ?', [mb_strtolower(trim((string) $source->city), 'UTF-8')]);
-                if (trim((string) $source->state) !== '') {
-                    $query->whereRaw('LOWER(ads.state) = ?', [mb_strtolower(trim((string) $source->state), 'UTF-8')]);
-                }
-            } elseif ($locality === 'state' && trim((string) $source->state) !== '') {
-                $query->whereRaw('LOWER(ads.state) = ?', [mb_strtolower(trim((string) $source->state), 'UTF-8')]);
+            $excluded = array_values(array_unique(array_merge(
+                $excludeIds,
+                $result->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+            )));
+            $query = $this->eligible($source);
+            if ($excluded !== []) {
+                $query->whereNotIn('ads.id', $excluded);
             }
+            $this->applyPriceAndCondition($query, $source);
+            $this->applyLocalityConstraint($query, $source, $locality);
 
             $batch = $query
                 ->orderByDesc('ads.created_at')
+                ->orderByDesc('ads.id')
                 ->limit($needed - $result->count())
                 ->get();
             $result = $result->merge($batch)->unique('id')->values();
@@ -135,15 +149,33 @@ class SimilarListingService
         $query->whereBetween('ads.price', [max(0, $min), max($min, $max)]);
     }
 
-    private function orderByLocality(Builder $query, Ad $source): void
+    private function localityTiers(Ad $source): array
     {
-        $city = mb_strtolower(trim((string) $source->city), 'UTF-8');
-        $state = mb_strtolower(trim((string) $source->state), 'UTF-8');
-        if ($city !== '') {
-            $query->orderByRaw('CASE WHEN LOWER(ads.city) = ? THEN 0 ELSE 1 END', [$city]);
+        $tiers = [];
+        if (trim((string) $source->city) !== '') {
+            $tiers[] = 'city';
         }
-        if ($state !== '') {
-            $query->orderByRaw('CASE WHEN LOWER(ads.state) = ? THEN 0 ELSE 1 END', [$state]);
+        if (trim((string) $source->state) !== '') {
+            $tiers[] = 'state';
+        }
+        $tiers[] = null;
+
+        return $tiers;
+    }
+
+    private function applyLocalityConstraint(Builder $query, Ad $source, ?string $locality): void
+    {
+        if ($locality === 'city') {
+            $query->whereRaw('LOWER(ads.city) = ?', [mb_strtolower(trim((string) $source->city), 'UTF-8')]);
+            if (trim((string) $source->state) !== '') {
+                $query->whereRaw('LOWER(ads.state) = ?', [mb_strtolower(trim((string) $source->state), 'UTF-8')]);
+            }
+
+            return;
+        }
+
+        if ($locality === 'state') {
+            $query->whereRaw('LOWER(ads.state) = ?', [mb_strtolower(trim((string) $source->state), 'UTF-8')]);
         }
     }
 
