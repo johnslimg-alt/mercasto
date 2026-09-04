@@ -1,0 +1,92 @@
+name: RDC Session Diagnose
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: rdc-session-diagnose
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      github.event.comment.body == 'RUN:rdc_session_diagnose:MERCASTO'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate recovery secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_recovery_key
+          chmod 600 ~/.ssh/mercasto_recovery_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+      - name: Read sanitized RDC state
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_recovery_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          echo '=== RDC SERVICE ==='
+          systemctl show remote-desktop-commander.service --no-pager \
+            -p ActiveState -p SubState -p MainPID -p NRestarts -p ExecMainStatus
+          echo '=== DIRECT SSH ==='
+          sshd -t
+          getent passwd mercasto-agent | cut -d: -f1,6,7 || true
+          ss -lnt 2>/dev/null | grep -E '(:22 |:22$)' || true
+          echo '=== DEVICE STATE METADATA ==='
+          if [ -f /root/.desktop-commander-device/device.json ]; then
+            stat -c 'present size=%s modified=%y' /root/.desktop-commander-device/device.json
+          else
+            echo 'device_file=missing'
+          fi
+          echo '=== SANITIZED RDC JOURNAL ==='
+          journalctl -u remote-desktop-commander.service -n 160 --no-pager 2>/dev/null \
+            | sed -E \
+              -e 's#https?://[^ ]+#<url>#g' \
+              -e 's/[A-Za-z0-9_-]{24,}/<redacted>/g' \
+              -e 's/[A-Z0-9]{4}-[A-Z0-9]{4}/<code>/g' \
+            | grep -E -i 'persist|session|authoriz|device|channel|online|ready|error|fail|remote|starting' \
+            | tail -100 || true
+          REMOTE
+      - name: Remove SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/mercasto_recovery_key
+      - name: Report result
+        if: always()
+        uses: actions/github-script@v9
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const status = process.env.JOB_STATUS || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 832,
+              body: `RDC_SESSION_DIAGNOSE_RESULT\nstatus=${status}\nrun_id=${context.runId}\nrun=${runUrl}`
+            });
