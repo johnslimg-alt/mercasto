@@ -113,7 +113,7 @@ export default function ListingAutofillPanel({
             label={copy.subcategory}
             suggestion={suggestions.subcategory}
             copy={copy}
-            disabled={!category || !subcategory}
+            disabled={!category || !subcategory || form.category !== category}
             onApply={() => onApplySubcategory?.(category, subcategory)}
           />
           <SuggestionRow
