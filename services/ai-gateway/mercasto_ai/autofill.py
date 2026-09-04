@@ -34,7 +34,7 @@ class AutofillRequest(BaseModel):
     locale: str = Field(default="es", max_length=10)
 
     @model_validator(mode="after")
-    def require_input(self) -> "AutofillRequest":
+    def require_input(self) -> AutofillRequest:
         if not self.short_text.strip() and not self.images_base64:
             raise ValueError("Text or image input is required")
         return self
@@ -98,14 +98,14 @@ def _extract_json(raw: str) -> dict[str, Any]:
     cleaned = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.MULTILINE).strip()
     try:
         value = json.loads(cleaned)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
         match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
         if match is None:
-            raise AutofillUnavailable("Local model returned invalid autofill JSON")
+            raise AutofillUnavailable("Local model returned invalid autofill JSON") from exc
         try:
             value = json.loads(match.group(0))
-        except json.JSONDecodeError as exc:
-            raise AutofillUnavailable("Local model returned invalid autofill JSON") from exc
+        except json.JSONDecodeError as nested_exc:
+            raise AutofillUnavailable("Local model returned invalid autofill JSON") from nested_exc
     if not isinstance(value, dict):
         raise AutofillUnavailable("Local model returned invalid autofill contract")
     return value
