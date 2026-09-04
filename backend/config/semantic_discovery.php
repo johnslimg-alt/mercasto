@@ -8,6 +8,9 @@ return [
     'max_distance' => max(0.05, min(1.0, (float) env('SEMANTIC_DISCOVERY_MAX_DISTANCE', 0.35))),
     'per_page' => 16,
     'max_page' => 100,
+    'benchmark' => [
+        'enabled' => (bool) env('SEMANTIC_BENCHMARK_ENABLED', false),
+    ],
     'similar' => [
         'semantic_enabled' => (bool) env('SEMANTIC_SIMILAR_ENABLED', true),
         'limit' => max(1, min(12, (int) env('SEMANTIC_SIMILAR_LIMIT', 8))),
