@@ -30,8 +30,17 @@ function normalized(value) {
 }
 
 export default function PostScreenWithAutofill(props) {
-  const { form, images, lang, setForm } = props;
+  const { form, images, lang, setForm, isLoggedIn } = props;
   const [formRevision, setFormRevision] = useState(0);
+
+  const resolveSubcategory = useCallback((category, hint) => {
+    if (!category || !hint) return null;
+    const needle = normalized(hint);
+    const match = subcategoryOptions(category, lang).find(
+      (option) => normalized(option.value) === needle || normalized(option.label) === needle,
+    );
+    return match?.value || null;
+  }, [lang]);
 
   const applyCategory = useCallback((category) => {
     if (!category) return;
@@ -41,16 +50,12 @@ export default function PostScreenWithAutofill(props) {
     setFormRevision((value) => value + 1);
   }, [setForm]);
 
-  const applySubcategory = useCallback((category, hint) => {
-    if (!category || !hint) return;
-    const options = subcategoryOptions(category, lang);
-    const needle = normalized(hint);
-    const match = options.find((option) => normalized(option.value) === needle || normalized(option.label) === needle);
-    if (!match) return;
+  const applySubcategory = useCallback((category, canonicalSubcategory) => {
+    if (!category || !canonicalSubcategory) return;
     setForm((current) => current.category === category
-      ? { ...current, subcategory: match.value }
+      ? { ...current, subcategory: canonicalSubcategory }
       : current);
-  }, [lang, setForm]);
+  }, [setForm]);
 
   const applyAttribute = useCallback((category, key, value) => {
     if (!category || !key || value == null) return;
@@ -61,18 +66,21 @@ export default function PostScreenWithAutofill(props) {
 
   return (
     <>
-      <div className="bg-[var(--paper)] px-4 pt-5 md:pt-8">
-        <ListingAutofillPanel
-          form={form}
-          images={images}
-          lang={lang}
-          onApplyCategory={applyCategory}
-          onApplySubcategory={applySubcategory}
-          onApplyAttribute={applyAttribute}
-          onApplyTitle={(title) => setForm((current) => ({ ...current, title }))}
-          onApplyDescription={(description) => setForm((current) => ({ ...current, description }))}
-        />
-      </div>
+      {isLoggedIn && (
+        <div className="bg-[var(--paper)] px-4 pt-5 md:pt-8">
+          <ListingAutofillPanel
+            form={form}
+            images={images}
+            lang={lang}
+            resolveSubcategory={resolveSubcategory}
+            onApplyCategory={applyCategory}
+            onApplySubcategory={applySubcategory}
+            onApplyAttribute={applyAttribute}
+            onApplyTitle={(title) => setForm((current) => ({ ...current, title }))}
+            onApplyDescription={(description) => setForm((current) => ({ ...current, description }))}
+          />
+        </div>
+      )}
       <PostScreen key={`post-${formRevision}`} {...props} />
     </>
   );
