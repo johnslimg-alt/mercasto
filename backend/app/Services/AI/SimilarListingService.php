@@ -69,8 +69,6 @@ class SimilarListingService
 
         try {
             return DB::transaction(function () use ($source, $embedding, $locality, $needed, $excludeIds): Collection {
-                // Filtered HNSW queries need iterative scans so a selective city/state
-                // predicate cannot exhaust the approximate candidate pool too soon.
                 DB::statement("SET LOCAL hnsw.iterative_scan = 'strict_order'");
 
                 $query = $this->eligible($source)
@@ -196,7 +194,10 @@ class SimilarListingService
         $location = trim((string) $source->location);
 
         if ($location !== '' && ($city === '' || $state === '')) {
-            $parts = array_values(array_filter(array_map('trim', explode(',', $location)), fn (string $part): bool => $part !== ''));
+            $parts = array_values(array_filter(
+                array_map('trim', explode(',', $location)),
+                fn (string $part): bool => $part !== ''
+            ));
             if ($city === '' && count($parts) >= 2) {
                 $city = $parts[0];
             }
@@ -233,7 +234,7 @@ class SimilarListingService
         }
 
         if ($locality === 'state' && $state !== '') {
-            $stateNeedle = '%'.mb_strtolower($state, 'UTFEXP8').'%';
+            $stateNeedle = '%'.mb_strtolower($state, 'UTF-8').'%';
             $query->where(function (Builder $scope) use ($state, $stateNeedle) {
                 $scope->whereRaw('LOWER(ads.state) = ?', [mb_strtolower($state, 'UTF-8')])
                     ->orWhere(function (Builder $legacy) use ($stateNeedle) {
