@@ -6,7 +6,7 @@ import io
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from mercasto_ai.autofill import AutofillRequest, canonicalize, _sanitize_image
+from mercasto_ai.autofill import AutofillRequest, _sanitize_image, canonicalize
 from mercasto_ai.combined import app
 
 
