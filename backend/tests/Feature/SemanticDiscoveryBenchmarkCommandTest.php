@@ -34,15 +34,18 @@ class SemanticDiscoveryBenchmarkCommandTest extends TestCase
     {
         $source = file_get_contents(app_path('Console/Commands/SemanticDiscoveryBenchmark.php'));
         $this->assertIsString($source);
-        $this->assertStringContainsString('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)', $source);
-        $this->assertStringNotContainsString("DB::insert", $source);
-        $this->assertStringNotContainsString("DB::update", $source);
-        $this->assertStringNotContainsString("DB::delete", $this->withoutDescription($source));
-        $this->assertStringNotContainsString("'embedding' =>", $source);
-    }
+        $upper = strtoupper($source);
 
-    private function withoutDescription(string $source): string
-    {
-        return preg_replace('/protected \$description = .*?;/', '', $source) ?? $source;
+        $this->assertStringContainsString('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)', $source);
+        $this->assertStringNotContainsString('DB::INSERT', $upper);
+        $this->assertStringNotContainsString('DB::UPDATE', $upper);
+        $this->assertStringNotContainsString('DB::DELETE', $upper);
+        $this->assertStringNotContainsString('INSERT INTO ', $upper);
+        $this->assertStringNotContainsString('UPDATE ADS ', $upper);
+        $this->assertStringNotContainsString('DELETE FROM ', $upper);
+        $this->assertStringNotContainsString("'embedding' =>", $source);
+        $this->assertStringNotContainsString("'embedding_text' =>", $source);
+        $this->assertStringContainsString("'shared_hit_blocks' => (int) (\$root['Shared Hit Blocks'] ?? 0)", $source);
+        $this->assertStringContainsString("'shared_read_blocks' => (int) (\$root['Shared Read Blocks'] ?? 0)", $source);
     }
 }
