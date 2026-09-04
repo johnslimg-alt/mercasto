@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from mercasto_ai.autofill import _canonicalize, AutofillField, ListingAutofillProposal
+from mercasto_ai import autofill
+from mercasto_ai.autofill import AutofillField, ListingAutofillProposal
 from mercasto_ai.combined import app
 
 
@@ -126,7 +127,7 @@ def test_canonicalizer_drops_hallucinated_taxonomy_values() -> None:
         },
     )
 
-    canonical, warnings = _canonicalize(proposal, schema)
+    canonical, warnings = autofill._canonicalize(proposal, schema)
 
     assert canonical.category is not None
     assert canonical.category.value == "motor"
