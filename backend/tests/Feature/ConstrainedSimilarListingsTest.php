@@ -123,8 +123,8 @@ class ConstrainedSimilarListingsTest extends TestCase
     {
         $source = file_get_contents(app_path('Services/AI/SimilarListingService.php'));
         $this->assertIsString($source);
-        $semanticStart = strpos($source, 'private function semanticCandidates');
-        $deterministicStart = strpos($source, 'private function deterministicCandidates');
+        $semanticStart = strpos($source, 'private function semanticTier');
+        $deterministicStart = strpos($source, 'private function deterministicTier');
         $this->assertNotFalse($semanticStart);
         $this->assertNotFalse($deterministicStart);
 
