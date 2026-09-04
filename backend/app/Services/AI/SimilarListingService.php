@@ -212,34 +212,38 @@ class SimilarListingService
     private function applyLocalityConstraint(Builder $query, Ad $source, ?string $locality): void
     {
         [$city, $state] = $this->sourceLocality($source);
-        if ($locality === 'city' && $city !== '') {
-            $cityNeedle = '%'.mb_strtolower($city, 'UTF-8').'%';
-            $stateNeedle = $state !== '' ? '%'.mb_strtolower($state, 'UTF-8').'%' : null;
-            $query->where(function (Builder $scope) use ($city, $state, $cityNeedle, $stateNeedle) {
-                $scope->where(function (Builder $explicit) use ($city, $state) {
-                    $explicit->whereRaw('LOWER(ads.city) = ?', [mb_strtolower($city, 'UTF-8')]);
-                    if ($state !== '') {
-                        $explicit->whereRaw('LOWER(ads.state) = ?', [mb_strtolower($state, 'UTF-8')]);
+        $cityNormalized = mb_strtolower(trim($city), 'UTF-8');
+        $stateNormalized = mb_strtolower(trim($state), 'UTF-8');
+
+        if ($locality === 'city' && $cityNormalized !== '') {
+            $legacyExact = $stateNormalized !== ''
+                ? $cityNormalized.','.$stateNormalized
+                : $cityNormalized;
+            $query->where(function (Builder $scope) use ($cityNormalized, $stateNormalized, $legacyExact) {
+                $scope->where(function (Builder $explicit) use ($cityNormalized, $stateNormalized) {
+                    $explicit->whereRaw('LOWER(TRIM(ads.city)) = ?', [$cityNormalized]);
+                    if ($stateNormalized !== '') {
+                        $explicit->whereRaw('LOWER(TRIM(ads.state)) = ?', [$stateNormalized]);
                     }
-                })->orWhere(function (Builder $legacy) use ($cityNeedle, $stateNeedle) {
+                })->orWhere(function (Builder $legacy) use ($legacyExact) {
                     $legacy->whereRaw("TRIM(COALESCE(ads.city, '')) = ''")
-                        ->whereRaw('LOWER(ads.location) LIKE ?', [$cityNeedle]);
-                    if ($stateNeedle !== null) {
-                        $legacy->whereRaw('LOWER(ads.location) LIKE ?', [$stateNeedle]);
-                    }
+                        ->whereRaw("LOWER(REPLACE(TRIM(ads.location), ', ', ',')) = ?", [$legacyExact]);
                 });
             });
 
             return;
         }
 
-        if ($locality === 'state' && $state !== '') {
-            $stateNeedle = '%'.mb_strtolower($state, 'UTF-8').'%';
-            $query->where(function (Builder $scope) use ($state, $stateNeedle) {
-                $scope->whereRaw('LOWER(ads.state) = ?', [mb_strtolower($state, 'UTF-8')])
-                    ->orWhere(function (Builder $legacy) use ($stateNeedle) {
+        if ($locality === 'state' && $stateNormalized !== '') {
+            $stateSuffix = '%,'.$stateNormalized;
+            $query->where(function (Builder $scope) use ($stateNormalized, $stateSuffix) {
+                $scope->whereRaw('LOWER(TRIM(ads.state)) = ?', [$stateNormalized])
+                    ->orWhere(function (Builder $legacy) use ($stateNormalized, $stateSuffix) {
                         $legacy->whereRaw("TRIM(COALESCE(ads.state, '')) = ''")
-                            ->whereRaw('LOWER(ads.location) LIKE ?', [$stateNeedle]);
+                            ->where(function (Builder $location) use ($stateNormalized, $stateSuffix) {
+                                $location->whereRaw("LOWER(REPLACE(TRIM(ads.location), ', ', ',')) = ?", [$stateNormalized])
+                                    ->orWhereRaw("LOWER(REPLACE(TRIM(ads.location), ', ', ',')) LIKE ?", [$stateSuffix]);
+                            });
                     });
             });
         }
