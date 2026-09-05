@@ -60,6 +60,7 @@ export default function ListingAutofillPanel({
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <input
           data-testid="listing-autofill-text"
+          aria-label={copy.placeholder}
           value={shortText}
           onChange={(event) => { setShortText(event.target.value); if (suggestions) clear(); }}
           maxLength={1200}
