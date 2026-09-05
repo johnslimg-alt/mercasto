@@ -1,7 +1,4 @@
-from mercasto_ai.autofill import (
-    AutofillRequest,
-    canonicalize,
-)
+from mercasto_ai.autofill import AutofillRequest, canonicalize
 
 
 TAXONOMY = [
