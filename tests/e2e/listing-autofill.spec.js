@@ -6,6 +6,8 @@ const seller = {
   name: 'Autofill Seller',
   email: 'autofill-e2e@example.test',
   role: 'individual',
+  is_verified: true,
+  account_verified: true,
   onboarding_completed_at: '2026-09-01T00:00:00Z',
 };
 
@@ -42,6 +44,7 @@ async function prepare(page, scenario = 'ok') {
     localStorage.setItem('mercasto_language', 'en');
     localStorage.setItem('cookiesAccepted', 'true');
     localStorage.setItem('cookie_consent', 'essential');
+    sessionStorage.removeItem('mercasto.publish_draft.v1');
   }, seller);
 
   await page.route('**/api/**', async route => {
@@ -49,23 +52,23 @@ async function prepare(page, scenario = 'ok') {
     const url = new URL(request.url());
     const pathname = url.pathname;
 
-    if (pathname.endsWith('/api/user') && request.method() === 'GET') {
+    if (pathname.endsWith('/user') && request.method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(seller) });
     }
-    if (pathname.endsWith('/api/categories')) {
+    if (pathname.endsWith('/categories')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(categories) });
     }
-    if (pathname.endsWith('/api/category-attributes')) {
+    if (pathname.includes('/category-attributes')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     }
-    if (pathname.endsWith('/api/auth/providers')) {
+    if (pathname.endsWith('/auth/providers')) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ google: false, apple: false, twitter: false, telegram: false, sms: false }),
       });
     }
-    if (pathname.endsWith('/api/ads/generate-description') && request.method() === 'POST') {
+    if (pathname.endsWith('/ads/generate-description') && request.method() === 'POST') {
       const raw = request.postDataBuffer();
       requests.push(raw ? raw.toString('latin1') : '');
       if (scenario === 'unavailable') {
@@ -77,7 +80,7 @@ async function prepare(page, scenario = 'ok') {
         body: JSON.stringify(suggestionPayload({ lowConfidence: scenario === 'low' })),
       });
     }
-    if (pathname.endsWith('/api/ads') && request.method() === 'GET') {
+    if (pathname.endsWith('/ads') && request.method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], total: 0 }) });
     }
     if (pathname.includes('/notifications')) {
@@ -86,7 +89,7 @@ async function prepare(page, scenario = 'ok') {
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 
-  await page.goto('/post');
+  await page.goto('/post', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('listing-autofill-panel')).toBeVisible({ timeout: 10000 });
   return requests;
 }
@@ -101,7 +104,7 @@ async function openDetailsStep(page) {
 }
 
 test('text-only autofill stays suggestion-only until seller applies fields', async ({ page }, testInfo) => {
-  test.skip(!['chromium', 'chromium-mobile'].includes(testInfo.project.name));
+  test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name));
   const requests = await prepare(page);
 
   await page.getByTestId('listing-autofill-text').fill('Used Nissan Versa 2022');
@@ -121,7 +124,7 @@ test('text-only autofill stays suggestion-only until seller applies fields', asy
 });
 
 test('photo-only and mixed autofill send only new seller media', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium');
+  test.skip(testInfo.project.name !== 'chromium-desktop');
   const requests = await prepare(page);
   await openDetailsStep(page);
 
@@ -140,7 +143,7 @@ test('photo-only and mixed autofill send only new seller media', async ({ page }
 });
 
 test('low-confidence suggestions expose no apply action', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium');
+  test.skip(testInfo.project.name !== 'chromium-desktop');
   await prepare(page, 'low');
   await page.getByTestId('listing-autofill-text').fill('Ambiguous object');
   await page.getByTestId('listing-autofill-run').click();
