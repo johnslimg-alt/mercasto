@@ -53,44 +53,19 @@ def _contains_phrase(text: str, phrase: str) -> bool:
 
 _CATEGORY_LOCALE_ANCHORS: dict[str, dict[str, tuple[str, ...]]] = {
     "en": {
-        "motor": ("car", "vehicle", "motorcycle", "truck", "pickup", "bicycle", "auto parts"),
-        "inmobiliaria": ("house", "apartment", "real estate", "land", "office", "warehouse", "for sale", "for rent"),
-        "empleo": ("job", "vacancy", "full time", "part time", "salary", "hiring"),
-        "servicios": ("plumber", "plumbing", "electrician", "cleaning", "repair", "maintenance", "home service"),
-        "electronica": ("phone", "smartphone", "laptop", "tablet", "computer", "monitor", "television", "camera", "drone", "charger"),
-        "moda": ("dress", "clothing", "shoes", "bag", "jewelry", "size"),
-        "hogar": ("sofa", "furniture", "table", "chair", "bed", "mattress", "refrigerator", "washer", "garden"),
-        "infantil": ("toy", "baby", "stroller", "crib", "kids clothing", "child"),
-        "mascotas": ("dog", "cat", "pet", "pet food", "veterinarian", "adoption"),
-        "negocios": ("business for sale", "franchise", "machinery", "investment"),
-        "formacion": ("book", "course", "classes", "language lessons", "university", "certification"),
-        "ocio": ("video game", "console", "collectible", "guitar", "photography", "camping", "fishing", "surf"),
-        "boletos": ("ticket", "tickets", "concert", "festival", "theater", "match", "conference", "cinema"),
-        "turismo": ("hotel", "hostel", "lodging", "tour", "excursion", "travel", "tour guide", "transfer", "yacht", "boat", "spa"),
+        "motor": ("car", "vehicle", "motorcycle", "truck", "pickup", "bicycle", "auto parts"), "inmobiliaria": ("house", "apartment", "real estate", "land", "office", "warehouse", "for sale", "for rent"), "empleo": ("job", "vacancy", "full time", "part time", "salary", "hiring"), "servicios": ("plumber", "plumbing", "electrician", "cleaning", "repair", "maintenance"), "electronica": ("phone", "smartphone", "laptop", "tablet", "computer", "monitor", "television", "camera", "drone"), "moda": ("dress", "clothing", "shoes", "bag", "jewelry"), "hogar": ("sofa", "furniture", "table", "chair", "bed", "mattress", "refrigerator", "garden"), "infantil": ("toy", "baby", "stroller", "crib", "kids clothing"), "mascotas": ("dog", "cat", "pet", "pet food", "veterinarian"), "negocios": ("business for sale", "franchise", "machinery", "investment"), "formacion": ("book", "course", "classes", "language lessons", "university"), "ocio": ("video game", "console", "collectible", "guitar", "camping", "fishing", "surf"), "boletos": ("ticket", "tickets", "concert", "festival", "theater", "conference"), "turismo": ("hotel", "hostel", "lodging", "tour", "excursion", "travel", "car rental", "yacht", "boat", "spa"),
     },
     "ru": {
-        "motor": ("авто", "машина", "автомобиль", "мотоцикл", "велосипед", "запчасти"),
-        "inmobiliaria": ("дом", "квартира", "недвижимость", "земля", "офис", "аренда", "продажа"),
-        "empleo": ("работа", "вакансия", "полный день", "подработка", "зарплата"),
-        "servicios": ("услуга", "сантехник", "электрик", "уборка", "ремонт"),
-        "electronica": ("телефон", "смартфон", "ноутбук", "планшет", "компьютер", "телевизор", "камера"),
-        "mascotas": ("собака", "кошка", "питомец", "корм", "ветеринар"),
-        "formacion": ("книга", "курс", "занятия", "язык", "университет"),
-        "boletos": ("билет", "билеты", "концерт", "фестиваль", "театр"),
-        "turismo": ("отель", "гостиница", "тур", "экскурсия", "путешествие", "яхта"),
+        "motor": ("авто", "машина", "автомобиль", "мотоцикл", "велосипед", "запчасти"), "inmobiliaria": ("дом", "квартира", "недвижимость", "земля", "офис", "аренда", "продажа"), "empleo": ("работа", "вакансия", "полный день", "подработка", "зарплата"), "servicios": ("услуга", "сантехник", "электрик", "уборка", "ремонт"), "electronica": ("телефон", "смартфон", "ноутбук", "планшет", "компьютер", "телевизор", "камера"), "moda": ("одежда", "платье", "обувь", "сумка"), "hogar": ("мебель", "диван", "стол", "холодильник", "сад"), "infantil": ("игрушка", "ребенок", "детская одежда", "коляска"), "mascotas": ("собака", "кошка", "питомец", "корм", "ветеринар"), "negocios": ("бизнес", "франшиза", "оборудование", "инвестиция"), "formacion": ("книга", "курс", "занятия", "язык", "университет"), "ocio": ("видеоигра", "консоль", "гитара", "рыбалка", "серфинг"), "boletos": ("билет", "билеты", "концерт", "фестиваль", "театр"), "turismo": ("отель", "гостиница", "тур", "экскурсия", "путешествие", "аренда авто", "яхта"),
     },
-}
-
-_SUBCATEGORY_HINTS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
-    "motor": (("Autos", ("auto", "carro", "coche", "nissan", "toyota", "honda", "versa", "car", "vehicle")), ("Motos", ("moto", "motocicleta", "motorcycle")), ("Camionetas", ("camioneta", "pickup", "truck")), ("Bicicletas", ("bicicleta", "bicycle")), ("Refacciones", ("refaccion", "autoparte", "auto parts"))),
-    "inmobiliaria": (("Casas en venta", ("casa en venta", "house for sale")), ("Casas en renta", ("casa en renta", "house for rent")), ("Departamentos", ("departamento", "apartment")), ("Terrenos", ("terreno", "land")), ("Oficinas", ("oficina", "office")), ("Bodegas", ("bodega", "warehouse"))),
-    "electronica": (("Teléfonos", ("iphone", "telefono", "celular", "phone", "smartphone")), ("Laptops", ("laptop", "macbook")), ("Tablets", ("tablet",)), ("TV y video", ("televisor", "tv", "television")), ("Cámaras", ("camara", "camera")), ("Drones", ("drone",))),
-    "empleo": (("Medio tiempo", ("medio tiempo", "part time")), ("Tecnología", ("tecnologia", "technology")), ("Ventas", ("ventas", "sales")), ("Chofer", ("chofer", "driver")), ("Construcción", ("construccion", "construction")), ("Hotelería", ("hoteleria", "hospitality"))),
-    "servicios": (("Reparaciones", ("reparacion", "repair")), ("Limpieza", ("limpieza", "cleaning")), ("Clases", ("clases", "lessons")), ("Transporte", ("transporte", "transport")), ("Mascotas", ("mascotas", "pets")), ("Belleza", ("belleza", "beauty"))),
-    "mascotas": (("Perros", ("perro", "dog")), ("Gatos", ("gato", "cat")), ("Alimento", ("croqueta", "croquetas", "pet food", "alimento")), ("Servicios", ("veterinario", "veterinarian"))),
-    "formacion": (("Libros", ("libro", "book")), ("Cursos", ("curso", "course")), ("Idiomas", ("idioma", "ingles", "language lessons")), ("Material escolar", ("material escolar", "school supplies"))),
-    "boletos": (("Conciertos", ("concierto", "concert")), ("Festivales", ("festival",)), ("Teatro y cultura", ("teatro", "theater")), ("Conferencias", ("conferencia", "conference"))),
-    "turismo": (("hospedaje", ("hotel", "hostal", "hospedaje", "lodging")), ("tours", ("tour", "excursion")), ("renta_vehiculos", ("renta de auto", "car rental")), ("guias_servicios", ("guia turistico", "tour guide")), ("retiros_bienestar", ("spa", "temazcal", "wellness"))),
+    "pt": {"motor": ("carro", "veiculo", "moto"), "inmobiliaria": ("casa", "apartamento", "imovel", "terreno"), "empleo": ("emprego", "vaga", "salario"), "servicios": ("servico", "encanador", "limpeza", "reparo"), "electronica": ("telefone", "celular", "notebook", "tablet"), "moda": ("roupa", "vestido", "calcado"), "hogar": ("moveis", "sofa", "geladeira"), "infantil": ("brinquedo", "bebe"), "mascotas": ("cachorro", "gato", "pet"), "negocios": ("negocio", "franquia"), "formacion": ("livro", "curso", "idioma"), "ocio": ("videogame", "console", "pesca"), "boletos": ("ingresso", "concerto", "festival"), "turismo": ("hotel", "pousada", "viagem", "passeio", "aluguel de carro")},
+    "fr": {"motor": ("voiture", "vehicule", "moto"), "inmobiliaria": ("maison", "appartement", "immobilier", "terrain"), "empleo": ("emploi", "poste", "salaire"), "servicios": ("service", "plombier", "nettoyage", "reparation"), "electronica": ("telephone", "smartphone", "ordinateur", "tablette"), "moda": ("vetement", "robe", "chaussures"), "hogar": ("meuble", "canape", "refrigerateur"), "infantil": ("jouet", "bebe"), "mascotas": ("chien", "chat", "animal"), "negocios": ("commerce", "franchise"), "formacion": ("livre", "cours", "langue"), "ocio": ("jeu video", "console", "peche"), "boletos": ("billet", "concert", "festival"), "turismo": ("hotel", "hebergement", "voyage", "circuit", "location de voiture")},
+    "de": {"motor": ("auto", "fahrzeug", "motorrad"), "inmobiliaria": ("haus", "wohnung", "immobilie", "grundstuck"), "empleo": ("job", "stelle", "gehalt"), "servicios": ("dienstleistung", "klempner", "reinigung", "reparatur"), "electronica": ("telefon", "smartphone", "laptop", "tablet"), "moda": ("kleidung", "kleid", "schuhe"), "hogar": ("mobel", "sofa", "kuhlschrank"), "infantil": ("spielzeug", "baby"), "mascotas": ("hund", "katze", "haustier"), "negocios": ("unternehmen", "franchise"), "formacion": ("buch", "kurs", "sprache"), "ocio": ("videospiel", "konsole", "angeln"), "boletos": ("ticket", "konzert", "festival"), "turismo": ("hotel", "unterkunft", "reise", "tour", "autovermietung")},
+    "it": {"motor": ("auto", "veicolo", "moto"), "inmobiliaria": ("casa", "appartamento", "immobile", "terreno"), "empleo": ("lavoro", "posto", "stipendio"), "servicios": ("servizio", "idraulico", "pulizia", "riparazione"), "electronica": ("telefono", "smartphone", "portatile", "tablet"), "moda": ("abbigliamento", "vestito", "scarpe"), "hogar": ("mobili", "divano", "frigorifero"), "infantil": ("giocattolo", "bambino"), "mascotas": ("cane", "gatto", "animale"), "negocios": ("attivita", "franchising"), "formacion": ("libro", "corso", "lingua"), "ocio": ("videogioco", "console", "pesca"), "boletos": ("biglietto", "concerto", "festival"), "turismo": ("hotel", "alloggio", "viaggio", "tour", "noleggio auto")},
+    "zh": {"motor": ("汽车", "车辆", "摩托车"), "inmobiliaria": ("房子", "公寓", "房地产", "土地"), "empleo": ("工作", "招聘", "工资"), "servicios": ("服务", "清洁", "维修"), "electronica": ("手机", "电脑", "平板", "相机"), "moda": ("衣服", "鞋", "包"), "hogar": ("家具", "沙发", "冰箱"), "infantil": ("玩具", "婴儿"), "mascotas": ("狗", "猫", "宠物"), "negocios": ("生意", "加盟"), "formacion": ("书", "课程", "语言"), "ocio": ("游戏", "游戏机", "钓鱼"), "boletos": ("门票", "演唱会", "音乐节"), "turismo": ("酒店", "住宿", "旅游", "旅行", "租车")},
+    "ko": {"motor": ("자동차", "차량", "오토바이"), "inmobiliaria": ("집", "아파트", "부동산", "토지"), "empleo": ("직업", "채용", "급여"), "servicios": ("서비스", "청소", "수리"), "electronica": ("휴대폰", "스마트폰", "노트북", "태블릿"), "moda": ("의류", "신발", "가방"), "hogar": ("가구", "소파", "냉장고"), "infantil": ("장난감", "아기"), "mascotas": ("개", "고양이", "반려동물"), "negocios": ("사업", "프랜차이즈"), "formacion": ("책", "강좌", "언어"), "ocio": ("비디오 게임", "콘솔", "낚시"), "boletos": ("티켓", "콘서트", "축제"), "turismo": ("호텔", "숙박", "여행", "투어", "렌터카")},
+    "ja": {"motor": ("車", "自動車", "バイク"), "inmobiliaria": ("家", "マンション", "不動産", "土地"), "empleo": ("仕事", "求人", "給与"), "servicios": ("サービス", "清掃", "修理"), "electronica": ("スマホ", "電話", "パソコン", "タブレット"), "moda": ("服", "靴", "バッグ"), "hogar": ("家具", "ソファ", "冷蔵庫"), "infantil": ("おもちゃ", "赤ちゃん"), "mascotas": ("犬", "猫", "ペット"), "negocios": ("ビジネス", "フランチャイズ"), "formacion": ("本", "コース", "言語"), "ocio": ("ゲーム", "コンソール", "釣り"), "boletos": ("チケット", "コンサート", "フェスティバル"), "turismo": ("ホテル", "宿泊", "旅行", "ツアー", "レンタカー")},
+    "ar": {"motor": ("سيارة", "مركبة", "دراجة نارية"), "inmobiliaria": ("منزل", "شقة", "عقار", "أرض"), "empleo": ("وظيفة", "عمل", "راتب"), "servicios": ("خدمة", "تنظيف", "إصلاح"), "electronica": ("هاتف", "حاسوب", "جهاز لوحي", "كاميرا"), "moda": ("ملابس", "حذاء", "حقيبة"), "hogar": ("أثاث", "أريكة", "ثلاجة"), "infantil": ("لعبة", "طفل"), "mascotas": ("كلب", "قطة", "حيوان أليف"), "negocios": ("عمل تجاري", "امتياز"), "formacion": ("كتاب", "دورة", "لغة"), "ocio": ("لعبة فيديو", "صيد"), "boletos": ("تذكرة", "حفل", "مهرجان"), "turismo": ("فندق", "إقامة", "سفر", "جولة", "تأجير سيارة")},
 }
 
 _GENERIC_ENUM_VALUES = {"otra", "otro", "other", "otros", "otras"}
@@ -359,15 +334,6 @@ class LocalAutofillClient:
         confidence = 0.96 if best_score >= 6.0 else 0.9
         return best_slug, confidence
 
-    @staticmethod
-    def _rule_subcategory(category_slug: str | None, seller_text: str) -> tuple[str | None, float]:
-        if not category_slug or not seller_text:
-            return None, 0.0
-        normalized = _normalize_match_text(seller_text)
-        for hint, anchors in _SUBCATEGORY_HINTS.get(category_slug, ()):
-            if any(_contains_phrase(normalized, anchor) for anchor in anchors):
-                return hint, 0.9
-        return None, 0.0
 
     async def suggest(self, request: AutofillRequest) -> AutofillResponse:
         started = time.monotonic()
@@ -416,16 +382,15 @@ class LocalAutofillClient:
                 )
                 title = seller_text[:200] or None
                 description = seller_text[:1200] or None
-                subcategory_hint, subcategory_confidence = self._rule_subcategory(category_slug, seller_text)
                 combined: dict[str, Any] = {
                     "category": category_slug,
-                    "subcategory_hint": subcategory_hint,
+                    "subcategory_hint": None,
                     "attributes": {},
                     "title": title,
                     "description": description,
                     "confidence": {
                         "category": category_confidence,
-                        "subcategory_hint": subcategory_confidence,
+                        "subcategory_hint": 0.0,
                         "attributes": {},
                         "title": 1.0 if title else 0.0,
                         "description": 1.0 if description else 0.0,
@@ -437,14 +402,16 @@ class LocalAutofillClient:
                 ]
                 normalized_seller_text = _normalize_match_text(seller_text)
                 for item in enum_attributes:
+                    matches = []
                     for value in item.options:
                         normalized_value = _normalize_match_text(value)
                         if normalized_value in _GENERIC_ENUM_VALUES:
                             continue
                         if seller_text and _contains_phrase(normalized_seller_text, normalized_value):
-                            combined["attributes"][item.key] = value
-                            combined["confidence"]["attributes"][item.key] = 0.95
-                            break
+                            matches.append(value)
+                    if len(matches) == 1:
+                        combined["attributes"][item.key] = matches[0]
+                        combined["confidence"]["attributes"][item.key] = 0.95
 
                 remaining = self.timeout - (time.monotonic() - started)
                 unresolved = [

@@ -216,7 +216,62 @@ def test_rule_category_respects_english_locale() -> None:
     assert confidence >= 0.9
 
 
-def test_rule_subcategory_returns_canonical_live_hint() -> None:
-    hint, confidence = LocalAutofillClient._rule_subcategory("motor", "Nissan Versa 2022")
-    assert hint == "Autos"
-    assert confidence >= 0.9
+
+def test_rule_category_covers_all_enabled_locales() -> None:
+    taxonomy_value = [
+        {"slug": "inmobiliaria", "label": "Inmuebles", "attributes": []},
+        {"slug": "turismo", "label": "Turismo", "attributes": []},
+        {"slug": "electronica", "label": "Electrónica", "attributes": []},
+    ]
+    cases = {
+        "es": ("casa en venta", "inmobiliaria"),
+        "en": ("house for sale", "inmobiliaria"),
+        "ru": ("дом на продажу", "inmobiliaria"),
+        "pt": ("apartamento", "inmobiliaria"),
+        "fr": ("maison à vendre", "inmobiliaria"),
+        "de": ("wohnung", "inmobiliaria"),
+        "it": ("appartamento", "inmobiliaria"),
+        "zh": ("公寓", "inmobiliaria"),
+        "ko": ("아파트", "inmobiliaria"),
+        "ja": ("マンション", "inmobiliaria"),
+        "ar": ("شقة", "inmobiliaria"),
+    }
+    for locale, (phrase, expected) in cases.items():
+        req = AutofillRequest(short_text=phrase, locale=locale, taxonomy=taxonomy_value)
+        slug, confidence = LocalAutofillClient._rule_category(req, phrase)
+        assert slug == expected, locale
+        assert confidence >= 0.8
+
+
+def test_rule_category_prefers_specific_car_rental_phrase() -> None:
+    req = AutofillRequest(
+        short_text="car rental",
+        locale="en",
+        taxonomy=[
+            {"slug": "motor", "label": "Motor", "attributes": []},
+            {"slug": "turismo", "label": "Tourism", "attributes": []},
+        ],
+    )
+    slug, confidence = LocalAutofillClient._rule_category(req, req.short_text)
+    assert slug == "turismo"
+    assert confidence >= 0.8
+
+
+def test_enum_matching_abstains_when_multiple_options_match() -> None:
+    req = AutofillRequest(
+        short_text="Nissan y Toyota compatibles",
+        taxonomy=[{
+            "slug": "motor",
+            "label": "Motor",
+            "attributes": [{"key": "marca", "type": "select", "options": ["Nissan", "Toyota"]}],
+        }],
+    )
+    result = asyncio.run(LocalAutofillClient().suggest(req))
+    assert result.category.value == "motor"
+    assert "marca" not in result.attributes
+
+
+def test_runtime_subcategory_hint_is_disabled_until_server_whitelist_exists() -> None:
+    result = asyncio.run(LocalAutofillClient().suggest(request()))
+    assert result.subcategory_hint.value is None
+    assert result.subcategory_hint.confidence == 0.0

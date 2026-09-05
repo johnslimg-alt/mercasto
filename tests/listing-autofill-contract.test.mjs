@@ -24,7 +24,6 @@ test('edit flow exposes the same optional autofill panel while keeping the norma
   assert.match(editFlow, /<form onSubmit=\{handleSubmit\}/);
   assert.match(editFlow, /data-testid="edit-ad-save"/);
   assert.match(editFlow, /onApplyCategory=/);
-  assert.match(editFlow, /onApplySubcategory=/);
   assert.match(editFlow, /onApplyAttribute=/);
   assert.match(editFlow, /onApplyTitle=/);
   assert.match(editFlow, /onApplyDescription=/);
@@ -37,6 +36,11 @@ test('suggestions are never silently applied and every action is an explicit but
   assert.match(panel, /onClick=\{run\}/);
   assert.doesNotMatch(panel, /useEffect\([^)]*onApply/s);
   assert.match(panel, /data-testid="listing-autofill-suggestions"/);
+});
+
+test('subcategory apply stays disabled until a server-side canonical whitelist exists', () => {
+  assert.doesNotMatch(panel, /suggestions\?\.subcategory_hint/);
+  assert.doesNotMatch(panel, /onApplySubcategory/);
 });
 
 test('autofill request remains authenticated optional multipart with at most two new photos', () => {
