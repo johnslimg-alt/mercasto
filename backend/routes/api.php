@@ -46,7 +46,7 @@ Route::middleware('throttle:search')->get('/ads/{id}/similar', [AdController::cl
 Route::middleware('throttle:api')->get('/ads/{id}/price-history', [AdController::class, 'priceHistory'])->whereNumber('id'); // Historial de precios
 
 // Защита от CPU DDoS: генерация PDF очень ресурсоемкая, ставим лимит 10 в минуту
-Route::middleware('throttle:10,1')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:10,1'])->group(function () {
     Route::get('/ads/{id}/pdf', [AdController::class, 'generatePdf'])->whereNumber('id');
 });
 Route::middleware('throttle:api')->get('/sitemap.xml', [AdController::class, 'sitemap']);
