@@ -78,6 +78,7 @@ bash scripts/privacy-retention-contract-gate.sh
 bash scripts/payment-payload-privacy-gate.sh
 bash scripts/payment-webhook-idempotency-scan.sh
 bash scripts/media-upload-validation-scan.sh
+bash scripts/private-identity-storage-gate.sh
 bash scripts/xml-upload-security-gate.sh
 bash scripts/search-alert-flow-gate.sh
 bash scripts/chat-api-security-gate.sh

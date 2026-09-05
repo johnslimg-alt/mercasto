@@ -39,6 +39,7 @@ class KycAiPrescreenTest extends TestCase
             'document' => UploadedFile::fake()->image('identidad.jpg', 900, 600),
         ]);
         $response->assertOk();
+        $this->assertArrayNotHasKey('kyc_document_url', $response->json('user'));
         Queue::assertPushed(PreScreenKycDocumentWithAI::class, fn ($job) => $job->userId === $user->id);
 
         $user->refresh();

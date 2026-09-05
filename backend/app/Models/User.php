@@ -92,6 +92,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'kyc_ai_status',
         'kyc_ai_notes',
         'kyc_ai_checked_at',
+        'kyc_document_url',
+        'business_csf_url',
     ];
 
     protected $appends = [
