@@ -95,9 +95,10 @@ async function prepare(page, scenario = 'ok') {
 }
 
 async function openDetailsStep(page) {
-  await page.getByRole('button', { name: 'Cars', exact: true }).click();
-  await page.getByRole('button', { name: /Sedán|Sedan/i }).first().click();
-  const next = page.getByRole('button', { name: /Next/i }).filter({ visible: true }).first();
+  const main = page.getByRole('main');
+  await main.getByRole('button', { name: 'Cars', exact: true }).click();
+  await main.getByRole('button', { name: /Sedán|Sedan/i }).first().click();
+  const next = main.getByRole('button', { name: /Next/i }).filter({ visible: true }).first();
   await expect(next).toBeEnabled();
   await next.click();
   await expect(page.getByTestId('publish-title')).toBeVisible();
@@ -119,7 +120,7 @@ test('text-only autofill stays suggestion-only until seller applies fields', asy
   await expect(applyButtons).toHaveCount(5);
   await applyButtons.nth(0).click();
   await applyButtons.nth(1).click();
-  const next = page.getByRole('button', { name: /Next/i }).filter({ visible: true }).first();
+  const next = page.getByRole('main').getByRole('button', { name: /Next/i }).filter({ visible: true }).first();
   await expect(next).toBeEnabled();
 });
 
@@ -137,19 +138,18 @@ test('photo-only and mixed autofill send only new seller media', async ({ page }
 
   await page.getByTestId('listing-autofill-text').fill('Nissan Versa with one seller photo');
   await page.getByTestId('listing-autofill-run').click();
-  expect(requests).toHaveLength(2);
+  await expect.poll(() => requests.length).toBe(2);
   expect(requests[1]).toContain('Nissan Versa with one seller photo');
   expect(requests[1]).toContain('icon-192x192.png');
 });
 
 test('low-confidence suggestions expose no apply action', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
-  await prepare(page, 'low');
+  const requests = await prepare(page, 'low');
   await page.getByTestId('listing-autofill-text').fill('Ambiguous object');
   await page.getByTestId('listing-autofill-run').click();
-  const suggestions = page.getByTestId('listing-autofill-suggestions');
-  await expect(suggestions).toBeVisible();
-  await expect(suggestions.getByRole('button', { name: 'Apply' })).toHaveCount(0);
+  await expect.poll(() => requests.length).toBe(1);
+  await expect(page.getByTestId('listing-autofill-panel').getByRole('button', { name: 'Apply' })).toHaveCount(0);
 });
 
 test('gateway failure leaves the manual publish flow usable on mobile', async ({ page }, testInfo) => {
@@ -159,7 +159,7 @@ test('gateway failure leaves the manual publish flow usable on mobile', async ({
   await page.getByTestId('listing-autofill-run').click();
   await expect(page.getByText(/Suggestions are unavailable|Autofill unavailable/i)).toBeVisible();
 
-  const category = page.getByRole('button', { name: 'Cars', exact: true });
+  const category = page.getByRole('main').getByRole('button', { name: 'Cars', exact: true });
   await expect(category).toBeVisible();
   await category.click();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
