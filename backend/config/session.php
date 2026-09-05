@@ -47,7 +47,7 @@ return [
     |
     */
 
-    'encrypt' => env('SESSION_ENCRYPT', app()->environment('production')),
+    'encrypt' => env('SESSION_ENCRYPT', env('APP_ENV', 'production') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

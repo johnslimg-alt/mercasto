@@ -19,7 +19,7 @@ fi
 if grep -qE '^  cadvisor:' "$COMPOSE"; then
   echo "FAIL: cAdvisor host-access profile must stay removed" >&2; exit 1
 fi
-grep -qF "env('SESSION_ENCRYPT', app()->environment('production'))" "$SESSION"
+grep -qF "env('SESSION_ENCRYPT', env('APP_ENV', 'production') === 'production')" "$SESSION"
 grep -qF 'SESSION_ENCRYPT=true' "$ENV_PROD"
 grep -qF 'SESSION_ENCRYPT must be true when explicitly set' "$READINESS"
 [[ $(grep -c 'command: php artisan queue:work' "$COMPOSE") -eq 2 ]]
