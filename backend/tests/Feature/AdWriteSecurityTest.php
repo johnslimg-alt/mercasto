@@ -6,6 +6,7 @@ use App\Models\Ad;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -64,6 +65,50 @@ class AdWriteSecurityTest extends TestCase
              ->assertJsonValidationErrors(['images.0']);
 
         $this->assertDatabaseCount('ads', 0);
+    }
+
+    public function test_ad_upload_aggregate_limit_rejects_more_than_sixty_megabytes(): void
+    {
+        $request = Request::create('/api/ads', 'POST', [], [], [
+            'images' => [
+                UploadedFile::fake()->create('one.jpg', 4096, 'image/jpeg'),
+                UploadedFile::fake()->create('two.jpg', 4096, 'image/jpeg'),
+                UploadedFile::fake()->create('three.jpg', 4096, 'image/jpeg'),
+            ],
+            'video_file' => UploadedFile::fake()->create('clip.mp4', 51200, 'video/mp4'),
+        ]);
+
+        $controller = app(\App\Http\Controllers\Api\AdController::class);
+        $method = new \ReflectionMethod($controller, 'validateAggregateUploadSize');
+        $method->setAccessible(true);
+
+        try {
+            $method->invoke($controller, $request);
+            $this->fail('Expected aggregate upload validation to fail.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertSame(
+                'El tamaño total de fotos y video no puede superar 60 MB por solicitud.',
+                $e->errors()['files'][0]
+            );
+        }
+    }
+
+    public function test_ad_upload_aggregate_limit_allows_exactly_sixty_megabytes(): void
+    {
+        $request = Request::create('/api/ads', 'POST', [], [], [
+            'images' => [
+                UploadedFile::fake()->create('one.jpg', 5120, 'image/jpeg'),
+                UploadedFile::fake()->create('two.jpg', 5120, 'image/jpeg'),
+            ],
+            'video_file' => UploadedFile::fake()->create('clip.mp4', 51200, 'video/mp4'),
+        ]);
+
+        $controller = app(\App\Http\Controllers\Api\AdController::class);
+        $method = new \ReflectionMethod($controller, 'validateAggregateUploadSize');
+        $method->setAccessible(true);
+        $method->invoke($controller, $request);
+
+        $this->addToAssertionCount(1);
     }
 
     public function test_ad_mutation_routes_enforce_burst_rate_limit(): void
