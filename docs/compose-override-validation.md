@@ -35,7 +35,7 @@ Expected result:
 - rendered config includes `mercasto-scheduler.depends_on.redis.condition: service_healthy`;
 - rendered config includes `mercasto-reverb.depends_on.redis.condition: service_healthy`;
 - no service definitions are accidentally replaced with incomplete fragments;
-- frontend, backend, worker, scheduler, reverb, redis, postgres, ollama, prometheus, grafana, cadvisor and certbot remain present.
+- frontend, backend, worker, scheduler, reverb, redis, postgres, ollama, prometheus, grafana and certbot remain present.
 
 ## Manual workflow run
 

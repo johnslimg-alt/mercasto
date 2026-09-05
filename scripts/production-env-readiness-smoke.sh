@@ -55,6 +55,16 @@ else
   echo "OK: APP_DEBUG=false"
 fi
 
+session_encrypt="$(get_env SESSION_ENCRYPT || true)"
+if [[ -n "$session_encrypt" && "$session_encrypt" != "true" ]]; then
+  echo "FAIL: SESSION_ENCRYPT must be true when explicitly set" >&2
+  failures=$((failures + 1))
+elif [[ "$session_encrypt" == "true" ]]; then
+  echo "OK: SESSION_ENCRYPT=true"
+else
+  echo "OK: SESSION_ENCRYPT omitted; production config defaults encryption on"
+fi
+
 required_keys=(
   APP_KEY
   APP_URL

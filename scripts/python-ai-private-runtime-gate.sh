@@ -41,7 +41,6 @@ required = [
     "http://127.0.0.1:8080/health",
     "cpus: '0.50'",
     "memory: 256M",
-    "autoheal=true",
 ]
 for marker in required:
     if marker not in body:

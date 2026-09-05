@@ -11,11 +11,6 @@
 # optional/background services that are safe to reduce during provider limits.
 
 services:
-  cadvisor:
-    cpus: "0.20"
-    mem_limit: 256m
-    mem_reservation: 64m
-
   prometheus:
     cpus: "0.30"
     mem_limit: 512m
