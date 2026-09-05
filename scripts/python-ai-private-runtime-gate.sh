@@ -96,7 +96,7 @@ for marker in deploy_required:
         raise SystemExit(f"deployment does not carry private AI gateway contract: {marker}")
 
 stop_index = deploy.find('stop mercasto-moderation-worker')
-gateway_up_index = deploy.find('up -d --no-build --no-deps $OTHER_UP_SERVICES')
+gateway_up_index = deploy.find('up -d --no-build --no-deps --remove-orphans $OTHER_UP_SERVICES')
 worker_up_index = deploy.find('--force-recreate --renew-anon-volumes mercasto-moderation-worker')
 if min(stop_index, gateway_up_index, worker_up_index) < 0 or not stop_index < gateway_up_index < worker_up_index:
     raise SystemExit("deployment must quiesce moderation, update gateway services, then start the worker with dependencies")

@@ -282,27 +282,27 @@ jobs:
           fi
 
           if [ -n "$PHP_REFRESH_SERVICES" ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps \
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans \
               --force-recreate --renew-anon-volumes $PHP_REFRESH_SERVICES
           fi
 
           if [ "$AUTOFILL_MODEL_UP" -eq 1 ]; then
-            if ! docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps mercasto-autofill-model; then
+            if ! docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans mercasto-autofill-model; then
               echo "::warning::Optional listing-autofill model failed to start; shared AI gateway will continue without it."
             fi
           fi
 
           if [ -n "$OTHER_UP_SERVICES" ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps $OTHER_UP_SERVICES
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans $OTHER_UP_SERVICES
           fi
 
           if [ "$MODERATION_WORKER_UP" -eq 1 ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build \
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --remove-orphans \
               --force-recreate --renew-anon-volumes mercasto-moderation-worker
           fi
 
           if [ "$FRONTEND_UP" -eq 1 ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --force-recreate mercasto-frontend
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans --force-recreate mercasto-frontend
           fi
 
           if [ -z "$PHP_REFRESH_SERVICES" ] && [ -z "$OTHER_UP_SERVICES" ] && [ "$AUTOFILL_MODEL_UP" -eq 0 ] && [ "$MODERATION_WORKER_UP" -eq 0 ] && [ "$FRONTEND_UP" -eq 0 ]; then
