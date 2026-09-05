@@ -34,10 +34,29 @@ use Minishlink\WebPush\Subscription;
 class AdController extends Controller
 {
     private const PUBLIC_AD_USER_COLUMNS = 'id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp';
+    private const MAX_AD_UPLOAD_BYTES = 60 * 1024 * 1024;
 
     private function imageManager(): ImageManager
     {
         return ImageManager::usingDriver(Driver::class);
+    }
+
+    private function validateAggregateUploadSize(Request $request): void
+    {
+        $totalBytes = 0;
+        foreach ($request->file('images', []) as $image) {
+            $totalBytes += max(0, (int) $image->getSize());
+        }
+
+        if ($request->hasFile('video_file')) {
+            $totalBytes += max(0, (int) $request->file('video_file')->getSize());
+        }
+
+        if ($totalBytes > self::MAX_AD_UPLOAD_BYTES) {
+            throw ValidationException::withMessages([
+                'files' => ['El tamaño total de fotos y video no puede superar 60 MB por solicitud.'],
+            ]);
+        }
     }
 
     private function validateCategoryAttributes(Request $request): void
@@ -492,6 +511,7 @@ class AdController extends Controller
             'attributes' => 'required|array', // Динамические характеристики (марка, модель, ОЗУ и т.д.)
             'attributes.subcategory' => 'required|string|max:100',
         ]);
+        $this->validateAggregateUploadSize($request);
         $this->validateCategoryAttributes($request);
 
         // Dynamic category attributes validation
@@ -669,6 +689,7 @@ class AdController extends Controller
             'attributes' => 'required|array',
             'attributes.subcategory' => 'required|string|max:100',
         ]);
+        $this->validateAggregateUploadSize($request);
         $this->validateCategoryAttributes($request);
 
         // Dynamic category attributes validation
