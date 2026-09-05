@@ -120,6 +120,7 @@ bash scripts/attribute-flow-gate.sh
 bash scripts/otp-abuse-control-gate.sh
 bash scripts/python-ai-private-runtime-gate.sh
 bash scripts/runtime-host-privilege-gate.sh
+bash scripts/deploy-orphan-cleanup-gate.sh
 
 bash scripts/legacy-secret-fallback-gate.sh
 bash scripts/internal-service-exposure-watch.test.sh
