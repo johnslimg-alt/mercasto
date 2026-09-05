@@ -15,6 +15,9 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
   const [recoveryCodes, setRecoveryCodes] = useState(null);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [disablePassword, setDisablePassword] = useState('');
+  const [disableCode, setDisableCode] = useState('');
 
   const startSetup = async () => {
     setLoading(true);
@@ -65,14 +68,23 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
     }
   };
 
-  const disable2fa = async () => {
-    if (!window.confirm(t.twofa_disable_confirm || 'Desactivar la autenticación en dos pasos?')) return;
+  const disable2fa = async (e) => {
+    e.preventDefault();
+    if (!disablePassword && !disableCode) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/user/two-factor-authentication`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...(disablePassword ? { password: disablePassword } : {}),
+          ...(disableCode ? { code: disableCode } : {}),
+        }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showToast?.(t.twofa_disabled || 'Autenticación en dos pasos desactivada');
         const updatedUser = { ...user, two_factor_confirmed_at: null };
@@ -81,8 +93,12 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
         setStep('idle');
         setQrDataUrl(null);
         setRecoveryCodes(null);
+        setDisableOpen(false);
+        setDisablePassword('');
+        setDisableCode('');
       } else {
-        showToast?.(t.error_generic || 'Error', 'error');
+        const validationMessage = data?.errors?.reauthentication?.[0];
+        showToast?.(validationMessage || data.message || t.twofa_reauth_invalid || 'Verifica tu identidad para continuar.', 'error');
       }
     } catch (e) {
       showToast?.(t.connection_error || 'Error de conexión', 'error');
@@ -101,11 +117,75 @@ export default function TwoFactorAuthSection({ user, setUser, t, showToast }) {
       </p>
 
       {enabled ? (
-        <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/30">
-          <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{t.twofa_active || 'Activada'}</span>
-          <button onClick={disable2fa} disabled={loading} className="btn-sm bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-50">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.disable || 'Desactivar')}
-          </button>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/30">
+            <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{t.twofa_active || 'Activada'}</span>
+            {!disableOpen && (
+              <button
+                type="button"
+                onClick={() => setDisableOpen(true)}
+                disabled={loading}
+                className="btn-sm bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-50"
+              >
+                {t.disable || 'Desactivar'}
+              </button>
+            )}
+          </div>
+
+          {disableOpen && (
+            <form onSubmit={disable2fa} className="space-y-3 rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50/50 dark:bg-red-500/5 p-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {t.twofa_reauth_title || 'Confirma tu identidad'}
+                </p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {t.twofa_reauth_desc || 'Introduce tu contraseña o un código actual de autenticación / recuperación.'}
+                </p>
+              </div>
+              <input
+                type="password"
+                autoComplete="current-password"
+                aria-label={t.password || 'Contraseña'}
+                value={disablePassword}
+                onChange={(e) => setDisablePassword(e.target.value)}
+                placeholder={t.password || 'Contraseña'}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30"
+              />
+              <div className="text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                {t.or || 'o'}
+              </div>
+              <input
+                type="text"
+                autoComplete="one-time-code"
+                aria-label={t.twofa_reauth_code || 'Código de autenticación o recuperación'}
+                value={disableCode}
+                onChange={(e) => setDisableCode(e.target.value.trim())}
+                placeholder={t.twofa_reauth_code || 'Código de autenticación o recuperación'}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-lime-500/30"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDisableOpen(false);
+                    setDisablePassword('');
+                    setDisableCode('');
+                  }}
+                  disabled={loading}
+                  className="btn-sm bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
+                >
+                  {t.cancel || 'Cancelar'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || (!disablePassword && !disableCode)}
+                  className="btn-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (t.twofa_disable_confirm_action || t.disable || 'Desactivar')}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       ) : step === 'idle' ? (
         <button onClick={startSetup} disabled={loading} className="btn-sm bg-slate-900 hover:bg-black text-white disabled:opacity-50">

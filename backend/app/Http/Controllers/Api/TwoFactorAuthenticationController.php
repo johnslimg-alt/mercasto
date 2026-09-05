@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use PragmaRX\Google2FA\Google2FA;
 
 class TwoFactorAuthenticationController extends Controller
@@ -16,40 +19,31 @@ class TwoFactorAuthenticationController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        
-        // Защита от перехвата аккаунта (2FA Overwrite): блокируем генерацию, если 2FA уже включена
+
         if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
             return response()->json(['message' => 'La autenticación de dos factores ya está activada.'], 400);
         }
 
         $google2fa = new Google2FA();
-
         $secretKey = $google2fa->generateSecretKey();
 
         $user->forceFill([
             'two_factor_secret' => $secretKey,
             'two_factor_recovery_codes' => json_encode(Collection::times(8, function () {
-                return Str::random(10) . '-' . Str::random(10);
+                return Str::random(10).'-'.Str::random(10);
             })->all()),
         ])->save();
 
-        // Защита (Session Hijacking): отзываем все остальные сессии при включении 2FA, 
-        // чтобы выкинуть потенциальных взломщиков, оставив только текущее устройство
-        $currentToken = $request->user()->currentAccessToken();
-        if ($currentToken) {
-            $user->tokens()->where('id', '!=', $currentToken->id)->delete();
-        }
+        $this->revokeOtherTokens($request);
 
         $qrCodeUrl = $google2fa->getQRCodeUrl(
             config('app.name'),
             $user->email,
-            $user->two_factor_secret
+            $user->two_factor_secret,
         );
 
-        // Для генерации QR-кода на фронтенде можно использовать 'pragmarx/google2fa-qrcode' или любую JS-библиотеку
-        // Здесь мы просто вернем URL для QR-кода
         return response()->json([
-            'qr_code_url' => $qrCodeUrl, // Или можно сгенерировать SVG и вернуть его
+            'qr_code_url' => $qrCodeUrl,
             'recovery_codes' => json_decode($user->two_factor_recovery_codes),
         ]);
     }
@@ -75,18 +69,83 @@ class TwoFactorAuthenticationController extends Controller
     }
 
     /**
-     * Отключение двухфакторной аутентификации.
+     * Отключение двухфакторной аутентификации после повторного подтверждения личности.
      */
     public function destroy(Request $request)
     {
+        $validated = $request->validate([
+            'password' => 'nullable|string|max:255',
+            'code' => 'nullable|string|max:64',
+        ]);
         $user = $request->user();
+        $rateLimitKey = 'two-factor-disable:user:'.$user->getAuthIdentifier();
 
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+            return response()->json([
+                'message' => 'Demasiados intentos de verificación. Inténtalo de nuevo más tarde.',
+            ], 429)->header('Retry-After', (string) RateLimiter::availableIn($rateLimitKey));
+        }
+
+        if (! $user->two_factor_secret || ! $user->two_factor_confirmed_at) {
+            return response()->json(['message' => 'La autenticación de dos factores no está activada.'], 422);
+        }
+
+        $password = (string) ($validated['password'] ?? '');
+        $code = (string) ($validated['code'] ?? '');
+        if ($password === '' && $code === '') {
+            RateLimiter::hit($rateLimitKey, 60);
+            throw ValidationException::withMessages([
+                'reauthentication' => ['Confirma tu contraseña o un código 2FA antes de desactivar la protección.'],
+            ]);
+        }
+
+        $verified = $password !== '' && Hash::check($password, (string) $user->password);
+        $recoveryCodes = json_decode((string) $user->two_factor_recovery_codes, true) ?? [];
+
+        if (! $verified && $code !== '') {
+            $google2fa = new Google2FA();
+            $verified = $google2fa->verifyKey((string) $user->two_factor_secret, $code);
+
+            if (! $verified) {
+                foreach ($recoveryCodes as $recoveryCode) {
+                    if (is_string($recoveryCode) && hash_equals($recoveryCode, $code)) {
+                        $verified = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (! $verified) {
+            RateLimiter::hit($rateLimitKey, 60);
+            throw ValidationException::withMessages([
+                'reauthentication' => ['La contraseña o el código de autenticación es incorrecto.'],
+            ]);
+        }
+
+        RateLimiter::clear($rateLimitKey);
         $user->forceFill([
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
         ])->save();
 
+        // A sensitive security downgrade invalidates every other persisted session.
+        $this->revokeOtherTokens($request);
+
         return response()->json(['message' => 'Two-factor authentication has been disabled.']);
+    }
+
+    private function revokeOtherTokens(Request $request): void
+    {
+        $user = $request->user();
+        $currentToken = $user->currentAccessToken();
+        $currentTokenId = is_object($currentToken) && isset($currentToken->id)
+            ? (int) $currentToken->id
+            : null;
+
+        if ($currentTokenId) {
+            $user->tokens()->where('id', '!=', $currentTokenId)->delete();
+        }
     }
 }
