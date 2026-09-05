@@ -41,6 +41,7 @@ echo "== Production env readiness smoke =="
 
 app_env="$(get_env APP_ENV || true)"
 app_debug="$(get_env APP_DEBUG || true)"
+session_encrypt="$(get_env SESSION_ENCRYPT || true)"
 if [[ "$app_env" != "production" ]]; then
   echo "FAIL: APP_ENV must be production" >&2
   failures=$((failures + 1))
@@ -53,6 +54,13 @@ if [[ "$app_debug" != "false" ]]; then
   failures=$((failures + 1))
 else
   echo "OK: APP_DEBUG=false"
+fi
+
+if [[ "$session_encrypt" != "true" ]]; then
+  echo "FAIL: SESSION_ENCRYPT must be true" >&2
+  failures=$((failures + 1))
+else
+  echo "OK: SESSION_ENCRYPT=true"
 fi
 
 required_keys=(

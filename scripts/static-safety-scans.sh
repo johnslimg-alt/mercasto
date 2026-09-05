@@ -49,6 +49,7 @@ bash scripts/edit-ad-contract-gate.sh
 bash scripts/paid-renewal-contract-gate.sh
 bash scripts/cache-policy-scan.sh
 bash scripts/session-config-scan.sh
+bash scripts/session-encryption-contract-gate.sh
 node --test scripts/session-cookie-smoke.test.mjs
 node --test scripts/production-session-security-smoke.test.mjs
 node --test scripts/security-header-smoke.test.mjs

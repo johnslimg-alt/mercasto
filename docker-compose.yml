@@ -71,6 +71,7 @@ services:
       - /var/www/vendor
     environment:
       - "DB_HOST=postgres"
+      - "SESSION_ENCRYPT=true"
       - "REDIS_HOST=redis"
       - "REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
       - "OLLAMA_TEXT_MODEL=qwen3.8:9b-local"
