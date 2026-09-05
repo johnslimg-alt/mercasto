@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use PragmaRX\Google2FA\Google2FA;
@@ -77,6 +78,13 @@ class TwoFactorAuthenticationController extends Controller
             'code' => 'nullable|string|max:64',
         ]);
         $user = $request->user();
+        $rateLimitKey = 'two-factor-disable:user:'.$user->getAuthIdentifier();
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+            return response()->json([
+                'message' => 'Demasiados intentos de verificación. Inténtalo de nuevo más tarde.',
+            ], 429)->header('Retry-After', (string) RateLimiter::availableIn($rateLimitKey));
+        }
 
         if (! $user->two_factor_secret || ! $user->two_factor_confirmed_at) {
             return response()->json(['message' => 'La autenticación de dos factores no está activada.'], 422);
@@ -85,6 +93,7 @@ class TwoFactorAuthenticationController extends Controller
         $password = (string) ($validated['password'] ?? '');
         $code = (string) ($validated['code'] ?? '');
         if ($password === '' && $code === '') {
+            RateLimiter::hit($rateLimitKey, 60);
             throw ValidationException::withMessages([
                 'reauthentication' => ['Confirma tu contraseña o un código 2FA antes de desactivar la protección.'],
             ]);
@@ -108,11 +117,13 @@ class TwoFactorAuthenticationController extends Controller
         }
 
         if (! $verified) {
+            RateLimiter::hit($rateLimitKey, 60);
             throw ValidationException::withMessages([
                 'reauthentication' => ['La contraseña o el código de autenticación es incorrecto.'],
             ]);
         }
 
+        RateLimiter::clear($rateLimitKey);
         $user->forceFill([
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
