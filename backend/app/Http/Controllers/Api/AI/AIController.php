@@ -219,7 +219,7 @@ class AIController extends Controller
     public function analyzeImage(Request $request)
     {
         $validated = $request->validate([
-            'image_path' => 'required|string',
+            'image_path' => 'required|string|max:512',
             'title' => 'nullable|string|max:255',
         ]);
 
