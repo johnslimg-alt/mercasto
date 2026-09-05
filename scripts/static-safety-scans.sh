@@ -25,6 +25,7 @@ node scripts/self-hosted-pr-safety.mjs
 node --test scripts/self-hosted-pr-safety.test.mjs
 bash scripts/official-actions-node24-gate.sh
 bash scripts/official-actions-node24-gate.test.sh
+bash scripts/compose-image-digest-gate.sh
 bash scripts/security-audit-gate.sh
 bash scripts/launch-readiness-contract-gate.sh
 bash scripts/seo-route-shell-gate.sh
