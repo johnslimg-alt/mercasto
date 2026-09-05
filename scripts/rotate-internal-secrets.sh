@@ -86,6 +86,7 @@ NEW_DB="$(openssl rand -hex 32)"
 NEW_REDIS="$(openssl rand -hex 32)"
 
 test -n "$OLD_DB"; test -n "$OLD_REDIS"
+umask 0027
 backup="postgres-backups/pre_secret_rotation_$(date -u +%Y%m%d_%H%M%S).dump"
 docker compose exec -T postgres sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup"
 test -s "$backup"

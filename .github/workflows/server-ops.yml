@@ -62,6 +62,7 @@ jobs:
             fi
 
             backup_dir=/var/www/mercasto/postgres-backups
+            umask 0027
             mkdir -p "$backup_dir"
             backup="$backup_dir/pre_catalog_semantic_$(date -u +%Y%m%d_%H%M%S).dump"
             docker compose exec -T postgres sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup"
