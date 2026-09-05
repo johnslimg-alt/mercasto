@@ -40,6 +40,7 @@ class KycAiPrescreenTest extends TestCase
         ]);
         $response->assertOk();
         $this->assertArrayNotHasKey('kyc_document_url', $response->json('user'));
+        Storage::disk('local')->assertExists($response->json('user.kyc_document_url') ?? $user->fresh()->kyc_document_url);
         Queue::assertPushed(PreScreenKycDocumentWithAI::class, fn ($job) => $job->userId === $user->id);
 
         $user->refresh();

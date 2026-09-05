@@ -780,11 +780,14 @@ class ProfileController extends Controller
 
         // Удаляем старый документ, если была предыдущая попытка
         if ($user->kyc_document_url) {
-            Storage::delete($user->kyc_document_url);
+            Storage::disk('local')->delete($user->kyc_document_url);
+            if (config('filesystems.default') !== 'local') {
+                Storage::disk(config('filesystems.default'))->delete($user->kyc_document_url);
+            }
         }
 
         // Безопасность: Сохраняем в приватную папку (не в public), чтобы никто не мог скачать паспорт по прямой ссылке
-        $path = $request->file('document')->store('kyc_documents');
+        $path = $request->file('document')->store('kyc_documents', 'local');
 
         $user->kyc_document_url = $path;
         $user->kyc_status = 'pending';
@@ -821,11 +824,22 @@ class ProfileController extends Controller
         if ($request->user()->role !== 'admin') return response()->json(['message' => 'Acceso denegado'], 403);
         
         $user = User::findOrFail($id);
-        if (!$user->kyc_document_url || !Storage::exists($user->kyc_document_url)) {
+        if (! $user->kyc_document_url) {
             return response()->json(['message' => 'Documento no encontrado'], 404);
         }
-        
-        return Storage::download($user->kyc_document_url);
+
+        $disk = Storage::disk('local');
+        if (! $disk->exists($user->kyc_document_url) && config('filesystems.default') !== 'local') {
+            $legacy = Storage::disk(config('filesystems.default'));
+            if ($legacy->exists($user->kyc_document_url)) {
+                $disk = $legacy;
+            }
+        }
+        if (! $disk->exists($user->kyc_document_url)) {
+            return response()->json(['message' => 'Documento no encontrado'], 404);
+        }
+
+        return $disk->download($user->kyc_document_url);
     }
 
     public function approveKyc(Request $request, $id)

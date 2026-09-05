@@ -37,6 +37,12 @@ class PreScreenKycDocumentWithAI implements ShouldQueue, ShouldBeUnique
         if (! $user || $user->kyc_status !== 'pending' || ! $user->kyc_document_url) return;
 
         $disk = Storage::disk('local');
+        if (! $disk->exists($user->kyc_document_url) && config('filesystems.default') !== 'local') {
+            $legacy = Storage::disk(config('filesystems.default'));
+            if ($legacy->exists($user->kyc_document_url)) {
+                $disk = $legacy;
+            }
+        }
         if (! $disk->exists($user->kyc_document_url)) {
             $this->storeResult($user, 'manual_review', 'El archivo no está disponible para el prefiltro. Revisión manual requerida.');
             return;
@@ -52,7 +58,7 @@ class PreScreenKycDocumentWithAI implements ShouldQueue, ShouldBeUnique
 
             if ($extension === 'pdf') {
                 $parser = new \Smalot\PdfParser\Parser();
-                $text = trim($parser->parseFile($disk->path($user->kyc_document_url))->getText());
+                $text = trim($parser->parseContent($disk->get($user->kyc_document_url))->getText());
                 if (mb_strlen($text) < 40) {
                     $this->storeResult($user, 'manual_review', 'PDF escaneado o sin texto legible; requiere revisión visual manual.');
                     return;
