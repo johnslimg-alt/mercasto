@@ -47,6 +47,16 @@ class AccountDeletionController extends Controller
             Storage::disk('public')->delete($user->avatar_url);
         }
 
+        if ($user->kyc_document_url) {
+            Storage::disk('local')->delete($user->kyc_document_url);
+            if (config('filesystems.default') !== 'local') {
+                Storage::disk(config('filesystems.default'))->delete($user->kyc_document_url);
+            }
+        }
+        if ($user->business_csf_url && ! str_starts_with($user->business_csf_url, 'http')) {
+            Storage::disk('local')->delete($user->business_csf_url);
+        }
+
         $adIds = Ad::where('user_id', $user->id)->pluck('id');
 
         DB::table('reviews')->where('reviewer_id', $user->id)->orWhere('seller_id', $user->id)->delete();
@@ -60,6 +70,8 @@ class AccountDeletionController extends Controller
         DB::table('push_subscriptions')->where('user_id', $user->id)->delete();
         DB::table('category_subscriptions')->where('user_id', $user->id)->delete();
         DB::table('coupon_user')->where('user_id', $user->id)->delete();
+        DB::table('messages')->where('sender_id', $user->id)->orWhere('receiver_id', $user->id)->delete();
+        DB::table('conversations')->where('buyer_id', $user->id)->orWhere('seller_id', $user->id)->delete();
 
         DB::table('favorites')->whereIn('ad_id', $adIds)->delete();
         DB::table('ad_views')->whereIn('ad_id', $adIds)->delete();
