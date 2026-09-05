@@ -2,7 +2,6 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'docker_metrics'
+  - job_name: 'prometheus'
     static_configs:
-      # Подключаемся к контейнеру cAdvisor, который работает на порту 8080 внутри сети Docker
-      - targets: ['cadvisor:8080']
+      - targets: ['127.0.0.1:9090']

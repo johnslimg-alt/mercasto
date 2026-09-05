@@ -1,23 +1,6 @@
 # docker-compose.yml — production ready for self-hosted runner
 
 services:
-  autoheal:
-    image: willfarrell/autoheal:1.2.0@sha256:31f580ef0279eaced5b38d631b08c474d70d8403c1c2fdd6ddcf2e879d5f3f7c
-    container_name: autoheal
-    environment:
-      - AUTOHEAL_CONTAINER_LABEL=all
-      - AUTOHEAL_INTERVAL=120
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
-    healthcheck:
-      disable: true
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   mercasto-frontend:
     build:
       context: .
@@ -53,8 +36,6 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
-    labels:
-      - autoheal=true
     networks:
       - default
       - automation-net
@@ -104,8 +85,6 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
-    labels:
-      - autoheal=true
 
   mercasto-worker:
     build:
@@ -137,8 +116,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    labels:
-      - autoheal=false
 
   mercasto-moderation-worker:
     build:
@@ -175,8 +152,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    labels:
-      - autoheal=false
 
   mercasto-scheduler:
     build:
@@ -202,8 +177,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    labels:
-      - autoheal=false
 
   mercasto-reverb:
     build:
@@ -236,8 +209,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    labels:
-      - autoheal=false
 
   mercasto-autofill-model:
     image: ghcr.io/ggml-org/llama.cpp@sha256:991cf50e9eb7dee4c18090849c7f909bafc5a1884cdde2dc3011df7407da09d6
@@ -284,8 +255,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    labels:
-      - autoheal=true
 
   mercasto-ai-gateway:
     build:
@@ -326,8 +295,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    labels:
-      - autoheal=true
 
   ollama:
     image: ollama/ollama:0.32.6@sha256:b88c73ace3e115f8ec53dc8761ae1c0aabfa675406e3681786b98757ce050f42
@@ -353,8 +320,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    labels:
-      - autoheal=true
 
   postgres:
     image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
@@ -444,25 +409,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1@sha256:3cde6faf0791ebf7b41d6f8ae7145466fed712ea6f252c935294d2608b1af388
-    container_name: cadvisor
-    profiles: ["monitoring"]
-    expose: ["8080"]
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    restart: unless-stopped
-    healthcheck:
-      disable: true
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   prometheus:
     image: prom/prometheus:v2.54.0@sha256:497fe921f22fea8535fa2bcb1c193dacc6ce98c08274257b3d18a4eaae0f9647
     container_name: prometheus
@@ -470,7 +416,6 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     expose: ["9090"]
-    depends_on: [cadvisor]
     restart: unless-stopped
     logging:
       driver: "json-file"
