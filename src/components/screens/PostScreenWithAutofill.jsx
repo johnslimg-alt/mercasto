@@ -30,7 +30,7 @@ function normalized(value) {
 }
 
 export default function PostScreenWithAutofill(props) {
-  const { form, images, lang, setForm, isLoggedIn } = props;
+  const { form, images, lang, setForm, user } = props;
   const [formRevision, setFormRevision] = useState(0);
 
   const resolveSubcategory = useCallback((category, hint) => {
@@ -45,8 +45,6 @@ export default function PostScreenWithAutofill(props) {
   const applyCategory = useCallback((category) => {
     if (!category) return;
     setForm((current) => ({ ...current, category, subcategory: '', attributes: {} }));
-    // PostScreen owns category-navigation UI state. Remount only after an explicit
-    // seller category acceptance so its local parent-category state reflects the new value.
     setFormRevision((value) => value + 1);
   }, [setForm]);
 
@@ -60,13 +58,14 @@ export default function PostScreenWithAutofill(props) {
   const applyAttribute = useCallback((category, key, value) => {
     if (!category || !key || value == null) return;
     setForm((current) => current.category === category
-      ? { ...current, attributes: { ...(current.attributes || {}), [key]: value } }
+      ? { ...current, attributes: { ...(current.attributes || {}), [key]: value }
+      }
       : current);
   }, [setForm]);
 
   return (
     <>
-      {isLoggedIn && (
+      {user && (
         <div className="bg-[var(--paper)] px-4 pt-5 md:pt-8">
           <ListingAutofillPanel
             form={form}
