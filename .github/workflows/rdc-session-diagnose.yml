@@ -45,7 +45,7 @@ jobs:
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           ssh -i ~/.ssh/mercasto_recovery_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -uo pipefail
           echo '=== RDC SERVICES ==='

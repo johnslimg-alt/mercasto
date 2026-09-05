@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, AlertTriangle, Loader2, X, Plus, Image, Pencil, Sparkles, Settings2 } from 'lucide-react';
 import SortablePhotoGrid from '../SortablePhotoGrid';
+import ListingAutofillPanel from '../ai/ListingAutofillPanel';
 import MEXICO_STATES from '../../utils/mexicoStates';
 import { filterConfig } from '../../constants/filterConfig';
 import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { localizedText } from '../../utils/localize';
+import { subcategoriesMap } from '../../constants/locationsAndCategories';
+import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || '/storage';
@@ -23,6 +26,29 @@ const getImageUrls = (pathStr) => {
     if (Array.isArray(arr)) return arr.map(getImageUrl);
   } catch (e) {}
   return [getImageUrl(pathStr)];
+};
+
+const normalizedAutofillValue = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toLocaleLowerCase();
+
+const autofillSubcategoryOptions = (category, lang) => {
+  const taxonomyCategory = category === 'coches' ? 'motor' : category;
+  const canonical = subcategoriesByLang.es[taxonomyCategory];
+  const localized = subcategoriesByLang[lang]?.[taxonomyCategory];
+  if (canonical && !Array.isArray(canonical)) {
+    return Object.keys(canonical).map((value) => ({
+      value,
+      label: (!Array.isArray(localized) && localized?.[value]) || canonical[value],
+    }));
+  }
+  const values = Array.isArray(canonical)
+    ? canonical
+    : (subcategoriesMap[taxonomyCategory] || subcategoriesMap[category] || []);
+  const labels = Array.isArray(localized) ? localized : values;
+  return values.map((value, index) => ({ value, label: labels[index] || value }));
 };
 
 export default function EditAdScreen({ t, lang }) {
@@ -142,6 +168,16 @@ export default function EditAdScreen({ t, lang }) {
     if (apiCategoryFields && apiCategoryFields.length > 0) return apiCategoryFields;
     return filterConfig[form.category] || [];
   }, [apiCategoryFields, form.category]);
+
+  const resolveAutofillSubcategory = (category, hint) => {
+    if (!category || !hint) return null;
+    const needle = normalizedAutofillValue(hint);
+    const match = autofillSubcategoryOptions(category, lang).find(
+      (option) => normalizedAutofillValue(option.value) === needle
+        || normalizedAutofillValue(option.label) === needle,
+    );
+    return match?.value || null;
+  };
 
   const handleAttrChange = (fieldId, value) =>
     setForm(prev => ({ ...prev, attributes: { ...prev.attributes, [fieldId]: value } }));
@@ -268,6 +304,29 @@ export default function EditAdScreen({ t, lang }) {
       )}
 
       {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm">{error}</div>}
+
+      <ListingAutofillPanel
+        form={form}
+        images={images}
+        lang={lang}
+        resolveSubcategory={resolveAutofillSubcategory}
+        onApplyCategory={(category) => setForm((current) => ({
+          ...current,
+          category,
+          subcategory: '',
+          attributes: {},
+        }))}
+        onApplySubcategory={(category, subcategory) => setForm((current) => (
+          current.category === category ? { ...current, subcategory } : current
+        ))}
+        onApplyAttribute={(category, key, value) => setForm((current) => (
+          current.category === category
+            ? { ...current, attributes: { ...current.attributes, [key]: value } }
+            : current
+        ))}
+        onApplyTitle={(title) => setForm((current) => ({ ...current, title }))}
+        onApplyDescription={(description) => setForm((current) => ({ ...current, description }))}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
