@@ -4,6 +4,7 @@ set -euo pipefail
 SERVICE="remote-desktop-commander.service"
 UNIT="/etc/systemd/system/${SERVICE}"
 LEGACY_SERVICE="desktop-commander.service"
+RDC_VERSION="0.2.48"
 
 if [ "$(id -u)" -eq 0 ]; then
   SUDO=()
@@ -49,7 +50,7 @@ Type=simple
 User=root
 Environment=HOME=/root
 WorkingDirectory=/root
-ExecStart=/usr/bin/env npx -y @wonderwhy-er/desktop-commander@latest remote --persist-session
+ExecStart=/usr/bin/env npx -y @wonderwhy-er/desktop-commander@0.2.48 remote --persist-session
 Restart=always
 RestartSec=10
 KillSignal=SIGINT
@@ -59,6 +60,7 @@ TimeoutStopSec=20
 WantedBy=multi-user.target
 EOF
 
+echo "Installing Desktop Commander remote service version ${RDC_VERSION}"
 "${SUDO[@]}" install -o root -g root -m 0644 "$TMP_UNIT" "$UNIT"
 "${SUDO[@]}" systemctl daemon-reload
 "${SUDO[@]}" systemctl enable "$SERVICE"
@@ -79,4 +81,4 @@ if ! systemctl is-active --quiet "$SERVICE"; then
   exit 1
 fi
 
-echo "RDC_AGENT_REPAIR_OK"
+echo "RDC_AGENT_REPAIR_OK version=${RDC_VERSION}"
