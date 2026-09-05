@@ -8,6 +8,18 @@ use Intervention\Image\Facades\Image;
 
 class ImageRecognitionService
 {
+    private const ALLOWED_IMAGE_PREFIXES = [
+        'ads/',
+        'avatars/',
+        'business-logos/',
+        'business-banners/',
+        'banners/',
+    ];
+
+    private const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+    private const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
     private OllamaClient $ollama;
 
     public function __construct(OllamaClient $ollama)
@@ -20,6 +32,8 @@ class ImageRecognitionService
      */
     public function analyze(string $imagePath, ?string $title = null): array
     {
+        $imagePath = $this->resolveSafeImagePath($imagePath);
+
         // Try AI-based analysis if title is provided
         if ($title) {
             $aiResult = $this->aiAnalysis($title, $imagePath);
@@ -114,6 +128,72 @@ class ImageRecognitionService
     }
 
     /**
+     * Resolve only Mercasto-owned public image objects and reject path escapes.
+     */
+    private function resolveSafeImagePath(string $imagePath): string
+    {
+        $imagePath = trim($imagePath);
+        if ($imagePath === '' || str_contains($imagePath, "\0") || str_contains($imagePath, '\\')) {
+            throw new \InvalidArgumentException('Invalid image path.');
+        }
+
+        if (str_starts_with($imagePath, '/') || preg_match('#^[a-z][a-z0-9+.-]*://#i', $imagePath)) {
+            throw new \InvalidArgumentException('Invalid image path.');
+        }
+
+        $segments = explode('/', $imagePath);
+        if (in_array('', $segments, true) || in_array('.', $segments, true) || in_array('..', $segments, true)) {
+            throw new \InvalidArgumentException('Invalid image path.');
+        }
+
+        $allowedPrefix = false;
+        foreach (self::ALLOWED_IMAGE_PREFIXES as $prefix) {
+            if (str_starts_with($imagePath, $prefix)) {
+                $allowedPrefix = true;
+                break;
+            }
+        }
+        if (! $allowedPrefix) {
+            throw new \InvalidArgumentException('Image path is outside an allowed directory.');
+        }
+
+        $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+        if (! in_array($extension, self::ALLOWED_IMAGE_EXTENSIONS, true)) {
+            throw new \InvalidArgumentException('Unsupported image extension.');
+        }
+
+        $disk = Storage::disk('public');
+        if (! $disk->exists($imagePath)) {
+            throw new \InvalidArgumentException('Image does not exist.');
+        }
+
+        try {
+            $root = realpath($disk->path(''));
+            $candidate = realpath($disk->path($imagePath));
+            if ($root !== false && $candidate !== false) {
+                $rootPrefix = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+                if (! str_starts_with($candidate, $rootPrefix)) {
+                    throw new \InvalidArgumentException('Image path escapes public storage.');
+                }
+            }
+        } catch (\RuntimeException) {
+            // Non-local disks do not expose filesystem paths. The normalized object key
+            // and allowlisted prefix/extension remain authoritative there.
+        }
+
+        try {
+            $mimeType = strtolower((string) $disk->mimeType($imagePath));
+        } catch (\Throwable) {
+            throw new \InvalidArgumentException('Image MIME type cannot be verified.');
+        }
+        if (! in_array($mimeType, self::ALLOWED_IMAGE_MIME_TYPES, true)) {
+            throw new \InvalidArgumentException('Unsupported image MIME type.');
+        }
+
+        return $imagePath;
+    }
+
+    /**
      * Analyze image from filename keywords
      */
     private function analyzeFromFilename(string $imagePath): array
@@ -191,11 +271,12 @@ class ImageRecognitionService
         ];
 
         try {
-            if (Storage::exists($imagePath)) {
-                $metadata['size'] = Storage::size($imagePath);
+            $disk = Storage::disk('public');
+            if ($disk->exists($imagePath)) {
+                $metadata['size'] = $disk->size($imagePath);
                 
                 // Try to get dimensions
-                $fullPath = Storage::path($imagePath);
+                $fullPath = $disk->path($imagePath);
                 if (file_exists($fullPath)) {
                     $imageSize = @getimagesize($fullPath);
                     if ($imageSize) {
