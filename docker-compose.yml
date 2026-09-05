@@ -239,6 +239,54 @@ services:
     labels:
       - autoheal=false
 
+  mercasto-autofill-model:
+    image: ghcr.io/ggml-org/llama.cpp@sha256:991cf50e9eb7dee4c18090849c7f909bafc5a1884cdde2dc3011df7407da09d6
+    container_name: mercasto_autofill_model
+    command:
+      - "-hf"
+      - "ggml-org/SmolVLM2-500M-Video-Instruct-GGUF:Q8_0"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+      - "-c"
+      - "2048"
+      - "-t"
+      - "4"
+      - "-tb"
+      - "4"
+      - "-b"
+      - "256"
+      - "-ub"
+      - "64"
+      - "--parallel"
+      - "1"
+      - "--poll"
+      - "0"
+    expose:
+      - "8080"
+    networks:
+      - autofill-private
+      - autofill-egress
+    cpus: "4.0"
+    mem_limit: 2g
+    volumes:
+      - autofill_model_cache:/root/.cache/huggingface
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - autoheal=true
+
   mercasto-ai-gateway:
     build:
       context: ./services/ai-gateway
@@ -246,13 +294,22 @@ services:
     container_name: mercasto_ai_gateway
     expose:
       - "8080"
+    networks:
+      - default
+      - autofill-private
     environment:
       - "OLLAMA_BASE_URL=http://ollama:11434"
       - "OLLAMA_VISION_MODEL=qwen3-vl:2b-instruct"
+      - "AUTOFILL_MODEL_BASE_URL=http://mercasto-autofill-model:8080"
+      - "AUTOFILL_MODEL_NAME=smolvlm2-500m"
+      - "AUTOFILL_TIMEOUT_SECONDS=${AUTOFILL_TIMEOUT_SECONDS:-18}"
+      - "AUTOFILL_PREWARM_ENABLED=true"
       - "OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT:-90}"
       - "MERCASTO_AI_INTERNAL_TOKEN=${MERCASTO_AI_INTERNAL_TOKEN:-}"
     depends_on:
       ollama:
+        condition: service_healthy
+      mercasto-autofill-model:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -455,6 +512,7 @@ services:
 
 volumes:
   ollama_data:
+  autofill_model_cache:
 
 networks:
   # This network is long-lived production infrastructure shared by the Mercasto
@@ -466,3 +524,7 @@ networks:
   automation-net:
     external: true
     name: automation-net
+  autofill-private:
+    internal: true
+  autofill-egress:
+    driver: bridge

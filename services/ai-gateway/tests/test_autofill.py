@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from mercasto_ai.autofill import AutofillRequest, _sanitize_image, canonicalize
+from mercasto_ai.autofill import (
+    AutofillRequest,
+    LocalAutofillClient,
+    _sanitize_image,
+    canonicalize,
+)
 from mercasto_ai.combined import app
 
 
@@ -98,3 +104,85 @@ def test_endpoint_rejects_missing_input(monkeypatch) -> None:
         headers={"X-Mercasto-Internal-Token": "autofill-secret"},
     )
     assert response.status_code == 422
+
+
+def test_runtime_never_accepts_model_free_text(monkeypatch) -> None:
+    client = LocalAutofillClient()
+
+    async def fail_chat(*args, **kwargs):
+        raise AssertionError("text-only autofill must not call the vision model")
+
+    monkeypatch.setattr(client, "_chat", fail_chat)
+    result = asyncio.run(client.suggest(request()))
+
+    assert result.category.value == "motor"
+    assert result.category.confidence >= 0.8
+    assert result.attributes["marca"].value == "Nissan"
+    assert "modelo" not in result.attributes
+    assert result.title.value == "Nissan Versa usado"
+    assert result.description.value == "Nissan Versa usado"
+
+
+def test_photo_only_runtime_leaves_free_text_empty(monkeypatch) -> None:
+    source = io.BytesIO()
+    Image.new("RGB", (32, 32), (10, 20, 30)).save(source, format="JPEG")
+    photo_request = AutofillRequest(
+        short_text="",
+        images_base64=[base64.b64encode(source.getvalue()).decode("ascii")],
+        taxonomy=taxonomy(),
+    )
+    client = LocalAutofillClient()
+
+    async def fake_chat(*args, **kwargs):
+        return {"category": "motor"}
+
+    monkeypatch.setattr(client, "_chat", fake_chat)
+    result = asyncio.run(client.suggest(photo_request))
+
+    assert result.category.value == "motor"
+    assert result.category.confidence < 0.8
+    assert result.title.value is None
+    assert result.description.value is None
+    assert result.requires_seller_confirmation is True
+
+
+def test_rule_category_abstains_on_equal_conflicting_signals() -> None:
+    request_value = AutofillRequest(
+        short_text="casa iphone",
+        taxonomy=[
+            {"slug": "inmobiliaria", "label": "Inmuebles", "attributes": []},
+            {"slug": "electronica", "label": "Electrónica", "attributes": []},
+        ],
+    )
+    slug, confidence = LocalAutofillClient._rule_category(request_value, "casa iphone")
+    assert slug is None
+    assert confidence == 0.0
+
+
+def test_rule_category_matches_representative_marketplace_phrases() -> None:
+    taxonomy_value = [
+        {"slug": slug, "label": slug, "attributes": []}
+        for slug in [
+            "electronica", "motor", "inmobiliaria", "servicios", "empleo", "moda",
+            "hogar", "mascotas", "formacion", "boletos", "turismo", "infantil",
+        ]
+    ]
+    cases = [
+        ("iPhone 15 Pro usado", "electronica"),
+        ("Nissan Versa 2022", "motor"),
+        ("Casa de dos recámaras", "inmobiliaria"),
+        ("Servicio de plomería a domicilio", "servicios"),
+        ("Vacante de tiempo completo", "empleo"),
+        ("Vestido de fiesta talla M", "moda"),
+        ("Sofá para sala usado", "hogar"),
+        ("Croquetas para perro", "mascotas"),
+        ("Clases de inglés particulares", "formacion"),
+        ("Boletos concierto CDMX", "boletos"),
+        ("Hotel en Cancún fin de semana", "turismo"),
+        ("Juguete para niño de 5 años", "infantil"),
+    ]
+    request_value = AutofillRequest(short_text="fixture", taxonomy=taxonomy_value)
+    for phrase, expected in cases:
+        slug, confidence = LocalAutofillClient._rule_category(request_value, phrase)
+        assert slug == expected, phrase
+        assert confidence >= 0.8
