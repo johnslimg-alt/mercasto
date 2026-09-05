@@ -49,6 +49,19 @@ class AccountDeletionController extends Controller
 
         $adIds = Ad::where('user_id', $user->id)->pluck('id');
 
+        // Explicit account-deletion scope: remove private identity-verification files.
+        foreach ([$user->kyc_document_url, $user->business_csf_url] as $privatePath) {
+            if (is_string($privatePath) && $privatePath !== '' && ! str_starts_with($privatePath, 'http')) {
+                Storage::disk('local')->delete($privatePath);
+            }
+        }
+
+        // Explicit privacy cleanup for user-to-user communication and saved reminders/searches.
+        DB::table('messages')->where('sender_id', $user->id)->orWhere('receiver_id', $user->id)->delete();
+        DB::table('conversations')->where('buyer_id', $user->id)->orWhere('seller_id', $user->id)->delete();
+        DB::table('search_alerts')->where('user_id', $user->id)->delete();
+        DB::table('saved_searches')->where('user_id', $user->id)->delete();
+
         DB::table('reviews')->where('reviewer_id', $user->id)->orWhere('seller_id', $user->id)->delete();
         DB::table('favorites')->where('user_id', $user->id)->delete();
         DB::table('user_notifications')->where('user_id', $user->id)->delete();

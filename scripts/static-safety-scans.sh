@@ -75,6 +75,7 @@ bash scripts/schema-drift-contract-gate.sh
 bash scripts/postgres-observability-contract-gate.sh
 bash scripts/payment-retention-scan.sh
 bash scripts/privacy-retention-contract-gate.sh
+bash scripts/account-deletion-privacy-gate.sh
 bash scripts/payment-payload-privacy-gate.sh
 bash scripts/payment-webhook-idempotency-scan.sh
 bash scripts/media-upload-validation-scan.sh
