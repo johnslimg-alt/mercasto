@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\SecureOneTimeCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -99,7 +100,11 @@ class CompleteRegistrationMetaCapiTest extends TestCase
 
         $phone = '+525512345690';
         $eventId = 'register_user_phone_shared_event';
-        Cache::put('phone_auth_'.$phone, 123456, now()->addMinutes(10));
+        Cache::put(
+            SecureOneTimeCode::cacheKey('phone-auth', $phone),
+            SecureOneTimeCode::hash('123456', 'phone-auth'),
+            now()->addMinutes(10),
+        );
 
         $response = $this->postJson('/api/auth/phone/verify', [
             'phone_number' => $phone,

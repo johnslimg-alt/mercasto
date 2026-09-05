@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Support\SecureOneTimeCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Socialite\Facades\Socialite;
@@ -16,7 +17,9 @@ class RegistrationConsentChannelsTest extends TestCase
     public function test_new_phone_account_requires_consent_and_preserves_valid_code_for_retry(): void
     {
         $phone = '+525512345678';
-        Cache::put('phone_auth_'.$phone, 123456, now()->addMinutes(10));
+        $cacheKey = SecureOneTimeCode::cacheKey('phone-auth', $phone);
+        $codeHash = SecureOneTimeCode::hash('123456', 'phone-auth');
+        Cache::put($cacheKey, $codeHash, now()->addMinutes(10));
 
         $this->postJson('/api/auth/phone/verify', [
             'phone_number' => $phone,
@@ -29,14 +32,19 @@ class RegistrationConsentChannelsTest extends TestCase
             'consent_source',
         ]);
 
-        $this->assertSame(123456, Cache::get('phone_auth_'.$phone));
+        $this->assertSame($codeHash, Cache::get($cacheKey));
         $this->assertDatabaseMissing('users', ['phone_number' => $phone]);
     }
 
     public function test_new_phone_account_records_consent_but_existing_user_can_login_without_reaccepting(): void
     {
         $phone = '+525512345679';
-        Cache::put('phone_auth_'.$phone, 654321, now()->addMinutes(10));
+        $cacheKey = SecureOneTimeCode::cacheKey('phone-auth', $phone);
+        Cache::put(
+            $cacheKey,
+            SecureOneTimeCode::hash('654321', 'phone-auth'),
+            now()->addMinutes(10),
+        );
 
         $eventId = 'register_user_phone_channel_test';
         $created = $this->postJson('/api/auth/phone/verify', [
@@ -56,7 +64,11 @@ class RegistrationConsentChannelsTest extends TestCase
             'source' => 'mobile',
         ]);
 
-        Cache::put('phone_auth_'.$phone, 111222, now()->addMinutes(10));
+        Cache::put(
+            $cacheKey,
+            SecureOneTimeCode::hash('111222', 'phone-auth'),
+            now()->addMinutes(10),
+        );
         $this->postJson('/api/auth/phone/verify', [
             'phone_number' => $phone,
             'code' => '111222',
@@ -101,6 +113,7 @@ class RegistrationConsentChannelsTest extends TestCase
             ->assertJsonPath('user.id', $userId)
             ->assertJsonPath('is_new_user', false)
             ->assertJsonPath('registration_event_id', null);
+        $this->assertDatabaseCount('users', 1);
         $this->assertDatabaseCount('user_consents', 3);
     }
 
