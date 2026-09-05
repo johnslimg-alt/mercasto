@@ -58,8 +58,20 @@ fi
 echo "== Backups =="
 if [[ -d postgres-backups ]]; then
   ls -lah postgres-backups | tail -20
+  backup_dir_mode="$(stat -c %a postgres-backups)"
+  if [[ "$backup_dir_mode" != "2770" && "$backup_dir_mode" != "770" ]]; then
+    echo "unsafe postgres-backups mode: $backup_dir_mode (expected 2770/770)" >&2
+    exit 1
+  fi
+  unsafe_backups="$(find postgres-backups -maxdepth 1 -type f -name '*.dump' -perm /0137 -print -quit)"
+  if [[ -n "$unsafe_backups" ]]; then
+    echo "unsafe PostgreSQL backup permissions detected" >&2
+    exit 1
+  fi
+  echo "backup permissions OK"
 else
   echo "postgres-backups directory missing" >&2
+  exit 1
 fi
 
 echo "== Reboot state =="

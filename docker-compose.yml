@@ -373,6 +373,7 @@ services:
       - ./postgres-backups:/backups
     entrypoint: >
       /bin/bash -c "
+      umask 0027;
       while true; do
         FILE=/backups/backup_$$(date +%Y%m%d_%H%M).dump;
         pg_dump -h postgres -U ${DB_USERNAME:-mercasto_user} -d ${DB_DATABASE:-mercasto} -F c -f $$FILE && echo \"Backup: $$FILE\";
