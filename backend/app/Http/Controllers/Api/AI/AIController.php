@@ -241,6 +241,11 @@ class AIController extends Controller
 
             return response()->json($result);
 
+        } catch (\InvalidArgumentException) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Invalid image path',
+            ], 422);
         } catch (\Exception $e) {
             Log::error('AI image error', ['error' => $e->getMessage()]);
             return response()->json([
