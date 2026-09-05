@@ -17,7 +17,10 @@ class AdUploadBatchBoundsTest extends TestCase
     public function test_rejected_update_does_not_delete_existing_images_before_total_count_validation(): void
     {
         Storage::fake('public');
-        Category::create(['slug' => 'hogar', 'name' => ['es' => 'Hogar'], 'icon' => 'Home']);
+        Category::firstOrCreate(
+            ['slug' => 'hogar'],
+            ['name' => ['es' => 'Hogar'], 'icon' => 'Home'],
+        );
         $user = User::factory()->create();
         $currentImages = collect(range(1, 10))->map(fn (int $i) => "ads/existing-{$i}.jpg")->all();
         foreach ($currentImages as $path) {
