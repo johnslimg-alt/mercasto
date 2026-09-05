@@ -1,6 +1,5 @@
 from mercasto_ai.autofill import AutofillRequest, canonicalize
 
-
 TAXONOMY = [
     {
         "slug": "motor",
