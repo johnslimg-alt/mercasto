@@ -86,6 +86,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verification_token',
         'pending_email',
         'phone_otp',
+        'phone_otp_hash',
         'phone_otp_expires_at',
         'first_return_after_24h_at',
         'kyc_ai_status',
