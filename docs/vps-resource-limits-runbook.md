@@ -96,3 +96,16 @@ Suggested targets:
 - Do not stop `postgres` or `redis` unless performing a controlled rollback.
 - Do not click Hostinger `Remove limitations` while CPU remains near 100%.
 - Do not delete `n8n_data` without a separate export/backup.
+
+## Queue worker memory sizing
+
+Queue concurrency is bounded by host memory rather than an unexplained process count.
+
+The production rule is:
+
+- reserve the larger of 30% of host RAM or 4 GiB for PostgreSQL, Redis, PHP-FPM, frontend/reverb, kernel/filesystem cache and transient deploy load;
+- the aggregate declared memory limits of all `queue:work` containers must be no more than 25% of total host RAM and must also fit below the post-reserve usable memory;
+- every queue worker container must have an explicit memory limit;
+- increasing worker replicas or per-worker memory requires this budget check to remain green.
+
+Run `bash scripts/worker-memory-budget.sh` on the target host before increasing worker concurrency. On the current ~31.3 GiB production host, the safe queue budget is ~7.8 GiB while the two configured 1 GiB workers consume a 2 GiB declared maximum, leaving substantial peak-load headroom.

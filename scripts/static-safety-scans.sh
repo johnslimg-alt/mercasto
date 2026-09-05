@@ -66,6 +66,7 @@ node --test scripts/manual-server-gate-self-hosted.test.mjs
 bash scripts/root-owned-checkout-workflow-gate.sh
 node --test scripts/automerge-workflow-guard.test.mjs
 node --test scripts/hosted-workflow-timeout-guard.test.mjs
+bash scripts/worker-memory-budget.test.sh
 node --test scripts/workflow-concurrency-guard.test.mjs
 node --test scripts/seo-audit-request.test.mjs
 bash scripts/csrf-session-contract-gate.sh
