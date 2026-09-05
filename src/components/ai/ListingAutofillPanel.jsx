@@ -3,9 +3,13 @@ import { Check, Loader2, ShieldCheck, Sparkles, WandSparkles } from 'lucide-reac
 import { useListingAutofill } from '../../hooks/ai/useListingAutofill';
 import { getListingAutofillCopy } from './listingAutofillI18n';
 
+const MIN_APPLY_CONFIDENCE = 0.8;
+
 function SuggestionRow({ label, suggestion, copy, onApply, disabled = false }) {
   if (!suggestion?.value) return null;
-  const pct = Math.round(Math.max(0, Math.min(1, Number(suggestion.confidence) || 0)) * 100);
+  const confidence = Math.max(0, Math.min(1, Number(suggestion.confidence) || 0));
+  const pct = Math.round(confidence * 100);
+  const applyDisabled = disabled || confidence < MIN_APPLY_CONFIDENCE;
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
@@ -13,7 +17,7 @@ function SuggestionRow({ label, suggestion, copy, onApply, disabled = false }) {
         <div className="mt-0.5 break-words text-sm font-semibold text-slate-900 dark:text-white">{suggestion.value}</div>
         <div className="mt-1 text-[11px] text-slate-500">{pct}% {copy.confidence}</div>
       </div>
-      <button type="button" disabled={disabled} onClick={onApply} className="min-h-10 shrink-0 rounded-lg bg-lime-500 px-3 text-xs font-extrabold text-slate-950 hover:bg-lime-400 disabled:cursor-not-allowed disabled:opacity-40">
+      <button type="button" disabled={applyDisabled} onClick={onApply} className="min-h-10 shrink-0 rounded-lg bg-lime-500 px-3 text-xs font-extrabold text-slate-950 hover:bg-lime-400 disabled:cursor-not-allowed disabled:opacity-40">
         <Check size={14} className="mr-1 inline" />{copy.apply}
       </button>
     </div>
@@ -24,9 +28,7 @@ export default function ListingAutofillPanel({
   form,
   images,
   lang,
-  resolveSubcategory,
   onApplyCategory,
-  onApplySubcategory,
   onApplyAttribute,
   onApplyTitle,
   onApplyDescription,
@@ -37,10 +39,6 @@ export default function ListingAutofillPanel({
   const newPhotos = useMemo(() => (images || []).filter((image) => image?.source === 'new' && image?.file instanceof File), [images]);
   const canAnalyze = shortText.trim().length > 0 || newPhotos.length > 0;
   const category = suggestions?.category?.value || null;
-  const canonicalSubcategory = useMemo(
-    () => resolveSubcategory?.(category, suggestions?.subcategory_hint?.value) || null,
-    [category, resolveSubcategory, suggestions?.subcategory_hint?.value],
-  );
 
   const run = async () => {
     if (!canAnalyze) return;
@@ -78,7 +76,6 @@ export default function ListingAutofillPanel({
       {suggestions && (
         <div className="mt-4 space-y-2" data-testid="listing-autofill-suggestions">
           <SuggestionRow label={copy.category} suggestion={suggestions.category} copy={copy} onApply={() => onApplyCategory?.(category)} />
-          <SuggestionRow label={copy.subcategory} suggestion={suggestions.subcategory_hint} copy={copy} disabled={!canonicalSubcategory} onApply={() => onApplySubcategory?.(category, canonicalSubcategory)} />
           <SuggestionRow label={copy.titleField} suggestion={suggestions.title} copy={copy} onApply={() => onApplyTitle?.(suggestions.title.value)} />
           <SuggestionRow label={copy.description} suggestion={suggestions.description} copy={copy} onApply={() => onApplyDescription?.(suggestions.description.value)} />
           {Object.keys(suggestions.attributes || {}).length > 0 && (

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
 import os
 import re
 import time
+import unicodedata
+from pathlib import Path
 from typing import Annotated, Any
 
 import httpx
@@ -18,6 +21,82 @@ from .main import require_internal_token
 _CATEGORY_CONFIDENCE = 0.40
 _FIELD_CONFIDENCE = 0.45
 
+
+
+_CATEGORY_ANCHORS: dict[str, tuple[str, ...]] = {
+    "motor": ("auto", "carro", "coche", "vehiculo", "nissan", "toyota", "honda", "ford", "chevrolet", "mazda", "kia", "hyundai", "volkswagen", "versa", "camioneta", "pickup", "suv", "moto", "motocicleta", "bicicleta", "refaccion", "autoparte"),
+    "inmobiliaria": ("casa", "departamento", "terreno", "local comercial", "oficina", "bodega", "renta vacacional", "recamara", "inmueble", "escrituras", "infonavit"),
+    "empleo": ("vacante", "empleo", "puesto", "contratacion", "tiempo completo", "medio tiempo", "salario", "sueldo", "prestaciones", "trabajo remoto"),
+    "servicios": ("plomeria", "electricista", "limpieza", "reparacion", "mantenimiento", "cotizacion", "servicio a domicilio", "instalacion"),
+    "electronica": ("iphone", "smartphone", "telefono", "celular", "laptop", "tablet", "computadora", "pc gamer", "monitor", "televisor", "tv", "audio", "camara", "drone", "cargador", "android", "ios", "macbook"),
+    "moda": ("vestido", "ropa", "calzado", "zapato", "tenis", "bolso", "bolsa", "joyeria", "collar", "pulsera", "talla", "blusa", "pantalon"),
+    "hogar": ("sofa", "mueble", "mesa", "silla", "cama", "colchon", "refrigerador", "lavadora", "electrodomestico", "decoracion", "herramienta", "jardin", "cocina"),
+    "infantil": ("juguete", "bebe", "carriola", "cuna", "autoasiento", "ropa infantil", "ropa bebe", "nino", "nina"),
+    "mascotas": ("perro", "gato", "mascota", "croqueta", "croquetas", "veterinario", "adopcion", "vacunado", "esterilizado", "alimento para perro", "alimento para gato"),
+    "negocios": ("negocio", "traspaso", "franquicia", "maquinaria", "equipamiento", "inversion", "sociedad"),
+    "formacion": ("libro", "curso", "clases de", "clase de", "idioma", "universidad", "certificacion", "material escolar", "programacion"),
+    "ocio": ("videojuego", "consola", "coleccion", "instrumento", "guitarra", "fotografia", "camping", "pesca", "surf"),
+    "boletos": ("boleto", "boletos", "entrada", "entradas", "concierto", "festival", "teatro", "partido", "conferencia", "cine"),
+    "turismo": ("hotel", "hostal", "hospedaje", "villa", "cabana", "glamping", "tour", "excursion", "viaje", "guia turistico", "transfer", "renta de auto", "yate", "lancha", "spa", "temazcal"),
+}
+
+
+def _normalize_match_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value.casefold())
+    without_marks = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return " ".join(re.sub(r"[^\w+]+", " ", without_marks, flags=re.UNICODE).split())
+
+
+def _contains_unsegmented_script(value: str) -> bool:
+    return any(
+        "CJK" in unicodedata.name(ch, "")
+        or "HIRAGANA" in unicodedata.name(ch, "")
+        or "KATAKANA" in unicodedata.name(ch, "")
+        or "HANGUL" in unicodedata.name(ch, "")
+        for ch in value
+    )
+
+
+def _contains_phrase(text: str, phrase: str) -> bool:
+    normalized_phrase = _normalize_match_text(phrase)
+    if not normalized_phrase:
+        return False
+    if _contains_unsegmented_script(normalized_phrase):
+        return normalized_phrase in text
+    return re.search(rf"(?:^|\s){re.escape(normalized_phrase)}(?:$|\s)", text) is not None
+
+_CATEGORY_LOCALE_ANCHORS: dict[str, dict[str, tuple[str, ...]]] = {
+    "en": {
+        "motor": ("car", "vehicle", "motorcycle", "truck", "pickup", "bicycle", "auto parts"), "inmobiliaria": ("house", "apartment", "real estate", "land", "office", "warehouse", "for sale", "for rent"), "empleo": ("job", "vacancy", "full time", "part time", "salary", "hiring"), "servicios": ("plumber", "plumbing", "electrician", "cleaning", "repair", "maintenance"), "electronica": ("phone", "smartphone", "laptop", "tablet", "computer", "monitor", "television", "camera", "drone"), "moda": ("dress", "clothing", "shoes", "bag", "jewelry"), "hogar": ("sofa", "furniture", "table", "chair", "bed", "mattress", "refrigerator", "garden"), "infantil": ("toy", "baby", "stroller", "crib", "kids clothing"), "mascotas": ("dog", "cat", "pet", "pet food", "veterinarian"), "negocios": ("business for sale", "franchise", "machinery", "investment"), "formacion": ("book", "course", "classes", "language lessons", "university"), "ocio": ("video game", "console", "collectible", "guitar", "camping", "fishing", "surf"), "boletos": ("ticket", "tickets", "concert", "festival", "theater", "conference"), "turismo": ("hotel", "hostel", "lodging", "tour", "excursion", "travel", "car rental", "yacht", "boat", "spa"),
+    },
+    "ru": {
+        "motor": ("авто", "машина", "автомобиль", "мотоцикл", "велосипед", "запчасти"), "inmobiliaria": ("дом", "квартира", "недвижимость", "земля", "офис", "аренда", "продажа"), "empleo": ("работа", "вакансия", "полный день", "подработка", "зарплата"), "servicios": ("услуга", "сантехник", "электрик", "уборка", "ремонт"), "electronica": ("телефон", "смартфон", "ноутбук", "планшет", "компьютер", "телевизор", "камера"), "moda": ("одежда", "платье", "обувь", "сумка"), "hogar": ("мебель", "диван", "стол", "холодильник", "сад"), "infantil": ("игрушка", "ребенок", "детская одежда", "коляска"), "mascotas": ("собака", "кошка", "питомец", "корм", "ветеринар"), "negocios": ("бизнес", "франшиза", "оборудование", "инвестиция"), "formacion": ("книга", "курс", "занятия", "язык", "университет"), "ocio": ("видеоигра", "консоль", "гитара", "рыбалка", "серфинг"), "boletos": ("билет", "билеты", "концерт", "фестиваль", "театр"), "turismo": ("отель", "гостиница", "тур", "экскурсия", "путешествие", "аренда авто", "яхта"),
+    },
+    "pt": {"motor": ("carro", "veiculo", "moto"), "inmobiliaria": ("casa", "apartamento", "imovel", "terreno"), "empleo": ("emprego", "vaga", "salario"), "servicios": ("servico", "encanador", "limpeza", "reparo"), "electronica": ("telefone", "celular", "notebook", "tablet"), "moda": ("roupa", "vestido", "calcado"), "hogar": ("moveis", "sofa", "geladeira"), "infantil": ("brinquedo", "bebe"), "mascotas": ("cachorro", "gato", "pet"), "negocios": ("negocio", "franquia"), "formacion": ("livro", "curso", "idioma"), "ocio": ("videogame", "console", "pesca"), "boletos": ("ingresso", "concerto", "festival"), "turismo": ("hotel", "pousada", "viagem", "passeio", "aluguel de carro")},
+    "fr": {"motor": ("voiture", "vehicule", "moto"), "inmobiliaria": ("maison", "appartement", "immobilier", "terrain"), "empleo": ("emploi", "poste", "salaire"), "servicios": ("service", "plombier", "nettoyage", "reparation"), "electronica": ("telephone", "smartphone", "ordinateur", "tablette"), "moda": ("vetement", "robe", "chaussures"), "hogar": ("meuble", "canape", "refrigerateur"), "infantil": ("jouet", "bebe"), "mascotas": ("chien", "chat", "animal"), "negocios": ("commerce", "franchise"), "formacion": ("livre", "cours", "langue"), "ocio": ("jeu video", "console", "peche"), "boletos": ("billet", "concert", "festival"), "turismo": ("hotel", "hebergement", "voyage", "circuit", "location de voiture")},
+    "de": {"motor": ("auto", "fahrzeug", "motorrad"), "inmobiliaria": ("haus", "wohnung", "immobilie", "grundstuck"), "empleo": ("job", "stelle", "gehalt"), "servicios": ("dienstleistung", "klempner", "reinigung", "reparatur"), "electronica": ("telefon", "smartphone", "laptop", "tablet"), "moda": ("kleidung", "kleid", "schuhe"), "hogar": ("mobel", "sofa", "kuhlschrank"), "infantil": ("spielzeug", "baby"), "mascotas": ("hund", "katze", "haustier"), "negocios": ("unternehmen", "franchise"), "formacion": ("buch", "kurs", "sprache"), "ocio": ("videospiel", "konsole", "angeln"), "boletos": ("ticket", "konzert", "festival"), "turismo": ("hotel", "unterkunft", "reise", "tour", "autovermietung")},
+    "it": {"motor": ("auto", "veicolo", "moto"), "inmobiliaria": ("casa", "appartamento", "immobile", "terreno"), "empleo": ("lavoro", "posto", "stipendio"), "servicios": ("servizio", "idraulico", "pulizia", "riparazione"), "electronica": ("telefono", "smartphone", "portatile", "tablet"), "moda": ("abbigliamento", "vestito", "scarpe"), "hogar": ("mobili", "divano", "frigorifero"), "infantil": ("giocattolo", "bambino"), "mascotas": ("cane", "gatto", "animale"), "negocios": ("attivita", "franchising"), "formacion": ("libro", "corso", "lingua"), "ocio": ("videogioco", "console", "pesca"), "boletos": ("biglietto", "concerto", "festival"), "turismo": ("hotel", "alloggio", "viaggio", "tour", "noleggio auto")},
+    "zh": {"motor": ("汽车", "车辆", "摩托车"), "inmobiliaria": ("房子", "公寓", "房地产", "土地"), "empleo": ("工作", "招聘", "工资"), "servicios": ("服务", "清洁", "维修"), "electronica": ("手机", "电脑", "平板", "相机"), "moda": ("衣服", "鞋", "包"), "hogar": ("家具", "沙发", "冰箱"), "infantil": ("玩具", "婴儿"), "mascotas": ("狗", "猫", "宠物"), "negocios": ("生意", "加盟"), "formacion": ("书", "课程", "语言"), "ocio": ("游戏", "游戏机", "钓鱼"), "boletos": ("门票", "演唱会", "音乐节"), "turismo": ("酒店", "住宿", "旅游", "旅行", "租车")},
+    "ko": {"motor": ("자동차", "차량", "오토바이"), "inmobiliaria": ("집", "아파트", "부동산", "토지"), "empleo": ("직업", "채용", "급여"), "servicios": ("서비스", "청소", "수리"), "electronica": ("휴대폰", "스마트폰", "노트북", "태블릿"), "moda": ("의류", "신발", "가방"), "hogar": ("가구", "소파", "냉장고"), "infantil": ("장난감", "아기"), "mascotas": ("개", "고양이", "반려동물"), "negocios": ("사업", "프랜차이즈"), "formacion": ("책", "강좌", "언어"), "ocio": ("비디오 게임", "콘솔", "낚시"), "boletos": ("티켓", "콘서트", "축제"), "turismo": ("호텔", "숙박", "여행", "투어", "렌터카")},
+    "ja": {"motor": ("車", "自動車", "バイク"), "inmobiliaria": ("家", "マンション", "不動産", "土地"), "empleo": ("仕事", "求人", "給与"), "servicios": ("サービス", "清掃", "修理"), "electronica": ("スマホ", "電話", "パソコン", "タブレット"), "moda": ("服", "靴", "バッグ"), "hogar": ("家具", "ソファ", "冷蔵庫"), "infantil": ("おもちゃ", "赤ちゃん"), "mascotas": ("犬", "猫", "ペット"), "negocios": ("ビジネス", "フランチャイズ"), "formacion": ("本", "コース", "言語"), "ocio": ("ゲーム", "コンソール", "釣り"), "boletos": ("チケット", "コンサート", "フェスティバル"), "turismo": ("ホテル", "宿泊", "旅行", "ツアー", "レンタカー")},
+    "ar": {"motor": ("سيارة", "مركبة", "دراجة نارية"), "inmobiliaria": ("منزل", "شقة", "عقار", "أرض"), "empleo": ("وظيفة", "عمل", "راتب"), "servicios": ("خدمة", "تنظيف", "إصلاح"), "electronica": ("هاتف", "حاسوب", "جهاز لوحي", "كاميرا"), "moda": ("ملابس", "حذاء", "حقيبة"), "hogar": ("أثاث", "أريكة", "ثلاجة"), "infantil": ("لعبة", "طفل"), "mascotas": ("كلب", "قطة", "حيوان أليف"), "negocios": ("عمل تجاري", "امتياز"), "formacion": ("كتاب", "دورة", "لغة"), "ocio": ("لعبة فيديو", "صيد"), "boletos": ("تذكرة", "حفل", "مهرجان"), "turismo": ("فندق", "إقامة", "سفر", "جولة", "تأجير سيارة")},
+}
+
+_GENERIC_ENUM_VALUES = {"otra", "otro", "other", "otros", "otras"}
+_OPTION_ALIASES_PATH = Path(__file__).with_name("option_aliases.json")
+try:
+    _OPTION_ALIASES: dict[str, dict[str, dict[str, str]]] = json.loads(
+        _OPTION_ALIASES_PATH.read_text(encoding="utf-8")
+    )
+except (OSError, json.JSONDecodeError):
+    _OPTION_ALIASES = {}
+
+
+def _localized_option_aliases(locale: str, key: str, canonical: str) -> tuple[str, ...]:
+    localized = _OPTION_ALIASES.get(locale, {}).get(key, {}).get(canonical)
+    if not isinstance(localized, str) or not localized.strip():
+        return (canonical,)
+    return (canonical, localized)
 
 class AttributeChoice(BaseModel):
     key: str = Field(min_length=1, max_length=80, pattern=r"^[a-zA-Z0-9_\-]+$")
@@ -188,9 +267,13 @@ def canonicalize(raw: dict[str, Any], request: AutofillRequest, model: str) -> A
 
 class LocalAutofillClient:
     def __init__(self) -> None:
-        self.base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434").rstrip("/")
-        self.model = os.getenv("OLLAMA_VISION_MODEL", "qwen3-vl:2b-instruct")
-        self.timeout = max(8.0, min(45.0, float(os.getenv("AUTOFILL_TIMEOUT_SECONDS", "36"))))
+        self.base_url = os.getenv(
+            "AUTOFILL_MODEL_BASE_URL", "http://mercasto-autofill-model:8080"
+        ).rstrip("/")
+        self.model = os.getenv("AUTOFILL_MODEL_NAME", "smolvlm2-500m")
+        self.timeout = max(
+            6.0, min(20.0, float(os.getenv("AUTOFILL_TIMEOUT_SECONDS", "18")))
+        )
 
     async def _chat(
         self,
@@ -198,116 +281,260 @@ class LocalAutofillClient:
         system_prompt: str,
         seller_payload: dict[str, Any],
         images: list[str],
+        schema_name: str,
+        schema: dict[str, Any],
         timeout_seconds: float,
+        max_tokens: int,
     ) -> dict[str, Any]:
-        message: dict[str, Any] = {
-            "role": "user",
-            "content": "UNTRUSTED_SELLER_DATA:\n"
-            + json.dumps(seller_payload, ensure_ascii=False, separators=(",", ":")),
-        }
+        text = "UNTRUSTED_SELLER_DATA:\n" + json.dumps(
+            seller_payload, ensure_ascii=False, separators=(",", ":")
+        )
         if images:
-            message["images"] = images
+            content: str | list[dict[str, Any]] = [{"type": "text", "text": text}]
+            content.extend(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/webp;base64,{image}"},
+                }
+                for image in images
+            )
+        else:
+            content = text
         payload = {
             "model": self.model,
             "stream": False,
-            "keep_alive": "24h",
-            "messages": [{"role": "system", "content": system_prompt}, message],
-            "options": {"temperature": 0, "num_predict": 420, "num_ctx": 8192},
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": content},
+            ],
+            "temperature": 0,
+            "max_tokens": max_tokens,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"name": schema_name, "schema": schema, "strict": True},
+            },
         }
         response = await client.post(
-            f"{self.base_url}/api/chat",
+            f"{self.base_url}/v1/chat/completions",
             json=payload,
             timeout=max(3.0, timeout_seconds),
         )
         response.raise_for_status()
         body = response.json()
-        return _extract_json(str(body.get("message", {}).get("content", "")))
+        choices = body.get("choices") if isinstance(body, dict) else None
+        if not isinstance(choices, list) or not choices:
+            raise AutofillUnavailable("Local model returned no choices")
+        message = choices[0].get("message") if isinstance(choices[0], dict) else None
+        if not isinstance(message, dict):
+            raise AutofillUnavailable("Local model returned no message")
+        return _extract_json(str(message.get("content", "")))
+
+    @staticmethod
+    def _rule_category(request: AutofillRequest, seller_text: str) -> tuple[str | None, float]:
+        normalized = _normalize_match_text(seller_text)
+        if not normalized:
+            return None, 0.0
+        allowed = {category.slug for category in request.taxonomy}
+        scores: dict[str, float] = {}
+        locale = request.locale.split("-", 1)[0].casefold()
+        localized = _CATEGORY_LOCALE_ANCHORS.get(locale, {})
+        for slug, anchors in _CATEGORY_ANCHORS.items():
+            if slug not in allowed:
+                continue
+            score = 0.0
+            combined_anchors = (*anchors, *localized.get(slug, ()))
+            category = next((item for item in request.taxonomy if item.slug == slug), None)
+            if category is not None:
+                combined_anchors = (*combined_anchors, category.label)
+            for anchor in combined_anchors:
+                normalized_anchor = _normalize_match_text(anchor)
+                if _contains_phrase(normalized, normalized_anchor):
+                    score += 3.0 + min(2.0, normalized_anchor.count(" ") * 0.5)
+            if score:
+                scores[slug] = score
+        if not scores:
+            return None, 0.0
+        ranking = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+        best_slug, best_score = ranking[0]
+        runner_up = ranking[1][1] if len(ranking) > 1 else 0.0
+        if runner_up and best_score <= runner_up:
+            return None, 0.0
+        confidence = 0.96 if best_score >= 6.0 else 0.9
+        return best_slug, confidence
+
 
     async def suggest(self, request: AutofillRequest) -> AutofillResponse:
         started = time.monotonic()
         images = [_sanitize_image(value) for value in request.images_base64]
-        category_choices = [
-            {"slug": category.slug, "label": category.label} for category in request.taxonomy
-        ]
-        stage_one_input = {
-            "seller_text": request.short_text.strip(),
-            "allowed_categories": category_choices,
-            "locale": request.locale,
-        }
+        categories = [category.slug for category in request.taxonomy]
+        seller_text = " ".join(request.short_text.split()).strip()
         try:
             async with httpx.AsyncClient() as client:
-                stage_one = await self._chat(
-                    client,
-                    _CATEGORY_PROMPT,
-                    stage_one_input,
-                    images,
-                    self.timeout,
-                )
-                confidence = (
-                    stage_one.get("confidence")
-                    if isinstance(stage_one.get("confidence"), dict)
-                    else {}
-                )
-                category_slug = (
-                    stage_one.get("category")
-                    if isinstance(stage_one.get("category"), str)
-                    else None
-                )
-                category_conf = _confidence(confidence.get("category"))
+                if seller_text:
+                    category_slug, category_confidence = self._rule_category(request, seller_text)
+                else:
+                    category_slug, category_confidence = None, 0.0
+
+                if category_slug is None and images:
+                    category_schema = {
+                        "type": "object",
+                        "properties": {"category": {"type": "string", "enum": ["", *categories]}},
+                        "required": ["category"],
+                        "additionalProperties": False,
+                    }
+                    stage_one = await self._chat(
+                        client,
+                        _CATEGORY_PROMPT
+                        + "\nReturn only category. Use an empty string when evidence is ambiguous.",
+                        {
+                            "seller_text": "",
+                            "allowed_categories": [
+                                {"slug": category.slug, "label": category.label}
+                                for category in request.taxonomy
+                            ],
+                            "locale": request.locale,
+                        },
+                        images,
+                        "listing_category",
+                        category_schema,
+                        self.timeout,
+                        24,
+                    )
+                    value = stage_one.get("category")
+                    category_slug = value if isinstance(value, str) and value in categories else None
+                    category_confidence = 0.55 if category_slug else 0.0
+
                 selected = next(
                     (category for category in request.taxonomy if category.slug == category_slug),
                     None,
                 )
+                title = seller_text[:200] or None
+                description = seller_text[:1200] or None
                 combined: dict[str, Any] = {
-                    **stage_one,
+                    "category": category_slug,
                     "subcategory_hint": None,
                     "attributes": {},
+                    "title": title,
+                    "description": description,
+                    "confidence": {
+                        "category": category_confidence,
+                        "subcategory_hint": 0.0,
+                        "attributes": {},
+                        "title": 1.0 if title else 0.0,
+                        "description": 1.0 if description else 0.0,
+                    },
                 }
-                combined_confidence = dict(confidence)
-                combined_confidence.update({"subcategory_hint": 0.0, "attributes": {}})
-                combined["confidence"] = combined_confidence
+
+                enum_attributes = [
+                    item for item in (selected.attributes if selected else []) if item.options
+                ]
+                normalized_seller_text = _normalize_match_text(seller_text)
+                for item in enum_attributes:
+                    matches = []
+                    for value in item.options:
+                        normalized_value = _normalize_match_text(value)
+                        if normalized_value in _GENERIC_ENUM_VALUES:
+                            continue
+                        aliases = _localized_option_aliases(request.locale, item.key, value)
+                        if seller_text and any(
+                            _contains_phrase(normalized_seller_text, alias) for alias in aliases
+                        ):
+                            matches.append(value)
+                    if len(matches) == 1:
+                        combined["attributes"][item.key] = matches[0]
+                        combined["confidence"]["attributes"][item.key] = 0.95
 
                 remaining = self.timeout - (time.monotonic() - started)
-                if selected is not None and category_conf >= _CATEGORY_CONFIDENCE and remaining >= 3.0:
-                    stage_two_input = {
-                        "seller_text": request.short_text.strip(),
-                        "selected_category": selected.slug,
-                        "allowed_category": selected.model_dump(),
-                        "locale": request.locale,
+                unresolved = [
+                    item for item in enum_attributes if item.key not in combined["attributes"]
+                ]
+                if selected is not None and images and unresolved and remaining >= 3.0:
+                    properties = {
+                        item.key: {"type": "string", "enum": ["", *item.options]}
+                        for item in unresolved
+                    }
+                    detail_schema = {
+                        "type": "object",
+                        "properties": {
+                            "attributes": {
+                                "type": "object",
+                                "properties": properties,
+                                "additionalProperties": False,
+                            }
+                        },
+                        "required": ["attributes"],
+                        "additionalProperties": False,
                     }
                     try:
                         stage_two = await self._chat(
                             client,
-                            _DETAIL_PROMPT,
-                            stage_two_input,
+                            _BASE_SAFETY
+                            + "\nReturn only enum values visible in the image. Use empty strings otherwise.",
+                            {
+                                "seller_text": seller_text,
+                                "selected_category": selected.slug,
+                                "allowed_attributes": [
+                                    {"key": item.key, "options": item.options}
+                                    for item in unresolved
+                                ],
+                                "locale": request.locale,
+                            },
                             images,
+                            "listing_attributes",
+                            detail_schema,
                             remaining,
+                            min(80, 12 + len(unresolved) * 8),
                         )
                     except (httpx.HTTPError, ValueError, AutofillUnavailable):
                         stage_two = {}
-                    detail_confidence = (
-                        stage_two.get("confidence")
-                        if isinstance(stage_two.get("confidence"), dict)
-                        else {}
-                    )
-                    combined["subcategory_hint"] = stage_two.get("subcategory_hint")
-                    combined["attributes"] = (
+                    raw_attributes = (
                         stage_two.get("attributes")
                         if isinstance(stage_two.get("attributes"), dict)
                         else {}
                     )
-                    combined_confidence["subcategory_hint"] = detail_confidence.get(
-                        "subcategory_hint", 0.0
-                    )
-                    combined_confidence["attributes"] = (
-                        detail_confidence.get("attributes")
-                        if isinstance(detail_confidence.get("attributes"), dict)
-                        else {}
-                    )
+                    for item in unresolved:
+                        value = raw_attributes.get(item.key)
+                        if isinstance(value, str) and value in item.options:
+                            combined["attributes"][item.key] = value
+                            combined["confidence"]["attributes"][item.key] = 0.55
 
-                return canonicalize(combined, request, self.model)
+                return canonicalize(combined, request, f"rules+{self.model}")
         except (httpx.HTTPError, ValueError, AutofillUnavailable) as exc:
             raise AutofillUnavailable("Private autofill model unavailable") from exc
+
+
+async def prewarm_autofill_model() -> None:
+    if os.getenv("AUTOFILL_PREWARM_ENABLED", "false").lower() not in {"1", "true", "yes", "on"}:
+        return
+    attempts = max(1, min(6, int(os.getenv("AUTOFILL_PREWARM_ATTEMPTS", "4"))))
+    delay = max(0.0, min(30.0, float(os.getenv("AUTOFILL_PREWARM_RETRY_SECONDS", "5"))))
+    source = io.BytesIO()
+    Image.new("RGB", (32, 32), (127, 127, 127)).save(source, format="JPEG", quality=70)
+    image = _sanitize_image(base64.b64encode(source.getvalue()).decode("ascii"))
+    client = LocalAutofillClient()
+    schema = {
+        "type": "object",
+        "properties": {"category": {"type": "string", "enum": ["", "motor"]}},
+        "required": ["category"],
+        "additionalProperties": False,
+    }
+    for attempt in range(attempts):
+        try:
+            async with httpx.AsyncClient() as http_client:
+                await client._chat(
+                    http_client,
+                    _CATEGORY_PROMPT + "\nSynthetic startup warmup. Return only category.",
+                    {"seller_text": "", "allowed_categories": [{"slug": "motor", "label": "Autos"}]},
+                    [image],
+                    "autofill_warmup",
+                    schema,
+                    client.timeout,
+                    12,
+                )
+            return
+        except (httpx.HTTPError, ValueError, AutofillUnavailable):
+            if attempt + 1 < attempts:
+                await asyncio.sleep(delay * (attempt + 1))
 
 
 def get_autofill_client() -> LocalAutofillClient:

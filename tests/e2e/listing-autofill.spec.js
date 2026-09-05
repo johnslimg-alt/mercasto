@@ -22,11 +22,11 @@ function suggestionPayload({ lowConfidence = false } = {}) {
     success: true,
     applied: false,
     suggestions: {
-      category: { value: lowConfidence ? null : 'motor', confidence },
-      subcategory_hint: { value: lowConfidence ? null : 'Sedán', confidence },
-      attributes: lowConfidence ? {} : { marca: { value: 'Nissan', confidence: 0.9 } },
-      title: { value: lowConfidence ? null : 'Nissan Versa usado', confidence },
-      description: { value: lowConfidence ? null : 'Nissan Versa usado en buen estado visible.', confidence },
+      category: { value: 'motor', confidence },
+      subcategory_hint: { value: null, confidence: 0 },
+      attributes: { marca: { value: 'Nissan', confidence: lowConfidence ? 0.2 : 0.9 } },
+      title: { value: 'Nissan Versa usado', confidence },
+      description: { value: 'Nissan Versa usado en buen estado visible.', confidence },
       runtime: 'private_local',
       model: 'autofill-e2e-fixture',
       authoritative: false,
@@ -117,10 +117,13 @@ test('text-only autofill stays suggestion-only until seller applies fields', asy
   expect(requests[0]).not.toContain('filename=');
 
   const applyButtons = suggestions.getByRole('button', { name: 'Apply' });
-  await expect(applyButtons).toHaveCount(5);
+  await expect(applyButtons).toHaveCount(4);
   await applyButtons.nth(0).click();
   await applyButtons.nth(1).click();
-  const next = page.getByRole('main').getByRole('button', { name: /Next/i }).filter({ visible: true }).first();
+  const main = page.getByRole('main');
+  const next = main.getByRole('button', { name: /Next/i }).filter({ visible: true }).first();
+  await expect(next).toBeDisabled();
+  await main.getByRole('button', { name: /Sedán|Sedan/i }).first().click();
   await expect(next).toBeEnabled();
 });
 
@@ -143,13 +146,15 @@ test('photo-only and mixed autofill send only new seller media', async ({ page }
   expect(requests[1]).toContain('icon-192x192.png');
 });
 
-test('low-confidence suggestions expose no apply action', async ({ page }, testInfo) => {
+test('low-confidence suggestions keep apply actions disabled', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   const requests = await prepare(page, 'low');
   await page.getByTestId('listing-autofill-text').fill('Ambiguous object');
   await page.getByTestId('listing-autofill-run').click();
   await expect.poll(() => requests.length).toBe(1);
-  await expect(page.getByTestId('listing-autofill-panel').getByRole('button', { name: 'Apply' })).toHaveCount(0);
+  const applyButtons = page.getByTestId('listing-autofill-panel').getByRole('button', { name: 'Apply' });
+  await expect(applyButtons).toHaveCount(4);
+  for (const button of await applyButtons.all()) await expect(button).toBeDisabled();
 });
 
 test('gateway failure leaves the manual publish flow usable on mobile', async ({ page }, testInfo) => {
