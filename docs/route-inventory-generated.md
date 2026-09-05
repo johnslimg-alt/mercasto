@@ -1,823 +1,739 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-05T19:41:25Z
-Commit: f00893cd
+Generated at: 2026-09-05T19:41:00Z
+Commit: 3be256f8
 Source: php artisan route:list --except-vendor -v
 
 ```text
 
-  GET|HEAD  / .............................................. routes/web.php:41
+  GET|HEAD  / .................................... generated::<auto>
             ⇂ web
-  ANY       acerca-de .................. Illuminate\Routing\RedirectController
+  ANY       acerca-de generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
-  GET|HEAD  ads/{id} ................................... SeoShellController@ad
+  GET|HEAD  ads/{id} ..... generated::<auto> › SeoShellController@ad
             ⇂ web
-  GET|HEAD  api/admin/ads/pending ................ Api\AdController@pendingAds
+  GET|HEAD  api/admin/ads/pending generated::<auto> › Api\AdController@pendingAds
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/analytics ....... Api\AdminAnalyticsController@analytics
+  GET|HEAD  api/admin/analytics generated::<auto> › Api\AdminAnalyticsController@analytics
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/banners ................... Api\AdBannerController@index
+  GET|HEAD  api/admin/banners generated::<auto> › Api\AdBannerController@index
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/admin/banners ................... Api\AdBannerController@store
+  POST      api/admin/banners generated::<auto> › Api\AdBannerController@store
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/banners/stats ............. Api\AdBannerController@stats
+  GET|HEAD  api/admin/banners/stats generated::<auto> › Api\AdBannerController@stats
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/admin/banners/upload ...... Api\AdBannerController@uploadImage
+  POST      api/admin/banners/upload generated::<auto> › Api\AdBannerController@uploadImage
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PUT       api/admin/banners/{id} ............. Api\AdBannerController@update
+  PUT       api/admin/banners/{id} generated::<auto> › Api\AdBannerController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/admin/banners/{id} ............ Api\AdBannerController@destroy
+  DELETE    api/admin/banners/{id} generated::<auto> › Api\AdBannerController@destroy
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/business-verifications Api\BusinessProfileController@adminPendingVerifications
+  GET|HEAD  api/admin/business-verifications generated::<auto> › Api\BusinessProfileController@adminPendingVerifications
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/business-verifications/{userId}/csf Api\BusinessProfileController@adminDownloadCsf
+  GET|HEAD  api/admin/business-verifications/{userId}/csf generated::<auto> › Api\BusinessProfileController@adminDownloadCsf
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/admin/business-verifications/{userId}/review Api\BusinessProfileController@adminReviewVerification
+  POST      api/admin/business-verifications/{userId}/review generated::<auto> › Api\BusinessProfileController@adminReviewVerification
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/coupons ............... Api\PaymentController@getCoupons
+  GET|HEAD  api/admin/coupons generated::<auto> › Api\PaymentController@getCoupons
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/admin/coupons ............. Api\PaymentController@createCoupon
+  POST      api/admin/coupons generated::<auto> › Api\PaymentController@createCoupon
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/admin/coupons/{id} ........ Api\PaymentController@deleteCoupon
+  DELETE    api/admin/coupons/{id} generated::<auto> › Api\PaymentController@deleteCoupon
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/kyc ................ Api\ProfileController@getPendingKyc
+  GET|HEAD  api/admin/kyc generated::<auto> › Api\ProfileController@getPendingKyc
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/kyc/document/{id} Api\ProfileController@viewKycDocument
+  GET|HEAD  api/admin/kyc/document/{id} generated::<auto> › Api\ProfileController@viewKycDocument
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/admin/kyc/{id}/approve ...... Api\ProfileController@approveKyc
+  POST      api/admin/kyc/{id}/approve generated::<auto> › Api\ProfileController@approveKyc
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/admin/kyc/{id}/reject ........ Api\ProfileController@rejectKyc
+  POST      api/admin/kyc/{id}/reject generated::<auto> › Api\ProfileController@rejectKyc
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/marketing/meta/campaigns Api\MarketingController@metaCampaigns
-            ⇂ api
-            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  PATCH     api/admin/marketing/meta/campaigns/{campaignId}/budget Api\MarketingController@updateMetaCampaignBudget
+  GET|HEAD  api/admin/marketing/meta/campaigns generated::<auto> › Api\MarketingController@metaCampaigns
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  PATCH     api/admin/marketing/meta/campaigns/{campaignId}/status Api\MarketingController@updateMetaCampaignStatus
+  PATCH     api/admin/marketing/meta/campaigns/{campaignId}/budget generated::<auto> › Api\MarketingController@updateMetaCampaignBudget
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/admin/marketing/meta/status Api\MarketingController@metaStatus
+  PATCH     api/admin/marketing/meta/campaigns/{campaignId}/status generated::<auto> › Api\MarketingController@updateMetaCampaignStatus
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/admin/moderation/ads ... Api\AdminAdModerationController@index
+  GET|HEAD  api/admin/marketing/meta/status generated::<auto> › Api\MarketingController@metaStatus
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/admin/moderation/ads/{ad} Api\AdminAdModerationController@show
+  GET|HEAD  api/admin/moderation/ads generated::<auto> › Api\AdminAdModerationController@index
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/admin/moderation/ads/{ad}/decision Api\AdminAdModerationController@decide
+  GET|HEAD  api/admin/moderation/ads/{ad} generated::<auto> › Api\AdminAdModerationController@show
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/admin/moderation/ads/{ad}/retry-ai Api\AdminAdModerationController@retry
+  POST      api/admin/moderation/ads/{ad}/decision generated::<auto> › Api\AdminAdModerationController@decide
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/admin/moderation/process-pending Api\AdminAdModerationController@processPending
+  POST      api/admin/moderation/ads/{ad}/retry-ai generated::<auto> › Api\AdminAdModerationController@retry
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/admin/payments ........ Api\PaymentController@getAdminPayments
+  POST      api/admin/moderation/process-pending generated::<auto> › Api\AdminAdModerationController@processPending
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/placements ........... Api\AdBannerController@placements
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
+  GET|HEAD  api/admin/payments generated::<auto> › Api\PaymentController@getAdminPayments
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/admin/placements ...... Api\AdBannerController@createPlacement
+  GET|HEAD  api/admin/placements generated::<auto> › Api\AdBannerController@placements
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PUT       api/admin/placements/{id} . Api\AdBannerController@updatePlacement
+  POST      api/admin/placements generated::<auto> › Api\AdBannerController@createPlacement
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/admin/placements/{id} Api\AdBannerController@destroyPlacement
+  PUT       api/admin/placements/{id} generated::<auto> › Api\AdBannerController@updatePlacement
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/reports .................... Api\AdController@getReports
+  DELETE    api/admin/placements/{id} generated::<auto> › Api\AdBannerController@destroyPlacement
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/admin/reports/{id} ............. Api\AdController@deleteReport
+  GET|HEAD  api/admin/reports generated::<auto> › Api\AdController@getReports
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PATCH     api/admin/reports/{id}/transition Api\ReportModerationController@transitionListingReport
+  DELETE    api/admin/reports/{id} generated::<auto> › Api\AdController@deleteReport
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/seo-measurement ...... Api\AdminSeoMeasurementController
+  GET|HEAD  api/admin/seo-measurement generated::<auto> › Api\AdminSeoMeasurementController
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/admin/user-reports ...... Api\ProfileController@getUserReports
+  GET|HEAD  api/admin/user-reports generated::<auto> › Api\ProfileController@getUserReports
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/admin/user-reports/{id} Api\ProfileController@deleteUserReport
+  DELETE    api/admin/user-reports/{id} generated::<auto> › Api\ProfileController@deleteUserReport
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PATCH     api/admin/user-reports/{id}/transition Api\ReportModerationController@transitionUserReport
-            ⇂ api
-            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/ads .............................. Api\AdIndexController@index
+  GET|HEAD  api/ads generated::<auto> › Api\AdIndexController@index
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:search
-  POST      api/ads ................................... Api\AdController@store
+  POST      api/ads ..... generated::<auto> › Api\AdController@store
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ads
-  POST      api/ads/bulk-action .................. Api\AdController@bulkAction
+  POST      api/ads/bulk-action generated::<auto> › Api\AdController@bulkAction
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
-  POST      api/ads/bulk-upload .................. Api\AdController@bulkUpload
+  POST      api/ads/bulk-upload generated::<auto> › Api\AdController@bulkUpload
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:uploads
-  GET|HEAD  api/ads/featured .................. Api\AdIndexController@featured
+  GET|HEAD  api/ads/featured generated::<auto> › Api\AdIndexController@featured
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/ads/generate-description ......... Api\AiDescriptionController
+  POST      api/ads/generate-description generated::<auto> › Api\AiDescriptionController
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,1
-  POST      api/ads/impressions ........... Api\AdController@recordImpressions
+  POST      api/ads/impressions generated::<auto> › Api\AdController@recordImpressions
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  POST      api/ads/promote/credits/bulk Api\AdController@promoteWithCreditsBulk
+  POST      api/ads/promote/credits/bulk generated::<auto> › Api\AdController@promoteWithCreditsBulk
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  POST      api/ads/{ad} ............................. Api\AdController@update
+  POST      api/ads/{ad} generated::<auto> › Api\AdController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  GET|HEAD  api/ads/{id} ............................... Api\AdController@show
+  GET|HEAD  api/ads/{id} . generated::<auto> › Api\AdController@show
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  DELETE    api/ads/{id} ............................ Api\AdController@destroy
+  DELETE    api/ads/{id} generated::<auto> › Api\AdController@destroy
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  PUT       api/ads/{id}/activate .................. Api\AdController@activate
+  PUT       api/ads/{id}/activate generated::<auto> › Api\AdController@activate
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  POST      api/ads/{id}/click .................. Api\AdController@recordClick
+  POST      api/ads/{id}/click generated::<auto> › Api\AdController@recordClick
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  POST      api/ads/{id}/contact-seller .. Api\ContactController@contactSeller
+  POST      api/ads/{id}/contact-seller generated::<auto> › Api\ContactController@contactSeller
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,60
-  GET|HEAD  api/ads/{id}/edit ...................... Api\AdController@editForm
+  GET|HEAD  api/ads/{id}/edit generated::<auto> › Api\AdController@editForm
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/ads/{id}/favorite ............ Api\AdController@toggleFavorite
+  POST      api/ads/{id}/favorite generated::<auto> › Api\AdController@toggleFavorite
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PUT       api/ads/{id}/pause ........................ Api\AdController@pause
+  PUT       api/ads/{id}/pause generated::<auto> › Api\AdController@pause
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  GET|HEAD  api/ads/{id}/pdf .................... Api\AdController@generatePdf
+  GET|HEAD  api/ads/{id}/pdf generated::<auto> › Api\AdController@generatePdf
             ⇂ api
-            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
-  GET|HEAD  api/ads/{id}/price-history ......... Api\AdController@priceHistory
+  GET|HEAD  api/ads/{id}/price-history generated::<auto> › Api\AdController@priceHistory
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/ads/{id}/promote/credits . Api\AdController@promoteWithCredits
+  POST      api/ads/{id}/promote/credits generated::<auto> › Api\AdController@promoteWithCredits
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  PUT       api/ads/{id}/renew ........................ Api\AdController@renew
+  PUT       api/ads/{id}/renew generated::<auto> › Api\AdController@renew
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  POST      api/ads/{id}/report ...................... Api\AdController@report
+  POST      api/ads/{id}/report generated::<auto> › Api\AdController@report
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,1
-  POST      api/ads/{id}/republish ................ Api\AdController@republish
+  POST      api/ads/{id}/republish generated::<auto> › Api\AdController@republish
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  GET|HEAD  api/ads/{id}/similar .................... Api\AdController@similar
+  GET|HEAD  api/ads/{id}/similar generated::<auto> › Api\AdController@similar
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:search
-  PATCH     api/ads/{id}/status ................ Api\AdController@updateStatus
+  PATCH     api/ads/{id}/status generated::<auto> › Api\AdController@updateStatus
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
-  POST      api/ads/{id}/view .................... Api\AdController@recordView
+  POST      api/ads/{id}/view generated::<auto> › Api\AdController@recordView
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  POST      api/agents/advocate ............ Api\AdController@askAdvocateAgent
+  POST      api/agents/advocate generated::<auto> › Api\AdController@askAdvocateAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/ceo ...................... Api\AdController@askCeoAgent
+  POST      api/agents/ceo generated::<auto> › Api\AdController@askCeoAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/ceo-ui ................. Api\AdController@askCeoUiAgent
+  POST      api/agents/ceo-ui generated::<auto> › Api\AdController@askCeoUiAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/ceo-ux ................. Api\AdController@askCeoUxAgent
+  POST      api/agents/ceo-ux generated::<auto> › Api\AdController@askCeoUxAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/lawyer ................ Api\AdController@askLawyerAgent
+  POST      api/agents/lawyer generated::<auto> › Api\AdController@askLawyerAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/marketing .......... Api\AdController@askMarketingAgent
+  POST      api/agents/marketing generated::<auto> › Api\AdController@askMarketingAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/notary ................ Api\AdController@askNotaryAgent
+  POST      api/agents/notary generated::<auto> › Api\AdController@askNotaryAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/postgresql .......... Api\AdController@askPostgresAgent
+  POST      api/agents/postgresql generated::<auto> › Api\AdController@askPostgresAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/react ......... Api\AdController@generateReactComponent
+  POST      api/agents/react generated::<auto> › Api\AdController@generateReactComponent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/seo ...................... Api\AdController@askSeoAgent
+  POST      api/agents/seo generated::<auto> › Api\AdController@askSeoAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/agents/ui ........................ Api\AdController@askUiAgent
+  POST      api/agents/ui generated::<auto> › Api\AdController@askUiAgent
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:2,1
-  POST      api/auth/oauth/exchange ..... Api\AuthController@exchangeOAuthCode
+  POST      api/auth/oauth/exchange generated::<auto> › Api\AuthController@exchangeOAuthCode
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
-  POST      api/auth/phone/request ....... Api\AuthController@requestPhoneCode
+  POST      api/auth/phone/request generated::<auto> › Api\AuthController@requestPhoneCode
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
-  POST      api/auth/phone/verify ......... Api\AuthController@verifyPhoneCode
+  POST      api/auth/phone/verify generated::<auto> › Api\AuthController@verifyPhoneCode
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
-  GET|HEAD  api/auth/providers ............... Api\AuthController@getProviders
+  GET|HEAD  api/auth/providers generated::<auto> › Api\AuthController@getProviders
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/auth/telegram/callback Api\AuthController@handleTelegramWidget
+  POST      api/auth/telegram/callback generated::<auto> › Api\AuthController@handleTelegramWidget
             ⇂ api
-  GET|HEAD  api/auth/{provider}/callback Api\AuthController@handleProviderCallback
+  GET|HEAD  api/auth/{provider}/callback generated::<auto> › Api\AuthController@handleProviderCallback
             ⇂ api
             ⇂ web
-  GET|HEAD  api/auth/{provider}/redirect Api\AuthController@redirectToProvider
+  GET|HEAD  api/auth/{provider}/redirect generated::<auto> › Api\AuthController@redirectToProvider
             ⇂ api
             ⇂ web
-  GET|HEAD  api/banners ................. Api\AdBannerController@publicBanners
+  GET|HEAD  api/banners generated::<auto> › Api\AdBannerController@publicBanners
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/banners/{id}/click ......... Api\AdBannerController@trackClick
+  POST      api/banners/{id}/click generated::<auto> › Api\AdBannerController@trackClick
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|POST|HEAD api/broadcasting/auth Illuminate\Broadcasting\BroadcastController@authenticate
-            ⇂ api
-            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/categories ...................... Api\CategoryController@index
+  GET|HEAD  api/categories generated::<auto> › Api\CategoryController@index
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/categories ...................... Api\CategoryController@store
+  POST      api/categories generated::<auto> › Api\CategoryController@store
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PUT       api/categories/{id} ................ Api\CategoryController@update
+  PUT       api/categories/{id} generated::<auto> › Api\CategoryController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/category-attributes .... Api\CategoryAttributeController@index
+  GET|HEAD  api/category-attributes generated::<auto> › Api\CategoryAttributeController@index
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:search
-  GET|HEAD  api/chat/conversations ....... Api\ChatController@getConversations
+  GET|HEAD  api/chat/conversations generated::<auto> › Api\ChatController@getConversations
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  GET|HEAD  api/chat/conversations/{conversation}/messages Api\ChatController@getConversationMessages
+  GET|HEAD  api/chat/conversations/{conversation}/messages generated::<auto> › Api\ChatController@getConversationMessages
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  POST      api/chat/messages ................. Api\ChatController@sendMessage
+  POST      api/chat/messages generated::<auto> › Api\ChatController@sendMessage
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:20,1
-  POST      api/contact ................................ routes/support.php:13
+  POST      api/contact .......................... generated::<auto>
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:3,60
-  POST      api/email/send-verification . Api\EmailVerificationController@send
+  POST      api/email/send-verification generated::<auto> › Api\EmailVerificationController@send
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:3,60
-  POST      api/email/verify .......... Api\EmailVerificationController@verify
+  POST      api/email/verify generated::<auto> › Api\EmailVerificationController@verify
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
-  GET|HEAD  api/favorites ......................... Api\AdController@favorites
+  GET|HEAD  api/favorites generated::<auto> › Api\AdController@favorites
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/forgot-password ............ Api\AuthController@forgotPassword
+  POST      api/forgot-password generated::<auto> › Api\AuthController@forgotPassword
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
-  POST      api/gamification/activity Api\GamificationController@recordActivity
+  POST      api/gamification/activity generated::<auto> › Api\GamificationController@recordActivity
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/gamification/leaderboard Api\GamificationController@leaderboard
+  GET|HEAD  api/gamification/leaderboard generated::<auto> › Api\GamificationController@leaderboard
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/gamification/profile ...... Api\GamificationController@profile
+  GET|HEAD  api/gamification/profile generated::<auto> › Api\GamificationController@profile
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/google-merchant.xml ...... Api\AdController@googleMerchantFeed
+  GET|HEAD  api/google-merchant.xml generated::<auto> › Api\AdController@googleMerchantFeed
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/img .......................................... ImageController
+  GET|HEAD  api/img ............ generated::<auto> › ImageController
             ⇂ api
-  POST      api/login ............................... Api\AuthController@login
-            ⇂ api
-            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
-  POST      api/login/two-factor ........... Api\AuthController@loginTwoFactor
+  POST      api/login . generated::<auto> › Api\AuthController@login
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
-  POST      api/logout ............................. Api\AuthController@logout
+  POST      api/login/two-factor generated::<auto> › Api\AuthController@loginTwoFactor
+            ⇂ api
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
+  POST      api/logout generated::<auto> › Api\AuthController@logout
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/meta/events/contact .......... Api\MetaEventController@contact
+  POST      api/meta/events/contact generated::<auto> › Api\MetaEventController@contact
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  POST      api/meta/events/post-ad ........... Api\MetaEventController@postAd
+  POST      api/meta/events/post-ad generated::<auto> › Api\MetaEventController@postAd
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/meta/events/wishlist ... Api\MetaEventController@addToWishlist
+  POST      api/meta/events/wishlist generated::<auto> › Api\MetaEventController@addToWishlist
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/notifications ............... Api\NotificationController@index
+  GET|HEAD  api/notifications generated::<auto> › Api\NotificationController@index
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/notifications/read-all Api\NotificationController@markAllRead
+  POST      api/notifications/read-all generated::<auto> › Api\NotificationController@markAllRead
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/notifications/unread-count Api\NotificationController@unreadCount
+  GET|HEAD  api/notifications/unread-count generated::<auto> › Api\NotificationController@unreadCount
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/notifications/{id}/read .. Api\NotificationController@markRead
+  POST      api/notifications/{id}/read generated::<auto> › Api\NotificationController@markRead
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/payment/balance ......... Api\PaymentController@payWithBalance
-            ⇂ api
-            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
-  POST      api/payment/clip ........ Api\PaymentController@createClipCheckout
+  POST      api/payment/balance generated::<auto> › Api\PaymentController@payWithBalance
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
-  POST      api/payment/webhook .......... Api\PaymentController@handleWebhook
+  POST      api/payment/clip generated::<auto> › Api\PaymentController@createClipCheckout
+            ⇂ api
+            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
+  POST      api/payment/webhook generated::<auto> › Api\PaymentController@handleWebhook
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  POST      api/phone/send-otp ....... Api\PhoneVerificationController@sendOtp
+  POST      api/phone/send-otp generated::<auto> › Api\PhoneVerificationController@sendOtp
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,1
-  POST      api/phone/verify-otp ... Api\PhoneVerificationController@verifyOtp
+  POST      api/phone/verify-otp generated::<auto> › Api\PhoneVerificationController@verifyOtp
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,1
-  POST      api/push/subscribe .................. Api\PushController@subscribe
+  POST      api/push/subscribe generated::<auto> › Api\PushController@subscribe
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/push/test ............................ Api\PushController@test
+  POST      api/push/test generated::<auto> › Api\PushController@test
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,1
-  POST      api/push/unsubscribe .............. Api\PushController@unsubscribe
+  POST      api/push/unsubscribe generated::<auto> › Api\PushController@unsubscribe
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/push/vapid-key ............. Api\PushController@vapidPublicKey
+  GET|HEAD  api/push/vapid-key generated::<auto> › Api\PushController@vapidPublicKey
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/recommendations ........... Api\RecommendationController@index
+  GET|HEAD  api/recommendations generated::<auto> › Api\RecommendationController@index
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/recommendations/trending Api\RecommendationController@trending
+  GET|HEAD  api/recommendations/trending generated::<auto> › Api\RecommendationController@trending
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/referral ........................ Api\ReferralController@index
+  GET|HEAD  api/referral generated::<auto> › Api\ReferralController@index
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/referral/apply .................. Api\ReferralController@apply
+  POST      api/referral/apply generated::<auto> › Api\ReferralController@apply
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/register ......................... Api\AuthController@register
+  POST      api/register generated::<auto> › Api\AuthController@register
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
-  POST      api/reset-password .............. Api\AuthController@resetPassword
+  POST      api/reset-password generated::<auto> › Api\AuthController@resetPassword
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:auth
-  GET|HEAD  api/search/semantic .......... Api\SearchController@semanticSearch
+  GET|HEAD  api/search/semantic generated::<auto> › Api\SearchController@semanticSearch
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:search
-  GET|HEAD  api/search/suggestions .......... Api\SearchController@suggestions
+  GET|HEAD  api/search/suggestions generated::<auto> › Api\SearchController@suggestions
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:search
-  GET|HEAD  api/seller/stats ................. Api\SellerStatsController@index
+  GET|HEAD  api/seller/stats generated::<auto> › Api\SellerStatsController@index
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/sitemap.xml ......................... Api\AdController@sitemap
+  GET|HEAD  api/sitemap.xml generated::<auto> › Api\AdController@sitemap
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/states/counts .............................. routes/api.php:55
+  GET|HEAD  api/states/counts .................... generated::<auto>
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/stores ............... Api\BusinessProfileController@directory
+  GET|HEAD  api/stores generated::<auto> › Api\BusinessProfileController@directory
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/user .............................. Api\ProfileController@show
+  GET|HEAD  api/user generated::<auto> › Api\ProfileController@show
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/user .................... Api\AccountDeletionController@delete
+  DELETE    api/user generated::<auto> › Api\AccountDeletionController@delete
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/user/ads .............................. Api\AdController@myAds
+  GET|HEAD  api/user/ads generated::<auto> › Api\AdController@myAds
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/user/analytics .................... Api\AdController@analytics
+  GET|HEAD  api/user/analytics generated::<auto> › Api\AdController@analytics
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/avatar ............... Api\ProfileController@uploadAvatar
+  POST      api/user/avatar generated::<auto> › Api\ProfileController@uploadAvatar
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:profile-uploads
-  GET|HEAD  api/user/business-profile ..... Api\BusinessProfileController@show
+  GET|HEAD  api/user/business-profile generated::<auto> › Api\BusinessProfileController@show
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PUT       api/user/business-profile ... Api\BusinessProfileController@update
+  PUT       api/user/business-profile generated::<auto> › Api\BusinessProfileController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/business-profile/banner Api\BusinessProfileController@uploadBanner
+  POST      api/user/business-profile/banner generated::<auto> › Api\BusinessProfileController@uploadBanner
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:profile-uploads
-  POST      api/user/business-profile/csf Api\BusinessProfileController@uploadCsf
+  POST      api/user/business-profile/csf generated::<auto> › Api\BusinessProfileController@uploadCsf
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:identity-uploads
-  POST      api/user/business-profile/logo Api\BusinessProfileController@uploadLogo
+  POST      api/user/business-profile/logo generated::<auto> › Api\BusinessProfileController@uploadLogo
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:profile-uploads
-  POST      api/user/coupons/redeem ....... Api\PaymentController@redeemCoupon
+  POST      api/user/coupons/redeem generated::<auto> › Api\PaymentController@redeemCoupon
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,1
-  POST      api/user/email/confirm .. Api\ProfileController@confirmEmailChange
+  POST      api/user/email/confirm generated::<auto> › Api\ProfileController@confirmEmailChange
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/email/request .. Api\ProfileController@requestEmailChange
+  POST      api/user/email/request generated::<auto> › Api\ProfileController@requestEmailChange
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:3,1
-  GET|HEAD  api/user/favorite-ads ............... Api\AdController@favoriteAds
+  GET|HEAD  api/user/favorite-ads generated::<auto> › Api\AdController@favoriteAds
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/kyc ..................... Api\ProfileController@submitKyc
+  POST      api/user/kyc generated::<auto> › Api\ProfileController@submitKyc
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:identity-uploads
-  POST      api/user/mobile-push/register .. Api\MobilePushController@register
+  POST      api/user/mobile-push/register generated::<auto> › Api\MobilePushController@register
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/mobile-push/unregister Api\MobilePushController@unregister
+  POST      api/user/mobile-push/unregister generated::<auto> › Api\MobilePushController@unregister
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PUT       api/user/notifications . Api\ProfileController@updateNotifications
+  PUT       api/user/notifications generated::<auto> › Api\ProfileController@updateNotifications
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/notifications . Api\ProfileController@updateNotifications
+  POST      api/user/notifications generated::<auto> › Api\ProfileController@updateNotifications
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/user/notifications/list Api\ProfileController@getNotifications
+  GET|HEAD  api/user/notifications/list generated::<auto> › Api\ProfileController@getNotifications
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/notifications/read-all Api\ProfileController@markAllNotificationsRead
+  POST      api/user/notifications/read-all generated::<auto> › Api\ProfileController@markAllNotificationsRead
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/user/notifications/{id} Api\ProfileController@deleteNotification
+  DELETE    api/user/notifications/{id} generated::<auto> › Api\ProfileController@deleteNotification
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/notifications/{id}/read Api\ProfileController@markNotificationRead
+  POST      api/user/notifications/{id}/read generated::<auto> › Api\ProfileController@markNotificationRead
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PUT       api/user/password ........... Api\ProfileController@changePassword
+  PUT       api/user/password generated::<auto> › Api\ProfileController@changePassword
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/password ........... Api\ProfileController@changePassword
+  POST      api/user/password generated::<auto> › Api\ProfileController@changePassword
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/user/payments .......... Api\PaymentController@getUserPayments
+  GET|HEAD  api/user/payments generated::<auto> › Api\PaymentController@getUserPayments
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/preferences ..... Api\ProfileController@updatePreferences
+  POST      api/user/preferences generated::<auto> › Api\ProfileController@updatePreferences
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/profile .................... Api\ProfileController@update
-            ⇂ api
-            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:profile-uploads
-  GET|HEAD  api/user/profile ................ Api\ProfileController@getProfile
-            ⇂ api
-            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PUT       api/user/profile .................... Api\ProfileController@update
+  POST      api/user/profile generated::<auto> › Api\ProfileController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:profile-uploads
-  POST      api/user/push-subscribe ...... Api\ProfileController@pushSubscribe
+  GET|HEAD  api/user/profile generated::<auto> › Api\ProfileController@getProfile
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/push-unsubscribe .. Api\ProfileController@pushUnsubscribe
+  PUT       api/user/profile generated::<auto> › Api\ProfileController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/user/saved-searches .......... Api\SavedSearchController@index
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:profile-uploads
+  POST      api/user/push-subscribe generated::<auto> › Api\ProfileController@pushSubscribe
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/saved-searches .......... Api\SavedSearchController@store
+  POST      api/user/push-unsubscribe generated::<auto> › Api\ProfileController@pushUnsubscribe
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  PATCH     api/user/saved-searches/{savedSearch} Api\SavedSearchController@update
+  GET|HEAD  api/user/saved-searches generated::<auto> › Api\SavedSearchController@index
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/user/saved-searches/{savedSearch} Api\SavedSearchController@destroy
+  POST      api/user/saved-searches generated::<auto> › Api\SavedSearchController@store
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/saved-searches/{savedSearch}/reset Api\SavedSearchController@resetCount
+  PATCH     api/user/saved-searches/{savedSearch} generated::<auto> › Api\SavedSearchController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/user/search-alerts ........... Api\SearchAlertController@index
+  DELETE    api/user/saved-searches/{savedSearch} generated::<auto> › Api\SavedSearchController@destroy
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/search-alerts ........... Api\SearchAlertController@store
+  POST      api/user/saved-searches/{savedSearch}/reset generated::<auto> › Api\SavedSearchController@resetCount
+            ⇂ api
+            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+  GET|HEAD  api/user/search-alerts generated::<auto> › Api\SearchAlertController@index
+            ⇂ api
+            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+  POST      api/user/search-alerts generated::<auto> › Api\SearchAlertController@store
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
-  PATCH     api/user/search-alerts/{searchAlert} Api\SearchAlertController@update
+  PATCH     api/user/search-alerts/{searchAlert} generated::<auto> › Api\SearchAlertController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/user/search-alerts/{searchAlert} Api\SearchAlertController@destroy
+  DELETE    api/user/search-alerts/{searchAlert} generated::<auto> › Api\SearchAlertController@destroy
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/user/subscriptions .... Api\ProfileController@getSubscriptions
+  GET|HEAD  api/user/subscriptions generated::<auto> › Api\ProfileController@getSubscriptions
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/subscriptions/toggle Api\ProfileController@toggleSubscription
+  POST      api/user/subscriptions/toggle generated::<auto> › Api\ProfileController@toggleSubscription
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/two-factor-authentication Api\TwoFactorAuthenticationController@store
+  POST      api/user/two-factor-authentication generated::<auto> › Api\TwoFactorAuthenticationController@store
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/user/two-factor-authentication Api\TwoFactorAuthenticationController@destroy
+  DELETE    api/user/two-factor-authentication generated::<auto> › Api\TwoFactorAuthenticationController@destroy
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/user/two-factor-authentication/confirm Api\TwoFactorAuthenticationController@confirm
+  POST      api/user/two-factor-authentication/confirm generated::<auto> › Api\TwoFactorAuthenticationController@confirm
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/users ............................ Api\ProfileController@index
+  GET|HEAD  api/users generated::<auto> › Api\ProfileController@index
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  DELETE    api/users/{id} ..................... Api\ProfileController@destroy
+  DELETE    api/users/{id} generated::<auto> › Api\ProfileController@destroy
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  GET|HEAD  api/users/{id}/business-profile Api\BusinessProfileController@publicShow
+  GET|HEAD  api/users/{id}/business-profile generated::<auto> › Api\BusinessProfileController@publicShow
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  GET|HEAD  api/users/{id}/profile ....... Api\ProfileController@publicProfile
+  GET|HEAD  api/users/{id}/profile generated::<auto> › Api\ProfileController@publicProfile
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/users/{id}/report ............... Api\ProfileController@report
+  POST      api/users/{id}/report generated::<auto> › Api\ProfileController@report
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,1
-  GET|HEAD  api/users/{id}/reviews ................ Api\ReviewController@index
+  GET|HEAD  api/users/{id}/reviews generated::<auto> › Api\ReviewController@index
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
-  POST      api/users/{id}/reviews ................ Api\ReviewController@store
+  POST      api/users/{id}/reviews generated::<auto> › Api\ReviewController@store
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:5,1
-  POST      api/users/{id}/role ............. Api\ProfileController@changeRole
+  POST      api/users/{id}/role generated::<auto> › Api\ProfileController@changeRole
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/users/{id}/verify ........... Api\ProfileController@verifyUser
+  POST      api/users/{id}/verify generated::<auto> › Api\ProfileController@verifyUser
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-  POST      api/webhooks/clip ............ Api\PaymentController@handleWebhook
+  POST      api/webhooks/clip generated::<auto> › Api\PaymentController@handleWebhook
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  POST      api/webhooks/clip/ad-renewal ...... Api\AdRenewalWebhookController
+  POST      api/webhooks/clip/ad-renewal generated::<auto> › Api\AdRenewalWebhookController
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:60,1
-  GET|HEAD  articulos_camping ............... SeoShellController@verticalAlias
+  GET|HEAD  articulos_camping generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  GET|HEAD  atracciones_exp ................. SeoShellController@verticalAlias
+  GET|HEAD  atracciones_exp generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  ANY       autos ...................... Illuminate\Routing\RedirectController
+  ANY       autos generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
-  GET|HEAD  ayuda .............................. SeoShellController@publicPage
+  GET|HEAD  ayuda generated::<auto> › SeoShellController@publicPage
             ⇂ web
-  GET|HEAD  ayuda/comprar-y-contactar .............. SeoShellController@source
+  GET|HEAD  ayuda/comprar-y-contactar generated::<auto> › SeoShellController@source
             ⇂ web
-  GET|HEAD  ayuda/publicar-anuncio ................. SeoShellController@source
+  GET|HEAD  ayuda/publicar-anuncio generated::<auto> › SeoShellController@source
             ⇂ web
-  GET|HEAD  boletos .............................. SeoShellController@vertical
+  GET|HEAD  boletos generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  boletos_turismo ................. SeoShellController@verticalAlias
+  GET|HEAD  boletos_turismo generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  GET|POST|HEAD broadcasting/auth Illuminate\Broadcasting\BroadcastController@authenticate
+  GET|HEAD  como-funciona generated::<auto> › SeoShellController@source
             ⇂ web
-  GET|HEAD  como-funciona .......................... SeoShellController@source
+  GET|HEAD  contacto generated::<auto> › SeoShellController@publicPage
             ⇂ web
-  GET|HEAD  contacto ........................... SeoShellController@publicPage
+  GET|HEAD  cookies generated::<auto> › SeoShellController@publicPage
             ⇂ web
-  GET|HEAD  cookies ............................ SeoShellController@publicPage
+  GET|HEAD  electronica generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  electronica .......................... SeoShellController@vertical
+  GET|HEAD  empleos generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  empleos .............................. SeoShellController@vertical
+  GET|HEAD  guias_servicios generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  GET|POST|HEAD graphql ... graphql › Nuwave\Lighthouse\Http\GraphQLController
-            ⇂ Nuwave\Lighthouse\Http\Middleware\AcceptJson
-            ⇂ Nuwave\Lighthouse\Http\Middleware\AttemptAuthentication
-  GET|HEAD  guias_servicios ................. SeoShellController@verticalAlias
+  ANY       help generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
-  ANY       help ....................... Illuminate\Routing\RedirectController
+  GET|HEAD  hogar .. generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  hogar ................................ SeoShellController@vertical
+  GET|HEAD  hospedaje generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  GET|HEAD  horizon/api/batches horizon.jobs-batches.index › Laravel\Horizon\Http\Controllers\BatchesController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  POST      horizon/api/batches/retry/{id} horizon.jobs-batches.retry › Laravel\Horizon\Http\Controllers\BatchesController@retry
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/batches/{id} horizon.jobs-batches.show › Laravel\Horizon\Http\Controllers\BatchesController@show
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/jobs/completed horizon.completed-jobs.index › Laravel\Horizon\Http\Controllers\CompletedJobsController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/jobs/failed horizon.failed-jobs.index › Laravel\Horizon\Http\Controllers\FailedJobsController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/jobs/failed/{id} horizon.failed-jobs.show › Laravel\Horizon\Http\Controllers\FailedJobsController@show
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/jobs/pending horizon.pending-jobs.index › Laravel\Horizon\Http\Controllers\PendingJobsController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  POST      horizon/api/jobs/retry/{id} horizon.retry-jobs.show › Laravel\Horizon\Http\Controllers\RetryController@store
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/jobs/silenced horizon.silenced-jobs.index › Laravel\Horizon\Http\Controllers\SilencedJobsController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/jobs/{id} horizon.jobs.show › Laravel\Horizon\Http\Controllers\JobsController@show
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/masters horizon.masters.index › Laravel\Horizon\Http\Controllers\MasterSupervisorController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/metrics/jobs horizon.jobs-metrics.index › Laravel\Horizon\Http\Controllers\JobMetricsController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/metrics/jobs/{id} horizon.jobs-metrics.show › Laravel\Horizon\Http\Controllers\JobMetricsController@show
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/metrics/queues horizon.queues-metrics.index › Laravel\Horizon\Http\Controllers\QueueMetricsController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/metrics/queues/{id} horizon.queues-metrics.show › Laravel\Horizon\Http\Controllers\QueueMetricsController@show
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/monitoring horizon.monitoring.index › Laravel\Horizon\Http\Controllers\MonitoringController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  POST      horizon/api/monitoring horizon.monitoring.store › Laravel\Horizon\Http\Controllers\MonitoringController@store
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/monitoring/{tag} horizon.monitoring-tag.paginate › Laravel\Horizon\Http\Controllers\MonitoringController@paginate
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  DELETE    horizon/api/monitoring/{tag} horizon.monitoring-tag.destroy › Laravel\Horizon\Http\Controllers\MonitoringController@destroy
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/stats horizon.stats.index › Laravel\Horizon\Http\Controllers\DashboardStatsController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/api/workload horizon.workload.index › Laravel\Horizon\Http\Controllers\WorkloadController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  horizon/{view?} horizon.index › Laravel\Horizon\Http\Controllers\HomeController@index
-            ⇂ horizon
-            ⇂ Laravel\Horizon\Http\Middleware\Authenticate
-  GET|HEAD  hospedaje ....................... SeoShellController@verticalAlias
+  GET|HEAD  infantil generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  infantil ............................. SeoShellController@vertical
+  ANY       informatica generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
-  ANY       informatica ................ Illuminate\Routing\RedirectController
+  GET|HEAD  inmuebles generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  inmuebles ............................ SeoShellController@vertical
+  GET|HEAD  listings generated::<auto> › SeoShellController@listings
             ⇂ web
-  GET|HEAD  listings ............................. SeoShellController@listings
+  GET|HEAD  mascotas generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  mascotas ............................. SeoShellController@vertical
+  GET|HEAD  moda ... generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  moda ................................. SeoShellController@vertical
+  GET|HEAD  motor .. generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  motor ................................ SeoShellController@vertical
+  GET|HEAD  negocios generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  negocios ............................. SeoShellController@vertical
+  GET|HEAD  ocio ... generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  ocio ................................. SeoShellController@vertical
+  GET|HEAD  privacidad generated::<auto> › SeoShellController@publicPage
             ⇂ web
-  GET|HEAD  privacidad ......................... SeoShellController@publicPage
+  ANY       privacy generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
-  ANY       privacy .................... Illuminate\Routing\RedirectController
+  GET|HEAD  productos generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  productos ............................ SeoShellController@vertical
+  GET|HEAD  renta_vehiculos generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  GET|HEAD  renta_vehiculos ................. SeoShellController@verticalAlias
+  GET|HEAD  retiros_bienestar generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  POST      resend/webhook resend.webhook › Resend\Laravel\Http\Controllers\WebhookController@handleWebhook
-  GET|HEAD  retiros_bienestar ............... SeoShellController@verticalAlias
+  ANY       safety generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
-  ANY       safety ..................... Illuminate\Routing\RedirectController
+  GET|HEAD  seguridad generated::<auto> › SeoShellController@source
             ⇂ web
-  GET|HEAD  sanctum/csrf-cookie sanctum.csrf-cookie › Laravel\Sanctum\Http\Controllers\CsrfCookieController@show
+  GET|HEAD  servicios generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  seguridad .............................. SeoShellController@source
+  GET|HEAD  share/ads/{id} ... generated::<auto> › ShareAdController
             ⇂ web
-  GET|HEAD  servicios ............................ SeoShellController@vertical
+  GET|HEAD  sitemap-ads.xml generated::<auto> › Api\SitemapController@ads
             ⇂ web
-  GET|HEAD  share/ads/{id} ................................. ShareAdController
+  GET|HEAD  sitemap-categories.xml generated::<auto> › Api\SitemapController@categories
             ⇂ web
-  GET|HEAD  sitemap-ads.xml ........................ Api\SitemapController@ads
+  GET|HEAD  sitemap-main.xml generated::<auto> › Api\SitemapController@index
             ⇂ web
-  GET|HEAD  sitemap-categories.xml .......... Api\SitemapController@categories
+  GET|HEAD  sitemap-states.xml generated::<auto> › Api\SitemapController@states
             ⇂ web
-  GET|HEAD  sitemap-main.xml ..................... Api\SitemapController@index
+  GET|HEAD  sitemap.xml generated::<auto> › Api\SitemapController@sitemapIndex
             ⇂ web
-  GET|HEAD  sitemap-states.xml .................. Api\SitemapController@states
+  GET|HEAD  sobre-mercasto generated::<auto> › SeoShellController@source
             ⇂ web
-  GET|HEAD  sitemap.xml ................... Api\SitemapController@sitemapIndex
+  GET|HEAD  souvenirs generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  GET|HEAD  sobre-mercasto ......................... SeoShellController@source
+  GET|HEAD  storage/{path} ..................................... storage.local
+  PUT       storage/{path} .............................. storage.local.upload
+  GET|HEAD  tarifas .. generated::<auto> › SeoShellController@source
             ⇂ web
-  GET|HEAD  souvenirs ....................... SeoShellController@verticalAlias
+  GET|HEAD  tecnologia generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  GET|HEAD  storage/{path} storage.local › var/www/mercasto/backend/vendor/laravel/framework/src/Illuminate/Filesystem/FilesystemServiceProvider.php:111
-  PUT       storage/{path} storage.local.upload › var/www/mercasto/backend/vendor/laravel/framework/src/Illuminate/Filesystem/FilesystemServiceProvider.php:119
-  GET|HEAD  tarifas ................................ SeoShellController@source
+  ANY       telefonia generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
-  GET|HEAD  tecnologia ...................... SeoShellController@verticalAlias
+  GET|HEAD  telefonos generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  ANY       telefonia .................. Illuminate\Routing\RedirectController
+  GET|HEAD  terminos generated::<auto> › SeoShellController@publicPage
             ⇂ web
-  GET|HEAD  telefonos ....................... SeoShellController@verticalAlias
+  ANY       terms generated::<auto> › Illuminate\Routing › RedirectController
             ⇂ web
-  GET|HEAD  terminos ........................... SeoShellController@publicPage
+  GET|HEAD  tiendas generated::<auto> › SeoShellController@publicPage
             ⇂ web
-  ANY       terms ...................... Illuminate\Routing\RedirectController
+  GET|HEAD  tours generated::<auto> › SeoShellController@verticalAlias
             ⇂ web
-  GET|HEAD  tiendas ............................ SeoShellController@publicPage
+  GET|HEAD  turismo generated::<auto> › SeoShellController@vertical
             ⇂ web
-  GET|HEAD  tours ........................... SeoShellController@verticalAlias
-            ⇂ web
-  GET|HEAD  turismo .............................. SeoShellController@vertical
-            ⇂ web
-  GET|HEAD  up var/www/mercasto/backend/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php:224
+  GET|HEAD  up ................................... generated::<auto>
 
-                                                          Showing [274] routes
+                                                          Showing [245] routes
 
 ```
