@@ -34,7 +34,11 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->alias([
             'last-active' => \App\Http\Middleware\UpdateLastActive::class,
+            'admin' => \App\Http\Middleware\EnforceAdminRouteRole::class,
         ]);
+        // This centralized boundary automatically protects every /api/admin/* route
+        // plus legacy admin-equivalent mutation paths before controller code runs.
+        $middleware->prependToGroup('api', \App\Http\Middleware\EnforceAdminRouteRole::class);
         $middleware->prependToGroup('api', \App\Http\Middleware\SecurityAuditMiddleware::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\RejectUnsafeXmlUpload::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\ApplyListingQualityPreflight::class);
