@@ -34,10 +34,30 @@ use Minishlink\WebPush\Subscription;
 class AdController extends Controller
 {
     private const PUBLIC_AD_USER_COLUMNS = 'id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp';
+    private const MAX_AD_IMAGES = 10;
+    private const MAX_IMAGE_BATCH_BYTES = 50 * 1024 * 1024;
 
     private function imageManager(): ImageManager
     {
         return ImageManager::usingDriver(Driver::class);
+    }
+
+    private function validateImageUploadBatch(Request $request, int $existingImageCount = 0): void
+    {
+        $files = $request->hasFile('images') ? (array) $request->file('images') : [];
+
+        if ($existingImageCount + count($files) > self::MAX_AD_IMAGES) {
+            throw ValidationException::withMessages([
+                'images' => ['No puedes tener más de 10 imágenes en total por anuncio.'],
+            ]);
+        }
+
+        $batchBytes = array_sum(array_map(static fn ($file) => (int) $file->getSize(), $files));
+        if ($batchBytes > self::MAX_IMAGE_BATCH_BYTES) {
+            throw ValidationException::withMessages([
+                'images' => ['El lote de imágenes supera el límite total permitido.'],
+            ]);
+        }
     }
 
     private function validateCategoryAttributes(Request $request): void
@@ -485,13 +505,14 @@ class AdController extends Controller
             'longitude' => 'nullable|required_with:latitude|numeric|between:-118,-86',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД, защита от Data Integrity Bypass
             'subcategory' => 'nullable|string|max:255',
-            'images' => 'nullable|array|max:10', // Максимум 10 картинок
+            'images' => 'nullable|array|max:' . self::MAX_AD_IMAGES, // Максимум 10 картинок
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Максимум 5МБ и защита от OOM-бомб (Pixel Flooding)
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // 50MB Max
             'attributes' => 'required|array', // Динамические характеристики (марка, модель, ОЗУ и т.д.)
             'attributes.subcategory' => 'required|string|max:100',
         ]);
+        $this->validateImageUploadBatch($request);
         $this->validateCategoryAttributes($request);
 
         // Dynamic category attributes validation
@@ -660,9 +681,9 @@ class AdController extends Controller
             'longitude' => 'nullable|required_with:latitude|numeric|between:-118,-86',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД
             'subcategory' => 'nullable|string|max:255',
-            'existing_images' => 'nullable|array',
+            'existing_images' => 'nullable|array|max:' . self::MAX_AD_IMAGES,
             'existing_images.*' => 'string',
-            'images' => 'nullable|array|max:10', // Новые изображения
+            'images' => 'nullable|array|max:' . self::MAX_AD_IMAGES, // Новые изображения
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Защита от Pixel Flooding
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // Защита от загрузки вредоносных скриптов
@@ -710,15 +731,13 @@ class AdController extends Controller
         // Защита от IDOR (Кража медиа): разрешаем оставить только те фото, которые уже принадлежали этому объявлению
         $keptImages = array_intersect($currentImages, $requestedImages);
 
-        // Находим изображения для удаления, сравнивая текущие с сохраненными
+        // Проверяем лимиты до любых удалений: невалидный upload не должен менять существующие файлы.
+        $this->validateImageUploadBatch($request, count($keptImages));
+
+        // Находим изображения для удаления, сравнивая текущие с сохраненными.
         $imagesToDelete = array_diff($currentImages, $keptImages);
         if (count($imagesToDelete) > 0) {
             Storage::disk('public')->delete($imagesToDelete);
-        }
-
-        // Защита от переполнения хранилища: проверяем ОБЩЕЕ количество картинок (старые + новые)
-        if (count($keptImages) + ($request->hasFile('images') ? count($request->file('images')) : 0) > 10) {
-            return response()->json(['message' => 'No puedes tener más de 10 imágenes en total por anuncio.'], 422);
         }
 
         // Загружаем новые изображения
