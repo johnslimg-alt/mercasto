@@ -31,7 +31,9 @@ test('edit flow exposes the same optional autofill panel while keeping the norma
 });
 
 test('suggestions are never silently applied and every action is an explicit button', () => {
-  assert.match(panel, /type="button" disabled=\{disabled\} onClick=\{onApply\}/);
+  assert.match(panel, /const MIN_APPLY_CONFIDENCE = 0\.8;/);
+  assert.match(panel, /const applyDisabled = disabled \|\| confidence < MIN_APPLY_CONFIDENCE;/);
+  assert.match(panel, /type="button" disabled=\{applyDisabled\} onClick=\{onApply\}/);
   assert.match(panel, /onClick=\{run\}/);
   assert.doesNotMatch(panel, /useEffect\([^)]*onApply/s);
   assert.match(panel, /data-testid="listing-autofill-suggestions"/);
