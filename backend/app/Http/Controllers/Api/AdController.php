@@ -1771,12 +1771,10 @@ class AdController extends Controller
     {
         $ad = Ad::with('user')->findOrFail($id);
 
-        // Защита от IDOR: скрытые объявления нельзя экспортировать в PDF
-        if ($ad->status !== 'active') {
-            $user = auth('sanctum')->user();
-            if (!$user || ($user->id !== $ad->user_id && $user->role !== 'admin')) {
-                return response()->json(['message' => 'Anuncio no disponible para exportación.'], 403);
-            }
+        // PDF exports may contain seller/listing details and are owner/admin only.
+        $user = auth('sanctum')->user();
+        if (! $user || ((int) $user->id !== (int) $ad->user_id && $user->role !== 'admin')) {
+            return response()->json(['message' => 'Anuncio no disponible para exportación.'], 403);
         }
 
         // Генерируем PDF только для категории "недвижимость"
