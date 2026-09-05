@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
@@ -7,6 +8,7 @@ import os
 import re
 import time
 import unicodedata
+from pathlib import Path
 from typing import Annotated, Any
 
 import httpx
@@ -45,10 +47,22 @@ def _normalize_match_text(value: str) -> str:
     return " ".join(re.sub(r"[^\w+]+", " ", without_marks, flags=re.UNICODE).split())
 
 
+def _contains_unsegmented_script(value: str) -> bool:
+    return any(
+        "CJK" in unicodedata.name(ch, "")
+        or "HIRAGANA" in unicodedata.name(ch, "")
+        or "KATAKANA" in unicodedata.name(ch, "")
+        or "HANGUL" in unicodedata.name(ch, "")
+        for ch in value
+    )
+
+
 def _contains_phrase(text: str, phrase: str) -> bool:
     normalized_phrase = _normalize_match_text(phrase)
     if not normalized_phrase:
         return False
+    if _contains_unsegmented_script(normalized_phrase):
+        return normalized_phrase in text
     return re.search(rf"(?:^|\s){re.escape(normalized_phrase)}(?:$|\s)", text) is not None
 
 _CATEGORY_LOCALE_ANCHORS: dict[str, dict[str, tuple[str, ...]]] = {
@@ -69,6 +83,20 @@ _CATEGORY_LOCALE_ANCHORS: dict[str, dict[str, tuple[str, ...]]] = {
 }
 
 _GENERIC_ENUM_VALUES = {"otra", "otro", "other", "otros", "otras"}
+_OPTION_ALIASES_PATH = Path(__file__).with_name("option_aliases.json")
+try:
+    _OPTION_ALIASES: dict[str, dict[str, dict[str, str]]] = json.loads(
+        _OPTION_ALIASES_PATH.read_text(encoding="utf-8")
+    )
+except (OSError, json.JSONDecodeError):
+    _OPTION_ALIASES = {}
+
+
+def _localized_option_aliases(locale: str, key: str, canonical: str) -> tuple[str, ...]:
+    localized = _OPTION_ALIASES.get(locale, {}).get(key, {}).get(canonical)
+    if not isinstance(localized, str) or not localized.strip():
+        return (canonical,)
+    return (canonical, localized)
 
 class AttributeChoice(BaseModel):
     key: str = Field(min_length=1, max_length=80, pattern=r"^[a-zA-Z0-9_\-]+$")
@@ -407,7 +435,10 @@ class LocalAutofillClient:
                         normalized_value = _normalize_match_text(value)
                         if normalized_value in _GENERIC_ENUM_VALUES:
                             continue
-                        if seller_text and _contains_phrase(normalized_seller_text, normalized_value):
+                        aliases = _localized_option_aliases(request.locale, item.key, value)
+                        if seller_text and any(
+                            _contains_phrase(normalized_seller_text, alias) for alias in aliases
+                        ):
                             matches.append(value)
                     if len(matches) == 1:
                         combined["attributes"][item.key] = matches[0]
@@ -475,6 +506,8 @@ class LocalAutofillClient:
 async def prewarm_autofill_model() -> None:
     if os.getenv("AUTOFILL_PREWARM_ENABLED", "false").lower() not in {"1", "true", "yes", "on"}:
         return
+    attempts = max(1, min(6, int(os.getenv("AUTOFILL_PREWARM_ATTEMPTS", "4"))))
+    delay = max(0.0, min(30.0, float(os.getenv("AUTOFILL_PREWARM_RETRY_SECONDS", "5"))))
     source = io.BytesIO()
     Image.new("RGB", (32, 32), (127, 127, 127)).save(source, format="JPEG", quality=70)
     image = _sanitize_image(base64.b64encode(source.getvalue()).decode("ascii"))
@@ -485,20 +518,23 @@ async def prewarm_autofill_model() -> None:
         "required": ["category"],
         "additionalProperties": False,
     }
-    try:
-        async with httpx.AsyncClient() as http_client:
-            await client._chat(
-                http_client,
-                _CATEGORY_PROMPT + "\nSynthetic startup warmup. Return only category.",
-                {"seller_text": "", "allowed_categories": [{"slug": "motor", "label": "Autos"}]},
-                [image],
-                "autofill_warmup",
-                schema,
-                client.timeout,
-                12,
-            )
-    except (httpx.HTTPError, ValueError, AutofillUnavailable):
-        return
+    for attempt in range(attempts):
+        try:
+            async with httpx.AsyncClient() as http_client:
+                await client._chat(
+                    http_client,
+                    _CATEGORY_PROMPT + "\nSynthetic startup warmup. Return only category.",
+                    {"seller_text": "", "allowed_categories": [{"slug": "motor", "label": "Autos"}]},
+                    [image],
+                    "autofill_warmup",
+                    schema,
+                    client.timeout,
+                    12,
+                )
+            return
+        except (httpx.HTTPError, ValueError, AutofillUnavailable):
+            if attempt + 1 < attempts:
+                await asyncio.sleep(delay * (attempt + 1))
 
 
 def get_autofill_client() -> LocalAutofillClient:

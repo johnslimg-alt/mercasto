@@ -64,3 +64,12 @@ test('shared AI gateway does not health-block on optional autofill sidecar', () 
   const deploy = fs.readFileSync('.github/workflows/deploy-selfhosted.yml', 'utf8');
   assert.match(deploy, /Optional listing-autofill model failed to start; shared AI gateway will continue without it/);
 });
+
+test('autofill option alias manifest stays in sync with enabled UI translations', async () => {
+  const locales = ['en', 'pt', 'fr', 'zh', 'ko', 'de', 'it', 'ar', 'ru', 'ja'];
+  const manifest = JSON.parse(fs.readFileSync('services/ai-gateway/mercasto_ai/option_aliases.json', 'utf8'));
+  for (const locale of locales) {
+    const module = await import(`../src/constants/filterOptionTranslations/${locale}.js`);
+    assert.deepEqual(manifest[locale], module.default, `stale ${locale} option aliases`);
+  }
+});

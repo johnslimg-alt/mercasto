@@ -9,9 +9,11 @@ from PIL import Image
 
 from mercasto_ai.autofill import (
     AutofillRequest,
+    AutofillUnavailable,
     LocalAutofillClient,
     _sanitize_image,
     canonicalize,
+    prewarm_autofill_model,
 )
 from mercasto_ai.combined import app
 
@@ -275,3 +277,49 @@ def test_runtime_subcategory_hint_is_disabled_until_server_whitelist_exists() ->
     result = asyncio.run(LocalAutofillClient().suggest(request()))
     assert result.subcategory_hint.value is None
     assert result.subcategory_hint.confidence == 0.0
+
+
+def test_cjk_category_matching_supports_unsegmented_sentences() -> None:
+    taxonomy_value = [{"slug": "electronica", "label": "Electrónica", "attributes": []}]
+    for locale, phrase in (("zh", "出售苹果手机"), ("ja", "中古スマホを販売")):
+        req = AutofillRequest(short_text=phrase, locale=locale, taxonomy=taxonomy_value)
+        slug, confidence = LocalAutofillClient._rule_category(req, phrase)
+        assert slug == "electronica", locale
+        assert confidence >= 0.8
+
+
+def test_localized_enum_labels_map_back_to_canonical_values() -> None:
+    req = AutofillRequest(
+        short_text="black automatic Toyota car",
+        locale="en",
+        taxonomy=[{
+            "slug": "motor",
+            "label": "Motor",
+            "attributes": [
+                {"key": "marca", "type": "select", "options": ["Toyota", "Nissan"]},
+                {"key": "color", "type": "select", "options": ["Negro", "Blanco"]},
+                {"key": "transmision", "type": "select", "options": ["Manual", "Automática", "CVT"]},
+            ],
+        }],
+    )
+    result = asyncio.run(LocalAutofillClient().suggest(req))
+    assert result.attributes["marca"].value == "Toyota"
+    assert result.attributes["color"].value == "Negro"
+    assert result.attributes["transmision"].value == "Automática"
+
+
+def test_prewarm_retries_transient_sidecar_failures(monkeypatch) -> None:
+    monkeypatch.setenv("AUTOFILL_PREWARM_ENABLED", "true")
+    monkeypatch.setenv("AUTOFILL_PREWARM_ATTEMPTS", "3")
+    monkeypatch.setenv("AUTOFILL_PREWARM_RETRY_SECONDS", "0")
+    calls = {"count": 0}
+
+    async def fake_chat(self, *args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise AutofillUnavailable("sidecar starting")
+        return {"category": ""}
+
+    monkeypatch.setattr(LocalAutofillClient, "_chat", fake_chat)
+    asyncio.run(prewarm_autofill_model())
+    assert calls["count"] == 3

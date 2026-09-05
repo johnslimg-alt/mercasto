@@ -24,6 +24,9 @@ test = [
 [tool.setuptools.packages.find]
 include = ["mercasto_ai*"]
 
+[tool.setuptools.package-data]
+mercasto_ai = ["*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

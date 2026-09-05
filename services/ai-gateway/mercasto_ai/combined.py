@@ -1,3 +1,5 @@
+import asyncio
+
 from .autofill import prewarm_autofill_model
 from .autofill import router as autofill_router
 from .autofill_boundary import AutofillRequestBoundaryMiddleware
@@ -12,7 +14,7 @@ app.include_router(autofill_router)
 
 
 async def prewarm_listing_autofill() -> None:
-    await prewarm_autofill_model()
+    asyncio.create_task(prewarm_autofill_model())
 
 
 app.router.add_event_handler("startup", prewarm_listing_autofill)
