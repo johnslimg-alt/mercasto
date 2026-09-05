@@ -23,7 +23,11 @@ echo "== Media upload validation scan =="
 
 test -f "$CONTROLLER"
 
-grep -qF "'images' => 'nullable|array|max:10'" "$CONTROLLER"
+grep -qF 'private const MAX_AD_IMAGES = 10;' "$CONTROLLER"
+grep -qF 'private const MAX_IMAGE_BATCH_BYTES = 50 * 1024 * 1024;' "$CONTROLLER"
+grep -qF "'images' => 'nullable|array|max:' . self::MAX_AD_IMAGES" "$CONTROLLER"
+grep -qF "'existing_images' => 'nullable|array|max:' . self::MAX_AD_IMAGES" "$CONTROLLER"
+grep -qF 'validateImageUploadBatch($request' "$CONTROLLER"
 grep -qF "'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096'" "$CONTROLLER"
 grep -qF "'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200'" "$CONTROLLER"
 grep -qF "scaleDown(width: 1200, height: 1200)" "$CONTROLLER"

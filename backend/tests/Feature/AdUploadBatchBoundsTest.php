@@ -44,7 +44,6 @@ class AdUploadBatchBoundsTest extends TestCase
         ]);
 
         $response = $this->actingAs($user, 'sanctum')->post("/api/ads/{$ad->id}", [
-            '_method' => 'PUT',
             'title' => 'Mueble',
             'description' => 'Mueble usado',
             'price' => 1000,
