@@ -51,7 +51,7 @@ FIXTURES = [
         "name": "autos",
         "short_text": "Nissan Versa usado",
         "expected_category": "motor",
-        "ranked_categories": ("motor", "electronica", "servicios"),
+        "captured_category_ranking": ("motor", "electronica", "servicios"),
         "expected_attributes": {"marca": "Nissan"},
         "raw": model_raw("motor", {"marca": "Nissan"}, "Nissan Versa usado"),
     },
@@ -59,7 +59,7 @@ FIXTURES = [
         "name": "inmuebles",
         "short_text": "Casa de dos recámaras",
         "expected_category": "inmobiliaria",
-        "ranked_categories": ("inmobiliaria", "servicios", "hogar"),
+        "captured_category_ranking": ("inmobiliaria", "servicios", "motor"),
         "expected_attributes": {"tipo": "Casa"},
         "raw": model_raw("inmobiliaria", {"tipo": "Casa"}, "Casa de dos recámaras"),
     },
@@ -67,15 +67,15 @@ FIXTURES = [
         "name": "servicios",
         "short_text": "Servicio de plomería a domicilio",
         "expected_category": "servicios",
-        "ranked_categories": ("servicios", "empleo", "hogar"),
+        "captured_category_ranking": ("empleo", "servicios", "motor"),
         "expected_attributes": {"tipo": "Plomería"},
-        "raw": model_raw("servicios", {"tipo": "Plomería"}, "Servicio de plomería"),
+        "raw": model_raw("empleo", {"tipo": "Plomería"}, "Servicio de plomería"),
     },
     {
         "name": "empleo",
         "short_text": "Vacante de tiempo completo",
         "expected_category": "empleo",
-        "ranked_categories": ("empleo", "servicios", "negocios"),
+        "captured_category_ranking": ("empleo", "servicios", "motor"),
         "expected_attributes": {"modalidad": "Tiempo completo"},
         "raw": model_raw("empleo", {"modalidad": "Tiempo completo"}, "Vacante de tiempo completo"),
     },
@@ -83,7 +83,7 @@ FIXTURES = [
         "name": "producto_general",
         "short_text": "Televisor Samsung usado",
         "expected_category": "electronica",
-        "ranked_categories": ("electronica", "hogar", "productos"),
+        "captured_category_ranking": ("electronica", "motor", "servicios"),
         "expected_attributes": {"marca": "Samsung"},
         "raw": model_raw("electronica", {"marca": "Samsung"}, "Televisor Samsung usado"),
     },
@@ -95,12 +95,19 @@ def test_representative_offline_fixture_metrics() -> None:
     top3_hits = 0
     predicted_attributes = 0
     correct_attributes = 0
+    allowed_categories = {category["slug"] for category in TAXONOMY}
 
     for fixture in FIXTURES:
         request = AutofillRequest(short_text=fixture["short_text"], taxonomy=TAXONOMY)
         result = canonicalize(fixture["raw"], request, "offline-fixture")
         top1_hits += int(result.category.value == fixture["expected_category"])
-        top3_hits += int(fixture["expected_category"] in fixture["ranked_categories"][:3])
+
+        captured_ranking = [
+            slug
+            for slug in fixture["captured_category_ranking"]
+            if slug in allowed_categories
+        ][:3]
+        top3_hits += int(fixture["expected_category"] in captured_ranking)
 
         for key, suggestion in result.attributes.items():
             predicted_attributes += 1
@@ -110,7 +117,7 @@ def test_representative_offline_fixture_metrics() -> None:
     top3_accuracy = top3_hits / len(FIXTURES)
     field_precision = correct_attributes / max(1, predicted_attributes)
 
-    assert top1_accuracy >= 0.80
+    assert top1_accuracy == 0.80
     assert top3_accuracy == 1.0
     assert field_precision >= 0.90
 
