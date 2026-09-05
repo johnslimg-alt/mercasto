@@ -26,7 +26,9 @@ class EnforceAdminRouteRole
             return true;
         }
 
-        if ($request->is('api/categories', 'api/categories/*') && ! $request->isMethod('GET')) {
+        if ($request->is('api/categories', 'api/categories/*')
+            && ! $request->isMethod('GET')
+            && ! $request->isMethod('HEAD')) {
             return true;
         }
 
