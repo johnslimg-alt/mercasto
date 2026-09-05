@@ -23,7 +23,7 @@ If Hostinger shows CPU limitation or CPU near 100%, reduce optional load in this
 1. GitHub self-hosted runners: `gh-runner-1`, `gh-runner-2`, `gh-runner-3`.
 2. n8n: `n8n_ai_agent`.
 3. Ollama: `mercasto_ollama`.
-4. Monitoring extras only if necessary: `cadvisor`, `prometheus`, `grafana`.
+4. Monitoring is external/read-only. The former cAdvisor/Prometheus/Grafana Compose stack is retired because cAdvisor required broad host filesystem access.
 
 Keep n8n data volumes unless a separate backup/export has been completed.
 
@@ -88,6 +88,7 @@ Suggested targets:
 - `n8n_ai_agent`: low CPU share and memory cap.
 - `mercasto_ollama`: disable unless actively used, or cap heavily.
 - GitHub runners: run only when needed; avoid long-running idle runner fleets on a small VPS.
+- Do not reintroduce Docker-socket autoheal or whole-root monitoring mounts. Use container restart policies, healthchecks and the existing external production/live gates.
 
 ## Do not do during an active limitation
 

@@ -1,23 +1,6 @@
 # docker-compose.yml — production ready for self-hosted runner
 
 services:
-  autoheal:
-    image: willfarrell/autoheal:1.2.0@sha256:31f580ef0279eaced5b38d631b08c474d70d8403c1c2fdd6ddcf2e879d5f3f7c
-    container_name: autoheal
-    environment:
-      - AUTOHEAL_CONTAINER_LABEL=all
-      - AUTOHEAL_INTERVAL=120
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
-    healthcheck:
-      disable: true
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   mercasto-frontend:
     build:
       context: .
@@ -438,56 +421,6 @@ services:
       interval: 60s
       timeout: 5s
       retries: 5
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1@sha256:3cde6faf0791ebf7b41d6f8ae7145466fed712ea6f252c935294d2608b1af388
-    container_name: cadvisor
-    profiles: ["monitoring"]
-    expose: ["8080"]
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    restart: unless-stopped
-    healthcheck:
-      disable: true
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  prometheus:
-    image: prom/prometheus:v2.54.0@sha256:497fe921f22fea8535fa2bcb1c193dacc6ce98c08274257b3d18a4eaae0f9647
-    container_name: prometheus
-    profiles: ["monitoring"]
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    expose: ["9090"]
-    depends_on: [cadvisor]
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  grafana:
-    image: grafana/grafana:11.1.0@sha256:079600c9517b678c10cda6006b4487d3174512fd4c6cface37df7822756ed7a5
-    container_name: grafana
-    profiles: ["monitoring"]
-    ports: ["127.0.0.1:3000:3000"]
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - "GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}"
-    depends_on: [prometheus]
-    restart: unless-stopped
     logging:
       driver: "json-file"
       options:
