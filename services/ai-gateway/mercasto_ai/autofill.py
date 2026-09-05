@@ -41,8 +41,59 @@ _CATEGORY_ANCHORS: dict[str, tuple[str, ...]] = {
 
 def _normalize_match_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value.casefold())
-    ascii_like = "".join(ch for ch in normalized if not unicodedata.combining(ch))
-    return " ".join(re.sub(r"[^a-z0-9+]+", " ", ascii_like).split())
+    without_marks = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return " ".join(re.sub(r"[^\w+]+", " ", without_marks, flags=re.UNICODE).split())
+
+
+def _contains_phrase(text: str, phrase: str) -> bool:
+    normalized_phrase = _normalize_match_text(phrase)
+    if not normalized_phrase:
+        return False
+    return re.search(rf"(?:^|\s){re.escape(normalized_phrase)}(?:$|\s)", text) is not None
+
+_CATEGORY_LOCALE_ANCHORS: dict[str, dict[str, tuple[str, ...]]] = {
+    "en": {
+        "motor": ("car", "vehicle", "motorcycle", "truck", "pickup", "bicycle", "auto parts"),
+        "inmobiliaria": ("house", "apartment", "real estate", "land", "office", "warehouse", "for sale", "for rent"),
+        "empleo": ("job", "vacancy", "full time", "part time", "salary", "hiring"),
+        "servicios": ("plumber", "plumbing", "electrician", "cleaning", "repair", "maintenance", "home service"),
+        "electronica": ("phone", "smartphone", "laptop", "tablet", "computer", "monitor", "television", "camera", "drone", "charger"),
+        "moda": ("dress", "clothing", "shoes", "bag", "jewelry", "size"),
+        "hogar": ("sofa", "furniture", "table", "chair", "bed", "mattress", "refrigerator", "washer", "garden"),
+        "infantil": ("toy", "baby", "stroller", "crib", "kids clothing", "child"),
+        "mascotas": ("dog", "cat", "pet", "pet food", "veterinarian", "adoption"),
+        "negocios": ("business for sale", "franchise", "machinery", "investment"),
+        "formacion": ("book", "course", "classes", "language lessons", "university", "certification"),
+        "ocio": ("video game", "console", "collectible", "guitar", "photography", "camping", "fishing", "surf"),
+        "boletos": ("ticket", "tickets", "concert", "festival", "theater", "match", "conference", "cinema"),
+        "turismo": ("hotel", "hostel", "lodging", "tour", "excursion", "travel", "tour guide", "transfer", "yacht", "boat", "spa"),
+    },
+    "ru": {
+        "motor": ("авто", "машина", "автомобиль", "мотоцикл", "велосипед", "запчасти"),
+        "inmobiliaria": ("дом", "квартира", "недвижимость", "земля", "офис", "аренда", "продажа"),
+        "empleo": ("работа", "вакансия", "полный день", "подработка", "зарплата"),
+        "servicios": ("услуга", "сантехник", "электрик", "уборка", "ремонт"),
+        "electronica": ("телефон", "смартфон", "ноутбук", "планшет", "компьютер", "телевизор", "камера"),
+        "mascotas": ("собака", "кошка", "питомец", "корм", "ветеринар"),
+        "formacion": ("книга", "курс", "занятия", "язык", "университет"),
+        "boletos": ("билет", "билеты", "концерт", "фестиваль", "театр"),
+        "turismo": ("отель", "гостиница", "тур", "экскурсия", "путешествие", "яхта"),
+    },
+}
+
+_SUBCATEGORY_HINTS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
+    "motor": (("Autos", ("auto", "carro", "coche", "nissan", "toyota", "honda", "versa", "car", "vehicle")), ("Motos", ("moto", "motocicleta", "motorcycle")), ("Camionetas", ("camioneta", "pickup", "truck")), ("Bicicletas", ("bicicleta", "bicycle")), ("Refacciones", ("refaccion", "autoparte", "auto parts"))),
+    "inmobiliaria": (("Casas en venta", ("casa en venta", "house for sale")), ("Casas en renta", ("casa en renta", "house for rent")), ("Departamentos", ("departamento", "apartment")), ("Terrenos", ("terreno", "land")), ("Oficinas", ("oficina", "office")), ("Bodegas", ("bodega", "warehouse"))),
+    "electronica": (("Teléfonos", ("iphone", "telefono", "celular", "phone", "smartphone")), ("Laptops", ("laptop", "macbook")), ("Tablets", ("tablet",)), ("TV y video", ("televisor", "tv", "television")), ("Cámaras", ("camara", "camera")), ("Drones", ("drone",))),
+    "empleo": (("Medio tiempo", ("medio tiempo", "part time")), ("Tecnología", ("tecnologia", "technology")), ("Ventas", ("ventas", "sales")), ("Chofer", ("chofer", "driver")), ("Construcción", ("construccion", "construction")), ("Hotelería", ("hoteleria", "hospitality"))),
+    "servicios": (("Reparaciones", ("reparacion", "repair")), ("Limpieza", ("limpieza", "cleaning")), ("Clases", ("clases", "lessons")), ("Transporte", ("transporte", "transport")), ("Mascotas", ("mascotas", "pets")), ("Belleza", ("belleza", "beauty"))),
+    "mascotas": (("Perros", ("perro", "dog")), ("Gatos", ("gato", "cat")), ("Alimento", ("croqueta", "croquetas", "pet food", "alimento")), ("Servicios", ("veterinario", "veterinarian"))),
+    "formacion": (("Libros", ("libro", "book")), ("Cursos", ("curso", "course")), ("Idiomas", ("idioma", "ingles", "language lessons")), ("Material escolar", ("material escolar", "school supplies"))),
+    "boletos": (("Conciertos", ("concierto", "concert")), ("Festivales", ("festival",)), ("Teatro y cultura", ("teatro", "theater")), ("Conferencias", ("conferencia", "conference"))),
+    "turismo": (("hospedaje", ("hotel", "hostal", "hospedaje", "lodging")), ("tours", ("tour", "excursion")), ("renta_vehiculos", ("renta de auto", "car rental")), ("guias_servicios", ("guia turistico", "tour guide")), ("retiros_bienestar", ("spa", "temazcal", "wellness"))),
+}
+
+_GENERIC_ENUM_VALUES = {"otra", "otro", "other", "otros", "otras"}
 
 class AttributeChoice(BaseModel):
     key: str = Field(min_length=1, max_length=80, pattern=r"^[a-zA-Z0-9_\-]+$")
@@ -282,15 +333,19 @@ class LocalAutofillClient:
             return None, 0.0
         allowed = {category.slug for category in request.taxonomy}
         scores: dict[str, float] = {}
+        locale = request.locale.split("-", 1)[0].casefold()
+        localized = _CATEGORY_LOCALE_ANCHORS.get(locale, {})
         for slug, anchors in _CATEGORY_ANCHORS.items():
             if slug not in allowed:
                 continue
             score = 0.0
-            for anchor in anchors:
+            combined_anchors = (*anchors, *localized.get(slug, ()))
+            category = next((item for item in request.taxonomy if item.slug == slug), None)
+            if category is not None:
+                combined_anchors = (*combined_anchors, category.label)
+            for anchor in combined_anchors:
                 normalized_anchor = _normalize_match_text(anchor)
-                if not normalized_anchor:
-                    continue
-                if re.search(rf"(?:^|\s){re.escape(normalized_anchor)}(?:$|\s)", normalized):
+                if _contains_phrase(normalized, normalized_anchor):
                     score += 3.0 + min(2.0, normalized_anchor.count(" ") * 0.5)
             if score:
                 scores[slug] = score
@@ -304,6 +359,16 @@ class LocalAutofillClient:
         confidence = 0.96 if best_score >= 6.0 else 0.9
         return best_slug, confidence
 
+    @staticmethod
+    def _rule_subcategory(category_slug: str | None, seller_text: str) -> tuple[str | None, float]:
+        if not category_slug or not seller_text:
+            return None, 0.0
+        normalized = _normalize_match_text(seller_text)
+        for hint, anchors in _SUBCATEGORY_HINTS.get(category_slug, ()):
+            if any(_contains_phrase(normalized, anchor) for anchor in anchors):
+                return hint, 0.9
+        return None, 0.0
+
     async def suggest(self, request: AutofillRequest) -> AutofillResponse:
         started = time.monotonic()
         images = [_sanitize_image(value) for value in request.images_base64]
@@ -314,6 +379,9 @@ class LocalAutofillClient:
                 if seller_text:
                     category_slug, category_confidence = self._rule_category(request, seller_text)
                 else:
+                    category_slug, category_confidence = None, 0.0
+
+                if category_slug is None and images:
                     category_schema = {
                         "type": "object",
                         "properties": {"category": {"type": "string", "enum": ["", *categories]}},
@@ -348,15 +416,16 @@ class LocalAutofillClient:
                 )
                 title = seller_text[:200] or None
                 description = seller_text[:1200] or None
+                subcategory_hint, subcategory_confidence = self._rule_subcategory(category_slug, seller_text)
                 combined: dict[str, Any] = {
                     "category": category_slug,
-                    "subcategory_hint": None,
+                    "subcategory_hint": subcategory_hint,
                     "attributes": {},
                     "title": title,
                     "description": description,
                     "confidence": {
                         "category": category_confidence,
-                        "subcategory_hint": 0.0,
+                        "subcategory_hint": subcategory_confidence,
                         "attributes": {},
                         "title": 1.0 if title else 0.0,
                         "description": 1.0 if description else 0.0,
@@ -366,9 +435,13 @@ class LocalAutofillClient:
                 enum_attributes = [
                     item for item in (selected.attributes if selected else []) if item.options
                 ]
+                normalized_seller_text = _normalize_match_text(seller_text)
                 for item in enum_attributes:
                     for value in item.options:
-                        if seller_text and value.casefold() in seller_text.casefold():
+                        normalized_value = _normalize_match_text(value)
+                        if normalized_value in _GENERIC_ENUM_VALUES:
+                            continue
+                        if seller_text and _contains_phrase(normalized_seller_text, normalized_value):
                             combined["attributes"][item.key] = value
                             combined["confidence"]["attributes"][item.key] = 0.95
                             break

@@ -309,8 +309,6 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
-      mercasto-autofill-model:
-        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=10)"]

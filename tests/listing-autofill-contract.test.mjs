@@ -52,3 +52,11 @@ test('listing autofill copy exists for all active UI languages', () => {
     assert.match(i18n, new RegExp(`\\n  ${language}: \\{`), `missing ${language}`);
   }
 });
+
+test('shared AI gateway does not health-block on optional autofill sidecar', () => {
+  const compose = fs.readFileSync('docker-compose.yml', 'utf8');
+  const gateway = compose.split('\n  mercasto-ai-gateway:')[1].split('\n  mercasto-')[0];
+  assert.doesNotMatch(gateway, /mercasto-autofill-model:\s*\n\s*condition:\s*service_healthy/);
+  const deploy = fs.readFileSync('.github/workflows/deploy-selfhosted.yml', 'utf8');
+  assert.match(deploy, /Optional listing-autofill model failed to start; shared AI gateway will continue without it/);
+});

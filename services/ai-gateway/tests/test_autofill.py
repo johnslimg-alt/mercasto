@@ -186,3 +186,37 @@ def test_rule_category_matches_representative_marketplace_phrases() -> None:
         slug, confidence = LocalAutofillClient._rule_category(request_value, phrase)
         assert slug == expected, phrase
         assert confidence >= 0.8
+
+
+def test_enum_matching_requires_token_boundaries() -> None:
+    req = AutofillRequest(
+        short_text="iPhone algo usado",
+        taxonomy=[{
+            "slug": "electronica",
+            "label": "Electrónica",
+            "attributes": [{"key": "marca", "type": "select", "options": ["LG", "Otra"]}],
+        }],
+    )
+    result = asyncio.run(LocalAutofillClient().suggest(req))
+    assert result.category.value == "electronica"
+    assert "marca" not in result.attributes
+
+
+def test_rule_category_respects_english_locale() -> None:
+    req = AutofillRequest(
+        short_text="house for sale",
+        locale="en",
+        taxonomy=[
+            {"slug": "inmobiliaria", "label": "Real Estate", "attributes": []},
+            {"slug": "servicios", "label": "Services", "attributes": []},
+        ],
+    )
+    slug, confidence = LocalAutofillClient._rule_category(req, req.short_text)
+    assert slug == "inmobiliaria"
+    assert confidence >= 0.9
+
+
+def test_rule_subcategory_returns_canonical_live_hint() -> None:
+    hint, confidence = LocalAutofillClient._rule_subcategory("motor", "Nissan Versa 2022")
+    assert hint == "Autos"
+    assert confidence >= 0.9
