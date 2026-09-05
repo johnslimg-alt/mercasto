@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-05T19:41:00Z
-Commit: d5d1d9ce
+Generated at: 2026-09-05T19:41:25Z
+Commit: f00893cd
 Source: php artisan route:list --except-vendor -v
 
 ```text
