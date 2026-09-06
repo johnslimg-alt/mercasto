@@ -134,3 +134,5 @@ bash scripts/internal-service-exposure-watch.test.sh
 echo "static safety scans OK"
 
 bash scripts/monetization-plan-contract.sh
+
+bash scripts/real-estate-unmanaged-dependency-contract-gate.sh
