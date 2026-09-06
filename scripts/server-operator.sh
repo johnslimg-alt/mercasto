@@ -234,6 +234,7 @@ case "$OPERATION" in
     fi
     clear_laravel_bootstrap_caches
     print_header "Build and start stack"
+    bash scripts/compose-orphan-preflight.sh "${COMPOSE_PROD[@]:2}"
     "${COMPOSE_PROD[@]}" up -d --build --remove-orphans --renew-anon-volumes
     nginx_config_test
     print_header "Run migrations"
@@ -255,6 +256,7 @@ case "$OPERATION" in
   restart_stack)
     require_confirm
     print_header "Restart stack"
+    bash scripts/compose-orphan-preflight.sh "${COMPOSE_PROD[@]:2}"
     "${COMPOSE_PROD[@]}" up -d --remove-orphans
     nginx_config_test
     compose_ps
