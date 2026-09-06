@@ -62,6 +62,7 @@ node --test tests/filter-url-state.test.mjs
 node --test tests/global-filter-options.test.mjs
 node --test scripts/server-operator-deploy-cache.test.mjs
 node --test scripts/php-runtime-dependency-parity.test.mjs
+bash scripts/no-unused-graphql-surface-gate.sh
 bash scripts/server-operator-branch-gate.sh
 bash scripts/maintenance-reboot-operator-gate.sh
 bash scripts/os-maintenance-precheck-tempfile.test.sh
