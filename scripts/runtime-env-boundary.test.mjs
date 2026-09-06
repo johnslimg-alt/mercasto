@@ -15,10 +15,10 @@ test('persistent host env is not widened to the shared www-data group', () => {
   assert.match(deploy, /if test -r backend\/\.env; then/);
 });
 
-test('runner uses its private env snapshot after host hardening', () => {
-  assert.doesNotMatch(deploy, /COMPOSE_ENV_FILE="\/var\/www\/mercasto\/\.env"/);
-  assert.doesNotMatch(deploy, /grep -Eq '[^']*MERCASTO_AI_INTERNAL_TOKEN[^']*' \/var\/www\/mercasto\/\.env/);
-  assert.ok((deploy.match(/COMPOSE_ENV_FILE="\$RUNNER_TEMP\/mercasto-backend\.env"/g) ?? []).length >= 5);
+test('compose env remains distinct from the Laravel runtime env boundary', () => {
+  assert.ok((deploy.match(/COMPOSE_ENV_FILE="\/var\/www\/mercasto\/\.env"/g) ?? []).length >= 5);
+  assert.doesNotMatch(deploy, /COMPOSE_ENV_FILE="\$RUNNER_TEMP\/mercasto-backend\.env"/);
+  assert.match(deploy, /docker exec mercasto_backend_container cat \/var\/www\/\.env > "\$RUNNER_TEMP\/mercasto-backend\.env"/);
   assert.match(deploy, /rm -f "\$RUNNER_TEMP\/mercasto-backend\.env"/);
 });
 
