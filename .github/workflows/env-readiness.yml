@@ -6,8 +6,10 @@ on:
     branches: [main]
     paths:
       - 'scripts/env-readiness-smoke.sh'
+      - 'scripts/production-env-readiness-smoke.sh'
       - 'backend/config/**'
       - 'docs/**'
+      - '.github/workflows/env-readiness.yml'
 
 permissions:
   contents: read
@@ -17,11 +19,24 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
-      - name: Run env readiness smoke
+      - name: Refresh production checkout
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          # /var/www/mercasto is intentionally root-owned; the self-hosted runner uses passwordless sudo for git refreshes.
           sudo -n git fetch origin main --prune
           sudo -n git reset --hard origin/main
-          REQUIRE_ENV_READY=1 bash scripts/env-readiness-smoke.sh
+
+      - name: Run runtime launch readiness smoke
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          ENV_READINESS_CONTAINER=mercasto_backend_container \
+            REQUIRE_ENV_READY=1 \
+            bash scripts/env-readiness-smoke.sh
+
+      - name: Run production env readiness smoke
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          ENV_READINESS_CONTAINER=mercasto_backend_container \
+            bash scripts/production-env-readiness-smoke.sh
