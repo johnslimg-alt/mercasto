@@ -34,7 +34,7 @@ export default function ReembolsosScreen() {
         <div className="rounded-[2rem] bg-gradient-to-br from-slate-950 to-slate-800 text-white p-7 sm:p-10 shadow-2xl shadow-slate-900/10 mb-8">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300 mb-3">Pagos, promociones y soporte</p>
           <h1 className="text-4xl sm:text-6xl font-black tracking-[-0.06em] leading-none mb-4">Política de pagos y reembolsos</h1>
-          <p className="max-w-3xl text-slate-300 leading-relaxed">Esta página resume cómo funcionan los cargos por servicios de visibilidad, suscripciones y otros productos digitales dentro de Mercasto, así como los casos en los que puede proceder una revisión de reembolso.</p>
+          <p className="max-w-3xl text-slate-300 leading-relaxed">Esta página resume cómo funcionan los cargos por servicios de visibilidad, planes de cuenta y otros productos digitales dentro de Mercasto, así como los casos en los que puede proceder una revisión de reembolso.</p>
           <p className="text-sm text-slate-400 mt-5">Última actualización: 23 de mayo de 2026 · Aplicable a Mercasto México</p>
         </div>
 
@@ -46,7 +46,7 @@ export default function ReembolsosScreen() {
               <a className="rounded-xl px-3 py-2 hover:bg-slate-50 hover:text-[#65A30D]" href="#servicios">2. Servicios de pago</a>
               <a className="rounded-xl px-3 py-2 hover:bg-slate-50 hover:text-[#65A30D]" href="#no-reembolsable">3. Cargos no reembolsables</a>
               <a className="rounded-xl px-3 py-2 hover:bg-slate-50 hover:text-[#65A30D]" href="#revision">4. Casos de revisión</a>
-              <a className="rounded-xl px-3 py-2 hover:bg-slate-50 hover:text-[#65A30D]" href="#suscripciones">5. Suscripciones</a>
+              <a className="rounded-xl px-3 py-2 hover:bg-slate-50 hover:text-[#65A30D]" href="#suscripciones">5. Planes de cuenta</a>
               <a className="rounded-xl px-3 py-2 hover:bg-slate-50 hover:text-[#65A30D]" href="#disputas">6. Soporte</a>
             </div>
           </aside>
@@ -72,8 +72,8 @@ export default function ReembolsosScreen() {
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">Cuando no proceda un reembolso monetario, Mercasto podrá ofrecer créditos, extensión del servicio o reactivación del beneficio si el problema fue causado por la plataforma.</div>
             </Section>
 
-            <Section id="suscripciones" title="5. Suscripciones y cancelaciones">
-              <p>Las suscripciones se cobran por adelantado para el periodo indicado al momento de compra. La cancelación evita renovaciones posteriores, pero no devuelve automáticamente el importe del periodo vigente ya iniciado.</p>
+            <Section id="suscripciones" title="5. Planes de cuenta y vigencia">
+              <p>Los planes de cuenta disponibles actualmente se pagan por adelantado para el periodo indicado al momento de compra y no se renuevan automáticamente. Al terminar la vigencia, se requiere una nueva compra para activar otro periodo.</p>
             </Section>
 
             <Section id="disputas" title="6. Disputas, aclaraciones y soporte">
