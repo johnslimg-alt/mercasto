@@ -39,3 +39,11 @@ No blank or `PENDING` field may be interpreted as approval. Payments/refunds, co
 ## First-prune engineering gate
 
 Before any destructive executor is merged: refresh count-only dry-run evidence; require fresh offsite backup plus restore drill; prove the age predicate is index-supported; add tests for protected rows; bound rows/time per batch; use retry-safe checkpoints; record rows/duration/WAL/database-size impact; and preserve only privacy-safe aggregates where raw identifiers are no longer needed.
+
+## Bounded-plan readiness evidence
+
+Run `RETENTION_PLAN_AGE_DAYS=<explicit-review-age> bash scripts/privacy-retention-plan-readiness.sh` to obtain planner-only evidence for the current engineering candidate selection shapes. The age must be supplied explicitly for each review run; the script intentionally has no default retention window. The script uses a read-only transaction and `EXPLAIN` with `ANALYZE FALSE`, so candidate queries are not executed and no row is changed.
+
+The plan probe is intentionally limited to telemetry candidates, read-only notifications older than the explicitly supplied plan-probe age, and already-expired personal access tokens. Unread notifications are excluded by predicate. Payments/refunds, moderation decisions and consent evidence remain outside this plan probe because their retention is specifically owner/legal gated.
+
+A successful plan probe is evidence only. It does not approve a retention window, create a pruning executor, or override `NO_LEADING_INDEX`; any sequential/global scan or otherwise unsuitable plan remains a blocker until a reviewed index migration or query shape is approved.
