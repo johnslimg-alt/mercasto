@@ -99,7 +99,7 @@ jobs:
       - name: Verify private AI deployment credential
         run: |
           set -euo pipefail
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -r "$COMPOSE_ENV_FILE"
           if ! grep -Eq '^MERCASTO_AI_INTERNAL_TOKEN=.+$' "$COMPOSE_ENV_FILE"; then
             echo "MERCASTO_AI_INTERNAL_TOKEN is required in the private production compose env." >&2
@@ -147,7 +147,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -s "$COMPOSE_ENV_FILE"
 
           CHANGED_FILES=""
@@ -366,7 +366,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -s "$COMPOSE_ENV_FILE"
 
           # Migrations run against the pre-refresh PHP runtime and can regenerate
@@ -577,7 +577,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -s "$COMPOSE_ENV_FILE"
 
           docker compose --env-file "$COMPOSE_ENV_FILE" exec -T -e DEPLOY_SHA="$DEPLOY_SHA" mercasto-frontend sh -lc '
@@ -627,7 +627,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
           test -s "$COMPOSE_ENV_FILE"
 
           for attempt in 1 2 3; do
