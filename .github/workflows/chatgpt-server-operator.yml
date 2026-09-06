@@ -30,7 +30,8 @@ jobs:
         github.event.comment.body == 'RUN:restart_frontend:MERCASTO' ||
         github.event.comment.body == 'RUN:restart_stack:MERCASTO' ||
         github.event.comment.body == 'RUN:align_media_caps:MERCASTO' ||
-        github.event.comment.body == 'RUN:cleanup_docker:MERCASTO'
+        github.event.comment.body == 'RUN:cleanup_docker:MERCASTO' ||
+        github.event.comment.body == 'RUN:maintenance_reboot:MERCASTO'
       )
     runs-on: [self-hosted]
     timeout-minutes: 60
@@ -58,6 +59,7 @@ jobs:
               'RUN:restart_stack:MERCASTO': ['restart_stack', 'MERCASTO', '160'],
               'RUN:align_media_caps:MERCASTO': ['align_media_caps', 'MERCASTO', '160'],
               'RUN:cleanup_docker:MERCASTO': ['cleanup_docker', 'MERCASTO', '160'],
+              'RUN:maintenance_reboot:MERCASTO': ['maintenance_reboot', 'MERCASTO', '220'],
             };
             const selected = commands[body];
             if (!selected) {
