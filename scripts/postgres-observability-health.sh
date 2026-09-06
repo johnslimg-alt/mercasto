@@ -37,6 +37,7 @@ WITH activity AS (
   FROM pg_stat_statements
   WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
     AND query ~* '(real_estate_developments|category_names_backup_20260704|blacklist)'
+    AND query !~* 'pg_stat_statements'
 )
 SELECT activity.connections,
        limits.max_connections,
