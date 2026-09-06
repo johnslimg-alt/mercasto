@@ -77,7 +77,9 @@ jobs:
           set -euo pipefail
           test -d /var/www/mercasto/.git
           test -f /var/www/mercasto/scripts/server-operator.sh
+          test -f /var/www/mercasto/scripts/server-status-safe.sh
           bash -n /var/www/mercasto/scripts/server-operator.sh
+          bash -n /var/www/mercasto/scripts/server-status-safe.sh
 
       - name: Execute allowlisted production operation
         shell: bash
@@ -88,8 +90,12 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          OPERATION="$OPERATION" CONFIRM="$CONFIRM" TAIL_LINES="$TAIL_LINES" \
-            bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
+          if [ "$OPERATION" = "status" ]; then
+            bash scripts/server-status-safe.sh
+          else
+            OPERATION="$OPERATION" CONFIRM="$CONFIRM" TAIL_LINES="$TAIL_LINES" \
+              bash scripts/server-operator.sh "$OPERATION" "$CONFIRM"
+          fi
 
       - name: Report result
         if: always()
