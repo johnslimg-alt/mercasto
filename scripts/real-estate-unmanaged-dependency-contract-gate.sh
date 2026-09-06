@@ -13,6 +13,6 @@ if grep -Eiq '(^|[^[:alnum:]_])(delete|update|insert|truncate|drop|alter|create|
   echo "FAIL: unmanaged dependency scan contains a mutating SQL verb" >&2
   exit 1
 fi
-grep -qF 'fresh runtime evidence' "$DOC"
+grep -qFi 'fresh runtime evidence' "$DOC"
 grep -qF '0 statement IDs / 0 calls' "$DOC"
 echo 'real estate unmanaged dependency contract OK'
