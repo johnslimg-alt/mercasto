@@ -40,6 +40,7 @@ Article 76 Bis VIII–IX technical requirements relevant to any future Mercasto 
 
 - Do **not** enable or describe recurring billing as production-ready until the purchase, renewal-notice and immediate-cancellation UX are verified against the requirements above and legal/product owners approve it.
 - Existing one-off visibility/credit/payment flows must keep their copy tied to actual activation, cancellation and refund mechanics.
+- Technical re-check on **2026-09-06**: current paid account plans are fixed one-month activations after an individual successful payment (`plan_expires_at = now() + 1 month`); no automatic renewal/recurring-charge path is implemented. Public refund copy must not imply automatic renewal or cancellation of future recurring charges.
 - Payment/refund retention remains outside automatic short-term pruning until legal/business approval.
 - AI moderation remains assist-only; no model-only signal may become authoritative legal/moderation action.
 
