@@ -16,7 +16,8 @@ required = [
     "-name 'backup_*.dump' -size +0c",
     'backup_age',
     '-gt 7200',
-    'pg_restore -l',
+    'docker exec -i mercasto_db_container pg_restore -l',
+    'sudo -n bash scripts/compose-orphan-preflight.sh',
     'compose-orphan-preflight.sh',
     'public_smoke',
     'systemd-run',
@@ -28,11 +29,13 @@ for needle in required:
         raise SystemExit(f'missing maintenance reboot safety contract: {needle}')
 if block.index('npm run maintenance:precheck') > block.index('systemd-run'):
     raise SystemExit('precheck must run before reboot scheduling')
-if block.index('pg_restore -l') > block.index('systemd-run'):
+if block.index('docker exec -i mercasto_db_container pg_restore -l') > block.index('systemd-run'):
     raise SystemExit('restore-list validation must run before reboot scheduling')
 if "RUN:maintenance_reboot:MERCASTO" not in workflow:
     raise SystemExit('maintenance reboot exact workflow command missing')
 if "['maintenance_reboot', 'MERCASTO', '220']" not in workflow:
     raise SystemExit('maintenance reboot command map missing confirmation')
+if '${COMPOSE_PROD[@]} exec -T postgres pg_restore -l' in block:
+    raise SystemExit('maintenance reboot must not require backend/.env for backup validation')
 print('maintenance reboot operator gate OK')
 PY
