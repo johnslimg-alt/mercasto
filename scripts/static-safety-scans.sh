@@ -64,6 +64,7 @@ node --test scripts/server-operator-deploy-cache.test.mjs
 node --test scripts/php-runtime-dependency-parity.test.mjs
 bash scripts/server-operator-branch-gate.sh
 bash scripts/maintenance-reboot-operator-gate.sh
+bash scripts/os-maintenance-precheck-tempfile.test.sh
 node --test scripts/manual-server-gate-self-hosted.test.mjs
 bash scripts/root-owned-checkout-workflow-gate.sh
 node --test scripts/automerge-workflow-guard.test.mjs

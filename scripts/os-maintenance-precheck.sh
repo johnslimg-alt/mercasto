@@ -26,7 +26,14 @@ git status --short
 git rev-parse --short HEAD
 
 echo "== Compose config =="
-docker compose "${COMPOSE_FILES[@]}" config >/tmp/mercasto_compose_maintenance_config.out
+compose_snapshot="$(mktemp "${TMPDIR:-/tmp}/mercasto-compose-maintenance.XXXXXX")"
+log_snapshot=""
+cleanup_snapshots() {
+  rm -f "$compose_snapshot"
+  [[ -z "$log_snapshot" ]] || rm -f "$log_snapshot"
+}
+trap cleanup_snapshots EXIT
+docker compose "${COMPOSE_FILES[@]}" config >"$compose_snapshot"
 echo "compose config OK"
 
 echo "== Containers =="
@@ -34,7 +41,6 @@ docker compose "${COMPOSE_FILES[@]}" ps
 
 echo "== Recent critical logs =="
 log_snapshot="$(mktemp "${TMPDIR:-/tmp}/mercasto-maintenance-logs.XXXXXX")"
-trap 'rm -f "$log_snapshot"' EXIT
 for container in \
   mercasto_backend_container \
   mercasto_frontend_container \
