@@ -75,7 +75,9 @@ jobs:
               path.write_text('\n'.join(output) + '\n', encoding='utf-8')
           PY
 
-          cat "$RUNNER_TEMP/mercasto-backend.env"             | docker exec -i mercasto_backend_container sh -lc 'umask 077; cat > /var/www/.env'
+          cat "$RUNNER_TEMP/mercasto-backend.env" \
+            | docker exec -i mercasto_backend_container sh -lc 'umask 027; cat > /var/www/.env; chown root:www-data /var/www/.env; chmod 0640 /var/www/.env'
+          docker exec -u www-data mercasto_backend_container test -r /var/www/.env
 
       - name: Verify private AI deployment credential
         run: |
