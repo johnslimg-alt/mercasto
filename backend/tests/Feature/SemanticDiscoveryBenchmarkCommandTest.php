@@ -36,6 +36,7 @@ class SemanticDiscoveryBenchmarkCommandTest extends TestCase
         $this->assertIsString($source);
         $upper = strtoupper($source);
 
+        $this->assertStringContainsString("DB::statement('SET TRANSACTION READ ONLY')", $source);
         $this->assertStringContainsString('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)', $source);
         $this->assertStringNotContainsString('DB::INSERT', $upper);
         $this->assertStringNotContainsString('DB::UPDATE', $upper);

@@ -55,6 +55,7 @@ class SemanticDiscoveryBenchmark extends Command
             }
 
             $plan = DB::transaction(function () use ($sample, $limit): array {
+                DB::statement('SET TRANSACTION READ ONLY');
                 DB::statement("SET LOCAL hnsw.iterative_scan = 'strict_order'");
                 $rows = DB::select(<<<'SQL'
 EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
