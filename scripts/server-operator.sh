@@ -352,6 +352,41 @@ PY
     df -h /
     ;;
 
+  maintenance_reboot)
+    require_confirm
+    print_header "Maintenance reboot preflight"
+    npm run maintenance:precheck
+
+    if [ ! -f /var/run/reboot-required ]; then
+      echo "Refusing reboot: /var/run/reboot-required is absent." >&2
+      exit 65
+    fi
+
+    latest_backup=$(
+      find postgres-backups -maxdepth 1 -type f -name 'backup_*.dump' -size +0c -printf '%T@ %p\n' \
+        | sort -nr | head -1 | cut -d' ' -f2-
+    )
+    if [ -z "$latest_backup" ]; then
+      echo "Refusing reboot: no non-empty PostgreSQL backup found." >&2
+      exit 66
+    fi
+
+    backup_age=$(( $(date +%s) - $(stat -c %Y "$latest_backup") ))
+    if [ "$backup_age" -gt 7200 ]; then
+      echo "Refusing reboot: latest PostgreSQL backup is older than 2 hours." >&2
+      exit 67
+    fi
+
+    "${COMPOSE_PROD[@]}" exec -T postgres pg_restore -l < "$latest_backup" >/dev/null
+    bash scripts/compose-orphan-preflight.sh "${COMPOSE_PROD[@]:2}"
+    public_smoke
+    echo "Validated backup: $latest_backup (age=${backup_age}s)"
+    echo "Scheduling host reboot in 45 seconds so the workflow can publish its result."
+    sudo -n systemd-run --unit=mercasto-maintenance-reboot \
+      --on-active=45s --timer-property=AccuracySec=1s --collect \
+      /usr/bin/systemctl reboot
+    ;;
+
   *)
     echo "Unknown operation: $OPERATION" >&2
     exit 2
