@@ -377,8 +377,8 @@ PY
       exit 67
     fi
 
-    "${COMPOSE_PROD[@]}" exec -T postgres pg_restore -l < "$latest_backup" >/dev/null
-    bash scripts/compose-orphan-preflight.sh "${COMPOSE_PROD[@]:2}"
+    docker exec -i mercasto_db_container pg_restore -l < "$latest_backup" >/dev/null
+    sudo -n bash scripts/compose-orphan-preflight.sh "${COMPOSE_PROD[@]:2}"
     public_smoke
     echo "Validated backup: $latest_backup (age=${backup_age}s)"
     echo "Scheduling host reboot in 45 seconds so the workflow can publish its result."
