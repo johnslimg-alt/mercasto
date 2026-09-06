@@ -16,6 +16,14 @@ require_cmd apt
 require_cmd ps
 require_cmd timeout
 
+if [[ -x scripts/persistent-firewall-docker-gate.sh ]]; then
+  echo "== Persistent firewall safety =="
+  bash scripts/persistent-firewall-docker-gate.sh
+else
+  echo "missing persistent firewall Docker-rule gate" >&2
+  exit 1
+fi
+
 if [[ ! -f docker-compose.yml ]]; then
   echo "run this script from the Mercasto repository root" >&2
   exit 1
