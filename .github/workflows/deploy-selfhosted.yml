@@ -281,6 +281,10 @@ jobs:
             docker compose --env-file "$COMPOSE_ENV_FILE" stop mercasto-moderation-worker >/dev/null 2>&1 || true
           fi
 
+          # Fail closed before any --remove-orphans call. An unrelated app must
+          # never be deleted merely because it inherited the Mercasto project label.
+          bash scripts/compose-orphan-preflight.sh --env-file "$COMPOSE_ENV_FILE"
+
           if [ -n "$PHP_REFRESH_SERVICES" ]; then
             docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans \
               --force-recreate --renew-anon-volumes $PHP_REFRESH_SERVICES
