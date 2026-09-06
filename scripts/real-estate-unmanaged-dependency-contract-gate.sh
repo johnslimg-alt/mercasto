@@ -9,6 +9,7 @@ grep -qF 'BEGIN TRANSACTION READ ONLY;' "$SCAN"
 grep -qF 'pg_stat_statements' "$SCAN"
 grep -qF "query !~* 'pg_stat_statements'" "$SCAN"
 grep -qF 'real_estate_developments' "$SCAN"
+grep -qF 'test "$rc" -le 1' "$SCAN"
 if grep -Eiq '(^|[^[:alnum:]_])(delete|update|insert|truncate|drop|alter|create|grant|revoke|vacuum|analyze|refresh|copy)[[:space:]]' "$SCAN"; then
   echo "FAIL: unmanaged dependency scan contains a mutating SQL verb" >&2
   exit 1
