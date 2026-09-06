@@ -131,3 +131,5 @@ bash scripts/compose-orphan-preflight.test.sh
 bash scripts/legacy-secret-fallback-gate.sh
 bash scripts/internal-service-exposure-watch.test.sh
 echo "static safety scans OK"
+
+bash scripts/monetization-plan-contract.sh
