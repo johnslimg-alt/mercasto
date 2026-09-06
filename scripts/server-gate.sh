@@ -34,7 +34,7 @@ resolve_project_dir() {
 PROJECT_DIR="$(resolve_project_dir)"
 cd "$PROJECT_DIR"
 git config --global --add safe.directory "$PROJECT_DIR" || true
-COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env}"
 COMPOSE_PROD=(docker compose --env-file "$COMPOSE_ENV_FILE" -f docker-compose.yml -f docker-compose.override.yml)
 
 case "$MODE" in

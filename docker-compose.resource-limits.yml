@@ -1,7 +1,7 @@
 # Optional VPS resource limits override for Hostinger CPU/resource limitation events.
 #
 # Usage:
-#   docker compose --env-file backend/.env \
+#   docker compose --env-file .env \
 #     -f docker-compose.yml \
 #     -f docker-compose.override.yml \
 #     -f docker-compose.resource-limits.yml \

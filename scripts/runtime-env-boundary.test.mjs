@@ -22,6 +22,24 @@ test('compose env remains distinct from the Laravel runtime env boundary', () =>
   assert.match(deploy, /rm -f "\$RUNNER_TEMP\/mercasto-backend\.env"/);
 });
 
+test('production smoke and operator utilities default to the dedicated Compose env', () => {
+  const composeUtilities = [
+    'scripts/billing-readiness-smoke.sh',
+    'scripts/business-profile-smoke.sh',
+    'scripts/category-data-smoke.sh',
+    'scripts/env-readiness-smoke.sh',
+    'scripts/production-smoke.sh',
+    'scripts/server-gate.sh',
+    'scripts/server-operator.sh',
+    'scripts/sms-readiness-smoke.sh',
+  ];
+  for (const file of composeUtilities) {
+    const contents = readFileSync(file, 'utf8');
+    assert.match(contents, /COMPOSE_ENV_FILE=\"\$\{COMPOSE_ENV_FILE:-\.env\}\"/, `${file} must default to .env`);
+    assert.doesNotMatch(contents, /COMPOSE_ENV_FILE=\"\$\{COMPOSE_ENV_FILE:-backend\/\.env\}\"/);
+  }
+});
+
 test('PHP runtimes receive a container-only readable env copy', () => {
   assert.match(deploy, /\/var\/www\/docker\/refresh-runtime-env\.sh/);
   assert.match(deploy, /docker exec -u www-data mercasto_backend_container test -r \/run\/mercasto\/\.env/);
