@@ -34,10 +34,30 @@ use Minishlink\WebPush\Subscription;
 class AdController extends Controller
 {
     private const PUBLIC_AD_USER_COLUMNS = 'id,name,role,avatar_url,is_verified,created_at,whatsapp,telegram_username,business_whatsapp';
+    private const MAX_AD_IMAGES = 10;
+    private const MAX_IMAGE_BATCH_BYTES = 50 * 1024 * 1024;
 
     private function imageManager(): ImageManager
     {
         return ImageManager::usingDriver(Driver::class);
+    }
+
+    private function validateImageUploadBatch(Request $request, int $existingImageCount = 0): void
+    {
+        $files = $request->hasFile('images') ? (array) $request->file('images') : [];
+
+        if ($existingImageCount + count($files) > self::MAX_AD_IMAGES) {
+            throw ValidationException::withMessages([
+                'images' => ['No puedes tener más de 10 imágenes en total por anuncio.'],
+            ]);
+        }
+
+        $batchBytes = array_sum(array_map(static fn ($file) => (int) $file->getSize(), $files));
+        if ($batchBytes > self::MAX_IMAGE_BATCH_BYTES) {
+            throw ValidationException::withMessages([
+                'images' => ['El lote de imágenes supera el límite total permitido.'],
+            ]);
+        }
     }
 
     private function validateCategoryAttributes(Request $request): void
@@ -485,13 +505,14 @@ class AdController extends Controller
             'longitude' => 'nullable|required_with:latitude|numeric|between:-118,-86',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД, защита от Data Integrity Bypass
             'subcategory' => 'nullable|string|max:255',
-            'images' => 'nullable|array|max:10', // Максимум 10 картинок
+            'images' => 'nullable|array|max:' . self::MAX_AD_IMAGES, // Максимум 10 картинок
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Максимум 5МБ и защита от OOM-бомб (Pixel Flooding)
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // 50MB Max
             'attributes' => 'required|array', // Динамические характеристики (марка, модель, ОЗУ и т.д.)
             'attributes.subcategory' => 'required|string|max:100',
         ]);
+        $this->validateImageUploadBatch($request);
         $this->validateCategoryAttributes($request);
 
         // Dynamic category attributes validation
@@ -660,9 +681,9 @@ class AdController extends Controller
             'longitude' => 'nullable|required_with:latitude|numeric|between:-118,-86',
             'category' => 'required|string|exists:categories,slug', // Строгая привязка к БД
             'subcategory' => 'nullable|string|max:255',
-            'existing_images' => 'nullable|array',
+            'existing_images' => 'nullable|array|max:' . self::MAX_AD_IMAGES,
             'existing_images.*' => 'string',
-            'images' => 'nullable|array|max:10', // Новые изображения
+            'images' => 'nullable|array|max:' . self::MAX_AD_IMAGES, // Новые изображения
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Защита от Pixel Flooding
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // Защита от загрузки вредоносных скриптов
@@ -710,15 +731,13 @@ class AdController extends Controller
         // Защита от IDOR (Кража медиа): разрешаем оставить только те фото, которые уже принадлежали этому объявлению
         $keptImages = array_intersect($currentImages, $requestedImages);
 
-        // Находим изображения для удаления, сравнивая текущие с сохраненными
+        // Проверяем лимиты до любых удалений: невалидный upload не должен менять существующие файлы.
+        $this->validateImageUploadBatch($request, count($keptImages));
+
+        // Находим изображения для удаления, сравнивая текущие с сохраненными.
         $imagesToDelete = array_diff($currentImages, $keptImages);
         if (count($imagesToDelete) > 0) {
             Storage::disk('public')->delete($imagesToDelete);
-        }
-
-        // Защита от переполнения хранилища: проверяем ОБЩЕЕ количество картинок (старые + новые)
-        if (count($keptImages) + ($request->hasFile('images') ? count($request->file('images')) : 0) > 10) {
-            return response()->json(['message' => 'No puedes tener más de 10 imágenes en total por anuncio.'], 422);
         }
 
         // Загружаем новые изображения
@@ -1771,12 +1790,10 @@ class AdController extends Controller
     {
         $ad = Ad::with('user')->findOrFail($id);
 
-        // Защита от IDOR: скрытые объявления нельзя экспортировать в PDF
-        if ($ad->status !== 'active') {
-            $user = auth('sanctum')->user();
-            if (!$user || ($user->id !== $ad->user_id && $user->role !== 'admin')) {
-                return response()->json(['message' => 'Anuncio no disponible para exportación.'], 403);
-            }
+        // PDF exports may contain seller/listing details and are owner/admin only.
+        $user = auth('sanctum')->user();
+        if (! $user || ((int) $user->id !== (int) $ad->user_id && $user->role !== 'admin')) {
+            return response()->json(['message' => 'Anuncio no disponible para exportación.'], 403);
         }
 
         // Генерируем PDF только для категории "недвижимость"
@@ -1987,7 +2004,10 @@ class AdController extends Controller
     }
 
     /**
-     * AI Agent for PostgreSQL (Text-to-SQL & Database Insights)
+     * AI Agent for PostgreSQL insights.
+     *
+     * The model may only select one predefined read-only action and arguments.
+     * It never produces executable SQL.
      */
     public function askPostgresAgent(Request $request)
     {
@@ -1995,26 +2015,194 @@ class AdController extends Controller
         $request->validate(['query' => 'required|string|max:1000']);
         $query = (string) $request->input('query');
 
-        $schema = "Tables: ads(id, title, price, status, views, category, created_at), users(id, name, role, created_at), ad_clicks(ad_id, channel, created_at).";
-        $prompt = "Schema: {$schema}\nRequest: {$query}\nReturn ONLY one safe PostgreSQL SELECT query using only these tables and columns. Include LIMIT 50 or less. No markdown. No semicolon.";
+        $actions = [
+            'ads_summary_by_status' => 'No arguments. Count listings and average price grouped by status.',
+            'ads_by_category' => 'Arguments: category (string), optional limit 1-50. Return recent listings in one exact category.',
+            'top_ads_by_views' => 'Arguments: optional limit 1-50. Return active listings ordered by views.',
+            'recent_ads' => 'Arguments: optional days 1-365, optional limit 1-50. Return recently created listings.',
+            'user_growth' => 'Arguments: optional days 1-365. Return daily new-user counts grouped by role.',
+            'clicks_by_channel' => 'Arguments: optional days 1-365. Return contact-click counts grouped by channel.',
+        ];
+        $actionCatalog = collect($actions)
+            ->map(fn (string $description, string $name) => "- {$name}: {$description}")
+            ->implode("\n");
+        $prompt = "User request: {$query}\nAllowed actions:\n{$actionCatalog}\nReturn ONLY JSON with exactly these top-level keys: action, args. Never return SQL, code, markdown, or extra keys.";
 
         try {
-            $sql = $this->askAiText(
-                'You are a PostgreSQL DBA. Generate read-only SQL only. Never modify data.',
+            $selection = $this->askAiText(
+                'You classify an admin analytics request into one predefined read-only database action. Never generate SQL.',
                 $prompt,
-                220
+                180
             );
-            $sql = $this->safeAgentSelectSql($sql);
+            $command = $this->parsePostgresAgentCommand($selection);
 
             return response()->json([
                 'agent' => 'PostgreSQL DBA AI',
-                'sql' => $sql,
-                'data' => $this->runAgentSelect($sql),
+                'action' => $command['action'],
+                'data' => $this->runPostgresAgentAction($command['action'], $command['args']),
                 'status' => 'success',
             ]);
         } catch (\Throwable $e) {
             return response()->json(['agent' => 'PostgreSQL DBA AI', 'error' => $e->getMessage()], 400);
         }
+    }
+
+    private function parsePostgresAgentCommand(string $selection): array
+    {
+        $json = trim(str_replace(['```json', '```', '`'], '', $selection));
+        $command = json_decode($json, true);
+
+        if (! is_array($command) || count($command) !== 2 || array_diff(array_keys($command), ['action', 'args']) !== []) {
+            throw new \RuntimeException('La acción de base de datos generada no es válida.');
+        }
+
+        $action = $command['action'] ?? null;
+        $args = $command['args'] ?? null;
+        if (! is_string($action) || ! is_array($args)) {
+            throw new \RuntimeException('La acción de base de datos generada no es válida.');
+        }
+
+        $allowedActions = [
+            'ads_summary_by_status',
+            'ads_by_category',
+            'top_ads_by_views',
+            'recent_ads',
+            'user_growth',
+            'clicks_by_channel',
+        ];
+        if (! in_array($action, $allowedActions, true)) {
+            throw new \RuntimeException('La acción solicitada no está permitida.');
+        }
+
+        return ['action' => $action, 'args' => $args];
+    }
+
+    private function runPostgresAgentAction(string $action, array $args): array
+    {
+        return match ($action) {
+            'ads_summary_by_status' => $this->postgresAdsSummaryByStatus($args),
+            'ads_by_category' => $this->postgresAdsByCategory($args),
+            'top_ads_by_views' => $this->postgresTopAdsByViews($args),
+            'recent_ads' => $this->postgresRecentAds($args),
+            'user_growth' => $this->postgresUserGrowth($args),
+            'clicks_by_channel' => $this->postgresClicksByChannel($args),
+            default => throw new \RuntimeException('La acción solicitada no está permitida.'),
+        };
+    }
+
+    private function postgresAdsSummaryByStatus(array $args): array
+    {
+        $this->requireOnlyAgentArgs($args, []);
+
+        return DB::table('ads')
+            ->select('status', DB::raw('COUNT(*) as total'), DB::raw('AVG(price) as average_price'))
+            ->groupBy('status')
+            ->orderBy('status')
+            ->get()
+            ->map(fn ($row) => [
+                'status' => $row->status,
+                'total' => (int) $row->total,
+                'average_price' => round((float) $row->average_price, 2),
+            ])->all();
+    }
+
+    private function postgresAdsByCategory(array $args): array
+    {
+        $this->requireOnlyAgentArgs($args, ['category', 'limit']);
+        $category = trim((string) ($args['category'] ?? ''));
+        if ($category === '' || mb_strlen($category) > 100) {
+            throw new \RuntimeException('La categoría indicada no es válida.');
+        }
+        $limit = $this->boundedAgentInt($args, 'limit', 20, 1, 50);
+
+        return DB::table('ads')
+            ->select(['id', 'title', 'price', 'status', 'views', 'category', 'created_at'])
+            ->where('category', $category)
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()->map(fn ($row) => (array) $row)->all();
+    }
+
+    private function postgresTopAdsByViews(array $args): array
+    {
+        $this->requireOnlyAgentArgs($args, ['limit']);
+        $limit = $this->boundedAgentInt($args, 'limit', 20, 1, 50);
+
+        return DB::table('ads')
+            ->select(['id', 'title', 'price', 'views', 'category', 'created_at'])
+            ->where('status', 'active')
+            ->orderByDesc('views')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()->map(fn ($row) => (array) $row)->all();
+    }
+
+    private function postgresRecentAds(array $args): array
+    {
+        $this->requireOnlyAgentArgs($args, ['days', 'limit']);
+        $days = $this->boundedAgentInt($args, 'days', 30, 1, 365);
+        $limit = $this->boundedAgentInt($args, 'limit', 20, 1, 50);
+
+        return DB::table('ads')
+            ->select(['id', 'title', 'price', 'status', 'views', 'category', 'created_at'])
+            ->where('created_at', '>=', now()->subDays($days))
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()->map(fn ($row) => (array) $row)->all();
+    }
+
+    private function postgresUserGrowth(array $args): array
+    {
+        $this->requireOnlyAgentArgs($args, ['days']);
+        $days = $this->boundedAgentInt($args, 'days', 30, 1, 365);
+
+        return DB::table('users')
+            ->selectRaw('DATE(created_at) as day, role, COUNT(*) as total')
+            ->where('created_at', '>=', now()->subDays($days))
+            ->groupByRaw('DATE(created_at), role')
+            ->orderBy('day')
+            ->get()
+            ->map(fn ($row) => ['day' => $row->day, 'role' => $row->role, 'total' => (int) $row->total])
+            ->all();
+    }
+
+    private function postgresClicksByChannel(array $args): array
+    {
+        $this->requireOnlyAgentArgs($args, ['days']);
+        $days = $this->boundedAgentInt($args, 'days', 30, 1, 365);
+
+        return DB::table('ad_clicks')
+            ->select('channel', DB::raw('COUNT(*) as total'))
+            ->where('created_at', '>=', now()->subDays($days))
+            ->groupBy('channel')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => ['channel' => $row->channel, 'total' => (int) $row->total])
+            ->all();
+    }
+
+    private function requireOnlyAgentArgs(array $args, array $allowed): void
+    {
+        if (array_diff(array_keys($args), $allowed) !== []) {
+            throw new \RuntimeException('La acción contiene argumentos no permitidos.');
+        }
+    }
+
+    private function boundedAgentInt(array $args, string $key, int $default, int $min, int $max): int
+    {
+        if (! array_key_exists($key, $args)) {
+            return $default;
+        }
+        if (! is_int($args[$key]) && ! (is_string($args[$key]) && preg_match('/^\d+$/', $args[$key]))) {
+            throw new \RuntimeException("El argumento {$key} no es válido.");
+        }
+
+        $value = (int) $args[$key];
+        if ($value < $min || $value > $max) {
+            throw new \RuntimeException("El argumento {$key} está fuera del rango permitido.");
+        }
+
+        return $value;
     }
 
     /**
@@ -2095,70 +2283,6 @@ class AdController extends Controller
     public function askUiAgent(Request $request)
     {
         return $this->roleAgentResponse($request, 'UI Developer AI', 'You are a senior UI developer for Mercasto React/Tailwind. Reply in Russian with concrete CSS/JSX implementation steps and safe code suggestions.');
-    }
-
-    private function safeAgentSelectSql(string $sql): string
-    {
-        $sql = trim(str_replace(['```sql', '```', '`'], '', $sql));
-        $sql = trim(preg_replace('/\s+/', ' ', $sql) ?? $sql);
-        $sql = rtrim($sql, " \t\n\r\0\x0B;");
-
-        if (! preg_match('/^\s*select\s/i', $sql)) {
-            throw new \RuntimeException('Solo se permiten consultas SELECT por seguridad.');
-        }
-
-        if (preg_match('/(;|--|\/\*|\*\/)/', $sql)) {
-            throw new \RuntimeException('La consulta contiene sintaxis no permitida.');
-        }
-
-        $blockedKeywords = 'insert|update|delete|drop|alter|truncate|grant|revoke|copy|create|replace|execute|call|do|listen|notify|vacuum|analyze|attach|detach';
-        if (preg_match('/\b(' . $blockedKeywords . ')\b/i', $sql)) {
-            throw new \RuntimeException('La consulta generada no es de solo lectura.');
-        }
-
-        $blockedFields = 'email|password|token|secret|phone|two_factor|remember_token|pending_email|api_key|webhook|clip|payment';
-        if (preg_match('/\b(' . $blockedFields . ')\b/i', $sql)) {
-            throw new \RuntimeException('La consulta intenta leer campos sensibles.');
-        }
-
-        preg_match_all('/\b(?:from|join)\s+([a-zA-Z_][a-zA-Z0-9_.]*)/i', $sql, $matches);
-        $tables = $matches[1] ?? [];
-        if ($tables === []) {
-            throw new \RuntimeException('La consulta debe leer una tabla permitida.');
-        }
-
-        $allowedTables = ['ads', 'users', 'ad_clicks'];
-        foreach ($tables as $table) {
-            $table = strtolower((string) Str::of($table)->afterLast('.'));
-            if (! in_array($table, $allowedTables, true)) {
-                throw new \RuntimeException('La consulta usa una tabla no permitida.');
-            }
-        }
-
-        if (preg_match('/\b(pg_|pg_catalog|information_schema|sqlite_|mysql)\b/i', $sql)) {
-            throw new \RuntimeException('La consulta intenta leer metadatos internos.');
-        }
-
-        if (preg_match('/\blimit\s+(\d+)\b/i', $sql, $limit) && (int) $limit[1] > 100) {
-            throw new \RuntimeException('El límite máximo permitido es 100 filas.');
-        }
-
-        if (! preg_match('/\blimit\s+\d+\b/i', $sql)) {
-            $sql .= ' LIMIT 50';
-        }
-
-        return $sql;
-    }
-
-    private function runAgentSelect(string $sql): array
-    {
-        return DB::transaction(function () use ($sql) {
-            if (DB::getDriverName() === 'pgsql') {
-                DB::statement("SET LOCAL statement_timeout = '3000ms'");
-            }
-
-            return DB::select($sql);
-        });
     }
 
     private function roleAgentResponse(Request $request, string $agent, string $system)

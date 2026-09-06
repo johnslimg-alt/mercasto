@@ -76,6 +76,8 @@ test('mocked deploy enforces cache and upstream refresh order', () => {
   mkdirSync(bin);
   mkdirSync(cache, { recursive: true });
   mkdirSync(join(fixture, 'scripts'), { recursive: true });
+  writeFileSync(join(fixture, 'scripts', 'compose-orphan-preflight.sh'), '#!/usr/bin/env bash\nexit 0\n');
+  chmodSync(join(fixture, 'scripts', 'compose-orphan-preflight.sh'), 0o755);
   writeFileSync(join(fixture, 'scripts', 'offsite-backup-smoke.sh'), '#!/usr/bin/env bash\nexit 0\n');
   chmodSync(join(fixture, 'scripts', 'offsite-backup-smoke.sh'), 0o755);
   writeFileSync(join(fixture, 'scripts', 'media-offsite-backup-smoke.sh'), '#!/usr/bin/env bash\nexit 0\n');

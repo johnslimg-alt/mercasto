@@ -7,6 +7,7 @@ cd "$ROOT_DIR"
 echo "== Mercasto static safety scans =="
 
 bash scripts/repository-sensitive-artifact-scan.sh
+bash scripts/github-security-scanning-gate.sh
 bash scripts/repository-sensitive-artifact-scan.test.sh
 bash scripts/normalize-route-inventory.test.sh
 bash scripts/route-inventory-doc-gate.sh
@@ -25,6 +26,7 @@ node scripts/self-hosted-pr-safety.mjs
 node --test scripts/self-hosted-pr-safety.test.mjs
 bash scripts/official-actions-node24-gate.sh
 bash scripts/official-actions-node24-gate.test.sh
+bash scripts/compose-image-digest-gate.sh
 bash scripts/security-audit-gate.sh
 bash scripts/launch-readiness-contract-gate.sh
 bash scripts/seo-route-shell-gate.sh
@@ -36,6 +38,7 @@ bash scripts/catalog-reference-integrity-gate.sh
 bash scripts/seo-weekly-measurement-gate.sh
 bash scripts/seo-url-inspection-gate.sh
 bash scripts/backend-ai-provider-boundary-gate.sh
+bash scripts/ai-agent-action-safety-gate.sh
 bash scripts/admin-seo-measurement-gate.sh
 bash scripts/analytics-csp-gate.sh
 bash scripts/e2e-fixture-safety-gate.sh
@@ -60,6 +63,9 @@ node --test tests/global-filter-options.test.mjs
 node --test scripts/server-operator-deploy-cache.test.mjs
 node --test scripts/php-runtime-dependency-parity.test.mjs
 bash scripts/server-operator-branch-gate.sh
+bash scripts/maintenance-reboot-operator-gate.sh
+bash scripts/os-maintenance-precheck-tempfile.test.sh
+bash scripts/persistent-firewall-docker-gate.test.sh
 node --test scripts/manual-server-gate-self-hosted.test.mjs
 bash scripts/root-owned-checkout-workflow-gate.sh
 node --test scripts/automerge-workflow-guard.test.mjs
@@ -69,13 +75,18 @@ node --test scripts/seo-audit-request.test.mjs
 bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh
 bash scripts/offsite-backup-contract-gate.sh
+bash scripts/backup-permission-contract-gate.sh
+bash scripts/postgres-backup-loop.test.sh
 bash scripts/schema-drift-contract-gate.sh
 bash scripts/postgres-observability-contract-gate.sh
 bash scripts/payment-retention-scan.sh
+bash scripts/fixed-period-plan-copy-gate.sh
 bash scripts/privacy-retention-contract-gate.sh
 bash scripts/payment-payload-privacy-gate.sh
 bash scripts/payment-webhook-idempotency-scan.sh
 bash scripts/media-upload-validation-scan.sh
+bash scripts/private-identity-storage-gate.sh
+bash scripts/account-deletion-private-data-gate.sh
 bash scripts/xml-upload-security-gate.sh
 bash scripts/search-alert-flow-gate.sh
 bash scripts/chat-api-security-gate.sh
@@ -114,7 +125,14 @@ node --test scripts/ai-brand-positioning.test.mjs
 bash scripts/attribute-flow-gate.sh
 bash scripts/otp-abuse-control-gate.sh
 bash scripts/python-ai-private-runtime-gate.sh
+bash scripts/runtime-host-privilege-gate.sh
+bash scripts/deploy-orphan-cleanup-gate.sh
+bash scripts/compose-orphan-preflight.test.sh
 
 bash scripts/legacy-secret-fallback-gate.sh
 bash scripts/internal-service-exposure-watch.test.sh
 echo "static safety scans OK"
+
+bash scripts/monetization-plan-contract.sh
+
+bash scripts/real-estate-unmanaged-dependency-contract-gate.sh

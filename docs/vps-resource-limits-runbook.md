@@ -23,7 +23,7 @@ If Hostinger shows CPU limitation or CPU near 100%, reduce optional load in this
 1. GitHub self-hosted runners: `gh-runner-1`, `gh-runner-2`, `gh-runner-3`.
 2. n8n: `n8n_ai_agent`.
 3. Ollama: `mercasto_ollama`.
-4. Monitoring extras only if necessary: `cadvisor`, `prometheus`, `grafana`.
+4. Monitoring extras only if necessary: `prometheus`, `grafana`.
 
 Keep n8n data volumes unless a separate backup/export has been completed.
 

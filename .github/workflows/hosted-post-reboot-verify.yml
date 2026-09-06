@@ -1,0 +1,95 @@
+name: Hosted Post-Reboot Verify
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: hosted-post-reboot-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: >-
+      github.event.issue.number == 832 &&
+      github.actor == 'johnslimg-alt' &&
+      github.event.comment.body == 'RUN:hosted_post_reboot_verify:MERCASTO'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Validate recovery secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_verify_key
+          chmod 600 ~/.ssh/mercasto_verify_key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Verify production after reboot
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_verify_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /var/www/mercasto
+          echo "kernel=$(uname -r)"
+          echo "head=$(git rev-parse HEAD)"
+          test -z "$(git status --porcelain)"
+          if [ -e /var/run/reboot-required ]; then
+            echo "reboot_required=yes"
+            exit 70
+          fi
+          echo "reboot_required=no"
+          curl -fsS --max-time 30 -o /dev/null https://mercasto.com/
+          echo "root_http=PASS"
+          systemctl is-active --quiet passport-api.service
+          echo "passport=active"
+          docker ps --filter label=com.docker.compose.project=mercasto --format '{{.Names}}|{{.Status}}'
+          test "$(docker ps --filter label=com.docker.compose.project=mercasto -q | wc -l)" -eq 13
+          bash scripts/production-session-security-smoke.sh
+          bash scripts/production-error-mode-smoke.sh
+          bash scripts/internal-service-exposure-watch.sh
+          bash scripts/backup-permission-contract-gate.sh
+          echo "post_reboot_verify=PASS"
+          REMOTE
+
+      - name: Remove SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/mercasto_verify_key
+
+      - name: Report result
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          body="$(printf 'HOSTED_POST_REBOOT_VERIFY_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' "$JOB_STATUS" "$GITHUB_RUN_ID" "$RUN_URL")"
+          gh api "repos/$REPO/issues/832/comments" -f body="$body"

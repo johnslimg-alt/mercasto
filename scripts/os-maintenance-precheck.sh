@@ -16,6 +16,14 @@ require_cmd apt
 require_cmd ps
 require_cmd timeout
 
+if [[ -x scripts/persistent-firewall-docker-gate.sh ]]; then
+  echo "== Persistent firewall safety =="
+  bash scripts/persistent-firewall-docker-gate.sh
+else
+  echo "missing persistent firewall Docker-rule gate" >&2
+  exit 1
+fi
+
 if [[ ! -f docker-compose.yml ]]; then
   echo "run this script from the Mercasto repository root" >&2
   exit 1
@@ -26,7 +34,14 @@ git status --short
 git rev-parse --short HEAD
 
 echo "== Compose config =="
-docker compose "${COMPOSE_FILES[@]}" config >/tmp/mercasto_compose_maintenance_config.out
+compose_snapshot="$(mktemp "${TMPDIR:-/tmp}/mercasto-compose-maintenance.XXXXXX")"
+log_snapshot=""
+cleanup_snapshots() {
+  rm -f "$compose_snapshot"
+  [[ -z "$log_snapshot" ]] || rm -f "$log_snapshot"
+}
+trap cleanup_snapshots EXIT
+docker compose "${COMPOSE_FILES[@]}" config >"$compose_snapshot"
 echo "compose config OK"
 
 echo "== Containers =="
@@ -34,7 +49,6 @@ docker compose "${COMPOSE_FILES[@]}" ps
 
 echo "== Recent critical logs =="
 log_snapshot="$(mktemp "${TMPDIR:-/tmp}/mercasto-maintenance-logs.XXXXXX")"
-trap 'rm -f "$log_snapshot"' EXIT
 for container in \
   mercasto_backend_container \
   mercasto_frontend_container \
@@ -58,8 +72,20 @@ fi
 echo "== Backups =="
 if [[ -d postgres-backups ]]; then
   ls -lah postgres-backups | tail -20
+  backup_dir_mode="$(stat -c %a postgres-backups)"
+  if [[ "$backup_dir_mode" != "2770" && "$backup_dir_mode" != "770" ]]; then
+    echo "unsafe postgres-backups mode: $backup_dir_mode (expected 2770/770)" >&2
+    exit 1
+  fi
+  unsafe_backups="$(find postgres-backups -maxdepth 1 -type f -name '*.dump' -perm /0137 -print -quit)"
+  if [[ -n "$unsafe_backups" ]]; then
+    echo "unsafe PostgreSQL backup permissions detected" >&2
+    exit 1
+  fi
+  echo "backup permissions OK"
 else
   echo "postgres-backups directory missing" >&2
+  exit 1
 fi
 
 echo "== Reboot state =="

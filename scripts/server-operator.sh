@@ -234,6 +234,7 @@ case "$OPERATION" in
     fi
     clear_laravel_bootstrap_caches
     print_header "Build and start stack"
+    bash scripts/compose-orphan-preflight.sh "${COMPOSE_PROD[@]:2}"
     "${COMPOSE_PROD[@]}" up -d --build --remove-orphans --renew-anon-volumes
     nginx_config_test
     print_header "Run migrations"
@@ -255,6 +256,7 @@ case "$OPERATION" in
   restart_stack)
     require_confirm
     print_header "Restart stack"
+    bash scripts/compose-orphan-preflight.sh "${COMPOSE_PROD[@]:2}"
     "${COMPOSE_PROD[@]}" up -d --remove-orphans
     nginx_config_test
     compose_ps
@@ -348,6 +350,41 @@ PY
     docker system prune -af --volumes=false
     docker builder prune -af
     df -h /
+    ;;
+
+  maintenance_reboot)
+    require_confirm
+    print_header "Maintenance reboot preflight"
+    npm run maintenance:precheck
+
+    if [ ! -f /var/run/reboot-required ]; then
+      echo "Refusing reboot: /var/run/reboot-required is absent." >&2
+      exit 65
+    fi
+
+    latest_backup=$(
+      find postgres-backups -maxdepth 1 -type f -name 'backup_*.dump' -size +0c -printf '%T@ %p\n' \
+        | sort -nr | head -1 | cut -d' ' -f2-
+    )
+    if [ -z "$latest_backup" ]; then
+      echo "Refusing reboot: no non-empty PostgreSQL backup found." >&2
+      exit 66
+    fi
+
+    backup_age=$(( $(date +%s) - $(stat -c %Y "$latest_backup") ))
+    if [ "$backup_age" -gt 7200 ]; then
+      echo "Refusing reboot: latest PostgreSQL backup is older than 2 hours." >&2
+      exit 67
+    fi
+
+    docker exec -i mercasto_db_container pg_restore -l < "$latest_backup" >/dev/null
+    sudo -n bash scripts/compose-orphan-preflight.sh "${COMPOSE_PROD[@]:2}"
+    public_smoke
+    echo "Validated backup: $latest_backup (age=${backup_age}s)"
+    echo "Scheduling host reboot in 45 seconds so the workflow can publish its result."
+    sudo -n systemd-run --unit=mercasto-maintenance-reboot \
+      --on-active=45s --timer-property=AccuracySec=1s --collect \
+      /usr/bin/systemctl reboot
     ;;
 
   *)

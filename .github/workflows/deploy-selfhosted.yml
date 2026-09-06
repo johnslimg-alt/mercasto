@@ -169,6 +169,7 @@ jobs:
             add_service mercasto-ai-gateway
             add_up_service mercasto-frontend
             add_up_service ollama
+            add_up_service mercasto-autofill-model
             add_up_service mercasto-ai-gateway
             PHP_DEPENDENCY_REFRESH=1
           else
@@ -186,6 +187,7 @@ jobs:
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(services/ai-gateway/|docker-compose(\.override)?\.yml$)'; then
               add_service mercasto-ai-gateway
               add_up_service ollama
+              add_up_service mercasto-autofill-model
               add_up_service mercasto-ai-gateway
             fi
             # Compose changes can alter PHP mounts or image ownership, so renew
@@ -249,6 +251,7 @@ jobs:
           FRONTEND_UP=0
           MODERATION_WORKER_UP=0
           GATEWAY_UP=0
+          AUTOFILL_MODEL_UP=0
           PHP_REFRESH_SERVICES=""
           OTHER_UP_SERVICES=""
           for service in $UP_SERVICES; do
@@ -256,6 +259,8 @@ jobs:
               FRONTEND_UP=1
             elif [ "$service" = "mercasto-moderation-worker" ]; then
               MODERATION_WORKER_UP=1
+            elif [ "$service" = "mercasto-autofill-model" ]; then
+              AUTOFILL_MODEL_UP=1
             elif [ "$service" = "mercasto-ai-gateway" ]; then
               GATEWAY_UP=1
               OTHER_UP_SERVICES="$OTHER_UP_SERVICES $service"
@@ -276,25 +281,35 @@ jobs:
             docker compose --env-file "$COMPOSE_ENV_FILE" stop mercasto-moderation-worker >/dev/null 2>&1 || true
           fi
 
+          # Fail closed before any --remove-orphans call. An unrelated app must
+          # never be deleted merely because it inherited the Mercasto project label.
+          bash scripts/compose-orphan-preflight.sh --env-file "$COMPOSE_ENV_FILE"
+
           if [ -n "$PHP_REFRESH_SERVICES" ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps \
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans \
               --force-recreate --renew-anon-volumes $PHP_REFRESH_SERVICES
           fi
 
+          if [ "$AUTOFILL_MODEL_UP" -eq 1 ]; then
+            if ! docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans mercasto-autofill-model; then
+              echo "::warning::Optional listing-autofill model failed to start; shared AI gateway will continue without it."
+            fi
+          fi
+
           if [ -n "$OTHER_UP_SERVICES" ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps $OTHER_UP_SERVICES
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans $OTHER_UP_SERVICES
           fi
 
           if [ "$MODERATION_WORKER_UP" -eq 1 ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build \
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --remove-orphans \
               --force-recreate --renew-anon-volumes mercasto-moderation-worker
           fi
 
           if [ "$FRONTEND_UP" -eq 1 ]; then
-            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --force-recreate mercasto-frontend
+            docker compose --env-file "$COMPOSE_ENV_FILE" up -d --no-build --no-deps --remove-orphans --force-recreate mercasto-frontend
           fi
 
-          if [ -z "$PHP_REFRESH_SERVICES" ] && [ -z "$OTHER_UP_SERVICES" ] && [ "$MODERATION_WORKER_UP" -eq 0 ] && [ "$FRONTEND_UP" -eq 0 ]; then
+          if [ -z "$PHP_REFRESH_SERVICES" ] && [ -z "$OTHER_UP_SERVICES" ] && [ "$AUTOFILL_MODEL_UP" -eq 0 ] && [ "$MODERATION_WORKER_UP" -eq 0 ] && [ "$FRONTEND_UP" -eq 0 ]; then
             echo "No service restart required for changed files."
           fi
 
