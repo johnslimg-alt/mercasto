@@ -88,7 +88,7 @@ deploy_required = [
     'bash scripts/ensure-local-ai-models.sh',
     'services/ai-gateway/',
     'docker-compose(\\.override)?\\.yml$',
-    'COMPOSE_ENV_FILE="/var/www/mercasto/.env"',
+    'COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"',
     'Verify private AI deployment credential',
 ]
 for marker in deploy_required:

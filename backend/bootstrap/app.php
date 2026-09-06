@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 $trustedProxies = array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', '127.0.0.1,::1')))));
 
-return Application::configure(basePath: dirname(__DIR__))
+$application = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -69,3 +69,10 @@ return Application::configure(basePath: dirname(__DIR__))
             return null;
         });
     })->create();
+
+$runtimeEnvironmentPath = '/run/mercasto';
+if (is_readable($runtimeEnvironmentPath.'/.env')) {
+    $application->useEnvironmentPath($runtimeEnvironmentPath);
+}
+
+return $application;
