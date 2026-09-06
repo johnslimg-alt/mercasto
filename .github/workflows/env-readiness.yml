@@ -26,14 +26,18 @@ jobs:
           sudo -n git fetch origin main --prune
           sudo -n git reset --hard origin/main
 
-      - name: Run launch env readiness smoke
+      - name: Run runtime launch readiness smoke
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          sudo -n env REQUIRE_ENV_READY=1 bash scripts/env-readiness-smoke.sh
+          ENV_READINESS_CONTAINER=mercasto_backend_container \
+            REQUIRE_ENV_READY=1 \
+            bash scripts/env-readiness-smoke.sh
 
       - name: Run production env readiness smoke
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          sudo -n env ENV_FILE=backend/.env bash scripts/production-env-readiness-smoke.sh
+          docker exec -i -e ENV_FILE=/var/www/.env \
+            mercasto_backend_container \
+            bash -s < scripts/production-env-readiness-smoke.sh
