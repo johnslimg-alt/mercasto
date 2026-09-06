@@ -75,3 +75,15 @@ test('production deploy refreshes every PHP runtime vendor volume atomically', (
   for (const runtime of runtimes) assert.match(deploy, new RegExp(runtime));
   assert.match(operator, /up -d --build --remove-orphans --renew-anon-volumes/);
 });
+
+test('production deploy clears regenerated Laravel package cache after PHP runtime refresh', () => {
+  const refresh = deploy.indexOf('--force-recreate --renew-anon-volumes $PHP_REFRESH_SERVICES');
+  const cacheStep = deploy.indexOf('- name: Кэш и очереди');
+  const postRefreshClear = deploy.indexOf('sudo -n rm -f backend/bootstrap/cache/*.php', cacheStep);
+  const firstNewRuntimeArtisan = deploy.indexOf('docker exec mercasto_backend_container php artisan optimize:clear', cacheStep);
+
+  assert.ok(refresh >= 0, 'PHP runtime refresh must be present');
+  assert.ok(cacheStep > refresh, 'cache step must follow PHP runtime recreation');
+  assert.ok(postRefreshClear > cacheStep, 'generated Laravel package cache must be cleared in the post-refresh cache step');
+  assert.ok(firstNewRuntimeArtisan > postRefreshClear, 'cache clear must happen before first Artisan boot against the refreshed vendor');
+});
