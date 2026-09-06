@@ -3,6 +3,7 @@ set -euo pipefail
 
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.override.yml)
 COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
+ENV_READINESS_CONTAINER="${ENV_READINESS_CONTAINER:-}"
 COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
 REQUIRE_ENV_READY="${REQUIRE_ENV_READY:-0}"
 
@@ -20,14 +21,32 @@ if [[ ! -f docker-compose.yml ]]; then
   exit 1
 fi
 
-if [[ ! -f "$COMPOSE_ENV_FILE" ]]; then
-  echo "missing compose env file: $COMPOSE_ENV_FILE" >&2
+if [[ -n "$ENV_READINESS_CONTAINER" ]]; then
+  if [[ ! "$ENV_READINESS_CONTAINER" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+    echo "invalid ENV_READINESS_CONTAINER" >&2
+    exit 1
+  fi
+  if [[ "$(docker inspect -f '{{.State.Running}}' "$ENV_READINESS_CONTAINER" 2>/dev/null || true)" != "true" ]]; then
+    echo "runtime readiness container is not running: $ENV_READINESS_CONTAINER" >&2
+    exit 1
+  fi
+elif [[ ! -r "$COMPOSE_ENV_FILE" ]]; then
+  echo "compose env file is not readable: $COMPOSE_ENV_FILE" >&2
   exit 1
 fi
 
+run_tinker() {
+  local program="$1"
+  if [[ -n "$ENV_READINESS_CONTAINER" ]]; then
+    docker exec "$ENV_READINESS_CONTAINER" php artisan tinker --execute="$program"
+  else
+    "${COMPOSE[@]}" exec -T mercasto-backend php artisan tinker --execute="$program"
+  fi
+}
+
 echo "== Launch env readiness =="
 
-RESULTS="$("${COMPOSE[@]}" exec -T mercasto-backend php artisan tinker --execute='
+TINKER_PROGRAM='
 $checks = [
     "app_key" => (string) config("app.key"),
     "app_url" => (string) config("app.url"),
@@ -56,8 +75,9 @@ foreach ($checks as $name => $value) {
     }
     echo $name . "=" . ($ok ? "ready" : "not_ready") . PHP_EOL;
 }
-')"
+'
 
+RESULTS="$(run_tinker "$TINKER_PROGRAM")"
 echo "$RESULTS"
 
 NOT_READY="$(echo "$RESULTS" | grep '=not_ready' || true)"
