@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 COMPOSE="docker-compose.yml"
+BACKUP_LOOP="scripts/postgres-backup-loop.sh"
 ROTATE="scripts/rotate-internal-secrets.sh"
 OPS=".github/workflows/server-ops.yml"
 PRECHECK="scripts/os-maintenance-precheck.sh"
 echo "== Backup permission contract gate =="
-grep -qF 'umask 0027;' "$COMPOSE"
+grep -qF 'postgres-backup-loop.sh:/usr/local/bin/mercasto-postgres-backup-loop:ro' "$COMPOSE"
+grep -qF 'umask 0027' "$BACKUP_LOOP"
+grep -qF '.partial.$$' "$BACKUP_LOOP"
+grep -qF 'pg_restore -l' "$BACKUP_LOOP"
 grep -qF 'umask 0027' "$ROTATE"
 grep -qF 'umask 0027' "$OPS"
 grep -qF 'backup permissions OK' "$PRECHECK"

@@ -369,17 +369,13 @@ services:
     container_name: mercasto_db_backup
     environment:
       PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_HOST: postgres
+      DB_USER: ${DB_USERNAME:-mercasto_user}
+      DB_NAME: ${DB_DATABASE:-mercasto}
     volumes:
       - ./postgres-backups:/backups
-    entrypoint: >
-      /bin/bash -c "
-      umask 0027;
-      while true; do
-        FILE=/backups/backup_$$(date +%Y%m%d_%H%M).dump;
-        pg_dump -h postgres -U ${DB_USERNAME:-mercasto_user} -d ${DB_DATABASE:-mercasto} -F c -f $$FILE && echo \"Backup: $$FILE\";
-        find /backups -type f -mtime +7 -delete;
-        sleep 86400;
-      done"
+      - ./scripts/postgres-backup-loop.sh:/usr/local/bin/mercasto-postgres-backup-loop:ro
+    entrypoint: ["/bin/bash", "/usr/local/bin/mercasto-postgres-backup-loop"]
     depends_on:
       postgres:
         condition: service_healthy

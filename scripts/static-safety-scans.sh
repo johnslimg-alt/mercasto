@@ -73,6 +73,7 @@ bash scripts/csrf-session-contract-gate.sh
 bash scripts/origin-edge-security-gate.sh
 bash scripts/offsite-backup-contract-gate.sh
 bash scripts/backup-permission-contract-gate.sh
+bash scripts/postgres-backup-loop.test.sh
 bash scripts/schema-drift-contract-gate.sh
 bash scripts/postgres-observability-contract-gate.sh
 bash scripts/payment-retention-scan.sh
