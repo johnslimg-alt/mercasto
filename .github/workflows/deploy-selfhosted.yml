@@ -75,15 +75,33 @@ jobs:
               path.write_text('\n'.join(output) + '\n', encoding='utf-8')
           PY
 
+          # Preserve the current persistent mode during the transition. Existing
+          # PHP-FPM workers may still need the host file until refreshed containers
+          # start with the runtime-env entrypoint.
           cat "$RUNNER_TEMP/mercasto-backend.env" \
-            | docker exec -i mercasto_backend_container sh -lc 'umask 027; cat > /var/www/.env; chown root:www-data /var/www/.env; chmod 0640 /var/www/.env'
-          docker exec -u www-data mercasto_backend_container test -r /var/www/.env
+            | docker exec -i mercasto_backend_container sh -lc 'umask 077; cat > /var/www/.env'
+
+          # Refresh the ephemeral PHP-readable copy in every already-running PHP
+          # runtime. On the first rollout old code may ignore it; after rollout it
+          # lets secret updates take effect without exposing the persistent host file.
+          for container in \
+            mercasto_backend_container \
+            mercasto_worker_container \
+            mercasto_moderation_worker_container \
+            mercasto_scheduler_container \
+            mercasto_reverb_container; do
+            if [ "$(docker inspect -f '{{.State.Running}}' "$container" 2>/dev/null || true)" = "true" ]; then
+              docker exec "$container" /var/www/docker/refresh-runtime-env.sh
+            fi
+          done
+          docker exec -u www-data mercasto_backend_container test -r /run/mercasto/.env
 
       - name: Verify private AI deployment credential
         run: |
           set -euo pipefail
-          test -r /var/www/mercasto/.env
-          if ! grep -Eq '^MERCASTO_AI_INTERNAL_TOKEN=.+$' /var/www/mercasto/.env; then
+          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
+          test -r "$COMPOSE_ENV_FILE"
+          if ! grep -Eq '^MERCASTO_AI_INTERNAL_TOKEN=.+$' "$COMPOSE_ENV_FILE"; then
             echo "MERCASTO_AI_INTERNAL_TOKEN is required in the private production compose env." >&2
             exit 1
           fi
@@ -129,7 +147,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
+          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
           test -s "$COMPOSE_ENV_FILE"
 
           CHANGED_FILES=""
@@ -315,6 +333,16 @@ jobs:
             echo "No service restart required for changed files."
           fi
 
+          # The runtime copies are now available (newly created by the entrypoint
+          # or refreshed above), so restore the persistent host secret boundary.
+          sudo -n chown root:root backend/.env
+          sudo -n chmod 0600 backend/.env
+          if test -r backend/.env; then
+            echo "Persistent backend/.env must not be directly readable by github-runner." >&2
+            exit 1
+          fi
+          docker exec -u www-data mercasto_backend_container test -r /run/mercasto/.env
+
           if [ "$NGINX_CONFIG_RELOAD" -eq 1 ]; then
             # default.conf/security_headers.conf are bind-mounted. Validate and
             # reload them in place instead of recreating the frontend container
@@ -338,7 +366,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
+          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
           test -s "$COMPOSE_ENV_FILE"
 
           # Migrations run against the pre-refresh PHP runtime and can regenerate
@@ -549,7 +577,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
+          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
           test -s "$COMPOSE_ENV_FILE"
 
           docker compose --env-file "$COMPOSE_ENV_FILE" exec -T -e DEPLOY_SHA="$DEPLOY_SHA" mercasto-frontend sh -lc '
@@ -599,7 +627,7 @@ jobs:
         run: |
           set -euo pipefail
           cd /var/www/mercasto
-          COMPOSE_ENV_FILE="/var/www/mercasto/.env"
+          COMPOSE_ENV_FILE="$RUNNER_TEMP/mercasto-backend.env"
           test -s "$COMPOSE_ENV_FILE"
 
           for attempt in 1 2 3; do

@@ -73,6 +73,11 @@ RUN --mount=type=cache,target=/root/.npm \
 # Копируем файлы проекта после установки зависимостей.
 COPY . .
 
+# Keep the persistent host .env root-only. Container root creates an ephemeral
+# runtime copy that PHP-FPM/www-data can read without widening host access.
+RUN install -m 0755 docker/refresh-runtime-env.sh /usr/local/bin/mercasto-refresh-runtime-env \
+    && install -m 0755 docker/runtime-env-entrypoint.sh /usr/local/bin/mercasto-runtime-entrypoint
+
 # Завершаем Laravel discovery после появления app/config/routes.
 RUN composer dump-autoload --no-dev --optimize --no-interaction
 
@@ -121,4 +126,6 @@ RUN echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/docker-php
 # PHP-FPM runtime metadata for compose/orchestrator visibility and graceful shutdown.
 EXPOSE 9000
 STOPSIGNAL SIGQUIT
+ENTRYPOINT ["/usr/local/bin/mercasto-runtime-entrypoint"]
+CMD ["php-fpm"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD php-fpm -t || exit 1
