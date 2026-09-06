@@ -9,6 +9,7 @@ POLICY="docs/ops/PRIVACY_RETENTION_DRAFT_2026-08-07.md"
 APPROVAL="docs/ops/PRIVACY_RETENTION_APPROVAL_PACKET_2026-09-06.md"
 INDEX_READY="scripts/privacy-retention-index-readiness.sh"
 PLAN_READY="scripts/privacy-retention-plan-readiness.sh"
+CHECKPOINT_READY="scripts/privacy-retention-checkpoint-readiness.sh"
 
 echo "== Privacy retention dry-run contract gate =="
 test -x "$DRY_RUN"
@@ -16,8 +17,10 @@ test -f "$POLICY"
 test -f "$APPROVAL"
 test -x "$INDEX_READY"
 test -x "$PLAN_READY"
+test -x "$CHECKPOINT_READY"
 bash -n "$INDEX_READY"
 bash -n "$PLAN_READY"
+bash -n "$CHECKPOINT_READY"
 bash -n "$DRY_RUN"
 
 grep -qF 'BEGIN TRANSACTION READ ONLY;' "$DRY_RUN"
@@ -64,6 +67,27 @@ for excluded in payments ad_moderation_decisions user_consents users; do
 done
 if grep -Eiq '^[[:space:]]*(delete|update|insert|truncate|drop|alter|create|grant|revoke|vacuum|refresh|copy)[[:space:]]' "$PLAN_READY"; then
   echo "FAIL: privacy retention plan readiness contains a mutating SQL statement" >&2
+  exit 1
+fi
+
+grep -qF 'BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY;' "$CHECKPOINT_READY"
+grep -qF 'RETENTION_CHECKPOINT_BATCH_LIMIT:-100' "$CHECKPOINT_READY"
+grep -qF 'BATCH_LIMIT > 1000' "$CHECKPOINT_READY"
+grep -qF 'RETENTION_CHECKPOINT_AGE_DAYS:-}' "$CHECKPOINT_READY"
+grep -qF 'AGE_DAYS > 3650' "$CHECKPOINT_READY"
+grep -qF 'replay_match' "$CHECKPOINT_READY"
+grep -qF 'duration_ms=' "$CHECKPOINT_READY"
+grep -qF 'AND ($age_column, id) > (' "$CHECKPOINT_READY"
+grep -qF 'is_read = TRUE' "$CHECKPOINT_READY"
+grep -qF 'expires_at IS NOT NULL AND expires_at < now()' "$CHECKPOINT_READY"
+for excluded in payments ad_moderation_decisions user_consents users; do
+  if grep -Eq "run_dataset[[:space:]]+\"$excluded\"" "$CHECKPOINT_READY"; then
+    echo "FAIL: $excluded must stay outside checkpoint replay candidates" >&2
+    exit 1
+  fi
+done
+if grep -Eiq '^[[:space:]]*(delete|update|insert|truncate|drop|alter|create|grant|revoke|vacuum|analyze|refresh|copy)[[:space:]]' "$CHECKPOINT_READY"; then
+  echo "FAIL: privacy retention checkpoint readiness contains a mutating SQL statement" >&2
   exit 1
 fi
 

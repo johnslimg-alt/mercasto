@@ -47,3 +47,9 @@ Run `RETENTION_PLAN_AGE_DAYS=<explicit-review-age> bash scripts/privacy-retentio
 The plan probe is intentionally limited to telemetry candidates, read-only notifications older than the explicitly supplied plan-probe age, and already-expired personal access tokens. Unread notifications are excluded by predicate. Payments/refunds, moderation decisions and consent evidence remain outside this plan probe because their retention is specifically owner/legal gated.
 
 A successful plan probe is evidence only. It does not approve a retention window, create a pruning executor, or override `NO_LEADING_INDEX`; any sequential/global scan or otherwise unsuitable plan remains a blocker until a reviewed index migration or query shape is approved.
+
+## Checkpoint replay readiness evidence
+
+Run `RETENTION_CHECKPOINT_AGE_DAYS=<explicit-review-age> bash scripts/privacy-retention-checkpoint-readiness.sh` to test the engineering candidate keyset cursor without deleting or changing rows. The script uses `REPEATABLE READ, READ ONLY`, hard-bounds each page, repeats the first page and compares an internal fingerprint, then reads the next page from an internal `(age_column, id)` checkpoint. It outputs only aggregate row counts, replay status, checkpoint presence and duration; checkpoint values and row identifiers are not printed.
+
+This probe is limited to the same telemetry candidates, read notifications and already-expired tokens. Its explicit age is review evidence only, not a retention policy. A passing replay probe does not override missing leading indexes, legal/owner approval, protected-row rules, backup/restore requirements, or the requirement to measure WAL/database-size impact for any future destructive executor.
