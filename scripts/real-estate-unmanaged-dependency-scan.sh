@@ -26,7 +26,7 @@ echo "-- repository references --"
 find . -xdev \
   \( -path './.git' -o -path './backend/vendor' -o -path './node_modules' -o -path './postgres-data' -o -path './postgres-backups' \) -prune -o \
   -type f -print0 2>/dev/null \
-  | xargs -0 -r grep -Il "$TABLE" 2>/dev/null \
+  | xargs -0 -r sh -c 'pattern="$1"; shift; grep -Il "$pattern" "$@" 2>/dev/null; rc=$?; test "$rc" -le 1' sh "$TABLE" \
   | sort
 
 echo "-- host scheduler/service references --"
