@@ -62,6 +62,7 @@ grep -qF 'real_estate_developments' "$HEALTH"
 grep -qF 'category_names_backup_20260704' "$HEALTH"
 grep -qF 'blacklist' "$HEALTH"
 grep -qF 'pg_stat_statements' "$HEALTH"
+grep -qF "query !~* 'pg_stat_statements'" "$HEALTH"
 grep -qF 'unmanaged_statement_ids' "$HEALTH"
 if grep -Eiq 'pg_stat_activity[^;]*query|select[^;]*[[:space:],]query[[:space:],]' "$HEALTH"; then
   echo "FAIL: health watch must not output SQL text" >&2
