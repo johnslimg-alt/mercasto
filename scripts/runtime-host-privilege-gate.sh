@@ -23,8 +23,9 @@ fi
 grep -qF "env('SESSION_ENCRYPT', env('APP_ENV', 'production') === 'production')" "$SESSION"
 grep -qF 'SESSION_ENCRYPT=true' "$ENV_PROD"
 grep -qF 'SESSION_ENCRYPT must be true when explicitly set' "$READINESS"
-grep -qF 'config("sentry.dsn")' "$READINESS"
 grep -qF 'ENV_READINESS_CONTAINER=mercasto_backend_container' "$ENV_WORKFLOW"
+grep -qF 'docker exec -i -e ENV_FILE=/var/www/.env' "$ENV_WORKFLOW"
+grep -qF 'bash -s < scripts/production-env-readiness-smoke.sh' "$ENV_WORKFLOW"
 ! grep -qE 'sudo .*production-env-readiness-smoke' "$ENV_WORKFLOW"
 [[ $(grep -c 'command: php artisan queue:work' "$COMPOSE") -eq 2 ]]
 [[ $(grep -c 'memory: 1G' "$COMPOSE") -ge 2 ]]
