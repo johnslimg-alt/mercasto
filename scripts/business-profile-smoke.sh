@@ -2,7 +2,7 @@
 set -euo pipefail
 
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.override.yml)
-COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env}"
 COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 USER_ID="${BUSINESS_PROFILE_USER_ID:-1}"

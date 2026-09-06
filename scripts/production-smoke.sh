@@ -3,7 +3,7 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.override.yml)
-COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env}"
 COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
 
 require_cmd() {

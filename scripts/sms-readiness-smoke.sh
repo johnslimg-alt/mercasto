@@ -2,7 +2,7 @@
 set -euo pipefail
 
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.override.yml)
-COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env}"
 COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
 REQUIRE_SMS_READY="${REQUIRE_SMS_READY:-0}"
 

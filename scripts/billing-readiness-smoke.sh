@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-backend/.env}"
+COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.override.yml)
 COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
 
