@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\SavedSearchController;
 use App\Http\Controllers\Api\GamificationController;
 use App\Http\Controllers\Api\PushController;
 use App\Http\Controllers\Api\AdBannerController;
+use App\Http\Controllers\Api\RuntimeErrorAlertController;
 
 // Public routes
 Route::get('/img', \App\Http\Controllers\ImageController::class); // on-the-fly thumbnail resizer (WebP)
@@ -119,6 +120,10 @@ Route::middleware('throttle:api')->get('/stores', [BusinessProfileController::cl
 Route::middleware('throttle:api')->get('/banners', [AdBannerController::class, 'publicBanners']);
 Route::middleware('throttle:api')->post('/banners/{id}/click', [AdBannerController::class, 'trackClick'])->whereNumber('id');
 Route::middleware('throttle:api')->get('/push/vapid-key', [PushController::class, 'vapidPublicKey']);
+
+// Internal-only runtime error delivery from Bugsink. Nginx restricts the
+// endpoint to private container networks; Laravel additionally checks a token.
+Route::post('/internal/runtime-alerts', RuntimeErrorAlertController::class);
 
 // Регистрация маршрутов для WebSockets (Reverb / Echo) с авторизацией Sanctum
 Broadcast::routes(['middleware' => ['auth:sanctum']]);

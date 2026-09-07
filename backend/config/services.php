@@ -28,6 +28,11 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'runtime_errors' => [
+        'alert_token' => env('BUGSINK_ALERT_TOKEN'),
+        'admin_email' => env('ADMIN_EMAIL'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

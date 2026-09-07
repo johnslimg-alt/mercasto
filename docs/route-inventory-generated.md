@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-05T19:41:00Z
-Commit: 3be256f8
+Generated at: 2026-09-07T00:15:18Z
+Commit: 1af26ec9-dirty
 Source: php artisan route:list --except-vendor -v
 
 ```text
@@ -123,6 +123,9 @@ Source: php artisan route:list --except-vendor -v
   DELETE    api/admin/reports/{id} generated::<auto> › Api\AdController@deleteReport
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+  PATCH     api/admin/reports/{id}/transition generated::<auto> › Api\ReportModerationController@transitionListingReport
+            ⇂ api
+            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
   GET|HEAD  api/admin/seo-measurement generated::<auto> › Api\AdminSeoMeasurementController
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
@@ -130,6 +133,9 @@ Source: php artisan route:list --except-vendor -v
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
   DELETE    api/admin/user-reports/{id} generated::<auto> › Api\ProfileController@deleteUserReport
+            ⇂ api
+            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+  PATCH     api/admin/user-reports/{id}/transition generated::<auto> › Api\ReportModerationController@transitionUserReport
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
   GET|HEAD  api/ads generated::<auto> › Api\AdIndexController@index
@@ -195,6 +201,7 @@ Source: php artisan route:list --except-vendor -v
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:ad-mutations
   GET|HEAD  api/ads/{id}/pdf generated::<auto> › Api\AdController@generatePdf
             ⇂ api
+            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
   GET|HEAD  api/ads/{id}/price-history generated::<auto> › Api\AdController@priceHistory
             ⇂ api
@@ -347,6 +354,8 @@ Source: php artisan route:list --except-vendor -v
             ⇂ api
             ⇂ Illuminate\Routing\Middleware\ThrottleRequests:api
   GET|HEAD  api/img ............ generated::<auto> › ImageController
+            ⇂ api
+  POST      api/internal/runtime-alerts generated::<auto> › Api\RuntimeErrorAlertController
             ⇂ api
   POST      api/login . generated::<auto> › Api\AuthController@login
             ⇂ api
@@ -734,6 +743,6 @@ Source: php artisan route:list --except-vendor -v
             ⇂ web
   GET|HEAD  up ................................... generated::<auto>
 
-                                                          Showing [245] routes
+                                                          Showing [248] routes
 
 ```

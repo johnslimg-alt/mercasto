@@ -436,6 +436,50 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  bugsink:
+    image: bugsink/bugsink:2.5.1@sha256:ecdd845877464d70d61244b8adba20d623e1860e88d8338f2808d9cc2925745c
+    container_name: mercasto_bugsink
+    expose:
+      - "8000"
+    environment:
+      - "PORT=8000"
+      - "SECRET_KEY=${BUGSINK_SECRET_KEY:-ci-only-bugsink-secret-not-for-production-012345678901234567890123456789}"
+      - "CREATE_SUPERUSER=${BUGSINK_ADMIN_EMAIL:-ci@invalid.example}:${BUGSINK_ADMIN_PASSWORD:-ci-only-password}"
+      - "BUGSINK_ADMIN_EMAIL=${BUGSINK_ADMIN_EMAIL:-ci@invalid.example}"
+      - "BASE_URL=https://mercasto.com/ops/errors"
+      - "ALLOWED_HOSTS=mercasto.com,localhost,127.0.0.1"
+      - "BEHIND_HTTPS_PROXY=True"
+      - "USE_X_REAL_IP=True"
+      - "SINGLE_USER=True"
+      - "SINGLE_TEAM=True"
+      - "USER_REGISTRATION=CB_NOBODY"
+      - "TEAM_CREATION=CB_NOBODY"
+      - "PHONEHOME=False"
+      - "SITE_TITLE=Mercasto Runtime Errors"
+      - "TIME_ZONE=America/Mexico_City"
+      - "MINIMIZE_INFORMATION_EXPOSURE=True"
+      - "MAX_EVENT_AGE_DAYS=30"
+      - "MAX_RETENTION_PER_PROJECT_EVENT_COUNT=5000"
+      - "EMAIL_BACKEND=bugsink.email_backends.QuietConsoleEmailBackend"
+      - "ALERTS_WEBHOOK_OUTBOUND_MODE=allowlist_only"
+      - "ALERTS_WEBHOOK_ALLOW_LIST=mercasto-frontend"
+      - "ALERTS_WEBHOOK_DENY_NON_GLOBAL=False"
+      - "BUGSINK_ALERT_TOKEN=${BUGSINK_ALERT_TOKEN:-ci-only-bugsink-alert-token-012345678901234567890123456789}"
+    volumes:
+      - bugsink_data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   certbot:
     image: certbot/dns-cloudflare:v2.10.0@sha256:d0ad4a78aaf11466780bba575dfb16ea0f8abfdca7c42dbfdcd786d50bf40dc6
     container_name: certbot
@@ -452,6 +496,7 @@ services:
 
 volumes:
   ollama_data:
+  bugsink_data:
   autofill_model_cache:
 
 networks:
