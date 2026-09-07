@@ -9,6 +9,7 @@ on:
       - 'backend/**'
       - 'docker-compose.yml'
       - 'docker-compose.override.yml'
+      - 'scripts/compose-config-gate.sh'
       - '.github/workflows/backend-image-gate.yml'
   pull_request:
     branches:
@@ -17,6 +18,7 @@ on:
       - 'backend/**'
       - 'docker-compose.yml'
       - 'docker-compose.override.yml'
+      - 'scripts/compose-config-gate.sh'
       - '.github/workflows/backend-image-gate.yml'
   schedule:
     - cron: '29 13 * * *'
@@ -59,8 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose config >/tmp/mercasto_compose_base.out
-          DB_PASSWORD=ci REDIS_PASSWORD=ci GRAFANA_PASSWORD=ci docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_compose_override.out
+          bash scripts/compose-config-gate.sh
 
       - name: Build backend image with unreadable runtime test storage
         shell: bash

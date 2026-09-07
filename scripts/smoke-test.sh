@@ -3,6 +3,9 @@ set -euo pipefail
 
 BASE_URL="${1:-https://mercasto.com}"
 FAILURES=0
+TMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+BODY_FILE="$(mktemp "${TMP_ROOT%/}/mercasto-smoke-body.XXXXXX")"
+trap 'rm -f "$BODY_FILE"' EXIT
 
 check_status() {
   local label="$1"
@@ -11,12 +14,12 @@ check_status() {
   local url="${BASE_URL}${path}"
 
   echo "==> ${label}: ${url}"
-  status=$(curl -L -sS -o /tmp/mercasto-smoke-body -w '%{http_code}' --max-time 20 "$url" || echo "000")
+  status=$(curl -L -sS -o "$BODY_FILE" -w '%{http_code}' --max-time 20 "$url" || echo "000")
 
   if [ "$status" != "$expected" ]; then
     echo "FAIL ${label}: expected ${expected}, got ${status}"
     echo "Body preview:"
-    head -c 500 /tmp/mercasto-smoke-body || true
+    head -c 500 "$BODY_FILE" || true
     echo
     FAILURES=$((FAILURES + 1))
   else
@@ -30,19 +33,19 @@ check_json() {
   local url="${BASE_URL}${path}"
 
   echo "==> ${label}: ${url}"
-  status=$(curl -L -sS -o /tmp/mercasto-smoke-body -w '%{http_code}' --max-time 20 "$url" || echo "000")
+  status=$(curl -L -sS -o "$BODY_FILE" -w '%{http_code}' --max-time 20 "$url" || echo "000")
 
   if [ "$status" != "200" ]; then
     echo "FAIL ${label}: expected 200, got ${status}"
-    head -c 500 /tmp/mercasto-smoke-body || true
+    head -c 500 "$BODY_FILE" || true
     echo
     FAILURES=$((FAILURES + 1))
     return
   fi
 
-  if ! python3 -m json.tool /tmp/mercasto-smoke-body >/dev/null 2>&1; then
+  if ! python3 -m json.tool "$BODY_FILE" >/dev/null 2>&1; then
     echo "FAIL ${label}: response is not valid JSON"
-    head -c 500 /tmp/mercasto-smoke-body || true
+    head -c 500 "$BODY_FILE" || true
     echo
     FAILURES=$((FAILURES + 1))
     return
