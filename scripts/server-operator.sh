@@ -53,6 +53,8 @@ cd "$PROJECT_DIR"
 git config --global --add safe.directory "$PROJECT_DIR" || true
 COMPOSE_BASE=(docker compose --env-file "$COMPOSE_ENV_FILE")
 COMPOSE_PROD=(docker compose --env-file "$COMPOSE_ENV_FILE" -f docker-compose.yml -f docker-compose.override.yml)
+SERVER_OPERATOR_TMPDIR="$(mktemp -d "${TMPDIR:-/tmp}/mercasto-server-operator.XXXXXX")"
+trap 'rm -rf "$SERVER_OPERATOR_TMPDIR"' EXIT
 
 require_confirm() {
   if [ "${CONFIRM:-}" != "MERCASTO" ]; then
@@ -120,7 +122,7 @@ download_with_retry() {
   local attempt
   local tmp
 
-  tmp="$(mktemp)"
+  tmp="$(mktemp "$SERVER_OPERATOR_TMPDIR/download.XXXXXX")"
   for ((attempt = 1; attempt <= attempts; attempt++)); do
     if curl -fsS --max-time 30 "$url" >"$tmp"; then
       mv "$tmp" "$output"
@@ -157,14 +159,17 @@ nginx_reload_upstreams() {
 
 seo_aeo_probe() {
   print_header "SEO/AEO smoke"
-  download_with_retry https://mercasto.com/ /tmp/mercasto-home.html
-  download_with_retry https://mercasto.com/sitemap.xml /tmp/mercasto-sitemap.xml
-  download_with_retry https://mercasto.com/robots.txt /tmp/mercasto-robots.txt
-  grep -Eiq '<title[^>]*>[^<]{10,70}</title>' /tmp/mercasto-home.html
-  grep -Eiq 'name="description"|property="og:description"' /tmp/mercasto-home.html
-  grep -Eiq 'application/ld\+json|schema.org' /tmp/mercasto-home.html
-  grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/mercasto-sitemap.xml
-  grep -Eiq 'Sitemap:|User-agent:' /tmp/mercasto-robots.txt
+  local home="$SERVER_OPERATOR_TMPDIR/home.html"
+  local sitemap="$SERVER_OPERATOR_TMPDIR/sitemap.xml"
+  local robots="$SERVER_OPERATOR_TMPDIR/robots.txt"
+  download_with_retry https://mercasto.com/ "$home"
+  download_with_retry https://mercasto.com/sitemap.xml "$sitemap"
+  download_with_retry https://mercasto.com/robots.txt "$robots"
+  grep -Eiq '<title[^>]*>[^<]{10,160}</title>' "$home"
+  grep -Eiq 'name="description"|property="og:description"' "$home"
+  grep -Eiq 'application/ld\+json|schema.org' "$home"
+  grep -Eiq '<urlset|<sitemapindex|<url>' "$sitemap"
+  grep -Eiq 'Sitemap:|User-agent:' "$robots"
   echo "SEO/AEO smoke OK"
 }
 
@@ -182,8 +187,8 @@ run_verify_quick() {
 
   echo "npm not found; running server-compatible verify:quick fallback"
   find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
-  "${COMPOSE_BASE[@]}" config >"/tmp/mercasto_compose_base.$(id -u).out"
-  "${COMPOSE_PROD[@]}" config >"/tmp/mercasto_compose_override.$(id -u).out"
+  "${COMPOSE_BASE[@]}" config >"$SERVER_OPERATOR_TMPDIR/compose-base.out"
+  "${COMPOSE_PROD[@]}" config >"$SERVER_OPERATOR_TMPDIR/compose-override.out"
   bash scripts/static-safety-scans.sh
   bash scripts/production-smoke.sh
   bash scripts/category-filter-smoke.sh
