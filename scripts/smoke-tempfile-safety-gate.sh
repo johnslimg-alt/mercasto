@@ -16,6 +16,7 @@ files=(
   scripts/public-production-watch.sh
   scripts/session-cookie-smoke.sh
   scripts/share-og-smoke.sh
+  scripts/host-storage-headroom-gate.test.sh
 )
 
 for file in "${files[@]}"; do
@@ -24,7 +25,7 @@ for file in "${files[@]}"; do
   grep -Eq "trap .*rm -r?f" "$file"
 done
 
-if grep -nE '/tmp/mercasto_(probe|listing_route)|\$\{TMPDIR:-/tmp\}/mercasto-(auth-providers|business-profile-(smoke|routes|migrate)|homepage-headers|cookie-headers|share-og-smoke)' "${files[@]}"; then
+if grep -nE '/tmp/mercasto_(probe|listing_route|storage-threshold-test\.out)|\$\{TMPDIR:-/tmp\}/mercasto-(auth-providers|business-profile-(smoke|routes|migrate)|homepage-headers|cookie-headers|share-og-smoke)' "${files[@]}"; then
   echo "fixed shared temp path found in production smoke scripts" >&2
   exit 1
 fi

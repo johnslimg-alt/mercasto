@@ -41,7 +41,7 @@ run_case 90 1 'FAIL: root filesystem usage is 90%'
 
 rc=0
 PATH="$TMP:$PATH" TEST_ROOT_USE=50 HOST_STORAGE_WARN_PERCENT=95 HOST_STORAGE_FAIL_PERCENT=90 \
-  bash "$HELPER" >/tmp/mercasto-storage-threshold-test.out 2>&1 || rc=$?
+  bash "$HELPER" >"$TMP/invalid-threshold.out" 2>&1 || rc=$?
 if [ "$rc" -ne 2 ]; then
   echo "invalid threshold configuration must fail with rc=2" >&2
   exit 1
