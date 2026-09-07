@@ -139,26 +139,56 @@ token_hash="$(docker exec "$BUGSINK_CONTAINER" sh -lc 'printf %s "$BUGSINK_ALERT
 verification_hash="$(printf '%s|%s' "$dsn" "$token_hash" | sha256sum | awk '{print $1}')"
 verified_hash="$(docker exec "$BUGSINK_CONTAINER" sh -lc 'cat /data/mercasto-runtime-alerts.verified 2>/dev/null || true')"
 if [ "$verified_hash" != "$verification_hash" ]; then
-  before_events="$(docker exec "$BUGSINK_CONTAINER" bugsink-manage shell -c 'from events.models import Event; print(Event.objects.count())' | tail -n 1)"
+  if ! [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "FAIL: runtime alert verification requires an exact deploy SHA" >&2
+    exit 1
+  fi
+
+  before_events="$(docker exec -e MERCASTO_VERIFY_RELEASE="$DEPLOY_SHA" "$BUGSINK_CONTAINER" bugsink-manage shell -c 'import os; from events.models import Event; print(Event.objects.filter(release=os.environ["MERCASTO_VERIFY_RELEASE"]).count())' | tail -n 1)"
   before_deliveries="$(docker exec "$BACKEND_CONTAINER" sh -lc "grep -c 'runtime error alert delivered' /var/www/storage/logs/laravel.log 2>/dev/null || true")"
 
   docker exec "$BACKEND_CONTAINER" php artisan sentry:test >/dev/null 2>&1
 
   after_events="$before_events"
-  after_deliveries="$before_deliveries"
+  test_issue_id=""
   for _ in $(seq 1 30); do
-    after_events="$(docker exec "$BUGSINK_CONTAINER" bugsink-manage shell -c 'from events.models import Event; print(Event.objects.count())' | tail -n 1)"
-    after_deliveries="$(docker exec "$BACKEND_CONTAINER" sh -lc "grep -c 'runtime error alert delivered' /var/www/storage/logs/laravel.log 2>/dev/null || true")"
-    if [ "$after_events" -gt "$before_events" ] && [ "$after_deliveries" -gt "$before_deliveries" ]; then
+    after_events="$(docker exec -e MERCASTO_VERIFY_RELEASE="$DEPLOY_SHA" "$BUGSINK_CONTAINER" bugsink-manage shell -c 'import os; from events.models import Event; print(Event.objects.filter(release=os.environ["MERCASTO_VERIFY_RELEASE"]).count())' | tail -n 1)"
+    if [ "$after_events" -gt "$before_events" ]; then
+      test_issue_id="$(docker exec -e MERCASTO_VERIFY_RELEASE="$DEPLOY_SHA" "$BUGSINK_CONTAINER" bugsink-manage shell -c 'import os; from events.models import Event; print(Event.objects.filter(release=os.environ["MERCASTO_VERIFY_RELEASE"]).order_by("-ingested_at").values_list("issue_id", flat=True).first() or "")' | tail -n 1)"
       break
     fi
     sleep 1
   done
 
-  if [ "$after_events" -le "$before_events" ]; then
+  if [ "$after_events" -le "$before_events" ] || [ -z "$test_issue_id" ]; then
     echo "FAIL: Sentry SDK test event did not reach Bugsink" >&2
     exit 1
   fi
+
+  after_deliveries="$before_deliveries"
+  for _ in $(seq 1 15); do
+    after_deliveries="$(docker exec "$BACKEND_CONTAINER" sh -lc "grep -c 'runtime error alert delivered' /var/www/storage/logs/laravel.log 2>/dev/null || true")"
+    if [ "$after_deliveries" -gt "$before_deliveries" ]; then
+      break
+    fi
+    sleep 1
+  done
+
+  if [ "$after_deliveries" -le "$before_deliveries" ]; then
+    webhook_failure="$(docker exec "$BUGSINK_CONTAINER" bugsink-manage shell -c 'from alerts.models import MessagingServiceConfig; c=MessagingServiceConfig.objects.get(display_name="Mercasto internal runtime alert mail"); print(1 if c.last_failure_timestamp else 0)' | tail -n 1)"
+    if [ "$webhook_failure" = "1" ]; then
+      echo "Retrying the failed Bugsink NEW alert for this deploy verification issue."
+      docker exec -e MERCASTO_VERIFY_ISSUE="$test_issue_id" "$BUGSINK_CONTAINER" bugsink-manage shell -c 'import os; from alerts.tasks import send_new_issue_alert; send_new_issue_alert.delay(os.environ["MERCASTO_VERIFY_ISSUE"])' >/dev/null
+      for _ in $(seq 1 30); do
+        after_deliveries="$(docker exec "$BACKEND_CONTAINER" sh -lc "grep -c 'runtime error alert delivered' /var/www/storage/logs/laravel.log 2>/dev/null || true")"
+        if [ "$after_deliveries" -gt "$before_deliveries" ]; then
+          break
+        fi
+        sleep 1
+      done
+    fi
+  fi
+
   if [ "$after_deliveries" -le "$before_deliveries" ]; then
     echo "FAIL: Bugsink alert did not complete Laravel mail delivery" >&2
     exit 1
