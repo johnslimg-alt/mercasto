@@ -44,10 +44,11 @@ create_local_text_model() {
   }
   docker exec -e MODEL_NAME="$model" -e MODEL_PATH="$LOCAL_TEXT_GGUF" "$OLLAMA_CONTAINER" sh -lc '
     set -eu
-    modelfile=/tmp/mercasto-qwen38.Modelfile
+    modelfile="$(mktemp /tmp/mercasto-qwen38.XXXXXX.Modelfile)"
+    cleanup() { rm -f "$modelfile"; }
+    trap cleanup EXIT
     printf "FROM %s\nPARAMETER num_ctx 4096\nPARAMETER temperature 0.2\n" "$MODEL_PATH" > "$modelfile"
     ollama create "$MODEL_NAME" -f "$modelfile"
-    rm -f "$modelfile"
   '
 }
 

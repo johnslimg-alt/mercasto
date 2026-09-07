@@ -109,10 +109,14 @@ bootstrap_required = [
     "qwen3-vl:2b-instruct",
     'ollama pull "$model"',
     'grep -Fxq "$model"',
+    'mktemp /tmp/mercasto-qwen38.XXXXXX.Modelfile',
+    'trap cleanup EXIT',
 ]
 for marker in bootstrap_required:
     if marker not in bootstrap:
         raise SystemExit(f"local AI model bootstrap contract missing: {marker}")
+if 'modelfile=/tmp/mercasto-qwen38.Modelfile' in bootstrap:
+    raise SystemExit("fixed shared Ollama Modelfile path remains")
 
 ollama_match = re.search(r"(?ms)^  ollama:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n|^volumes:\n)", compose)
 if not ollama_match:

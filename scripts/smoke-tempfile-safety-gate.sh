@@ -17,6 +17,11 @@ files=(
   scripts/session-cookie-smoke.sh
   scripts/share-og-smoke.sh
   scripts/server-operator.sh
+  scripts/compose-config-gate.sh
+  scripts/production-smoke.sh
+  scripts/crawler-policy-production-smoke.sh
+  scripts/smoke-test.sh
+  scripts/ensure-local-ai-models.sh
   scripts/host-storage-headroom-gate.test.sh
 )
 
@@ -33,6 +38,29 @@ fi
 
 if grep -nE '/tmp/mercasto[-_]' scripts/server-operator.sh; then
   echo "fixed shared temp path found in server operator" >&2
+  exit 1
+fi
+
+if grep -nE '/tmp/mercasto_(compose_config|crawler_policy)|/tmp/mercasto-smoke-body([^.]|$)' scripts/production-smoke.sh scripts/crawler-policy-production-smoke.sh scripts/smoke-test.sh; then
+  echo "fixed shared temp path found in production smoke chain" >&2
+  exit 1
+fi
+
+if grep -qF 'modelfile=/tmp/mercasto-qwen38.Modelfile' scripts/ensure-local-ai-models.sh; then
+  echo "fixed Ollama Modelfile path found in model bootstrap" >&2
+  exit 1
+fi
+
+if ! grep -qF '"check:compose": "bash scripts/compose-config-gate.sh"' package.json; then
+  echo "package check:compose must use the private compose config gate" >&2
+  exit 1
+fi
+if ! grep -qF 'bash scripts/compose-config-gate.sh' .github/workflows/backend-image-gate.yml; then
+  echo "backend image gate must use the private compose config gate" >&2
+  exit 1
+fi
+if grep -nE 'mercasto_compose_(base|override)(\.|\.out|\$)' package.json .github/workflows/backend-image-gate.yml; then
+  echo "fixed compose temp path remains outside the private compose config gate" >&2
   exit 1
 fi
 
