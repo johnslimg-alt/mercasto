@@ -42,6 +42,16 @@ grep -qF 'SENTRY_LARAVEL_DSN' scripts/production-env-readiness-smoke.sh
 grep -qF 'php artisan sentry:test' scripts/bugsink-bootstrap.sh
 grep -qF 'Bugsink alert did not complete Laravel mail delivery' scripts/bugsink-bootstrap.sh
 
+python3 - <<'PY'
+from pathlib import Path
+
+source = Path("scripts/bugsink-bootstrap.sh").read_text(encoding="utf-8")
+marker = "bootstrap_py=$(cat <<'PY'\n"
+start = source.index(marker) + len(marker)
+end = source.index("\nPY\n)", start)
+compile(source[start:end], "bugsink-bootstrap-embedded.py", "exec")
+PY
+
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 cat > "$tmpdir/backend.env" <<'EOF'
