@@ -31,6 +31,8 @@ jobs:
       - name: Check public search signals
         run: |
           set -euo pipefail
+          tmp_dir="$(mktemp -d "${RUNNER_TEMP:-/tmp}/mercasto-seo-aeo.XXXXXX")"
+          trap 'rm -rf "$tmp_dir"' EXIT
           retry() {
             local attempt
             for attempt in 1 2 3 4 5 6; do
@@ -40,14 +42,14 @@ jobs:
             done
             "$@"
           }
-          retry curl -fsS --max-time 30 https://mercasto.com/ -o /tmp/home.html
-          retry curl -fsS --max-time 30 https://mercasto.com/sitemap.xml -o /tmp/sitemap.xml
-          retry curl -fsS --max-time 30 https://mercasto.com/robots.txt -o /tmp/robots.txt
-          grep -Eiq '<title[^>]*>[^<]{10,160}</title>' /tmp/home.html
-          grep -Eiq 'name="description"|property="og:description"' /tmp/home.html
-          grep -Eiq 'application/ld\+json|schema.org' /tmp/home.html
-          grep -Eiq '<urlset|<sitemapindex|<url>' /tmp/sitemap.xml
-          grep -Eiq 'Sitemap:|User-agent:' /tmp/robots.txt
+          retry curl -fsS --max-time 30 https://mercasto.com/ -o "$tmp_dir/home.html"
+          retry curl -fsS --max-time 30 https://mercasto.com/sitemap.xml -o "$tmp_dir/sitemap.xml"
+          retry curl -fsS --max-time 30 https://mercasto.com/robots.txt -o "$tmp_dir/robots.txt"
+          grep -Eiq '<title[^>]*>[^<]{10,160}</title>' "$tmp_dir/home.html"
+          grep -Eiq 'name="description"|property="og:description"' "$tmp_dir/home.html"
+          grep -Eiq 'application/ld\+json|schema.org' "$tmp_dir/home.html"
+          grep -Eiq '<urlset|<sitemapindex|<url>' "$tmp_dir/sitemap.xml"
+          grep -Eiq 'Sitemap:|User-agent:' "$tmp_dir/robots.txt"
 
   production-error-mode:
     name: Production error mode and leak smoke

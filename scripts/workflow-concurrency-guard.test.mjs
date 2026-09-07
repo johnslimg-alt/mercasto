@@ -51,14 +51,43 @@ test('no cancel-in-progress workflow groups by github.ref', () => {
 });
 
 
-test('production SEO live gate matches the localized title availability contract', () => {
-  const workflow = readFileSync(`${workflowDir}/production-live-gates.yml`, 'utf8');
+test('production SEO live gates match the localized title availability contract', () => {
+  const production = readFileSync(`${workflowDir}/production-live-gates.yml`, 'utf8');
+  const vps = readFileSync(`${workflowDir}/vps-live-gate.yml`, 'utf8');
   const watch = readFileSync('scripts/public-production-watch.sh', 'utf8');
   const contract = '<title[^>]*>[^<]{10,160}</title>';
-  assert.ok(workflow.includes(contract));
-  assert.ok(watch.includes(contract));
-  assert.doesNotMatch(workflow, /\{10,70\}/);
-  assert.doesNotMatch(watch, /\{10,70\}/);
+  for (const source of [production, vps, watch]) {
+    assert.ok(source.includes(contract));
+    assert.doesNotMatch(source, /\{10,(?:70|90)\}/);
+  }
+});
+
+test('self-hosted production workflows avoid fixed shared temp files', () => {
+  const cases = new Map([
+    ['production-live-gates.yml', ['/tmp/home.html', '/tmp/sitemap.xml', '/tmp/robots.txt']],
+    ['vps-live-gate.yml', ['/tmp/mercasto-vps-home.html', '/tmp/mercasto-vps-auth-providers.json']],
+    ['post-merge-production-verify.yml', ['/tmp/mercasto_post_merge_compose.yml']],
+  ]);
+  for (const [file, forbidden] of cases) {
+    const source = readFileSync(`${workflowDir}/${file}`, 'utf8');
+    assert.match(source, /mktemp/);
+    assert.match(source, /trap 'rm -r?f /);
+    for (const path of forbidden) {
+      assert.ok(!source.includes(path), `${file} must not use fixed shared temp path ${path}`);
+    }
+  }
+});
+
+test('compose validation uses a private reusable tempfile gate', () => {
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+  const gate = readFileSync('scripts/compose-config-gate.sh', 'utf8');
+  const backendImage = readFileSync(`${workflowDir}/backend-image-gate.yml`, 'utf8');
+  assert.equal(pkg.scripts['check:compose'], 'bash scripts/compose-config-gate.sh');
+  assert.match(gate, /mktemp -d/);
+  assert.match(gate, /trap 'rm -rf /);
+  assert.doesNotMatch(gate, /\/tmp\/mercasto_compose_/);
+  assert.match(backendImage, /bash scripts\/compose-config-gate\.sh/);
+  assert.doesNotMatch(backendImage, /\/tmp\/mercasto_compose_/);
 });
 
 const serverOperatorCommands = [

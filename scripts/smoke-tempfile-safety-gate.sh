@@ -17,6 +17,8 @@ files=(
   scripts/session-cookie-smoke.sh
   scripts/share-og-smoke.sh
   scripts/server-operator.sh
+  scripts/production-smoke.sh
+  scripts/crawler-policy-production-smoke.sh
   scripts/host-storage-headroom-gate.test.sh
 )
 
@@ -33,6 +35,11 @@ fi
 
 if grep -nE '/tmp/mercasto[-_]' scripts/server-operator.sh; then
   echo "fixed shared temp path found in server operator" >&2
+  exit 1
+fi
+
+if grep -nE '/tmp/mercasto_(compose_config|crawler_policy)' scripts/production-smoke.sh scripts/crawler-policy-production-smoke.sh; then
+  echo "fixed shared temp path found in production smoke chain" >&2
   exit 1
 fi
 

@@ -5,6 +5,8 @@ BASE_URL="${BASE_URL:-https://mercasto.com}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.override.yml)
 COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-.env}"
 COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" "${COMPOSE_FILES[@]}")
+COMPOSE_CONFIG_TMP="$(mktemp "${TMPDIR:-/tmp}/mercasto-compose-smoke.XXXXXX.yml")"
+trap 'rm -f "$COMPOSE_CONFIG_TMP"' EXIT
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -51,10 +53,10 @@ if [[ ! -f docker-compose.override.yml ]]; then
 fi
 
 echo "== Compose validation =="
-"${COMPOSE[@]}" config >"/tmp/mercasto_compose_config.$(id -u).out"
-grep -q 'mercasto-scheduler:' "/tmp/mercasto_compose_config.$(id -u).out"
-grep -q 'mercasto-reverb:' "/tmp/mercasto_compose_config.$(id -u).out"
-grep -q 'condition: service_healthy' "/tmp/mercasto_compose_config.$(id -u).out"
+"${COMPOSE[@]}" config >"$COMPOSE_CONFIG_TMP"
+grep -q 'mercasto-scheduler:' "$COMPOSE_CONFIG_TMP"
+grep -q 'mercasto-reverb:' "$COMPOSE_CONFIG_TMP"
+grep -q 'condition: service_healthy' "$COMPOSE_CONFIG_TMP"
 echo "compose config OK"
 
 echo "== Container status =="

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-https://mercasto.com}"
-ROBOTS_TMP="/tmp/mercasto_crawler_policy.$(id -u).txt"
+ROBOTS_TMP="$(mktemp "${TMPDIR:-/tmp}/mercasto-crawler-policy.XXXXXX.txt")"
 trap 'rm -f "$ROBOTS_TMP"' EXIT
 
 check_status() {
