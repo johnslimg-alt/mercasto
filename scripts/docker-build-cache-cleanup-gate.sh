@@ -5,6 +5,8 @@ HELPER=scripts/docker-build-cache-cleanup.sh
 OPERATOR=scripts/server-operator.sh
 WORKFLOW=.github/workflows/chatgpt-server-operator.yml
 STATUS=scripts/server-status-safe.sh
+HEADROOM=scripts/host-storage-headroom-gate.sh
+HEADROOM_TEST=scripts/host-storage-headroom-gate.test.sh
 
 grep -qF "docker builder prune -af --filter 'until=24h'" "$HELPER"
 grep -qF 'Refusing build-cache cleanup: an active Docker/Buildx/Compose build is running on this shared host.' "$HELPER"
@@ -21,6 +23,10 @@ grep -qF 'bash scripts/docker-build-cache-cleanup.sh' "$OPERATOR"
 grep -qF 'RUN:cleanup_build_cache:MERCASTO' "$WORKFLOW"
 grep -qF "['cleanup_build_cache', 'MERCASTO', '160']" "$WORKFLOW"
 grep -qF '== Host storage ==' "$STATUS"
-grep -qF 'WARNING: root filesystem usage is' "$STATUS"
+grep -qF 'bash scripts/host-storage-headroom-gate.sh' "$STATUS"
+grep -qF 'HOST_STORAGE_WARN_PERCENT:-80' "$HEADROOM"
+grep -qF 'HOST_STORAGE_FAIL_PERCENT:-90' "$HEADROOM"
+grep -qF 'restore shared-host headroom without deleting unrelated project data' "$HEADROOM"
+bash "$HEADROOM_TEST"
 
 echo "docker build-cache cleanup gate OK"

@@ -20,10 +20,8 @@ fi
 echo
 echo "== Host storage =="
 df -h /
-root_use=$(df -P / | awk 'NR == 2 { gsub(/%/, "", $5); print $5 }')
-if [ "${root_use:-0}" -ge 80 ]; then
-  echo "WARNING: root filesystem usage is ${root_use}%; review Docker build cache before it becomes operational pressure."
-fi
+storage_rc=0
+bash scripts/host-storage-headroom-gate.sh || storage_rc=$?
 docker system df
 
 echo
@@ -36,3 +34,7 @@ echo
 echo "== Public HTTP smoke =="
 curl -fsSI --max-time 30 https://mercasto.com/ | head -n 20
 curl -fsSI --max-time 30 https://mercasto.com/api/categories | head -n 20
+
+if [ "$storage_rc" -ne 0 ]; then
+  exit "$storage_rc"
+fi
