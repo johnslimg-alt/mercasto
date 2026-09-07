@@ -58,9 +58,6 @@ TeamMembership.objects.update_or_create(
     team=team, user=user,
     defaults={"accepted": True, "role": TeamRole.ADMIN, "send_email_alerts": False},
 )
-PY
-)
-bootstrap_py+=$(cat <<'PY'
 project, _ = Project.objects.get_or_create(team=team, name="Backend Production")
 ProjectMembership.objects.update_or_create(
     project=project, user=user,
