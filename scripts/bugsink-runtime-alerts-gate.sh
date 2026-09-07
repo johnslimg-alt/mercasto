@@ -25,6 +25,11 @@ grep -qF 'set $bugsink_upstream "bugsink:8000";' default.conf
 grep -qF 'rewrite ^/ops/errors/(.*)$ /$1 break;' default.conf
 grep -qF 'listen 8081;' default.conf
 grep -qF 'location = /api/internal/runtime-alerts' default.conf
+grep -qF 'fastcgi_pass mercasto-backend:9000;' default.conf
+grep -qF 'rewrite ^ /index.php last;' default.conf
+grep -qF 'location = /index.php {' default.conf
+grep -qF 'internal;' default.conf
+grep -qF 'fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;' default.conf
 grep -qF 'return 404;' default.conf
 grep -qF 'http://mercasto-frontend:8081/api/internal/runtime-alerts?token=' scripts/bugsink-bootstrap.sh
 grep -qF 'access_log off;' default.conf

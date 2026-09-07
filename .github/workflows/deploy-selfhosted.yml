@@ -223,6 +223,7 @@ jobs:
             # the runtime dependency volumes as part of the same atomic refresh.
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^docker-compose(\.override)?\.yml$'; then
               add_up_service mercasto-frontend
+              add_up_service bugsink
               PHP_DEPENDENCY_REFRESH=1
             fi
           fi
