@@ -65,6 +65,8 @@ node --test scripts/php-runtime-dependency-parity.test.mjs
 bash scripts/no-unused-graphql-surface-gate.sh
 bash scripts/server-operator-branch-gate.sh
 bash scripts/maintenance-reboot-operator-gate.sh
+bash scripts/docker-build-cache-cleanup-gate.sh
+bash scripts/docker-build-cache-cleanup.test.sh
 bash scripts/os-maintenance-precheck-tempfile.test.sh
 bash scripts/persistent-firewall-docker-gate.test.sh
 node --test scripts/manual-server-gate-self-hosted.test.mjs

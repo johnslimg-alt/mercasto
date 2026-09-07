@@ -344,6 +344,12 @@ PY
     docker logs --tail="$TAIL_LINES" mercasto_backend_container 2>&1 | sed -E 's/(APP_KEY|DB_PASSWORD|REDIS_PASSWORD|CLIP_[A-Z_]+|SENTRY_[A-Z_]+)=([^[:space:]]+)/\1=***REDACTED***/g'
     ;;
 
+  cleanup_build_cache)
+    require_confirm
+    print_header "Bounded Docker build-cache cleanup"
+    CONFIRM="$CONFIRM" bash scripts/docker-build-cache-cleanup.sh
+    ;;
+
   cleanup_docker)
     require_confirm
     print_header "Docker cleanup"
