@@ -295,7 +295,7 @@ class ListingRequestBoundaryMiddleware:
                 return
             if declared_bytes > _MAX_LISTING_REQUEST_BODY_BYTES:
                 response = JSONResponse(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                     content={"detail": "Listing moderation request body is too large."},
                 )
                 await response(scope, receive, send)
@@ -314,7 +314,7 @@ class ListingRequestBoundaryMiddleware:
             received_bytes += len(chunk)
             if received_bytes > _MAX_LISTING_REQUEST_BODY_BYTES:
                 response = JSONResponse(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                     content={"detail": "Listing moderation request body is too large."},
                 )
                 await response(scope, receive, send)
@@ -329,7 +329,7 @@ class ListingRequestBoundaryMiddleware:
             _validate_listing_json_shape(buffered_body)
         except _ListingJsonShapeError:
             response = JSONResponse(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 content={"detail": "Listing moderation request has invalid JSON structure."},
             )
             await response(scope, receive, send)
@@ -388,13 +388,13 @@ def _decoded_image_size(image_base64: str, *, max_decoded_bytes: int) -> int:
         decoded = base64.b64decode(image_base64, validate=True)
     except (binascii.Error, ValueError) as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="image_base64 must contain valid base64 data.",
         ) from exc
 
     if len(decoded) > max_decoded_bytes:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="Decoded image exceeds the internal moderation limit.",
         )
     return len(decoded)
@@ -493,7 +493,7 @@ async def moderate_listing(
     )
     if decoded_total > _MAX_LISTING_DECODED_IMAGE_BYTES:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="Combined listing images exceed the internal moderation limit.",
         )
 

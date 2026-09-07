@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'services/ai-gateway/**'
+      - 'scripts/python-ai-dependency-audit.sh'
       - '.github/workflows/python-ai-gateway.yml'
   push:
     branches: [main]
     paths:
       - 'services/ai-gateway/**'
+      - 'scripts/python-ai-dependency-audit.sh'
       - '.github/workflows/python-ai-gateway.yml'
 
 permissions:
@@ -27,6 +29,8 @@ jobs:
           cache-dependency-path: services/ai-gateway/pyproject.toml
       - name: Install
         run: python -m pip install -e 'services/ai-gateway[test]'
+      - name: Audit runtime dependencies
+        run: bash scripts/python-ai-dependency-audit.sh
       - name: Compile
         run: python -m compileall -q services/ai-gateway/mercasto_ai
       - name: Lint

@@ -46,7 +46,7 @@ class AutofillRequestBoundaryMiddleware:
                 await response(scope, receive, send)
                 return
             if declared > _MAX_AUTOFILL_BODY_BYTES:
-                response = JSONResponse(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, content={"detail": "Autofill request body is too large."})
+                response = JSONResponse(status_code=status.HTTP_413_CONTENT_TOO_LARGE, content={"detail": "Autofill request body is too large."})
                 await response(scope, receive, send)
                 return
 
@@ -61,7 +61,7 @@ class AutofillRequestBoundaryMiddleware:
             chunk = message.get("body", b"")
             total += len(chunk)
             if total > _MAX_AUTOFILL_BODY_BYTES:
-                response = JSONResponse(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, content={"detail": "Autofill request body is too large."})
+                response = JSONResponse(status_code=status.HTTP_413_CONTENT_TOO_LARGE, content={"detail": "Autofill request body is too large."})
                 await response(scope, receive, send)
                 return
             chunks.append(chunk)
