@@ -18,6 +18,15 @@ else
 fi
 
 echo
+echo "== Host storage =="
+df -h /
+root_use=$(df -P / | awk 'NR == 2 { gsub(/%/, "", $5); print $5 }')
+if [ "${root_use:-0}" -ge 80 ]; then
+  echo "WARNING: root filesystem usage is ${root_use}%; review Docker build cache before it becomes operational pressure."
+fi
+docker system df
+
+echo
 echo "== Mercasto runtime containers =="
 docker ps \
   --filter label=com.docker.compose.project=mercasto \
