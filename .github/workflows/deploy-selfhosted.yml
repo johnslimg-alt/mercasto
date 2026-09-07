@@ -180,7 +180,6 @@ jobs:
           PHP_RUNTIME_SERVICES="mercasto-backend mercasto-worker mercasto-moderation-worker mercasto-scheduler mercasto-reverb"
           BUILD_SERVICES=""
           UP_SERVICES=""
-          NGINX_CONFIG_RELOAD=0
           PHP_DEPENDENCY_REFRESH=0
 
           # The PHP services share one source tree but each owns an anonymous
@@ -208,7 +207,10 @@ jobs:
               add_up_service mercasto-frontend
             fi
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(default\.conf|security_headers\.conf)$'; then
-              NGINX_CONFIG_RELOAD=1
+              # These are single-file bind mounts. git reset can replace the host
+              # inode while the running container remains pinned to the old one,
+              # so a plain nginx reload can still read stale configuration.
+              add_up_service mercasto-frontend
             fi
             if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(backend/Dockerfile|backend/composer\.(json|lock)|backend/package(-lock)?\.json|backend/vite\.config)'; then
               PHP_DEPENDENCY_REFRESH=1
@@ -226,6 +228,24 @@ jobs:
               add_up_service bugsink
               PHP_DEPENDENCY_REFRESH=1
             fi
+          fi
+
+          # Git checkout/reset can replace a bind-mounted file inode while the
+          # running frontend keeps the old inode mounted. Detect that drift on
+          # every deploy so a failed earlier rollout is self-healing even when
+          # the current commit does not touch Nginx config files.
+          if [ "$(docker inspect -f '{{.State.Running}}' mercasto_frontend_container 2>/dev/null || true)" != "true" ]; then
+            add_up_service mercasto-frontend
+          else
+            for nginx_config in default.conf security_headers.conf; do
+              host_hash="$(sha256sum "$nginx_config" | cut -d' ' -f1)"
+              container_hash="$(docker exec mercasto_frontend_container sha256sum "/etc/nginx/conf.d/$nginx_config" 2>/dev/null | cut -d' ' -f1 || true)"
+              if [ -z "$container_hash" ] || [ "$host_hash" != "$container_hash" ]; then
+                echo "::warning::Nginx bind-mount drift detected for $nginx_config; recreating frontend."
+                add_up_service mercasto-frontend
+                break
+              fi
+            done
           fi
 
           if [ "$(docker inspect -f '{{.State.Running}}' mercasto_bugsink 2>/dev/null || true)" != "true" ]; then
@@ -356,15 +376,6 @@ jobs:
             exit 1
           fi
           docker exec -u www-data mercasto_backend_container test -r /run/mercasto/.env
-
-          if [ "$NGINX_CONFIG_RELOAD" -eq 1 ]; then
-            # default.conf/security_headers.conf are bind-mounted. Validate and
-            # reload them in place instead of recreating the frontend container
-            # (and therefore touching the long-lived production network).
-            docker start mercasto_frontend_container >/dev/null
-            docker exec mercasto_frontend_container nginx -t
-            docker exec mercasto_frontend_container nginx -s reload
-          fi
 
           case " $UP_SERVICES " in
             *" mercasto-backend "*) docker compose --env-file "$COMPOSE_ENV_FILE" exec -T mercasto-frontend nginx -s reload || true ;;

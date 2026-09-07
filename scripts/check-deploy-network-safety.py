@@ -35,13 +35,27 @@ if len(ai_build_selectors) != 1:
 elif ".github/workflows/deploy-selfhosted" in ai_build_selectors[0]:
     errors.append("AI build selector still rebuilds on deploy workflow edits")
 
+config_selector = r"""if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^(default\.conf|security_headers\.conf)$'; then"""
+if config_selector not in deploy:
+    errors.append("missing nginx bind-mount config selector")
+else:
+    selector_tail = deploy.split(config_selector, 1)[1].split("\n            fi\n", 1)[0]
+    if "add_up_service mercasto-frontend" not in selector_tail:
+        errors.append("nginx bind-mount config changes must recreate mercasto-frontend")
+
+if "--force-recreate mercasto-frontend" not in deploy:
+    errors.append("missing frontend force-recreate deploy path")
+if "NGINX_CONFIG_RELOAD" in deploy:
+    errors.append("nginx bind-mount config must not rely on reload-only deploy state")
+
 for required in (
-    "NGINX_CONFIG_RELOAD=1",
-    "docker exec mercasto_frontend_container nginx -t",
-    "docker exec mercasto_frontend_container nginx -s reload",
+    "for nginx_config in default.conf security_headers.conf; do",
+    'host_hash="$(sha256sum "$nginx_config"',
+    "docker exec mercasto_frontend_container sha256sum",
+    "Nginx bind-mount drift detected",
 ):
     if required not in deploy:
-        errors.append(f"missing nginx config-only deploy guard: {required!r}")
+        errors.append(f"missing nginx bind-mount drift recovery guard: {required!r}")
 
 if errors:
     print("DEPLOY_NETWORK_SAFETY=FAIL", file=sys.stderr)
