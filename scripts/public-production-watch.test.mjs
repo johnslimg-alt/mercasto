@@ -90,6 +90,14 @@ test('approved AI title exceeds the former 70-character watch limit', () => {
   assert.ok([...approvedAiTitle].length <= 160);
 });
 
+test('server operator uses the current title contract and private temporary workspace', () => {
+  const operator = readFileSync('scripts/server-operator.sh', 'utf8');
+  assert.ok(operator.includes(`grep -Eiq '<title[^>]*>[^<]{10,160}</title>' "$home"`));
+  assert.ok(!operator.includes('{10,70}</title>'));
+  assert.match(operator, /SERVER_OPERATOR_TMPDIR=.*mktemp -d/);
+  assert.doesNotMatch(operator, /\/tmp\/mercasto[-_](?:home|sitemap|robots|compose)/);
+});
+
 test('passes the complete read-only watch on a healthy endpoint set', async () => {
   const server = createHealthyServer();
   const address = await listen(server);

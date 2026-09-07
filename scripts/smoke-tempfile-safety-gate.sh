@@ -16,6 +16,7 @@ files=(
   scripts/public-production-watch.sh
   scripts/session-cookie-smoke.sh
   scripts/share-og-smoke.sh
+  scripts/server-operator.sh
   scripts/host-storage-headroom-gate.test.sh
 )
 
@@ -27,6 +28,11 @@ done
 
 if grep -nE '/tmp/mercasto_(probe|listing_route|storage-threshold-test\.out)|\$\{TMPDIR:-/tmp\}/mercasto-(auth-providers|business-profile-(smoke|routes|migrate)|homepage-headers|cookie-headers|share-og-smoke)' "${files[@]}"; then
   echo "fixed shared temp path found in production smoke scripts" >&2
+  exit 1
+fi
+
+if grep -nE '/tmp/mercasto[-_]' scripts/server-operator.sh; then
+  echo "fixed shared temp path found in server operator" >&2
   exit 1
 fi
 
