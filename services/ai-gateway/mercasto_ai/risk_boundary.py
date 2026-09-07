@@ -55,7 +55,7 @@ class RiskRequestBoundaryMiddleware:
                 return
             if declared_bytes > _MAX_RISK_REQUEST_BODY_BYTES:
                 response = JSONResponse(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                     content={"detail": "Risk request body is too large."},
                 )
                 await response(scope, receive, send)
@@ -74,7 +74,7 @@ class RiskRequestBoundaryMiddleware:
             received_bytes += len(chunk)
             if received_bytes > _MAX_RISK_REQUEST_BODY_BYTES:
                 response = JSONResponse(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                     content={"detail": "Risk request body is too large."},
                 )
                 await response(scope, receive, send)

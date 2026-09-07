@@ -177,5 +177,16 @@ for marker in (
 if rotate.count("mercasto-moderation-worker") < 2 or "mercasto_moderation_worker_container" not in rotate:
     raise SystemExit("secret rotation must recreate, roll back, and health-check the moderation worker")
 
-print("python AI private runtime gate OK")
+print("python AI private runtime contract OK")
 PY
+
+PYPROJECT="$ROOT_DIR/services/ai-gateway/pyproject.toml"
+AI_WORKFLOW="$ROOT_DIR/.github/workflows/python-ai-gateway.yml"
+AI_AUDIT="$ROOT_DIR/scripts/python-ai-dependency-audit.sh"
+
+grep -qF '"pip-audit>=2.10,<3"' "$PYPROJECT"
+grep -qF 'bash scripts/python-ai-dependency-audit.sh' "$AI_WORKFLOW"
+grep -qF 'python3 -m pip_audit' "$AI_AUDIT"
+grep -qF 'tomllib' "$AI_AUDIT"
+
+echo "python AI private runtime gate OK"
