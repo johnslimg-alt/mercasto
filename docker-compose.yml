@@ -23,7 +23,7 @@ services:
       mercasto-backend:
         condition: service_healthy
       mercasto-reverb:
-        condition: service_started
+        condition: service_healthy
     # УЛУЧШЕНИЕ 1: реальный healthcheck
     healthcheck:
       test: ["CMD-SHELL", "pidof nginx >/dev/null 2>&1 || exit 1"]
@@ -203,7 +203,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      disable: true
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 8082) ? 0 : 1);"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     logging:
       driver: "json-file"
       options:
