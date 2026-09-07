@@ -200,6 +200,12 @@ if [ "$verified_hash" != "$verification_hash" ]; then
     exit 1
   fi
 
+  resolved_test_issue="$(docker exec -e MERCASTO_VERIFY_ISSUE="$test_issue_id" "$BUGSINK_CONTAINER" bugsink-manage shell -c 'import os; from issues.models import Issue; print(Issue.objects.filter(id=os.environ["MERCASTO_VERIFY_ISSUE"], calculated_type="Exception", calculated_value="This is a test exception sent from the Sentry Laravel SDK.").update(is_resolved=True, is_resolved_unconditionally=True, is_resolved_by_next_release=False))' | tail -n 1)"
+  if [ "$resolved_test_issue" != "1" ]; then
+    echo "FAIL: verified Sentry SDK test issue could not be resolved safely" >&2
+    exit 1
+  fi
+
   docker exec "$BUGSINK_CONTAINER" sh -lc "umask 077; printf '%s\\n' '$verification_hash' > /data/mercasto-runtime-alerts.verified"
 fi
 
