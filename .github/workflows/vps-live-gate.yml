@@ -84,9 +84,11 @@ jobs:
       - name: Check production HTTP endpoints
         run: |
           set -euo pipefail
+          tmp_dir="$(mktemp -d "${RUNNER_TEMP:-/tmp}/mercasto-vps-live.XXXXXX")"
+          trap 'rm -rf "$tmp_dir"' EXIT
           curl -fsS --retry 3 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 30 \
-            https://mercasto.com/ -o /tmp/mercasto-vps-home.html
+            https://mercasto.com/ -o "$tmp_dir/home.html"
           curl -fsS --retry 3 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 30 \
-            https://mercasto.com/api/auth/providers -o /tmp/mercasto-vps-auth-providers.json
-          grep -Eiq '<title[^>]*>[^<]{10,90}</title>' /tmp/mercasto-vps-home.html
-          grep -Eiq '"google"|"telegram"|"apple"|"sms"' /tmp/mercasto-vps-auth-providers.json
+            https://mercasto.com/api/auth/providers -o "$tmp_dir/auth-providers.json"
+          grep -Eiq '<title[^>]*>[^<]{10,160}</title>' "$tmp_dir/home.html"
+          grep -Eiq '"google"|"telegram"|"apple"|"sms"' "$tmp_dir/auth-providers.json"

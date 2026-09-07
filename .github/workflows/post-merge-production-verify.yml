@@ -70,7 +70,9 @@ jobs:
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR"
-          docker compose -f docker-compose.yml -f docker-compose.override.yml config >/tmp/mercasto_post_merge_compose.yml
+          compose_config="$(mktemp "${RUNNER_TEMP:-/tmp}/mercasto-post-merge-compose.XXXXXX.yml")"
+          trap 'rm -f "$compose_config"' EXIT
+          docker compose -f docker-compose.yml -f docker-compose.override.yml config >"$compose_config"
           docker compose -f docker-compose.yml -f docker-compose.override.yml ps
 
       - name: Preload local AI model without user data
