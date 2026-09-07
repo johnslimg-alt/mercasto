@@ -46,6 +46,9 @@ grep -qF 'MERCASTO_VERIFY_RELEASE' scripts/bugsink-bootstrap.sh
 grep -qF 'Event.objects.filter(release=os.environ["MERCASTO_VERIFY_RELEASE"])' scripts/bugsink-bootstrap.sh
 grep -qF 'send_new_issue_alert.delay(os.environ["MERCASTO_VERIFY_ISSUE"])' scripts/bugsink-bootstrap.sh
 grep -qF 'Retrying the failed Bugsink NEW alert for this deploy verification issue.' scripts/bugsink-bootstrap.sh
+grep -qF 'This is a test exception sent from the Sentry Laravel SDK.' scripts/bugsink-bootstrap.sh
+grep -qF 'verified Sentry SDK test issue could not be resolved safely' scripts/bugsink-bootstrap.sh
+grep -qF 'is_resolved_unconditionally=True' scripts/bugsink-bootstrap.sh
 
 python3 - <<'PY'
 from pathlib import Path
