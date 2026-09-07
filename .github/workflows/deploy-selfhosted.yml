@@ -75,6 +75,14 @@ jobs:
               path.write_text('\n'.join(output) + '\n', encoding='utf-8')
           PY
 
+          # Derive dedicated Bugsink credentials once. Only ADMIN_EMAIL crosses
+          # from Laravel into the tracker; the generated alert token is copied
+          # back into Laravel so SMTP/provider secrets never leave its env.
+          python3 scripts/bugsink-compose-env-sync.py \
+            "$RUNNER_TEMP/mercasto-backend.env" \
+            /var/www/mercasto/.env
+          bash scripts/bugsink-compose-env-readiness.sh /var/www/mercasto/.env
+
           # Preserve the current persistent mode during the transition. Existing
           # PHP-FPM workers may still need the host file until refreshed containers
           # start with the runtime-env entrypoint.
@@ -191,6 +199,7 @@ jobs:
             add_up_service ollama
             add_up_service mercasto-autofill-model
             add_up_service mercasto-ai-gateway
+            add_up_service bugsink
             PHP_DEPENDENCY_REFRESH=1
           else
             echo "$CHANGED_FILES"
@@ -216,6 +225,10 @@ jobs:
               add_up_service mercasto-frontend
               PHP_DEPENDENCY_REFRESH=1
             fi
+          fi
+
+          if [ "$(docker inspect -f '{{.State.Running}}' mercasto_bugsink 2>/dev/null || true)" != "true" ]; then
+            add_up_service bugsink
           fi
 
           if [ "$PHP_DEPENDENCY_REFRESH" -eq 1 ]; then
@@ -361,6 +374,13 @@ jobs:
           set -euo pipefail
           cd /var/www/mercasto
           bash scripts/ensure-local-ai-models.sh
+
+      - name: Ensure runtime error alerts
+        run: |
+          set -euo pipefail
+          cd /var/www/mercasto
+          bash scripts/bugsink-compose-env-readiness.sh /var/www/mercasto/.env
+          DEPLOY_SHA="$GITHUB_SHA" bash scripts/bugsink-bootstrap.sh
 
       - name: Кэш и очереди
         run: |

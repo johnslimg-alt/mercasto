@@ -104,6 +104,7 @@
   {"domain":null,"method":"GET|HEAD","uri":"api/gamification/profile","name":null,"action":"App\\Http\\Controllers\\Api\\GamificationController@profile","middleware":["api","Illuminate\\Auth\\Middleware\\Authenticate:sanctum"]},
   {"domain":null,"method":"GET|HEAD","uri":"api/google-merchant.xml","name":null,"action":"App\\Http\\Controllers\\Api\\AdController@googleMerchantFeed","middleware":["api","Illuminate\\Routing\\Middleware\\ThrottleRequests:api"]},
   {"domain":null,"method":"GET|HEAD","uri":"api/img","name":null,"action":"App\\Http\\Controllers\\ImageController","middleware":["api"]},
+  {"domain":null,"method":"POST","uri":"api/internal/runtime-alerts","name":null,"action":"App\\Http\\Controllers\\Api\\RuntimeErrorAlertController","middleware":["api"]},
   {"domain":null,"method":"POST","uri":"api/login","name":null,"action":"App\\Http\\Controllers\\Api\\AuthController@login","middleware":["api","Illuminate\\Routing\\Middleware\\ThrottleRequests:auth"]},
   {"domain":null,"method":"POST","uri":"api/login/two-factor","name":null,"action":"App\\Http\\Controllers\\Api\\AuthController@loginTwoFactor","middleware":["api","Illuminate\\Routing\\Middleware\\ThrottleRequests:auth"]},
   {"domain":null,"method":"POST","uri":"api/logout","name":null,"action":"App\\Http\\Controllers\\Api\\AuthController@logout","middleware":["api","Illuminate\\Auth\\Middleware\\Authenticate:sanctum"]},
