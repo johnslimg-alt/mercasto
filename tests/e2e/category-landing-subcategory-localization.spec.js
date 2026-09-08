@@ -83,3 +83,46 @@ for (const lang of ['es', 'zh', 'ar', 'ru']) {
     await expectNoOverflow(page);
   });
 }
+
+
+test('category landing trust section remains dark and readable in dark mode', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+    localStorage.setItem('theme', 'dark');
+  });
+  await mockApi(page);
+  await page.goto('/negocios', { waitUntil: 'domcontentloaded' });
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(true);
+  await expect(page.getByTestId('category-trust-section')).toBeVisible();
+  await expect(page.getByTestId('category-trust-card').first()).toBeVisible();
+
+  const colors = await page.evaluate(() => {
+    const renderedRgb = value => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = value;
+      context.fillRect(0, 0, 1, 1);
+      return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    };
+    const section = document.querySelector('[data-testid="category-trust-section"]');
+    const card = document.querySelector('[data-testid="category-trust-card"]');
+    const title = document.querySelector('[data-testid="category-trust-title"]');
+    return {
+      section: renderedRgb(getComputedStyle(section).backgroundColor),
+      card: renderedRgb(getComputedStyle(card).backgroundColor),
+      title: renderedRgb(getComputedStyle(title).color),
+    };
+  });
+  expect(Math.max(...colors.section)).toBeLessThan(90);
+  expect(Math.max(...colors.card)).toBeLessThan(110);
+  expect(Math.min(...colors.title)).toBeGreaterThan(190);
+  await expectNoOverflow(page);
+});

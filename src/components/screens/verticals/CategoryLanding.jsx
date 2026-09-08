@@ -347,7 +347,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
   const heroSubsections = localizedSubsections;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <VerticalHero
         title={cfg.title}
         subtitle={cfg.subtitle}
@@ -447,18 +447,18 @@ export default function CategoryLanding({ category, lang = 'es' }) {
         </section>
 
         {/* Trust */}
-        <section className={`${c.trust} rounded-3xl p-8`}>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">{t.why_mercasto || 'Mercasto'}</h2>
+        <section data-testid="category-trust-section" className={`${c.trust} rounded-3xl p-8 dark:bg-slate-900`}>
+          <h2 data-testid="category-trust-title" className="text-2xl font-bold text-slate-900 dark:text-white mb-6 text-center">{t.why_mercasto || 'Mercasto'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {cfg.trust.map(item => {
               const Icon = item.Icon;
               return (
-                <div key={item.title} className="bg-white rounded-2xl p-6 shadow-sm text-center">
+                <div key={item.title} data-testid="category-trust-card" className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm text-center dark:ring-1 dark:ring-slate-700">
                   <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border ${c.trustIcon}`}>
                     <Icon size={23} strokeWidth={2.2} />
                   </div>
-                  <h3 className="font-bold text-[15px] text-slate-800 mb-2">{item.title}</h3>
-                  <p className="text-[13px] text-slate-500 leading-relaxed">{item.body}</p>
+                  <h3 className="font-bold text-[15px] text-slate-800 dark:text-white mb-2">{item.title}</h3>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-300 leading-relaxed">{item.body}</p>
                 </div>
               );
             })}
