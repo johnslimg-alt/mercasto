@@ -95,7 +95,9 @@ class ClipWebhookTest extends TestCase
             'services.openai_ads.events_api_endpoint' => 'https://bzr.openai.com/v1/events',
             'app.frontend_url' => 'https://mercasto.com',
         ]);
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
         $this->createPendingPayment($user);
         $payment = DB::table('payments')->where('clip_checkout_id', self::CHECKOUT_ID)->first();
         Cache::put('meta_purchase_context:' . self::CHECKOUT_ID, [
@@ -124,6 +126,32 @@ class ClipWebhookTest extends TestCase
         $this->assertSame(1900, $event['data']['amount'] ?? null);
         $this->assertSame('MXN', $event['data']['currency'] ?? null);
         $this->assertSame('https://mercasto.com/promocionar', $event['source_url'] ?? null);
+    }
+
+    public function test_withdrawn_analytics_consent_blocks_delayed_openai_order_conversion(): void
+    {
+        config([
+            'services.openai_ads.pixel_id' => 'px_order_test',
+            'services.openai_ads.api_key' => 'test-key',
+            'services.openai_ads.events_api_endpoint' => 'https://bzr.openai.com/v1/events',
+        ]);
+        $user = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => false],
+        ]);
+        $this->createPendingPayment($user);
+        Cache::put('meta_purchase_context:' . self::CHECKOUT_ID, [
+            'openai_measurement_consent' => true,
+            'source_url' => 'https://mercasto.com/promocionar?plan=boost',
+        ], now()->addHour());
+
+        Http::fake([
+            $this->clipStatusUrl() => Http::response($this->completedCheckoutResponse(), 200),
+            'bzr.openai.com/*' => Http::response(['accepted' => 1], 200),
+        ]);
+
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())->assertOk();
+
+        Http::assertNotSent(fn (ClientRequest $request): bool => str_contains($request->url(), 'bzr.openai.com'));
     }
 
     public function test_duplicate_completed_checkout_does_not_double_credit_balance(): void

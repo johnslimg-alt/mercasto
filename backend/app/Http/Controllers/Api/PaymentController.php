@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\MetaCapiService;
 use App\Services\OpenAiAdsCapiService;
+use App\Support\AnalyticsTrackingConsent;
 use App\Support\PaymentPayloadSanitizer;
 use Illuminate\Http\Request;
 use App\Events\NewNotification;
@@ -402,10 +403,8 @@ class PaymentController extends Controller
 
             // External side effects run only after the database transaction commits.
             if ($fulfilledPayment && $fulfilledPayment->user_id) {
-                defer(function () use ($openai, $meta, $request, $fulfilledPayment) {
-                    $this->sendOpenAiOrder($openai, $request, $fulfilledPayment);
-                    $this->sendMetaPurchase($meta, $request, $fulfilledPayment);
-                })->always();
+                defer(fn () => $this->sendMetaPurchase($meta, $request, $fulfilledPayment))->always();
+                defer(fn () => $this->sendOpenAiOrder($openai, $request, $fulfilledPayment))->always();
             }
 
             if ($notificationData) {
@@ -665,9 +664,11 @@ class PaymentController extends Controller
             }
         }
 
-        $consent = (bool) ($context['openai_measurement_consent']
+        $checkoutConsent = (bool) ($context['openai_measurement_consent']
             ?? $request->boolean('openai_measurement_consent'));
-        if (! $consent) {
+        $openAiUser = User::find($payment->user_id);
+        $currentConsent = AnalyticsTrackingConsent::current($openAiUser);
+        if (! $checkoutConsent || ! $currentConsent) {
             return;
         }
 
@@ -678,7 +679,7 @@ class PaymentController extends Controller
         $result = $openai->send(
             'order_created',
             $request,
-            DB::table('users')->where('id', $payment->user_id)->first(),
+            $openAiUser,
             [
                 'type' => 'contents',
                 'amount' => $amountMinor,

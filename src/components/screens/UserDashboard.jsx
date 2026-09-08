@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { localizedText } from '../../utils/localize';
 import { formatDate, formatMXN, formatNumber } from '../../utils/localeFormat';
+import { persistAnalyticsTrackingConsent } from '../../utils/trackingConsent';
 import PushNotificationManager from '../ui/PushNotificationManager';
 import AchievementsModal from '../gamification/AchievementsModal';
 
@@ -1033,7 +1034,13 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                         const newVal = !trackingConsent;
                         setTrackingConsent(newVal);
                         localStorage.setItem('mercasto_privacy_tracking_consent', String(newVal));
-                        window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
+                        const notify = () => window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
+                        const cookieAllowsTracking = localStorage.getItem('cookie_consent') === 'all';
+                        const allowed = cookieAllowsTracking && newVal;
+                        if (!allowed) notify();
+                        void persistAnalyticsTrackingConsent(allowed).then((synced) => {
+                          if (allowed && synced) notify();
+                        });
                       }}
                       className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${trackingConsent ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                     >

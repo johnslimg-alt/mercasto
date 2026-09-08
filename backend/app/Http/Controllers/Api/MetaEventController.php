@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ad;
 use App\Services\MetaCapiService;
 use App\Services\OpenAiAdsCapiService;
 use App\Services\TikTokEventsApiService;
+use App\Support\AnalyticsTrackingConsent;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class MetaEventController extends Controller
 {
@@ -16,6 +19,25 @@ class MetaEventController extends Controller
         TikTokEventsApiService $tiktok,
         OpenAiAdsCapiService $openai
     ) {
+        $request->validate(['listing_id' => ['required', 'integer']]);
+        $listing = Ad::query()
+            ->whereKey((int) $request->input('listing_id'))
+            ->where('user_id', $request->user()->id)
+            ->whereIn('status', ['pending', 'under_review', 'active'])
+            ->where('created_at', '>=', now()->subMinutes(30))
+            ->first();
+
+        if (! $listing) {
+            throw ValidationException::withMessages([
+                'listing_id' => ['El anuncio no pertenece al usuario o no corresponde a una publicación reciente.'],
+            ]);
+        }
+
+        $request->merge([
+            'category' => $listing->category,
+            'city' => $listing->city,
+        ]);
+
         return $this->sendClassifiedEvent(
             $request, $meta, $tiktok, $openai, 'PostAd', 'Lead', 'published', 'custom', 'listing_published'
         );
@@ -108,7 +130,9 @@ class MetaEventController extends Controller
         );
 
         $openAiResult = ['ok' => false, 'skipped' => true, 'reason' => 'not_requested'];
-        if ($request->boolean('openai_measurement_consent') && $openAiEventType) {
+        if ($openAiEventType
+            && $request->boolean('openai_measurement_consent')
+            && AnalyticsTrackingConsent::current($request->user())) {
             $openAiData = $openAiEventType === 'custom'
                 ? [
                     'type' => 'custom',

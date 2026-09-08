@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserConsent;
+use App\Support\AnalyticsTrackingConsent;
 use App\Support\PrivacyFingerprint;
 use App\Support\SecureOneTimeCode;
 use Illuminate\Http\Request;
@@ -236,6 +237,11 @@ class AuthController extends Controller
             'ip_hash' => $ipHash,
             'user_agent_hash' => $userAgentHash,
         ];
+
+        AnalyticsTrackingConsent::persist(
+            $user,
+            (bool) ($consent['openai_measurement_consent'] ?? false),
+        );
 
         UserConsent::insert([
             [

@@ -28,18 +28,20 @@ function installQueue() {
 
 function initPixel() {
   if (!OPENAI_ADS_PIXEL_ID || !isBrowser() || window.__mercastoOpenAIAdsPixelInitialized) return;
+  if (!isOpenAIAdsMeasurementAllowed()) return;
   installQueue();
   const queue = oaiq();
   if (!queue) return;
-  queue('consent', isOpenAIAdsMeasurementAllowed());
+  queue('consent', true);
   queue('init', { pixelId: OPENAI_ADS_PIXEL_ID, ...(VERBOSE ? { debug: true } : {}) });
   window.__mercastoOpenAIAdsPixelInitialized = true;
 }
 
 function syncConsent() {
-  initPixel();
+  const allowed = isOpenAIAdsMeasurementAllowed();
+  if (allowed) initPixel();
   const queue = oaiq();
-  if (queue) queue('consent', isOpenAIAdsMeasurementAllowed());
+  if (queue && window.__mercastoOpenAIAdsPixelInitialized) queue('consent', allowed);
 }
 
 const clean = (value, max = 160) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -108,7 +110,6 @@ function handleItem(item = {}) {
 export function installOpenAIAdsBridge() {
   if (!isBrowser() || window.__mercastoOpenAIAdsBridgeInstalled) return;
   window.__mercastoOpenAIAdsBridgeInstalled = true;
-  initPixel();
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.forEach(handleItem);
 

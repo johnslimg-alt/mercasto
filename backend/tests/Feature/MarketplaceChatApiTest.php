@@ -127,7 +127,9 @@ class MarketplaceChatApiTest extends TestCase
         Http::fake(['bzr.openai.com/*' => Http::response(['accepted' => 1], 200)]);
 
         $seller = User::factory()->create();
-        $buyer = User::factory()->create();
+        $buyer = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
         $ad = $this->createAd($seller);
 
         $first = $this->actingAs($buyer, 'sanctum')
@@ -168,6 +170,32 @@ class MarketplaceChatApiTest extends TestCase
             fn ($entry) => str_contains($entry[0]->url(), 'bzr.openai.com')
         );
         $this->assertCount(1, $openAiRequests);
+    }
+
+    public function test_withdrawn_server_consent_blocks_openai_lead_even_when_request_claims_opt_in(): void
+    {
+        config([
+            'services.openai_ads.pixel_id' => 'px_lead_test',
+            'services.openai_ads.api_key' => 'test-key',
+            'services.openai_ads.events_api_endpoint' => 'https://bzr.openai.com/v1/events',
+        ]);
+        Http::fake();
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => false],
+        ]);
+        $ad = $this->createAd($seller);
+
+        $this->actingAs($buyer, 'sanctum')->postJson('/api/chat/messages', [
+            'receiver_id' => $seller->id,
+            'ad_id' => $ad->id,
+            'content' => '¿Sigue disponible?',
+            'openai_measurement_consent' => true,
+        ])->assertOk()
+            ->assertJsonPath('lead_created', true)
+            ->assertJsonMissingPath('openai_lead_event_id');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'bzr.openai.com'));
     }
 
     public function test_unread_message_notifications_coalesce_per_conversation_and_clear_on_read(): void

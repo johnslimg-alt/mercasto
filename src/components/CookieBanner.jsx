@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cookie, X } from 'lucide-react';
+import { persistAnalyticsTrackingConsent } from '../utils/trackingConsent';
 
 export default function CookieBanner({ t, lang }) {
   const [visible, setVisible] = useState(false);
@@ -18,13 +19,24 @@ export default function CookieBanner({ t, lang }) {
 
   const accept = () => {
     localStorage.setItem('cookie_consent', 'all');
-    window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
+    const notify = () => window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
+    const hasAuth = Boolean(localStorage.getItem('auth_token'));
+    const privacyAllowsTracking = localStorage.getItem('mercasto_privacy_tracking_consent') !== 'false';
+    if (hasAuth) {
+      if (!privacyAllowsTracking) notify();
+      void persistAnalyticsTrackingConsent(privacyAllowsTracking).then((synced) => {
+        if (privacyAllowsTracking && synced) notify();
+      });
+    } else {
+      notify();
+    }
     setVisible(false);
   };
 
   const essential = () => {
     localStorage.setItem('cookie_consent', 'essential');
     window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
+    void persistAnalyticsTrackingConsent(false);
     setVisible(false);
   };
 

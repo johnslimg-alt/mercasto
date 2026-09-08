@@ -1923,6 +1923,30 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    const syncConsentIntoSession = (event) => {
+      const allowed = event?.detail?.allowed;
+      if (typeof allowed !== 'boolean') return;
+      setUser(prev => {
+        if (!prev) return prev;
+        const rawPreferences = prev.notification_preferences;
+        let preferences = rawPreferences || {};
+        if (typeof rawPreferences === 'string') {
+          try { preferences = JSON.parse(rawPreferences || '{}'); } catch { preferences = {}; }
+        }
+        return {
+          ...prev,
+          notification_preferences: {
+            ...preferences,
+            analytics_tracking_consent: allowed,
+          },
+        };
+      });
+    };
+    window.addEventListener('mercasto:analytics-consent-synced', syncConsentIntoSession);
+    return () => window.removeEventListener('mercasto:analytics-consent-synced', syncConsentIntoSession);
+  }, [setUser]);
+
+  useEffect(() => {
     if (!user?.id || !lang) return undefined;
     const preferences = typeof user.notification_preferences === 'string'
       ? (() => { try { return JSON.parse(user.notification_preferences || '{}'); } catch { return {}; } })()

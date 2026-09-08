@@ -9,6 +9,7 @@ use App\Services\OpenAiAdsCapiService;
 use App\Events\MessageSent;
 use App\Events\NewNotification;
 use App\Mail\NewMessageMail;
+use App\Support\AnalyticsTrackingConsent;
 use App\Support\MailLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -181,7 +182,9 @@ class ChatController extends Controller {
             );
             $formatted['lead_created'] = $leadCreated;
 
-            if ($leadCreated && $request->boolean('openai_measurement_consent')) {
+            if ($leadCreated
+                && $request->boolean('openai_measurement_consent')
+                && AnalyticsTrackingConsent::current($request->user())) {
                 $openAiLeadEventId = 'lead_created_message_' . $message->id;
                 $formatted['openai_lead_event_id'] = $openAiLeadEventId;
                 defer(fn () => $openai->send(
