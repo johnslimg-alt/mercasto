@@ -76,6 +76,61 @@ const AdCard = memo(({
     e.currentTarget.src = '/placeholder-ad.svg';
   }, [onImageError]);
 
+  if (options.layout === 'list') {
+    return (
+      <article
+        ref={isCatalogFiller ? null : observeRef}
+        data-testid="catalog-list-card"
+        className={`relative market-card ad-result-card group flex min-h-[96px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}
+      >
+        <button
+          type="button"
+          aria-label={localizedText(ad.title, lang)}
+          onClick={() => { options.onActivate?.(ad); handleViewAd(ad); }}
+          className="absolute inset-0 z-10 cursor-pointer rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#84CC16] focus-visible:ring-inset"
+        />
+        <div className="relative pointer-events-none h-[96px] w-[104px] shrink-0 overflow-hidden bg-slate-200 sm:h-[108px] sm:w-[144px] md:w-[156px] dark:bg-slate-800">
+          <img
+            src={safeImage}
+            width={imageWidth}
+            height={Math.round(imageWidth * 0.75)}
+            loading={options.priority ? 'eager' : 'lazy'}
+            fetchPriority={options.priority ? 'high' : 'auto'}
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            onError={handleImageError}
+            alt={localizedText(ad.title, lang)}
+          />
+          {isCatalogFiller && <span className="badge absolute left-1.5 top-1.5 z-10 bg-slate-900/90 text-[9px] text-white">{detailCopy.catalogTitle}</span>}
+          {!isCatalogFiller && isDestacado && <span className="badge absolute left-1.5 top-1.5 z-10 bg-blue-600 text-[9px] text-white">{t.featured_status}</span>}
+          {!isCatalogFiller && !isDestacado && isUrgente && <span className="badge absolute left-1.5 top-1.5 z-10 bg-amber-500 text-[9px] text-white">{t.urgent_badge}</span>}
+        </div>
+        <div className="ad-result-body pointer-events-none flex min-w-0 flex-1 flex-col px-3 py-2.5 pr-12 text-[#0F172A] dark:text-white sm:px-4 sm:py-3">
+          <h3 className="line-clamp-2 text-[13px] font-bold leading-snug text-slate-800 dark:text-slate-100 sm:text-[14px]">{localizedText(ad.title, lang)}</h3>
+          <div className="mt-1 text-[16px] font-black leading-none text-slate-950 dark:text-white sm:text-[18px]">
+            ${formatNumber(ad.price, lang)} <span className="text-[9px] font-semibold text-slate-400">MXN</span>
+          </div>
+          <div className="mt-auto flex min-w-0 items-center gap-2 pt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="truncate">{ad.state ? `${ad.state}${ad.location ? ` · ${ad.location.split(',')[0]}` : ''}` : (ad.location?.split(',')[0] || t.all_mexico)}</span>
+            {ad.condition && <span className="hidden shrink-0 rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600 sm:inline dark:bg-slate-800 dark:text-slate-300">{ad.condition}</span>}
+          </div>
+        </div>
+        <button
+          type="button"
+          data-testid="ad-card-favorite"
+          aria-label={t.ad_favorite}
+          aria-pressed={isFav}
+          onClick={(e) => handleToggleFavorite(e, ad.id)}
+          className="pointer-events-auto absolute right-1 top-1 z-20 flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#84CC16]"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/92 shadow-sm backdrop-blur transition-colors hover:bg-white dark:bg-slate-900/92 dark:hover:bg-slate-800">
+            <Heart className={`h-4 w-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-700 dark:text-slate-300'}`} />
+          </span>
+        </button>
+      </article>
+    );
+  }
+
   return (
     <article ref={isCatalogFiller ? null : observeRef} className={`relative market-card ad-result-card overflow-hidden group flex flex-col h-full min-h-[252px] shrink-0 dark:border-slate-800 ${isHighlighted ? 'ring-2 ring-lime-400/70 shadow-lime-500/20' : ''}`}>
       <button

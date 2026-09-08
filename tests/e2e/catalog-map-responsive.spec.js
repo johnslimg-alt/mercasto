@@ -184,19 +184,21 @@ test('standalone fullscreen map uses responsive filter geometry instead of a ful
     const panel = dialog.getByTestId('map-filter-panel');
     const canvas = dialog.getByTestId('map-fullscreen-canvas');
     await expect(panel).toBeVisible();
+    await dialog.getByTestId('map-filter-section-listing-type').locator('button').first().click();
+    await dialog.getByTestId('map-filter-section-condition').locator('button').first().click();
 
     const panelBox = await panel.boundingBox();
     const canvasBox = await canvas.boundingBox();
     expect(panelBox).not.toBeNull();
     expect(canvasBox).not.toBeNull();
     if (viewport.width >= 1024) {
-      expect(panelBox.width).toBeGreaterThanOrEqual(360);
-      expect(panelBox.width).toBeLessThanOrEqual(400);
+      expect(panelBox.width).toBeGreaterThanOrEqual(350);
+      expect(panelBox.width).toBeLessThanOrEqual(380);
       expect(canvasBox.x).toBeGreaterThanOrEqual(panelBox.x + panelBox.width - 1);
       await expect(dialog.getByTestId('map-results-panel')).toBeVisible();
     } else {
       expect(panelBox.width).toBeLessThanOrEqual(viewport.width);
-      expect(panelBox.height).toBeLessThanOrEqual(Math.min(620, viewport.height * 0.72) + 2);
+      expect(panelBox.height).toBeLessThanOrEqual(viewport.height * (viewport.width >= 640 ? 0.78 : 0.72) + 2);
       expect(canvasBox.x).toBeLessThanOrEqual(1);
       await expect(dialog.getByTestId('map-results-panel')).toBeHidden();
     }
@@ -212,7 +214,7 @@ test('standalone fullscreen map uses responsive filter geometry instead of a ful
       dialog.getByTestId('map-search-area'),
     ]) {
       const box = await control.boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(48);
+      expect(box?.height).toBeGreaterThanOrEqual(viewport.width >= 1024 ? 36 : 44);
     }
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `fullscreen overflow at ${viewport.width}px`).toBeLessThanOrEqual(1);
@@ -229,6 +231,9 @@ test('standalone negocios map search-area keeps its category and sends filters t
   await dialog.getByTestId('map-filter-toggle').click();
 
   await expect(dialog.getByTestId('map-filter-category')).toHaveCount(0);
+  await dialog.getByTestId('map-filter-section-listing-type').locator('button').first().click();
+  await dialog.getByTestId('map-filter-section-condition').locator('button').first().click();
+  await dialog.getByTestId('map-filter-section-dynamic').locator('button').first().click();
   await dialog.getByTestId('map-filter-state').selectOption('Veracruz');
   await dialog.getByTestId('map-filter-city').selectOption('Veracruz');
   await dialog.getByTestId('map-filter-min-price').fill('100000');

@@ -44,7 +44,13 @@ export default function SplitViewContainer({
   t = {},
   lang = 'es',
 }) {
-  const [viewLayout, setViewLayout] = useState('grid'); // 'grid' or 'list'
+  const [viewLayout, setViewLayout] = useState(() => {
+    try {
+      return localStorage.getItem('mercasto_catalog_view') === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  }); // 'grid' or 'list'
   const [hoveredAdId, setHoveredAdId] = useState(null);
   const [selectedAdId, setSelectedAdId] = useState(null);
   const [isMobileCatalog, setIsMobileCatalog] = useState(getIsMobileCatalog);
@@ -60,6 +66,14 @@ export default function SplitViewContainer({
     [genuineAds],
   );
   const catalogReferenceCount = ads.length - genuineAds.length;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mercasto_catalog_view', viewLayout);
+    } catch {
+      // Private browsing/storage restrictions should not block catalog navigation.
+    }
+  }, [viewLayout]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');

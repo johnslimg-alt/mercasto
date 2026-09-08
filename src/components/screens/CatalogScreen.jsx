@@ -48,7 +48,7 @@ export default function CatalogScreen({
   const [filterViewport, setFilterViewport] = React.useState(() => {
     if (typeof window === 'undefined') return 'desktop';
     if (window.innerWidth < 768) return 'mobile';
-    if (window.innerWidth < 1024) return 'tablet';
+    if (window.innerWidth < 1280) return 'tablet';
     return 'desktop';
   });
   const [catalogToast, setCatalogToast] = React.useState(null);
@@ -63,7 +63,7 @@ export default function CatalogScreen({
 
   React.useEffect(() => {
     const updateFilterViewport = () => {
-      const nextViewport = window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop';
+      const nextViewport = window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1280 ? 'tablet' : 'desktop';
       setFilterViewport(nextViewport);
       if (nextViewport === 'desktop') setShowMobileFilters(false);
     };
@@ -213,8 +213,8 @@ export default function CatalogScreen({
         </div>
       )}
 
-      <div className="mx-auto flex min-h-[calc(100vh-11rem)] max-w-[1440px] flex-col gap-6 px-4 py-6 pb-28 md:pb-8 lg:flex-row lg:px-6 lg:py-8">
-        <div className="mb-2 flex min-h-12 items-center justify-between gap-3 lg:hidden">
+      <div className="mx-auto flex min-h-[calc(100vh-11rem)] max-w-[1440px] flex-col gap-5 px-4 py-6 pb-28 md:pb-8 lg:px-6 lg:py-8 xl:flex-row xl:gap-6">
+        <div className="mb-2 flex min-h-12 items-center justify-between gap-3 xl:hidden">
           <h1 className="min-w-0 pr-2 text-[16px] font-bold leading-tight text-slate-900 dark:text-white sm:text-[18px]">
             {t.search_results}
             <span className="ml-1 whitespace-nowrap text-[12px] font-normal text-slate-400 sm:text-[14px]">({safeServerAds.length})</span>
@@ -229,7 +229,7 @@ export default function CatalogScreen({
           </button>
         </div>
 
-        <aside className="hidden shrink-0 lg:block lg:w-1/4">
+        <aside className="hidden shrink-0 xl:block xl:w-[280px]">
           <SidebarFilters {...filterProps} />
           {user && (
             <React.Suspense fallback={null}>
@@ -248,7 +248,7 @@ export default function CatalogScreen({
           onClose={() => setShowMobileFilters(false)}
           title={t.filters}
           closeLabel={t.close_btn || t.close}
-          maxHeight="90vh"
+          maxHeight="82vh"
           zIndex={9999}
         >
           <div className="block p-6">
@@ -271,7 +271,7 @@ export default function CatalogScreen({
         {showMobileFilters && filterViewport === 'tablet' && (
           <div className="fixed inset-0 z-[9999] flex items-stretch justify-start bg-slate-900/60 backdrop-blur-sm">
             <div data-pointer-dismiss-surface aria-hidden="true" className="absolute inset-0 -z-10" onClick={() => setShowMobileFilters(false)} />
-            <div ref={tabletFilterDialogRef} data-testid="catalog-tablet-filter-dialog" role="dialog" aria-modal="true" aria-labelledby="tablet-filters-title" className="h-full w-[360px] overflow-y-auto border-r border-slate-200 bg-white p-6 shadow-2xl animate-slideRight dark:border-slate-800 dark:bg-slate-900">
+            <div ref={tabletFilterDialogRef} data-testid="catalog-tablet-filter-dialog" role="dialog" aria-modal="true" aria-labelledby="tablet-filters-title" className="h-full w-[340px] max-w-[88vw] overflow-y-auto border-r border-slate-200 bg-white p-4 shadow-2xl animate-slideRight dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
                 <h2 id="tablet-filters-title" className="text-base font-bold text-slate-900 dark:text-white">{t.filters}</h2>
                 <button

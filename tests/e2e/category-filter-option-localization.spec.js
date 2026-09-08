@@ -38,6 +38,9 @@ for (const lang of languages) {
     if (testInfo.project.name === 'chromium-mobile') {
       await page.getByTestId('catalog-mobile-filters').click();
       const dialog = page.getByRole('dialog');
+      for (const id of ['carroceria', 'documentacion', 'uso', 'marca']) {
+        await dialog.getByTestId(`sidebar-category-group-${id}`).locator('button').first().click();
+      }
       const bodyType = dialog.getByTestId('sidebar-category-filter-carroceria');
       await expect(bodyType.locator('option[value="Sedán"]')).toHaveText(expected('carroceria', 'Sedán'));
       await expect(dialog.getByTestId('sidebar-category-filter-documentacion').locator('option[value="Factura original"]')).toHaveText(expected('documentacion', 'Factura original'));
@@ -47,6 +50,9 @@ for (const lang of languages) {
       await bodyType.selectOption('Sedán');
       await expect(bodyType).toHaveValue('Sedán');
     } else {
+      for (const id of ['carroceria', 'documentacion', 'uso', 'marca']) {
+        await page.getByTestId(`sidebar-category-group-${id}`).locator('button').first().click();
+      }
       const sedan = page.getByTestId('sidebar-category-filter-carroceria-Sedán');
       await expect(sedan.locator('xpath=..')).toContainText(expected('carroceria', 'Sedán'));
       await expect(page.getByTestId('sidebar-category-filter-documentacion-Factura original').locator('xpath=..')).toContainText(expected('documentacion', 'Factura original'));

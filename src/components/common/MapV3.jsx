@@ -212,7 +212,7 @@ const LISTING_TYPE_OPTIONS = [
   ['Compro', 'listingWanted'], ['Subasta', 'listingAuction'],
 ];
 
-const MAP_SELECT_CLASS = 'min-h-12 w-full appearance-none rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 pr-10 text-sm font-semibold text-white outline-none transition-colors focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20 disabled:cursor-not-allowed disabled:opacity-50';
+const MAP_SELECT_CLASS = 'h-11 lg:h-10 w-full appearance-none rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 pr-9 text-[13px] font-semibold text-white outline-none transition-colors focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 function MapFilterSelect({ className = '', children, ...props }) {
   return (
@@ -222,6 +222,24 @@ function MapFilterSelect({ className = '', children, ...props }) {
       </select>
       <ChevronDown aria-hidden="true" size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
     </div>
+  );
+}
+
+function MapFilterSection({ title, children, defaultOpen = false, testId = '' }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section data-testid={testId || undefined} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(value => !value)}
+        className="flex h-11 w-full items-center justify-between gap-3 px-3.5 text-left text-[12px] font-black text-slate-200 transition-colors hover:bg-slate-800/70"
+      >
+        <span>{title}</span>
+        <ChevronDown size={15} className={`shrink-0 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="space-y-3 border-t border-slate-800 px-3.5 py-3">{children}</div>}
+    </section>
   );
 }
 
@@ -466,8 +484,33 @@ export default function MapV3({
     [onMarkerClick, visibleMarkers],
   );
 
-  useEffect(() => () => {
-    mountedRef.current = false;
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (mapQuery.trim()) count += 1;
+    if (!categoryLocked && selectedCategory) count += 1;
+    if (selectedState) count += 1;
+    if (selectedCity) count += 1;
+    if (minPrice !== '') count += 1;
+    if (maxPrice !== '') count += 1;
+    if (listingType) count += 1;
+    count += conditionFilter.length;
+    if (onlyWithCoords) count += 1;
+    for (const value of Object.values(dynamicFilters || {})) {
+      if (Array.isArray(value)) count += value.filter(Boolean).length;
+      else if (value && typeof value === 'object') count += Object.values(value).filter(Boolean).length;
+      else if (value) count += 1;
+    }
+    return count;
+  }, [categoryLocked, conditionFilter, dynamicFilters, listingType, mapQuery, maxPrice, minPrice, onlyWithCoords, selectedCategory, selectedCity, selectedState]);
+
+  useEffect(() => {
+    // React StrictMode intentionally replays effect setup/cleanup in development.
+    // Reset the mounted flag on every setup so map-area reads are not permanently
+    // disabled after the first StrictMode cleanup pass.
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   // Prevent body scroll while the fullscreen dialog is open.
@@ -483,6 +526,10 @@ export default function MapV3({
     if (!instanceRef.current) return;
     try {
       const map = instanceRef.current;
+      // Preserve the last visible search area before a filter-driven map rebuild.
+      // Without this, a quick "search this area" click can race the 100 ms
+      // fullscreen re-init and lose lat/lng/radius entirely.
+      updateMapArea(map);
       map.off();
       map.remove();
     } catch {
@@ -607,17 +654,6 @@ export default function MapV3({
 
   const handleCityChange = (city) => {
     setSelectedCity(city);
-  };
-
-  const handleConditionToggle = (val) => {
-    setConditionFilter(prev => prev.includes(val) ? prev.filter(c => c !== val) : [...prev, val]);
-  };
-
-  const handleDynamicToggle = (key, val) => {
-    setDynamicFilters(prev => {
-      const current = prev[key] || [];
-      return { ...prev, [key]: current.includes(val) ? current.filter(c => c !== val) : [...current, val] };
-    });
   };
 
   useEffect(() => {
@@ -1021,10 +1057,14 @@ function createPopupElement(ad, marker) {
       }
     }
 
+    const rememberVisibleArea = () => updateMapArea(map);
+    map.on('moveend zoomend', rememberVisibleArea);
+
     window.requestAnimationFrame(() => {
       if (mountedRef.current && instanceRef.current === map) {
         try {
           map.invalidateSize();
+          rememberVisibleArea();
         } catch {
           // Ignore stale map instance after unmount.
         }
@@ -1055,42 +1095,69 @@ function createPopupElement(ad, marker) {
 
   const availableCities = selectedState ? (MEXICO_STATES_CITIES[selectedState] || []) : [];
 
-  // Shared responsive filter panel for fullscreen search maps.
+  // Fullscreen filters: compact bottom sheet on mobile/tablet, side drawer on desktop.
   const filterPanelContent = showFilters ? (
     <aside
       data-testid="map-filter-panel"
-      className="absolute inset-x-0 top-0 z-[20] flex max-h-[min(72vh,620px)] flex-col border-b border-slate-800 bg-slate-950/98 shadow-2xl backdrop-blur-xl lg:static lg:h-full lg:max-h-none lg:w-[380px] lg:shrink-0 lg:border-b-0 lg:border-r lg:shadow-none"
+      data-map-filter-layout="responsive-drawer"
+      className="absolute inset-x-2 bottom-2 z-[20] flex max-h-[72vh] flex-col overflow-hidden rounded-[26px] border border-slate-700/80 bg-slate-950/98 shadow-2xl backdrop-blur-xl sm:max-h-[78vh] lg:static lg:h-full lg:max-h-none lg:w-[360px] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:border-r lg:shadow-none"
     >
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-        <div className="space-y-4">
-          <div className="flex min-h-12 items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 transition-colors focus-within:border-[#84CC16] focus-within:ring-2 focus-within:ring-[#84CC16]/20">
-            <Search size={16} className="shrink-0 text-[#84CC16]" />
-            <input
-              data-testid="map-filter-query"
-              value={mapQuery}
-              onChange={(e) => { mapQueryRef.current = e.target.value; setMapQuery(e.target.value); }}
-              className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
-              placeholder={t('home.searchPlaceholder')}
-            />
-          </div>
-
-          {!categoryLocked && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('ads.category')}</label>
-              <MapFilterSelect
-                data-testid="map-filter-category"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <option value="">{t('filters.allCategories')}</option>
-                {categories.map(cat => (
-                  <option key={cat.slug} value={cat.slug}>{cat.name?.[lang] || cat.name?.es || cat.name}</option>
-                ))}
-              </MapFilterSelect>
+      <div className="shrink-0 border-b border-slate-800 px-4 pb-3 pt-2.5 lg:pt-3.5">
+        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-slate-700 lg:hidden" aria-hidden="true" />
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#84CC16]/15 text-[#84CC16]">
+            <SlidersHorizontal size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-[14px] font-black text-white">{t('map.filters')}</h3>
+              {activeFilterCount > 0 && (
+                <span data-testid="map-active-filter-count" className="rounded-full bg-[#84CC16] px-2 py-0.5 text-[10px] font-black text-slate-950">{activeFilterCount}</span>
+              )}
             </div>
-          )}
+            <p className="truncate text-[10px] font-semibold text-slate-500">{visibleMarkers.length} {t('map.listings')}</p>
+          </div>
+          <button
+            type="button"
+            data-testid="map-filter-close"
+            onClick={() => setShowFilters(false)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+            aria-label={t('common.close')}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-2">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3.5 sm:p-4">
+        <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 transition-colors focus-within:border-[#84CC16] focus-within:ring-2 focus-within:ring-[#84CC16]/20">
+          <Search size={15} className="shrink-0 text-[#84CC16]" />
+          <input
+            data-testid="map-filter-query"
+            value={mapQuery}
+            onChange={(e) => { mapQueryRef.current = e.target.value; setMapQuery(e.target.value); }}
+            className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-white outline-none placeholder:text-slate-500"
+            placeholder={t('home.searchPlaceholder')}
+          />
+        </div>
+
+        {!categoryLocked && (
+          <MapFilterSection title={copy.category || t('ads.category')} defaultOpen={false} testId="map-filter-section-category">
+            <MapFilterSelect
+              data-testid="map-filter-category"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <option value="">{t('filters.allCategories')}</option>
+              {categories.map(cat => (
+                <option key={cat.slug} value={cat.slug}>{cat.name?.[lang] || cat.name?.es || cat.name}</option>
+              ))}
+            </MapFilterSelect>
+          </MapFilterSection>
+        )}
+
+        <MapFilterSection title={copy.location || t('filters.allStates')} defaultOpen testId="map-filter-section-location">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
             <MapFilterSelect
               aria-label={t('filters.allStates')}
               data-testid="map-filter-state"
@@ -1111,7 +1178,25 @@ function createPopupElement(ad, marker) {
               {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
             </MapFilterSelect>
           </div>
+          <button
+            data-testid="map-only-real-gps"
+            type="button"
+            aria-pressed={onlyWithCoords}
+            onClick={() => setOnlyWithCoords(v => !v)}
+            className={`inline-flex h-11 lg:h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-[11px] font-black transition-colors ${
+              onlyWithCoords
+                ? 'border-[#84CC16] bg-[#84CC16]/15 text-[#BEF264]'
+                : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+            }`}
+          >
+            <span className="flex items-center gap-2"><MapPin size={14} /> {t('map.realGpsOnly')}</span>
+            <span className={`h-4 w-7 rounded-full p-0.5 transition-colors ${onlyWithCoords ? 'bg-[#84CC16]' : 'bg-slate-700'}`}>
+              <span className={`block h-3 w-3 rounded-full bg-white transition-transform ${onlyWithCoords ? 'translate-x-3' : ''}`} />
+            </span>
+          </button>
+        </MapFilterSection>
 
+        <MapFilterSection title={copy.price_mxn || t('filters.minPrice')} defaultOpen testId="map-filter-section-price">
           <div className="grid grid-cols-2 gap-2">
             <input
               data-testid="map-filter-min-price"
@@ -1119,7 +1204,7 @@ function createPopupElement(ad, marker) {
               onChange={(e) => { minPriceRef.current = e.target.value; setMinPrice(e.target.value); }}
               type="number"
               inputMode="numeric"
-              className="min-h-12 min-w-0 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none transition-colors placeholder:text-slate-500 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20"
+              className="h-11 lg:h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-800 px-3 text-[13px] font-semibold text-white outline-none transition-colors placeholder:text-slate-500 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20"
               placeholder={t('filters.minPrice')}
             />
             <input
@@ -1128,11 +1213,13 @@ function createPopupElement(ad, marker) {
               onChange={(e) => { maxPriceRef.current = e.target.value; setMaxPrice(e.target.value); }}
               type="number"
               inputMode="numeric"
-              className="min-h-12 min-w-0 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none transition-colors placeholder:text-slate-500 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20"
+              className="h-11 lg:h-10 min-w-0 rounded-xl border border-slate-700 bg-slate-800 px-3 text-[13px] font-semibold text-white outline-none transition-colors placeholder:text-slate-500 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20"
               placeholder={t('filters.maxPrice')}
             />
           </div>
+        </MapFilterSection>
 
+        <MapFilterSection title={t('map.listingType')} defaultOpen={false} testId="map-filter-section-listing-type">
           <MapFilterSelect
             data-testid="map-filter-listing-type"
             value={listingType}
@@ -1141,31 +1228,28 @@ function createPopupElement(ad, marker) {
             <option value="">{t('map.listingType')}</option>
             {LISTING_TYPE_OPTIONS.map(([value, key]) => <option key={value} value={value}>{t(`map.${key}`)}</option>)}
           </MapFilterSelect>
+        </MapFilterSection>
 
-          <div className="space-y-2">
-            <p className="text-xs font-black text-slate-400">{t('map.condition')}</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
-              {CONDITION_OPTIONS.map(opt => (
-                <button
-                  key={opt}
-                  data-testid={`map-condition-${opt}`}
-                  type="button"
-                  aria-pressed={conditionFilter.includes(opt)}
-                  onClick={() => handleConditionToggle(opt)}
-                  className={`min-h-12 rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
-                    conditionFilter.includes(opt)
-                      ? 'bg-[#84CC16] text-slate-950'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {conditionLabel(opt, t)}
-                </button>
-              ))}
-            </div>
+        <MapFilterSection title={t('map.condition')} defaultOpen={false} testId="map-filter-section-condition">
+          <div className="grid grid-cols-2 gap-2">
+            {CONDITION_OPTIONS.map(opt => (
+              <button
+                key={opt}
+                data-testid={`map-condition-${opt}`}
+                type="button"
+                aria-pressed={conditionFilter.includes(opt)}
+                onClick={() => setConditionFilter(prev => prev.includes(opt) ? prev.filter(value => value !== opt) : [...prev, opt])}
+                className={`h-11 lg:h-9 rounded-xl border px-2 text-[10px] font-black transition-colors ${conditionFilter.includes(opt) ? 'border-[#84CC16] bg-[#84CC16] text-slate-950' : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'}`}
+              >
+                {conditionLabel(opt, t)}
+              </button>
+            ))}
           </div>
+        </MapFilterSection>
 
-          {normalizedConfig.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        {normalizedConfig.length > 0 && (
+          <MapFilterSection title={copy.category_filters || t('map.filters')} defaultOpen={false} testId="map-filter-section-dynamic">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
               {normalizedConfig.map(field => {
                 const fieldId = field.id || field.key;
                 const fieldLabel = copy[`filter_label_${fieldId}`] || field.label || fieldId;
@@ -1173,8 +1257,8 @@ function createPopupElement(ad, marker) {
                 const currentVals = dynamicFilters[fieldId] || [];
                 const currentVal = Array.isArray(currentVals) ? (currentVals[0] || '') : (currentVals || '');
                 return (
-                  <div key={fieldId} className="min-w-0 space-y-1.5">
-                    <p className="text-[11px] font-black text-slate-400">{fieldLabel}</p>
+                  <label key={fieldId} className="min-w-0 space-y-1.5">
+                    <span className="block text-[10px] font-black uppercase tracking-wide text-slate-500">{fieldLabel}</span>
                     {hasOptions ? (
                       <MapFilterSelect
                         aria-label={fieldLabel}
@@ -1197,51 +1281,41 @@ function createPopupElement(ad, marker) {
                         type="text"
                         value={currentVal}
                         onChange={(e) => setDynamicFilters(prev => ({ ...prev, [fieldId]: e.target.value }))}
-                        className="min-h-12 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-semibold text-white outline-none transition-colors placeholder:text-slate-500 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20"
+                        className="h-11 lg:h-10 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 text-[13px] font-semibold text-white outline-none transition-colors placeholder:text-slate-500 focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20"
                         placeholder={field.placeholder || fieldLabel}
                       />
                     )}
-                  </div>
+                  </label>
                 );
               })}
             </div>
-          )}
-        </div>
+          </MapFilterSection>
+        )}
       </div>
 
-      <div className="shrink-0 space-y-2 border-t border-slate-800 bg-slate-950/98 p-3 sm:p-4">
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            data-testid="map-only-real-gps"
-            type="button"
-            aria-pressed={onlyWithCoords}
-            onClick={() => setOnlyWithCoords(v => !v)}
-            className={`inline-flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors ${
-              onlyWithCoords ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            <MapPin size={14} /> {t('map.realGpsOnly')}
-          </button>
+      <div className="shrink-0 border-t border-slate-800 bg-slate-950/98 p-3">
+        <div className="grid grid-cols-[0.8fr_1.2fr] gap-2">
           <button
             data-testid="map-clear-filters"
             type="button"
             onClick={clearAllFilters}
-            className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 py-2 text-xs font-black text-slate-300 transition-colors hover:bg-slate-700"
+            className="inline-flex h-11 lg:h-10 items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 text-[11px] font-black text-slate-300 transition-colors hover:bg-slate-800"
           >
-            <X size={14} /> {t('common.reset')}
+            <X size={13} /> {t('common.reset')}
+          </button>
+          <button
+            data-testid="map-search-area"
+            type="button"
+            onClick={handleSearchArea}
+            className="inline-flex h-11 lg:h-10 items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-3 text-[11px] font-black text-slate-950 transition-colors hover:bg-[#a3e635]"
+          >
+            <Crosshair size={14} /> {t('map.searchArea')} · {visibleMarkers.length}
           </button>
         </div>
-        <button
-          data-testid="map-search-area"
-          type="button"
-          onClick={handleSearchArea}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-[#84CC16] px-4 py-2.5 text-sm font-black text-slate-950 transition-colors hover:bg-[#a3e635]"
-        >
-          <Crosshair size={16} /> {t('map.searchArea')}
-        </button>
       </div>
     </aside>
   ) : null;
+
 
   return (
     <>
@@ -1386,10 +1460,10 @@ function createPopupElement(ad, marker) {
           onKeyDown={handleFullscreenKeyDown}
         >
           {/* ── Header bar ── */}
-          <div data-testid="map-fullscreen-header" className="relative z-[30] flex items-center gap-2 border-b border-slate-800 bg-slate-900/98 px-3 py-2.5 shadow-lg backdrop-blur sm:gap-3 sm:px-6 sm:py-3">
+          <div data-testid="map-fullscreen-header" className="relative z-[30] flex items-center gap-2 border-b border-slate-800 bg-slate-900/96 px-2.5 py-2 shadow-lg backdrop-blur sm:px-4">
             <div className="flex shrink-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#84CC16]">
-                <MapPin size={18} className="text-slate-950" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#84CC16]">
+                <MapPin size={16} className="text-slate-950" />
               </div>
               <div className="hidden min-w-0 sm:block">
                 <h2 className="truncate text-sm font-black text-white">{t('map.interactive')}</h2>
@@ -1402,11 +1476,11 @@ function createPopupElement(ad, marker) {
               type="button"
               aria-expanded={showFilters}
               onClick={() => setShowFilters(!showFilters)}
-              className={`ml-auto inline-flex min-h-12 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-colors sm:ml-0 ${
+              className={`ml-auto inline-flex h-12 lg:h-10 items-center gap-1.5 rounded-xl px-3 text-[11px] font-black transition-colors sm:ml-0 ${
                 showFilters ? 'bg-[#84CC16] text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <Filter size={15} /> {t('map.filters')}
+              <Filter size={14} /> {t('map.filters')}{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
             </button>
 
             <button
@@ -1414,11 +1488,11 @@ function createPopupElement(ad, marker) {
               type="button"
               onClick={getUserLocation}
               disabled={locating}
-              className="inline-flex h-12 w-12 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-xs font-black text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-4"
+              className="inline-flex h-12 w-12 lg:h-10 lg:w-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-[11px] font-black text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-3"
               title={t('map.nearMe')}
               aria-label={t('map.nearMe')}
             >
-              {locating ? <Loader2 size={18} className="animate-spin" /> : <Locate size={18} />}
+              {locating ? <Loader2 size={16} className="animate-spin" /> : <Locate size={16} />}
               <span className="hidden sm:inline">{t('map.nearMe')}</span>
             </button>
 
@@ -1427,11 +1501,11 @@ function createPopupElement(ad, marker) {
               data-testid="map-close"
               type="button"
               onClick={closeFullscreenMap}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-500/20 text-red-400 transition-colors hover:bg-red-500/30 hover:text-red-300 sm:w-auto sm:gap-2 sm:px-4"
+              className="flex h-12 w-12 lg:h-10 lg:w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/15 text-red-300 transition-colors hover:bg-red-500/25 sm:w-auto sm:gap-2 sm:px-3"
               aria-label={t('map.closeMap')}
               title={t('map.closeEsc')}
             >
-              <X size={20} />
+              <X size={17} />
               <span className="hidden text-sm font-black sm:inline">{t('common.close')}</span>
             </button>
           </div>
@@ -1470,7 +1544,7 @@ function createPopupElement(ad, marker) {
               {/* ── Compact map result strip ── */}
               <div
                 data-testid="map-results-panel"
-                className={`${showFilters ? 'hidden lg:block' : ''} absolute inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-[5] rounded-2xl border border-slate-700/50 bg-slate-900/95 p-3 text-white shadow-2xl backdrop-blur-md`}
+                className={`${showFilters ? 'hidden lg:block' : ''} absolute inset-x-2 bottom-[max(8px,env(safe-area-inset-bottom))] z-[5] rounded-2xl border border-slate-700/50 bg-slate-900/94 p-2.5 text-white shadow-xl backdrop-blur-md sm:inset-x-3 sm:p-3`}
               >
                 <div className="flex flex-wrap items-center gap-2 text-[10px] font-black sm:text-xs">
                   <span className="mr-auto flex items-center gap-1.5 font-bold">
@@ -1488,7 +1562,7 @@ function createPopupElement(ad, marker) {
                         data-testid="map-result-chip"
                         type="button"
                         onClick={() => activateMarker(marker)}
-                        className="min-h-12 shrink-0 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-[11px] font-black text-white transition-colors hover:border-[#84CC16] hover:bg-[#84CC16] hover:text-slate-950"
+                        className="h-9 shrink-0 rounded-xl border border-slate-700 bg-slate-800 px-3 text-[10px] font-black text-white transition-colors hover:border-[#84CC16] hover:bg-[#84CC16] hover:text-slate-950"
                       >
                         {marker.label || t('map.viewListing')}
                       </button>
