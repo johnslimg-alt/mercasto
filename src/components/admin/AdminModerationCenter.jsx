@@ -257,7 +257,7 @@ export default function AdminModerationCenter() {
         type="button"
         dir={direction}
         onClick={() => { setOpen(true); loadQueue(); }}
-        className="fixed right-3 bottom-20 md:right-4 md:bottom-6 z-[80] flex items-center gap-3 rounded-2xl bg-slate-950 p-2.5 text-start text-white shadow-2xl ring-1 ring-white/10 hover:bg-slate-900 sm:px-4 sm:py-3"
+        className="fixed right-3 bottom-[96px] md:right-4 md:bottom-6 z-[80] flex items-center gap-3 rounded-2xl bg-slate-950 p-2.5 text-start text-white shadow-2xl ring-1 ring-white/10 hover:bg-slate-900 sm:px-4 sm:py-3"
         aria-label={t('openAria')}
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-lime-400 text-xl text-slate-950">✓</span>
