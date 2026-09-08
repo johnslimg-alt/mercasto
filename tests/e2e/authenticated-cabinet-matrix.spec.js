@@ -196,6 +196,10 @@ async function capture(page, viewport, role, screen, projectName) {
 test('fresh session applies the theme on the first toggle click', async ({ page }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.addInitScript(() => {
+    // addInitScript also runs inside child frames. Restrict storage setup to
+    // the top-level page so a late same-origin iframe cannot clear the theme
+    // after the user has already toggled it.
+    if (window.top !== window) return;
     localStorage.removeItem('theme');
     localStorage.setItem('lang', 'es');
     localStorage.setItem('mercasto_language', 'es');
