@@ -72,15 +72,15 @@ class CategoryAttributeController extends Controller
                             }
 
                             $value = $opt['value'] ?? null;
-                            $label = $opt['label'] ?? $value;
-                            if (is_array($label)) {
-                                $label = $label['es'] ?? $label['en'] ?? reset($label);
+                            $optionLabel = $opt['label'] ?? $value;
+                            if (is_array($optionLabel)) {
+                                $optionLabel = $optionLabel['es'] ?? $optionLabel['en'] ?? reset($optionLabel);
                             }
 
                             if ($value !== null && $value !== '') {
                                 $formattedOptions[] = [
                                     'value' => (string) $value,
-                                    'label' => (string) ($label ?? $value),
+                                    'label' => (string) ($optionLabel ?? $value),
                                 ];
                             } else {
                                 $fallback = reset($opt);
