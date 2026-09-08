@@ -31,3 +31,31 @@ test('vertical hero search controls stay inside the form from tablet through des
     }
   }
 });
+
+test('vertical hero fullscreen search-area can invoke the search handler without a synthetic form event', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+  });
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/motor');
+
+  const heroMapToggle = page.getByRole('button', { name: /Ver anuncios en el mapa/i });
+  await expect(heroMapToggle).toBeVisible();
+  await heroMapToggle.click();
+  const expand = page.getByTestId('map-expand').first();
+  await expect(expand).toBeVisible({ timeout: 15_000 });
+  await expand.click();
+  const dialog = page.getByRole('dialog', { name: 'Mapa interactivo' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByTestId('map-filter-toggle').click();
+  await dialog.getByTestId('map-search-area').click();
+
+  await expect(page).toHaveURL(/\?category=motor/);
+  expect(pageErrors).toEqual([]);
+});

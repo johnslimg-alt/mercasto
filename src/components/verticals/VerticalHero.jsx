@@ -82,7 +82,7 @@ export default function VerticalHero({
     : [];
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     if (onSearch) onSearch(query, { state, city, radius });
   };
 
