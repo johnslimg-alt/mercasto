@@ -31,6 +31,24 @@ export function filterOptionValue(option) {
   return String(option?.value ?? option?.label ?? '');
 }
 
+
+export function canonicalizeFilterOptionSelection(options, selection) {
+  if (!Array.isArray(options) || selection == null) return selection;
+  const canonicalizeOne = (item) => {
+    if (typeof item !== 'string' && typeof item !== 'number') return item;
+    const candidate = String(item).trim().toLocaleLowerCase();
+    for (const option of options) {
+      const canonical = filterOptionValue(option);
+      if (!canonical) continue;
+      if (canonical.trim().toLocaleLowerCase() === candidate) return canonical;
+      if (option && typeof option === 'object' && typeof option.label === 'string'
+        && option.label.trim().toLocaleLowerCase() === candidate) return canonical;
+    }
+    return item;
+  };
+  return Array.isArray(selection) ? selection.map(canonicalizeOne) : canonicalizeOne(selection);
+}
+
 export function filterOptionLabel(fieldId, canonicalValue, language = 'es') {
   const value = String(canonicalValue ?? '');
   if (!value) return value;

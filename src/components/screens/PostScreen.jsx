@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { mexicoLocations, subcategoriesMap } from '../../constants/locationsAndCategories';
 import { filterConfig, autoModelsByBrand } from '../../constants/filterConfig';
-import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
+import { canonicalizeFilterOptionSelection, filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { getGlobalFilterDefinitions } from '../../constants/globalFilterOptions';
 import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
 import MapV3 from '../common/MapV3';
@@ -159,6 +159,7 @@ export default function PostScreen({
 
   const [apiAttributes, setApiAttributes] = useState(null);
   const [attributesLoading, setAttributesLoading] = useState(false);
+  const [attributesResolvedCategory, setAttributesResolvedCategory] = useState('');
   const [customCity, setCustomCity] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -262,28 +263,59 @@ export default function PostScreen({
     if (!form.category) {
       setApiAttributes(null);
       setAttributesLoading(false);
+      setAttributesResolvedCategory('');
       return;
     }
     let cancelled = false;
+    const requestedCategory = form.category;
+    setApiAttributes(null);
     setAttributesLoading(true);
-    fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(form.category)}`)
+    setAttributesResolvedCategory('');
+    fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(requestedCategory)}`)
       .then(r => (r.ok ? r.json() : []))
       .then(data => {
         if (!cancelled) setApiAttributes(Array.isArray(data) && data.length > 0 ? data : null);
       })
       .catch(() => { if (!cancelled) setApiAttributes(null); })
-      .finally(() => { if (!cancelled) setAttributesLoading(false); });
+      .finally(() => {
+        if (!cancelled) {
+          setAttributesLoading(false);
+          setAttributesResolvedCategory(requestedCategory);
+        }
+      });
     return () => { cancelled = true; };
   }, [form.category]);
 
-  // Prune stale attribute keys when category's attribute list changes
   const dynamicAttributes = useMemo(() => {
     if (apiAttributes && apiAttributes.length > 0) return apiAttributes;
     return filterConfig[form.category] || [];
   }, [apiAttributes, form.category]);
 
+  // A same-session draft created before canonical option values were introduced
+  // may still contain a display label such as "Casa". Normalize it as soon as
+  // the runtime schema is available so the select is valid and the draft is
+  // re-saved with durable canonical values such as "casa".
   useEffect(() => {
-    if (!form.category || dynamicAttributes.length === 0 || !form.attributes) return;
+    if (!form.category || attributesResolvedCategory !== form.category || dynamicAttributes.length === 0) return;
+    setForm((current) => {
+      if (current.category !== form.category || !current.attributes) return current;
+      let changed = false;
+      const attributes = { ...current.attributes };
+      dynamicAttributes.forEach((field) => {
+        const key = field.id || field.key;
+        if (!key || !Array.isArray(field.options) || !Object.prototype.hasOwnProperty.call(attributes, key)) return;
+        const normalized = canonicalizeFilterOptionSelection(field.options, attributes[key]);
+        if (JSON.stringify(normalized) !== JSON.stringify(attributes[key])) {
+          attributes[key] = normalized;
+          changed = true;
+        }
+      });
+      return changed ? { ...current, attributes } : current;
+    });
+  }, [attributesResolvedCategory, dynamicAttributes, form.category, setForm]);
+
+  useEffect(() => {
+    if (!form.category || attributesResolvedCategory !== form.category || dynamicAttributes.length === 0 || !form.attributes) return;
     const validKeys = new Set(dynamicAttributes.map(f => f.id || f.key));
     saleFacets.forEach(f => validKeys.add(f.key));
     const pruned = Object.fromEntries(
@@ -292,7 +324,7 @@ export default function PostScreen({
     if (Object.keys(pruned).length !== Object.keys(form.attributes).length) {
       setForm(prev => ({ ...prev, attributes: pruned }));
     }
-  }, [dynamicAttributes, form.category, saleFacets, setForm]);
+  }, [attributesResolvedCategory, dynamicAttributes, form.category, saleFacets, setForm]);
 
   // Set GPS coords
   const setCoords = (lat, lng) => {
