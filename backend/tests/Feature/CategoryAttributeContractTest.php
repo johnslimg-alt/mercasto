@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Ad;
+use App\Models\SearchAlert;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -55,9 +56,11 @@ class CategoryAttributeContractTest extends TestCase
         $this->assertNull($range['options']);
     }
 
-    public function test_legacy_display_labels_are_normalized_to_canonical_values(): void
+    public function test_legacy_display_labels_are_normalized_across_persisted_consumers(): void
     {
         $categoryId = DB::table('categories')->where('slug', 'inmobiliaria')->value('id');
+        $user = User::factory()->create();
+
         DB::table('category_attributes')->insert([
             'category_id' => $categoryId,
             'key' => 'legacy_property_type',
@@ -70,8 +73,11 @@ class CategoryAttributeContractTest extends TestCase
             'required' => false,
             'sort_order' => 993,
         ]);
-        $ad = Ad::query()->create([
-            'user_id' => User::factory()->create()->id,
+
+        // Bypass the model event so this row represents a genuinely historical
+        // pre-canonicalization listing that must be repaired by the migration.
+        $ad = Ad::withoutEvents(fn () => Ad::query()->create([
+            'user_id' => $user->id,
             'title' => 'Legacy attribute value',
             'description' => 'Normalization contract',
             'price' => 1000,
@@ -80,11 +86,46 @@ class CategoryAttributeContractTest extends TestCase
             'condition' => 'usado',
             'status' => 'archived',
             'attributes' => ['legacy_property_type' => 'House'],
+        ]));
+
+        $scalarAlert = SearchAlert::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Legacy scalar search',
+            'category_id' => $categoryId,
+            'category_slug' => 'inmobiliaria',
+            'filters' => ['legacy_property_type' => 'Casa'],
+            'is_active' => true,
+        ]);
+        $multiAlert = SearchAlert::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Legacy multi search',
+            'category_id' => $categoryId,
+            'category_slug' => 'inmobiliaria',
+            'filters' => ['legacy_property_type' => ['House', 'terreno']],
+            'is_active' => true,
         ]);
 
         $migration = require database_path('migrations/2026_09_08_230000_normalize_category_attribute_option_values.php');
         $migration->up();
 
         $this->assertSame('casa', $ad->fresh()->attributes['legacy_property_type']);
+        $this->assertSame('casa', $scalarAlert->fresh()->filters['legacy_property_type']);
+        $this->assertSame(['casa', 'terreno'], $multiAlert->fresh()->filters['legacy_property_type']);
+
+        // A stale browser draft/client may still submit a translated display label
+        // after deployment. The persistence boundary must canonicalize it again.
+        $staleClientAd = Ad::query()->create([
+            'user_id' => $user->id,
+            'title' => 'Stale draft attribute value',
+            'description' => 'Persistence boundary contract',
+            'price' => 1200,
+            'location' => 'Veracruz',
+            'category' => 'inmobiliaria',
+            'condition' => 'usado',
+            'status' => 'draft',
+            'attributes' => ['legacy_property_type' => 'Casa'],
+        ]);
+
+        $this->assertSame('casa', $staleClientAd->fresh()->attributes['legacy_property_type']);
     }
 }
