@@ -98,6 +98,36 @@ test('terms sidebar navigation scrolls to and marks the selected section', async
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });
 
+
+
+test('cookie category cards stay dark in dark mode', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    localStorage.setItem('theme', 'dark');
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+  });
+  await page.goto('/cookies', { waitUntil: 'domcontentloaded' });
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(true);
+  const cards = page.getByTestId('cookie-category-card');
+  await expect(cards).toHaveCount(3);
+  const rendered = await cards.evaluateAll(nodes => nodes.map(node => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.fillStyle = getComputedStyle(node).backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+  }));
+  for (const rgb of rendered) expect(Math.max(...rgb)).toBeLessThan(120);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
 test.describe('browser route aliases', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
