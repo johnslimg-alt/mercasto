@@ -1033,6 +1033,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
                         const newVal = !trackingConsent;
                         setTrackingConsent(newVal);
                         localStorage.setItem('mercasto_privacy_tracking_consent', String(newVal));
+                        window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
                       }}
                       className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${trackingConsent ? 'bg-lime-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                     >

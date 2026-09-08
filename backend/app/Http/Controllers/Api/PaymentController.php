@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\MetaCapiService;
+use App\Services\OpenAiAdsCapiService;
 use App\Support\PaymentPayloadSanitizer;
 use Illuminate\Http\Request;
 use App\Events\NewNotification;
@@ -68,6 +69,7 @@ class PaymentController extends Controller
             'description' => 'required|string|max:255',
             'product_code' => 'nullable|string|in:' . self::PRODUCT_CODES_LIST,
             'ad_id' => 'nullable|integer|exists:ads,id', // Защита от создания призрачных платежей
+            'openai_measurement_consent' => 'nullable|boolean',
         ]);
 
         // Fail closed before mutating payment state when Clip credentials are not configured.
@@ -228,7 +230,7 @@ class PaymentController extends Controller
     /**
      * Обработка веб-хука от Clip
      */
-    public function handleWebhook(Request $request, MetaCapiService $meta)
+    public function handleWebhook(Request $request, MetaCapiService $meta, OpenAiAdsCapiService $openai)
     {
         $payload = $request->all();
         $checkoutId = $this->firstClipString(
@@ -400,7 +402,10 @@ class PaymentController extends Controller
 
             // External side effects run only after the database transaction commits.
             if ($fulfilledPayment && $fulfilledPayment->user_id) {
-                defer(fn () => $this->sendMetaPurchase($meta, $request, $fulfilledPayment))->always();
+                defer(function () use ($openai, $meta, $request, $fulfilledPayment) {
+                    $this->sendOpenAiOrder($openai, $request, $fulfilledPayment);
+                    $this->sendMetaPurchase($meta, $request, $fulfilledPayment);
+                })->always();
             }
 
             if ($notificationData) {
@@ -545,13 +550,32 @@ class PaymentController extends Controller
                 'client_user_agent' => $request->userAgent(),
                 'fbp' => $request->cookie('_fbp'),
                 'fbc' => $request->cookie('_fbc'),
+                'openai_measurement_consent' => $request->boolean('openai_measurement_consent'),
+                'oppref' => $this->rawCookieValue($request, '__oppref'),
+                'obref' => $this->rawCookieValue($request, '__obref'),
+                'source_url' => $request->headers->get('referer'),
             ], fn ($value) => $value !== null && $value !== ''), now()->addDay());
         } catch (\Throwable $e) {
-            Log::warning('Unable to cache Meta purchase context', [
+            Log::warning('Unable to cache purchase conversion context', [
                 'checkout_id' => $checkoutId,
                 'exception' => $e::class,
             ]);
         }
+    }
+
+    private function rawCookieValue(Request $request, string $cookieName): ?string
+    {
+        foreach (explode(';', (string) $request->headers->get('cookie', '')) as $pair) {
+            $parts = explode('=', ltrim($pair), 2);
+            if (count($parts) !== 2 || trim($parts[0]) !== $cookieName) {
+                continue;
+            }
+
+            $value = $parts[1];
+            return $value !== '' && strlen($value) <= 2048 ? $value : null;
+        }
+
+        return null;
     }
 
     private function sendMetaPurchase(MetaCapiService $meta, Request $request, object $payment): void
@@ -620,6 +644,65 @@ class PaymentController extends Controller
             'skipped' => (bool) ($result['skipped'] ?? false),
             'reason' => $result['reason'] ?? null,
         ]);
+    }
+
+    private function sendOpenAiOrder(
+        OpenAiAdsCapiService $openai,
+        Request $request,
+        object $payment,
+        array $context = []
+    ): void {
+        if ($context === [] && ! empty($payment->clip_checkout_id)) {
+            try {
+                $cached = Cache::get($this->metaPurchaseContextKey((string) $payment->clip_checkout_id), []);
+                $context = is_array($cached) ? $cached : [];
+            } catch (\Throwable $e) {
+                Log::warning('Unable to read cached OpenAI Ads purchase context', [
+                    'payment_id' => $payment->id,
+                    'exception' => $e::class,
+                ]);
+                $context = [];
+            }
+        }
+
+        $consent = (bool) ($context['openai_measurement_consent']
+            ?? $request->boolean('openai_measurement_consent'));
+        if (! $consent) {
+            return;
+        }
+
+        $productId = (string) ($payment->product_code
+            ?: ($payment->ad_id ? 'ad_promotion_' . $payment->ad_id : 'payment_' . $payment->id));
+        $amountMinor = (int) round(((float) $payment->amount) * 100);
+        $sourceUrl = $context['source_url'] ?? $request->headers->get('referer');
+        $result = $openai->send(
+            'order_created',
+            $request,
+            DB::table('users')->where('id', $payment->user_id)->first(),
+            [
+                'type' => 'contents',
+                'amount' => $amountMinor,
+                'currency' => 'MXN',
+                'contents' => [[
+                    'id' => $productId,
+                    'name' => (string) $payment->description,
+                    'content_type' => 'product',
+                    'quantity' => 1,
+                    'amount' => $amountMinor,
+                ]],
+            ],
+            'order_created_payment_' . $payment->id,
+            is_scalar($sourceUrl) ? (string) $sourceUrl : null,
+            $context
+        );
+
+        if (! ($result['ok'] ?? false) && ! ($result['skipped'] ?? false)) {
+            Log::warning('OpenAI Ads CAPI order_created was not accepted', [
+                'payment_id' => $payment->id,
+                'event_id' => $result['event_id'] ?? null,
+                'status' => $result['status'] ?? null,
+            ]);
+        }
     }
 
     private function metaPurchaseContextKey(string $checkoutId): string
@@ -748,12 +831,13 @@ class PaymentController extends Controller
      * Pagar cualquier tarifa/promoción directamente desde el saldo (créditos) de la cuenta.
      * El saldo solo puede recargarse con tarjeta (createClipCheckout, credits_*), nunca al revés.
      */
-    public function payWithBalance(Request $request)
+    public function payWithBalance(Request $request, OpenAiAdsCapiService $openai)
     {
         $request->validate([
             'description' => 'required|string|max:255',
             'product_code' => 'nullable|string|in:' . self::PRODUCT_CODES_LIST,
             'ad_id' => 'nullable|integer|exists:ads,id',
+            'openai_measurement_consent' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
@@ -828,6 +912,10 @@ class PaymentController extends Controller
 
         broadcast(new NewNotification((int) $result['payment']->user_id, $result['notificationData']));
         Cache::forget('ads_featured_block');
+
+        if ($request->boolean('openai_measurement_consent')) {
+            defer(fn () => $this->sendOpenAiOrder($openai, $request, $result['payment']))->always();
+        }
 
         return response()->json([
             'success' => true,

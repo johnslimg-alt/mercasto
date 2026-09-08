@@ -847,6 +847,9 @@ export const events = {
   messageSent: (params = {}) =>
     trackEvent(FUNNEL_EVENTS.MESSAGE_SENT, params),
 
+  leadCreated: (params = {}) =>
+    trackEvent('lead_created', params),
+
   contactOpened,
   contactClick: contactOpened,
 

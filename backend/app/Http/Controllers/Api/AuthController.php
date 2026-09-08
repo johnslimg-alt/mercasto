@@ -149,6 +149,7 @@ class AuthController extends Controller
             'consent_accepted_at' => ['required', 'date'],
             'consent_source' => ['required', 'string', Rule::in(['web', 'mobile', 'api'])],
             'meta_event_id' => ['nullable', 'string', 'max:120', 'regex:/^[A-Za-z0-9._:-]+$/'],
+            'openai_measurement_consent' => ['nullable', 'boolean'],
         ]);
 
         $clientAcceptedAt = Carbon::parse((string) $validated['consent_accepted_at']);
@@ -174,6 +175,7 @@ class AuthController extends Controller
             'meta_event_id' => isset($validated['meta_event_id'])
                 ? (string) $validated['meta_event_id']
                 : null,
+            'openai_measurement_consent' => (bool) ($validated['openai_measurement_consent'] ?? false),
         ];
     }
 
@@ -767,6 +769,9 @@ class AuthController extends Controller
                 if (!empty($registrationConsent['meta_event_id'])) {
                     $request->merge(['meta_event_id' => $registrationConsent['meta_event_id']]);
                 }
+                $request->merge([
+                    'openai_measurement_consent' => (bool) ($registrationConsent['openai_measurement_consent'] ?? false),
+                ]);
 
                 $user = DB::transaction(function () use ($provider, $socialUser, $request, $registrationConsent) {
                     $user = new User();
@@ -904,6 +909,9 @@ class AuthController extends Controller
                 if (!empty($registrationConsent['meta_event_id'])) {
                     $request->merge(['meta_event_id' => $registrationConsent['meta_event_id']]);
                 }
+                $request->merge([
+                    'openai_measurement_consent' => (bool) ($registrationConsent['openai_measurement_consent'] ?? false),
+                ]);
                 $user = DB::transaction(function () use ($socialUser, $request, $registrationConsent) {
                     $user = new User();
                     $user->name = $socialUser->name ?: 'telegram_user_' . rand(1000, 9999);

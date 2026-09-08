@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateTime } from '../../utils/localeFormat';
 import { events } from '../../utils/analytics';
+import { isOpenAIAdsMeasurementAllowed } from '../../utils/trackingConsent';
 import {
   ArrowLeft,
   CircleAlert,
@@ -232,7 +233,12 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
       const response = await fetch(`${API_BASE}/chat/messages`, {
         method: 'POST',
         headers: apiHeaders(token, true),
-        body: JSON.stringify({ receiver_id: receiverId, ad_id: adId, content }),
+        body: JSON.stringify({
+          receiver_id: receiverId,
+          ad_id: adId,
+          content,
+          openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
+        }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error('send failed');
@@ -249,6 +255,12 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
         events.messageStarted(analyticsContext);
       }
       events.messageSent(analyticsContext);
+      if (payload.lead_created === true && payload.openai_lead_event_id) {
+        events.leadCreated({
+          ...analyticsContext,
+          event_id: String(payload.openai_lead_event_id),
+        });
+      }
       if (nextConversationId) {
         setSelectedConversationId(nextConversationId);
         setSearchParams({ conversation: String(nextConversationId) }, { replace: true });

@@ -1,19 +1,12 @@
-const OPENAI_ADS_PIXEL_ID = import.meta.env.VITE_OPENAI_ADS_PIXEL_ID || '';
-const VERBOSE = import.meta.env.VITE_ANALYTICS_VERBOSE === 'true';
+import { isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
+
+const ENV = import.meta.env || {};
+const OPENAI_ADS_PIXEL_ID = ENV.VITE_OPENAI_ADS_PIXEL_ID || '';
+const VERBOSE = ENV.VITE_ANALYTICS_VERBOSE === 'true';
 const SDK_URL = 'https://bzrcdn.openai.com/sdk/oaiq.min.js';
 const SENT = '__mercastoOpenAIAdsSent';
 
 const isBrowser = () => typeof window !== 'undefined' && typeof document !== 'undefined';
-
-export function isOpenAIAdsMeasurementAllowed() {
-  if (!isBrowser()) return false;
-  try {
-    return localStorage.getItem('cookie_consent') === 'all'
-      && localStorage.getItem('mercasto_privacy_tracking_consent') !== 'false';
-  } catch {
-    return false;
-  }
-}
 
 function oaiq() {
   return isBrowser() && typeof window.oaiq === 'function' ? window.oaiq : null;
@@ -103,10 +96,7 @@ function handleItem(item = {}) {
     const content = listingContent(item);
     sent = measure('custom', { type: 'custom', ...(content ? { contents: [content] } : {}) },
       options(item, 'listing_published'));
-  } else if ([
-    'contact_opened', 'contact_click', 'whatsapp_click', 'telegram_click',
-    'phone_click', 'email_click', 'message_started',
-  ].includes(event)) {
+  } else if (event === 'lead_created') {
     sent = measure('lead_created', { type: 'customer_action' }, options(item));
   }
 

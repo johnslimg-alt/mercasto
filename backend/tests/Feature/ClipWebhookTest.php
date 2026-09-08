@@ -6,6 +6,7 @@ use App\Events\NewNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -84,6 +85,45 @@ class ClipWebhookTest extends TestCase
                 );
         });
         Http::assertSentCount(1);
+    }
+
+    public function test_verified_paid_checkout_sends_one_openai_order_created_conversion(): void
+    {
+        config([
+            'services.openai_ads.pixel_id' => 'px_order_test',
+            'services.openai_ads.api_key' => 'test-key',
+            'services.openai_ads.events_api_endpoint' => 'https://bzr.openai.com/v1/events',
+            'app.frontend_url' => 'https://mercasto.com',
+        ]);
+        $user = User::factory()->create();
+        $this->createPendingPayment($user);
+        $payment = DB::table('payments')->where('clip_checkout_id', self::CHECKOUT_ID)->first();
+        Cache::put('meta_purchase_context:' . self::CHECKOUT_ID, [
+            'openai_measurement_consent' => true,
+            'source_url' => 'https://mercasto.com/promocionar?plan=boost#checkout',
+            'client_ip_address' => '203.0.113.44',
+            'client_user_agent' => 'MercastoOrderTest/1.0',
+        ], now()->addHour());
+
+        Http::fake([
+            $this->clipStatusUrl() => Http::response($this->completedCheckoutResponse(), 200),
+            'bzr.openai.com/*' => Http::response(['accepted' => 1], 200),
+        ]);
+
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())->assertOk();
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())->assertOk();
+
+        $openAiRequests = collect(Http::recorded())->filter(
+            fn ($entry) => str_contains($entry[0]->url(), 'bzr.openai.com')
+        );
+        $this->assertCount(1, $openAiRequests);
+        $event = $openAiRequests->first()[0]->data()['events'][0] ?? [];
+        $this->assertSame('order_created_payment_' . $payment->id, $event['id'] ?? null);
+        $this->assertSame('order_created', $event['type'] ?? null);
+        $this->assertSame('contents', $event['data']['type'] ?? null);
+        $this->assertSame(1900, $event['data']['amount'] ?? null);
+        $this->assertSame('MXN', $event['data']['currency'] ?? null);
+        $this->assertSame('https://mercasto.com/promocionar', $event['source_url'] ?? null);
     }
 
     public function test_duplicate_completed_checkout_does_not_double_credit_balance(): void

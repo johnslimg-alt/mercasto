@@ -7,6 +7,7 @@ import { formatDate, formatMXN, formatNumber } from './utils/localeFormat';
 import { formatPaymentActionCopy, getPaymentActionCopy } from './utils/paymentActionCopy';
 import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlState';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
+import { isOpenAIAdsMeasurementAllowed } from './utils/trackingConsent';
 import { clearPublishDraft } from './utils/publishDraft';
 import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
@@ -3566,7 +3567,12 @@ function App() {
           const res = await fetch(`${API_URL}/payment/balance`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ description, ad_id: adId, product_code: productCode }),
+            body: JSON.stringify({
+              description,
+              ad_id: adId,
+              product_code: productCode,
+              openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
+            }),
           });
           const data = await res.json();
           if (res.ok && data.success) {
@@ -3592,7 +3598,13 @@ function App() {
       const res = await fetch(`${API_URL}/payment/clip`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, description, ad_id: adId, product_code: productCode })
+        body: JSON.stringify({
+          amount,
+          description,
+          ad_id: adId,
+          product_code: productCode,
+          openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
+        })
       });
       const data = await res.json();
       if (res.ok && data.payment_url) {

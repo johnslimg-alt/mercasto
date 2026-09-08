@@ -5,6 +5,7 @@ use App\Models\Ad;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\OpenAiAdsCapiService;
 use App\Events\MessageSent;
 use App\Events\NewNotification;
 use App\Mail\NewMessageMail;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Mail;
 use App\Jobs\SendTelegramMessageNotification;
+use function Illuminate\Support\defer;
 
 class ChatController extends Controller {
     public function getConversations(Request $request) {
@@ -88,11 +90,12 @@ class ChatController extends Controller {
         ]);
     }
 
-    public function sendMessage(Request $request) {
+    public function sendMessage(Request $request, OpenAiAdsCapiService $openai) {
         $data = $request->validate([
             'receiver_id' => 'required|integer|exists:users,id',
             'content' => 'required|string|max:1000',
             'ad_id' => 'required|integer|exists:ads,id',
+            'openai_measurement_consent' => 'nullable|boolean',
         ]);
         $userId = (int) $request->user()->id;
         $receiverId = (int) $data['receiver_id'];
@@ -136,6 +139,7 @@ class ChatController extends Controller {
                     'last_message_at' => now(),
                 ]
             );
+            $leadCreated = $conversation->wasRecentlyCreated;
 
             $message = Message::create([
                 'conversation_id' => $conversation->id,
@@ -171,7 +175,26 @@ class ChatController extends Controller {
                 $userId,
             );
 
-            return response()->json($this->formatMessage($message->load('sender:id,name,avatar_url', 'conversation.ad:id,title,price,image_url'), $userId));
+            $formatted = $this->formatMessage(
+                $message->load('sender:id,name,avatar_url', 'conversation.ad:id,title,price,image_url'),
+                $userId,
+            );
+            $formatted['lead_created'] = $leadCreated;
+
+            if ($leadCreated && $request->boolean('openai_measurement_consent')) {
+                $openAiLeadEventId = 'lead_created_message_' . $message->id;
+                $formatted['openai_lead_event_id'] = $openAiLeadEventId;
+                defer(fn () => $openai->send(
+                    'lead_created',
+                    $request,
+                    $request->user(),
+                    ['type' => 'customer_action'],
+                    $openAiLeadEventId,
+                    $request->headers->get('referer')
+                ))->always();
+            }
+
+            return response()->json($formatted);
         }
 
         $message = Message::create(['sender_id' => $request->user()->id, 'receiver_id' => $request->receiver_id, 'content' => $data['content'], 'ad_id' => $data['ad_id']]);

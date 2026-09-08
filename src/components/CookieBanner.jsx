@@ -18,11 +18,13 @@ export default function CookieBanner({ t, lang }) {
 
   const accept = () => {
     localStorage.setItem('cookie_consent', 'all');
+    window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
     setVisible(false);
   };
 
   const essential = () => {
     localStorage.setItem('cookie_consent', 'essential');
+    window.dispatchEvent(new CustomEvent('mercasto:tracking-consent'));
     setVisible(false);
   };
 

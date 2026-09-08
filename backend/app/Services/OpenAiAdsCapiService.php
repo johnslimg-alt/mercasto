@@ -18,47 +18,66 @@ class OpenAiAdsCapiService
         array $userDataOverrides = [],
         ?string $customEventName = null
     ): array {
-        $pixelId = config('services.openai_ads.pixel_id');
-        $apiKey = config('services.openai_ads.api_key');
-        $endpoint = (string) config('services.openai_ads.events_api_endpoint', 'https://bzr.openai.com/v1/events');
-
-        if (!$pixelId || !$apiKey) {
-            return ['ok' => false, 'skipped' => true, 'reason' => 'missing_pixel_or_api_key', 'event_id' => $eventId];
-        }
-
-        $eventId = $eventId ?: $this->makeEventId($eventType);
-        $event = [
-            'id' => $eventId,
-            'type' => $eventType,
-            'timestamp_ms' => (int) floor(microtime(true) * 1000),
-            'source_url' => $this->sourceUrl($sourceUrl ?: $request->headers->get('referer')),
-            'action_source' => 'web',
-            'data' => $data,
-        ];
-
-        if ($customEventName) {
-            $event['custom_event_name'] = $customEventName;
-        }
-        if ($oppref = $this->cookieValue($request, $userDataOverrides, 'oppref', '__oppref')) {
-            $event['oppref'] = $oppref;
-        }
-        if ($userData = $this->userData($request, $user, $userDataOverrides)) {
-            $event['user'] = $userData;
-        }
-
-        $payload = [
-            'validate_only' => (bool) config('services.openai_ads.validate_only', false),
-            'integration_source' => 'mercasto_web',
-            'events' => [$event],
-        ];
-
         try {
+            $pixelId = config('services.openai_ads.pixel_id');
+            $apiKey = config('services.openai_ads.api_key');
+            $endpoint = (string) config(
+                'services.openai_ads.events_api_endpoint',
+                'https://bzr.openai.com/v1/events'
+            );
+
+            if (!$pixelId || !$apiKey) {
+                return [
+                    'ok' => false,
+                    'skipped' => true,
+                    'reason' => 'missing_pixel_or_api_key',
+                    'event_id' => $eventId,
+                ];
+            }
+
+            $eventId = $eventId ?: $this->makeEventId($eventType);
+            $event = [
+                'id' => $eventId,
+                'type' => $eventType,
+                'timestamp_ms' => (int) floor(microtime(true) * 1000),
+                'source_url' => $this->sourceUrl(
+                    $request,
+                    $sourceUrl ?: $request->headers->get('referer')
+                ),
+                'action_source' => 'web',
+                'data' => $data,
+            ];
+
+            if ($customEventName) {
+                $event['custom_event_name'] = $customEventName;
+            }
+            if ($oppref = $this->cookieValue(
+                $request,
+                $userDataOverrides,
+                'oppref',
+                '__oppref'
+            )) {
+                $event['oppref'] = $oppref;
+            }
+            if ($userData = $this->userData($request, $user, $userDataOverrides)) {
+                $event['user'] = $userData;
+            }
+
+            $payload = [
+                'validate_only' => (bool) config('services.openai_ads.validate_only', false),
+                'integration_source' => 'mercasto_web',
+                'events' => [$event],
+            ];
+
             $response = Http::withToken($apiKey)
                 ->acceptJson()
                 ->asJson()
                 ->timeout(8)
                 ->retry(2, 250)
-                ->post(rtrim($endpoint, '?') . '?pid=' . rawurlencode((string) $pixelId), $payload);
+                ->post(
+                    rtrim($endpoint, '?') . '?pid=' . rawurlencode((string) $pixelId),
+                    $payload
+                );
 
             Log::info('OpenAI Ads CAPI response', [
                 'event_type' => $eventType,
@@ -78,7 +97,12 @@ class OpenAiAdsCapiService
                 'event_id' => $eventId,
                 'exception' => $e::class,
             ]);
-            return ['ok' => false, 'event_id' => $eventId, 'error' => $e->getMessage()];
+
+            return [
+                'ok' => false,
+                'event_id' => $eventId,
+                'error' => $e->getMessage(),
+            ];
         }
     }
 
@@ -124,33 +148,72 @@ class OpenAiAdsCapiService
         string $cookieName
     ): ?string {
         if (array_key_exists($overrideKey, $overrides) && is_scalar($overrides[$overrideKey])) {
-            return $this->cleanOpaque((string) $overrides[$overrideKey]);
-        }
-
-        if ($value = $this->cleanOpaque((string) $request->cookie($cookieName, ''))) {
-            return $value;
+            return $this->opaqueValue((string) $overrides[$overrideKey]);
         }
 
         foreach (explode(';', (string) $request->headers->get('cookie', '')) as $pair) {
-            [$name, $value] = array_pad(explode('=', trim($pair), 2), 2, null);
-            if ($value !== null && rawurldecode(trim((string) $name)) === $cookieName) {
-                return $this->cleanOpaque(rawurldecode($value));
+            $parts = explode('=', ltrim($pair), 2);
+            if (count($parts) !== 2 || trim($parts[0]) !== $cookieName) {
+                continue;
             }
+
+            return $this->opaqueValue($parts[1]);
         }
-        return null;
+
+        return $this->opaqueValue((string) $request->cookie($cookieName, ''));
     }
 
-    private function cleanOpaque(string $value): ?string
+    private function opaqueValue(string $value): ?string
     {
-        $value = trim($value, " \t\n\r\0\x0B\"");
-        return $value === '' ? null : substr($value, 0, 1024);
+        if ($value === '' || strlen($value) > 2048) {
+            return null;
+        }
+
+        return $value;
     }
 
-    private function sourceUrl(?string $sourceUrl): string
+    private function sourceUrl(Request $request, ?string $sourceUrl): string
     {
-        $fallback = rtrim((string) config('app.frontend_url', 'https://mercasto.com'), '/');
+        $canonical = rtrim((string) config('app.frontend_url', 'https://mercasto.com'), '/');
+        $canonicalParts = parse_url($canonical);
+        $canonicalOrigin = $this->originFromParts($canonicalParts);
+        if ($canonicalOrigin === null) {
+            $canonicalOrigin = 'https://mercasto.com';
+        }
+
         $candidate = trim((string) $sourceUrl);
-        return filter_var($candidate, FILTER_VALIDATE_URL) ? $candidate : $fallback;
+        if ($candidate === '' || ! filter_var($candidate, FILTER_VALIDATE_URL)) {
+            return $canonicalOrigin;
+        }
+
+        $parts = parse_url($candidate);
+        $candidateOrigin = $this->originFromParts($parts);
+        if ($candidateOrigin === null || strcasecmp($candidateOrigin, $canonicalOrigin) !== 0) {
+            return $canonicalOrigin;
+        }
+
+        $path = isset($parts['path']) && is_string($parts['path']) ? $parts['path'] : '/';
+        if ($path === '' || $path[0] !== '/') {
+            $path = '/';
+        }
+
+        return $canonicalOrigin . ($path === '/' ? '' : $path);
+    }
+
+    private function originFromParts(array|false $parts): ?string
+    {
+        if (! is_array($parts)) {
+            return null;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
+            return null;
+        }
+
+        $port = isset($parts['port']) ? ':' . (int) $parts['port'] : '';
+        return $scheme . '://' . $host . $port;
     }
 
     private function makeEventId(string $eventType): string
