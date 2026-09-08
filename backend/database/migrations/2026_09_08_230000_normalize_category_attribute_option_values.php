@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Ad;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -25,26 +26,28 @@ return new class extends Migration
                 continue;
             }
 
+            $storageKeys = Ad::categoryAttributeStorageKeys((string) $definition->key);
+
             DB::table('ads')
                 ->where('category', $definition->category_slug)
                 ->whereNotNull('attributes')
                 ->orderBy('id')
-                ->chunkById(200, function ($ads) use ($definition, $legacyToCanonical): void {
+                ->chunkById(200, function ($ads) use ($storageKeys, $legacyToCanonical): void {
                     foreach ($ads as $ad) {
                         $attributes = is_string($ad->attributes) ? json_decode($ad->attributes, true) : $ad->attributes;
-                        if (! is_array($attributes) || ! array_key_exists($definition->key, $attributes)) {
+                        if (! is_array($attributes)) {
                             continue;
                         }
 
-                        [$normalized, $changed] = $this->normalizeStoredValue(
-                            $attributes[$definition->key],
+                        [$attributes, $changed] = $this->normalizeAttributeBag(
+                            $attributes,
+                            $storageKeys,
                             $legacyToCanonical
                         );
                         if (! $changed) {
                             continue;
                         }
 
-                        $attributes[$definition->key] = $normalized;
                         DB::table('ads')->where('id', $ad->id)->update([
                             'attributes' => json_encode($attributes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                         ]);
@@ -62,28 +65,52 @@ return new class extends Migration
                         ->orWhere('category_id', $definition->category_id);
                 })
                 ->orderBy('id')
-                ->chunkById(200, function ($alerts) use ($definition, $legacyToCanonical): void {
+                ->chunkById(200, function ($alerts) use ($storageKeys, $legacyToCanonical): void {
                     foreach ($alerts as $alert) {
                         $filters = is_string($alert->filters) ? json_decode($alert->filters, true) : $alert->filters;
-                        if (! is_array($filters) || ! array_key_exists($definition->key, $filters)) {
+                        if (! is_array($filters)) {
                             continue;
                         }
 
-                        [$normalized, $changed] = $this->normalizeStoredValue(
-                            $filters[$definition->key],
+                        [$filters, $changed] = $this->normalizeAttributeBag(
+                            $filters,
+                            $storageKeys,
                             $legacyToCanonical
                         );
                         if (! $changed) {
                             continue;
                         }
 
-                        $filters[$definition->key] = $normalized;
                         DB::table('search_alerts')->where('id', $alert->id)->update([
                             'filters' => json_encode($filters, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                         ]);
                     }
                 });
         }
+    }
+
+    private function normalizeAttributeBag(array $bag, array $storageKeys, array $legacyToCanonical): array
+    {
+        $changed = false;
+
+        foreach ($storageKeys as $storageKey) {
+            if (! array_key_exists($storageKey, $bag)) {
+                continue;
+            }
+
+            [$normalized, $valueChanged] = $this->normalizeStoredValue(
+                $bag[$storageKey],
+                $legacyToCanonical
+            );
+            if (! $valueChanged) {
+                continue;
+            }
+
+            $bag[$storageKey] = $normalized;
+            $changed = true;
+        }
+
+        return [$bag, $changed];
     }
 
     private function legacyToCanonicalMap(mixed $rawOptions): array
