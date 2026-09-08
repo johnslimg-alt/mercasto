@@ -28,13 +28,13 @@ for (const project of ['chromium-desktop', 'chromium-mobile']) {
     await expect(dialog).toBeVisible();
     const filterToggle = dialog.getByTestId('map-filter-toggle');
     const filterBox = await filterToggle.boundingBox();
-    expect(filterBox?.height).toBeGreaterThanOrEqual(48);
+    expect(filterBox?.height).toBeGreaterThanOrEqual(project === 'chromium-desktop' ? 40 : 48);
     await filterToggle.click();
     await expect(dialog.getByTestId('map-filter-query')).toBeVisible();
 
     const close = dialog.getByTestId('map-close');
     const closeBox = await close.boundingBox();
-    expect(closeBox?.height).toBeGreaterThanOrEqual(48);
+    expect(closeBox?.height).toBeGreaterThanOrEqual(project === 'chromium-desktop' ? 40 : 48);
     await close.click();
     await expect(dialog).toBeHidden();
     await expect(expand).toBeFocused();

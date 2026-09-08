@@ -21,8 +21,8 @@ function scrollTo(id) {
 const COOKIE_TABLE = [
   {
     type: 'Esenciales / Sesión',
-    color: 'bg-blue-50 border-blue-100',
-    badge: 'bg-blue-100 text-blue-700',
+    color: 'bg-blue-50 border-blue-100 dark:bg-blue-950/35 dark:border-blue-800/60',
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/70 dark:text-blue-200',
     desc: 'Necesarias para el funcionamiento básico de la plataforma. Sin estas cookies, la plataforma no funcionaría correctamente.',
     cookies: [
       { name: 'session_token', purpose: 'Mantiene tu sesión activa al iniciar sesión.', duration: 'Sesión', required: true },
@@ -32,8 +32,8 @@ const COOKIE_TABLE = [
   },
   {
     type: 'Funcionales',
-    color: 'bg-purple-50 border-purple-100',
-    badge: 'bg-purple-100 text-purple-700',
+    color: 'bg-purple-50 border-purple-100 dark:bg-purple-950/35 dark:border-purple-800/60',
+    badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/70 dark:text-purple-200',
     desc: 'Mejoran tu experiencia recordando tus preferencias, como el idioma, la ubicación o los filtros de búsqueda recientes.',
     cookies: [
       { name: 'language_pref', purpose: 'Guarda tu preferencia de idioma.', duration: '1 año', required: false },
@@ -43,8 +43,8 @@ const COOKIE_TABLE = [
   },
   {
     type: 'Analíticas',
-    color: 'bg-amber-50 border-amber-100',
-    badge: 'bg-amber-100 text-amber-700',
+    color: 'bg-amber-50 border-amber-100 dark:bg-amber-950/35 dark:border-amber-800/60',
+    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/70 dark:text-amber-200',
     desc: 'Nos permiten entender cómo los usuarios interactúan con la plataforma para mejorar su funcionamiento y contenido.',
     cookies: [
       { name: '_ga', purpose: 'Google Analytics: identifica usuarios únicos.', duration: '2 años', required: false },
@@ -141,7 +141,7 @@ export default function CookiesScreen() {
                   <p>A continuación detallamos los tipos de cookies que utilizamos y su propósito:</p>
                   <div className="mt-4 space-y-6">
                     {COOKIE_TABLE.map((cat) => (
-                      <div key={cat.type} className={`rounded-xl border p-5 ${cat.color}`}>
+                      <div key={cat.type} data-testid="cookie-category-card" className={`rounded-xl border p-5 ${cat.color}`}>
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-semibold text-slate-800">{cat.type}</h3>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cat.badge}`}>

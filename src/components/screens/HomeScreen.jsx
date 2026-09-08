@@ -862,21 +862,21 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
             <section className="col-span-12">
 
-              <div className="flex items-end justify-between mb-4 mt-2">
+              <div className="mb-4 mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 
                 <h2 className="text-[22px] font-bold tracking-tight">{t.automotive}</h2>
 
-                <div className="flex items-center gap-2">
+                <div data-testid="home-auto-filter-row" className="flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 no-scrollbar sm:w-auto sm:overflow-visible sm:pb-0">
 
-                  <button onClick={() => { runSearch('', 'motor'); }} className="btn-sm bg-slate-900 text-white">{t.all || 'Todos'}</button>
+                  <button onClick={() => { runSearch('', 'motor'); }} className="btn-sm shrink-0 bg-slate-900 text-white">{t.all || 'Todos'}</button>
 
-                  <button onClick={() => { runSearch('Nissan', 'motor'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">Nissan</button>
+                  <button onClick={() => { runSearch('Nissan', 'motor'); }} className="btn-sm shrink-0 border border-slate-300 bg-white hover:bg-slate-50">Nissan</button>
 
-                  <button onClick={() => { runSearch('VW', 'motor'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">VW</button>
+                  <button onClick={() => { runSearch('VW', 'motor'); }} className="btn-sm shrink-0 border border-slate-300 bg-white hover:bg-slate-50">VW</button>
 
-                  <button onClick={() => { runSearch('Toyota', 'motor'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50">Toyota</button>
+                  <button onClick={() => { runSearch('Toyota', 'motor'); }} className="btn-sm shrink-0 border border-slate-300 bg-white hover:bg-slate-50">Toyota</button>
 
-                  <button onClick={() => { runSearch('Honda', 'motor'); }} className="btn-sm border border-slate-300 bg-white hover:bg-slate-50 hidden sm:inline-flex">Honda</button>
+                  <button onClick={() => { runSearch('Honda', 'motor'); }} className="btn-sm shrink-0 border border-slate-300 bg-white hover:bg-slate-50 hidden sm:inline-flex">Honda</button>
 
                   <span className="w-px h-5 bg-slate-300 mx-1 hidden sm:block"></span>
 

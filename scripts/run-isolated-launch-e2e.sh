@@ -96,7 +96,7 @@ docker exec "$POSTGRES_CONTAINER" psql -U postgres -d "$DB_NAME" -c 'CREATE EXTE
 
 echo "== Start provider-safe Clip mock =="
 docker run -d --name "$CLIP_CONTAINER" --network "$NETWORK" \
-  -p "$CLIP_PORT:$CLIP_PORT" \
+  -p "127.0.0.1:$CLIP_PORT:$CLIP_PORT" \
   -e CLIP_E2E_MOCK_HOST=0.0.0.0 \
   -e CLIP_E2E_MOCK_PORT="$CLIP_PORT" \
   -e CLIP_E2E_PUBLIC_BASE_URL="http://127.0.0.1:$CLIP_PORT" \
@@ -109,7 +109,7 @@ fi
 
 echo "== Start deterministic Ollama fallback mock =="
 docker run -d --name "$OLLAMA_CONTAINER" --network "$NETWORK" \
-  -p "$OLLAMA_HOST_PORT:11434" \
+  -p "127.0.0.1:$OLLAMA_HOST_PORT:11434" \
   -e OLLAMA_E2E_MOCK_HOST=0.0.0.0 \
   -e OLLAMA_E2E_MOCK_PORT=11434 \
   -v "$ROOT_DIR/scripts/ollama-e2e-mock.mjs:/app/ollama-e2e-mock.mjs:ro" \
@@ -165,14 +165,14 @@ common_env=(
 )
 
 echo "== Migrate and seed isolated database =="
-docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan migrate:fresh --force
-docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=MercastoCategoriesSeeder --force
-docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=CategoryAttributeSeeder --force
-docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=E2eTestSeeder --force
+docker run --rm --entrypoint '' --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan migrate:fresh --force
+docker run --rm --entrypoint '' --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=MercastoCategoriesSeeder --force
+docker run --rm --entrypoint '' --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=CategoryAttributeSeeder --force
+docker run --rm --entrypoint '' --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=E2eTestSeeder --force
 
 echo "== Start isolated API =="
-docker run -d --name "$API_CONTAINER" --network "$NETWORK" \
-  -p "$API_PORT:8000" "${common_env[@]}" "$BACKEND_IMAGE" \
+docker run -d --name "$API_CONTAINER" --entrypoint '' --network "$NETWORK" \
+  -p "127.0.0.1:$API_PORT:8000" "${common_env[@]}" "$BACKEND_IMAGE" \
   sh -lc 'php artisan storage:link >/dev/null 2>&1 || true; exec php artisan serve --host=0.0.0.0 --port=8000' >/dev/null
 if ! wait_for_url "http://127.0.0.1:$API_PORT/up" "Laravel API"; then
   docker ps -a --filter "name=$API_CONTAINER" >&2 || true

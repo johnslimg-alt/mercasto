@@ -72,17 +72,20 @@ for (const lang of languages) {
 
     await expect(dialog.getByTitle(tr.map.nearMe)).toBeVisible();
     await expect(dialog.getByTitle(tr.map.drawArea)).toHaveCount(0);
+    await dialog.getByTestId('map-filter-section-listing-type').locator('button').first().click();
     await expect(dialog.getByTestId('map-filter-listing-type').locator('option').first()).toHaveText(tr.map.listingType);
     await dialog.getByTestId('map-filter-listing-type').selectOption('Venta');
     await expect(dialog.getByTestId('map-filter-listing-type')).toHaveValue('Venta');
     await expect(dialog.getByTestId('map-filter-listing-type').locator('option[value="Venta"]')).toHaveText(tr.map.listingSale);
 
+    await dialog.getByTestId('map-filter-section-condition').locator('button').first().click();
     const newCondition = dialog.getByTestId('map-condition-nuevo');
     await expect(newCondition).toHaveText(tr.map.conditionNew);
     await expect(dialog.getByTestId('map-condition-usado')).toHaveText(tr.map.conditionUsed);
     await expect(dialog.getByTestId('map-condition-reacondicionado')).toHaveText(tr.map.conditionRefurbished);
     await expect(dialog.getByTestId('map-condition-para_piezas')).toHaveText(tr.map.conditionParts);
 
+    await dialog.getByTestId('map-filter-section-dynamic').locator('button').first().click();
     const mapBodyType = dialog.getByTestId('map-filter-dynamic-carroceria');
     await expect(mapBodyType.locator('option[value="Sedán"]')).toHaveText(filterOptionLabel('carroceria', 'Sedán', lang));
     await mapBodyType.selectOption('Sedán');

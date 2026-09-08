@@ -347,7 +347,7 @@ export default function CategoryLanding({ category, lang = 'es' }) {
   const heroSubsections = localizedSubsections;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <VerticalHero
         title={cfg.title}
         subtitle={cfg.subtitle}
@@ -402,27 +402,28 @@ export default function CategoryLanding({ category, lang = 'es' }) {
         {subcats.length > 0 && (
           <section>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-5">{t.search_placeholder}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div data-testid="category-quick-links" className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
               {localizedSubsections.map(({ name, query, Icon }) => {
                 return (
                   <button key={query}
+                    data-testid="category-quick-link"
                     onClick={() => navigate(`/?category=${categoryParam}&search=${encodeURIComponent(query)}`)}
-                    className={`bg-white border border-slate-200 rounded-2xl p-5 flex flex-col items-center gap-3 ${c.hover} hover:shadow-md transition-all group text-center`}>
-                    <span className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${c.iconBase} ${c.iconHover} transition-colors`}>
-                      <Icon size={23} strokeWidth={2.2} />
+                    className={`group flex min-h-[64px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 ${c.hover}`}>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${c.iconBase} ${c.iconHover} transition-colors dark:border-slate-700 dark:bg-slate-800`}>
+                      <Icon size={18} strokeWidth={2.1} />
                     </span>
-                    <span className="text-[14px] font-semibold text-slate-700 group-hover:text-slate-900">{name}</span>
+                    <span className="min-w-0 text-[12px] font-bold leading-snug text-slate-700 transition-colors group-hover:text-slate-950 dark:text-slate-200 dark:group-hover:text-white sm:text-[13px]">{name}</span>
                   </button>
                 );
               })}
-              {/* "Ver todo" tile */}
               <button
+                data-testid="category-quick-link-all"
                 onClick={() => navigate(`/?category=${categoryParam}`)}
-                className={`bg-white border-2 border-dashed border-slate-200 rounded-2xl p-5 flex flex-col items-center gap-3 ${c.hover} hover:shadow-md transition-all group text-center`}>
-                <span className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${c.iconBase} ${c.iconHover} transition-colors`}>
-                  <Globe size={23} strokeWidth={2.2} />
+                className={`group flex min-h-[64px] items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-900/60 dark:hover:bg-slate-900 ${c.hover}`}>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${c.iconBase} ${c.iconHover} transition-colors dark:border-slate-700 dark:bg-slate-800`}>
+                  <Globe size={18} strokeWidth={2.1} />
                 </span>
-                <span className="text-[14px] font-semibold text-slate-500 group-hover:text-slate-900">{t.view_all}</span>
+                <span className="text-[12px] font-bold text-slate-500 transition-colors group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-white sm:text-[13px]">{t.view_all}</span>
               </button>
             </div>
           </section>
@@ -447,18 +448,18 @@ export default function CategoryLanding({ category, lang = 'es' }) {
         </section>
 
         {/* Trust */}
-        <section className={`${c.trust} rounded-3xl p-8`}>
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">{t.why_mercasto || 'Mercasto'}</h2>
+        <section data-testid="category-trust-section" className={`${c.trust} rounded-3xl p-8 dark:bg-slate-900`}>
+          <h2 data-testid="category-trust-title" className="text-2xl font-bold text-slate-900 dark:text-white mb-6 text-center">{t.why_mercasto || 'Mercasto'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {cfg.trust.map(item => {
               const Icon = item.Icon;
               return (
-                <div key={item.title} className="bg-white rounded-2xl p-6 shadow-sm text-center">
+                <div key={item.title} data-testid="category-trust-card" className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm text-center dark:ring-1 dark:ring-slate-700">
                   <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border ${c.trustIcon}`}>
                     <Icon size={23} strokeWidth={2.2} />
                   </div>
-                  <h3 className="font-bold text-[15px] text-slate-800 mb-2">{item.title}</h3>
-                  <p className="text-[13px] text-slate-500 leading-relaxed">{item.body}</p>
+                  <h3 className="font-bold text-[15px] text-slate-800 dark:text-white mb-2">{item.title}</h3>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-300 leading-relaxed">{item.body}</p>
                 </div>
               );
             })}

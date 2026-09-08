@@ -8,6 +8,14 @@ const detailAd = {
   price: 1499,
   category: 'motor',
   condition: 'nuevo',
+  attributes: {
+    material: 'Piel sintética',
+    ajuste: 'Universal',
+    editorial_reference: true,
+    catalog_cover_key: 'reference-6336',
+    catalog_image_semantic_key: 'seat_cover',
+    catalog_image_source: 'curated-local',
+  },
   state: 'Ciudad de México',
   location: 'Ciudad de México, México',
   image_url: '/placeholder-ad.svg',
@@ -52,6 +60,32 @@ async function mockDetailApi(page, requests, authenticated = false) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 }
+
+test('public ad detail hides internal catalog metadata on desktop and mobile', async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    const requests = [];
+    await page.setViewportSize(viewport);
+    await mockDetailApi(page, requests);
+    await page.goto('/ads/6336', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByText('Piel sintética', { exact: true })).toBeVisible();
+    await expect(page.getByText('Universal', { exact: true })).toBeVisible();
+    for (const internalValue of [
+      'editorial_reference',
+      'reference-6336',
+      'catalog_image_semantic_key',
+      'seat_cover',
+      'catalog_image_source',
+      'curated-local',
+    ]) {
+      await expect(page.getByText(internalValue, { exact: true })).toHaveCount(0);
+    }
+  }
+});
+
 
 test('ad detail prioritizes the hero and defers below-fold bundles', async ({ page }) => {
   const apiRequests = [];

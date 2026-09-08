@@ -3,9 +3,31 @@ import { filterConfig } from '../../constants/filterConfig';
 import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { getGlobalFilterDefinitions } from '../../constants/globalFilterOptions';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
-import { Filter, MapPin } from 'lucide-react';
+import { ChevronDown, Filter, MapPin } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+function FilterAccordion({ title, children, defaultOpen = false, selectedCount = 0, testId = '' }) {
+  const [open, setOpen] = useState(defaultOpen || selectedCount > 0);
+  useEffect(() => {
+    if (selectedCount > 0) setOpen(true);
+  }, [selectedCount]);
+  return (
+    <section data-testid={testId || undefined} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(value => !value)}
+        className="flex h-10 w-full items-center gap-2 px-3 text-left text-[12px] font-bold text-slate-800 transition-colors hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-800"
+      >
+        <span className="min-w-0 flex-1 truncate">{title}</span>
+        {selectedCount > 0 && <span className="rounded-full bg-[#84CC16]/15 px-2 py-0.5 text-[10px] font-black text-[#4D7C0F] dark:text-[#BEF264]">{selectedCount}</span>}
+        <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="space-y-2.5 border-t border-slate-100 px-3 py-3 dark:border-slate-800">{children}</div>}
+    </section>
+  );
+}
 
 export default function SidebarFilters({
   activeCat, minPrice, setMinPrice, maxPrice, setMaxPrice,
@@ -14,10 +36,10 @@ export default function SidebarFilters({
   const [apiConfig, setApiConfig] = useState(null);
   const selectedState = typeof dynamicFilters.location_state === 'string' ? dynamicFilters.location_state : '';
   const selectedCity = typeof dynamicFilters.location_city === 'string' ? dynamicFilters.location_city : '';
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [isCompact, setIsCompact] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1280 : false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    const handleResize = () => setIsCompact(window.innerWidth < 1280);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -35,10 +57,6 @@ export default function SidebarFilters({
 
   // API data takes priority; fallback to static filterConfig
   const config = apiConfig ?? (activeCat ? (filterConfig[activeCat] || null) : null);
-
-  const handleConditionToggle = (val) => {
-    setConditionFilter(prev => prev.includes(val) ? prev.filter(c => c !== val) : [...prev, val]);
-  };
 
   const handleDynamicToggle = (key, val) => {
     setDynamicFilters(prev => {
@@ -79,12 +97,22 @@ export default function SidebarFilters({
 
   const globalFilters = getGlobalFilterDefinitions(t);
 
+  const categoryFields = Array.isArray(config)
+    ? config.filter((field) => !['condition', 'location_state', 'location_city'].includes(field.id || field.key))
+    : [];
+  const activeCount = [minPrice, maxPrice, selectedState, selectedCity].filter(Boolean).length
+    + conditionFilter.filter(Boolean).length
+    + Object.values(dynamicFilters || {}).reduce((total, value) => {
+      if (Array.isArray(value)) return total + value.filter(Boolean).length;
+      if (value && typeof value === 'object') return total + Object.values(value).filter(Boolean).length;
+      return total + (value ? 1 : 0);
+    }, 0);
 
-  const panelClass = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 sticky top-[90px] shadow-sm dark:shadow-none';
-  const sectionTitleClass = 'text-[14px] font-semibold mb-3 text-slate-900 dark:text-white';
-  const inputClass = 'w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[13px] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors';
-  const selectClass = 'w-full pl-3 pr-8 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[13px] text-slate-700 dark:text-slate-100 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors cursor-pointer';
-  const labelClass = 'flex items-center gap-3 text-[13px] text-slate-700 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors';
+
+  const panelClass = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 lg:sticky lg:top-[90px] shadow-sm dark:shadow-none';
+  const inputClass = 'h-10 w-full px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors';
+  const selectClass = 'h-10 w-full pl-3 pr-8 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] text-slate-700 dark:text-slate-100 outline-none focus:border-[#84CC16] focus:bg-white dark:focus:bg-slate-900 transition-colors cursor-pointer';
+  const labelClass = 'flex items-center gap-2.5 text-[12px] text-slate-700 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white transition-colors';
 
   // Get available cities for selected state
   const availableCities = selectedState && MEXICO_STATES_CITIES[selectedState]
@@ -92,216 +120,136 @@ export default function SidebarFilters({
     : [];
 
   return (
-    <div className={panelClass}>
-      <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-        <h3 className="font-bold flex items-center gap-2 text-slate-950 dark:text-white">
-          <Filter size={18} /> {tr('filter')}
-        </h3>
-        <button type="button" data-testid="sidebar-clear-filters" onClick={clearAll} className="text-[12px] text-slate-500 dark:text-slate-400 hover:text-[#84CC16] font-medium transition-colors">
+    <div className={panelClass} data-testid="sidebar-filters">
+      <div className="mb-3 flex items-center justify-between gap-3 border-b border-slate-100 pb-3 dark:border-slate-800">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#84CC16]/15 text-[#65A30D] dark:text-[#BEF264]"><Filter size={15} /></span>
+          <div className="min-w-0">
+            <h3 className="text-[13px] font-black text-slate-950 dark:text-white">{tr('filter')}</h3>
+            {activeCount > 0 && <p className="text-[10px] font-bold text-slate-400">{activeCount} {tr('filters') || tr('filter')}</p>}
+          </div>
+        </div>
+        <button type="button" data-testid="sidebar-clear-filters" onClick={clearAll} className="h-8 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-[#65A30D] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-[#BEF264]">
           {tr('clear_filters')}
         </button>
       </div>
 
-      {/* Фильтр по локации: Штат и Город */}
-      <div className="mb-6 border-b border-slate-100 dark:border-slate-800 pb-6">
-        <h4 className={sectionTitleClass}>
-          <MapPin size={14} className="inline mr-2 text-[#84CC16]" />
-          {tr('location')}
-        </h4>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-              {tr('state_label')}
-            </label>
-            <select
-              aria-label={tr('state_label') || 'State'}
-              data-testid="sidebar-filter-state"
-              value={selectedState}
-              onChange={e => handleStateChange(e.target.value)}
-              className={selectClass}
-            >
-              <option value="">{tr('all_mexico')}</option>
-              {MEXICO_STATES.map(state => (
-                <option key={state} value={state}>{state}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-              {tr('city_label')}
-            </label>
-            <select
-              aria-label={tr('city_label') || 'City'}
-              data-testid="sidebar-filter-city"
-              value={selectedCity}
-              onChange={e => handleCityChange(e.target.value)}
-              disabled={!selectedState}
-              className={`${selectClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <option value="">{selectedState ? tr('all_cities') : tr('select_state_first')}</option>
-              {availableCities.map(city => (
-                <option key={city} value={city}>{city}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+      <div className="space-y-2">
+        <FilterAccordion title={tr('location')} defaultOpen selectedCount={[selectedState, selectedCity].filter(Boolean).length} testId="sidebar-group-location">
+          <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400"><MapPin size={13} className="text-[#84CC16]" /> {tr('location')}</div>
+          <select aria-label={tr('state_label') || 'State'} data-testid="sidebar-filter-state" value={selectedState} onChange={e => handleStateChange(e.target.value)} className={selectClass}>
+            <option value="">{tr('all_mexico')}</option>
+            {MEXICO_STATES.map(state => <option key={state} value={state}>{state}</option>)}
+          </select>
+          <select aria-label={tr('city_label') || 'City'} data-testid="sidebar-filter-city" value={selectedCity} onChange={e => handleCityChange(e.target.value)} disabled={!selectedState} className={`${selectClass} disabled:cursor-not-allowed disabled:opacity-50`}>
+            <option value="">{selectedState ? tr('all_cities') : tr('select_state_first')}</option>
+            {availableCities.map(city => <option key={city} value={city}>{city}</option>)}
+          </select>
+        </FilterAccordion>
 
-      {/* Глобальный фильтр: Цена */}
-      <div className="mb-6">
-        <h4 className={sectionTitleClass}>{tr('price_mxn')}</h4>
-        <div className="flex items-center gap-2">
-          <input aria-label={`${tr('price_mxn') || 'Price'} ${tr('min') || 'minimum'}`} data-testid="sidebar-filter-min-price" type="number" placeholder={tr('min')} value={minPrice} onChange={e => setMinPrice(e.target.value)} className={inputClass} />
-          <span className="text-slate-400">-</span>
-          <input aria-label={`${tr('price_mxn') || 'Price'} ${tr('max') || 'maximum'}`} data-testid="sidebar-filter-max-price" type="number" placeholder={tr('max')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className={inputClass} />
-        </div>
-      </div>
+        <FilterAccordion title={tr('price_mxn')} defaultOpen selectedCount={[minPrice, maxPrice].filter(Boolean).length} testId="sidebar-group-price">
+          <div className="grid grid-cols-2 gap-2">
+            <input aria-label={`${tr('price_mxn') || 'Price'} ${tr('min') || 'minimum'}`} data-testid="sidebar-filter-min-price" type="number" placeholder={tr('min')} value={minPrice} onChange={e => setMinPrice(e.target.value)} className={inputClass} />
+            <input aria-label={`${tr('price_mxn') || 'Price'} ${tr('max') || 'maximum'}`} data-testid="sidebar-filter-max-price" type="number" placeholder={tr('max')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className={inputClass} />
+          </div>
+        </FilterAccordion>
 
-      {/* Глобальный фильтр: Состояние товара */}
-      <div className="mb-6 border-b border-slate-100 dark:border-slate-800 pb-6">
-        <h4 className={sectionTitleClass}>{tr('condition')}</h4>
-        {isMobile ? (
-          <div className="relative">
-            <select
-              aria-label={tr('condition') || 'Condition'}
-              data-testid="sidebar-filter-condition"
-              value={conditionFilter[0] || ''}
-              onChange={e => {
-                const val = e.target.value;
-                setConditionFilter(val ? [val] : []);
-              }}
-              className={`${selectClass} appearance-none`}
-            >
+        <FilterAccordion title={tr('condition')} selectedCount={conditionFilter.length} testId="sidebar-group-condition">
+          {isCompact ? (
+            <select aria-label={tr('condition') || 'Condition'} data-testid="sidebar-filter-condition" value={conditionFilter[0] || ''} onChange={e => setConditionFilter(e.target.value ? [e.target.value] : [])} className={`${selectClass} appearance-none`}>
               <option value="">{tr('any')}</option>
-              {['nuevo', 'usado', 'reacondicionado', 'para_piezas'].map(cond => (
-                <option key={cond} value={cond}>{conditionLabels[cond] || cond}</option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">▼</div>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {['nuevo', 'usado', 'reacondicionado', 'para_piezas'].map(cond => (
-              <label key={cond} className={labelClass}>
-                <input data-testid={`sidebar-filter-condition-${cond}`} type="checkbox" checked={conditionFilter.includes(cond)} onChange={() => handleConditionToggle(cond)} className="w-4 h-4 rounded text-[#84CC16] focus:ring-[#84CC16] accent-[#84CC16] border-slate-300" />
-                <span>{conditionLabels[cond] || cond}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {globalFilters.map(field => (
-        <div key={field.id} className="mb-6">
-          <h4 className={sectionTitleClass}>{field.label}</h4>
-          {field.type === 'select' ? (
-            <select aria-label={field.label} data-testid={`sidebar-filter-${field.id}`} value={dynamicFilters[field.id] || ''} onChange={e => handleDynamicChange(field.id, e.target.value)} className={selectClass}>
-              <option value="">{tr('any')}</option>
-              {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              {['nuevo', 'usado', 'reacondicionado', 'para_piezas'].map(cond => <option key={cond} value={cond}>{conditionLabels[cond] || cond}</option>)}
             </select>
           ) : (
-            isMobile ? (
-              <div className="relative">
-                <select
-                  aria-label={field.label}
-                  data-testid={`sidebar-filter-${field.id}`}
-                  value={dynamicFilters[field.id]?.[0] || ''}
-                  onChange={e => {
-                    const val = e.target.value;
-                    handleDynamicChange(field.id, val ? [val] : []);
-                  }}
-                  className={`${selectClass} appearance-none`}
-                >
+            <div className="space-y-2">
+              {['nuevo', 'usado', 'reacondicionado', 'para_piezas'].map(cond => (
+                <label key={cond} className={labelClass}>
+                  <input data-testid={`sidebar-filter-condition-${cond}`} type="checkbox" checked={conditionFilter.includes(cond)} onChange={() => setConditionFilter(prev => prev.includes(cond) ? prev.filter(value => value !== cond) : [...prev, cond])} className="h-4 w-4 rounded accent-[#84CC16]" />
+                  <span>{conditionLabels[cond] || cond}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </FilterAccordion>
+
+        {globalFilters.map(field => {
+          const raw = dynamicFilters[field.id];
+          const selectedCount = Array.isArray(raw) ? raw.filter(Boolean).length : (raw ? 1 : 0);
+          return (
+            <FilterAccordion key={field.id} title={field.label} defaultOpen={['listing_type', 'sort'].includes(field.id)} selectedCount={selectedCount} testId={`sidebar-group-${field.id}`}>
+              {field.type === 'select' || isCompact ? (
+                <select aria-label={field.label} data-testid={`sidebar-filter-${field.id}`} value={Array.isArray(raw) ? (raw[0] || '') : (raw || '')} onChange={e => handleDynamicChange(field.id, field.type === 'select' ? e.target.value : (e.target.value ? [e.target.value] : []))} className={selectClass}>
                   <option value="">{tr('any')}</option>
                   {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">▼</div>
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-[190px] overflow-y-auto no-scrollbar">
-                {field.options.map(opt => (
-                  <label key={opt.value} className={labelClass}>
-                    <input data-testid={`sidebar-filter-${field.id}-${opt.value}`} type="checkbox" checked={(dynamicFilters[field.id] || []).includes(opt.value)} onChange={() => handleDynamicToggle(field.id, opt.value)} className="w-4 h-4 rounded text-[#84CC16] focus:ring-[#84CC16] accent-[#84CC16] border-slate-300" />
-                    <span>{opt.label}</span>
-                  </label>
-                ))}
-              </div>
-            )
-          )}
-        </div>
-      ))}
+              ) : (
+                <div className="max-h-[168px] space-y-2 overflow-y-auto pr-1 no-scrollbar">
+                  {field.options.map(opt => (
+                    <label key={opt.value} className={labelClass}>
+                      <input data-testid={`sidebar-filter-${field.id}-${opt.value}`} type="checkbox" checked={(Array.isArray(raw) ? raw : []).includes(opt.value)} onChange={() => handleDynamicToggle(field.id, opt.value)} className="h-4 w-4 rounded accent-[#84CC16]" />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </FilterAccordion>
+          );
+        })}
 
-      {/* Динамические фильтры (из API или статического конфига) - зависят от категории */}
-      {config && config.length > 0 && (
-        <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
-          <h4 className="text-[13px] font-bold text-[#84CC16] mb-4 uppercase tracking-wide">
-            {tr('category_filters')}
-          </h4>
-          {config.map(field => {
-            // Translate field label using filter_label_<id> key, fallback to original label
-            const fieldId = field.id || field.key;
-            const fieldLabel = tr(`filter_label_${fieldId}`, field.label || fieldId);
-            const anyLabel = tr('any');
-            return (
-              <div key={fieldId} className="mb-6">
-                <h4 className={sectionTitleClass}>{fieldLabel}</h4>
-
-                {field.type === 'checkbox' && Array.isArray(field.options) && (
-                  isMobile ? (
-                    <div className="relative">
-                      <select
-                        aria-label={fieldLabel}
-                        data-testid={`sidebar-category-filter-${fieldId}`}
-                        value={dynamicFilters[fieldId]?.[0] || ''}
-                        onChange={e => {
-                          const val = e.target.value;
-                          handleDynamicChange(fieldId, val ? [val] : []);
-                        }}
-                        className={`${selectClass} appearance-none`}
-                      >
-                        <option value="">{anyLabel}</option>
+        {categoryFields.length > 0 && (
+          <div className="space-y-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+            <div className="px-1 pb-0.5 pt-1 text-[10px] font-black uppercase tracking-wider text-[#65A30D] dark:text-[#BEF264]">{tr('category_filters')}</div>
+            {categoryFields.map(field => {
+              const fieldId = field.id || field.key;
+              const fieldLabel = tr(`filter_label_${fieldId}`) || field.label || fieldId;
+              const raw = dynamicFilters[fieldId];
+              const selectedCount = Array.isArray(raw)
+                ? raw.filter(Boolean).length
+                : (raw && typeof raw === 'object' ? Object.values(raw).filter(Boolean).length : (raw ? 1 : 0));
+              return (
+                <FilterAccordion key={fieldId} title={fieldLabel} selectedCount={selectedCount} testId={`sidebar-category-group-${fieldId}`}>
+                  {field.type === 'checkbox' && Array.isArray(field.options) && (
+                    isCompact ? (
+                      <select aria-label={fieldLabel} data-testid={`sidebar-category-filter-${fieldId}`} value={Array.isArray(raw) ? (raw[0] || '') : ''} onChange={e => handleDynamicChange(fieldId, e.target.value ? [e.target.value] : [])} className={`${selectClass} appearance-none`}>
+                        <option value="">{tr('any')}</option>
                         {field.options.map(opt => { const value = filterOptionValue(opt); return <option key={value} value={value}>{filterOptionDisplayLabel(fieldId, opt, lang)}</option>; })}
                       </select>
-                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">▼</div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5 max-h-[200px] overflow-y-auto no-scrollbar">
-                      {field.options.map(opt => (
-                        <label key={filterOptionValue(opt)} className={labelClass}>
-                          <input data-testid={`sidebar-category-filter-${fieldId}-${filterOptionValue(opt)}`} type="checkbox" checked={(dynamicFilters[fieldId] || []).includes(filterOptionValue(opt))} onChange={() => handleDynamicToggle(fieldId, filterOptionValue(opt))} className="w-4 h-4 rounded text-[#84CC16] focus:ring-[#84CC16] accent-[#84CC16] border-slate-300" />
-                          <span>{filterOptionDisplayLabel(fieldId, opt, lang)}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )
-                )}
-
-                {field.type === 'select' && Array.isArray(field.options) && (
-                  <div className="relative">
-                    <select aria-label={fieldLabel} data-testid={`sidebar-category-filter-${fieldId}`} value={dynamicFilters[fieldId] || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} className={`${selectClass} appearance-none`}>
-                      <option value="">{anyLabel}</option>
+                    ) : (
+                      <div className="max-h-[180px] space-y-2 overflow-y-auto pr-1 no-scrollbar">
+                        {field.options.map(opt => {
+                          const value = filterOptionValue(opt);
+                          return (
+                            <label key={value} className={labelClass}>
+                              <input data-testid={`sidebar-category-filter-${fieldId}-${value}`} type="checkbox" checked={(Array.isArray(raw) ? raw : []).includes(value)} onChange={() => handleDynamicToggle(fieldId, value)} className="h-4 w-4 rounded accent-[#84CC16]" />
+                              <span>{filterOptionDisplayLabel(fieldId, opt, lang)}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )
+                  )}
+                  {field.type === 'select' && Array.isArray(field.options) && (
+                    <select aria-label={fieldLabel} data-testid={`sidebar-category-filter-${fieldId}`} value={raw || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} className={`${selectClass} appearance-none`}>
+                      <option value="">{tr('any')}</option>
                       {field.options.map(opt => { const value = filterOptionValue(opt); return <option key={value} value={value}>{filterOptionDisplayLabel(fieldId, opt, lang)}</option>; })}
                     </select>
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">▼</div>
-                  </div>
-                )}
-
-                {field.type === 'text' && (
-                  <input aria-label={fieldLabel} type="text" value={dynamicFilters[fieldId] || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} placeholder={field.placeholder || ''} className={inputClass} />
-                )}
-
-                {field.type === 'range' && (
-                  <div className="flex items-center gap-2">
-                    <input aria-label={`${fieldLabel} ${field.minPlaceholder || tr('from')}`} type="number" placeholder={field.minPlaceholder || tr('from')} value={(dynamicFilters[fieldId] || {}).min || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), min: e.target.value })} className={inputClass} />
-                    <span className="text-slate-400">-</span>
-                    <input aria-label={`${fieldLabel} ${field.maxPlaceholder || tr('to')}`} type="number" placeholder={field.maxPlaceholder || tr('to')} value={(dynamicFilters[fieldId] || {}).max || ''} onChange={e => handleDynamicChange(fieldId, { ...(dynamicFilters[fieldId] || {}), max: e.target.value })} className={inputClass} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  )}
+                  {field.type === 'text' && (
+                    <input aria-label={fieldLabel} data-testid={`sidebar-category-filter-${fieldId}`} type="text" value={raw || ''} onChange={e => handleDynamicChange(fieldId, e.target.value)} placeholder={field.placeholder || ''} className={inputClass} />
+                  )}
+                  {field.type === 'range' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <input aria-label={`${fieldLabel} ${field.minPlaceholder || tr('from')}`} data-testid={`sidebar-category-filter-${fieldId}-min`} type="number" placeholder={field.minPlaceholder || tr('from')} value={(raw || {}).min || ''} onChange={e => handleDynamicChange(fieldId, { ...(raw || {}), min: e.target.value })} className={inputClass} />
+                      <input aria-label={`${fieldLabel} ${field.maxPlaceholder || tr('to')}`} data-testid={`sidebar-category-filter-${fieldId}-max`} type="number" placeholder={field.maxPlaceholder || tr('to')} value={(raw || {}).max || ''} onChange={e => handleDynamicChange(fieldId, { ...(raw || {}), max: e.target.value })} className={inputClass} />
+                    </div>
+                  )}
+                </FilterAccordion>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
+
 }

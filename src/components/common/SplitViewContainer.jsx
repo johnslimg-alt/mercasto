@@ -44,7 +44,13 @@ export default function SplitViewContainer({
   t = {},
   lang = 'es',
 }) {
-  const [viewLayout, setViewLayout] = useState('grid'); // 'grid' or 'list'
+  const [viewLayout, setViewLayout] = useState(() => {
+    try {
+      return localStorage.getItem('mercasto_catalog_view') === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  }); // 'grid' or 'list'
   const [hoveredAdId, setHoveredAdId] = useState(null);
   const [selectedAdId, setSelectedAdId] = useState(null);
   const [isMobileCatalog, setIsMobileCatalog] = useState(getIsMobileCatalog);
@@ -60,6 +66,14 @@ export default function SplitViewContainer({
     [genuineAds],
   );
   const catalogReferenceCount = ads.length - genuineAds.length;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mercasto_catalog_view', viewLayout);
+    } catch {
+      // Private browsing/storage restrictions should not block catalog navigation.
+    }
+  }, [viewLayout]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');
@@ -238,8 +252,8 @@ export default function SplitViewContainer({
           
           {/* Map overlay info */}
           {!mapCollapsed && (
-            <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[5] flex items-center justify-between gap-2">
-              <div className="rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-2 shadow-lg">
+            <div data-testid="catalog-map-status" className="pointer-events-none absolute bottom-[72px] left-3 right-3 z-[5] flex items-center justify-between gap-2">
+              <div data-testid="catalog-map-status-pill" className="rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-2 shadow-lg">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <MapPin size={14} className="text-[#84CC16]" />
                   <span data-testid="catalog-map-real-count">{mappableAds.length} {t.map_real_listings}</span>
