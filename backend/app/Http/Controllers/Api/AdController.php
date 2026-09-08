@@ -796,6 +796,10 @@ class AdController extends Controller
         $nextCondition = $validated['condition'] ?? $ad->condition;
         $nextSubcategory = $request->input('subcategory', $ad->subcategory);
         $nextAttributes = $request->filled('attributes') ? $request->input('attributes') : $ad->attributes;
+        $nextAttributes = Ad::canonicalizeCategoryAttributeValues(
+            $validated['category'],
+            (array) $nextAttributes
+        );
         $nextImageUrl = count($finalImagePaths) > 0 ? json_encode(array_values($finalImagePaths)) : null;
 
         $contentChanged =

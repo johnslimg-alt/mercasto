@@ -56,6 +56,7 @@ class CategoryAttributeContractTest extends TestCase
         $this->assertNull($range['options']);
     }
 
+
     public function test_legacy_display_labels_are_normalized_across_persisted_consumers(): void
     {
         $categoryId = DB::table('categories')->where('slug', 'inmobiliaria')->value('id');
@@ -128,4 +129,81 @@ class CategoryAttributeContractTest extends TestCase
 
         $this->assertSame('casa', $staleClientAd->fresh()->attributes['legacy_property_type']);
     }
+
+    public function test_stale_clients_are_canonicalized_before_search_write_query_and_moderation_compare(): void
+    {
+        $categoryId = DB::table('categories')->insertGetId([
+            'slug' => 'canonical-contract',
+            'name' => json_encode(['es' => 'Contrato canonical', 'en' => 'Canonical contract']),
+            'icon' => 'Tag',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('category_attributes')->insert([
+            'category_id' => $categoryId,
+            'key' => 'property_type',
+            'label' => json_encode(['es' => 'Tipo de propiedad', 'en' => 'Property type']),
+            'type' => 'select',
+            'options' => json_encode([
+                ['value' => 'casa', 'label' => ['es' => 'Casa', 'en' => 'House']],
+                ['value' => 'terreno', 'label' => ['es' => 'Terreno', 'en' => 'Land']],
+            ]),
+            'required' => false,
+            'sort_order' => 1,
+        ]);
+        $user = User::factory()->create();
+        $ad = Ad::query()->create([
+            'user_id' => $user->id,
+            'title' => 'Casa sin cambios',
+            'description' => 'Descripción estable',
+            'price' => 1500000,
+            'location' => 'Veracruz',
+            'state' => 'Veracruz',
+            'city' => 'Veracruz',
+            'latitude' => 19.1738,
+            'longitude' => -96.1342,
+            'category' => 'canonical-contract',
+            'subcategory' => 'Casa',
+            'condition' => 'usado',
+            'attributes' => ['subcategory' => 'Casa', 'property_type' => 'casa'],
+            'status' => 'active',
+            'ai_moderation_status' => 'approved',
+        ]);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/user/search-alerts', [
+                'name' => 'Casa antigua',
+                'category' => 'canonical-contract',
+                'filters' => ['property_type' => 'Casa'],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('filters.property_type', 'casa');
+
+        $this->getJson('/api/ads?category=canonical-contract&filters[property_type]=Casa')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $ad->id);
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson("/api/ads/{$ad->id}", [
+                'title' => 'Casa sin cambios',
+                'description' => 'Descripción estable',
+                'price' => 1500000,
+                'location' => 'Veracruz',
+                'state' => 'Veracruz',
+                'city' => 'Veracruz',
+                'latitude' => 19.1738,
+                'longitude' => -96.1342,
+                'category' => 'canonical-contract',
+                'subcategory' => 'Casa',
+                'condition' => 'usado',
+                'attributes' => ['subcategory' => 'Casa', 'property_type' => 'Casa'],
+                'existing_images' => [],
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'active')
+            ->assertJsonPath('attributes.property_type', 'casa');
+
+        $this->assertSame('approved', $ad->fresh()->ai_moderation_status);
+    }
+
 }

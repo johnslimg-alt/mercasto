@@ -102,7 +102,7 @@ class Ad extends Model
         });
     }
 
-    private static function canonicalizeCategoryAttributeValues(?string $category, array $listingAttributes): array
+    public static function canonicalizeCategoryAttributeValues(?string $category, array $listingAttributes): array
     {
         $category = trim((string) $category);
         if ($category === '' || ! Schema::hasTable('categories') || ! Schema::hasTable('category_attributes')) {
@@ -116,7 +116,7 @@ class Ad extends Model
             ->get(['category_attributes.key', 'category_attributes.options']);
 
         foreach ($definitions as $definition) {
-            if (! array_key_exists($definition->key, $listingAttributes) || ! is_scalar($listingAttributes[$definition->key])) {
+            if (! array_key_exists($definition->key, $listingAttributes)) {
                 continue;
             }
 
@@ -149,14 +149,30 @@ class Ad extends Model
                 }
             }
 
-            $current = trim((string) $listingAttributes[$definition->key]);
-            $canonical = $lookup[mb_strtolower($current, 'UTF-8')] ?? null;
-            if ($canonical !== null) {
-                $listingAttributes[$definition->key] = $canonical;
-            }
+            $listingAttributes[$definition->key] = self::canonicalizeCategoryAttributeValue(
+                $listingAttributes[$definition->key],
+                $lookup
+            );
         }
 
         return $listingAttributes;
+    }
+
+    private static function canonicalizeCategoryAttributeValue(mixed $value, array $lookup): mixed
+    {
+        if (is_array($value)) {
+            return array_map(
+                static fn ($item) => self::canonicalizeCategoryAttributeValue($item, $lookup),
+                $value
+            );
+        }
+
+        if (! is_scalar($value)) {
+            return $value;
+        }
+
+        $current = trim((string) $value);
+        return $lookup[mb_strtolower($current, 'UTF-8')] ?? $value;
     }
 
     public function setExpiresAtAttribute(mixed $value): void

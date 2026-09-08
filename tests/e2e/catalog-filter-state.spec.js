@@ -106,6 +106,37 @@ test('runtime category option keeps its canonical value while displaying its lab
   await expect(propertyType).toHaveValue('casa');
 });
 
+test('legacy runtime option URL is upgraded to its canonical value', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.addInitScript(() => localStorage.setItem('lang', 'es'));
+  const adRequests = [];
+  await page.route('**/api/**', async (route) => {
+    const url = new URL(route.request().url());
+    const pathname = url.pathname;
+    if (pathname.endsWith('/ads')) {
+      adRequests.push(url.toString());
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], total: 0, current_page: 1, last_page: 1 }) });
+    }
+    if (pathname.endsWith('/category-attributes')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{
+        id: 'property_type', key: 'property_type', label: 'Tipo de propiedad', type: 'select',
+        options: [{ value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }],
+      }]) });
+    }
+    if (pathname.endsWith('/categories')) return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    if (pathname.endsWith('/auth/providers')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/listings?category=inmobiliaria&filters%5Bproperty_type%5D=Casa');
+  const propertyType = page.getByTestId('sidebar-category-filter-property_type');
+  await expect(propertyType).toHaveValue('casa');
+  await expect(page).toHaveURL(/filters%5Bproperty_type%5D=casa/);
+  await expect.poll(() => adRequests.some((url) => new URL(url).searchParams.get('filters[property_type]') === 'casa')).toBeTruthy();
+});
+
+
 test('mobile filter sheet persists canonical state and clear-all resets it', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile');
   await page.addInitScript(() => localStorage.setItem('lang', 'en'));
