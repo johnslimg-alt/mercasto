@@ -28,7 +28,7 @@ class CategoryAttributeController extends Controller
             return response()->json([]);
         }
 
-        $cacheKey = "cat_attrs_{$category}";
+        $cacheKey = "cat_attrs_v2_{$category}";
 
         $attributes = Cache::remember($cacheKey, 3600, function () use ($category) {
             return DB::table('category_attributes')
