@@ -5,6 +5,7 @@ import { whatsappInterestMessage } from '../../utils/whatsappLocale';
 import { formatDate, formatNumber } from '../../utils/localeFormat';
 import { filterOptionLabel } from '../../utils/filterOptionTranslations';
 import { canonicalAdCondition, formatAdDetailCopy, getAdDetailCopy } from '../../utils/adDetailCopy';
+import { publicListingAttributeEntries } from '../../utils/publicListingAttributes';
 import ContactButton from '../common/ContactButton';
 // buildMapEmbedUrl
 
@@ -424,6 +425,7 @@ export default function AdDetailScreen({
   } catch(e) {}
 
   const catConfig = filterConfig[ad.category] || [];
+  const publicAttributeEntries = publicListingAttributeEntries(attributes);
   const locationLabel = buildPublicLocationLabel(ad);
   const telegramUsername = getSafeTelegramUsername(ad);
   // Escribir por Telegram
@@ -664,11 +666,11 @@ export default function AdDetailScreen({
             )}
 
             {/* DYNAMIC EAV ATTRIBUTES (Отображение фильтров) */}
-            {Object.keys(attributes).length > 0 && (
+            {publicAttributeEntries.length > 0 && (
               <div className="mb-10">
                 <h3 className="text-[18px] font-bold text-slate-900 mb-5">{t.main_features || 'Main features'}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {Object.entries(attributes).map(([key, val]) => {
+                  {publicAttributeEntries.map(([key, val]) => {
                     const fieldDef = catConfig.find(f => f.id === key);
                     const label = t[`filter_label_${key}`] || (fieldDef ? fieldDef.label : key);
                     const displayVal = Array.isArray(val)

@@ -123,8 +123,8 @@ export default function VerticalHero({
         )}
         </div>
 
-        <form onSubmit={handleSubmit}
-          className="mx-auto grid max-w-5xl grid-cols-1 gap-2 rounded-3xl bg-white p-2 shadow-2xl md:grid-cols-[1.35fr_0.9fr_0.85fr_0.55fr_auto]">
+        <form data-testid="vertical-hero-search-form" onSubmit={handleSubmit}
+          className="mx-auto grid max-w-5xl grid-cols-1 gap-2 rounded-3xl bg-white p-2 shadow-2xl md:grid-cols-2 lg:grid-cols-[1.35fr_0.9fr_0.85fr_0.55fr_auto]">
           <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <Search size={18} className="text-slate-400 shrink-0" />
             <input

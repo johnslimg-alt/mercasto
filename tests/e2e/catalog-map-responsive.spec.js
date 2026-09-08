@@ -66,3 +66,32 @@ test('mobile catalog primary toolbar controls keep 48px hit targets without over
     expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(1);
   }
 });
+
+
+test('catalog map status never covers the near-me control', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/listings');
+    const shell = page.getByTestId('catalog-map-shell');
+    await expect(shell).toBeVisible();
+
+    if ((await shell.boundingBox())?.height <= 60) {
+      await page.getByTestId('catalog-map-toggle').click();
+    }
+
+    const status = page.getByTestId('catalog-map-status-pill');
+    const nearMe = page.getByTestId('map-near-me');
+    await expect(status).toBeVisible();
+    await expect(nearMe).toBeVisible();
+    const statusBox = await status.boundingBox();
+    const nearMeBox = await nearMe.boundingBox();
+    expect(statusBox).not.toBeNull();
+    expect(nearMeBox).not.toBeNull();
+
+    const horizontalOverlap = Math.max(0, Math.min(statusBox.x + statusBox.width, nearMeBox.x + nearMeBox.width) - Math.max(statusBox.x, nearMeBox.x));
+    const verticalOverlap = Math.max(0, Math.min(statusBox.y + statusBox.height, nearMeBox.y + nearMeBox.height) - Math.max(statusBox.y, nearMeBox.y));
+    expect(horizontalOverlap * verticalOverlap, `map control overlap at ${width}px`).toBe(0);
+  }
+});
