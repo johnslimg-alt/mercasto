@@ -263,7 +263,33 @@ class SeoShellController extends Controller
 
     public function ad(int $id): Response
     {
-        $ad = Ad::query()->where('status', 'active')->findOrFail($id);
+        $ad = Ad::query()->where('status', 'active')->find($id);
+
+        if (! $ad) {
+            $canonical = url('/ads/' . $id);
+            $description = 'Este anuncio no está disponible. Explora otros anuncios clasificados en Mercasto México.';
+
+            return $this->renderShell([
+                'title' => 'Anuncio no encontrado | Mercasto',
+                'description' => $description,
+                'canonical' => $canonical,
+                'type' => 'website',
+                'image' => url('/icon-512x512.png'),
+                'robots' => 'noindex,follow,max-image-preview:large',
+            ], [
+                '@context' => 'https://schema.org',
+                '@type' => 'WebPage',
+                'name' => 'Anuncio no encontrado',
+                'description' => $description,
+                'url' => $canonical,
+                'isPartOf' => [
+                    '@type' => 'WebSite',
+                    'name' => 'Mercasto',
+                    'url' => url('/'),
+                ],
+            ], 404);
+        }
+
         $title = Str::limit($this->localized($ad->title) ?: 'Anuncio en Mercasto', 80, '');
         $description = Str::limit(
             trim(strip_tags($this->localized($ad->description))) ?: 'Mira esta referencia en Mercasto, plataforma de clasificados para México.',
@@ -330,7 +356,7 @@ class SeoShellController extends Controller
         ]);
     }
 
-    private function renderShell(array $meta, array $schema): Response
+    private function renderShell(array $meta, array $schema, int $status = 200): Response
     {
         $url = (string) config('app.frontend_shell_url', 'http://mercasto-frontend:8081/index.html');
         $frontend = Http::timeout(3)->accept('text/html')->get($url);
@@ -370,7 +396,7 @@ class SeoShellController extends Controller
             '<script type="application/ld+json" id="schema-ld-json">' . $json . '</script>',
         );
 
-        return response($html, 200)
+        return response($html, $status)
             ->header('Content-Type', 'text/html; charset=UTF-8')
             ->header('Cache-Control', 'public, max-age=60, s-maxage=60');
     }

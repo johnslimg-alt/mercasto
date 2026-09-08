@@ -208,7 +208,7 @@ class SeoShellControllerTest extends TestCase
         $response->assertDontSee('https://schema.org/InStock', false);
     }
 
-    public function test_inactive_ad_does_not_receive_an_indexable_shell(): void
+    public function test_inactive_ad_returns_branded_noindex_404_shell(): void
     {
         $user = User::factory()->create();
         $ad = Ad::create([
@@ -221,7 +221,24 @@ class SeoShellControllerTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $this->get("https://mercasto.test/ads/{$ad->id}")->assertNotFound();
+        $response = $this->get("https://mercasto.test/ads/{$ad->id}");
+
+        $response->assertNotFound();
+        $response->assertSee('<title>Anuncio no encontrado | Mercasto</title>', false);
+        $response->assertSee('content="noindex,follow,max-image-preview:large"', false);
+        $response->assertSee('<script type="module" src="/assets/app-current.js"></script>', false);
+    }
+
+    public function test_missing_ad_returns_branded_noindex_404_shell(): void
+    {
+        $response = $this->get('https://mercasto.test/ads/404404');
+
+        $response->assertNotFound();
+        $response->assertSee('<title>Anuncio no encontrado | Mercasto</title>', false);
+        $response->assertSee('<link rel="canonical" href="https://mercasto.test/ads/404404" />', false);
+        $response->assertSee('content="noindex,follow,max-image-preview:large"', false);
+        $response->assertSee('"@type":"WebPage"', false);
+        $response->assertSee('<script type="module" src="/assets/app-current.js"></script>', false);
     }
 
     public function test_missing_or_invalid_frontend_shell_fails_closed(): void
