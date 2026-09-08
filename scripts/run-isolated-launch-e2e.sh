@@ -165,13 +165,13 @@ common_env=(
 )
 
 echo "== Migrate and seed isolated database =="
-docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan migrate:fresh --force
-docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=MercastoCategoriesSeeder --force
-docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=CategoryAttributeSeeder --force
-docker run --rm --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=E2eTestSeeder --force
+docker run --rm --entrypoint '' --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan migrate:fresh --force
+docker run --rm --entrypoint '' --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=MercastoCategoriesSeeder --force
+docker run --rm --entrypoint '' --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=CategoryAttributeSeeder --force
+docker run --rm --entrypoint '' --network "$NETWORK" "${common_env[@]}" "$BACKEND_IMAGE" php artisan db:seed --class=E2eTestSeeder --force
 
 echo "== Start isolated API =="
-docker run -d --name "$API_CONTAINER" --network "$NETWORK" \
+docker run -d --name "$API_CONTAINER" --entrypoint '' --network "$NETWORK" \
   -p "$API_PORT:8000" "${common_env[@]}" "$BACKEND_IMAGE" \
   sh -lc 'php artisan storage:link >/dev/null 2>&1 || true; exec php artisan serve --host=0.0.0.0 --port=8000' >/dev/null
 if ! wait_for_url "http://127.0.0.1:$API_PORT/up" "Laravel API"; then

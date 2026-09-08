@@ -13,6 +13,8 @@ grep -qF 'VITE_API_URL="http://127.0.0.1:$API_PORT/api"' scripts/run-isolated-la
 grep -qF 'VITE_DISABLE_REALTIME=true' scripts/run-isolated-launch-e2e.sh
 grep -qF "VITE_DISABLE_REALTIME === 'true'" src/App.jsx
 grep -qF 'pgvector/pgvector:pg18' scripts/run-isolated-launch-e2e.sh
+entrypoint_bypass_count=$(grep -cF -- "--entrypoint ''" scripts/run-isolated-launch-e2e.sh)
+[[ "$entrypoint_bypass_count" -eq 5 ]] || { echo "Expected 5 isolated backend runs to bypass the production env entrypoint, found $entrypoint_bypass_count" >&2; exit 1; }
 grep -qF 'tests/e2e/auth-flow.spec.js' scripts/run-isolated-launch-e2e.sh
 grep -qF 'tests/e2e/ads-lifecycle.spec.js' scripts/run-isolated-launch-e2e.sh
 grep -qF 'tests/e2e/payments.spec.js' scripts/run-isolated-launch-e2e.sh
