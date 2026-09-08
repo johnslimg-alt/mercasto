@@ -148,6 +148,9 @@ async function mockDeepLinkRecoveryApi(page, state) {
     if (path === '/api/ads/404404' && request.method() === 'GET') {
       return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'not found' }) });
     }
+    if (path === '/api/ads/403403' && request.method() === 'GET') {
+      return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ message: 'not available' }) });
+    }
     if (path === '/api/ads/6336/price-history') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"history":[]}' });
     if (path === '/api/ads/6336/similar') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     if (path.startsWith('/api/recommendations')) return route.fulfill({ status: 200, contentType: 'application/json', body: '{"data":[]}' });
@@ -190,6 +193,14 @@ test('deep-link ad renders NotFound only for a real 404', async ({ page }) => {
   await installRouteLanguage(page, 'es');
   await mockDeepLinkRecoveryApi(page, { recovered: false });
   await page.goto('/ads/404404', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('not-found-screen')).toBeVisible();
+  await expect(page.getByTestId('deep-link-ad-load-error')).toHaveCount(0);
+});
+
+test('deep-link ad maps an inaccessible inactive listing to NotFound', async ({ page }) => {
+  await installRouteLanguage(page, 'es');
+  await mockDeepLinkRecoveryApi(page, { recovered: false });
+  await page.goto('/ads/403403', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('not-found-screen')).toBeVisible();
   await expect(page.getByTestId('deep-link-ad-load-error')).toHaveCount(0);
 });
