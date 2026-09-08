@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Models\User;
 use App\Events\NewNotification;
 use App\Jobs\PreScreenKycDocumentWithAI;
+use App\Support\AnalyticsTrackingConsent;
 use App\Support\MailLocale;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
@@ -392,6 +393,35 @@ class ProfileController extends Controller
 
         // Защита от утечки секретов 2FA при смене настроек
         return response()->json(['message' => 'Preferencias actualizadas.', 'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])]);
+    }
+
+    public function updateAnalyticsConsent(Request $request)
+    {
+        $data = $request->validate([
+            'analytics_tracking_consent' => ['required', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $allowed = (bool) $data['analytics_tracking_consent'];
+        AnalyticsTrackingConsent::persist($user, $allowed);
+
+        if (! $allowed) {
+            $checkoutIds = DB::table('payments')
+                ->where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->whereNotNull('clip_checkout_id')
+                ->pluck('clip_checkout_id');
+            foreach ($checkoutIds as $checkoutId) {
+                if (is_string($checkoutId) && $checkoutId !== '') {
+                    Cache::forget('meta_purchase_context:' . $checkoutId);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'analytics_tracking_consent' => $allowed,
+        ]);
     }
 
     /**

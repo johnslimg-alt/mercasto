@@ -101,13 +101,13 @@ test('vertical card metadata localizes known canonical attributes', async () => 
   assert.deepEqual(service.secondary, ['4-7 years', 'Per visit']);
 });
 
-test('export and Clip feedback no longer leak hardcoded Spanish while request contracts stay unchanged', () => {
+test('export and Clip feedback stay localized while core payment fields and consent are enforced', () => {
   assert.equal(app.includes('Error al obtener datos del backend'), false);
   assert.equal(app.includes("toLocaleString('es-MX')} Créditos Mercasto"), false);
   assert.match(app, /showToast\(t\.connection_error, 'error'\)/);
   assert.match(app, /localizeServerMessage\(lang, data\.message, t\.payment_error_generating\)/);
   assert.match(app, /formatNumber\(numericAmount, lang\).*t\.pm_credits_unit/);
-  assert.match(app, /fetch\(`\$\{API_URL\}\/payment\/clip`,[\s\S]*?method: 'POST',[\s\S]*?JSON\.stringify\(\{ amount, description, ad_id: adId, product_code: productCode \}\)/);
+  assert.match(app, /fetch\(`\$\{API_URL\}\/payment\/clip`,[\s\S]*?method: 'POST',[\s\S]*?amount,[\s\S]*?description,[\s\S]*?ad_id: adId,[\s\S]*?product_code: productCode,[\s\S]*?openai_measurement_consent: isOpenAIAdsMeasurementAllowed\(\)/);
 });
 
 

@@ -1,5 +1,6 @@
 import { trackEvent } from './analytics';
 import { createAnalyticsEventId, FUNNEL_EVENTS, registrationEventId } from './funnelAnalytics.js';
+import { isOpenAIAdsMeasurementAllowed } from './trackingConsent.js';
 
 const META_API_BASE = '/api/meta/events';
 const FETCH_PATCH_MARKER = '__mercastoMetaRegistrationFetch';
@@ -59,6 +60,7 @@ function buildPayload(dataLayerItem = {}) {
     city: clean(dataLayerItem.city || dataLayerItem.location_city || ''),
     url: clean(dataLayerItem.page_location || window.location.href),
     event_id: clean(dataLayerItem.event_id || dataLayerItem.meta_event_id || ''),
+    openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
   };
 }
 
@@ -188,6 +190,7 @@ function registrationRequestWithEventId(input, init = {}) {
         body: JSON.stringify({
           ...payload,
           meta_event_id: sharedEventId,
+          openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
         }),
       },
     };

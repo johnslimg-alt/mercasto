@@ -134,6 +134,13 @@ return [
         'graph_version' => env('FACEBOOK_GRAPH_VERSION', 'v25.0'),
     ],
 
+    'openai_ads' => [
+        'pixel_id' => env('OPENAI_ADS_PIXEL_ID'),
+        'api_key' => env('OPENAI_ADS_CAPI_KEY'),
+        'events_api_endpoint' => env('OPENAI_ADS_EVENTS_API_ENDPOINT', 'https://bzr.openai.com/v1/events'),
+        'validate_only' => filter_var(env('OPENAI_ADS_VALIDATE_ONLY', false), FILTER_VALIDATE_BOOLEAN),
+    ],
+
     'tiktok' => [
         'pixel_code' => env('TIKTOK_PIXEL_CODE', 'D9C3HKBC77UBS5FSD7C0'),
         'access_token' => env('TIKTOK_EVENTS_ACCESS_TOKEN', env('TIKTOK_ACCESS_TOKEN')),

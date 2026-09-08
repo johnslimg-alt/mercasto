@@ -544,6 +544,9 @@ Source: php artisan route:list --except-vendor -v
   POST      api/user/preferences generated::<auto> › Api\ProfileController@updatePreferences
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+  POST      api/user/privacy/analytics-consent generated::<auto> › Api\ProfileController@updateAnalyticsConsent
+            ⇂ api
+            ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
   POST      api/user/profile generated::<auto> › Api\ProfileController@update
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum

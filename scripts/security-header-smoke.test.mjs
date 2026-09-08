@@ -105,4 +105,8 @@ test('rejects a response without required CSP safety directives', async () => {
 test('production CSP allows the Cloudflare Web Analytics beacon', async () => {
   const config = await readFile(new URL('../security_headers.conf', import.meta.url), 'utf8');
   assert.match(config, /script-src[^;]*https:\/\/static\.cloudflareinsights\.com/);
+  assert.match(config, /script-src[^;]*https:\/\/bzrcdn\.openai\.com/);
+  assert.match(config, /connect-src[^;]*https:\/\/bzr\.openai\.com/);
+  assert.match(config, /connect-src[^;]*https:\/\/bzrcdn\.openai\.com/);
+  assert.match(config, /img-src[^;]*https:\/\/bzr\.openai\.com/);
 });

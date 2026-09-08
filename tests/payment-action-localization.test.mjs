@@ -65,13 +65,14 @@ test('Mexico Spanish payment copy follows punctuation policy', () => {
   }
 });
 
-test('App localizes payment actions without changing backend purchase contracts', () => {
+test('App localizes payment actions while preserving core purchase fields and consent', () => {
   const source = fs.readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
   assert.match(source, /getPaymentActionCopy\(lang\)/);
   assert.match(source, /formatPaymentActionCopy\(lang, 'payWithBalance'/);
   assert.match(source, /formatPaymentActionCopy\(lang, 'promotionConfirm'/);
   assert.match(source, /formatPaymentActionCopy\(lang, 'invalidCreditsAmount'/);
-  assert.match(source, /body: JSON\.stringify\(\{ description, ad_id: adId, product_code: productCode \}\)/);
+  assert.match(source, /fetch\(`\$\{API_URL\}\/payment\/balance`,[\s\S]*?body: JSON\.stringify\(\{[\s\S]*?description,[\s\S]*?ad_id: adId,[\s\S]*?product_code: productCode,[\s\S]*?openai_measurement_consent: isOpenAIAdsMeasurementAllowed\(\)/);
+  assert.match(source, /fetch\(`\$\{API_URL\}\/payment\/clip`,[\s\S]*?body: JSON\.stringify\(\{[\s\S]*?amount,[\s\S]*?description,[\s\S]*?ad_id: adId,[\s\S]*?product_code: productCode,[\s\S]*?openai_measurement_consent: isOpenAIAdsMeasurementAllowed\(\)/);
   assert.match(source, /body: JSON\.stringify\(\{ type \}\)/);
   assert.match(source, /`\$\{formatNumber\(numericAmount, lang\)\} \$\{t\.pm_credits_unit\} · Mercasto`/);
   assert.doesNotMatch(source, /numericAmount\.toLocaleString\('es-MX'\)/);

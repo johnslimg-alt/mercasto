@@ -11,14 +11,8 @@ const expected = {
   braceExpansion: '5.0.9',
 };
 
-const allowedAdvisories = new Set([
-  'GHSA-4x5r-pxfx-6jf8', // Babel 7 build-time sourceMappingURL file read.
-]);
-const allowedVulnerablePackages = new Set([
-  '@babel/core',
-  'react-router',
-  'react-router-dom',
-]);
+const allowedAdvisories = new Set();
+const allowedVulnerablePackages = new Set();
 const forbiddenRscPatterns = [
   /@react-router\/(?:dev|node)/,
   /react-router\/dom\/server/,
@@ -113,5 +107,5 @@ for (const file of walk(path.join(root, 'src'))) {
 }
 
 if (!process.exitCode) {
-  console.log('npm audit policy OK: patched transitive pins enforced; only documented non-applicable advisories remain.');
+  console.log('npm audit policy OK: patched transitive pins enforced; no advisory exceptions are active.');
 }
