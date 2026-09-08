@@ -1389,7 +1389,7 @@ function App() {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
         .then(async res => {
-          if (res.status === 404 || res.status === 410) {
+          if (res.status === 403 || res.status === 404 || res.status === 410) {
             if (!cancelled && pathAdMatch) setDeepLinkAdMissing(true);
             return null;
           }
