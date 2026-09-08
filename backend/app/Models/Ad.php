@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class Ad extends Model
 {
@@ -83,7 +85,78 @@ class Ad extends Model
                 $ad->attributes['expires_at'] = null;
                 $ad->attributes['reminder_sent_at'] = null;
             }
+
+            if (! $ad->isDirty('attributes') && ! $ad->isDirty('category')) {
+                return;
+            }
+
+            $listingAttributes = $ad->getAttribute('attributes');
+            if (! is_array($listingAttributes) || $listingAttributes === []) {
+                return;
+            }
+
+            $ad->setAttribute(
+                'attributes',
+                self::canonicalizeCategoryAttributeValues($ad->getAttribute('category'), $listingAttributes)
+            );
         });
+    }
+
+    private static function canonicalizeCategoryAttributeValues(?string $category, array $listingAttributes): array
+    {
+        $category = trim((string) $category);
+        if ($category === '' || ! Schema::hasTable('categories') || ! Schema::hasTable('category_attributes')) {
+            return $listingAttributes;
+        }
+
+        $definitions = DB::table('category_attributes')
+            ->join('categories', 'categories.id', '=', 'category_attributes.category_id')
+            ->where('categories.slug', $category)
+            ->whereNotNull('category_attributes.options')
+            ->get(['category_attributes.key', 'category_attributes.options']);
+
+        foreach ($definitions as $definition) {
+            if (! array_key_exists($definition->key, $listingAttributes) || ! is_scalar($listingAttributes[$definition->key])) {
+                continue;
+            }
+
+            $options = is_string($definition->options)
+                ? json_decode($definition->options, true)
+                : $definition->options;
+            if (! is_array($options)) {
+                continue;
+            }
+
+            $lookup = [];
+            foreach ($options as $option) {
+                if (! is_array($option) || ! isset($option['value'])) {
+                    continue;
+                }
+
+                $canonical = trim((string) $option['value']);
+                if ($canonical === '') {
+                    continue;
+                }
+                $lookup[mb_strtolower($canonical, 'UTF-8')] = $canonical;
+
+                $labels = is_array($option['label'] ?? null)
+                    ? $option['label']
+                    : [$option['label'] ?? null];
+                foreach ($labels as $label) {
+                    if (is_scalar($label)) {
+                        $lookup[mb_strtolower(trim((string) $label), 'UTF-8')] = $canonical;
+                    }
+                }
+            }
+
+            $current = trim((string) $listingAttributes[$definition->key]);
+            $canonical = $lookup[mb_strtolower($current, 'UTF-8')] ?? null;
+            if ($canonical !== null) {
+                $listingAttributes[$definition->key] = $canonical;
+            }
+        }
+
+        return $listingAttributes;
     }
 
     public function setExpiresAtAttribute(mixed $value): void
