@@ -58,25 +58,35 @@ class CategoryAttributeController extends Controller
                         $options = $decoded ?? $options;
                     }
 
-                    if (is_array($options)) {
+                    // Preserve canonical option values separately from display labels.
+                    // The frontend already understands {value,label}; flattening these
+                    // objects to labels makes filters query "Casa" while stored ads use
+                    // canonical values such as "casa". Range metadata must also remain
+                    // associative instead of being flattened into a list.
+                    if (is_array($options) && ! isset($options['min'])) {
                         $formattedOptions = [];
                         foreach ($options as $opt) {
-                            if (is_array($opt)) {
-                                if (isset($opt['label'])) {
-                                    $lbl = $opt['label'];
-                                    if (is_array($lbl)) {
-                                        $lblVal = $lbl['es'] ?? $lbl['en'] ?? reset($lbl);
-                                    } else {
-                                        $lblVal = $lbl;
-                                    }
-                                    $formattedOptions[] = $lblVal;
-                                } elseif (isset($opt['value'])) {
-                                    $formattedOptions[] = $opt['value'];
-                                } else {
-                                    $formattedOptions[] = reset($opt);
-                                }
-                            } else {
+                            if (! is_array($opt)) {
                                 $formattedOptions[] = $opt;
+                                continue;
+                            }
+
+                            $value = $opt['value'] ?? null;
+                            $label = $opt['label'] ?? $value;
+                            if (is_array($label)) {
+                                $label = $label['es'] ?? $label['en'] ?? reset($label);
+                            }
+
+                            if ($value !== null && $value !== '') {
+                                $formattedOptions[] = [
+                                    'value' => (string) $value,
+                                    'label' => (string) ($label ?? $value),
+                                ];
+                            } else {
+                                $fallback = reset($opt);
+                                if (is_scalar($fallback)) {
+                                    $formattedOptions[] = (string) $fallback;
+                                }
                             }
                         }
                         $options = $formattedOptions;
