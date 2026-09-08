@@ -104,6 +104,8 @@ test('map controls hydrate from catalog state and search-area preserves canonica
   await page.getByTestId('map-expand').click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByTestId('map-filter-toggle').click();
+  await page.getByTestId('map-filter-section-category').getByRole('button').click();
+  await page.getByTestId('map-filter-section-listing-type').getByRole('button').click();
 
   await expect(page.getByTestId('map-filter-query')).toHaveValue('corolla');
   await expect(page.getByTestId('map-filter-category')).toHaveValue('coches');
@@ -142,6 +144,8 @@ test('map controls hydrate from catalog state and search-area preserves canonica
   await expect.poll(() => new URL(page.url()).searchParams.getAll('filters[listing_type][]')).toEqual(['Renta']);
   await page.getByTestId('map-expand').click();
   await page.getByTestId('map-filter-toggle').click();
+  await page.getByTestId('map-filter-section-category').getByRole('button').click();
+  await page.getByTestId('map-filter-section-listing-type').getByRole('button').click();
   await expect(page.getByTestId('map-filter-query')).toHaveValue('corolla');
   await expect(page.getByTestId('map-filter-category')).toHaveValue('coches');
   await expect(page.getByTestId('map-filter-listing-type')).toHaveValue('Renta');
@@ -188,6 +192,8 @@ test('map reset immediately clears catalog filters while preserving the current 
 
   await page.getByTestId('map-expand').click();
   await page.getByTestId('map-filter-toggle').click();
+  await page.getByTestId('map-filter-section-category').getByRole('button').click();
+  await page.getByTestId('map-filter-section-listing-type').getByRole('button').click();
   const requestCountBeforeReset = adRequests.length;
   await page.getByTestId('map-clear-filters').click();
 

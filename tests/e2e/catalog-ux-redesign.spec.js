@@ -93,7 +93,7 @@ test('catalog keeps permanent sidebar only on wide desktop', async ({ page }, te
   for (const width of [1024, 1180, 1279]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/listings?category=motor');
-    await expect(page.getByTestId('sidebar-filters')).toHaveCount(0);
+    await expect(page.getByTestId('sidebar-filters')).toBeHidden();
     const trigger = page.getByTestId('catalog-mobile-filters');
     await expect(trigger).toBeVisible();
     await trigger.click();
