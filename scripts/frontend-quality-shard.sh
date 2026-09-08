@@ -40,6 +40,7 @@ case "${shard}" in
       tests/e2e/vertical-landing-localization.spec.js tests/e2e/autos-landing-localization.spec.js \
       tests/e2e/empleos-landing-localization.spec.js tests/e2e/inmuebles-landing-localization.spec.js \
       tests/e2e/servicios-landing-localization.spec.js tests/e2e/category-landing-subcategory-localization.spec.js \
+      tests/e2e/vertical-hero-geometry.spec.js \
       tests/e2e/ad-detail-localization.spec.js tests/e2e/seller-profile-localization.spec.js \
       tests/e2e/storefront-public-copy.spec.js tests/e2e/stores-directory-localization.spec.js \
       tests/e2e/runtime-seo-localization.spec.js tests/e2e/runtime-schema-localization.spec.js \
