@@ -14,6 +14,20 @@ class Ad extends Model
 {
     use HasFactory;
 
+    private const CATEGORY_ATTRIBUTE_STORAGE_ALIASES = [
+        'brand' => ['marca'],
+        'model' => ['modelo'],
+        'kms' => ['km'],
+        'fuel' => ['combustible'],
+        'property_type' => ['tipo'],
+        'rooms' => ['habitaciones'],
+        'bathrooms' => ['banos'],
+        'area' => ['m2'],
+        'contract_type' => ['contrato'],
+        'working_hours' => ['tipo_empleo'],
+        'salary' => ['salario'],
+    ];
+
     protected $fillable = [
         'user_id',
         'title',
@@ -102,6 +116,14 @@ class Ad extends Model
         });
     }
 
+    public static function categoryAttributeStorageKeys(string $key): array
+    {
+        return array_values(array_unique([
+            $key,
+            ...(self::CATEGORY_ATTRIBUTE_STORAGE_ALIASES[$key] ?? []),
+        ]));
+    }
+
     public static function canonicalizeCategoryAttributeValues(?string $category, array $listingAttributes): array
     {
         $category = trim((string) $category);
@@ -116,10 +138,6 @@ class Ad extends Model
             ->get(['category_attributes.key', 'category_attributes.options']);
 
         foreach ($definitions as $definition) {
-            if (! array_key_exists($definition->key, $listingAttributes)) {
-                continue;
-            }
-
             $options = is_string($definition->options)
                 ? json_decode($definition->options, true)
                 : $definition->options;
@@ -149,10 +167,20 @@ class Ad extends Model
                 }
             }
 
-            $listingAttributes[$definition->key] = self::canonicalizeCategoryAttributeValue(
-                $listingAttributes[$definition->key],
-                $lookup
-            );
+            if ($lookup === []) {
+                continue;
+            }
+
+            foreach (self::categoryAttributeStorageKeys((string) $definition->key) as $storageKey) {
+                if (! array_key_exists($storageKey, $listingAttributes)) {
+                    continue;
+                }
+
+                $listingAttributes[$storageKey] = self::canonicalizeCategoryAttributeValue(
+                    $listingAttributes[$storageKey],
+                    $lookup
+                );
+            }
         }
 
         return $listingAttributes;
