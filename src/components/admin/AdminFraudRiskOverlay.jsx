@@ -180,7 +180,7 @@ export default function AdminFraudRiskOverlay() {
         type="button"
         data-testid="admin-fraud-risk-open"
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-3 z-[80] flex items-center gap-2 rounded-2xl border border-slate-800 bg-white px-3 py-2.5 text-sm font-extrabold text-slate-900 shadow-xl hover:bg-slate-50 md:bottom-6 md:left-4 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+        className="fixed bottom-[96px] left-3 z-[80] flex items-center gap-2 rounded-2xl border border-slate-800 bg-white px-3 py-2.5 text-sm font-extrabold text-slate-900 shadow-xl hover:bg-slate-50 md:bottom-6 md:left-4 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
         aria-label={t('open')}
         dir={direction}
       >

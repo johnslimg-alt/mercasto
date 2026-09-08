@@ -263,6 +263,33 @@ for (const viewport of [
   });
 }
 
+test('admin floating tools clear the mobile tab bar and each other', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.setViewportSize({ width: 320, height: 720 });
+  await installAdmin(page, 'en');
+  await mockApi(page);
+  await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+
+  const moderation = page.getByTestId('admin-smart-moderation-open');
+  const risk = page.getByTestId('admin-fraud-risk-open');
+  const tabBar = page.locator('.mobile-tabbar');
+  await expect(moderation).toBeVisible();
+  await expect(risk).toBeVisible();
+  await expect(tabBar).toBeVisible();
+
+  const [moderationBox, riskBox, tabBarBox] = await Promise.all([
+    moderation.boundingBox(),
+    risk.boundingBox(),
+    tabBar.boundingBox(),
+  ]);
+  expect(moderationBox?.height).toBeGreaterThanOrEqual(48);
+  expect(riskBox?.height).toBeGreaterThanOrEqual(48);
+  expect(moderationBox.y + moderationBox.height).toBeLessThanOrEqual(tabBarBox.y - 8);
+  expect(riskBox.y + riskBox.height).toBeLessThanOrEqual(tabBarBox.y - 8);
+  expect(riskBox.x + riskBox.width).toBeLessThanOrEqual(moderationBox.x - 8);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+});
+
 test('smart moderation rejection comment uses its visible label as the textbox name', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await installAdmin(page, 'en');
