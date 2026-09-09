@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { AlertTriangle, BarChart3, CheckSquare, ExternalLink, Loader2, Pencil, PlusCircle, Square, Trash2, TrendingUp, X, Zap } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
 import { formatMXN, formatNumber } from '../../utils/localeFormat';
+import { isAdCreditPromotionEligible, isPausedAdBulkActivatable, isReviewReadyForBulkReactivation } from '../../utils/adBulkEligibility';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -141,7 +142,12 @@ export default function MyAdsScreen({
     return sorted;
   }, [filter, sortBy, userAds]);
 
+  const selectedAds = useMemo(() => userAds.filter(ad => selectedIds.has(ad.id)), [selectedIds, userAds]);
   const allVisibleSelected = filteredAds.length > 0 && filteredAds.every(ad => selectedIds.has(ad.id));
+  const canBulkPause = selectedAds.length > 0 && selectedAds.every(ad => ad.status === 'active');
+  const canBulkActivate = selectedAds.length > 0 && selectedAds.every(ad => isPausedAdBulkActivatable(ad));
+  const canBulkConfirmReactivation = selectedAds.length > 0 && selectedAds.every(isReviewReadyForBulkReactivation);
+  const canBulkPromote = selectedAds.length > 0 && selectedAds.every(ad => isAdCreditPromotionEligible(ad));
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -160,7 +166,7 @@ export default function MyAdsScreen({
     setSelectedIds(new Set());
   };
 
-  const doBulkAction = async (action) => {
+  const doBulkAction = async (action, extraPayload = {}) => {
     if (selectedIds.size === 0) return;
     setBulkLoading(true);
     try {
@@ -168,7 +174,7 @@ export default function MyAdsScreen({
       const res = await fetch(`${API_URL}/ads/bulk-action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action, ad_ids: [...selectedIds] }),
+        body: JSON.stringify({ action, ad_ids: [...selectedIds], ...extraPayload }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Error');
@@ -181,6 +187,13 @@ export default function MyAdsScreen({
       setBulkLoading(false);
       setTimeout(() => setToast(null), 3000);
     }
+  };
+
+  const confirmBulkLegacyReactivation = async () => {
+    if (!canBulkConfirmReactivation) return;
+    const confirmed = window.confirm(t.confirm_reactivation_details);
+    if (!confirmed) return;
+    await doBulkAction('confirm_reactivate', { confirm_available: true });
   };
 
   const confirmLegacyReactivation = async (ad) => {
@@ -220,7 +233,7 @@ export default function MyAdsScreen({
   };
 
   const doBulkPromoteWithCredits = async () => {
-    if (selectedIds.size === 0) return;
+    if (!canBulkPromote) return;
     setBulkLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
@@ -443,10 +456,11 @@ export default function MyAdsScreen({
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800 shadow-2xl px-4 py-3 flex items-center justify-between gap-3">
           <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 shrink-0">{selectedIds.size} {t.selected || 'seleccionados'}</span>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={doBulkPromoteWithCredits} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-[#0F172A] text-white flex items-center gap-1.5 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />} {t.promote_with_credits || 'Promocionar con créditos'} ({selectedIds.size} × 50)</button>
-            <button onClick={() => doBulkAction('pause')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 disabled:opacity-40">{t.pause || 'Pausar'}</button>
-            <button onClick={() => doBulkAction('activate')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-lime-50 text-lime-800 border border-lime-200 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/60 disabled:opacity-40">{t.reactivate || 'Activar'}</button>
-            <button onClick={() => doBulkAction('delete')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/60 disabled:opacity-40">{t.delete || 'Eliminar'}</button>
+            {canBulkPromote && <button data-testid="bulk-promote-selected" onClick={doBulkPromoteWithCredits} disabled={bulkLoading} className="btn-sm bg-[#0F172A] text-white flex items-center gap-1.5 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />} {t.promote_with_credits || 'Promocionar con créditos'} ({selectedIds.size} × 50)</button>}
+            {canBulkPause && <button data-testid="bulk-pause-selected" onClick={() => doBulkAction('pause')} disabled={bulkLoading} className="btn-sm bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 disabled:opacity-40">{t.pause || 'Pausar'}</button>}
+            {canBulkActivate && <button data-testid="bulk-activate-selected" onClick={() => doBulkAction('activate')} disabled={bulkLoading} className="btn-sm bg-lime-50 text-lime-800 border border-lime-200 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/60 disabled:opacity-40">{t.reactivate || 'Activar'}</button>}
+            {canBulkConfirmReactivation && <button data-testid="bulk-confirm-reactivation-selected" onClick={confirmBulkLegacyReactivation} disabled={bulkLoading} className="btn-sm bg-lime-50 text-lime-800 border border-lime-200 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/60 disabled:opacity-40">{t.confirm_and_reactivate}</button>}
+            <button data-testid="bulk-delete-selected" onClick={() => doBulkAction('delete')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/60 disabled:opacity-40">{t.delete || 'Eliminar'}</button>
           </div>
         </div>
       )}

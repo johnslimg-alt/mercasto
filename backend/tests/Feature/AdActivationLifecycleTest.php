@@ -8,7 +8,6 @@ use App\Models\AdModerationDecision;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AdActivationLifecycleTest extends TestCase
@@ -229,6 +228,72 @@ class AdActivationLifecycleTest extends TestCase
             ->assertJsonPath('affected', 1);
 
         $this->assertSame('active', $live->fresh()->status);
+    }
+
+    public function test_bulk_confirm_reactivation_requires_explicit_confirmation_and_reactivates_atomically(): void
+    {
+        Carbon::setTestNow('2026-09-09 01:30:00');
+        $owner = User::factory()->create();
+        $first = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+            'expires_at' => null,
+        ]);
+        $second = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+            'expires_at' => null,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'ad_ids' => [$first->id, $second->id],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('confirm_available');
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'confirm_available' => true,
+                'ad_ids' => [$first->id, $second->id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('affected', 2);
+
+        foreach ([$first->fresh(), $second->fresh()] as $ad) {
+            $this->assertSame('active', $ad->status);
+            $this->assertNotNull($ad->expires_at);
+            $this->assertTrue($ad->expires_at->greaterThan(now()));
+            $this->assertNotNull($ad->republished_at);
+        }
+    }
+
+    public function test_bulk_confirm_reactivation_rejects_mixed_or_incomplete_selection_without_partial_updates(): void
+    {
+        $owner = User::factory()->create();
+        $ready = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+        ]);
+        $incomplete = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+            'state' => null,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'confirm_available' => true,
+                'ad_ids' => [$ready->id, $incomplete->id],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('invalid_ad_ids.0', $incomplete->id);
+
+        $this->assertSame('archived', $ready->fresh()->status);
+        $this->assertSame('archived', $incomplete->fresh()->status);
     }
 
     private function createAd(User $seller, array $overrides = []): Ad

@@ -145,6 +145,27 @@ class E2eTestSeeder extends Seeder
                 'is_catalog_filler' => false,
                 ]
             );
+
+            Ad::updateOrCreate(
+                ['user_id' => $seller->id, 'title' => 'Mercasto E2E Review Ready Listing'],
+                [
+                'description' => 'Anuncio aprobado que requiere confirmación del vendedor.',
+                'price' => 135000,
+                'location' => 'Cuauhtémoc, Ciudad de México',
+                'city' => 'Cuauhtémoc',
+                'state' => 'Ciudad de México',
+                'latitude' => 19.4326000,
+                'longitude' => -99.1332000,
+                'category' => 'coches',
+                'subcategory' => 'Sedán',
+                'condition' => 'usado',
+                'attributes' => $fixtureAttributes,
+                'status' => 'archived',
+                'expires_at' => null,
+                'ai_moderation_status' => 'approved',
+                'is_catalog_filler' => false,
+                ]
+            );
         });
 
         User::updateOrCreate(
