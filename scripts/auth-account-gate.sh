@@ -55,10 +55,12 @@ grep -qF "Hash::make" "$AUTH"
 grep -qF "createToken('auth_token')->plainTextToken" "$AUTH"
 grep -qF "makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password'])" "$AUTH"
 
-# 2FA login and OAuth bypass protection.
-grep -qF "Auth::validate" "$AUTH"
-if grep -qF "Auth::attempt" "$AUTH"; then
-  echo "Password validation must not authenticate a session before 2FA completes." >&2
+# 2FA login and OAuth bypass protection. Email identity resolution must be
+# case-insensitive without authenticating a Laravel session before 2FA completes.
+grep -qF "EmailIdentity::resolveLogin" "$AUTH"
+grep -qF "Hash::check" "$AUTH"
+if grep -qF "Auth::validate" "$AUTH" || grep -qF "Auth::attempt" "$AUTH"; then
+  echo "Login must resolve the canonical email identity and validate the password without creating a session." >&2
   exit 1
 fi
 grep -qF "public function loginTwoFactor" "$AUTH"
