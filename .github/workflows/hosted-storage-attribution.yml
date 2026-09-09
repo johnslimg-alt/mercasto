@@ -109,9 +109,12 @@ jobs:
             echo '/root/automation-stack/backups is absent'
           fi
 
-          echo '=== LARGE FILE METADATA >= 2 GiB ==='
-          timeout 180s find /root /var -xdev -type f -size +2G -printf '%s\t%p\n' 2>/dev/null \
-            | sort -nr | head -50 || true
+          echo '=== LARGE FILE METADATA >= 2 GiB (KNOWN TECHNICAL ROOTS ONLY) ==='
+          for scan_root in /root/automation-stack /var/lib/docker /var/www/mercasto; do
+            if [ -d "$scan_root" ]; then
+              timeout 120s find "$scan_root" -xdev -type f -size +2G -printf '%s\t%p\n' 2>/dev/null || true
+            fi
+          done | sort -nr | head -50 || true
 
           echo '=== DOCKER STORAGE SUMMARY ==='
           docker system df || true
