@@ -291,7 +291,7 @@ export default function AppHeader({
                 {favoriteIds.length > 0 && <span className="absolute -top-0.5 -right-0.5 bg-[#84CC16] text-slate-950 text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white">{favoriteIds.length}</span>}
               </button>
             <div className="relative hidden sm:block">
-            <button data-testid="desktop-account-button" onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
+            <button data-testid="desktop-account-button" aria-label={user ? t.open_account_menu : t.login} onClick={() => { if(user) { setShowProfileMenu(v => !v); } else { setAuthMode('login'); setShowAuthModal(true); } setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-user-button flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl" aria-expanded={showProfileMenu}>
                 {user?.avatar_url ? (
                   <img src={user.avatar_url && (user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")) ? user.avatar_url : getImageUrl(user.avatar_url)} className="w-8 h-8 rounded-full object-cover" alt=""/>
                 ) : (

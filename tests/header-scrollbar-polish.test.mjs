@@ -18,6 +18,7 @@ test('header uses compact geometry and removes the redundant AI strip', () => {
   assert.ok(header.includes('lg:h-[60px]'));
   assert.ok(header.includes('mobile-search-row py-2.5 lg:hidden'));
   assert.equal(header.includes('global-ai-brand-strip'), false);
+  assert.ok(header.includes('data-testid="desktop-account-button" aria-label={user ? t.open_account_menu : t.login}'));
   assert.match(css, /@media \(max-width: 1023px\)[\s\S]*?\.header-category-bar[\s\S]*?display:\s*none/);
 });
 
