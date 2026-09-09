@@ -299,7 +299,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/user/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy']);
     Route::post('/user/saved-searches/{savedSearch}/reset', [SavedSearchController::class, 'resetCount']);
     Route::get('/gamification/profile', [GamificationController::class, 'profile']);
-    Route::post('/gamification/activity', [GamificationController::class, 'recordActivity']);
+    Route::middleware('throttle:gamification-activity')->post('/gamification/activity', [GamificationController::class, 'recordActivity']);
     Route::get('/gamification/leaderboard', [GamificationController::class, 'leaderboard']);
     Route::post('/push/subscribe', [PushController::class, 'subscribe']);
     Route::post('/push/unsubscribe', [PushController::class, 'unsubscribe']);

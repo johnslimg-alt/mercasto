@@ -30,14 +30,18 @@ class GamificationController extends Controller
     }
 
     /**
-     * Record activity (login, post, etc.)
+     * Record canonical client login activity.
+     *
+     * Other activity types are server-side events and must not be supplied by clients.
      */
     public function recordActivity(Request $request)
     {
-        $user = $request->user();
-        $type = $request->input('type', 'login');
+        $request->validate([
+            'type' => ['nullable', 'string', 'in:login'],
+        ]);
 
-        $result = $this->gamification->recordActivity($user, $type);
+        $user = $request->user();
+        $result = $this->gamification->recordActivity($user, 'login');
 
         // Also check achievements
         $newAchievements = $this->gamification->checkAchievements($user);
