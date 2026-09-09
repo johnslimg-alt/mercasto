@@ -61,6 +61,34 @@ class CanonicalCatalogFiltersTest extends TestCase
         );
     }
 
+    public function test_catalog_sorts_use_a_unique_tie_breaker_across_pages(): void
+    {
+        $timestamp = now()->subHour()->startOfSecond();
+        $ads = collect(range(1, 20))->map(function (int $index) use ($timestamp): Ad {
+            $ad = $this->ad([
+                'price' => 500,
+                'views' => 25,
+                'title' => "Stable sort {$index}",
+            ]);
+            $ad->forceFill([
+                'created_at' => $timestamp,
+                'updated_at' => $timestamp,
+            ])->saveQuietly();
+            return $ad;
+        });
+
+        $expected = $ads->pluck('id')->sortDesc()->values()->all();
+
+        foreach (['latest', 'price_asc', 'price_desc', 'popular'] as $sort) {
+            $pageOne = collect($this->getJson("/api/ads?sort={$sort}&page=1")->assertOk()->json('data'))->pluck('id')->all();
+            $pageTwo = collect($this->getJson("/api/ads?sort={$sort}&page=2")->assertOk()->json('data'))->pluck('id')->all();
+            $actual = array_merge($pageOne, $pageTwo);
+
+            $this->assertSame($expected, $actual, "Sort {$sort} must be deterministic across offset pages.");
+            $this->assertSame([], array_values(array_intersect($pageOne, $pageTwo)), "Sort {$sort} must not repeat listings across pages.");
+        }
+    }
+
     private function ad(array $overrides = []): Ad
     {
         $userId = $overrides['user_id'] ?? User::factory()->create()->id;

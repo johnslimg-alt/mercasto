@@ -177,6 +177,11 @@ class AdIndexController extends Controller
             $query->latest();
         }
 
+        // Offset pagination must have a total order. Without a final unique
+        // tie-breaker, equal timestamps/prices/views (or equal distances) can
+        // move between pages and produce duplicates or omissions.
+        $query->orderByDesc('ads.id');
+
         $hasFilters = $request->anyFilled([
             'lat',
             'lng',
