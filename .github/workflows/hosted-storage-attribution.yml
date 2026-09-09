@@ -74,9 +74,39 @@ jobs:
             local limit="$1"
             shift
             if command -v ionice >/dev/null 2>&1; then
-              timeout "${limit}s" ionice -c3 nice -n 19 "$@" 2>/dev/null || true
+              timeout "${limit}s" ionice -c3 nice -n 19 "$@" 2>/dev/null
             else
-              timeout "${limit}s" nice -n 19 "$@" 2>/dev/null || true
+              timeout "${limit}s" nice -n 19 "$@" 2>/dev/null
+            fi
+          }
+
+          probe_du() {
+            local label="$1"
+            local limit="$2"
+            shift 2
+            local tmp rc
+            tmp="$(mktemp)"
+            echo "--- ${label} ---"
+            lowio_timeout "$limit" du -x -B1M "$@" >"$tmp"
+            rc=$?
+            cat "$tmp"
+            rm -f "$tmp"
+            case "$rc" in
+              0) echo 'probe_status=success' ;;
+              124|137) echo "probe_status=timeout limit=${limit}s" ;;
+              *) echo "probe_status=error rc=${rc}" ;;
+            esac
+            return 0
+          }
+
+          probe_existing_du() {
+            local path="$1"
+            local limit="$2"
+            if [ -e "$path" ]; then
+              probe_du "$path" "$limit" -s "$path"
+            else
+              echo "--- ${path} ---"
+              echo 'probe_status=absent'
             fi
           }
 
@@ -91,43 +121,51 @@ jobs:
             bash /var/www/mercasto/scripts/host-storage-headroom-gate.sh || true
           fi
 
-          echo '=== TOP LEVEL ROOT FILESYSTEM (MiB) ==='
-          lowio_timeout 180 du -x -d1 -B1M / | sort -nr | head -40 || true
+          # Keep each expensive tree independent. A slow Docker tree must not hide
+          # sizes from unrelated top-level paths, and partial output survives a timeout.
+          echo '=== ROOT CHILDREN (MiB) ==='
+          probe_du '/root depth=1' 90 -d1 /root
+
+          echo '=== VAR CHILDREN (MiB) ==='
+          probe_du '/var depth=1' 90 -d1 /var
+
+          echo '=== FOCUSED SAME-FILESYSTEM PROBES (MiB) ==='
+          probe_existing_du /var/lib/docker 60
+          probe_existing_du /var/lib/docker/buildkit 45
+          probe_existing_du /var/lib/docker/overlay2 45
+          probe_existing_du /var/lib/docker/volumes 45
+          probe_existing_du /var/www 45
+          probe_existing_du /var/log 30
+          probe_existing_du /var/cache 30
+          probe_existing_du /usr 45
+          probe_existing_du /opt 30
+          probe_existing_du /srv 30
+          probe_existing_du /home 30
+          probe_existing_du /tmp 30
+          probe_existing_du /root/.cache 30
+          probe_existing_du /root/.local 30
+          probe_existing_du /root/.npm 30
+          probe_existing_du /root/.ollama 30
 
           echo '=== AUTOMATION STACK (MiB, same filesystem) ==='
           if [ -d /root/automation-stack ]; then
-            lowio_timeout 120 du -x -d1 -B1M /root/automation-stack | sort -nr | head -30 || true
+            probe_du '/root/automation-stack depth=1' 60 -d1 /root/automation-stack
           else
             echo '/root/automation-stack is absent'
           fi
 
           echo '=== AUTOMATION BACKUPS (MiB, depth 2) ==='
           if [ -d /root/automation-stack/backups ]; then
-            lowio_timeout 120 du -x -d2 -B1M /root/automation-stack/backups | sort -nr | head -50 || true
+            probe_du '/root/automation-stack/backups depth=2' 60 -d2 /root/automation-stack/backups
           else
             echo '/root/automation-stack/backups is absent'
           fi
 
-          echo '=== LARGE FILES >= 2 GiB (ROOT FILESYSTEM, TOP-LEVEL AGGREGATE) ==='
-          lowio_timeout 120 find / -xdev -type f -size +2G -printf '%s\t%p\n' |
-            awk -F '\t' '{
-              split($2, parts, "/")
-              bucket = "/" parts[2]
-              bytes[bucket] += $1
-              count[bucket] += 1
-            }
-            END {
-              for (bucket in bytes) {
-                printf "%.0f\t%d\t%s\n", bytes[bucket], count[bucket], bucket
-              }
-            }' |
-            sort -nr | head -50 || true
-
           echo '=== DOCKER STORAGE SUMMARY ==='
-          timeout 30s docker system df || true
+          timeout 30s docker system df || echo 'docker_system_df_status=timeout_or_error'
 
           echo '=== DOCKER BUILDER SUMMARY ==='
-          timeout 60s docker builder du 2>/dev/null | tail -60 || true
+          timeout 60s docker builder du 2>/dev/null | tail -80 || echo 'docker_builder_du_status=timeout_or_error'
           REMOTE
 
       - name: Remove SSH key
