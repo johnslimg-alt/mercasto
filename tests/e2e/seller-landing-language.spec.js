@@ -12,9 +12,13 @@ test.describe('seller campaign landing language', () => {
     const response = await page.goto('/vendedores', { waitUntil: 'domcontentloaded' });
 
     expect(response?.status(), '/vendedores HTTP status').toBeLessThan(400);
+    await expect(page).toHaveURL(/\/vendedores(?:[?#].*)?$/);
+    await expect(page.locator('body')).toContainText('El plan gratuito incluye hasta 3 anuncios al mes');
+    await expect(page.locator('html')).toHaveAttribute('lang', /^es(?:-MX)?$/);
+
+    await page.getByRole('button', { name: 'Empezar gratis' }).first().click();
     await expect(page).toHaveURL(/\/post(?:[?#].*)?$/);
     await expect(page.locator('body')).toContainText('Inicia sesión para continuar');
-    await expect(page.locator('html')).toHaveAttribute('lang', /^es(?:-MX)?$/);
 
     await expect.poll(() => page.evaluate(() => ({
       appLanguage: localStorage.getItem('lang'),
