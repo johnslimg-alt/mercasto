@@ -148,6 +148,14 @@ class AdIndexController extends Controller
             $query->whereIn('condition', $conditions);
         }
 
+        $queryFilters = $request->query('filters');
+        if (is_array($queryFilters) && $request->filled('category')) {
+            $request->query->set('filters', Ad::canonicalizeCategoryAttributeValues(
+                (string) $request->query('category'),
+                $queryFilters
+            ));
+        }
+
         AdQueryFilters::apply($query, $request);
 
         $sort = $request->query('sort') ?: AdQueryFilters::sortFromFilter($request) ?: 'latest';

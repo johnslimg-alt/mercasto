@@ -70,3 +70,50 @@ test('publication restores a same-session text draft without pretending files we
   await expect(page.getByText(/0\/10/)).toBeVisible();
   await expect(page.getByText(/Fotos del anuncio|Fotos/).first()).toBeVisible();
 });
+
+
+test('publication normalizes a legacy runtime option in a restored draft', async ({ page }) => {
+  await page.addInitScript(({ user, savedAt }) => {
+    localStorage.setItem('auth_token', 'draft-e2e-token');
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('cookiesAccepted', 'true');
+    sessionStorage.setItem('mercasto.publish_draft.v1', JSON.stringify({
+      version: 1,
+      savedAt,
+      step: 2,
+      form: {
+        title: 'Casa recuperada', price: '2500000', description: 'Borrador heredado',
+        location: '', city: '', state: '', latitude: '', longitude: '',
+        category: 'inmobiliaria', subcategory: '', condition: 'usado',
+        attributes: { property_type: 'Casa' },
+      },
+      contact: { contactMethods: ['whatsapp'], waMode: 'phone', phoneValue: '5512345678', waUsername: '', telegramValue: '' },
+    }));
+  }, { user: seller, savedAt: Date.now() });
+
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/user') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(seller) });
+    if (path === '/api/categories') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    if (path === '/api/category-attributes') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{
+        id: 'property_type', key: 'property_type', label: 'Tipo de propiedad', type: 'select',
+        options: [{ value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }],
+        required: false, sort_order: 1,
+      }]) });
+    }
+    if (path === '/api/ads' || path.startsWith('/api/ads/')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], total: 0, current_page: 1, per_page: 16 }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+
+  await page.goto('/post', { waitUntil: 'domcontentloaded' });
+  const propertyType = page.getByTestId('post-attribute-property_type');
+  await expect(propertyType).toHaveValue('casa');
+  await expect(propertyType.locator('option[value="casa"]')).toHaveText('Casa');
+  await expect.poll(() => page.evaluate(() => {
+    const raw = sessionStorage.getItem('mercasto.publish_draft.v1');
+    return raw ? JSON.parse(raw).form.attributes.property_type : null;
+  })).toBe('casa');
+});
