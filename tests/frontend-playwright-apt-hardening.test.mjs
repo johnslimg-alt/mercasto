@@ -2,18 +2,29 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-const workflow = fs.readFileSync('.github/workflows/frontend-quality.yml', 'utf8');
+const hardeningScript = fs.readFileSync('scripts/stabilize-playwright-apt.sh', 'utf8');
+const workflows = [
+  '.github/workflows/frontend-quality.yml',
+  '.github/workflows/public-ui-visual-evidence.yml',
+  '.github/workflows/legal-readiness.yml',
+];
 
-test('browser and WebKit jobs isolate Playwright from the runner Google Chrome apt source', () => {
-  const hardening = workflow.match(/name: Stabilize Playwright apt sources/g) || [];
-  assert.equal(hardening.length, 2);
-  assert.ok(workflow.includes("grep -q 'dl.google.com/linux/chrome'"));
-  assert.ok(workflow.includes('Acquire::Retries "3";'));
+test('shared Playwright apt hardening isolates unstable runner sources', () => {
+  assert.ok(hardeningScript.includes('dl.google.com/linux/chrome'));
+  assert.ok(hardeningScript.includes('archive.ubuntu.com/ubuntu'));
+  assert.ok(hardeningScript.includes('Acquire::Retries "3";'));
+  assert.ok(hardeningScript.includes('Acquire::https::Timeout "20";'));
+});
 
-  const chromiumHardening = workflow.indexOf('name: Stabilize Playwright apt sources');
-  const chromiumInstall = workflow.indexOf('name: Install Chromium');
-  const webkitHardening = workflow.lastIndexOf('name: Stabilize Playwright apt sources');
-  const webkitInstall = workflow.indexOf('name: Install WebKit');
-  assert.ok(chromiumHardening >= 0 && chromiumHardening < chromiumInstall);
-  assert.ok(webkitHardening > chromiumHardening && webkitHardening < webkitInstall);
+test('every with-deps workflow hardens apt sources before browser installation', () => {
+  for (const file of workflows) {
+    const workflow = fs.readFileSync(file, 'utf8');
+    const installs = [...workflow.matchAll(/npx playwright install --with-deps/g)].map(match => match.index);
+    assert.ok(installs.length > 0, file);
+    for (const installIndex of installs) {
+      const prefix = workflow.slice(0, installIndex);
+      const hardeningIndex = prefix.lastIndexOf('bash scripts/stabilize-playwright-apt.sh');
+      assert.ok(hardeningIndex >= 0, `${file}: missing hardening before Playwright install`);
+    }
+  }
 });
