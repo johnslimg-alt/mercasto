@@ -274,14 +274,20 @@ export default function PostScreen({
     fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(requestedCategory)}`)
       .then(r => (r.ok ? r.json() : []))
       .then(data => {
-        if (!cancelled) setApiAttributes(Array.isArray(data) && data.length > 0 ? data : null);
+        if (cancelled) return;
+        // Keep the schema payload and its resolved-category marker in the same
+        // React update. If the marker renders first, draft-pruning can briefly
+        // inspect the fallback static schema and remove legacy runtime keys
+        // before canonicalization gets a chance to upgrade their values.
+        setApiAttributes(Array.isArray(data) && data.length > 0 ? data : null);
+        setAttributesResolvedCategory(requestedCategory);
+        setAttributesLoading(false);
       })
-      .catch(() => { if (!cancelled) setApiAttributes(null); })
-      .finally(() => {
-        if (!cancelled) {
-          setAttributesLoading(false);
-          setAttributesResolvedCategory(requestedCategory);
-        }
+      .catch(() => {
+        if (cancelled) return;
+        setApiAttributes(null);
+        setAttributesResolvedCategory(requestedCategory);
+        setAttributesLoading(false);
       });
     return () => { cancelled = true; };
   }, [form.category]);
