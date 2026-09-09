@@ -31,7 +31,7 @@ const canonicalPresentation = {
   },
   property_type: {
     casa: ['tipo', 'Casa'], departamento: ['tipo', 'Departamento'], terreno: ['tipo', 'Terreno'],
-    local: ['tipo', 'Local comercial'], oficina: ['tipo', 'Oficina'],
+    local: ['tipo', 'Local comercial'], oficina: ['tipo', 'Oficina'], bodega: ['tipo', 'Bodega'],
   },
   contract_type: {
     indefinido: ['contrato', 'Indefinido'], temporal: ['contrato', 'Temporal'],
@@ -42,8 +42,24 @@ const canonicalPresentation = {
   },
 };
 
+const presentationFieldAliases = {
+  marca: ['brand'],
+  combustible: ['fuel'],
+  tipo: ['property_type'],
+  contrato: ['contract_type'],
+  // Legacy fallback schemas have used tipo_empleo for values now split between
+  // contract_type and working_hours, so try both canonical definitions.
+  tipo_empleo: ['working_hours', 'contract_type'],
+};
+
 function presentationEntry(fieldId, value) {
-  return canonicalPresentation[fieldId]?.[String(value || '').trim().toLocaleLowerCase()] || null;
+  const normalizedValue = String(value || '').trim().toLocaleLowerCase();
+  const candidates = [fieldId, ...(presentationFieldAliases[fieldId] || [])];
+  for (const candidate of candidates) {
+    const entry = canonicalPresentation[candidate]?.[normalizedValue];
+    if (entry) return entry;
+  }
+  return null;
 }
 
 export async function loadFilterOptionLanguage(language) {
