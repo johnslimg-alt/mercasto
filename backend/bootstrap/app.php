@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AccountDeletionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Database\QueryException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -64,6 +65,23 @@ $application = Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
+            return null;
+        });
+
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
+
+            if (str_contains($e->getMessage(), 'users_email_case_insensitive_unique')) {
+                return response()->json([
+                    'message' => 'Los datos proporcionados no son válidos.',
+                    'errors' => [
+                        'email' => ['Este correo electrónico ya está registrado.'],
+                    ],
+                ], 422);
             }
 
             return null;

@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserConsent;
 use App\Support\AnalyticsTrackingConsent;
+use App\Support\EmailIdentity;
 use App\Support\PrivacyFingerprint;
 use App\Support\SecureOneTimeCode;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -37,6 +37,13 @@ class AuthController extends Controller
             'avatar_url' => 'nullable|string|url',
             'referral_code' => 'nullable|string|max:10',
         ]);
+
+        if (EmailIdentity::exists((string) $request->email)) {
+            throw ValidationException::withMessages([
+                'email' => ['Este correo electrónico ya está registrado.'],
+            ]);
+        }
+
         $registrationConsent = $this->validateRegistrationConsent($request);
 
         // Persist only a purpose-scoped keyed fingerprint. During rollout, match the
@@ -67,7 +74,7 @@ class AuthController extends Controller
         $user = DB::transaction(function () use ($request, $ip, $role, $registrationConsent) {
             $user = new User();
             $user->name = $request->name;
-            $user->email = $request->email;
+            $user->email = EmailIdentity::normalize((string) $request->email);
             $user->password = Hash::make($request->password);
             $user->phone_number = $request->phone_number;
             $user->avatar_url = $request->avatar_url;
@@ -284,15 +291,15 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Validate the first factor without creating a Laravel session. Authentication
-        // is completed only after the bearer token is issued (and after 2FA when enabled).
-        if (!Auth::validate($request->only('email', 'password'))) {
+        // Resolve email identity case-insensitively for normal accounts. For the
+        // small pre-existing legacy duplicate set, require an exact stored spelling
+        // so authentication can never guess which historical account was intended.
+        $user = EmailIdentity::resolveLogin((string) $request->email);
+        if (! $user || ! Hash::check((string) $request->password, (string) $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Las credenciales proporcionadas son incorrectas.'],
             ]);
         }
-
-        $user = User::where('email', $request->email)->firstOrFail();
 
         // A valid password is the first factor. Issue a short-lived opaque challenge
         // so the 2FA endpoint cannot be used as a standalone login method.
@@ -457,29 +464,32 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email|max:255']);
 
-        $user = \App\Models\User::where('email', $request->email)->first();
+        $user = EmailIdentity::resolveLogin((string) $request->email);
 
-        // Always return the same response regardless of whether email exists (prevent enumeration)
+        // Always return the same response regardless of whether email exists (prevent enumeration).
+        // Recovery uses the stored identity spelling so unique legacy mixed-case accounts work
+        // case-insensitively, while ambiguous legacy duplicates still require an exact spelling.
         if ($user) {
             $token = Str::random(60);
-            
+            $recipientEmail = (string) $user->email;
+
             DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $request->email],
+                ['email' => $recipientEmail],
                 ['token' => Hash::make($token), 'created_at' => now()]
             );
 
-        $resetUrl = config('app.frontend_url', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($request->email);
+            $resetUrl = config('app.frontend_url', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($recipientEmail);
 
             // Защита от Time-Based Enumeration: асинхронная отправка письма
-            dispatch(function() use ($request, $resetUrl) {
+            dispatch(function() use ($recipientEmail, $resetUrl) {
                 Mail::send('emails.action', [
                     'title' => 'Restablecer tu contraseña',
                     'body' => 'Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en Mercasto. Haz clic en el botón de abajo para elegir una nueva contraseña.',
                     'actionText' => 'Restablecer Contraseña',
                     'actionUrl' => $resetUrl,
                     'footer' => 'Si no solicitaste este cambio, puedes ignorar o eliminar este correo de forma segura. Tu cuenta seguirá protegida.'
-                ], function($message) use ($request) {
-                    $message->to($request->email)->subject('Restablecer contraseña - Mercasto');
+                ], function($message) use ($recipientEmail) {
+                    $message->to($recipientEmail)->subject('Restablecer contraseña - Mercasto');
                 });
             });
         } else {
@@ -496,27 +506,26 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
             'token' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();
+        $user = EmailIdentity::resolveLogin((string) $request->email);
+        if (! $user) {
+            return response()->json(['message' => 'El token es inválido o ha expirado.'], 400);
+        }
+
+        $storedEmail = (string) $user->email;
+        $record = DB::table('password_reset_tokens')->where('email', $storedEmail)->first();
         if (!$record || !Hash::check($request->token, $record->token)) {
             return response()->json(['message' => 'El token es inválido o ha expirado.'], 400);
         }
 
         // Reject tokens older than 1 hour
         if (\Carbon\Carbon::parse($record->created_at)->addHour()->isPast()) {
-            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            DB::table('password_reset_tokens')->where('email', $storedEmail)->delete();
             return response()->json(['message' => 'El token ha expirado. Por favor solicita uno nuevo.'], 400);
-        }
-
-        $user = User::where('email', $request->email)->first();
-        
-        // Защита от Fatal Error 500, если пользователь удалил аккаунт до сброса пароля
-        if (!$user) {
-            return response()->json(['message' => 'Usuario no encontrado.'], 404);
         }
         
         $user->password = Hash::make($request->password);
@@ -525,7 +534,7 @@ class AuthController extends Controller
         // Revoke ALL existing tokens to force re-login everywhere
         $user->tokens()->delete();
 
-        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+        DB::table('password_reset_tokens')->where('email', $storedEmail)->delete();
 
         return response()->json(['message' => 'Contraseña restablecida exitosamente. Por favor inicia sesión.']);
     }
@@ -754,11 +763,22 @@ class AuthController extends Controller
 
             // Если не нашли по ID, но есть Email, ищем по Email для связывания аккаунтов
             if (!$user && $socialUser->email) {
-                $existingUser = User::where('email', $socialUser->email)->first();
-                
+                $emailMatches = EmailIdentity::matches((string) $socialUser->email);
+                if ($emailMatches->count() > 1) {
+                    Log::warning('OAuth email identity is ambiguous', [
+                        'email_hash' => hash('sha256', EmailIdentity::normalize((string) $socialUser->email)),
+                        'provider' => $provider,
+                    ]);
+                    return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=oauth_email_ambiguous');
+                }
+
+                $existingUser = $emailMatches->first();
                 // Защита нулевого дня (Account Takeover): ЗАПРЕЩАЕМ авто-привязку OAuth к админским аккаунтам!
                 if ($existingUser && $existingUser->role === 'admin') {
-                    \Illuminate\Support\Facades\Log::alert('Attempted OAuth Hijack on Admin Account: ' . $socialUser->email);
+                    Log::alert('Attempted OAuth Hijack on Admin Account', [
+                        'email_hash' => hash('sha256', EmailIdentity::normalize((string) $socialUser->email)),
+                        'provider' => $provider,
+                    ]);
                     return redirect()->away(config('app.frontend_url', 'https://mercasto.com') . '/?error=admin_oauth_forbidden');
                 }
                 $user = $existingUser;
@@ -786,7 +806,7 @@ class AuthController extends Controller
                     $user = new User();
                     // У некоторых провайдеров (например Telegram) может не быть Email, генерируем заглушку
                     $user->name = $socialUser->name ?? "{$provider}_user_" . rand(1000, 9999);
-                    $user->email = $socialUser->email ?? "{$socialUser->id}@{$provider}.local";
+                    $user->email = EmailIdentity::normalize((string) ($socialUser->email ?? "{$socialUser->id}@{$provider}.local"));
                     $user->{"{$provider}_id"} = $socialUser->id;
                     $user->avatar_url = $socialUser->avatar;
                     $user->role = 'individual';
@@ -904,9 +924,19 @@ class AuthController extends Controller
 
             // Если не нашли по ID, но есть Email, ищем по Email
             if (!$user && $socialUser->email) {
-                $existingUser = User::where('email', $socialUser->email)->first();
+                $emailMatches = EmailIdentity::matches((string) $socialUser->email);
+                if ($emailMatches->count() > 1) {
+                    Log::warning('Telegram email identity is ambiguous', [
+                        'email_hash' => hash('sha256', EmailIdentity::normalize((string) $socialUser->email)),
+                    ]);
+                    return response()->json(['error' => 'Identidad de correo ambigua'], 409);
+                }
+
+                $existingUser = $emailMatches->first();
                 if ($existingUser && $existingUser->role === 'admin') {
-                    \Illuminate\Support\Facades\Log::alert('Attempted OAuth Hijack on Admin Account via Telegram: ' . $socialUser->email);
+                    Log::alert('Attempted OAuth Hijack on Admin Account via Telegram', [
+                        'email_hash' => hash('sha256', EmailIdentity::normalize((string) $socialUser->email)),
+                    ]);
                     return response()->json(['error' => 'No permitido'], 403);
                 }
                 $user = $existingUser;
@@ -924,7 +954,7 @@ class AuthController extends Controller
                 $user = DB::transaction(function () use ($socialUser, $request, $registrationConsent) {
                     $user = new User();
                     $user->name = $socialUser->name ?: 'telegram_user_' . rand(1000, 9999);
-                    $user->email = $socialUser->email;
+                    $user->email = EmailIdentity::normalize((string) $socialUser->email);
                     $user->telegram_id = $socialUser->id;
                     $user->avatar_url = $socialUser->avatar;
                     $user->role = 'individual';

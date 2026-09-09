@@ -160,17 +160,14 @@ class GamificationService
             'listings_count' => DB::table('ads')->where('user_id', $user->id)->count(),
             'listings_with_photos' => DB::table('ads')
                 ->where('user_id', $user->id)
-                ->whereNotNull('images')
-                ->where('images', '!=', '[]')
-                ->where('images', '!=', 'null')
+                ->whereNotNull('image_url')
+                ->where('image_url', '!=', '')
+                ->where('image_url', '!=', '[]')
+                ->where('image_url', '!=', 'null')
+                ->where('generated_cover', false)
                 ->count(),
-            'referrals_count' => DB::table('waitlist_subscribers')
-                ->where('referred_by', $user->email)
-                ->orWhere('referred_by_code', function($q) use ($user) {
-                    $q->select('referral_code')
-                      ->from('waitlist_subscribers')
-                      ->where('email', $user->email);
-                })
+            'referrals_count' => DB::table('referrals')
+                ->where('referrer_id', $user->id)
                 ->count(),
             'streak_days' => $this->getCurrentStreak($user),
             'reviews_count' => 0, // TODO: implement when reviews system exists

@@ -102,6 +102,8 @@ bash scripts/moderation-pipeline-gate.sh
 bash scripts/seller-reactivation-reminder-gate.sh
 bash scripts/seller-correction-flow-gate.sh
 bash scripts/referral-localization-contract-gate.sh
+bash scripts/gamification-referral-contract-gate.sh
+bash scripts/gamification-photo-contract-gate.sh
 bash scripts/profile-edit-localization-contract-gate.sh
 bash scripts/chat-localization-contract-gate.sh
 bash scripts/saved-searches-localization-contract-gate.sh
@@ -126,6 +128,7 @@ bash scripts/mobile-app-association-gate.sh
 bash scripts/design-token-contract-gate.sh
 bash scripts/conversion-journey-gate.sh
 bash scripts/auth-account-gate.sh
+bash scripts/email-case-identity-gate.sh
 node --test scripts/ai-brand-positioning.test.mjs
 bash scripts/attribute-flow-gate.sh
 bash scripts/otp-abuse-control-gate.sh
