@@ -108,8 +108,20 @@ jobs:
             echo '/root/automation-stack/backups is absent'
           fi
 
-          echo '=== LARGE FILE METADATA >= 2 GiB (ROOT FILESYSTEM) ==='
-          lowio_timeout 120 find / -xdev -type f -size +2G -printf '%s\t%p\n' | sort -nr | head -50 || true
+          echo '=== LARGE FILES >= 2 GiB (ROOT FILESYSTEM, TOP-LEVEL AGGREGATE) ==='
+          lowio_timeout 120 find / -xdev -type f -size +2G -printf '%s\t%p\n' |
+            awk -F '\t' '{
+              split($2, parts, "/")
+              bucket = "/" parts[2]
+              bytes[bucket] += $1
+              count[bucket] += 1
+            }
+            END {
+              for (bucket in bytes) {
+                printf "%.0f\t%d\t%s\n", bytes[bucket], count[bucket], bucket
+              }
+            }' |
+            sort -nr | head -50 || true
 
           echo '=== DOCKER STORAGE SUMMARY ==='
           timeout 30s docker system df || true
