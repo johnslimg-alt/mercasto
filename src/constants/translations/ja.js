@@ -573,6 +573,7 @@ export default {
   "payment_status_approved": "承認済み",
   "payment_status_failed": "失敗",
   "payment_status_pending": "保留中",
+  "payment_status_review": "審査中",
   "pending_ads": "保留中の広告",
   "personal_info": "個人情報",
   "phone": "連絡先電話番号",

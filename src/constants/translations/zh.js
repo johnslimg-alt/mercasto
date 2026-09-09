@@ -573,6 +573,7 @@ export default {
   "payment_status_approved": "已批准",
   "payment_status_failed": "失败",
   "payment_status_pending": "待付款",
+  "payment_status_review": "审核中",
   "pending_ads": "待处理广告",
   "personal_info": "个人信息",
   "phone": "联系电话",

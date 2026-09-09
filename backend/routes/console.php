@@ -30,6 +30,10 @@ Schedule::call(function () {
     if ($expiredPromotions->isNotEmpty()) {
         DB::table('ads')
             ->whereIn('id', $expiredPromotions)
+            ->where(function ($query) {
+                $query->whereNull('boost_expires_at')
+                    ->orWhere('boost_expires_at', '<', now());
+            })
             ->update([
                 'promoted' => null,
                 'boost_type' => null,
@@ -37,7 +41,10 @@ Schedule::call(function () {
                 'updated_at' => now(),
             ]);
 
-        DB::table('ad_promotions')->whereIn('ad_id', $expiredPromotions)->delete();
+        DB::table('ad_promotions')
+            ->whereIn('ad_id', $expiredPromotions)
+            ->where('expires_at', '<', now())
+            ->delete();
 
         // Сбрасываем кэши, чтобы снять бейджи "Top seller" на фронтенде
         Cache::forget('sitemap_xml');

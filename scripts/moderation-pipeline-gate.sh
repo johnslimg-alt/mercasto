@@ -11,6 +11,7 @@ COMMAND="backend/app/Console/Commands/RequeueLegacyModeration.php"
 CONFIG="backend/config/services.php"
 COMPOSE="docker-compose.yml"
 MIDDLEWARE="backend/app/Http/Middleware/EnforcePaidAdRenewal.php"
+MODEL="backend/app/Models/Ad.php"
 UI="src/components/screens/MyAdsScreen.jsx"
 
 if grep -qF 'dispatch(function () use ($ad)' "$CONTROLLER"; then
@@ -73,7 +74,9 @@ if grep -Eq 'generativelanguage\.googleapis\.com|api\.deepseek\.com|api\.anthrop
 fi
 grep -qF '{--execute : Requeue the selected ads}' "$COMMAND"
 grep -qF "'confirm_available' => 'required|accepted'" "$CONTROLLER"
-grep -qF "\$ad->ai_moderation_status === 'approved'" "$CONTROLLER"
+grep -qF 'isSellerConfirmationReactivationEligible()' "$CONTROLLER"
+grep -qF "\$this->ai_moderation_status !== 'approved'" "$MODEL"
+grep -qF "data_get(\$decision->metadata, 'activation_mode') !== 'seller_confirmation_required'" "$MODEL"
 grep -qF "(\$ad->ai_moderation_status ?? null) === 'approved'" "$MIDDLEWARE"
 grep -qF "confirm-reactivation-ad-" "$UI"
 grep -qF "review_ready" "$UI"

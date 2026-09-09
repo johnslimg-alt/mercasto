@@ -5,7 +5,7 @@ import SortablePhotoGrid from '../SortablePhotoGrid';
 import ListingAutofillPanel from '../ai/ListingAutofillPanel';
 import MEXICO_STATES from '../../utils/mexicoStates';
 import { filterConfig } from '../../constants/filterConfig';
-import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
+import { canonicalizeFilterOptionSelection, filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { localizedText } from '../../utils/localize';
 import { subcategoriesMap } from '../../constants/locationsAndCategories';
 import { subcategoriesByLang } from '../../constants/subcategoryTranslations';
@@ -168,6 +168,29 @@ export default function EditAdScreen({ t, lang }) {
     if (apiCategoryFields && apiCategoryFields.length > 0) return apiCategoryFields;
     return filterConfig[form.category] || [];
   }, [apiCategoryFields, form.category]);
+
+  // Older listings may persist a display label (for example "Casa") while
+  // the current runtime schema uses a canonical value (for example "casa").
+  // Normalize loaded attributes as soon as the applicable schema is available
+  // so controlled selects remain visible and the next save upgrades the value.
+  useEffect(() => {
+    if (!form.category || categoryFields.length === 0 || !form.attributes) return;
+    setForm((current) => {
+      if (current.category !== form.category || !current.attributes) return current;
+      let changed = false;
+      const attributes = { ...current.attributes };
+      categoryFields.forEach((field) => {
+        const key = field.id || field.key;
+        if (!key || !Array.isArray(field.options) || !Object.prototype.hasOwnProperty.call(attributes, key)) return;
+        const normalized = canonicalizeFilterOptionSelection(field.options, attributes[key]);
+        if (JSON.stringify(normalized) !== JSON.stringify(attributes[key])) {
+          attributes[key] = normalized;
+          changed = true;
+        }
+      });
+      return changed ? { ...current, attributes } : current;
+    });
+  }, [categoryFields, form.category]);
 
   const resolveAutofillSubcategory = (category, hint) => {
     if (!category || !hint) return null;

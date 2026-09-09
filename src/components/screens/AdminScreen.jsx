@@ -455,6 +455,11 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                     {t.payment_status_approved || 'Aprobado'}
                                   </span>
+                                ) : payment.status === 'paid_review' ? (
+                                  <span className="inline-flex items-center gap-1 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-300 px-2.5 py-1 rounded-full text-[12px] font-bold border border-orange-100 dark:border-orange-900/30">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                                    {t.payment_status_review || 'En revisión'}
+                                  </span>
                                 ) : payment.status === 'pending' ? (
                                   <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full text-[12px] font-bold border border-amber-100 dark:border-amber-900/30">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -490,6 +495,10 @@ export default function AdminScreen({ adminAnalytics, loadingAdminAnalytics = fa
                             {payment.status === 'paid' || payment.status === 'succeeded' || payment.status === 'approved' ? (
                               <span className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold border border-emerald-100 dark:border-emerald-900/30">
                                 {t.payment_status_approved || 'Aprobado'}
+                              </span>
+                            ) : payment.status === 'paid_review' ? (
+                              <span className="bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full text-[11px] font-bold border border-orange-100 dark:border-orange-900/30">
+                                {t.payment_status_review || 'En revisión'}
                               </span>
                             ) : payment.status === 'pending' ? (
                               <span className="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full text-[11px] font-bold border border-amber-100 dark:border-amber-900/30">

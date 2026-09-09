@@ -29,8 +29,10 @@ grep -qF "\$verifiedCurrency !== 'MXN'" "$CONTROLLER"
 test -f "$TEST_FILE"
 grep -qF '$fulfillment = DB::transaction' "$CONTROLLER"
 grep -qF -- '->lockForUpdate()' "$CONTROLLER"
-grep -qF "if (! \$lockedPayment || \$lockedPayment->status === 'paid')" "$CONTROLLER"
+grep -qF "if (! \$lockedPayment || in_array(\$lockedPayment->status, ['paid', 'paid_review'], true))" "$CONTROLLER"
+grep -qF "'status' => 'paid_review'" "$CONTROLLER"
 grep -qF "'status' => 'paid'" "$CONTROLLER"
+grep -qF "\$fulfilledPayment->status === 'paid'" "$CONTROLLER"
 grep -qF '$this->activatePaidProduct($fulfilledPayment);' "$CONTROLLER"
 grep -qF '$this->activateAdPromotion($fulfilledPayment);' "$CONTROLLER"
 grep -qF "DB::table('ad_promotions')->updateOrInsert" "$CONTROLLER"
@@ -42,19 +44,25 @@ grep -qF "'purchase_clip_' . \$payment->id" "$CONTROLLER"
 grep -qF 'broadcast(new NewNotification' "$CONTROLLER"
 grep -qF 'test_duplicate_completed_checkout_does_not_double_credit_balance' "$TEST_FILE"
 grep -qF 'test_duplicate_completed_checkout_keeps_one_promotion_ledger_row' "$TEST_FILE"
+grep -qF 'test_paid_promotion_for_ad_that_expired_before_webhook_requires_manual_review' "$TEST_FILE"
+grep -qF 'test_paid_promotion_does_not_overwrite_a_newer_active_promotion' "$TEST_FILE"
+grep -qF 'test_paid_promotion_for_deleted_ad_requires_manual_review' "$TEST_FILE"
+grep -qF 'promotionPurchaseCode' "$CONTROLLER"
 grep -qF 'test_fulfillment_failure_rolls_back_paid_transition_and_credit_balance' "$TEST_FILE"
 
 transaction_line="$(grep -nF '$fulfillment = DB::transaction' "$CONTROLLER" | head -1 | cut -d: -f1)"
 lock_line="$(grep -nF -- '->lockForUpdate()' "$CONTROLLER" | head -1 | cut -d: -f1)"
+review_status_line="$(grep -nF "'status' => 'paid_review'" "$CONTROLLER" | head -1 | cut -d: -f1)"
 paid_line="$(grep -nF "'status' => 'paid'" "$CONTROLLER" | head -1 | cut -d: -f1)"
 product_line="$(grep -nF '$this->activatePaidProduct($fulfilledPayment);' "$CONTROLLER" | head -1 | cut -d: -f1)"
 promotion_line="$(grep -nF '$this->activateAdPromotion($fulfilledPayment);' "$CONTROLLER" | head -1 | cut -d: -f1)"
-notification_insert_line="$(grep -nF "DB::table('user_notifications')->insertGetId" "$CONTROLLER" | head -1 | cut -d: -f1)"
+review_notification_insert_line="$(grep -nF "DB::table('user_notifications')->insertGetId" "$CONTROLLER" | sed -n '1p' | cut -d: -f1)"
+success_notification_insert_line="$(grep -nF "DB::table('user_notifications')->insertGetId" "$CONTROLLER" | sed -n '2p' | cut -d: -f1)"
 committed_line="$(grep -nF 'if ($fulfillment)' "$CONTROLLER" | head -1 | cut -d: -f1)"
 meta_purchase_line="$(grep -nF 'defer(fn () => $this->sendMetaPurchase($meta, $request, $fulfilledPayment))->always()' "$CONTROLLER" | head -1 | cut -d: -f1)"
 broadcast_line="$(grep -nF 'broadcast(new NewNotification' "$CONTROLLER" | head -1 | cut -d: -f1)"
 
-for line in "$transaction_line" "$lock_line" "$paid_line" "$product_line" "$promotion_line" "$notification_insert_line" "$committed_line" "$meta_purchase_line" "$broadcast_line"; do
+for line in "$transaction_line" "$lock_line" "$review_status_line" "$paid_line" "$product_line" "$promotion_line" "$review_notification_insert_line" "$success_notification_insert_line" "$committed_line" "$meta_purchase_line" "$broadcast_line"; do
   if [ -z "$line" ]; then
     echo "unable to locate transactional webhook contract" >&2
     exit 1
@@ -62,12 +70,19 @@ for line in "$transaction_line" "$lock_line" "$paid_line" "$product_line" "$prom
 done
 
 if [ "$lock_line" -le "$transaction_line" ] ||
-  [ "$paid_line" -le "$lock_line" ] ||
+  [ "$review_status_line" -le "$lock_line" ] ||
+  [ "$review_notification_insert_line" -le "$review_status_line" ] ||
+  [ "$review_notification_insert_line" -ge "$committed_line" ]; then
+  echo "manual-review fulfillment must stay inside the locked payment transaction" >&2
+  exit 1
+fi
+
+if [ "$paid_line" -le "$lock_line" ] ||
   [ "$product_line" -le "$paid_line" ] ||
   [ "$promotion_line" -le "$product_line" ] ||
-  [ "$notification_insert_line" -le "$promotion_line" ] ||
-  [ "$committed_line" -le "$notification_insert_line" ]; then
-  echo "database fulfillment is not fully enclosed by the paid-transition transaction" >&2
+  [ "$success_notification_insert_line" -le "$promotion_line" ] ||
+  [ "$committed_line" -le "$success_notification_insert_line" ]; then
+  echo "successful database fulfillment is not fully enclosed by the paid-transition transaction" >&2
   exit 1
 fi
 

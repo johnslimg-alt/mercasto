@@ -192,6 +192,8 @@ class ClipWebhookTest extends TestCase
             'price' => 100000,
             'category' => 'motor',
             'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -219,6 +221,150 @@ class ClipWebhookTest extends TestCase
         ]);
         $this->assertDatabaseCount('ad_promotions', 1);
         $this->assertDatabaseCount('user_notifications', 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_paid_promotion_for_ad_that_expired_before_webhook_requires_manual_review(): void
+    {
+        $user = User::factory()->create();
+        $adId = DB::table('ads')->insertGetId([
+            'user_id' => $user->id,
+            'title' => 'Promoción que venció durante checkout',
+            'description' => 'Anuncio elegible al iniciar el checkout y vencido antes del webhook.',
+            'price' => 100000,
+            'category' => 'motor',
+            'status' => 'active',
+            'expires_at' => now()->subMinute(),
+            'is_catalog_filler' => false,
+            'created_at' => now()->subHour(),
+            'updated_at' => now(),
+        ]);
+        $this->createPendingPayment($user, [
+            'ad_id' => $adId,
+            'description' => 'Subir 24 horas (Anuncio #' . $adId . ')',
+            'product_code' => 'boost_1_day',
+        ]);
+
+        Http::fake([
+            $this->clipStatusUrl() => Http::response($this->completedCheckoutResponse(), 200),
+        ]);
+
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())
+            ->assertOk()
+            ->assertJson(['status' => 'received']);
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())
+            ->assertOk();
+
+        $this->assertDatabaseHas('payments', [
+            'clip_payment_request_id' => self::PAYMENT_REQUEST_ID,
+            'status' => 'paid_review',
+        ]);
+        $this->assertNull(DB::table('ads')->where('id', $adId)->value('boost_expires_at'));
+        $this->assertDatabaseCount('ad_promotions', 0);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $user->id,
+            'title' => 'Pago recibido — promoción en revisión',
+        ]);
+        $this->assertSame(1, DB::table('user_notifications')->where('title', 'Pago recibido — promoción en revisión')->count());
+        $this->assertSame(0, DB::table('user_notifications')->where('title', 'Pago exitoso!')->count());
+        Http::assertSentCount(1);
+    }
+
+    public function test_paid_promotion_does_not_overwrite_a_newer_active_promotion(): void
+    {
+        $user = User::factory()->create();
+        $newerExpiry = now()->addDays(6);
+        $adId = DB::table('ads')->insertGetId([
+            'user_id' => $user->id,
+            'title' => 'Promoción más reciente protegida',
+            'description' => 'Una segunda promoción se activó mientras Clip completaba el checkout anterior.',
+            'price' => 100000,
+            'category' => 'motor',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+            'promoted' => 'highlight',
+            'boost_type' => 'highlight_7_days',
+            'boost_expires_at' => $newerExpiry,
+            'created_at' => now()->subHour(),
+            'updated_at' => now(),
+        ]);
+        DB::table('ad_promotions')->insert([
+            'ad_id' => $adId,
+            'type' => 'highlight',
+            'expires_at' => $newerExpiry,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->createPendingPayment($user, [
+            'ad_id' => $adId,
+            'description' => 'Subir 24 horas (Anuncio #' . $adId . ')',
+            'product_code' => 'boost_1_day',
+        ]);
+
+        Http::fake([
+            $this->clipStatusUrl() => Http::response($this->completedCheckoutResponse(), 200),
+        ]);
+
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())
+            ->assertOk()
+            ->assertJson(['status' => 'received']);
+
+        $this->assertDatabaseHas('payments', [
+            'clip_payment_request_id' => self::PAYMENT_REQUEST_ID,
+            'status' => 'paid_review',
+        ]);
+        $ad = DB::table('ads')->where('id', $adId)->first();
+        $this->assertSame('highlight', $ad->promoted);
+        $this->assertSame('highlight_7_days', $ad->boost_type);
+        $this->assertSame($newerExpiry->format('Y-m-d H:i:s'), (string) $ad->boost_expires_at);
+        $this->assertDatabaseCount('ad_promotions', 1);
+        $this->assertDatabaseHas('ad_promotions', ['ad_id' => $adId, 'type' => 'highlight']);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $user->id,
+            'title' => 'Pago recibido — promoción en revisión',
+        ]);
+        Http::assertSentCount(1);
+    }
+
+    public function test_paid_promotion_for_deleted_ad_requires_manual_review(): void
+    {
+        $user = User::factory()->create();
+        $adId = DB::table('ads')->insertGetId([
+            'user_id' => $user->id,
+            'title' => 'Promoción eliminada durante checkout',
+            'description' => 'El anuncio desaparece después de iniciar la compra de promoción.',
+            'price' => 100000,
+            'category' => 'motor',
+            'status' => 'active',
+            'expires_at' => now()->addDays(3),
+            'is_catalog_filler' => false,
+            'created_at' => now()->subHour(),
+            'updated_at' => now(),
+        ]);
+        $this->createPendingPayment($user, [
+            'ad_id' => $adId,
+            'description' => 'Subir 24 horas (Anuncio #' . $adId . ')',
+            'product_code' => 'boost_1_day',
+        ]);
+        DB::table('ads')->where('id', $adId)->delete();
+        $this->assertNull(DB::table('payments')->where('clip_checkout_id', self::CHECKOUT_ID)->value('ad_id'));
+
+        Http::fake([
+            $this->clipStatusUrl() => Http::response($this->completedCheckoutResponse(), 200),
+        ]);
+
+        $this->postJson('/api/webhooks/clip', $this->completedWebhookPayload())
+            ->assertOk()
+            ->assertJson(['status' => 'received']);
+
+        $this->assertDatabaseHas('payments', [
+            'clip_payment_request_id' => self::PAYMENT_REQUEST_ID,
+            'status' => 'paid_review',
+        ]);
+        $this->assertDatabaseCount('ad_promotions', 0);
+        $this->assertSame(1, DB::table('user_notifications')->where('title', 'Pago recibido — promoción en revisión')->count());
+        $this->assertSame(0, DB::table('user_notifications')->where('title', 'Pago exitoso!')->count());
         Http::assertSentCount(1);
     }
 

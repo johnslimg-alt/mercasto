@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Ad;
+use App\Models\AdModerationDecision;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -35,6 +36,26 @@ class LegacyModerationReactivationTest extends TestCase
         $this->assertSame('Boca del Río', $ad->city);
         $this->assertTrue($ad->expires_at->between(now()->addDays(6), now()->addDays(8)));
         $this->assertDatabaseCount('payments', 0);
+    }
+
+    public function test_user_ads_exposes_exact_seller_confirmation_pending_state(): void
+    {
+        $seller = User::factory()->create();
+        $ad = $this->legacyAd($seller);
+        Sanctum::actingAs($seller);
+
+        $this->getJson('/api/user/ads')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $ad->id)
+            ->assertJsonPath('data.0.seller_confirmation_pending', true);
+
+        $ad->forceFill([
+            'republished_at' => now()->addMinute(),
+        ])->saveQuietly();
+
+        $this->getJson('/api/user/ads')
+            ->assertOk()
+            ->assertJsonPath('data.0.seller_confirmation_pending', false);
     }
 
     public function test_confirmation_and_approval_are_required(): void
@@ -70,7 +91,7 @@ class LegacyModerationReactivationTest extends TestCase
 
     private function legacyAd(User $seller): Ad
     {
-        return Ad::query()->create([
+        $ad = Ad::query()->create([
             'user_id' => $seller->id,
             'title' => 'Bicicleta usada',
             'description' => 'Bicicleta en buen estado.',
@@ -84,11 +105,20 @@ class LegacyModerationReactivationTest extends TestCase
             'condition' => 'usado',
             'attributes' => ['subcategory' => 'general'],
             'status' => 'archived',
-            'expires_at' => now()->subDays(5),
+            'expires_at' => null,
             'ai_moderation_status' => 'approved',
             'ai_moderated_at' => now(),
             'is_catalog_filler' => false,
         ]);
+
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'ai',
+            'decision' => 'approved',
+            'metadata' => ['activation_mode' => 'seller_confirmation_required'],
+        ]);
+
+        return $ad;
     }
 
     private function confirmationPayload(): array

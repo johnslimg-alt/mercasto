@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { AlertTriangle, BarChart3, CheckSquare, ExternalLink, Loader2, Pencil, PlusCircle, Square, Trash2, TrendingUp, X, Zap } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
 import { formatMXN, formatNumber } from '../../utils/localeFormat';
+import { isAdCreditPromotionEligible, isPausedAdBulkActivatable, isReviewReadyForBulkReactivation, isSellerConfirmationPending } from '../../utils/adBulkEligibility';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -25,6 +26,15 @@ function awaitsHumanReview(ad) {
   return ad?.status === 'archived'
     && HUMAN_REVIEW_STATUSES.has(ad?.ai_moderation_status)
     && !requiresSellerCorrection(ad);
+}
+
+function isSoldOrArchived(ad) {
+  return ad?.status === 'sold'
+    || ad?.status === 'inactive'
+    || (ad?.status === 'archived'
+      && !isSellerConfirmationPending(ad)
+      && !requiresSellerCorrection(ad)
+      && !awaitsHumanReview(ad));
 }
 
 function getPromoLabels(t) {
@@ -107,9 +117,9 @@ export default function MyAdsScreen({
     featured: userAds.filter(ad => ad.promoted || ad.is_featured).length,
     draft: userAds.filter(ad => ad.status === 'draft').length,
     pending: userAds.filter(ad => ad.status === 'pending' || awaitsHumanReview(ad)).length,
-    review_ready: userAds.filter(ad => ad.status === 'archived' && ad.ai_moderation_status === 'approved').length,
+    review_ready: userAds.filter(isSellerConfirmationPending).length,
     needs_correction: userAds.filter(requiresSellerCorrection).length,
-    sold: userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad) && !awaitsHumanReview(ad))).length,
+    sold: userAds.filter(isSoldOrArchived).length,
     rejected: userAds.filter(ad => ad.status === 'rejected').length,
   }), [userAds]);
 
@@ -120,9 +130,9 @@ export default function MyAdsScreen({
     else if (filter === 'featured') list = userAds.filter(ad => ad.promoted || ad.is_featured);
     else if (filter === 'draft') list = userAds.filter(ad => ad.status === 'draft');
     else if (filter === 'pending') list = userAds.filter(ad => ad.status === 'pending' || awaitsHumanReview(ad));
-    else if (filter === 'review_ready') list = userAds.filter(ad => ad.status === 'archived' && ad.ai_moderation_status === 'approved');
+    else if (filter === 'review_ready') list = userAds.filter(isSellerConfirmationPending);
     else if (filter === 'needs_correction') list = userAds.filter(requiresSellerCorrection);
-    else if (filter === 'sold') list = userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad) && !awaitsHumanReview(ad)));
+    else if (filter === 'sold') list = userAds.filter(isSoldOrArchived);
     else if (filter === 'rejected') list = userAds.filter(ad => ad.status === 'rejected');
     else list = userAds;
 
@@ -141,7 +151,12 @@ export default function MyAdsScreen({
     return sorted;
   }, [filter, sortBy, userAds]);
 
+  const selectedAds = useMemo(() => userAds.filter(ad => selectedIds.has(ad.id)), [selectedIds, userAds]);
   const allVisibleSelected = filteredAds.length > 0 && filteredAds.every(ad => selectedIds.has(ad.id));
+  const canBulkPause = selectedAds.length > 0 && selectedAds.every(ad => ad.status === 'active');
+  const canBulkActivate = selectedAds.length > 0 && selectedAds.every(ad => isPausedAdBulkActivatable(ad));
+  const canBulkConfirmReactivation = selectedAds.length > 0 && selectedAds.every(isReviewReadyForBulkReactivation);
+  const canBulkPromote = selectedAds.length > 0 && selectedAds.every(ad => isAdCreditPromotionEligible(ad));
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -160,7 +175,7 @@ export default function MyAdsScreen({
     setSelectedIds(new Set());
   };
 
-  const doBulkAction = async (action) => {
+  const doBulkAction = async (action, extraPayload = {}) => {
     if (selectedIds.size === 0) return;
     setBulkLoading(true);
     try {
@@ -168,7 +183,7 @@ export default function MyAdsScreen({
       const res = await fetch(`${API_URL}/ads/bulk-action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action, ad_ids: [...selectedIds] }),
+        body: JSON.stringify({ action, ad_ids: [...selectedIds], ...extraPayload }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Error');
@@ -181,6 +196,13 @@ export default function MyAdsScreen({
       setBulkLoading(false);
       setTimeout(() => setToast(null), 3000);
     }
+  };
+
+  const confirmBulkLegacyReactivation = async () => {
+    if (!canBulkConfirmReactivation) return;
+    const confirmed = window.confirm(t.confirm_reactivation_details);
+    if (!confirmed) return;
+    await doBulkAction('confirm_reactivate', { confirm_available: true });
   };
 
   const confirmLegacyReactivation = async (ad) => {
@@ -220,7 +242,7 @@ export default function MyAdsScreen({
   };
 
   const doBulkPromoteWithCredits = async () => {
-    if (selectedIds.size === 0) return;
+    if (!canBulkPromote) return;
     setBulkLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
@@ -356,7 +378,7 @@ export default function MyAdsScreen({
                        ad.status === 'expired' ? (t.expired_status || 'Expirado') :
                        ad.status === 'draft' ? (t.draft_status || 'Borrador') :
                        ad.status === 'pending' ? (t.pending_status || 'En Moderación') :
-                       ad.status === 'archived' && ad.ai_moderation_status === 'approved' ? (t.review_ready_status) :
+                       isSellerConfirmationPending(ad) ? (t.review_ready_status) :
                        correction ? (t.needs_correction_status) :
                        pendingHumanReview ? (t.pending_status || 'En Moderación') :
                        ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived' ? (t.sold_status || 'Vendido') :
@@ -411,10 +433,10 @@ export default function MyAdsScreen({
                   <Link to={`/anuncio/${ad.id}/editar`} data-testid={`edit-ad-${ad.id}`} className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${correction ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-200' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}><Pencil className="w-3 h-3" /> {correction ? (t.correct_and_resubmit) : (t.edit || 'Editar')}</Link>
                   {ad.status === 'active' && <button data-testid={`pause-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.pause || 'Pausar'}</button>}
                   {ad.status === 'paused' && <button data-testid={`reactivate-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}
-                  {ad.status === 'archived' && ad.ai_moderation_status === 'approved' && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate}</button>}
+                  {isSellerConfirmationPending(ad) && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate}</button>}
                   {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 flex items-center justify-center gap-1 text-[11px]">{t.renew || 'Renew'}</button> : null; })()}
                   {ad.status === 'expired' && <button data-testid={`republish-ad-${ad.id}`} onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 flex items-center justify-center gap-1 text-[11px]">{t.republish || 'Republicar'}</button>}
-                  {ad.status === 'active' && PROMO_CATEGORIES.map((key) => {
+                  {isAdCreditPromotionEligible(ad) && PROMO_CATEGORIES.map((key) => {
                     const isActiveHere = promo && promo.category === key;
                     const label = key === 'boost' ? (t.promo_boost || 'Subir')
                       : key === 'highlight' ? (t.promo_highlight || 'Resaltar')
@@ -443,10 +465,11 @@ export default function MyAdsScreen({
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800 shadow-2xl px-4 py-3 flex items-center justify-between gap-3">
           <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 shrink-0">{selectedIds.size} {t.selected || 'seleccionados'}</span>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={doBulkPromoteWithCredits} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-[#0F172A] text-white flex items-center gap-1.5 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />} {t.promote_with_credits || 'Promocionar con créditos'} ({selectedIds.size} × 50)</button>
-            <button onClick={() => doBulkAction('pause')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 disabled:opacity-40">{t.pause || 'Pausar'}</button>
-            <button onClick={() => doBulkAction('activate')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-lime-50 text-lime-800 border border-lime-200 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/60 disabled:opacity-40">{t.reactivate || 'Activar'}</button>
-            <button onClick={() => doBulkAction('delete')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/60 disabled:opacity-40">{t.delete || 'Eliminar'}</button>
+            {canBulkPromote && <button data-testid="bulk-promote-selected" onClick={doBulkPromoteWithCredits} disabled={bulkLoading} className="btn-sm bg-[#0F172A] text-white flex items-center gap-1.5 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />} {t.promote_with_credits || 'Promocionar con créditos'} ({selectedIds.size} × 50)</button>}
+            {canBulkPause && <button data-testid="bulk-pause-selected" onClick={() => doBulkAction('pause')} disabled={bulkLoading} className="btn-sm bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 disabled:opacity-40">{t.pause || 'Pausar'}</button>}
+            {canBulkActivate && <button data-testid="bulk-activate-selected" onClick={() => doBulkAction('activate')} disabled={bulkLoading} className="btn-sm bg-lime-50 text-lime-800 border border-lime-200 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/60 disabled:opacity-40">{t.reactivate || 'Activar'}</button>}
+            {canBulkConfirmReactivation && <button data-testid="bulk-confirm-reactivation-selected" onClick={confirmBulkLegacyReactivation} disabled={bulkLoading} className="btn-sm bg-lime-50 text-lime-800 border border-lime-200 dark:bg-lime-950/40 dark:text-lime-300 dark:border-lime-800/60 disabled:opacity-40">{t.confirm_and_reactivate}</button>}
+            <button data-testid="bulk-delete-selected" onClick={() => doBulkAction('delete')} disabled={bulkLoading || selectedIds.size === 0} className="btn-sm bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/60 disabled:opacity-40">{t.delete || 'Eliminar'}</button>
           </div>
         </div>
       )}
