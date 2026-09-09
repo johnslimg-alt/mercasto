@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\EmailVerifyMail;
+use App\Support\EmailIdentity;
 use App\Support\MailLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,11 +61,12 @@ class EmailVerificationController extends Controller
             'email' => 'required|email',
         ]);
 
-        $user = DB::table('users')
-            ->where('email', $data['email'])
+        $identity = EmailIdentity::resolveLogin((string) $data['email']);
+        $user = $identity ? DB::table('users')
+            ->where('id', $identity->id)
             ->where('email_verification_token', $data['token'])
             ->whereNull('email_verified_at')
-            ->first();
+            ->first() : null;
 
         if (!$user) {
             return response()->json(['error' => 'Token inválido o expirado.'], 422);

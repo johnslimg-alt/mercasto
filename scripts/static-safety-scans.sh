@@ -102,6 +102,7 @@ bash scripts/moderation-pipeline-gate.sh
 bash scripts/seller-reactivation-reminder-gate.sh
 bash scripts/seller-correction-flow-gate.sh
 bash scripts/referral-localization-contract-gate.sh
+bash scripts/gamification-referral-contract-gate.sh
 bash scripts/profile-edit-localization-contract-gate.sh
 bash scripts/chat-localization-contract-gate.sh
 bash scripts/saved-searches-localization-contract-gate.sh
