@@ -1902,6 +1902,14 @@ body::-webkit-scrollbar,
   }
 }
 
+@media (max-width: 399px) {
+  .mobile-location-select-top {
+    min-width: 3rem;
+    max-width: 3rem;
+    padding-inline: 0;
+  }
+}
+
 @media (min-width: 1024px) {
   .desktop-header-row .desktop-header-search-control {
     min-width: 280px;

@@ -31,6 +31,10 @@ test('header uses compact geometry and removes the redundant AI strip', () => {
   assert.equal(header.includes('global-ai-brand-strip'), false);
   assert.ok(header.includes('data-testid="desktop-account-button" aria-label={user ? t.open_account_menu : t.login}'));
   assert.ok(header.includes('data-testid="desktop-location-button" aria-label={searchLocationInput ?'));
+  assert.ok(header.includes('data-testid="mobile-location-button" aria-expanded={showMobileLocationPicker}'));
+  assert.ok(header.includes('aria-label={`${t.change_location}: ${searchLocationInput || t.all_mexico}`}'));
+  assert.ok(header.includes('hidden min-[400px]:inline truncate max-w-[68px]'));
+  assert.match(css, /@media \(max-width: 399px\)[\s\S]*?\.mobile-location-select-top[\s\S]*?min-width:\s*3rem[\s\S]*?max-width:\s*3rem/);
   assert.match(css, /@media \(max-width: 1023px\)[\s\S]*?\.header-category-bar[\s\S]*?display:\s*none/);
 });
 

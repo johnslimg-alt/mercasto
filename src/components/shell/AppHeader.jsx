@@ -124,9 +124,9 @@ export default function AppHeader({
                   </select>
                 </div>
                 <div className="relative">
-                  <button type="button" data-testid="mobile-location-button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label={t.change_location}>
+                  <button type="button" data-testid="mobile-location-button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label={`${t.change_location}: ${searchLocationInput || t.all_mexico}`}>
                     <MapPin className="w-3 h-3 text-[#84CC16]" />
-                    <span className="truncate max-w-[45px] text-[10px] font-extrabold uppercase">{searchLocationInput || t.all_mexico}</span>
+                    <span className="hidden min-[400px]:inline truncate max-w-[68px] text-[10px] font-extrabold uppercase">{searchLocationInput || t.all_mexico}</span>
                   </button>
                   {showMobileLocationPicker && (
                     <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50">
