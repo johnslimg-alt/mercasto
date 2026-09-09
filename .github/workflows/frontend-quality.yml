@@ -21,6 +21,7 @@ on:
       - 'scripts/i18n-audit.mjs'
       - 'scripts/check-recovery-guards.mjs'
       - 'scripts/frontend-quality-shard.sh'
+      - 'scripts/stabilize-playwright-apt.sh'
       - 'scripts/public-ui-route-policy.mjs'
       - 'scripts/public-ui-route-coverage-gate.mjs'
       - 'scripts/client-spa-route-policy.mjs'
@@ -71,7 +72,7 @@ jobs:
           files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
           printf '%s\n' "$files"
 
-          if printf '%s\n' "$files" | grep -Eq '^(index\.html$|src/|public/|package\.json$|package-lock\.json$|vite\.config\.|tailwind\.config\.|playwright\.config\.|tests/|\.github/workflows/frontend-quality\.yml$|scripts/(i18n-audit\.mjs|check-recovery-guards\.mjs|frontend-quality-shard\.sh|public-ui-route-policy\.mjs|public-ui-route-coverage-gate\.mjs|client-spa-route-policy\.mjs|client-spa-route-coverage-gate\.mjs|public-ui-visual-evidence-gate\.sh|public-copy-scan\.sh|fix-public-copy-fallbacks\.sh|apply-production-hotfixes\.sh)$)'; then
+          if printf '%s\n' "$files" | grep -Eq '^(index\.html$|src/|public/|package\.json$|package-lock\.json$|vite\.config\.|tailwind\.config\.|playwright\.config\.|tests/|\.github/workflows/frontend-quality\.yml$|scripts/(i18n-audit\.mjs|check-recovery-guards\.mjs|frontend-quality-shard\.sh|stabilize-playwright-apt\.sh|public-ui-route-policy\.mjs|public-ui-route-coverage-gate\.mjs|client-spa-route-policy\.mjs|client-spa-route-coverage-gate\.mjs|public-ui-visual-evidence-gate\.sh|public-copy-scan\.sh|fix-public-copy-fallbacks\.sh|apply-production-hotfixes\.sh)$)'; then
             echo "run_frontend=true" >> "$GITHUB_OUTPUT"
           else
             echo "run_frontend=false" >> "$GITHUB_OUTPUT"

@@ -9,6 +9,7 @@ on:
       - 'public/moderacion/**'
       - 'public/sitemap.xml'
       - 'scripts/legal-readiness-smoke.sh'
+      - 'scripts/stabilize-playwright-apt.sh'
       - 'scripts/seo-public-audit.mjs'
       - 'scripts/seo-audit-request.mjs'
       - 'scripts/seo-audit-request.test.mjs'
