@@ -70,11 +70,13 @@ jobs:
           ssh -i ~/.ssh/mercasto_storage_status_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -u
 
-          lowio() {
+          lowio_timeout() {
+            local limit="$1"
+            shift
             if command -v ionice >/dev/null 2>&1; then
-              timeout 240s ionice -c3 nice -n 19 "$@" 2>/dev/null || true
+              timeout "${limit}s" ionice -c3 nice -n 19 "$@" 2>/dev/null || true
             else
-              timeout 240s nice -n 19 "$@" 2>/dev/null || true
+              timeout "${limit}s" nice -n 19 "$@" 2>/dev/null || true
             fi
           }
 
@@ -89,38 +91,31 @@ jobs:
             bash /var/www/mercasto/scripts/host-storage-headroom-gate.sh || true
           fi
 
-          echo '=== TOP LEVEL /root (MiB, same filesystem) ==='
-          lowio du -x -d1 -B1M /root | sort -nr | head -30 || true
-
-          echo '=== TOP LEVEL /var (MiB, same filesystem) ==='
-          lowio du -x -d1 -B1M /var | sort -nr | head -30 || true
+          echo '=== TOP LEVEL ROOT FILESYSTEM (MiB) ==='
+          lowio_timeout 180 du -x -d1 -B1M / | sort -nr | head -40 || true
 
           echo '=== AUTOMATION STACK (MiB, same filesystem) ==='
           if [ -d /root/automation-stack ]; then
-            lowio du -x -d1 -B1M /root/automation-stack | sort -nr | head -30 || true
+            lowio_timeout 120 du -x -d1 -B1M /root/automation-stack | sort -nr | head -30 || true
           else
             echo '/root/automation-stack is absent'
           fi
 
           echo '=== AUTOMATION BACKUPS (MiB, depth 2) ==='
           if [ -d /root/automation-stack/backups ]; then
-            lowio du -x -d2 -B1M /root/automation-stack/backups | sort -nr | head -50 || true
+            lowio_timeout 120 du -x -d2 -B1M /root/automation-stack/backups | sort -nr | head -50 || true
           else
             echo '/root/automation-stack/backups is absent'
           fi
 
-          echo '=== LARGE FILE METADATA >= 2 GiB (KNOWN TECHNICAL ROOTS ONLY) ==='
-          for scan_root in /root/automation-stack /var/lib/docker /var/www/mercasto; do
-            if [ -d "$scan_root" ]; then
-              timeout 120s find "$scan_root" -xdev -type f -size +2G -printf '%s\t%p\n' 2>/dev/null || true
-            fi
-          done | sort -nr | head -50 || true
+          echo '=== LARGE FILE METADATA >= 2 GiB (ROOT FILESYSTEM) ==='
+          lowio_timeout 120 find / -xdev -type f -size +2G -printf '%s\t%p\n' | sort -nr | head -50 || true
 
           echo '=== DOCKER STORAGE SUMMARY ==='
-          docker system df || true
+          timeout 30s docker system df || true
 
           echo '=== DOCKER BUILDER SUMMARY ==='
-          timeout 90s docker builder du 2>/dev/null | tail -60 || true
+          timeout 60s docker builder du 2>/dev/null | tail -60 || true
           REMOTE
 
       - name: Remove SSH key
