@@ -159,6 +159,9 @@ class AdIndexController extends Controller
         AdQueryFilters::apply($query, $request);
 
         $sort = $request->query('sort') ?: AdQueryFilters::sortFromFilter($request) ?: 'latest';
+        if (! is_string($sort) || ! in_array($sort, ['latest', 'price_asc', 'price_desc', 'popular'], true)) {
+            $sort = 'latest';
+        }
         if ($sort === 'price_asc') {
             $query->orderBy('price', 'asc');
         } elseif ($sort === 'price_desc') {

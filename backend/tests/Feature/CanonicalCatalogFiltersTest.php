@@ -61,6 +61,28 @@ class CanonicalCatalogFiltersTest extends TestCase
         );
     }
 
+    public function test_unknown_top_level_sort_falls_back_to_latest_semantics(): void
+    {
+        $timestamp = now()->subHour()->startOfSecond();
+        $plain = $this->ad(['title' => 'Plain listing']);
+        $featured = $this->ad([
+            'title' => 'Featured listing',
+            'promoted' => 'destacado',
+            'boost_expires_at' => now()->addDay(),
+        ]);
+        foreach ([$plain, $featured] as $ad) {
+            $ad->forceFill(['created_at' => $timestamp, 'updated_at' => $timestamp])->saveQuietly();
+        }
+
+        $latest = collect($this->getJson('/api/ads?sort=latest')->assertOk()->json('data'))->pluck('id')->all();
+        $unknown = collect($this->getJson('/api/ads?sort=garbage')->assertOk()->json('data'))->pluck('id')->all();
+        $arraySort = collect($this->getJson('/api/ads?sort%5B0%5D=price_asc')->assertOk()->json('data'))->pluck('id')->all();
+
+        $this->assertSame([$featured->id, $plain->id], $latest);
+        $this->assertSame($latest, $unknown);
+        $this->assertSame($latest, $arraySort);
+    }
+
     public function test_catalog_sorts_use_a_unique_tie_breaker_across_pages(): void
     {
         $timestamp = now()->subHour()->startOfSecond();
