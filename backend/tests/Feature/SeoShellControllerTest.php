@@ -121,9 +121,9 @@ class SeoShellControllerTest extends TestCase
         $response = $this->get('https://mercasto.test/vendedores');
 
         $response->assertOk();
-        $response->assertSee('<title>Vende gratis en Mercasto | Publica anuncios en México</title>', false);
+        $response->assertSee('<title>Vende en Mercasto | Empieza gratis en México</title>', false);
         $response->assertSee('<link rel="canonical" href="https://mercasto.test/vendedores" />', false);
-        $response->assertSee('Publica anuncios gratis en Mercasto, llega a compradores en México', false);
+        $response->assertSee('Empieza con el plan gratuito de Mercasto: hasta 3 anuncios al mes', false);
         $response->assertSee('content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"', false);
         $response->assertSee('"@type":"WebPage"', false);
     }

@@ -4,8 +4,8 @@ import { getHelpCenterCopy } from '../utils/helpCenterCopy.js';
 
 export const PUBLIC_SEO_ROUTES = Object.freeze({
   '/vendedores': {
-    title: 'Vende gratis en Mercasto | Publica anuncios en México',
-    description: 'Publica anuncios gratis en Mercasto, llega a compradores en México y gestiona tus ventas de forma directa desde una plataforma de clasificados moderna.',
+    title: 'Vende en Mercasto | Empieza gratis en México',
+    description: 'Empieza con el plan gratuito de Mercasto: hasta 3 anuncios al mes y primera activación elegible por 7 días sin costo. Renovación y promociones son opcionales y de pago.',
   },
   '/tiendas': {
     title: 'Tiendas y Negocios en México | Mercasto',
