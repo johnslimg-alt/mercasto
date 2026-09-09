@@ -164,13 +164,8 @@ class GamificationService
                 ->where('images', '!=', '[]')
                 ->where('images', '!=', 'null')
                 ->count(),
-            'referrals_count' => DB::table('waitlist_subscribers')
-                ->where('referred_by', $user->email)
-                ->orWhere('referred_by_code', function($q) use ($user) {
-                    $q->select('referral_code')
-                      ->from('waitlist_subscribers')
-                      ->where('email', $user->email);
-                })
+            'referrals_count' => DB::table('referrals')
+                ->where('referrer_id', $user->id)
                 ->count(),
             'streak_days' => $this->getCurrentStreak($user),
             'reviews_count' => 0, // TODO: implement when reviews system exists
