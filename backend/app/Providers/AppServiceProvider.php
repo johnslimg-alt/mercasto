@@ -24,6 +24,7 @@ use App\Services\AI\PythonFraudDetectionService;
 use App\Services\AI\SellerMediaAwareFraudRiskFeatureExtractor;
 use App\Support\MailLocale;
 use App\Support\MailTranslations;
+use App\Support\TrustedE2eAccount;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Event;
@@ -58,7 +59,7 @@ class AppServiceProvider extends ServiceProvider
         // Public read APIs serve several parallel widgets on each marketplace page.
         RateLimiter::for("api", function ($request) {
             $user = $request->user();
-            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+            if (TrustedE2eAccount::matches($user)) {
                 return Limit::none();
             }
             return Limit::perMinute(240)->by($request->ip());
@@ -74,10 +75,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perHour(5)->by($request->ip());
         });
 
-        // Ad creation: 20 new ads per day per user (unlimited for E2E test runs)
+        // Ad creation: 20 new ads per day per user (unlimited only for trusted E2E accounts)
         RateLimiter::for("ads", function ($request) {
             $user = $request->user();
-            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+            if (TrustedE2eAccount::matches($user)) {
                 return Limit::none();
             }
             return Limit::perDay(20)->by(optional($user)->id ?: $request->ip());
@@ -86,7 +87,7 @@ class AppServiceProvider extends ServiceProvider
         // Authenticated listing writes: cap bursty clients without affecting normal editing.
         RateLimiter::for("ad-mutations", function ($request) {
             $user = $request->user();
-            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+            if (TrustedE2eAccount::matches($user)) {
                 return Limit::none();
             }
 
@@ -101,7 +102,7 @@ class AppServiceProvider extends ServiceProvider
         // Heavy import endpoints get a separate burst and daily budget.
         RateLimiter::for("uploads", function ($request) {
             $user = $request->user();
-            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+            if (TrustedE2eAccount::matches($user)) {
                 return Limit::none();
             }
 
@@ -116,7 +117,7 @@ class AppServiceProvider extends ServiceProvider
         // Profile image uploads share a user budget across avatar, logo, banner, and profile updates.
         RateLimiter::for("profile-uploads", function ($request) {
             $user = $request->user();
-            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+            if (TrustedE2eAccount::matches($user)) {
                 return Limit::none();
             }
 
@@ -131,7 +132,7 @@ class AppServiceProvider extends ServiceProvider
         // Identity documents are sensitive and expensive to parse/review, so use a tighter budget.
         RateLimiter::for("identity-uploads", function ($request) {
             $user = $request->user();
-            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+            if (TrustedE2eAccount::matches($user)) {
                 return Limit::none();
             }
 
@@ -143,10 +144,10 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        // Allow normal navigation across category landings without false 429s (unlimited for E2E)
+        // Allow normal navigation across category landings without false 429s (unlimited only for trusted E2E accounts)
         RateLimiter::for("search", function ($request) {
             $user = $request->user();
-            if ($user && (str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+            if (TrustedE2eAccount::matches($user)) {
                 return Limit::none();
             }
             return Limit::perMinute(240)->by($request->ip());
