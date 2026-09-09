@@ -32,6 +32,8 @@ jobs:
         run: npm ci
       - name: Verify evidence contract
         run: bash scripts/public-ui-visual-evidence-gate.sh
+      - name: Stabilize Playwright apt sources
+        run: bash scripts/stabilize-playwright-apt.sh
       - name: Install Chromium and WebKit
         run: npx playwright install --with-deps chromium webkit
       - name: Capture production visual evidence
