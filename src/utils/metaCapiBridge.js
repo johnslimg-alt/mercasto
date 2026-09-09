@@ -73,7 +73,7 @@ async function sendServerEvent(endpoint, payload) {
 
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
-    await fetch(`${META_API_BASE}/${endpoint}`, {
+    const response = await fetch(`${META_API_BASE}/${endpoint}`, {
       method: 'POST',
       credentials: 'same-origin',
       keepalive: true,
@@ -85,6 +85,9 @@ async function sendServerEvent(endpoint, payload) {
       },
       body: JSON.stringify(payload),
     });
+    if (!response.ok) {
+      throw new Error(`Meta CAPI ${endpoint} failed with HTTP ${response.status}`);
+    }
     return true;
   } catch (error) {
     if (import.meta.env.VITE_ANALYTICS_VERBOSE === 'true') {
@@ -122,6 +125,7 @@ function sendMappedEvent(metaConfig, item = {}) {
   const isReg = metaConfig.metaName === 'CompleteRegistration';
   const isPostAd = metaConfig.metaName === 'PostAd';
 
+  if (isPostAd && !payload.listing_id) return;
   if (!isReg && !isPostAd && !payload.listing_id) return;
   if (isReg && !payload.event_id) return;
 
@@ -304,6 +308,7 @@ export function replayMetaBrowserEvents() {
     const payload = buildPayload(item);
     const isReg = metaConfig.metaName === 'CompleteRegistration';
     const isPostAd = metaConfig.metaName === 'PostAd';
+    if (isPostAd && !payload.listing_id) return;
     if (!isReg && !isPostAd && !payload.listing_id) return;
     if (isReg && !payload.event_id) return;
 

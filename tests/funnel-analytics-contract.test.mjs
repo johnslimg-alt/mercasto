@@ -66,6 +66,8 @@ test('web analytics enforces platform/version and avoids duplicate signup hooks'
   assert.doesNotMatch(app, /events\.messageStarted\(channel\)/);
   assert.doesNotMatch(app, /event: `\$\{channel\}_click`/);
   assert.doesNotMatch(authContext, /events\.registered/);
+  assert.match(bridge, /if \(!response\.ok\)/);
+  assert.match(bridge, /if \(isPostAd && !payload\.listing_id\) return;/);
 });
 
 test('internal chat emits canonical message events without message content or user IDs', () => {
