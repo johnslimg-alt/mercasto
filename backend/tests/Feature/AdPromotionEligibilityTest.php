@@ -34,6 +34,23 @@ class AdPromotionEligibilityTest extends TestCase
         $this->assertSame(0, DB::table('ad_promotions')->count());
     }
 
+    public function test_single_credit_promotion_rejects_legacy_featured_marker_before_charging(): void
+    {
+        $owner = $this->seller();
+        $featured = $this->ad($owner, [
+            'promoted' => 'destacado',
+            'boost_expires_at' => null,
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson("/api/ads/{$featured->id}/promote/credits", ['type' => 'top'])
+            ->assertBadRequest();
+
+        $this->assertSame(200.0, (float) $owner->fresh()->balance);
+        $this->assertSame('destacado', $featured->fresh()->promoted);
+        $this->assertSame(0, DB::table('ad_promotions')->count());
+    }
+
     public function test_single_credit_promotion_rejects_hidden_listing_before_charging(): void
     {
         Carbon::setTestNow('2026-09-09 02:00:00');
@@ -98,8 +115,17 @@ class AdPromotionEligibilityTest extends TestCase
 
         $this->assertSame(150.0, (float) $owner->fresh()->balance);
         $this->assertSame('highlight', $alreadyPromoted->fresh()->promoted);
-        $this->assertSame('destacado', $fresh->fresh()->promoted);
+        $fresh = $fresh->fresh();
+        $this->assertSame('destacado', $fresh->promoted);
+        $this->assertSame('featured_7_days', $fresh->boost_type);
+        $this->assertNotNull($fresh->boost_expires_at);
+        $this->assertTrue($fresh->boost_expires_at->isFuture());
         $this->assertSame(1, DB::table('ad_promotions')->where('ad_id', $fresh->id)->count());
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/promote/credits/bulk', ['ad_ids' => [$fresh->id]])
+            ->assertBadRequest();
+        $this->assertSame(150.0, (float) $owner->fresh()->balance);
     }
 
     private function seller(): User

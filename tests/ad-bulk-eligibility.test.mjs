@@ -38,4 +38,5 @@ test('credit promotion is limited to visible live ads without an active promotio
   assert.equal(isAdCreditPromotionEligible({ ...active, status: 'archived' }, NOW), false);
   assert.equal(isAdCreditPromotionEligible({ ...active, expires_at: past }, NOW), false);
   assert.equal(isAdCreditPromotionEligible({ ...active, boost_expires_at: future }, NOW), false);
+  assert.equal(isAdCreditPromotionEligible({ ...active, promoted: 'destacado', boost_expires_at: null }, NOW), false);
 });

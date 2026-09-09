@@ -23,9 +23,11 @@ export function isReviewReadyForBulkReactivation(ad) {
 }
 
 export function isAdCreditPromotionEligible(ad, nowMs = Date.now()) {
+  const hasActivePromotion = (ad?.boost_expires_at && new Date(ad.boost_expires_at).getTime() > nowMs)
+    || (ad?.promoted === 'destacado' && !ad?.boost_expires_at);
   return ad?.status === 'active'
     && !ad?.is_catalog_filler
     && Boolean(ad?.expires_at)
     && new Date(ad.expires_at).getTime() > nowMs
-    && !(ad?.boost_expires_at && new Date(ad.boost_expires_at).getTime() > nowMs);
+    && !hasActivePromotion;
 }

@@ -952,6 +952,12 @@ class AdController extends Controller
             && $ad->expires_at->isFuture();
     }
 
+    private function hasActiveCreditPromotion(Ad $ad): bool
+    {
+        return ($ad->boost_expires_at !== null && $ad->boost_expires_at->isFuture())
+            || ($ad->promoted === 'destacado' && $ad->boost_expires_at === null);
+    }
+
     public function promoteWithCredits(Request $request, $id)
     {
         $validated = $request->validate([
@@ -976,7 +982,7 @@ class AdController extends Controller
             // Lock user + ad together so concurrent requests cannot double-spend credits.
             $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            if ($ad->boost_expires_at && $ad->boost_expires_at->isFuture()) {
+            if ($this->hasActiveCreditPromotion($ad)) {
                 return ['response' => response()->json(['message' => 'Este anuncio ya tiene una promoción activa.'], 400)];
             }
 
@@ -1079,10 +1085,7 @@ class AdController extends Controller
                 ], 422)];
             }
 
-            $eligibleAds = $ads->reject(fn (Ad $ad): bool =>
-                $ad->promoted === 'destacado'
-                || ($ad->boost_expires_at !== null && $ad->boost_expires_at->isFuture())
-            );
+            $eligibleAds = $ads->reject(fn (Ad $ad): bool => $this->hasActiveCreditPromotion($ad));
             if ($eligibleAds->isEmpty()) {
                 return ['response' => response()->json(['message' => 'Todos los anuncios seleccionados ya tienen una promoción activa.'], 400)];
             }
@@ -1108,14 +1111,17 @@ class AdController extends Controller
             $now = now();
             $promotedIds = [];
             foreach ($eligibleAds as $ad) {
+                $promotionExpiresAt = $now->copy()->addDays(7);
                 $ad->promoted = 'destacado';
+                $ad->boost_type = 'featured_7_days';
+                $ad->boost_expires_at = $promotionExpiresAt;
                 $ad->save();
                 $promotedIds[] = $ad->id;
 
                 DB::table('ad_promotions')->insert([
                     'ad_id' => $ad->id,
                     'type' => 'highlight',
-                    'expires_at' => $now->copy()->addDays(7),
+                    'expires_at' => $promotionExpiresAt,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
