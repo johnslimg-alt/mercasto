@@ -51,6 +51,7 @@ for (const [route, meta] of Object.entries(PUBLIC_SEO_ROUTES)) {
 assert(app.includes("import { getPublicSeo } from './constants/publicSeo';"));
 assert(app.includes('const publicSeo = getPublicSeo(location.pathname, lang);'));
 assert(app.includes('} else if (publicSeo) {'));
+assert(sitemap.includes("'vendedores' => ['weekly', '0.9']"), 'seller landing must be present in the main sitemap');
 
 assert(sitemap.includes("'reembolsos/' => ['monthly', '0.5']"));
 assert(sitemap.includes("'moderacion/' => ['monthly', '0.5']"));

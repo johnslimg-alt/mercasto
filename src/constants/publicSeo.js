@@ -3,6 +3,10 @@ import { getContactPageCopy } from '../utils/contactPageCopy.js';
 import { getHelpCenterCopy } from '../utils/helpCenterCopy.js';
 
 export const PUBLIC_SEO_ROUTES = Object.freeze({
+  '/vendedores': {
+    title: 'Vende gratis en Mercasto | Publica anuncios en México',
+    description: 'Publica anuncios gratis en Mercasto, llega a compradores en México y gestiona tus ventas de forma directa desde una plataforma de clasificados moderna.',
+  },
   '/tiendas': {
     title: 'Tiendas y Negocios en México | Mercasto',
     description: 'Explora perfiles de tiendas y negocios que publican anuncios clasificados en Mercasto México.',

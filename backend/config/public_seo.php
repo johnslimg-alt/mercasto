@@ -2,6 +2,12 @@
 
 return [
     'pages' => [
+        'vendedores' => [
+            'type' => 'WebPage',
+            'name' => 'Vender en Mercasto',
+            'title' => 'Vende gratis en Mercasto | Publica anuncios en México',
+            'description' => 'Publica anuncios gratis en Mercasto, llega a compradores en México y gestiona tus ventas de forma directa desde una plataforma de clasificados moderna.',
+        ],
         'tiendas' => [
             'type' => 'CollectionPage',
             'name' => 'Tiendas y negocios',

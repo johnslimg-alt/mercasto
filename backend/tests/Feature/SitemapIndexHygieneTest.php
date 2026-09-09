@@ -36,6 +36,7 @@ class SitemapIndexHygieneTest extends TestCase
 
         $response->assertOk();
         foreach ([
+            '/vendedores',
             '/como-funciona',
             '/seguridad',
             '/ayuda/publicar-anuncio',
