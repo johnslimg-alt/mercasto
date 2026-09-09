@@ -1,0 +1,140 @@
+name: Hosted Storage Attribution
+
+# Out-of-band, read-only filesystem attribution for shared-host pressure.
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: hosted-storage-attribution
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Attribute VPS storage out of band
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.number == 1038 &&
+       github.actor == 'johnslimg-alt' &&
+       github.event.comment.body == 'RUN:hosted_storage_status')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate diagnostics secrets
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SERVER_HOST"
+          test -n "$SERVER_SSH_KEY"
+
+      - name: Install SSH key
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/mercasto_storage_status_key
+          chmod 600 ~/.ssh/mercasto_storage_status_key
+          scan_file="$(mktemp)"
+          trap 'rm -f "$scan_file"' EXIT
+          for attempt in 1 2 3 4; do
+            : > "$scan_file"
+            if ssh-keyscan -T 5 -H "$SERVER_HOST" > "$scan_file" 2>/dev/null && [ -s "$scan_file" ]; then
+              cat "$scan_file" >> ~/.ssh/known_hosts
+              break
+            fi
+            if [ "$attempt" -eq 4 ]; then
+              echo "Unable to read the VPS SSH host key after $attempt attempts." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Read storage attribution
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/mercasto_storage_status_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -u
+
+          lowio() {
+            if command -v ionice >/dev/null 2>&1; then
+              timeout 240s ionice -c3 nice -n 19 "$@" 2>/dev/null || true
+            else
+              timeout 240s nice -n 19 "$@" 2>/dev/null || true
+            fi
+          }
+
+          echo '=== HOST ==='
+          hostname
+          uptime
+
+          echo '=== ROOT FILESYSTEM ==='
+          df -hP /
+          df -Pk /
+          if [ -f /var/www/mercasto/scripts/host-storage-headroom-gate.sh ]; then
+            bash /var/www/mercasto/scripts/host-storage-headroom-gate.sh || true
+          fi
+
+          echo '=== TOP LEVEL /root (MiB, same filesystem) ==='
+          lowio du -x -d1 -B1M /root | sort -nr | head -30 || true
+
+          echo '=== TOP LEVEL /var (MiB, same filesystem) ==='
+          lowio du -x -d1 -B1M /var | sort -nr | head -30 || true
+
+          echo '=== AUTOMATION STACK (MiB, same filesystem) ==='
+          if [ -d /root/automation-stack ]; then
+            lowio du -x -d1 -B1M /root/automation-stack | sort -nr | head -30 || true
+          else
+            echo '/root/automation-stack is absent'
+          fi
+
+          echo '=== AUTOMATION BACKUPS (MiB, depth 2) ==='
+          if [ -d /root/automation-stack/backups ]; then
+            lowio du -x -d2 -B1M /root/automation-stack/backups | sort -nr | head -50 || true
+          else
+            echo '/root/automation-stack/backups is absent'
+          fi
+
+          echo '=== LARGE FILE METADATA >= 2 GiB ==='
+          timeout 180s find /root /var -xdev -type f -size +2G -printf '%s\t%p\n' 2>/dev/null \
+            | sort -nr | head -50 || true
+
+          echo '=== DOCKER STORAGE SUMMARY ==='
+          docker system df || true
+
+          echo '=== DOCKER BUILDER SUMMARY ==='
+          timeout 90s docker builder du 2>/dev/null | tail -60 || true
+          REMOTE
+
+      - name: Remove SSH key
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/mercasto_storage_status_key
+
+      - name: Report diagnostics result
+        if: always() && github.event_name == 'issue_comment'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          body="$(printf 'HOSTED_STORAGE_STATUS_RESULT\nstatus=%s\nrun_id=%s\nrun=%s' \
+            "$JOB_STATUS" "$GITHUB_RUN_ID" "$RUN_URL")"
+          gh api "repos/$REPO/issues/1038/comments" -f body="$body"
