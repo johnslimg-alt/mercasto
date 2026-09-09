@@ -691,8 +691,8 @@ class AdController extends Controller
             'images.*' => 'file|mimes:jpg,jpeg,png,webp,gif|max:5120|dimensions:max_width=4096,max_height=4096', // Защита от Pixel Flooding
             'condition' => 'nullable|in:nuevo,usado',
             'video_file' => 'nullable|file|mimetypes:video/mp4,video/quicktime|max:51200', // Защита от загрузки вредоносных скриптов
-            'attributes' => 'required|array',
-            'attributes.subcategory' => 'required|string|max:100',
+            'attributes' => 'nullable|array',
+            'attributes.subcategory' => 'nullable|string|max:100',
         ]);
         $this->validateCategoryAttributes($request);
 
