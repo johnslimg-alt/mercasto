@@ -8,6 +8,7 @@ use App\Services\MetaCapiService;
 use App\Services\OpenAiAdsCapiService;
 use App\Support\AnalyticsTrackingConsent;
 use App\Support\PaymentPayloadSanitizer;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Events\NewNotification;
 use Illuminate\Support\Facades\Http;
@@ -771,6 +772,30 @@ class PaymentController extends Controller
         $this->forgetAdPromotionCaches();
     }
 
+    private function promotionAdEligibilityError(?object $ad, int $userId)
+    {
+        if (! $ad || (int) $ad->user_id !== $userId) {
+            return response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403);
+        }
+
+        $expiresAt = $ad->expires_at ? Carbon::parse($ad->expires_at) : null;
+        if ($ad->status !== 'active'
+            || (bool) $ad->is_catalog_filler
+            || ! $expiresAt
+            || now()->gte($expiresAt)) {
+            return response()->json(['message' => 'Solo puedes promocionar anuncios activos y vigentes.'], 400);
+        }
+
+        $boostExpiresAt = $ad->boost_expires_at ? Carbon::parse($ad->boost_expires_at) : null;
+        $hasActivePromotion = ($boostExpiresAt && now()->lt($boostExpiresAt))
+            || ($ad->promoted === 'destacado' && ! $boostExpiresAt);
+        if ($hasActivePromotion) {
+            return response()->json(['message' => 'Este anuncio ya tiene una promoción activa.'], 400);
+        }
+
+        return null;
+    }
+
     /**
      * Resuelve monto/descripción/product_code para una compra a partir de precios fijos del servidor.
      * Devuelve ['error' => JsonResponse|null, 'amount', 'description', 'productCode'].
@@ -787,9 +812,10 @@ class PaymentController extends Controller
                 return ['error' => response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403)];
             }
 
-            // Финансовая защита (Fraud Prevention): блокируем оплату для уже продвинутых или неактивных объявлений
-            if ($ad->status !== 'active') {
-                return ['error' => response()->json(['message' => 'Solo puedes promocionar anuncios que estén activos.'], 400)];
+            // Финансовая защита (Fraud Prevention): не создаём оплату для объявления,
+            // которое всё равно нельзя продвигать.
+            if ($error = $this->promotionAdEligibilityError($ad, (int) $user->id)) {
+                return ['error' => $error];
             }
 
             $productCode = $request->product_code;
@@ -859,6 +885,13 @@ class PaymentController extends Controller
 
         $result = DB::transaction(function () use ($user, $amount, $description, $productCode, $request) {
             $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            if ($request->ad_id) {
+                $ad = DB::table('ads')->where('id', $request->ad_id)->lockForUpdate()->first();
+                if ($error = $this->promotionAdEligibilityError($ad, (int) $user->id)) {
+                    return ['response' => $error];
+                }
+            }
 
             if (!$creditUser->unlimited_balance && (float) $creditUser->balance < $amount) {
                 return ['response' => response()->json([
