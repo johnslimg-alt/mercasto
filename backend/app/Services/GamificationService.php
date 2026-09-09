@@ -81,23 +81,35 @@ class GamificationService
                 continue;
             }
 
-            // Calculate current progress
+            // Calculate current progress. Most achievements grow toward a threshold,
+            // while user_position is a rank where a lower number is better.
             $currentProgress = $this->getProgress($user, $achievement->requirement_type);
-            $requirement = $achievement->requirement_value;
+            $requirement = (int) $achievement->requirement_value;
+            $requirementMet = $this->meetsRequirement(
+                $achievement->requirement_type,
+                $currentProgress,
+                $requirement
+            );
+            $storedProgress = $this->progressForStorage(
+                $achievement->requirement_type,
+                $currentProgress,
+                $requirement,
+                $requirementMet
+            );
 
             // Update progress
             if ($userAch) {
                 DB::table('user_achievements')
                     ->where('id', $userAch->id)
                     ->update([
-                        'progress' => min($currentProgress, $requirement),
+                        'progress' => $storedProgress,
                         'updated_at' => now(),
                     ]);
             } else {
                 DB::table('user_achievements')->insert([
                     'user_id' => $user->id,
                     'achievement_id' => $achievement->id,
-                    'progress' => min($currentProgress, $requirement),
+                    'progress' => $storedProgress,
                     'unlocked' => false,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -105,7 +117,7 @@ class GamificationService
             }
 
             // Check if should unlock
-            if ($currentProgress >= $requirement && (!$userAch || !$userAch->unlocked)) {
+            if ($requirementMet && (!$userAch || !$userAch->unlocked)) {
                 $this->unlockAchievement($user, $achievement);
                 $newlyUnlocked[] = $achievement;
             }
@@ -170,11 +182,43 @@ class GamificationService
                 ->where('referrer_id', $user->id)
                 ->count(),
             'streak_days' => $this->getCurrentStreak($user),
-            'reviews_count' => 0, // TODO: implement when reviews system exists
-            'five_star_reviews' => 0,
-            'user_position' => 1, // Default
+            'reviews_count' => DB::table('reviews')
+                ->where('seller_id', $user->id)
+                ->count(),
+            'five_star_reviews' => DB::table('reviews')
+                ->where('seller_id', $user->id)
+                ->where('rating', 5)
+                ->count(),
+            // User IDs are monotonic registration sequence identifiers. Using the
+            // immutable ID preserves the original milestone even if older accounts
+            // are later deleted; a live rank would incorrectly promote newer users.
+            'user_position' => (int) $user->id,
             default => 0,
         };
+    }
+
+    private function meetsRequirement(string $requirementType, int $currentProgress, int $requirement): bool
+    {
+        if ($requirementType === 'user_position') {
+            return $currentProgress > 0 && $currentProgress <= $requirement;
+        }
+
+        return $currentProgress >= $requirement;
+    }
+
+    private function progressForStorage(
+        string $requirementType,
+        int $currentProgress,
+        int $requirement,
+        bool $requirementMet
+    ): int {
+        // Position milestones are binary membership achievements, not a progress
+        // bar. Avoid showing a locked late user as 100/100 complete.
+        if ($requirementType === 'user_position') {
+            return $requirementMet ? $requirement : 0;
+        }
+
+        return min($currentProgress, $requirement);
     }
 
     /**
