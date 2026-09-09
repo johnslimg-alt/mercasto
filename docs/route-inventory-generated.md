@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-07T00:15:18Z
-Commit: 1af26ec9-dirty
+Generated at: 2026-09-09T23:18:03Z
+Commit: 98b0def9-dirty
 Source: php artisan route:list --except-vendor -v
 
 ```text
@@ -344,6 +344,7 @@ Source: php artisan route:list --except-vendor -v
   POST      api/gamification/activity generated::<auto> › Api\GamificationController@recordActivity
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
   GET|HEAD  api/gamification/leaderboard generated::<auto> › Api\GamificationController@leaderboard
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
@@ -744,10 +745,10 @@ Source: php artisan route:list --except-vendor -v
             ⇂ web
   GET|HEAD  turismo generated::<auto> › SeoShellController@vertical
             ⇂ web
+  GET|HEAD  up ................................... generated::<auto>
   GET|HEAD  vendedores generated::<auto> › SeoShellController@publicPage
             ⇂ web
-  GET|HEAD  up ................................... generated::<auto>
 
-                                                          Showing [249] routes
+                                                          Showing [250] routes
 
 ```
