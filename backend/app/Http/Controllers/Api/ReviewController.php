@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\GamificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ReviewController extends Controller
 {
@@ -42,7 +45,8 @@ class ReviewController extends Controller
         }
         
         // Защита от сбоя целостности БД
-        if (!\App\Models\User::where('id', $id)->exists()) {
+        $seller = User::find($id);
+        if (! $seller) {
             return response()->json(['message' => 'Vendedor no encontrado'], 404);
         }
         
@@ -70,6 +74,17 @@ class ReviewController extends Controller
                 'updated_at' => now()
             ]
         ], ['reviewer_id', 'seller_id'], ['rating', 'comment', 'updated_at']);
+
+        try {
+            app(GamificationService::class)->checkAchievements($seller);
+        } catch (\Throwable $e) {
+            // Saving a legitimate review is the primary operation; gamification is
+            // auxiliary and must stay fail-open if its storage/service is degraded.
+            Log::warning('Gamification review sync failed', [
+                'user_id' => $seller->id,
+                'error_class' => $e::class,
+            ]);
+        }
 
         return response()->json(['message' => 'Reseña guardada exitosamente']);
     }
