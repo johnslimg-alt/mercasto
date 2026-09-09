@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-09T23:18:03Z
-Commit: 98b0def9-dirty
+Generated at: 2026-09-09T23:28:50Z
+Commit: 700b0ae8-dirty
 Source: php artisan route:list --except-vendor -v
 
 ```text
@@ -344,7 +344,7 @@ Source: php artisan route:list --except-vendor -v
   POST      api/gamification/activity generated::<auto> › Api\GamificationController@recordActivity
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:10,1
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:gamification-activity
   GET|HEAD  api/gamification/leaderboard generated::<auto> › Api\GamificationController@leaderboard
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum

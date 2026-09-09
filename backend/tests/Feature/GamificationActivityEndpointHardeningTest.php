@@ -76,6 +76,18 @@ class GamificationActivityEndpointHardeningTest extends TestCase
             ->count());
     }
 
+    public function test_activity_rate_limit_does_not_consume_payment_bucket(): void
+    {
+        $user = User::factory()->create(['id' => 3002]);
+        Sanctum::actingAs($user);
+
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson('/api/gamification/activity')->assertOk();
+        }
+
+        $this->postJson('/api/payment/clip', [])->assertStatus(422);
+    }
+
     public function test_activity_endpoint_has_dedicated_rate_limit(): void
     {
         $route = collect(Route::getRoutes()->getRoutes())
@@ -84,6 +96,6 @@ class GamificationActivityEndpointHardeningTest extends TestCase
 
         $this->assertNotNull($route);
         $this->assertContains('auth:sanctum', $route->gatherMiddleware());
-        $this->assertContains('throttle:10,1', $route->gatherMiddleware());
+        $this->assertContains('throttle:gamification-activity', $route->gatherMiddleware());
     }
 }
