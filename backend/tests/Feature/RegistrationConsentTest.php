@@ -97,6 +97,62 @@ class RegistrationConsentTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'rate-limit@example.com']);
     }
 
+    public function test_e2e_prefixed_email_cannot_bypass_registration_ip_limit_in_production(): void
+    {
+        Mail::fake();
+        $ip = '203.0.113.101';
+
+        User::factory()->count(3)->create([
+            'ip_address' => $ip,
+            'created_at' => now()->subMinutes(10),
+        ]);
+
+        $originalEnvironment = $this->app['env'];
+        $this->app['env'] = 'production';
+
+        try {
+            $this->withServerVariables(['REMOTE_ADDR' => $ip])
+                ->postJson('/api/register', [
+                    'name' => 'Production E2E Prefix Attempt',
+                    'email' => 'e2e_attacker@example.com',
+                    'password' => 'Password123!',
+                    'password_confirmation' => 'Password123!',
+                    ...$this->registrationConsent(),
+                ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors('ip_address');
+        } finally {
+            $this->app['env'] = $originalEnvironment;
+        }
+
+        $this->assertDatabaseMissing('users', ['email' => 'e2e_attacker@example.com']);
+    }
+
+    public function test_e2e_prefixed_email_can_bypass_registration_ip_limit_only_in_testing(): void
+    {
+        Mail::fake();
+        $ip = '203.0.113.102';
+
+        User::factory()->count(3)->create([
+            'ip_address' => $ip,
+            'created_at' => now()->subMinutes(10),
+        ]);
+
+        $this->assertTrue($this->app->environment('testing'));
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson('/api/register', [
+                'name' => 'Isolated E2E Registration',
+                'email' => 'e2e_isolated@example.com',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                ...$this->registrationConsent(),
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('users', ['email' => 'e2e_isolated@example.com']);
+    }
+
     public function test_registration_daily_limit_honors_historical_raw_ip_rows(): void
     {
         Mail::fake();
