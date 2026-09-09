@@ -276,21 +276,27 @@ for (const viewport of [
 }
 
 
-test('edit canonicalizes a legacy runtime option after loading the current schema', async ({ page }) => {
+test('edit canonicalizes legacy options and preserves the required subcategory contract', async ({ page }) => {
   await installSession(page, 'es');
+  let saveBody = '';
   await page.route('**/api/**', async (route) => {
-    const path = new URL(route.request().url()).pathname;
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
     if (path === '/api/user') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 91, name: 'QA User', email: 'qa@example.test', role: 'individual', is_verified: true, account_verified: true }) });
-    if (path === '/api/categories') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 1, slug: 'inmobiliaria', name: { es: 'Inmobiliaria' } }]) });
+    if (path === '/api/categories') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 1, slug: 'inmobiliaria', name: { es: 'Inmobiliaria' } }, { id: 2, slug: 'motor', name: { es: 'Motor' } }]) });
     if (path === '/api/category-attributes') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{
       id: 'property_type', key: 'property_type', label: 'Tipo de propiedad', type: 'select',
       options: [{ value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }], required: false, sort_order: 1,
     }]) });
     if (path === '/api/ads/9/edit') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-      id: 9, title: 'Casa QA', description: 'QA', price: 2500000, category: 'inmobiliaria', condition: 'usado',
+      id: 9, title: 'Casa QA', description: 'QA', price: 2500000, category: 'inmobiliaria', subcategory: 'Casas en venta', condition: 'usado',
       state: 'Veracruz', city: 'Boca del Río', location: 'Boca del Río', latitude: 19.1, longitude: -96.1,
       image_url: null, attributes: { property_type: 'Casa' }, status: 'active',
     }) });
+    if (path === '/api/ads/9' && request.method() === 'POST') {
+      saveBody = request.postData() || '';
+      return route.fulfill({ status: 422, contentType: 'application/json', body: '{}' });
+    }
     if (path === '/api/notifications') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], next_page_url: null }) });
     if (path === '/api/auth/providers') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false, twitter: false, telegram: false }) });
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
@@ -301,4 +307,12 @@ test('edit canonicalizes a legacy runtime option after loading the current schem
   await expect(field).toBeVisible({ timeout: 15000 });
   await expect(field.locator('option[value="casa"]')).toHaveText('Casa');
   await expect(field).toHaveValue('casa');
+  await expect(page.getByTestId('edit-ad-subcategory')).toHaveValue('Casas en venta');
+
+  await page.getByTestId('edit-ad-save').click();
+  await expect.poll(() => /name="attributes\[property_type\]"\r?\n\r?\ncasa\r?\n/.test(saveBody)).toBe(true);
+  await expect.poll(() => /name="attributes\[subcategory\]"\r?\n\r?\nCasas en venta\r?\n/.test(saveBody)).toBe(true);
+
+  await page.getByRole('combobox', { name: translations.es.category, exact: true }).selectOption('motor');
+  await expect(page.getByTestId('edit-ad-subcategory')).toHaveValue('');
 });

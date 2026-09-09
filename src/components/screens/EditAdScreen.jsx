@@ -169,6 +169,11 @@ export default function EditAdScreen({ t, lang }) {
     return filterConfig[form.category] || [];
   }, [apiCategoryFields, form.category]);
 
+  const subcategoryOptions = useMemo(
+    () => autofillSubcategoryOptions(form.category, lang),
+    [form.category, lang],
+  );
+
   // Older listings may persist a display label (for example "Casa") while
   // the current runtime schema uses a canonical value (for example "casa").
   // Normalize loaded attributes as soon as the applicable schema is available
@@ -245,7 +250,11 @@ export default function EditAdScreen({ t, lang }) {
         formData.append(key, form[key] ?? '');
       });
       formData.append('condition', form.condition === 'Nuevo' ? 'nuevo' : 'usado');
-      Object.entries(form.attributes).forEach(([k, v]) => {
+      const attributesForSubmit = {
+        ...form.attributes,
+        ...(form.subcategory ? { subcategory: form.subcategory } : {}),
+      };
+      Object.entries(attributesForSubmit).forEach(([k, v]) => {
         if (Array.isArray(v)) v.forEach(val => formData.append(`attributes[${k}][]`, val));
         else if (v !== '' && v !== null && v !== undefined) formData.append(`attributes[${k}]`, v);
       });
@@ -371,7 +380,9 @@ export default function EditAdScreen({ t, lang }) {
 
         <div>
           <label className={labelClass}>{t.category} *</label>
-          <select aria-label={t.category} value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value, attributes: {}}))}
+          <select aria-label={t.category} value={form.category} onChange={e => setForm(p => ({
+            ...p, category: e.target.value, subcategory: '', attributes: {},
+          }))}
             required className={fieldClass}>
             <option value="">{t.select_category}</option>
             {categories.map(cat => (
@@ -379,6 +390,25 @@ export default function EditAdScreen({ t, lang }) {
             ))}
           </select>
         </div>
+
+        {form.category && subcategoryOptions.length > 0 && (
+          <div>
+            <label className={labelClass}>{t.post_select_subcategory} *</label>
+            <select
+              data-testid="edit-ad-subcategory"
+              aria-label={t.post_select_subcategory}
+              value={form.subcategory}
+              onChange={e => setForm(p => ({ ...p, subcategory: e.target.value }))}
+              required
+              className={fieldClass}
+            >
+              <option value="">{t.post_select_subcategory}</option>
+              {subcategoryOptions.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {form.category && (loadingCategoryFields || categoryFields.length > 0) && (
           <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-900">
