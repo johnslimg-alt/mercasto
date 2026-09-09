@@ -26,8 +26,8 @@ test('extracted shell preserves final visual and interaction anchors', () => {
     'data-testid="desktop-account-button"',
     'data-testid="mobile-header-search"',
     'data-testid="header-category-bar"',
-    'data-testid="global-ai-brand-strip"',
   ]) assert.ok(header.includes(marker), marker);
+  assert.equal(header.includes('data-testid="global-ai-brand-strip"'), false);
   assert.ok(mobile.includes('mobile-tabbar md:hidden fixed'));
   assert.ok(mobile.includes('data-testid="mobile-notifications-tab"'));
   assert.ok(footer.includes('footer-logo'));

@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import {
   Bell, Globe, Heart, LogOut, MapPin, MessageCircle, Moon, PlusCircle,
-  Search, Settings, Sparkles, Store, Sun, Trash2, User,
+  Search, Settings, Store, Sun, Trash2, User,
 } from 'lucide-react';
 import { formatDateTime, formatMXN } from '../../utils/localeFormat';
 import MercastoLogo from './MercastoLogo';
@@ -77,14 +77,14 @@ export default function AppHeader({
   user,
 }) {
   return (
-      <header className="site-header sticky top-0 z-40 backdrop-blur-2xl border-b shadow-sm">
-        <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-          <div data-testid="desktop-header-row" className="desktop-header-row relative flex items-center gap-2 h-[44px] sm:h-[48px] lg:h-[54px]">
-            <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity">
-              <MercastoLogo className="h-6 sm:h-7 lg:h-9" tagline={t.ai_brand_short} />
+      <header className="site-header sticky top-0 z-40 border-b backdrop-blur-xl">
+        <div className="mx-auto max-w-[1480px] px-3 sm:px-4 lg:px-6">
+          <div data-testid="desktop-header-row" className="desktop-header-row relative flex h-[52px] items-center gap-1.5 sm:h-[56px] lg:h-[60px]">
+            <a href="/" onClick={(e) => { e.preventDefault(); setCurrentTab('home'); setViewedAd(null); setViewedCompany(null); setActiveCat(''); setSearchQuery(''); navigate('/'); }} className="header-logo-link flex shrink-0 items-center gap-2 transition-opacity hover:opacity-90">
+              <MercastoLogo className="h-6 sm:h-7 lg:h-8" tagline={t.ai_brand_short} />
             </a>
-            <div className={isAdminRoute ? "hidden" : "hidden lg:flex flex-1 items-center"}>
-              <div ref={desktopSearchRef} className="relative flex-1 max-w-[860px]">
+            <div className={isAdminRoute ? "hidden" : "hidden min-w-0 flex-1 items-center lg:flex"}>
+              <div ref={desktopSearchRef} className="relative min-w-0 flex-1">
               <form onSubmit={submitHeaderSearch} data-testid="desktop-header-search" className="desktop-header-control desktop-header-search-control header-search-shell flex w-full items-center rounded-2xl shadow-sm focus-within:ring-4 focus-within:ring-[#84CC16]/20 focus-within:border-[#84CC16] transition-all">
                 <Search className="w-5 h-5 text-slate-400 ml-3.5 shrink-0" />
               <input data-testid="desktop-search-input" aria-label={t.search_placeholder} value={searchQuery} onChange={(e) => { const v = e.target.value; setSearchQuery(v); setViewedAd(null); setViewedCompany(null); fetchSuggestions(v); setShowSuggestions(true); setHighlightedIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleSearchInputKeyDown} placeholder={t.search_placeholder} className="w-full min-w-0 px-3 py-2 bg-transparent outline-none text-[14px]" />
@@ -110,7 +110,7 @@ export default function AppHeader({
               </Suspense>
               </div>
             </div>
-            <div className="flex items-center gap-1 ml-auto">
+            <div className="header-actions ml-auto flex shrink-0 items-center gap-1">
               <div className="mobile-top-controls sm:hidden" aria-label={t.theme_language_controls}>
                 <button data-testid="mobile-theme-toggle" type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? t.light_mode : t.dark_mode} aria-pressed={isDarkMode}>
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -168,9 +168,9 @@ export default function AppHeader({
               </button>
               {/* DESKTOP LOCATION SELECTOR */}
               <div className="relative hidden lg:block">
-                <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-bold text-slate-700 dark:text-slate-200 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer mr-1">
+                <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="desktop-header-control header-lang-select hidden items-center gap-1.5 rounded-xl border bg-transparent px-2 py-1.5 text-[12px] font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900 lg:flex xl:px-3">
                   <MapPin className="w-3.5 h-3.5 text-[#84CC16]" />
-                  <span className="truncate max-w-[110px]">{searchLocationInput || t.all_mexico}</span>
+                  <span className="hidden max-w-[110px] truncate xl:block">{searchLocationInput || t.all_mexico}</span>
                 </button>
                 {showLocationPicker && (
                   <div className="header-popover absolute top-full right-0 mt-2 w-[260px] rounded-2xl shadow-xl border p-4 z-50 bg-white dark:bg-slate-950">
@@ -282,9 +282,9 @@ export default function AppHeader({
                   </div>
                 )}
               </div>
-            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-icon-button p-2.5 rounded-xl hidden sm:flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-[#84CC16] transition-colors" title={t.footer_store_directory}>
+            <button onClick={() => { navigate('/tiendas'); setViewedAd(null); setViewedCompany(null); }} className="desktop-header-control header-icon-button hidden items-center gap-1.5 rounded-xl p-2.5 text-slate-600 transition-colors hover:text-[#84CC16] dark:text-slate-300 sm:flex" title={t.footer_store_directory}>
                 <Store className="w-[22px] h-[22px]" />
-                <span className="text-[13px] font-bold hidden md:block">{navLabels[5]}</span>
+                <span className="hidden text-[13px] font-bold xl:block">{navLabels[5]}</span>
             </button>
             <button onClick={() => { if(user) { setCurrentTab('profile'); setDashboardTab('favorites'); navigate('/profile'); } else { setAuthMode('login'); setShowAuthModal(true); } }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl hidden sm:block" aria-label={t.favorites || 'Favoritos'}>
                 <Heart className="w-[22px] h-[22px]" />
@@ -297,7 +297,7 @@ export default function AppHeader({
                 ) : (
                   <div className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"><User size={18} /></div>
                 )}
-              <span className="text-[13px] font-medium hidden lg:block">{user?.name || t.guest || 'Invitado'}</span>
+              <span className="hidden max-w-[96px] truncate text-[13px] font-medium 2xl:block">{user?.name || t.guest || 'Invitado'}</span>
               </button>
               {showProfileMenu && user && (
                 <div className="header-popover profile-menu-popover absolute top-full right-0 mt-2 w-52 rounded-2xl shadow-xl border p-2 z-50">
@@ -315,7 +315,7 @@ export default function AppHeader({
             </div>
           </div>
           {/* Mobile Search + Location + Account */}
-          <div className={isAdminRoute ? "hidden" : "mobile-search-row lg:hidden pt-7 pb-7"}>
+          <div className={isAdminRoute ? "hidden" : "mobile-search-row py-2.5 lg:hidden"}>
             <div ref={mobileSearchRef} className="relative min-w-0">
               <form onSubmit={submitHeaderSearch} data-testid="mobile-header-search" className="mobile-search-box mobile-search-combo flex items-center rounded-full focus-within:ring-2 focus-within:ring-[#84CC16]/30">
                 <Search className="w-4 h-4 text-slate-500 shrink-0 ml-3" />
@@ -360,9 +360,9 @@ export default function AppHeader({
           </div>
         </div>
         <div data-testid="header-category-bar" className={isAdminRoute ? "hidden" : "header-category-bar border-t"}>
-          <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-            <nav className="flex items-center gap-4 overflow-x-auto no-scrollbar font-medium text-slate-600 whitespace-nowrap">
-              <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
+          <div className="mx-auto max-w-[1480px] px-3 sm:px-4 lg:px-6">
+            <nav className="header-category-nav flex items-center gap-3 overflow-x-auto whitespace-nowrap font-medium text-slate-600">
+              <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link cursor-pointer whitespace-nowrap border-b-2 bg-transparent py-2 transition-colors ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>
               {headerCategories.map(c => (
                 <button type="button" key={c.slug} onClick={() => handleHeaderCategoryClick(c.slug)} className={`header-category-link whitespace-nowrap py-2 cursor-pointer border-b-2 transition-colors bg-transparent ${isHeaderCategoryActive(c.slug) ? 'is-active font-bold' : 'border-transparent'}`}>{c.label}</button>
               ))}
@@ -391,12 +391,6 @@ export default function AppHeader({
                 </div>
               )}
             </nav>
-          </div>
-        </div>
-        <div className="border-t border-lime-200/70 bg-lime-50/95 dark:border-lime-500/20 dark:bg-lime-950/40" data-testid="global-ai-brand-strip">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-center gap-1.5 px-4 py-1.5 text-center text-[11px] font-extrabold text-lime-900 sm:text-xs dark:text-lime-200">
-            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{t.ai_brand_tagline}</span>
           </div>
         </div>
       </header>

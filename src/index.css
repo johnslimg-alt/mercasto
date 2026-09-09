@@ -1824,3 +1824,108 @@ html.dark .btn-lg.bg-white:hover {
   background-color: #EF4444 !important;
   color: #FFFFFF !important;
 }
+
+/* Mercasto UI polish: scrollable surfaces stay fully functional without browser-style rails. */
+html,
+body,
+#root,
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+/* Header geometry: one compact system across desktop, tablet and phone. */
+.site-header {
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.07);
+}
+
+.header-logo-link {
+  min-width: max-content;
+}
+
+.header-actions {
+  min-width: max-content;
+}
+
+.header-category-nav {
+  min-height: 39px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.header-category-link {
+  padding-block: 0.6rem;
+  line-height: 1.05;
+}
+
+@media (max-width: 1023px) {
+  .mobile-search-row {
+    padding-block: 0.625rem !important;
+  }
+
+  .mobile-search-combo {
+    min-height: 2.75rem !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.07) !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .mobile-top-controls {
+    gap: 0.24rem;
+  }
+
+  .mobile-theme-icon,
+  .mobile-account-button--top {
+    width: 2.25rem;
+    height: 2.25rem;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+  }
+
+  .mobile-language-select {
+    width: 3.45rem;
+    height: 2.25rem;
+    flex-basis: 3.45rem;
+  }
+
+  .mobile-location-select-top {
+    height: 2.25rem;
+    min-width: 3.65rem;
+    max-width: 4.85rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .desktop-header-row .desktop-header-control {
+    height: 42px !important;
+    min-height: 42px !important;
+    min-width: 42px;
+    border-radius: 14px !important;
+  }
+
+  .desktop-header-row .desktop-header-search-control {
+    min-width: 280px;
+  }
+
+  .desktop-header-row .desktop-header-search-submit {
+    height: 34px !important;
+    min-height: 34px !important;
+    margin: 4px !important;
+    margin-left: 6px !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .header-category-bar {
+    display: none;
+  }
+}
