@@ -34,9 +34,44 @@ class GamificationSchemaAdoptionTest extends TestCase
         $user = User::factory()->create();
 
         $unlocked = app(GamificationService::class)->checkAchievements($user);
+        $unlockedSlugs = collect($unlocked)->pluck('slug')->sort()->values()->all();
 
-        $this->assertSame([], $unlocked);
+        $this->assertSame(['early_adopter', 'pioneer'], $unlockedSlugs);
         $this->assertSame(16, DB::table('user_achievements')->where('user_id', $user->id)->count());
-        $this->assertSame(0, DB::table('user_achievements')->where('user_id', $user->id)->where('unlocked', true)->count());
+        $this->assertSame(2, DB::table('user_achievements')->where('user_id', $user->id)->where('unlocked', true)->count());
     }
+
+    public function test_user_xp_state_is_unique_per_user(): void
+    {
+        $indexes = Schema::getIndexes('user_xp');
+        $hasUniqueUserIndex = collect($indexes)->contains(
+            static fn (array $index): bool => ($index['unique'] ?? false) === true
+                && ($index['columns'] ?? []) === ['user_id']
+        );
+
+        $this->assertTrue($hasUniqueUserIndex);
+
+        $user = User::factory()->create(['id' => 2000]);
+        DB::table('user_xp')->insert([
+            'user_id' => $user->id,
+            'total_xp' => 0,
+            'level' => 1,
+            'current_streak' => 0,
+            'longest_streak' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->expectException(\Illuminate\Database\QueryException::class);
+        DB::table('user_xp')->insert([
+            'user_id' => $user->id,
+            'total_xp' => 10,
+            'level' => 1,
+            'current_streak' => 0,
+            'longest_streak' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
 }
