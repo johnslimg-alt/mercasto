@@ -274,3 +274,31 @@ for (const viewport of [
     await verifyPublishEditControlNames(page, viewport);
   });
 }
+
+
+test('edit canonicalizes a legacy runtime option after loading the current schema', async ({ page }) => {
+  await installSession(page, 'es');
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/user') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 91, name: 'QA User', email: 'qa@example.test', role: 'individual', is_verified: true, account_verified: true }) });
+    if (path === '/api/categories') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 1, slug: 'inmobiliaria', name: { es: 'Inmobiliaria' } }]) });
+    if (path === '/api/category-attributes') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{
+      id: 'property_type', key: 'property_type', label: 'Tipo de propiedad', type: 'select',
+      options: [{ value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }], required: false, sort_order: 1,
+    }]) });
+    if (path === '/api/ads/9/edit') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      id: 9, title: 'Casa QA', description: 'QA', price: 2500000, category: 'inmobiliaria', condition: 'usado',
+      state: 'Veracruz', city: 'Boca del Río', location: 'Boca del Río', latitude: 19.1, longitude: -96.1,
+      image_url: null, attributes: { property_type: 'Casa' }, status: 'active',
+    }) });
+    if (path === '/api/notifications') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], next_page_url: null }) });
+    if (path === '/api/auth/providers') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false, twitter: false, telegram: false }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+
+  await page.goto('/anuncio/9/editar', { waitUntil: 'domcontentloaded' });
+  const field = page.getByTestId('edit-attribute-property_type');
+  await expect(field).toBeVisible({ timeout: 15000 });
+  await expect(field.locator('option[value="casa"]')).toHaveText('Casa');
+  await expect(field).toHaveValue('casa');
+});
