@@ -8,6 +8,7 @@ on:
       - 'tests/e2e/authenticated-cabinet-matrix.spec.js'
       - 'scripts/run-isolated-launch-e2e.sh'
       - 'scripts/isolated-launch-e2e-gate.sh'
+      - 'scripts/stabilize-playwright-apt.sh'
       - '.github/workflows/authenticated-cabinet-qa.yml'
 
 permissions:
@@ -37,6 +38,9 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+
+      - name: Stabilize Playwright apt sources
+        run: bash scripts/stabilize-playwright-apt.sh
 
       - name: Run isolated authenticated visual and interaction matrix
         run: bash scripts/run-isolated-launch-e2e.sh
