@@ -9,6 +9,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class AdActivationLifecycleTest extends TestCase
@@ -229,6 +230,196 @@ class AdActivationLifecycleTest extends TestCase
             ->assertJsonPath('affected', 1);
 
         $this->assertSame('active', $live->fresh()->status);
+    }
+
+    public function test_bulk_confirm_reactivation_requires_explicit_confirmation_and_reactivates_atomically(): void
+    {
+        Carbon::setTestNow('2026-09-09 01:30:00');
+        $owner = User::factory()->create();
+        $first = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+            'expires_at' => null,
+        ]);
+        $second = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+            'expires_at' => null,
+        ]);
+        $this->markSellerConfirmationRequired($first);
+        $this->markSellerConfirmationRequired($second);
+
+        $baselineTransactionLevel = DB::transactionLevel();
+        $indexNowTransactionLevels = [];
+        Http::fake(function () use (&$indexNowTransactionLevels) {
+            $indexNowTransactionLevels[] = DB::transactionLevel();
+
+            return Http::response(['ok' => true], 200);
+        });
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'ad_ids' => [$first->id, $second->id],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('confirm_available');
+
+        $decisionQueryCount = 0;
+        DB::listen(function ($query) use (&$decisionQueryCount): void {
+            if (str_contains(strtolower($query->sql), 'ad_moderation_decisions')) {
+                $decisionQueryCount++;
+            }
+        });
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'confirm_available' => true,
+                'ad_ids' => [$first->id, $second->id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('affected', 2);
+
+        $this->assertSame(1, $decisionQueryCount, 'latest moderation decisions must be eager-loaded once for the locked bulk selection');
+
+        foreach ([$first->fresh(), $second->fresh()] as $ad) {
+            $this->assertSame('active', $ad->status);
+            $this->assertNotNull($ad->expires_at);
+            $this->assertTrue($ad->expires_at->greaterThan(now()));
+            $this->assertNotNull($ad->republished_at);
+        }
+
+        $this->assertSame([$baselineTransactionLevel, $baselineTransactionLevel], $indexNowTransactionLevels);
+    }
+
+    public function test_bulk_confirm_reactivation_rejects_mixed_or_incomplete_selection_without_partial_updates(): void
+    {
+        $owner = User::factory()->create();
+        $ready = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+        ]);
+        $incomplete = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+            'state' => null,
+        ]);
+        $this->markSellerConfirmationRequired($ready);
+        $this->markSellerConfirmationRequired($incomplete);
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'confirm_available' => true,
+                'ad_ids' => [$ready->id, $incomplete->id],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('invalid_ad_ids.0', $incomplete->id);
+
+        $this->assertSame('archived', $ready->fresh()->status);
+        $this->assertSame('archived', $incomplete->fresh()->status);
+    }
+
+    public function test_seller_confirmation_intent_cannot_be_reused_for_a_free_second_term(): void
+    {
+        Carbon::setTestNow('2026-09-09 03:00:00');
+        $owner = User::factory()->create();
+        $ad = $this->createAd($owner, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'approved',
+            'expires_at' => null,
+        ]);
+        $this->markSellerConfirmationRequired($ad);
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'confirm_available' => true,
+                'ad_ids' => [$ad->id],
+            ])
+            ->assertOk();
+
+        $firstExpiry = $ad->fresh()->expires_at;
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson("/api/ads/{$ad->id}/status", ['status' => 'archived'])
+            ->assertOk();
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'confirm_available' => true,
+                'ad_ids' => [$ad->id],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('invalid_ad_ids.0', $ad->id);
+
+        $ad->refresh();
+        $this->assertSame('archived', $ad->status);
+        $this->assertTrue($ad->expires_at->equalTo($firstExpiry));
+    }
+
+    public function test_expired_approved_ad_cannot_be_archived_then_reactivated_for_free(): void
+    {
+        Carbon::setTestNow('2026-09-09 05:00:00');
+        $owner = User::factory()->create();
+        $expiredAt = now()->subDay();
+        $ad = $this->createAd($owner, [
+            'status' => 'expired',
+            'expires_at' => $expiredAt,
+            'ai_moderation_status' => 'approved',
+            'ai_moderated_at' => now()->subDays(8),
+        ]);
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'ai',
+            'decision' => 'approved',
+            'metadata' => ['activation_mode' => 'seller_confirmation_required'],
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->patchJson("/api/ads/{$ad->id}/status", ['status' => 'archived'])
+            ->assertOk();
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/bulk-action', [
+                'action' => 'confirm_reactivate',
+                'confirm_available' => true,
+                'ad_ids' => [$ad->id],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('invalid_ad_ids.0', $ad->id);
+
+        $this->actingAs($owner, 'sanctum')
+            ->putJson("/api/ads/{$ad->id}/activate", [
+                'confirm_available' => true,
+                'price' => $ad->price,
+                'condition' => $ad->condition,
+                'location' => $ad->location,
+                'state' => $ad->state,
+                'city' => $ad->city,
+            ])
+            ->assertUnprocessable();
+
+        $ad->refresh();
+        $this->assertSame('archived', $ad->status);
+        $this->assertTrue($ad->expires_at->equalTo($expiredAt));
+    }
+
+    private function markSellerConfirmationRequired(Ad $ad): void
+    {
+        $ad->forceFill([
+            'ai_moderation_status' => 'approved',
+            'ai_moderated_at' => now(),
+            'expires_at' => null,
+        ])->saveQuietly();
+
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'ai',
+            'decision' => 'approved',
+            'metadata' => ['activation_mode' => 'seller_confirmation_required'],
+        ]);
     }
 
     private function createAd(User $seller, array $overrides = []): Ad

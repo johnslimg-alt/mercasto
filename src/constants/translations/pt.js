@@ -573,6 +573,7 @@ export default {
   "payment_status_approved": "Aprovado",
   "payment_status_failed": "Falhou",
   "payment_status_pending": "Pendente",
+  "payment_status_review": "Em revisão",
   "pending_ads": "Anúncios Pendentes",
   "personal_info": "Informação Pessoal",
   "phone": "Telefone de Contato",

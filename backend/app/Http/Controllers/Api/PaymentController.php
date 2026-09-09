@@ -8,6 +8,7 @@ use App\Services\MetaCapiService;
 use App\Services\OpenAiAdsCapiService;
 use App\Support\AnalyticsTrackingConsent;
 use App\Support\PaymentPayloadSanitizer;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Events\NewNotification;
 use Illuminate\Support\Facades\Http;
@@ -321,7 +322,7 @@ class PaymentController extends Controller
             'payment_completed',
         ];
 
-        if (! in_array($paymentStatus, $paidStatuses, true) || $payment->status === 'paid') {
+        if (! in_array($paymentStatus, $paidStatuses, true) || in_array($payment->status, ['paid', 'paid_review'], true)) {
             return response()->json(['status' => 'received'], 200);
         }
 
@@ -354,8 +355,50 @@ class PaymentController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if (! $lockedPayment || $lockedPayment->status === 'paid') {
+            if (! $lockedPayment || in_array($lockedPayment->status, ['paid', 'paid_review'], true)) {
                 return null;
+            }
+
+            $promotionCode = $this->promotionPurchaseCode($lockedPayment);
+            $isPromotionPurchase = $promotionCode !== null;
+
+            if ($isPromotionPurchase) {
+                $promotionAd = DB::table('ads')
+                    ->where('id', $lockedPayment->ad_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($this->promotionAdEligibilityError($promotionAd, (int) $lockedPayment->user_id)) {
+                    DB::table('payments')->where('id', $lockedPayment->id)->update([
+                        'status' => 'paid_review',
+                        'clip_payment_request_id' => $verificationId,
+                        'webhook_payload' => json_encode(PaymentPayloadSanitizer::webhook($payload)),
+                        'clip_payment_request_url' => null,
+                        'updated_at' => now(),
+                    ]);
+
+                    $reviewNotification = [
+                        'user_id' => $lockedPayment->user_id,
+                        'title' => 'Pago recibido — promoción en revisión',
+                        'message' => 'Recibimos tu pago, pero el anuncio cambió antes de aplicar la promoción. Revisaremos el pago para evitar cobrarte por una promoción no visible.',
+                        'is_read' => false,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                    $reviewNotification['id'] = DB::table('user_notifications')->insertGetId($reviewNotification);
+
+                    Log::error('Paid Clip promotion requires manual remediation', [
+                        'payment_id' => $lockedPayment->id,
+                        'ad_id' => $lockedPayment->ad_id,
+                        'user_id' => $lockedPayment->user_id,
+                    ]);
+
+                    return [
+                        'payment' => DB::table('payments')->where('id', $lockedPayment->id)->first(),
+                        'notification' => $reviewNotification,
+                        'requires_review' => true,
+                    ];
+                }
             }
 
             DB::table('payments')->where('id', $lockedPayment->id)->update([
@@ -402,7 +445,7 @@ class PaymentController extends Controller
             $notificationData = $fulfillment['notification'];
 
             // External side effects run only after the database transaction commits.
-            if ($fulfilledPayment && $fulfilledPayment->user_id) {
+            if ($fulfilledPayment && $fulfilledPayment->user_id && $fulfilledPayment->status === 'paid') {
                 defer(fn () => $this->sendMetaPurchase($meta, $request, $fulfilledPayment))->always();
                 defer(fn () => $this->sendOpenAiOrder($openai, $request, $fulfilledPayment))->always();
             }
@@ -771,6 +814,30 @@ class PaymentController extends Controller
         $this->forgetAdPromotionCaches();
     }
 
+    private function promotionAdEligibilityError(?object $ad, int $userId)
+    {
+        if (! $ad || (int) $ad->user_id !== $userId) {
+            return response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403);
+        }
+
+        $expiresAt = $ad->expires_at ? Carbon::parse($ad->expires_at) : null;
+        if ($ad->status !== 'active'
+            || (bool) $ad->is_catalog_filler
+            || ! $expiresAt
+            || now()->gte($expiresAt)) {
+            return response()->json(['message' => 'Solo puedes promocionar anuncios activos y vigentes.'], 400);
+        }
+
+        $boostExpiresAt = $ad->boost_expires_at ? Carbon::parse($ad->boost_expires_at) : null;
+        $hasActivePromotion = ($boostExpiresAt && now()->lt($boostExpiresAt))
+            || ($ad->promoted === 'destacado' && ! $boostExpiresAt);
+        if ($hasActivePromotion) {
+            return response()->json(['message' => 'Este anuncio ya tiene una promoción activa.'], 400);
+        }
+
+        return null;
+    }
+
     /**
      * Resuelve monto/descripción/product_code para una compra a partir de precios fijos del servidor.
      * Devuelve ['error' => JsonResponse|null, 'amount', 'description', 'productCode'].
@@ -787,9 +854,10 @@ class PaymentController extends Controller
                 return ['error' => response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403)];
             }
 
-            // Финансовая защита (Fraud Prevention): блокируем оплату для уже продвинутых или неактивных объявлений
-            if ($ad->status !== 'active') {
-                return ['error' => response()->json(['message' => 'Solo puedes promocionar anuncios que estén activos.'], 400)];
+            // Финансовая защита (Fraud Prevention): не создаём оплату для объявления,
+            // которое всё равно нельзя продвигать.
+            if ($error = $this->promotionAdEligibilityError($ad, (int) $user->id)) {
+                return ['error' => $error];
             }
 
             $productCode = $request->product_code;
@@ -860,6 +928,13 @@ class PaymentController extends Controller
         $result = DB::transaction(function () use ($user, $amount, $description, $productCode, $request) {
             $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
+            if ($request->ad_id) {
+                $ad = DB::table('ads')->where('id', $request->ad_id)->lockForUpdate()->first();
+                if ($error = $this->promotionAdEligibilityError($ad, (int) $user->id)) {
+                    return ['response' => $error];
+                }
+            }
+
             if (!$creditUser->unlimited_balance && (float) $creditUser->balance < $amount) {
                 return ['response' => response()->json([
                     'message' => "Saldo insuficiente. Necesitas {$amount} créditos y tienes " . (float) $creditUser->balance . '.',
@@ -923,6 +998,27 @@ class PaymentController extends Controller
             'message' => 'Pago realizado con tu saldo',
             'balance' => $result['balance'],
         ]);
+    }
+
+    private function promotionPurchaseCode(object $payment): ?string
+    {
+        $explicitCode = is_string($payment->product_code ?? null)
+            ? $payment->product_code
+            : null;
+        if ($this->promotionConfig($explicitCode)) {
+            return $explicitCode;
+        }
+
+        $description = (string) ($payment->description ?? '');
+        $referencesListing = ! empty($payment->ad_id)
+            || preg_match('/\banuncio\s*#\d+/iu', $description) === 1;
+        if (! $referencesListing) {
+            return null;
+        }
+
+        $legacyCode = $this->resolvePromotionCode($description, (float) ($payment->amount ?? 0));
+
+        return $this->promotionConfig($legacyCode) ? $legacyCode : null;
     }
 
     private function promotionConfig(?string $productCode): ?array

@@ -30,6 +30,7 @@ use App\Support\PrivacyFingerprint;
 use Illuminate\Support\Facades\Mail;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
+use function Illuminate\Support\defer;
 
 class AdController extends Controller
 {
@@ -943,22 +944,46 @@ class AdController extends Controller
         'top' => ['promoted' => 'destacado', 'boost_type' => 'featured_7_days', 'ledger_type' => 'vip', 'days' => 7],
     ];
 
+
+    private function isCreditPromotionEligible(Ad $ad): bool
+    {
+        return $ad->status === 'active'
+            && ! $ad->is_catalog_filler
+            && $ad->expires_at !== null
+            && $ad->expires_at->isFuture();
+    }
+
+    private function hasActiveCreditPromotion(Ad $ad): bool
+    {
+        return ($ad->boost_expires_at !== null && $ad->boost_expires_at->isFuture())
+            || ($ad->promoted === 'destacado' && $ad->boost_expires_at === null);
+    }
+
     public function promoteWithCredits(Request $request, $id)
     {
+        $validated = $request->validate([
+            'type' => 'sometimes|string|in:boost,highlight,top',
+        ]);
         $user = $request->user();
-        $type = self::CREDITS_PROMO_TYPES[$request->input('type')] ?? self::CREDITS_PROMO_TYPES['highlight'];
+        $type = self::CREDITS_PROMO_TYPES[$validated['type'] ?? 'highlight'];
 
         $result = DB::transaction(function () use ($id, $user, $type) {
+            // Balance checkout locks user first, then touches the ad. Keep the same
+            // order here so concurrent payment paths cannot create a user↔ad cycle.
+            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $ad = Ad::whereKey($id)->lockForUpdate()->firstOrFail();
 
             if ($user->id !== $ad->user_id && $user->role !== 'admin') {
                 return ['response' => response()->json(['message' => 'No tienes permisos para promocionar este anuncio.'], 403)];
             }
 
-            // Lock user + ad together so concurrent requests cannot double-spend credits.
-            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if (! $this->isCreditPromotionEligible($ad)) {
+                return ['response' => response()->json([
+                    'message' => 'Solo puedes promocionar anuncios activos y vigentes.',
+                ], 422)];
+            }
 
-            if ($ad->boost_expires_at && $ad->boost_expires_at->isFuture()) {
+            if ($this->hasActiveCreditPromotion($ad)) {
                 return ['response' => response()->json(['message' => 'Este anuncio ya tiene una promoción activa.'], 400)];
             }
 
@@ -1003,7 +1028,7 @@ class AdController extends Controller
                 'boost_expires_at' => $expiresAt->toIso8601String(),
                 'promoted' => $type['promoted'],
             ];
-        });
+        }, 3);
 
         if (isset($result['response'])) {
             return $result['response'];
@@ -1038,16 +1063,32 @@ class AdController extends Controller
         $costPerAd = 50;
 
         $result = DB::transaction(function () use ($adIds, $user, $costPerAd) {
+            // Match balance checkout and single-credit promotion: user first, then ads
+            // in deterministic id order.
             $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
-
-            $ads = Ad::whereIn('id', $adIds)->where('user_id', $user->id)->lockForUpdate()->get();
+            $ads = Ad::whereIn('id', $adIds)
+                ->where('user_id', $user->id)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
             if ($ads->count() !== count($adIds)) {
                 return ['response' => response()->json(['message' => 'No tienes permisos para promocionar uno o más de estos anuncios.'], 403)];
             }
 
-            $eligibleAds = $ads->reject(fn ($ad) => $ad->promoted === 'destacado');
+            $invalidIds = $ads
+                ->reject(fn (Ad $ad): bool => $this->isCreditPromotionEligible($ad))
+                ->pluck('id')
+                ->values();
+            if ($invalidIds->isNotEmpty()) {
+                return ['response' => response()->json([
+                    'message' => 'Todos los anuncios seleccionados deben estar activos y vigentes antes de promocionarlos.',
+                    'invalid_ad_ids' => $invalidIds,
+                ], 422)];
+            }
+
+            $eligibleAds = $ads->reject(fn (Ad $ad): bool => $this->hasActiveCreditPromotion($ad));
             if ($eligibleAds->isEmpty()) {
-                return ['response' => response()->json(['message' => 'Todos los anuncios seleccionados ya están destacados.'], 400)];
+                return ['response' => response()->json(['message' => 'Todos los anuncios seleccionados ya tienen una promoción activa.'], 400)];
             }
 
             $totalCost = $eligibleAds->count() * $costPerAd;
@@ -1071,17 +1112,22 @@ class AdController extends Controller
             $now = now();
             $promotedIds = [];
             foreach ($eligibleAds as $ad) {
+                $promotionExpiresAt = $now->copy()->addDays(7);
                 $ad->promoted = 'destacado';
+                $ad->boost_type = 'featured_7_days';
+                $ad->boost_expires_at = $promotionExpiresAt;
                 $ad->save();
                 $promotedIds[] = $ad->id;
 
-                DB::table('ad_promotions')->insert([
-                    'ad_id' => $ad->id,
-                    'type' => 'highlight',
-                    'expires_at' => $now->copy()->addDays(7),
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
+                DB::table('ad_promotions')->updateOrInsert(
+                    ['ad_id' => $ad->id],
+                    [
+                        'type' => 'highlight',
+                        'expires_at' => $promotionExpiresAt,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]
+                );
             }
 
             return [
@@ -1090,7 +1136,7 @@ class AdController extends Controller
                 'promoted_ids' => $promotedIds,
                 'skipped_count' => count($adIds) - $eligibleAds->count(),
             ];
-        });
+        }, 3);
 
         if (isset($result['response'])) {
             return $result['response'];
@@ -1640,7 +1686,7 @@ class AdController extends Controller
      */
     public function myAds(Request $request, AdModerationGuidanceService $guidance)
     {
-        $ads = Ad::with(['user:' . self::PUBLIC_AD_USER_COLUMNS, 'latestModerationDecision'])
+        $ads = Ad::with(['user:' . self::PUBLIC_AD_USER_COLUMNS, 'latestModerationDecision', 'latestDecision'])
             ->addSelect(['whatsapp_clicks' => DB::table('ad_clicks')
                 ->selectRaw('count(*)')
                 ->whereColumn('ad_id', 'ads.id')
@@ -1655,7 +1701,9 @@ class AdController extends Controller
 
         $ads->getCollection()->transform(function (Ad $ad) use ($guidance) {
             $ad->setAttribute('seller_correction', $guidance->sellerCorrection($ad));
+            $ad->setAttribute('seller_confirmation_pending', $ad->isSellerConfirmationReactivationEligible());
             $ad->unsetRelation('latestModerationDecision');
+            $ad->unsetRelation('latestDecision');
             return $ad;
         });
 
@@ -2396,7 +2444,7 @@ class AdController extends Controller
         if ($request->user()->id !== $ad->user_id) {
             return response()->json(['message' => 'No tienes permisos para reactivar este anuncio'], 403);
         }
-        if ($ad->status === 'archived' && $ad->ai_moderation_status === 'approved') {
+        if ($ad->isSellerConfirmationReactivationEligible()) {
             $validated = $request->validate([
                 'confirm_available' => 'required|accepted',
                 'price' => 'required|numeric|min:0|max:9999999999.99',
@@ -2499,7 +2547,8 @@ class AdController extends Controller
     public function bulkAction(Request $request)
     {
         $validated = $request->validate([
-            'action' => 'required|in:pause,activate,delete',
+            'action' => 'required|in:pause,activate,confirm_reactivate,delete',
+            'confirm_available' => 'exclude_unless:action,confirm_reactivate|required|accepted',
             'ad_ids' => 'required|array|min:1|max:100',
             'ad_ids.*' => 'integer|min:1',
         ]);
@@ -2538,6 +2587,67 @@ class AdController extends Controller
                 ->where('status', 'paused')
                 ->where('expires_at', '>', now())
                 ->update(['status' => 'active', 'updated_at' => now()]);
+
+        } elseif ($action === 'confirm_reactivate') {
+            $result = DB::transaction(function () use ($adIds, $userId): array {
+                $ads = Ad::whereIn('id', $adIds)
+                    ->where('user_id', $userId)
+                    ->with('latestDecision')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $invalidIds = collect($adIds)->diff($ads->pluck('id'));
+                $invalidIds = $invalidIds->merge(
+                    $ads->filter(function (Ad $ad): bool {
+                        return ! $ad->isSellerConfirmationReactivationEligible()
+                            || ! is_numeric($ad->price)
+                            || (float) $ad->price < 0
+                            || (float) $ad->price > 9999999999.99
+                            || ! in_array((string) $ad->condition, ['nuevo', 'usado', 'new', 'used'], true)
+                            || ! filled($ad->location)
+                            || mb_strlen((string) $ad->location) > 255
+                            || ! filled($ad->state)
+                            || mb_strlen((string) $ad->state) > 60
+                            || ! filled($ad->city)
+                            || mb_strlen((string) $ad->city) > 100;
+                    })->pluck('id')
+                )->unique()->values();
+
+                if ($invalidIds->isNotEmpty()) {
+                    return ['invalid_ad_ids' => $invalidIds->all()];
+                }
+
+                foreach ($ads as $ad) {
+                    $ad->forceFill([
+                        'status' => 'active',
+                        'expires_at' => Ad::freshExpiry(),
+                        'reminder_sent_at' => null,
+                        'republished_at' => now(),
+                    ])->saveQuietly();
+                }
+
+                return [
+                    'affected' => $ads->count(),
+                    'reactivated_ids' => $ads->pluck('id')->all(),
+                ];
+            }, 3);
+
+            if (isset($result['invalid_ad_ids'])) {
+                return response()->json([
+                    'message' => 'Todos los anuncios seleccionados deben estar aprobados, pendientes de confirmación y tener datos vigentes completos.',
+                    'invalid_ad_ids' => $result['invalid_ad_ids'],
+                ], 422);
+            }
+            $affected = (int) $result['affected'];
+            $reactivatedIds = $result['reactivated_ids'] ?? [];
+            if ($reactivatedIds !== []) {
+                defer(function () use ($reactivatedIds): void {
+                    Ad::query()->whereIn('id', $reactivatedIds)->get()->each(
+                        fn (Ad $ad) => IndexNowController::notifyAdChange($ad, 'update')
+                    );
+                })->always();
+            }
 
         } elseif ($action === 'delete') {
             // Mirror destroy() cleanup for multiple ads

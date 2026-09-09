@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Ad;
+use App\Models\AdModerationDecision;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -144,6 +145,63 @@ class E2eTestSeeder extends Seeder
                 'expires_at' => now()->subDay(),
                 'is_catalog_filler' => false,
                 ]
+            );
+
+            $reviewReady = Ad::updateOrCreate(
+                ['user_id' => $seller->id, 'title' => 'Mercasto E2E Review Ready Listing'],
+                [
+                    'description' => 'Anuncio aprobado que requiere confirmación del vendedor.',
+                    'price' => 135000,
+                    'location' => 'Cuauhtémoc, Ciudad de México',
+                    'city' => 'Cuauhtémoc',
+                    'state' => 'Ciudad de México',
+                    'latitude' => 19.4326000,
+                    'longitude' => -99.1332000,
+                    'category' => 'coches',
+                    'subcategory' => 'Sedán',
+                    'condition' => 'usado',
+                    'attributes' => $fixtureAttributes,
+                    'status' => 'archived',
+                    'expires_at' => null,
+                    'republished_at' => null,
+                    'ai_moderation_status' => 'approved',
+                    'ai_moderated_at' => now(),
+                    'is_catalog_filler' => false,
+                ]
+            );
+
+            AdModerationDecision::query()->updateOrCreate(
+                ['ad_id' => $reviewReady->id, 'source' => 'ai', 'decision' => 'approved'],
+                ['metadata' => ['activation_mode' => 'seller_confirmation_required']]
+            );
+
+
+            $consumedApproval = Ad::updateOrCreate(
+                ['user_id' => $seller->id, 'title' => 'Mercasto E2E Consumed Approval Listing'],
+                [
+                    'description' => 'Anuncio cuya confirmación ya fue consumida y luego archivada.',
+                    'price' => 145000,
+                    'location' => 'Cuauhtémoc, Ciudad de México',
+                    'city' => 'Cuauhtémoc',
+                    'state' => 'Ciudad de México',
+                    'latitude' => 19.4326000,
+                    'longitude' => -99.1332000,
+                    'category' => 'coches',
+                    'subcategory' => 'Sedán',
+                    'condition' => 'usado',
+                    'attributes' => $fixtureAttributes,
+                    'status' => 'archived',
+                    'expires_at' => now()->addDays(5),
+                    'republished_at' => now()->subHour(),
+                    'ai_moderation_status' => 'approved',
+                    'ai_moderated_at' => now()->subHours(2),
+                    'is_catalog_filler' => false,
+                ]
+            );
+
+            AdModerationDecision::query()->updateOrCreate(
+                ['ad_id' => $consumedApproval->id, 'source' => 'ai', 'decision' => 'approved'],
+                ['metadata' => ['activation_mode' => 'seller_confirmation_required']]
             );
         });
 

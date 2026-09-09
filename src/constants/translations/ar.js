@@ -573,6 +573,7 @@ export default {
   "payment_status_approved": "تمت الموافقة",
   "payment_status_failed": "فشل",
   "payment_status_pending": "قيد الانتظار",
+  "payment_status_review": "قيد المراجعة",
   "pending_ads": "الإعلانات المعلقة",
   "personal_info": "المعلومات الشخصية",
   "phone": "رقم الهاتف",

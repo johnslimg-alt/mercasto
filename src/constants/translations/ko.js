@@ -573,6 +573,7 @@ export default {
   "payment_status_approved": "승인됨",
   "payment_status_failed": "실패",
   "payment_status_pending": "대기 중",
+  "payment_status_review": "검토 중",
   "pending_ads": "대기 중인 광고",
   "personal_info": "개인 정보",
   "phone": "전화번호",
