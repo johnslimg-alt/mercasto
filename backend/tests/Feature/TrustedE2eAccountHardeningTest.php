@@ -36,12 +36,14 @@ class TrustedE2eAccountHardeningTest extends TestCase
         $prefixAttacker = User::factory()->make(['email' => 'e2e_attacker@example.com', 'role' => 'individual']);
         $suffixAttacker = User::factory()->make(['email' => 'attacker_e2e@example.com', 'role' => 'individual']);
         $wrongRole = User::factory()->make(['email' => 'seller_e2e@mercasto.com', 'role' => 'admin']);
+        $caseVariantAttacker = User::factory()->make(['email' => 'SELLER_E2E@MERCASTO.COM', 'role' => 'individual']);
 
         $this->assertTrue(TrustedE2eAccount::matches($seller));
         $this->assertTrue(TrustedE2eAccount::matches($admin));
         $this->assertFalse(TrustedE2eAccount::matches($prefixAttacker));
         $this->assertFalse(TrustedE2eAccount::matches($suffixAttacker));
         $this->assertFalse(TrustedE2eAccount::matches($wrongRole));
+        $this->assertFalse(TrustedE2eAccount::matches($caseVariantAttacker));
         $this->assertFalse(TrustedE2eAccount::matches(null));
     }
 
@@ -49,6 +51,7 @@ class TrustedE2eAccountHardeningTest extends TestCase
     {
         $trusted = User::factory()->make(['id' => 91, 'email' => 'seller_e2e@mercasto.com', 'role' => 'individual']);
         $attacker = User::factory()->make(['id' => 92, 'email' => 'e2e_attacker@example.com', 'role' => 'individual']);
+        $caseVariantAttacker = User::factory()->make(['id' => 93, 'email' => 'SELLER_E2E@MERCASTO.COM', 'role' => 'individual']);
 
         foreach (['api', 'ads', 'ad-mutations', 'uploads', 'profile-uploads', 'identity-uploads', 'search'] as $name) {
             $limiter = RateLimiter::limiter($name);
@@ -62,6 +65,12 @@ class TrustedE2eAccountHardeningTest extends TestCase
             $this->assertNotEmpty($limits, "ordinary account must retain limits for {$name}");
             foreach ($limits as $limit) {
                 $this->assertNotInstanceOf(Unlimited::class, $limit, "wildcard E2E-like email must not bypass {$name}");
+            }
+
+            $caseVariantResult = $limiter($this->requestFor($caseVariantAttacker));
+            $caseVariantLimits = is_array($caseVariantResult) ? $caseVariantResult : [$caseVariantResult];
+            foreach ($caseVariantLimits as $limit) {
+                $this->assertNotInstanceOf(Unlimited::class, $limit, "case-variant E2E email must not bypass {$name}");
             }
         }
     }
@@ -88,14 +97,24 @@ class TrustedE2eAccountHardeningTest extends TestCase
             'role' => 'individual',
             'plan_code' => 'package_free',
         ]);
+        $caseVariantAttacker = User::factory()->create([
+            'email' => 'SELLER_E2E@MERCASTO.COM',
+            'role' => 'individual',
+            'plan_code' => 'package_free',
+        ]);
 
         $this->seedMonthlyAds($attacker, 3);
         $this->seedMonthlyAds($trusted, 3);
+        $this->seedMonthlyAds($caseVariantAttacker, 3);
 
         $this->actingAs($attacker, 'sanctum')
             ->postJson('/api/ads', $this->validAdPayload('Bloqueado por límite'))
             ->assertForbidden()
             ->assertJsonFragment(['message' => 'Has alcanzado el límite de 3 anuncios mensuales de tu plan. Actualiza tu plan para publicar más.']);
+
+        $this->actingAs($caseVariantAttacker, 'sanctum')
+            ->postJson('/api/ads', $this->validAdPayload('Bloqueado por variante de mayúsculas'))
+            ->assertForbidden();
 
         $this->actingAs($trusted, 'sanctum')
             ->postJson('/api/ads', $this->validAdPayload('E2E permitido'))
