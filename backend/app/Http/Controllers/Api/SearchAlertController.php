@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ad;
 use App\Models\Category;
 use App\Models\SearchAlert;
 use Illuminate\Http\Request;
@@ -38,6 +39,10 @@ class SearchAlertController extends Controller
         }
 
         $name = trim($data['name'] ?? '') ?: $this->buildName($data);
+        $filters = Ad::canonicalizeCategoryAttributeValues(
+            $data['category'] ?? null,
+            $data['filters'] ?? []
+        );
 
         $alert = SearchAlert::create([
             'user_id' => $request->user()->id,
@@ -49,7 +54,7 @@ class SearchAlertController extends Controller
             'max_price' => $data['max_price'] ?? null,
             'city' => $data['city'] ?? null,
             'state' => $data['state'] ?? null,
-            'filters' => $data['filters'] ?? [],
+            'filters' => $filters,
             'is_active' => true,
         ]);
 

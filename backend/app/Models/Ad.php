@@ -7,10 +7,26 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class Ad extends Model
 {
     use HasFactory;
+
+    private const CATEGORY_ATTRIBUTE_STORAGE_ALIASES = [
+        'brand' => ['marca'],
+        'model' => ['modelo'],
+        'kms' => ['km'],
+        'fuel' => ['combustible'],
+        'property_type' => ['tipo'],
+        'rooms' => ['habitaciones'],
+        'bathrooms' => ['banos'],
+        'area' => ['m2'],
+        'contract_type' => ['contrato'],
+        'working_hours' => ['tipo_empleo'],
+        'salary' => ['salario'],
+    ];
 
     protected $fillable = [
         'user_id',
@@ -83,7 +99,108 @@ class Ad extends Model
                 $ad->attributes['expires_at'] = null;
                 $ad->attributes['reminder_sent_at'] = null;
             }
+
+            if (! $ad->isDirty('attributes') && ! $ad->isDirty('category')) {
+                return;
+            }
+
+            $listingAttributes = $ad->getAttribute('attributes');
+            if (! is_array($listingAttributes) || $listingAttributes === []) {
+                return;
+            }
+
+            $ad->setAttribute(
+                'attributes',
+                self::canonicalizeCategoryAttributeValues($ad->getAttribute('category'), $listingAttributes)
+            );
         });
+    }
+
+    public static function categoryAttributeStorageKeys(string $key): array
+    {
+        return array_values(array_unique([
+            $key,
+            ...(self::CATEGORY_ATTRIBUTE_STORAGE_ALIASES[$key] ?? []),
+        ]));
+    }
+
+    public static function canonicalizeCategoryAttributeValues(?string $category, array $listingAttributes): array
+    {
+        $category = trim((string) $category);
+        if ($category === '' || ! Schema::hasTable('categories') || ! Schema::hasTable('category_attributes')) {
+            return $listingAttributes;
+        }
+
+        $definitions = DB::table('category_attributes')
+            ->join('categories', 'categories.id', '=', 'category_attributes.category_id')
+            ->where('categories.slug', $category)
+            ->whereNotNull('category_attributes.options')
+            ->get(['category_attributes.key', 'category_attributes.options']);
+
+        foreach ($definitions as $definition) {
+            $options = is_string($definition->options)
+                ? json_decode($definition->options, true)
+                : $definition->options;
+            if (! is_array($options)) {
+                continue;
+            }
+
+            $lookup = [];
+            foreach ($options as $option) {
+                if (! is_array($option) || ! isset($option['value'])) {
+                    continue;
+                }
+
+                $canonical = trim((string) $option['value']);
+                if ($canonical === '') {
+                    continue;
+                }
+                $lookup[mb_strtolower($canonical, 'UTF-8')] = $canonical;
+
+                $labels = is_array($option['label'] ?? null)
+                    ? $option['label']
+                    : [$option['label'] ?? null];
+                foreach ($labels as $label) {
+                    if (is_scalar($label)) {
+                        $lookup[mb_strtolower(trim((string) $label), 'UTF-8')] = $canonical;
+                    }
+                }
+            }
+
+            if ($lookup === []) {
+                continue;
+            }
+
+            foreach (self::categoryAttributeStorageKeys((string) $definition->key) as $storageKey) {
+                if (! array_key_exists($storageKey, $listingAttributes)) {
+                    continue;
+                }
+
+                $listingAttributes[$storageKey] = self::canonicalizeCategoryAttributeValue(
+                    $listingAttributes[$storageKey],
+                    $lookup
+                );
+            }
+        }
+
+        return $listingAttributes;
+    }
+
+    private static function canonicalizeCategoryAttributeValue(mixed $value, array $lookup): mixed
+    {
+        if (is_array($value)) {
+            return array_map(
+                static fn ($item) => self::canonicalizeCategoryAttributeValue($item, $lookup),
+                $value
+            );
+        }
+
+        if (! is_scalar($value)) {
+            return $value;
+        }
+
+        $current = trim((string) $value);
+        return $lookup[mb_strtolower($current, 'UTF-8')] ?? $value;
     }
 
     public function setExpiresAtAttribute(mixed $value): void

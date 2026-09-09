@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { filterConfig } from '../../constants/filterConfig';
-import { filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
+import { canonicalizeFilterOptionSelection, filterOptionDisplayLabel, filterOptionValue } from '../../utils/filterOptionTranslations';
 import { getGlobalFilterDefinitions } from '../../constants/globalFilterOptions';
 import { MEXICO_STATES, MEXICO_STATES_CITIES } from '../../utils/mexicoStates';
 import { ChevronDown, Filter, MapPin } from 'lucide-react';
@@ -48,12 +48,32 @@ export default function SidebarFilters({
   useEffect(() => {
     if (!activeCat) { setApiConfig(null); return; }
     let cancelled = false;
+    setApiConfig(null);
     fetch(`${API_URL}/category-attributes?category=${encodeURIComponent(activeCat)}`)
       .then(r => r.ok ? r.json() : [])
-      .then(data => { if (!cancelled) setApiConfig(data.length > 0 ? data : null); })
+      .then(data => {
+        if (cancelled) return;
+        const nextConfig = Array.isArray(data) && data.length > 0 ? data : null;
+        setApiConfig(nextConfig);
+        if (!nextConfig) return;
+        setDynamicFilters(prev => {
+          let changed = false;
+          const next = { ...prev };
+          nextConfig.forEach(field => {
+            const key = field.id || field.key;
+            if (!key || !Array.isArray(field.options) || !Object.prototype.hasOwnProperty.call(prev, key)) return;
+            const normalized = canonicalizeFilterOptionSelection(field.options, prev[key]);
+            if (JSON.stringify(normalized) !== JSON.stringify(prev[key])) {
+              next[key] = normalized;
+              changed = true;
+            }
+          });
+          return changed ? next : prev;
+        });
+      })
       .catch(() => { if (!cancelled) setApiConfig(null); });
     return () => { cancelled = true; };
-  }, [activeCat]);
+  }, [activeCat, setDynamicFilters]);
 
   // API data takes priority; fallback to static filterConfig
   const config = apiConfig ?? (activeCat ? (filterConfig[activeCat] || null) : null);
