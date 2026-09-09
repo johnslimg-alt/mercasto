@@ -165,7 +165,16 @@ jobs:
           timeout 30s docker system df || echo 'docker_system_df_status=timeout_or_error'
 
           echo '=== DOCKER BUILDER SUMMARY ==='
-          timeout 60s docker builder du 2>/dev/null | tail -80 || echo 'docker_builder_du_status=timeout_or_error'
+          builder_tmp="$(mktemp)"
+          timeout 60s docker builder du >"$builder_tmp" 2>/dev/null
+          builder_rc=$?
+          tail -80 "$builder_tmp"
+          rm -f "$builder_tmp"
+          case "$builder_rc" in
+            0) echo 'docker_builder_du_status=success' ;;
+            124|137) echo 'docker_builder_du_status=timeout' ;;
+            *) echo "docker_builder_du_status=error rc=${builder_rc}" ;;
+          esac
           REMOTE
 
       - name: Remove SSH key
