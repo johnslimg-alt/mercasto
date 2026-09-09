@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Events\NewNotification;
 use App\Jobs\PreScreenKycDocumentWithAI;
 use App\Support\AnalyticsTrackingConsent;
+use App\Support\EmailIdentity;
 use App\Support\MailLocale;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
@@ -269,12 +270,18 @@ class ProfileController extends Controller
         
         $request->validate($rules);
 
+        if (EmailIdentity::exists((string) $request->new_email, (int) $user->id)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'new_email' => ['Este correo electrónico ya está registrado.'],
+            ]);
+        }
+
         if ($user->password && !Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'La contraseña actual es incorrecta.'], 400);
         }
 
         $token = Str::random(60);
-        $user->pending_email = $request->new_email;
+        $user->pending_email = EmailIdentity::normalize((string) $request->new_email);
         $user->email_verification_token = Hash::make($token);
         $user->save();
 
@@ -303,7 +310,7 @@ class ProfileController extends Controller
         }
         
         // Защита от Fatal 500: проверяем, не занял ли кто-то этот email пока мы ждали подтверждения
-        if (User::where('email', $user->pending_email)->where('id', '!=', $user->id)->exists()) {
+        if (EmailIdentity::exists((string) $user->pending_email, (int) $user->id)) {
             return response()->json(['message' => 'Este correo electrónico ya ha sido registrado por otro usuario en el interín.'], 400);
         }
 

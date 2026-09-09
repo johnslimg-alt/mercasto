@@ -97,10 +97,13 @@ class TrustedE2eAccountHardeningTest extends TestCase
             'role' => 'individual',
             'plan_code' => 'package_free',
         ]);
+        // Simulate a historical row that predates the case-insensitive DB guard.
+        // New case variants are blocked by the unique identity index.
         $caseVariantAttacker = User::factory()->create([
             'email' => 'SELLER_E2E@MERCASTO.COM',
             'role' => 'individual',
             'plan_code' => 'package_free',
+            'email_case_legacy_exempt' => true,
         ]);
 
         $this->seedMonthlyAds($attacker, 3);
