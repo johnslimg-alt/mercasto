@@ -744,8 +744,10 @@ Source: php artisan route:list --except-vendor -v
             ⇂ web
   GET|HEAD  turismo generated::<auto> › SeoShellController@vertical
             ⇂ web
+  GET|HEAD  vendedores generated::<auto> › SeoShellController@publicPage
+            ⇂ web
   GET|HEAD  up ................................... generated::<auto>
 
-                                                          Showing [248] routes
+                                                          Showing [249] routes
 
 ```

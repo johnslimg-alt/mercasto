@@ -22,13 +22,13 @@ import './header-focus.css'
 import './admin-dark-safety.css'
 import './i18n'; // Multi-language support
 
-// Seller acquisition traffic must enter the publication flow directly.
-// Preserve query/hash attribution while removing the obsolete landing-page hop.
-if (['/vendedores', '/publicar-gratis'].includes(window.location.pathname)) {
+// Keep /vendedores as the canonical seller acquisition landing page.
+// Canonicalize only the legacy alias before React mounts, preserving campaign attribution.
+if (window.location.pathname === '/publicar-gratis') {
   window.history.replaceState(
     window.history.state,
     '',
-    `/post${window.location.search}${window.location.hash}`,
+    `/vendedores${window.location.search}${window.location.hash}`,
   );
 }
 

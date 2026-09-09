@@ -244,5 +244,6 @@
   {"domain":null,"method":"GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS","uri":"terms","name":null,"action":"Illuminate\\Routing\\RedirectController","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"tiendas","name":null,"action":"App\\Http\\Controllers\\SeoShellController@publicPage","middleware":["web"]},
   {"domain":null,"method":"GET|HEAD","uri":"tours","name":null,"action":"App\\Http\\Controllers\\SeoShellController@verticalAlias","middleware":["web"]},
-  {"domain":null,"method":"GET|HEAD","uri":"turismo","name":null,"action":"App\\Http\\Controllers\\SeoShellController@vertical","middleware":["web"]}
+  {"domain":null,"method":"GET|HEAD","uri":"turismo","name":null,"action":"App\\Http\\Controllers\\SeoShellController@vertical","middleware":["web"]},
+  {"domain":null,"method":"GET|HEAD","uri":"vendedores","name":null,"action":"App\\Http\\Controllers\\SeoShellController@publicPage","middleware":["web"]}
 ]
