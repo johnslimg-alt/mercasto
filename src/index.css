@@ -1905,22 +1905,8 @@ body::-webkit-scrollbar,
 }
 
 @media (min-width: 1024px) {
-  .desktop-header-row .desktop-header-control {
-    height: 42px !important;
-    min-height: 42px !important;
-    min-width: 42px;
-    border-radius: 14px !important;
-  }
-
   .desktop-header-row .desktop-header-search-control {
     min-width: 280px;
-  }
-
-  .desktop-header-row .desktop-header-search-submit {
-    height: 34px !important;
-    min-height: 34px !important;
-    margin: 4px !important;
-    margin-left: 6px !important;
   }
 }
 

@@ -168,7 +168,7 @@ export default function AppHeader({
               </button>
               {/* DESKTOP LOCATION SELECTOR */}
               <div className="relative hidden lg:block">
-                <button type="button" data-testid="desktop-location-button" onClick={() => setShowLocationPicker(!showLocationPicker)} className="desktop-header-control header-lang-select hidden items-center gap-1.5 rounded-xl border bg-transparent px-2 py-1.5 text-[12px] font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900 lg:flex xl:px-3">
+                <button type="button" data-testid="desktop-location-button" aria-label={searchLocationInput ? `${t.change_location}: ${searchLocationInput}` : t.change_location} aria-expanded={showLocationPicker} onClick={() => setShowLocationPicker(!showLocationPicker)} className="desktop-header-control header-lang-select hidden items-center gap-1.5 rounded-xl border bg-transparent px-2 py-1.5 text-[12px] font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900 lg:flex xl:px-3">
                   <MapPin className="w-3.5 h-3.5 text-[#84CC16]" />
                   <span className="hidden max-w-[110px] truncate xl:block">{searchLocationInput || t.all_mexico}</span>
                 </button>

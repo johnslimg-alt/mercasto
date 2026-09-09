@@ -42,8 +42,10 @@ test('desktop header preserves search width at the 1024px breakpoint', async ({ 
 
   const headerBox = await page.locator('.site-header').boundingBox();
   const searchBox = await page.getByTestId('desktop-header-search').boundingBox();
+  const locationButton = page.getByTestId('desktop-location-button');
   expect(headerBox.height).toBeLessThanOrEqual(105);
   expect(searchBox.width).toBeGreaterThanOrEqual(280);
+  await expect(locationButton).toHaveAccessibleName(/.+/);
 
   const metrics = await page.evaluate(() => ({
     documentScrollbar: getComputedStyle(document.documentElement).scrollbarWidth,

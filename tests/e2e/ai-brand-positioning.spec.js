@@ -18,11 +18,12 @@ for (const [language, tagline] of locales) {
       }, language);
     });
 
-    test('is visible globally and present in metadata', async ({ page }) => {
+    test('uses the compact AI brand surface and preserves metadata', async ({ page }) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' });
-      const strip = page.getByTestId('global-ai-brand-strip');
-      await expect(strip).toBeVisible();
-      await expect(strip).toContainText(tagline);
+      const logo = page.locator('.header-logo-link');
+      await expect(logo).toBeVisible();
+      await expect(logo).toContainText(/Mercasto.*AI/i);
+      await expect(page.getByTestId('global-ai-brand-strip')).toHaveCount(0);
       await expect(page).toHaveTitle(new RegExp(tagline));
       const description = await page.locator('meta[name="description"]').getAttribute('content');
       expect(description).toBeTruthy();
