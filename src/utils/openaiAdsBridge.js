@@ -96,7 +96,8 @@ function handleItem(item = {}) {
     sent = measure('registration_completed', { type: 'customer_action' }, options(item));
   } else if (event === 'listing_published' || event === 'ad_posted') {
     const content = listingContent(item);
-    sent = measure('custom', { type: 'custom', ...(content ? { contents: [content] } : {}) },
+    if (!content) return;
+    sent = measure('custom', { type: 'custom', contents: [content] },
       options(item, 'listing_published'));
   } else if (event === 'lead_created') {
     sent = measure('lead_created', { type: 'customer_action' }, options(item));

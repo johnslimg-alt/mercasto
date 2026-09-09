@@ -257,6 +257,9 @@ function handleDataLayerItem(item) {
   const analyticsEvent = cleanString(item.event, 80).toLowerCase();
   if (!analyticsEvent) return;
 
+  if ((analyticsEvent === 'listing_published' || analyticsEvent === 'ad_posted')
+    && !cleanString(item.listing_id || item.ad_id || item.content_id, 180)) return;
+
   if (analyticsEvent === 'page_view') {
     const pageKey = cleanString(
       item.page_path || `${window.location.pathname}${window.location.search}${window.location.hash}`,

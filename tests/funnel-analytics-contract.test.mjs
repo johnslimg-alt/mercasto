@@ -56,6 +56,8 @@ test('registration IDs satisfy backend allowlist and stay bounded', () => {
 test('web analytics enforces platform/version and avoids duplicate signup hooks', () => {
   const analytics = read('src/utils/analytics.js');
   const bridge = read('src/utils/metaCapiBridge.js');
+  const openAiBridge = read('src/utils/openaiAdsBridge.js');
+  const tiktok = read('src/utils/tiktokPixel.js');
   const app = read('src/App.jsx');
   const authContext = read('src/contexts/AuthContext.jsx');
 
@@ -68,6 +70,9 @@ test('web analytics enforces platform/version and avoids duplicate signup hooks'
   assert.doesNotMatch(authContext, /events\.registered/);
   assert.match(bridge, /if \(!response\.ok\)/);
   assert.match(bridge, /if \(isPostAd && !payload\.listing_id\) return;/);
+  assert.match(openAiBridge, /if \(!content\) return;/);
+  assert.match(tiktok, /analyticsEvent === 'listing_published'.*analyticsEvent === 'ad_posted'/s);
+  assert.match(tiktok, /!cleanString\(item\.listing_id \|\| item\.ad_id \|\| item\.content_id, 180\)\) return;/);
 });
 
 test('internal chat emits canonical message events without message content or user IDs', () => {
