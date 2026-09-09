@@ -135,6 +135,19 @@ jobs:
         run: npm ci
       - name: Build frontend
         run: npm run build
+      - name: Stabilize Playwright apt sources
+        run: |
+          for source_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+            [ -f "${source_file}" ] || continue
+            if grep -q 'dl.google.com/linux/chrome' "${source_file}"; then
+              sudo mv "${source_file}" "${source_file}.disabled"
+            fi
+          done
+          printf '%s\n' \
+            'Acquire::Retries "3";' \
+            'Acquire::http::Timeout "20";' \
+            'Acquire::https::Timeout "20";' \
+            | sudo tee /etc/apt/apt.conf.d/99mercasto-ci-network >/dev/null
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run ${{ matrix.shard }} regression
@@ -155,11 +168,17 @@ jobs:
         run: npm ci
       - name: Build frontend
         run: npm run build
-      - name: Stabilize Ubuntu apt mirror
+      - name: Stabilize Playwright apt sources
         run: |
           for source_file in /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
             if [ -f "${source_file}" ]; then
               sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "${source_file}"
+            fi
+          done
+          for source_file in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+            [ -f "${source_file}" ] || continue
+            if grep -q 'dl.google.com/linux/chrome' "${source_file}"; then
+              sudo mv "${source_file}" "${source_file}.disabled"
             fi
           done
           printf '%s\n' \
