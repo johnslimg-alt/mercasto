@@ -30,4 +30,6 @@ test('seller acquisition copy does not return to unlimited or all-free claims', 
     'Для частных продавцов нет жестких ограничений', '個人出品者に対する制限はありません',
   ];
   for (const phrase of banned) assert.equal(seller.includes(phrase), false, `stale seller pricing claim: ${phrase}`);
+  assert.equal(seller.includes('Su Messico, gli acquirenti'), false, 'Italian seller copy must name Mercasto, not Mexico, as the platform');
+  assert.equal(seller.includes('在 Mercasto， we'), false, 'Chinese seller copy must not contain mixed English text');
 });

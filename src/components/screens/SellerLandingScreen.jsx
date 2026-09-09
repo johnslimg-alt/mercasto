@@ -313,7 +313,7 @@ const TRANSLATIONS = {
     faq_q1: 'È davvero gratuito pubblicare annunci su Mercasto?',
     faq_a1: 'Il piano gratuito costa $0 al mese e include fino a 3 annunci al mese. La prima attivazione idonea è gratuita per 7 giorni; il rinnovo per altri 7 giorni costa $49 MXN. Mercasto non applica commissioni sulla vendita.',
     faq_q2: 'In che modo mi contatteranno gli acquirenti interessati?',
-    faq_a2: 'Su Messico, gli acquirenti ti contattano direttamente. Puoi impostare il tuo profilo per ricevere messaggi direttamente su WhatsApp, Telegram o ricevere chiamate telefoniche tradizionali.',
+    faq_a2: 'Su Mercasto, gli acquirenti ti contattano direttamente. Puoi impostare il tuo profilo per ricevere messaggi direttamente su WhatsApp, Telegram o ricevere chiamate telefoniche tradizionali.',
     faq_q3: 'Quali categorie di annunci posso pubblicare?',
     faq_a3: 'Puoi pubblicare quasi qualsiasi tipo di annuncio: auto e moto (Motor), immobili (vendita o affitto), servizi professionali, articoli personali, tecnologia, offerte di lavoro e altro ancora.',
     faq_q4: 'Quanti annunci posso pubblicare gratuitamente?',
@@ -421,7 +421,7 @@ const TRANSLATIONS = {
     faq_q4: '我可以免费发布多少个广告？',
     faq_a4: '免费套餐每月最多允许 3 个广告。如需发布更多，可选择付费套餐；当前条件请查看“价格”页面。',
     safety_title: '您的安全是我们的首要任务',
-    safety_desc: '在 Mercasto， we 持续验证用户资料以确保销售社区的真实可信。为了您的安心，请记住务必在公共且安全的地方进行交易。',
+    safety_desc: '在 Mercasto，我们持续验证用户资料以确保销售社区的真实可信。为了您的安心，请记住务必在公共且安全的地方进行交易。',
     cta_footer_title: '准备好今天开始销售了吗？',
     cta_footer_desc: '从免费套餐开始：每月最多 3 个广告，符合条件的广告首次可免费激活 7 天。',
     cta_footer_btn: '立即开始'
