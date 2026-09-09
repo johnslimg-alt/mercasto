@@ -69,6 +69,7 @@ jobs:
           set -euo pipefail
           ssh -i ~/.ssh/mercasto_storage_status_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -u
+          ROOT_DEVICE="$(stat -Lc %d -- /)"
 
           lowio_timeout() {
             local limit="$1"
@@ -99,15 +100,32 @@ jobs:
             return 0
           }
 
-          probe_existing_du() {
-            local path="$1"
+          probe_rootfs_du() {
+            local label="$1"
             local limit="$2"
-            if [ -e "$path" ]; then
-              probe_du "$path" "$limit" -s "$path"
-            else
-              echo "--- ${path} ---"
+            local path="$3"
+            shift 3
+            local path_device
+
+            if [ ! -e "$path" ]; then
+              echo "--- ${label} ---"
               echo 'probe_status=absent'
+              return 0
             fi
+
+            path_device="$(stat -Lc %d -- "$path" 2>/dev/null || true)"
+            if [ -z "$path_device" ]; then
+              echo "--- ${label} ---"
+              echo 'probe_status=stat_error'
+              return 0
+            fi
+            if [ "$path_device" != "$ROOT_DEVICE" ]; then
+              echo "--- ${label} ---"
+              echo 'probe_status=skipped_other_filesystem'
+              return 0
+            fi
+
+            probe_du "$label" "$limit" "$@" "$path"
           }
 
           echo '=== HOST ==='
@@ -122,44 +140,36 @@ jobs:
           fi
 
           # Keep each expensive tree independent. A slow Docker tree must not hide
-          # sizes from unrelated top-level paths, and partial output survives a timeout.
+          # sizes from unrelated top-level paths, and separate mounts are excluded.
           echo '=== ROOT CHILDREN (MiB) ==='
-          probe_du '/root depth=1' 90 -d1 /root
+          probe_rootfs_du '/root depth=1' 90 /root -d1
 
           echo '=== VAR CHILDREN (MiB) ==='
-          probe_du '/var depth=1' 90 -d1 /var
+          probe_rootfs_du '/var depth=1' 90 /var -d1
 
           echo '=== FOCUSED SAME-FILESYSTEM PROBES (MiB) ==='
-          probe_existing_du /var/lib/docker 60
-          probe_existing_du /var/lib/docker/buildkit 45
-          probe_existing_du /var/lib/docker/overlay2 45
-          probe_existing_du /var/lib/docker/volumes 45
-          probe_existing_du /var/www 45
-          probe_existing_du /var/log 30
-          probe_existing_du /var/cache 30
-          probe_existing_du /usr 45
-          probe_existing_du /opt 30
-          probe_existing_du /srv 30
-          probe_existing_du /home 30
-          probe_existing_du /tmp 30
-          probe_existing_du /root/.cache 30
-          probe_existing_du /root/.local 30
-          probe_existing_du /root/.npm 30
-          probe_existing_du /root/.ollama 30
+          probe_rootfs_du /var/lib/docker 60 /var/lib/docker -s
+          probe_rootfs_du /var/lib/docker/buildkit 45 /var/lib/docker/buildkit -s
+          probe_rootfs_du /var/lib/docker/overlay2 45 /var/lib/docker/overlay2 -s
+          probe_rootfs_du /var/lib/docker/volumes 45 /var/lib/docker/volumes -s
+          probe_rootfs_du /var/www 45 /var/www -s
+          probe_rootfs_du /var/log 30 /var/log -s
+          probe_rootfs_du /var/cache 30 /var/cache -s
+          probe_rootfs_du /usr 45 /usr -s
+          probe_rootfs_du /opt 30 /opt -s
+          probe_rootfs_du /srv 30 /srv -s
+          probe_rootfs_du /home 30 /home -s
+          probe_rootfs_du /tmp 30 /tmp -s
+          probe_rootfs_du /root/.cache 30 /root/.cache -s
+          probe_rootfs_du /root/.local 30 /root/.local -s
+          probe_rootfs_du /root/.npm 30 /root/.npm -s
+          probe_rootfs_du /root/.ollama 30 /root/.ollama -s
 
           echo '=== AUTOMATION STACK (MiB, same filesystem) ==='
-          if [ -d /root/automation-stack ]; then
-            probe_du '/root/automation-stack depth=1' 60 -d1 /root/automation-stack
-          else
-            echo '/root/automation-stack is absent'
-          fi
+          probe_rootfs_du '/root/automation-stack depth=1' 60 /root/automation-stack -d1
 
           echo '=== AUTOMATION BACKUPS (MiB, depth 2) ==='
-          if [ -d /root/automation-stack/backups ]; then
-            probe_du '/root/automation-stack/backups depth=2' 60 -d2 /root/automation-stack/backups
-          else
-            echo '/root/automation-stack/backups is absent'
-          fi
+          probe_rootfs_du '/root/automation-stack/backups depth=2' 60 /root/automation-stack/backups -d2
 
           echo '=== DOCKER STORAGE SUMMARY ==='
           timeout 30s docker system df || echo 'docker_system_df_status=timeout_or_error'
