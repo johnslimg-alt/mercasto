@@ -30,6 +30,7 @@ use App\Support\PrivacyFingerprint;
 use Illuminate\Support\Facades\Mail;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
+use function Illuminate\Support\defer;
 
 class AdController extends Controller
 {
@@ -2622,10 +2623,13 @@ class AdController extends Controller
                         'expires_at' => Ad::freshExpiry(),
                         'reminder_sent_at' => null,
                         'republished_at' => now(),
-                    ])->save();
+                    ])->saveQuietly();
                 }
 
-                return ['affected' => $ads->count()];
+                return [
+                    'affected' => $ads->count(),
+                    'reactivated_ids' => $ads->pluck('id')->all(),
+                ];
             }, 3);
 
             if (isset($result['invalid_ad_ids'])) {
@@ -2635,6 +2639,14 @@ class AdController extends Controller
                 ], 422);
             }
             $affected = (int) $result['affected'];
+            $reactivatedIds = $result['reactivated_ids'] ?? [];
+            if ($reactivatedIds !== []) {
+                defer(function () use ($reactivatedIds): void {
+                    Ad::query()->whereIn('id', $reactivatedIds)->get()->each(
+                        fn (Ad $ad) => IndexNowController::notifyAdChange($ad, 'update')
+                    );
+                })->always();
+            }
 
         } elseif ($action === 'delete') {
             // Mirror destroy() cleanup for multiple ads

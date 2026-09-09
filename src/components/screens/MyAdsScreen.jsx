@@ -28,6 +28,15 @@ function awaitsHumanReview(ad) {
     && !requiresSellerCorrection(ad);
 }
 
+function isSoldOrArchived(ad) {
+  return ad?.status === 'sold'
+    || ad?.status === 'inactive'
+    || (ad?.status === 'archived'
+      && !isSellerConfirmationPending(ad)
+      && !requiresSellerCorrection(ad)
+      && !awaitsHumanReview(ad));
+}
+
 function getPromoLabels(t) {
   return {
     boost_1_day: { name: t.pm_boost_1d_name || 'Subir 24 horas', totalMs: 1 * 24 * 60 * 60 * 1000, category: 'boost' },
@@ -110,7 +119,7 @@ export default function MyAdsScreen({
     pending: userAds.filter(ad => ad.status === 'pending' || awaitsHumanReview(ad)).length,
     review_ready: userAds.filter(isSellerConfirmationPending).length,
     needs_correction: userAds.filter(requiresSellerCorrection).length,
-    sold: userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad) && !awaitsHumanReview(ad))).length,
+    sold: userAds.filter(isSoldOrArchived).length,
     rejected: userAds.filter(ad => ad.status === 'rejected').length,
   }), [userAds]);
 
@@ -123,7 +132,7 @@ export default function MyAdsScreen({
     else if (filter === 'pending') list = userAds.filter(ad => ad.status === 'pending' || awaitsHumanReview(ad));
     else if (filter === 'review_ready') list = userAds.filter(isSellerConfirmationPending);
     else if (filter === 'needs_correction') list = userAds.filter(requiresSellerCorrection);
-    else if (filter === 'sold') list = userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad) && !awaitsHumanReview(ad)));
+    else if (filter === 'sold') list = userAds.filter(isSoldOrArchived);
     else if (filter === 'rejected') list = userAds.filter(ad => ad.status === 'rejected');
     else list = userAds;
 

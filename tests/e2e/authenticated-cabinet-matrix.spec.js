@@ -258,6 +258,22 @@ test('review-ready selection exposes only eligible bulk actions', async ({ page,
   await expect(page.getByTestId('bulk-activate-selected')).toHaveCount(0);
 });
 
+test('consumed approval is sold/archive, not review-ready', async ({ page, request }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-layout-cabinet', 'Covered once in the full Chromium cabinet project.');
+  const session = await authenticate(request, 'seller');
+  const ads = await sellerAds(request, session);
+  const consumed = ads.find(ad => ad.title === 'Mercasto E2E Consumed Approval Listing');
+  expect(consumed).toBeTruthy();
+  expect(consumed.seller_confirmation_pending).toBe(false);
+
+  await installSession(page, session);
+  await page.goto('/profile?filter=sold');
+  await expect(page.getByTestId(`dashboard-ad-${consumed.id}`)).toBeVisible();
+
+  await page.goto('/profile?filter=review_ready');
+  await expect(page.getByTestId(`dashboard-ad-${consumed.id}`)).toHaveCount(0);
+});
+
 const sellerTabs = ['my_ads', 'favorites', 'saved_searches', 'stats', 'transactions', 'contact_history', 'reviews', 'privacy', 'settings'];
 
 for (const viewport of viewports) {

@@ -8,6 +8,8 @@ use App\Models\AdModerationDecision;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class AdActivationLifecycleTest extends TestCase
@@ -247,6 +249,14 @@ class AdActivationLifecycleTest extends TestCase
         $this->markSellerConfirmationRequired($first);
         $this->markSellerConfirmationRequired($second);
 
+        $baselineTransactionLevel = DB::transactionLevel();
+        $indexNowTransactionLevels = [];
+        Http::fake(function () use (&$indexNowTransactionLevels) {
+            $indexNowTransactionLevels[] = DB::transactionLevel();
+
+            return Http::response(['ok' => true], 200);
+        });
+
         $this->actingAs($owner, 'sanctum')
             ->postJson('/api/ads/bulk-action', [
                 'action' => 'confirm_reactivate',
@@ -270,6 +280,8 @@ class AdActivationLifecycleTest extends TestCase
             $this->assertTrue($ad->expires_at->greaterThan(now()));
             $this->assertNotNull($ad->republished_at);
         }
+
+        $this->assertSame([$baselineTransactionLevel, $baselineTransactionLevel], $indexNowTransactionLevels);
     }
 
     public function test_bulk_confirm_reactivation_rejects_mixed_or_incomplete_selection_without_partial_updates(): void
