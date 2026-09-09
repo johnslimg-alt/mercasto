@@ -18,6 +18,26 @@ class CategoryAttributeAliasContractTest extends TestCase
         $categoryId = DB::table('categories')->where('slug', 'inmobiliaria')->value('id');
         $this->assertNotNull($categoryId);
 
+        // Keep the fixture self-contained. The migration intentionally derives
+        // legacy-label mappings from category_attributes rather than hardcoding
+        // display values, so this test must provide that runtime definition.
+        DB::table('category_attributes')->updateOrInsert(
+            [
+                'category_id' => $categoryId,
+                'key' => 'property_type',
+            ],
+            [
+                'label' => json_encode(['es' => 'Tipo de propiedad', 'en' => 'Property type']),
+                'type' => 'select',
+                'options' => json_encode([
+                    ['value' => 'casa', 'label' => ['es' => 'Casa', 'en' => 'House']],
+                    ['value' => 'departamento', 'label' => ['es' => 'Departamento', 'en' => 'Apartment']],
+                ]),
+                'required' => false,
+                'sort_order' => 994,
+            ]
+        );
+
         $user = User::factory()->create();
 
         $historicalAd = Ad::withoutEvents(fn () => Ad::query()->create([
