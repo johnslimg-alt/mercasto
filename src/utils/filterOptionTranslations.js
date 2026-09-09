@@ -16,6 +16,36 @@ const loaders = {
 
 const normalize = (language) => String(language || 'es').toLowerCase().split('-')[0];
 
+// Runtime category attributes use durable machine values while the older frontend
+// translation catalogs are keyed by their Spanish presentation values. Keep this
+// bridge in one place so persisted canonical values remain presentation-safe.
+const canonicalPresentation = {
+  brand: {
+    toyota: ['marca', 'Toyota'], nissan: ['marca', 'Nissan'], ford: ['marca', 'Ford'],
+    chevrolet: ['marca', 'Chevrolet'], honda: ['marca', 'Honda'], volkswagen: ['marca', 'Volkswagen'],
+    bmw: ['marca', 'BMW'], mercedes: ['marca', 'Mercedes-Benz'],
+  },
+  fuel: {
+    gasolina: ['combustible', 'Gasolina'], diesel: ['combustible', 'Diésel'],
+    hibrido: ['combustible', 'Híbrido'], electrico: ['combustible', 'Eléctrico'],
+  },
+  property_type: {
+    casa: ['tipo', 'Casa'], departamento: ['tipo', 'Departamento'], terreno: ['tipo', 'Terreno'],
+    local: ['tipo', 'Local comercial'], oficina: ['tipo', 'Oficina'],
+  },
+  contract_type: {
+    indefinido: ['contrato', 'Indefinido'], temporal: ['contrato', 'Temporal'],
+    beca: ['tipo_empleo', 'Prácticas'], autonomo: ['tipo_empleo', 'Freelance'],
+  },
+  working_hours: {
+    completa: ['tipo_empleo', 'Tiempo completo'], parcial: ['tipo_empleo', 'Medio tiempo'],
+  },
+};
+
+function presentationEntry(fieldId, value) {
+  return canonicalPresentation[fieldId]?.[String(value || '').trim().toLocaleLowerCase()] || null;
+}
+
 export async function loadFilterOptionLanguage(language) {
   const lang = normalize(language);
   if (lang === 'es' || cache[lang]) return cache[lang] || null;
@@ -30,7 +60,6 @@ export function filterOptionValue(option) {
   if (typeof option === 'string' || typeof option === 'number') return String(option);
   return String(option?.value ?? option?.label ?? '');
 }
-
 
 export function canonicalizeFilterOptionSelection(options, selection) {
   if (!Array.isArray(options) || selection == null) return selection;
@@ -53,7 +82,19 @@ export function filterOptionLabel(fieldId, canonicalValue, language = 'es') {
   const value = String(canonicalValue ?? '');
   if (!value) return value;
   const lang = normalize(language);
-  if (lang === 'es') return value;
+  const presentation = presentationEntry(fieldId, value);
+  const displayValue = presentation?.[1] || value;
+
+  if (lang === 'es') return displayValue;
+
+  const direct = cache[lang]?.[fieldId]?.[value];
+  if (direct) return direct;
+
+  if (presentation) {
+    const [legacyFieldId, legacyDisplayValue] = presentation;
+    return cache[lang]?.[legacyFieldId]?.[legacyDisplayValue] || legacyDisplayValue;
+  }
+
   return cache[lang]?.[fieldId]?.[value] || value;
 }
 
@@ -62,6 +103,16 @@ export function filterOptionDisplayLabel(fieldId, option, language = 'es') {
   if (!value) return value;
   const translated = filterOptionLabel(fieldId, value, language);
   if (translated !== value) return translated;
-  if (option && typeof option === 'object' && typeof option.label === 'string' && option.label.trim()) return option.label.trim();
+  if (option && typeof option === 'object' && typeof option.label === 'string' && option.label.trim()) {
+    const label = option.label.trim();
+    const lang = normalize(language);
+    if (lang !== 'es') {
+      const presentation = presentationEntry(fieldId, value);
+      const legacyFieldId = presentation?.[0];
+      const translatedLabel = legacyFieldId ? cache[lang]?.[legacyFieldId]?.[label] : null;
+      if (translatedLabel) return translatedLabel;
+    }
+    return label;
+  }
   return value;
 }
