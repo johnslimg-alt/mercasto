@@ -35,7 +35,7 @@ for (const language of ['es', 'en', 'ar']) {
 }
 
 
-async function mockHomeApi(page, { ads = [], recommendations = [] } = {}) {
+async function mockHomeApi(page, { ads = [], recommendations = [], user = null } = {}) {
   await page.route('**/api/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/auth/providers')) {
@@ -43,6 +43,14 @@ async function mockHomeApi(page, { ads = [], recommendations = [] } = {}) {
     }
     if (url.pathname.endsWith('/recommendations/trending')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: recommendations }) });
+    }
+    if (url.pathname.endsWith('/recommendations')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: recommendations }) });
+    }
+    if (url.pathname.endsWith('/user')) {
+      return user
+        ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) })
+        : route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ message: 'Unauthenticated' }) });
     }
     if (url.pathname.endsWith('/ads')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ads, total: ads.length, current_page: 1, last_page: 1 }) });
@@ -114,8 +122,29 @@ test('home listing card opens the exact ad detail', async ({ page }, testInfo) =
   await expect(page.getByRole('heading', { level: 1, name: ad.title, exact: true })).toBeVisible();
 });
 
-test('recommendation carousel exposes honest previous and next states', async ({ page }, testInfo) => {
+test('guest home keeps one trending rail without a duplicate recommendation request', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
+  let duplicateTrendingRequests = 0;
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.endsWith('/recommendations/trending')) duplicateTrendingRequests += 1;
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookie_consent', 'essential');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+  });
+  await mockHomeApi(page);
+  await page.goto('/');
+  await expect(page.getByTestId('recommendations-scroller')).toHaveCount(0);
+  await page.waitForTimeout(250);
+  expect(duplicateTrendingRequests).toBe(0);
+});
+
+test('authenticated recommendation carousel exposes honest previous and next states', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  const user = { id: 77, name: 'QA Seller', role: 'individual' };
   const recommendations = Array.from({ length: 6 }, (_, index) => ({
     id: 600 + index,
     title: `QA Recommendation ${index + 1}`,
@@ -123,12 +152,14 @@ test('recommendation carousel exposes honest previous and next states', async ({
     currency: 'MXN',
     images: [],
   }));
-  await page.addInitScript(() => {
+  await page.addInitScript((savedUser) => {
     localStorage.setItem('lang', 'es');
     localStorage.setItem('mercasto_language', 'es');
     localStorage.setItem('cookie_consent', 'essential');
-  });
-  await mockHomeApi(page, { recommendations });
+    localStorage.setItem('auth_token', 'qa-home-token');
+    localStorage.setItem('user', JSON.stringify(savedUser));
+  }, user);
+  await mockHomeApi(page, { recommendations, user });
   await page.goto('/');
 
   const scroller = page.getByTestId('recommendations-scroller');

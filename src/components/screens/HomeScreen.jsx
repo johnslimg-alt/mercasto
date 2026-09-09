@@ -496,92 +496,21 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
 
 
-            {/* 4. DEALS OF THE DAY */}
-
-            <section className="col-span-12 min-h-[220px] cls-safe">
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-                <div className="relative overflow-hidden rounded-3xl p-[1px] group">
-
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#84CC16] to-[#65A30D] opacity-90 group-hover:opacity-100 transition"></div>
-
-                  <div className="relative bg-gradient-to-br from-[#84CC16] to-[#65A30D] rounded-[23px] p-6 text-white h-[190px] flex flex-col">
-
-                    <span className="text-[11px] uppercase tracking-wider bg-white/20 w-fit px-2.5 py-1 rounded-full font-semibold">{t.deal_of_day}</span>
-
-                    <h3 className="text-[26px] font-bold mt-3 leading-tight">{t.up_to_40}</h3>
-
-                    <p className="text-white/90 text-[14px]">{t.elec_phones}</p>
-
-                    <div className="mt-auto flex items-center justify-between">
-
-                      <button onClick={() => setActiveCat('electronica')} className="btn-md bg-white text-[#0F172A] hover:bg-slate-100">{t.shop_now}</button>
-
-                      <span className="text-[12px] font-medium bg-black/20 px-2 py-1 rounded-lg">{t.ends_in_8h}</span>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-                <div className="market-card rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
-
-                  <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#84CC16]/10 rounded-full blur-2xl"></div>
-
-                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.furniture}</span>
-
-                  <h3 className="text-[22px] font-bold mt-2">{t.living_room_sets}</h3>
-
-                  <p className="text-slate-600 text-[14px]">{t.from_price}</p>
-
-                  <button className="btn-md border border-slate-300 mt-auto w-fit hover:bg-slate-50" onClick={() => setActiveCat('hogar')}>{t.see_deals}</button>
-
-                </div>
-
-                <div className="card bg-slate-900 text-white rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
-
-                  <span className="text-[11px] uppercase tracking-wider text-[#84CC16] font-semibold">{t.automotive}</span>
-
-                  <h3 className="text-[22px] font-bold mt-2">{t.certified_cars}</h3>
-
-                  <p className="text-white/70 text-[14px]">{t.zero_comm}</p>
-
-                  <button className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 mt-auto w-fit" onClick={() => setActiveCat('motor')}>{t.browse_cars}</button>
-
-                </div>
-
-                <div className="market-card border-2 border-[#84CC16]/30 rounded-3xl p-6 h-[190px] flex flex-col">
-
-                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.for_sellers}</span>
-
-                  <h3 className="text-[22px] font-bold mt-2">{t.boost_ad}</h3>
-
-                  <p className="text-slate-600 text-[14px]">{t.boost_desc}</p>
-
-                  <button className="btn-md bg-[#0F172A] text-white hover:bg-black mt-auto w-fit" onClick={() => setCurrentTab('post')}>{t.promote_now}</button>
-
-                </div>
-
-              </div>
-
-            </section>
-
-
-
-            {/* AI RECOMMENDATIONS */}
-            <section className="col-span-12 mt-6">
-              <React.Suspense fallback={<div className="h-48 w-full bg-slate-100 dark:bg-slate-900 rounded-2xl animate-pulse" />}>
-                <RecommendationsWidget
-                  userId={user?.id}
-                  limit={12}
-                  onAdClick={handleViewAd}
-                  lang={lang}
-                  t={t}
-                />
-              </React.Suspense>
-            </section>
+            {/* Personalized recommendations are intentionally authenticated-only.
+                Guests already have the canonical Trending rail above. */}
+            {user && (
+              <section className="col-span-12 mt-6">
+                <React.Suspense fallback={<div className="h-48 w-full bg-slate-100 dark:bg-slate-900 rounded-2xl animate-pulse" />}>
+                  <RecommendationsWidget
+                    userId={user.id}
+                    limit={12}
+                    onAdClick={handleViewAd}
+                    lang={lang}
+                    t={t}
+                  />
+                </React.Suspense>
+              </section>
+            )}
 
             {/* 5. REAL ESTATE SPOTLIGHT */}
 
