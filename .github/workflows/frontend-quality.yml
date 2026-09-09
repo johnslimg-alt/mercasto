@@ -17,10 +17,16 @@ on:
       - 'tailwind.config.*'
       - 'playwright.config.*'
       - '.github/workflows/frontend-quality.yml'
+      - '.github/workflows/e2e-public-smoke.yml'
+      - '.github/workflows/e2e-seller.yml'
+      - '.github/workflows/legal-readiness.yml'
+      - '.github/workflows/public-ui-visual-evidence.yml'
+      - '.github/workflows/authenticated-cabinet-qa.yml'
       - 'tests/**'
       - 'scripts/i18n-audit.mjs'
       - 'scripts/check-recovery-guards.mjs'
       - 'scripts/frontend-quality-shard.sh'
+      - 'scripts/stabilize-playwright-apt.sh'
       - 'scripts/public-ui-route-policy.mjs'
       - 'scripts/public-ui-route-coverage-gate.mjs'
       - 'scripts/client-spa-route-policy.mjs'
@@ -71,7 +77,7 @@ jobs:
           files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
           printf '%s\n' "$files"
 
-          if printf '%s\n' "$files" | grep -Eq '^(index\.html$|src/|public/|package\.json$|package-lock\.json$|vite\.config\.|tailwind\.config\.|playwright\.config\.|tests/|\.github/workflows/frontend-quality\.yml$|scripts/(i18n-audit\.mjs|check-recovery-guards\.mjs|frontend-quality-shard\.sh|public-ui-route-policy\.mjs|public-ui-route-coverage-gate\.mjs|client-spa-route-policy\.mjs|client-spa-route-coverage-gate\.mjs|public-ui-visual-evidence-gate\.sh|public-copy-scan\.sh|fix-public-copy-fallbacks\.sh|apply-production-hotfixes\.sh)$)'; then
+          if printf '%s\n' "$files" | grep -Eq '^(index\.html$|src/|public/|package\.json$|package-lock\.json$|vite\.config\.|tailwind\.config\.|playwright\.config\.|tests/|\.github/workflows/(frontend-quality|e2e-public-smoke|e2e-seller|legal-readiness|public-ui-visual-evidence|authenticated-cabinet-qa)\.yml$|scripts/(i18n-audit\.mjs|check-recovery-guards\.mjs|frontend-quality-shard\.sh|stabilize-playwright-apt\.sh|public-ui-route-policy\.mjs|public-ui-route-coverage-gate\.mjs|client-spa-route-policy\.mjs|client-spa-route-coverage-gate\.mjs|public-ui-visual-evidence-gate\.sh|public-copy-scan\.sh|fix-public-copy-fallbacks\.sh|apply-production-hotfixes\.sh)$)'; then
             echo "run_frontend=true" >> "$GITHUB_OUTPUT"
           else
             echo "run_frontend=false" >> "$GITHUB_OUTPUT"
@@ -135,6 +141,8 @@ jobs:
         run: npm ci
       - name: Build frontend
         run: npm run build
+      - name: Stabilize Playwright apt sources
+        run: bash scripts/stabilize-playwright-apt.sh
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run ${{ matrix.shard }} regression
@@ -155,18 +163,8 @@ jobs:
         run: npm ci
       - name: Build frontend
         run: npm run build
-      - name: Stabilize Ubuntu apt mirror
-        run: |
-          for source_file in /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
-            if [ -f "${source_file}" ]; then
-              sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "${source_file}"
-            fi
-          done
-          printf '%s\n' \
-            'Acquire::Retries "3";' \
-            'Acquire::http::Timeout "20";' \
-            'Acquire::https::Timeout "20";' \
-            | sudo tee /etc/apt/apt.conf.d/99mercasto-ci-network >/dev/null
+      - name: Stabilize Playwright apt sources
+        run: bash scripts/stabilize-playwright-apt.sh
       - name: Install WebKit
         env:
           DEBIAN_FRONTEND: noninteractive
