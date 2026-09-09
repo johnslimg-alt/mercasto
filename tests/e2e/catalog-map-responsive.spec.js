@@ -218,6 +218,22 @@ test('standalone fullscreen map uses responsive filter geometry instead of a ful
     }
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `fullscreen overflow at ${viewport.width}px`).toBeLessThanOrEqual(1);
+
+    if (viewport.width === 390) {
+      const scroller = panel.locator('.overflow-y-auto').first();
+      const before = await scroller.evaluate((node) => ({
+        top: node.scrollTop,
+        clientHeight: node.clientHeight,
+        scrollHeight: node.scrollHeight,
+        scrollbarWidth: getComputedStyle(node).scrollbarWidth,
+      }));
+      expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
+      expect(before.scrollbarWidth).toBe('none');
+      await scroller.hover();
+      await page.mouse.wheel(0, 420);
+      await expect.poll(() => scroller.evaluate((node) => node.scrollTop)).toBeGreaterThan(before.top);
+    }
+
     await dialog.getByTestId('map-close').click();
   }
 });
