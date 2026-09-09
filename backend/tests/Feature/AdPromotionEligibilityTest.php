@@ -19,6 +19,21 @@ class AdPromotionEligibilityTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_single_credit_promotion_rejects_unknown_type_before_charging(): void
+    {
+        $owner = $this->seller();
+        $active = $this->ad($owner);
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson("/api/ads/{$active->id}/promote/credits", ['type' => 'typo'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+
+        $this->assertSame(200.0, (float) $owner->fresh()->balance);
+        $this->assertNull($active->fresh()->promoted);
+        $this->assertSame(0, DB::table('ad_promotions')->count());
+    }
+
     public function test_single_credit_promotion_rejects_hidden_listing_before_charging(): void
     {
         Carbon::setTestNow('2026-09-09 02:00:00');

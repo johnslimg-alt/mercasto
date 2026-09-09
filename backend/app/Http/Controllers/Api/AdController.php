@@ -954,8 +954,11 @@ class AdController extends Controller
 
     public function promoteWithCredits(Request $request, $id)
     {
+        $validated = $request->validate([
+            'type' => 'sometimes|string|in:boost,highlight,top',
+        ]);
         $user = $request->user();
-        $type = self::CREDITS_PROMO_TYPES[$request->input('type')] ?? self::CREDITS_PROMO_TYPES['highlight'];
+        $type = self::CREDITS_PROMO_TYPES[$validated['type'] ?? 'highlight'];
 
         $result = DB::transaction(function () use ($id, $user, $type) {
             $ad = Ad::whereKey($id)->lockForUpdate()->firstOrFail();
