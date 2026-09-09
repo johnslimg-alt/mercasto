@@ -7,6 +7,7 @@ import { formatDate, formatMXN, formatNumber } from './utils/localeFormat';
 import { formatPaymentActionCopy, getPaymentActionCopy } from './utils/paymentActionCopy';
 import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlState';
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
+import { isOpenAIAdsMeasurementAllowed } from './utils/trackingConsent';
 import { clearPublishDraft } from './utils/publishDraft';
 import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
@@ -1922,6 +1923,30 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    const syncConsentIntoSession = (event) => {
+      const allowed = event?.detail?.allowed;
+      if (typeof allowed !== 'boolean') return;
+      setUser(prev => {
+        if (!prev) return prev;
+        const rawPreferences = prev.notification_preferences;
+        let preferences = rawPreferences || {};
+        if (typeof rawPreferences === 'string') {
+          try { preferences = JSON.parse(rawPreferences || '{}'); } catch { preferences = {}; }
+        }
+        return {
+          ...prev,
+          notification_preferences: {
+            ...preferences,
+            analytics_tracking_consent: allowed,
+          },
+        };
+      });
+    };
+    window.addEventListener('mercasto:analytics-consent-synced', syncConsentIntoSession);
+    return () => window.removeEventListener('mercasto:analytics-consent-synced', syncConsentIntoSession);
+  }, [setUser]);
+
+  useEffect(() => {
     if (!user?.id || !lang) return undefined;
     const preferences = typeof user.notification_preferences === 'string'
       ? (() => { try { return JSON.parse(user.notification_preferences || '{}'); } catch { return {}; } })()
@@ -3566,7 +3591,12 @@ function App() {
           const res = await fetch(`${API_URL}/payment/balance`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ description, ad_id: adId, product_code: productCode }),
+            body: JSON.stringify({
+              description,
+              ad_id: adId,
+              product_code: productCode,
+              openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
+            }),
           });
           const data = await res.json();
           if (res.ok && data.success) {
@@ -3592,7 +3622,13 @@ function App() {
       const res = await fetch(`${API_URL}/payment/clip`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, description, ad_id: adId, product_code: productCode })
+        body: JSON.stringify({
+          amount,
+          description,
+          ad_id: adId,
+          product_code: productCode,
+          openai_measurement_consent: isOpenAIAdsMeasurementAllowed(),
+        })
       });
       const data = await res.json();
       if (res.ok && data.payment_url) {

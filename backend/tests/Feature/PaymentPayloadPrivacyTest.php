@@ -131,6 +131,40 @@ class PaymentPayloadPrivacyTest extends TestCase
         $this->assertStringNotContainsString('private@example.test', json_encode($storedAudit));
     }
 
+    public function test_payment_measurement_hints_do_not_mutate_saved_analytics_consent(): void
+    {
+        config([
+            'services.clip.api_key' => 'privacy-test-key',
+            'services.clip.api_secret' => 'privacy-test-secret',
+            'services.clip.checkout_url' => 'https://clip.example.test/checkout',
+        ]);
+        Http::fake([
+            'https://clip.example.test/checkout' => Http::response(['status' => 'REJECTED'], 422),
+        ]);
+
+        $user = User::factory()->create([
+            'balance' => 100,
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/payment/clip', [
+            'amount' => 100,
+            'description' => '100 Créditos Mercasto',
+            'product_code' => 'credits_100',
+            'openai_measurement_consent' => false,
+        ])->assertStatus(400);
+
+        $this->postJson('/api/payment/balance', [
+            'description' => '100 Créditos Mercasto',
+            'product_code' => 'credits_100',
+            'openai_measurement_consent' => false,
+        ])->assertStatus(400);
+
+        $preferences = $user->fresh()->notification_preferences;
+        $this->assertTrue((bool) ($preferences['analytics_tracking_consent'] ?? false));
+    }
+
     public function test_privacy_migration_sanitizes_legacy_rows_and_terminal_urls(): void
     {
         $user = User::factory()->create();

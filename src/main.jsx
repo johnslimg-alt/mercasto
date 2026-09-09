@@ -63,8 +63,10 @@ function scheduleNonCriticalBootstrap() {
 
     initBehaviorAnalytics();
     bootstrapPromise = Promise.allSettled([
-      loadMetaBridge().then(({ installMetaCapiBridge }) => {
+      loadMetaBridge().then(async ({ installMetaCapiBridge }) => {
         installMetaCapiBridge();
+        const { installOpenAIAdsBridge } = await import('./utils/openaiAdsBridge');
+        installOpenAIAdsBridge();
       }),
       import('./utils/paidAdRenewalBridge').then(({ installPaidAdRenewalBridge }) => {
         installPaidAdRenewalBridge();

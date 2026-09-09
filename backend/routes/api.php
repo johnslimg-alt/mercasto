@@ -238,6 +238,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead'])->whereNumber('id');
     Route::post('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений
     Route::delete('/user/notifications/{id}', [ProfileController::class, 'deleteNotification'])->whereNumber('id'); // Удалить уведомление
+    Route::post('/user/privacy/analytics-consent', [ProfileController::class, 'updateAnalyticsConsent']);
     Route::post('/user/preferences', [ProfileController::class, 'updatePreferences']); // Onboarding preferences
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('/chat/conversations', [ChatController::class, 'getConversations']);

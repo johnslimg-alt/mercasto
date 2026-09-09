@@ -4,8 +4,12 @@ namespace App\Observers;
 
 use App\Models\User;
 use App\Services\MetaCapiService;
+use App\Services\OpenAiAdsCapiService;
 use App\Services\TikTokEventsApiService;
+use App\Support\AnalyticsTrackingConsent;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use function Illuminate\Support\defer;
 
 class UserMetaRegistrationObserver
 {
@@ -67,6 +71,26 @@ class UserMetaRegistrationObserver
             $eventId,
             $eventSourceUrl
         );
+
+        if ($request->boolean('openai_measurement_consent')) {
+            DB::afterCommit(function () use ($request, $user, $eventId, $eventSourceUrl): void {
+                $userId = (int) $user->id;
+                defer(function () use ($request, $userId, $eventId, $eventSourceUrl): void {
+                    $persistedUser = User::find($userId);
+                    if (! AnalyticsTrackingConsent::current($persistedUser)) {
+                        return;
+                    }
+                    app(OpenAiAdsCapiService::class)->send(
+                        'registration_completed',
+                        $request,
+                        $persistedUser,
+                        ['type' => 'customer_action'],
+                        $eventId,
+                        $eventSourceUrl
+                    );
+                })->always();
+            });
+        }
     }
     private function registrationMethod($request): string
     {

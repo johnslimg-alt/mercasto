@@ -14,6 +14,7 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -113,6 +114,88 @@ class MarketplaceChatApiTest extends TestCase
             && $mail->conversationId === $conversation->id
             && $mail->localeCode === 'ru'
         );
+    }
+
+    public function test_only_first_successful_conversation_message_creates_openai_lead(): void
+    {
+        config([
+            'services.openai_ads.pixel_id' => 'px_chat_lead_test',
+            'services.openai_ads.api_key' => 'test-key',
+            'services.openai_ads.events_api_endpoint' => 'https://bzr.openai.com/v1/events',
+            'app.frontend_url' => 'https://mercasto.com',
+        ]);
+        Http::fake(['bzr.openai.com/*' => Http::response(['accepted' => 1], 200)]);
+
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => true],
+        ]);
+        $ad = $this->createAd($seller);
+
+        $first = $this->actingAs($buyer, 'sanctum')
+            ->withHeader('Referer', 'https://mercasto.com/mensajes?ad_id=' . $ad->id . '#composer')
+            ->postJson('/api/chat/messages', [
+                'receiver_id' => $seller->id,
+                'ad_id' => $ad->id,
+                'content' => '¿Sigue disponible?',
+                'openai_measurement_consent' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('lead_created', true);
+
+        $eventId = (string) $first->json('openai_lead_event_id');
+        $this->assertMatchesRegularExpression('/^lead_created_message_\d+$/', $eventId);
+
+        Http::assertSent(function ($request) use ($eventId) {
+            if (! str_contains($request->url(), 'bzr.openai.com')) {
+                return false;
+            }
+            $event = $request->data()['events'][0] ?? [];
+            $this->assertSame($eventId, $event['id'] ?? null);
+            $this->assertSame('lead_created', $event['type'] ?? null);
+            $this->assertSame('customer_action', $event['data']['type'] ?? null);
+            $this->assertSame('https://mercasto.com/mensajes', $event['source_url'] ?? null);
+            return true;
+        });
+
+        $second = $this->actingAs($buyer, 'sanctum')->postJson('/api/chat/messages', [
+            'receiver_id' => $seller->id,
+            'ad_id' => $ad->id,
+            'content' => 'Segundo mensaje',
+            'openai_measurement_consent' => true,
+        ])->assertOk()->assertJsonPath('lead_created', false);
+
+        $this->assertNull($second->json('openai_lead_event_id'));
+        $openAiRequests = collect(Http::recorded())->filter(
+            fn ($entry) => str_contains($entry[0]->url(), 'bzr.openai.com')
+        );
+        $this->assertCount(1, $openAiRequests);
+    }
+
+    public function test_withdrawn_server_consent_blocks_openai_lead_even_when_request_claims_opt_in(): void
+    {
+        config([
+            'services.openai_ads.pixel_id' => 'px_lead_test',
+            'services.openai_ads.api_key' => 'test-key',
+            'services.openai_ads.events_api_endpoint' => 'https://bzr.openai.com/v1/events',
+        ]);
+        Http::fake();
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create([
+            'notification_preferences' => ['analytics_tracking_consent' => false],
+        ]);
+        $ad = $this->createAd($seller);
+
+        $this->actingAs($buyer, 'sanctum')->postJson('/api/chat/messages', [
+            'receiver_id' => $seller->id,
+            'ad_id' => $ad->id,
+            'content' => '¿Sigue disponible?',
+            'openai_measurement_consent' => true,
+        ])->assertOk()
+            ->assertJsonPath('lead_created', true)
+            ->assertJsonMissingPath('openai_lead_event_id');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'bzr.openai.com'));
     }
 
     public function test_unread_message_notifications_coalesce_per_conversation_and_clear_on_read(): void

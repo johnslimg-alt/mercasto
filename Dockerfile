@@ -8,9 +8,11 @@ WORKDIR /app
 # They can still be overridden with Docker build args when needed.
 ARG VITE_ANALYTICS_ENABLED=true
 ARG VITE_META_PIXEL_ID=4595315270748335
+ARG VITE_OPENAI_ADS_PIXEL_ID=
 ARG VITE_BUYER_NUDGE_ROLLOUT_PERCENT=0
 ENV VITE_ANALYTICS_ENABLED=${VITE_ANALYTICS_ENABLED}
 ENV VITE_META_PIXEL_ID=${VITE_META_PIXEL_ID}
+ENV VITE_OPENAI_ADS_PIXEL_ID=${VITE_OPENAI_ADS_PIXEL_ID}
 ENV VITE_BUYER_NUDGE_ROLLOUT_PERCENT=${VITE_BUYER_NUDGE_ROLLOUT_PERCENT}
 
 # Копируем package.json/package-lock.json и устанавливаем зависимости воспроизводимо.
@@ -24,7 +26,8 @@ RUN npm run build
 # Fail the image build if the production bundle silently loses Meta Pixel again.
 # Use BusyBox-compatible short grep flags because the build image is Alpine.
 RUN grep -R -F "4595315270748335" /app/dist/assets >/dev/null \
-    && grep -R -F "connect.facebook.net/en_US/fbevents.js" /app/dist/assets >/dev/null
+    && grep -R -F "connect.facebook.net/en_US/fbevents.js" /app/dist/assets >/dev/null \
+    && if [ -n "${VITE_OPENAI_ADS_PIXEL_ID}" ]; then grep -R -F "${VITE_OPENAI_ADS_PIXEL_ID}" /app/dist/assets >/dev/null; fi
 
 # --- Этап раздачи (Serve Stage) ---
 FROM nginx:stable-alpine
