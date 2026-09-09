@@ -1053,12 +1053,17 @@ class AdController extends Controller
         $costPerAd = 50;
 
         $result = DB::transaction(function () use ($adIds, $user, $costPerAd) {
-            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
-
-            $ads = Ad::whereIn('id', $adIds)->where('user_id', $user->id)->lockForUpdate()->get();
+            // Keep the same lock order as single promotion (ad -> user) to avoid deadlocks.
+            $ads = Ad::whereIn('id', $adIds)
+                ->where('user_id', $user->id)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
             if ($ads->count() !== count($adIds)) {
                 return ['response' => response()->json(['message' => 'No tienes permisos para promocionar uno o más de estos anuncios.'], 403)];
             }
+
+            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
             $invalidIds = $ads
                 ->reject(fn (Ad $ad): bool => $this->isCreditPromotionEligible($ad))
@@ -2573,6 +2578,7 @@ class AdController extends Controller
             $result = DB::transaction(function () use ($adIds, $userId): array {
                 $ads = Ad::whereIn('id', $adIds)
                     ->where('user_id', $userId)
+                    ->orderBy('id')
                     ->lockForUpdate()
                     ->get();
 
