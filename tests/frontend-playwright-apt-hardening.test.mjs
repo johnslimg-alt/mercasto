@@ -51,6 +51,25 @@ test('every apt-dependent Playwright install path is hardened inside the same wo
   assert.ok(installCount >= 7, 'expected direct and wrapped Playwright with-deps paths to be covered');
 });
 
+test('frontend quality scope covers every workflow that depends on Playwright apt hardening', () => {
+  const frontend = read('.github/workflows/frontend-quality.yml');
+  const dependentWorkflows = [
+    'frontend-quality.yml',
+    'e2e-public-smoke.yml',
+    'e2e-seller.yml',
+    'legal-readiness.yml',
+    'public-ui-visual-evidence.yml',
+    'authenticated-cabinet-qa.yml',
+  ];
+  const pushBlock = frontend.slice(frontend.indexOf('  push:'), frontend.indexOf('  pull_request:'));
+  const scopeBlock = frontend.slice(frontend.indexOf('files="$(git diff'), frontend.indexOf('  static:'));
+  for (const workflow of dependentWorkflows) {
+    assert.ok(pushBlock.includes(`.github/workflows/${workflow}`), `push.paths misses ${workflow}`);
+    const stem = workflow.replace(/\.yml$/, '');
+    assert.ok(scopeBlock.includes(stem), `PR scope misses ${workflow}`);
+  }
+});
+
 test('hardening script changes trigger every dependent path-filtered workflow', () => {
   const frontend = read('.github/workflows/frontend-quality.yml');
   const frontendPush = frontend.slice(frontend.indexOf('  push:'), frontend.indexOf('  pull_request:'));
