@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\NewNotification;
 use App\Mail\SellerReactivationReminderMail;
 use App\Models\Ad;
+use App\Models\AdModerationDecision;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -121,6 +122,30 @@ class SellerReactivationReminderCommandTest extends TestCase
         Mail::assertQueuedCount(1);
     }
 
+    public function test_consumed_approval_does_not_send_follow_up_after_manual_archive(): void
+    {
+        $seller = User::factory()->create();
+        $ad = $this->readyAd($seller);
+
+        $this->artisan('ads:remind-reactivation', ['--execute' => true])
+            ->assertSuccessful();
+        DB::table('user_notifications')->update(['created_at' => now()->subHours(73)]);
+
+        $ad->forceFill([
+            'status' => 'archived',
+            'expires_at' => now()->addDays(6),
+            'republished_at' => now(),
+        ])->saveQuietly();
+
+        $this->artisan('ads:remind-reactivation', [
+            '--execute' => true,
+            '--follow-up-after' => 72,
+        ])->assertSuccessful();
+
+        $this->assertDatabaseCount('user_notifications', 1);
+        Mail::assertQueuedCount(1);
+    }
+
     public function test_email_opt_out_still_receives_one_in_app_reminder(): void
     {
         $seller = User::factory()->create([
@@ -140,7 +165,7 @@ class SellerReactivationReminderCommandTest extends TestCase
         static $counter = 0;
         $counter++;
 
-        return Ad::query()->create(array_merge([
+        $ad = Ad::query()->create(array_merge([
             'user_id' => $seller->id,
             'title' => "Anuncio listo {$counter}",
             'description' => 'Descripción permitida.',
@@ -158,5 +183,14 @@ class SellerReactivationReminderCommandTest extends TestCase
             'ai_moderated_at' => now()->subHour(),
             'is_catalog_filler' => false,
         ], $overrides));
+
+        AdModerationDecision::query()->create([
+            'ad_id' => $ad->id,
+            'source' => 'ai',
+            'decision' => 'approved',
+            'metadata' => ['activation_mode' => 'seller_confirmation_required'],
+        ]);
+
+        return $ad;
     }
 }

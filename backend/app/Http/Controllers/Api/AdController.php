@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ad;
-use App\Models\AdModerationDecision;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -959,34 +958,6 @@ class AdController extends Controller
             || ($ad->promoted === 'destacado' && $ad->boost_expires_at === null);
     }
 
-    private function isSellerConfirmationReactivationEligible(Ad $ad): bool
-    {
-        if ($ad->status !== 'archived'
-            || $ad->ai_moderation_status !== 'approved'
-            || $ad->is_catalog_filler
-            || $ad->expires_at !== null) {
-            return false;
-        }
-
-        $decision = AdModerationDecision::query()
-            ->where('ad_id', $ad->id)
-            ->latest('id')
-            ->first();
-
-        if (! $decision
-            || $decision->decision !== 'approved'
-            || data_get($decision->metadata, 'activation_mode') !== 'seller_confirmation_required') {
-            return false;
-        }
-
-        if (! $ad->republished_at) {
-            return true;
-        }
-
-        return $decision->created_at !== null
-            && $decision->created_at->gt($ad->republished_at);
-    }
-
     public function promoteWithCredits(Request $request, $id)
     {
         $validated = $request->validate([
@@ -1714,7 +1685,7 @@ class AdController extends Controller
      */
     public function myAds(Request $request, AdModerationGuidanceService $guidance)
     {
-        $ads = Ad::with(['user:' . self::PUBLIC_AD_USER_COLUMNS, 'latestModerationDecision'])
+        $ads = Ad::with(['user:' . self::PUBLIC_AD_USER_COLUMNS, 'latestModerationDecision', 'latestDecision'])
             ->addSelect(['whatsapp_clicks' => DB::table('ad_clicks')
                 ->selectRaw('count(*)')
                 ->whereColumn('ad_id', 'ads.id')
@@ -1729,7 +1700,9 @@ class AdController extends Controller
 
         $ads->getCollection()->transform(function (Ad $ad) use ($guidance) {
             $ad->setAttribute('seller_correction', $guidance->sellerCorrection($ad));
+            $ad->setAttribute('seller_confirmation_pending', $ad->isSellerConfirmationReactivationEligible());
             $ad->unsetRelation('latestModerationDecision');
+            $ad->unsetRelation('latestDecision');
             return $ad;
         });
 
@@ -2470,7 +2443,7 @@ class AdController extends Controller
         if ($request->user()->id !== $ad->user_id) {
             return response()->json(['message' => 'No tienes permisos para reactivar este anuncio'], 403);
         }
-        if ($this->isSellerConfirmationReactivationEligible($ad)) {
+        if ($ad->isSellerConfirmationReactivationEligible()) {
             $validated = $request->validate([
                 'confirm_available' => 'required|accepted',
                 'price' => 'required|numeric|min:0|max:9999999999.99',
@@ -2625,7 +2598,7 @@ class AdController extends Controller
                 $invalidIds = collect($adIds)->diff($ads->pluck('id'));
                 $invalidIds = $invalidIds->merge(
                     $ads->filter(function (Ad $ad): bool {
-                        return ! $this->isSellerConfirmationReactivationEligible($ad)
+                        return ! $ad->isSellerConfirmationReactivationEligible()
                             || ! is_numeric($ad->price)
                             || (float) $ad->price < 0
                             || (float) $ad->price > 9999999999.99

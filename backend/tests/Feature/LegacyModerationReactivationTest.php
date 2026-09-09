@@ -38,6 +38,26 @@ class LegacyModerationReactivationTest extends TestCase
         $this->assertDatabaseCount('payments', 0);
     }
 
+    public function test_user_ads_exposes_exact_seller_confirmation_pending_state(): void
+    {
+        $seller = User::factory()->create();
+        $ad = $this->legacyAd($seller);
+        Sanctum::actingAs($seller);
+
+        $this->getJson('/api/user/ads')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $ad->id)
+            ->assertJsonPath('data.0.seller_confirmation_pending', true);
+
+        $ad->forceFill([
+            'republished_at' => now()->addMinute(),
+        ])->saveQuietly();
+
+        $this->getJson('/api/user/ads')
+            ->assertOk()
+            ->assertJsonPath('data.0.seller_confirmation_pending', false);
+    }
+
     public function test_confirmation_and_approval_are_required(): void
     {
         $seller = User::factory()->create();

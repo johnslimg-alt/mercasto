@@ -29,14 +29,23 @@ class SendSellerReactivationReminders extends Command
         $execute = (bool) $this->option('execute');
 
         $candidates = Ad::query()
-            ->selectRaw('user_id, COUNT(*) as ready_count, MIN(COALESCE(ai_moderated_at, updated_at, created_at)) as ready_since')
+            ->with('latestDecision')
             ->where('is_catalog_filler', false)
             ->where('status', 'archived')
             ->where('ai_moderation_status', 'approved')
-            ->groupBy('user_id')
+            ->whereNull('expires_at')
             ->orderBy('user_id')
-            ->limit($limit)
-            ->get();
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (Ad $ad): bool => $ad->isSellerConfirmationReactivationEligible())
+            ->groupBy('user_id')
+            ->map(fn ($ads, $userId) => (object) [
+                'user_id' => (int) $userId,
+                'ready_count' => $ads->count(),
+            ])
+            ->sortBy('user_id')
+            ->take($limit)
+            ->values();
 
         $summary = [
             'inspected' => $candidates->count(),

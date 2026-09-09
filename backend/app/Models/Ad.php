@@ -243,6 +243,38 @@ class Ad extends Model
         return $this->hasMany(AdModerationDecision::class)->latest();
     }
 
+    public function latestDecision(): HasOne
+    {
+        return $this->hasOne(AdModerationDecision::class)->latestOfMany();
+    }
+
+    public function isSellerConfirmationReactivationEligible(): bool
+    {
+        if ($this->status !== 'archived'
+            || $this->ai_moderation_status !== 'approved'
+            || $this->is_catalog_filler
+            || $this->expires_at !== null) {
+            return false;
+        }
+
+        $decision = $this->relationLoaded('latestDecision')
+            ? $this->getRelation('latestDecision')
+            : $this->latestDecision()->first();
+
+        if (! $decision
+            || $decision->decision !== 'approved'
+            || data_get($decision->metadata, 'activation_mode') !== 'seller_confirmation_required') {
+            return false;
+        }
+
+        if ($this->republished_at === null) {
+            return true;
+        }
+
+        return $decision->created_at !== null
+            && $decision->created_at->gt($this->republished_at);
+    }
+
     public function latestModerationDecision(): HasOne
     {
         return $this->hasOne(AdModerationDecision::class)

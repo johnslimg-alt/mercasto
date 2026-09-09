@@ -41,6 +41,8 @@ test('review-ready bulk reactivation requires a current seller-confirmation wind
   assert.equal(isSellerConfirmationPending({ ...ready, republished_at: '2026-09-09T01:30:00Z' }), false);
   assert.equal(isSellerConfirmationPending({ ...ready, ai_moderation_status: 'manual_review' }), false);
   assert.equal(isSellerConfirmationPending({ ...ready, is_catalog_filler: true }), false);
+  assert.equal(isSellerConfirmationPending({ ...ready, seller_confirmation_pending: false }), false);
+  assert.equal(isReviewReadyForBulkReactivation({ ...ready, seller_confirmation_pending: false }), false);
 });
 
 test('credit promotion is limited to visible live ads without an active promotion', () => {
