@@ -1129,7 +1129,7 @@ function createPopupElement(ad, marker) {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3.5 sm:p-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3.5 sm:p-4 no-scrollbar">
         <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 transition-colors focus-within:border-[#84CC16] focus-within:ring-2 focus-within:ring-[#84CC16]/20">
           <Search size={15} className="shrink-0 text-[#84CC16]" />
           <input

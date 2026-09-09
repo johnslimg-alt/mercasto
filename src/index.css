@@ -1828,16 +1828,14 @@ html.dark .btn-lg.bg-white:hover {
 /* Mercasto UI polish: scrollable surfaces stay fully functional without browser-style rails. */
 html,
 body,
-#root,
-* {
+#root {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
-#root::-webkit-scrollbar,
-*::-webkit-scrollbar {
+#root::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
   display: none !important;

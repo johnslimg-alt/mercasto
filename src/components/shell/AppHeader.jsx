@@ -221,7 +221,7 @@ export default function AppHeader({
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800 font-bold text-slate-900 dark:text-white flex justify-between items-center">
                       <span>{t.notifications_title || t.notifications}</span>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
+                    <div className="max-h-80 overflow-y-auto no-scrollbar">
                     {notifications.length === 0
                       ? <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-[13px]">{t.notifications_empty_title}</div>
                       : notifications.slice(0, 5).map(n => {

@@ -5,11 +5,22 @@ import test from 'node:test';
 const css = fs.readFileSync('src/index.css', 'utf8');
 const header = fs.readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
 const home = fs.readFileSync('src/components/screens/HomeScreen.jsx', 'utf8');
+const map = fs.readFileSync('src/components/common/MapV3.jsx', 'utf8');
+const catalog = fs.readFileSync('src/components/screens/CatalogScreen.jsx', 'utf8');
+const chat = fs.readFileSync('src/components/screens/ChatScreen.jsx', 'utf8');
+const moderation = fs.readFileSync('src/components/admin/AdminModerationCenter.jsx', 'utf8');
 
-test('scrollbars are visually hidden without disabling scrolling', () => {
-  assert.match(css, /\*[\s\S]{0,80}scrollbar-width:\s*none/);
-  assert.match(css, /\*::\-webkit-scrollbar[\s\S]{0,120}display:\s*none\s*!important/);
+test('decorative scrollbars are hidden without disabling essential vertical scroll controls', () => {
+  assert.match(css, /html,[\s\S]{0,80}#root \{[\s\S]{0,80}scrollbar-width:\s*none/);
+  assert.equal(css.includes('*::-webkit-scrollbar'), false);
+  assert.equal(css.includes('* {\n  scrollbar-width: none'), false);
   assert.equal(css.includes('overflow: hidden !important; /* global scrollbar'), false);
+  assert.match(map, /overflow-y-auto[^"]*no-scrollbar/);
+  assert.match(catalog, /overflow-y-auto no-scrollbar/);
+  assert.match(chat, /overflow-y-auto/);
+  assert.doesNotMatch(chat, /overflow-y-auto[^"]*no-scrollbar/);
+  assert.match(moderation, /overflow-y-auto/);
+  assert.doesNotMatch(moderation, /overflow-y-auto[^"]*no-scrollbar/);
 });
 
 test('header uses compact geometry and removes the redundant AI strip', () => {
