@@ -128,6 +128,36 @@ class AdPromotionEligibilityTest extends TestCase
         $this->assertSame(150.0, (float) $owner->fresh()->balance);
     }
 
+    public function test_bulk_credit_promotion_replaces_expired_ledger_before_recharging(): void
+    {
+        Carbon::setTestNow('2026-09-09 04:00:00');
+        $owner = $this->seller();
+        $ad = $this->ad($owner, [
+            'promoted' => 'destacado',
+            'boost_type' => 'featured_7_days',
+            'boost_expires_at' => now()->subMinute(),
+        ]);
+        DB::table('ad_promotions')->insert([
+            'ad_id' => $ad->id,
+            'type' => 'vip',
+            'expires_at' => now()->subMinute(),
+            'created_at' => now()->subDays(8),
+            'updated_at' => now()->subDays(8),
+        ]);
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/ads/promote/credits/bulk', ['ad_ids' => [$ad->id]])
+            ->assertOk()
+            ->assertJsonPath('promoted_ids.0', $ad->id);
+
+        $this->assertSame(150.0, (float) $owner->fresh()->balance);
+        $this->assertDatabaseCount('ad_promotions', 1);
+        $ledger = DB::table('ad_promotions')->where('ad_id', $ad->id)->first();
+        $this->assertNotNull($ledger);
+        $this->assertTrue(Carbon::parse($ledger->expires_at)->isFuture());
+        $this->assertTrue($ad->fresh()->boost_expires_at->isFuture());
+    }
+
     private function seller(): User
     {
         return User::factory()->create([

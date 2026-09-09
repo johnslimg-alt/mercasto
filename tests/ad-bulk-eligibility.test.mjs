@@ -4,6 +4,7 @@ import {
   isAdCreditPromotionEligible,
   isPausedAdBulkActivatable,
   isReviewReadyForBulkReactivation,
+  isSellerConfirmationPending,
 } from '../src/utils/adBulkEligibility.js';
 
 const NOW = Date.parse('2026-09-09T02:00:00Z');
@@ -24,12 +25,22 @@ test('paused bulk activation requires a live expiry', () => {
   assert.equal(isPausedAdBulkActivatable({ status: 'archived', expires_at: future }, NOW), false);
 });
 
-test('review-ready bulk reactivation requires approval and complete current details', () => {
-  const ready = { ...complete, status: 'archived', ai_moderation_status: 'approved' };
+test('review-ready bulk reactivation requires a current seller-confirmation window and complete details', () => {
+  const ready = {
+    ...complete,
+    status: 'archived',
+    ai_moderation_status: 'approved',
+    expires_at: null,
+    ai_moderated_at: '2026-09-09T01:00:00Z',
+    republished_at: null,
+  };
+  assert.equal(isSellerConfirmationPending(ready), true);
   assert.equal(isReviewReadyForBulkReactivation(ready), true);
   assert.equal(isReviewReadyForBulkReactivation({ ...ready, city: '' }), false);
-  assert.equal(isReviewReadyForBulkReactivation({ ...ready, ai_moderation_status: 'manual_review' }), false);
-  assert.equal(isReviewReadyForBulkReactivation({ ...ready, is_catalog_filler: true }), false);
+  assert.equal(isSellerConfirmationPending({ ...ready, expires_at: future }), false);
+  assert.equal(isSellerConfirmationPending({ ...ready, republished_at: '2026-09-09T01:30:00Z' }), false);
+  assert.equal(isSellerConfirmationPending({ ...ready, ai_moderation_status: 'manual_review' }), false);
+  assert.equal(isSellerConfirmationPending({ ...ready, is_catalog_filler: true }), false);
 });
 
 test('credit promotion is limited to visible live ads without an active promotion', () => {

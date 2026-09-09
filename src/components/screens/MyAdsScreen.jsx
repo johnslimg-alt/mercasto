@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { AlertTriangle, BarChart3, CheckSquare, ExternalLink, Loader2, Pencil, PlusCircle, Square, Trash2, TrendingUp, X, Zap } from 'lucide-react';
 import { localizedText } from '../../utils/localize';
 import { formatMXN, formatNumber } from '../../utils/localeFormat';
-import { isAdCreditPromotionEligible, isPausedAdBulkActivatable, isReviewReadyForBulkReactivation } from '../../utils/adBulkEligibility';
+import { isAdCreditPromotionEligible, isPausedAdBulkActivatable, isReviewReadyForBulkReactivation, isSellerConfirmationPending } from '../../utils/adBulkEligibility';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
 
@@ -108,7 +108,7 @@ export default function MyAdsScreen({
     featured: userAds.filter(ad => ad.promoted || ad.is_featured).length,
     draft: userAds.filter(ad => ad.status === 'draft').length,
     pending: userAds.filter(ad => ad.status === 'pending' || awaitsHumanReview(ad)).length,
-    review_ready: userAds.filter(ad => ad.status === 'archived' && ad.ai_moderation_status === 'approved').length,
+    review_ready: userAds.filter(isSellerConfirmationPending).length,
     needs_correction: userAds.filter(requiresSellerCorrection).length,
     sold: userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad) && !awaitsHumanReview(ad))).length,
     rejected: userAds.filter(ad => ad.status === 'rejected').length,
@@ -121,7 +121,7 @@ export default function MyAdsScreen({
     else if (filter === 'featured') list = userAds.filter(ad => ad.promoted || ad.is_featured);
     else if (filter === 'draft') list = userAds.filter(ad => ad.status === 'draft');
     else if (filter === 'pending') list = userAds.filter(ad => ad.status === 'pending' || awaitsHumanReview(ad));
-    else if (filter === 'review_ready') list = userAds.filter(ad => ad.status === 'archived' && ad.ai_moderation_status === 'approved');
+    else if (filter === 'review_ready') list = userAds.filter(isSellerConfirmationPending);
     else if (filter === 'needs_correction') list = userAds.filter(requiresSellerCorrection);
     else if (filter === 'sold') list = userAds.filter(ad => ad.status === 'sold' || ad.status === 'inactive' || (ad.status === 'archived' && ad.ai_moderation_status !== 'approved' && !requiresSellerCorrection(ad) && !awaitsHumanReview(ad)));
     else if (filter === 'rejected') list = userAds.filter(ad => ad.status === 'rejected');
@@ -369,7 +369,7 @@ export default function MyAdsScreen({
                        ad.status === 'expired' ? (t.expired_status || 'Expirado') :
                        ad.status === 'draft' ? (t.draft_status || 'Borrador') :
                        ad.status === 'pending' ? (t.pending_status || 'En Moderación') :
-                       ad.status === 'archived' && ad.ai_moderation_status === 'approved' ? (t.review_ready_status) :
+                       isSellerConfirmationPending(ad) ? (t.review_ready_status) :
                        correction ? (t.needs_correction_status) :
                        pendingHumanReview ? (t.pending_status || 'En Moderación') :
                        ad.status === 'sold' || ad.status === 'inactive' || ad.status === 'archived' ? (t.sold_status || 'Vendido') :
@@ -424,10 +424,10 @@ export default function MyAdsScreen({
                   <Link to={`/anuncio/${ad.id}/editar`} data-testid={`edit-ad-${ad.id}`} className={`btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1 text-[11px] ${correction ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-200' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'}`}><Pencil className="w-3 h-3" /> {correction ? (t.correct_and_resubmit) : (t.edit || 'Editar')}</Link>
                   {ad.status === 'active' && <button data-testid={`pause-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.pause || 'Pausar'}</button>}
                   {ad.status === 'paused' && <button data-testid={`reactivate-ad-${ad.id}`} onClick={() => handleToggleAdStatus(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px]"><Zap className="w-3 h-3" /> {t.reactivate || 'Reactivar'}</button>}
-                  {ad.status === 'archived' && ad.ai_moderation_status === 'approved' && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate}</button>}
+                  {isSellerConfirmationPending(ad) && <button data-testid={`confirm-reactivation-ad-${ad.id}`} disabled={bulkLoading} onClick={() => confirmLegacyReactivation(ad)} className="btn-sm flex-1 sm:flex-none bg-lime-50 hover:bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:hover:bg-lime-900/50 dark:text-lime-300 flex items-center justify-center gap-1 text-[11px] disabled:opacity-50"><Zap className="w-3 h-3" /> {t.confirm_and_reactivate}</button>}
                   {(() => { const d = daysUntilExpiry(ad.expires_at); return (d !== null && d <= 7 && ad.status === 'active') ? <button onClick={() => handleRenewAd(ad)} className="btn-sm flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 flex items-center justify-center gap-1 text-[11px]">{t.renew || 'Renew'}</button> : null; })()}
                   {ad.status === 'expired' && <button data-testid={`republish-ad-${ad.id}`} onClick={() => handleRepublishAd(ad)} className="btn-sm flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 flex items-center justify-center gap-1 text-[11px]">{t.republish || 'Republicar'}</button>}
-                  {ad.status === 'active' && PROMO_CATEGORIES.map((key) => {
+                  {isAdCreditPromotionEligible(ad) && PROMO_CATEGORIES.map((key) => {
                     const isActiveHere = promo && promo.category === key;
                     const label = key === 'boost' ? (t.promo_boost || 'Subir')
                       : key === 'highlight' ? (t.promo_highlight || 'Resaltar')

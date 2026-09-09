@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ad;
+use App\Models\AdModerationDecision;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -958,6 +959,34 @@ class AdController extends Controller
             || ($ad->promoted === 'destacado' && $ad->boost_expires_at === null);
     }
 
+    private function isSellerConfirmationReactivationEligible(Ad $ad): bool
+    {
+        if ($ad->status !== 'archived'
+            || $ad->ai_moderation_status !== 'approved'
+            || $ad->is_catalog_filler
+            || $ad->expires_at !== null) {
+            return false;
+        }
+
+        $decision = AdModerationDecision::query()
+            ->where('ad_id', $ad->id)
+            ->latest('id')
+            ->first();
+
+        if (! $decision
+            || $decision->decision !== 'approved'
+            || data_get($decision->metadata, 'activation_mode') !== 'seller_confirmation_required') {
+            return false;
+        }
+
+        if (! $ad->republished_at) {
+            return true;
+        }
+
+        return $decision->created_at !== null
+            && $decision->created_at->gt($ad->republished_at);
+    }
+
     public function promoteWithCredits(Request $request, $id)
     {
         $validated = $request->validate([
@@ -967,6 +996,9 @@ class AdController extends Controller
         $type = self::CREDITS_PROMO_TYPES[$validated['type'] ?? 'highlight'];
 
         $result = DB::transaction(function () use ($id, $user, $type) {
+            // Balance checkout locks user first, then touches the ad. Keep the same
+            // order here so concurrent payment paths cannot create a user↔ad cycle.
+            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $ad = Ad::whereKey($id)->lockForUpdate()->firstOrFail();
 
             if ($user->id !== $ad->user_id && $user->role !== 'admin') {
@@ -978,9 +1010,6 @@ class AdController extends Controller
                     'message' => 'Solo puedes promocionar anuncios activos y vigentes.',
                 ], 422)];
             }
-
-            // Lock user + ad together so concurrent requests cannot double-spend credits.
-            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
             if ($this->hasActiveCreditPromotion($ad)) {
                 return ['response' => response()->json(['message' => 'Este anuncio ya tiene una promoción activa.'], 400)];
@@ -1027,7 +1056,7 @@ class AdController extends Controller
                 'boost_expires_at' => $expiresAt->toIso8601String(),
                 'promoted' => $type['promoted'],
             ];
-        });
+        }, 3);
 
         if (isset($result['response'])) {
             return $result['response'];
@@ -1062,7 +1091,9 @@ class AdController extends Controller
         $costPerAd = 50;
 
         $result = DB::transaction(function () use ($adIds, $user, $costPerAd) {
-            // Keep the same lock order as single promotion (ad -> user) to avoid deadlocks.
+            // Match balance checkout and single-credit promotion: user first, then ads
+            // in deterministic id order.
+            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $ads = Ad::whereIn('id', $adIds)
                 ->where('user_id', $user->id)
                 ->orderBy('id')
@@ -1071,8 +1102,6 @@ class AdController extends Controller
             if ($ads->count() !== count($adIds)) {
                 return ['response' => response()->json(['message' => 'No tienes permisos para promocionar uno o más de estos anuncios.'], 403)];
             }
-
-            $creditUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
             $invalidIds = $ads
                 ->reject(fn (Ad $ad): bool => $this->isCreditPromotionEligible($ad))
@@ -1118,13 +1147,15 @@ class AdController extends Controller
                 $ad->save();
                 $promotedIds[] = $ad->id;
 
-                DB::table('ad_promotions')->insert([
-                    'ad_id' => $ad->id,
-                    'type' => 'highlight',
-                    'expires_at' => $promotionExpiresAt,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
+                DB::table('ad_promotions')->updateOrInsert(
+                    ['ad_id' => $ad->id],
+                    [
+                        'type' => 'highlight',
+                        'expires_at' => $promotionExpiresAt,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]
+                );
             }
 
             return [
@@ -1133,7 +1164,7 @@ class AdController extends Controller
                 'promoted_ids' => $promotedIds,
                 'skipped_count' => count($adIds) - $eligibleAds->count(),
             ];
-        });
+        }, 3);
 
         if (isset($result['response'])) {
             return $result['response'];
@@ -2439,7 +2470,7 @@ class AdController extends Controller
         if ($request->user()->id !== $ad->user_id) {
             return response()->json(['message' => 'No tienes permisos para reactivar este anuncio'], 403);
         }
-        if ($ad->status === 'archived' && $ad->ai_moderation_status === 'approved') {
+        if ($this->isSellerConfirmationReactivationEligible($ad)) {
             $validated = $request->validate([
                 'confirm_available' => 'required|accepted',
                 'price' => 'required|numeric|min:0|max:9999999999.99',
@@ -2594,9 +2625,7 @@ class AdController extends Controller
                 $invalidIds = collect($adIds)->diff($ads->pluck('id'));
                 $invalidIds = $invalidIds->merge(
                     $ads->filter(function (Ad $ad): bool {
-                        return $ad->status !== 'archived'
-                            || $ad->ai_moderation_status !== 'approved'
-                            || $ad->is_catalog_filler
+                        return ! $this->isSellerConfirmationReactivationEligible($ad)
                             || ! is_numeric($ad->price)
                             || (float) $ad->price < 0
                             || (float) $ad->price > 9999999999.99
