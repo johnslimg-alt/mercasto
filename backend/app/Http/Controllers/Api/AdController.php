@@ -426,6 +426,9 @@ class AdController extends Controller
             ")->latest();
         }
 
+        // Keep offset pagination stable when primary sort values tie.
+        $query->orderByDesc('ads.id');
+
         // Кэшируем главную страницу (без фильтров) на 60 секунд в Redis, чтобы выдерживать DDoS
         // Защита от Cache Bypass: проверяем только реальные параметры фильтрации, игнорируя мусорные
         $hasFilters = $request->anyFilled([
