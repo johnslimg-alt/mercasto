@@ -55,7 +55,10 @@ class AuthController extends Controller
             ->where('created_at', '>=', now()->subDay())
             ->count();
             
-        if ($recentAccounts >= 3 && !str_starts_with($request->email, 'e2e_')) {
+        $testingE2eBypass = app()->environment('testing')
+            && str_starts_with((string) $request->email, 'e2e_');
+
+        if ($recentAccounts >= 3 && ! $testingE2eBypass) {
             throw ValidationException::withMessages([
                 'ip_address' => ['Has alcanzado el límite de cuentas creadas desde esta red (IP) por hoy. Intenta de nuevo mañana.'],
             ]);
