@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Ad;
+use App\Models\Category;
 use App\Models\SearchAlert;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -204,6 +205,99 @@ class CategoryAttributeContractTest extends TestCase
             ->assertJsonPath('attributes.property_type', 'casa');
 
         $this->assertSame('approved', $ad->fresh()->ai_moderation_status);
+    }
+
+
+    public function test_legacy_update_can_preserve_missing_global_subcategory_contract(): void
+    {
+        $category = Category::create([
+            'slug' => 'legacy-edit-contract',
+            'name' => ['es' => 'Legacy edit', 'en' => 'Legacy edit'],
+            'icon' => 'Archive',
+        ]);
+        $user = User::factory()->create();
+        $ad = Ad::query()->create([
+            'user_id' => $user->id,
+            'title' => 'Legacy sin subcategoría',
+            'description' => 'Contenido estable',
+            'price' => 1200,
+            'location' => 'Veracruz',
+            'state' => 'Veracruz',
+            'city' => 'Veracruz',
+            'latitude' => 19.1738,
+            'longitude' => -96.1342,
+            'category' => $category->slug,
+            'subcategory' => null,
+            'condition' => 'usado',
+            'attributes' => null,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user, 'sanctum')->postJson("/api/ads/{$ad->id}", [
+            'title' => $ad->title,
+            'description' => $ad->description,
+            'price' => $ad->price,
+            'location' => $ad->location,
+            'state' => $ad->state,
+            'city' => $ad->city,
+            'latitude' => $ad->latitude,
+            'longitude' => $ad->longitude,
+            'category' => $ad->category,
+            'condition' => $ad->condition,
+            'existing_images' => [],
+        ])->assertOk()->assertJsonPath('status', 'active');
+
+        $ad->refresh();
+        $this->assertNull($ad->subcategory);
+        $this->assertSame('active', $ad->status);
+    }
+
+    public function test_legacy_update_still_requires_real_required_category_attributes(): void
+    {
+        $category = Category::create([
+            'slug' => 'legacy-edit-required',
+            'name' => ['es' => 'Legacy required', 'en' => 'Legacy required'],
+            'icon' => 'Archive',
+        ]);
+        DB::table('category_attributes')->insert([
+            'category_id' => $category->id,
+            'key' => 'serial_number',
+            'label' => json_encode(['es' => 'Serie', 'en' => 'Serial']),
+            'type' => 'text',
+            'options' => null,
+            'required' => true,
+            'sort_order' => 1,
+        ]);
+        $user = User::factory()->create();
+        $ad = Ad::query()->create([
+            'user_id' => $user->id,
+            'title' => 'Legacy required',
+            'description' => 'Contenido estable',
+            'price' => 1200,
+            'location' => 'Veracruz',
+            'state' => 'Veracruz',
+            'city' => 'Veracruz',
+            'latitude' => 19.1738,
+            'longitude' => -96.1342,
+            'category' => $category->slug,
+            'condition' => 'usado',
+            'attributes' => null,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user, 'sanctum')->postJson("/api/ads/{$ad->id}", [
+            'title' => $ad->title,
+            'description' => $ad->description,
+            'price' => $ad->price,
+            'location' => $ad->location,
+            'state' => $ad->state,
+            'city' => $ad->city,
+            'latitude' => $ad->latitude,
+            'longitude' => $ad->longitude,
+            'category' => $ad->category,
+            'condition' => $ad->condition,
+            'existing_images' => [],
+        ])->assertStatus(422)->assertJsonValidationErrors(['attributes.serial_number']);
     }
 
 }

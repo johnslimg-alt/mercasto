@@ -61,6 +61,8 @@ export default function EditAdScreen({ t, lang }) {
   const [error, setError] = useState(null);
   const [ad, setAd] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [initialCategory, setInitialCategory] = useState('');
+  const [initialSubcategory, setInitialSubcategory] = useState('');
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
@@ -119,6 +121,9 @@ export default function EditAdScreen({ t, lang }) {
         const conditionMap = { 'nuevo': 'Nuevo', 'used': 'Bueno', 'usado': 'Bueno' };
         const rawCond = adData.condition || '';
         const normalizedCondition = conditionMap[rawCond.toLowerCase()] || rawCond || 'Nuevo';
+        const loadedSubcategory = adData.subcategory || parsedAttrs.subcategory || '';
+        setInitialCategory(adData.category || '');
+        setInitialSubcategory(loadedSubcategory);
         setForm({
           title: localizedText(adData.title) || '',
           description: localizedText(adData.description) || '',
@@ -128,7 +133,7 @@ export default function EditAdScreen({ t, lang }) {
           state: adData.state || '',
           latitude: adData.latitude ?? '',
           longitude: adData.longitude ?? '',
-          subcategory: adData.subcategory || parsedAttrs.subcategory || '',
+          subcategory: loadedSubcategory,
           category: adData.category || '',
           condition: normalizedCondition,
           attributes: parsedAttrs
@@ -169,10 +174,15 @@ export default function EditAdScreen({ t, lang }) {
     return filterConfig[form.category] || [];
   }, [apiCategoryFields, form.category]);
 
-  const subcategoryOptions = useMemo(
-    () => autofillSubcategoryOptions(form.category, lang),
-    [form.category, lang],
-  );
+  const subcategoryOptions = useMemo(() => {
+    const current = autofillSubcategoryOptions(form.category, lang);
+    const legacyValue = form.subcategory;
+    if (!legacyValue || current.some((option) => String(option.value) === String(legacyValue))) return current;
+    // Keep a persisted legacy subcategory visible/selectable even when the
+    // current taxonomy no longer offers it. A manual category change clears
+    // it, while an unchanged legacy listing remains editable and saveable.
+    return [{ value: legacyValue, label: legacyValue }, ...current];
+  }, [form.category, form.subcategory, lang]);
 
   // Older listings may persist a display label (for example "Casa") while
   // the current runtime schema uses a canonical value (for example "casa").
@@ -196,6 +206,9 @@ export default function EditAdScreen({ t, lang }) {
       return changed ? { ...current, attributes } : current;
     });
   }, [categoryFields, form.category]);
+
+  const subcategoryRequired = subcategoryOptions.length > 0
+    && (form.category !== initialCategory || Boolean(initialSubcategory));
 
   const resolveAutofillSubcategory = (category, hint) => {
     if (!category || !hint) return null;
@@ -246,10 +259,11 @@ export default function EditAdScreen({ t, lang }) {
     e.preventDefault(); setSaving(true); setError(null);
     try {
       const formData = new FormData();
-      ['title','description','price','location','city','state','latitude','longitude','subcategory','category'].forEach((key) => {
+      ['title','description','price','location','city','state','latitude','longitude','category'].forEach((key) => {
         formData.append(key, form[key] ?? '');
       });
       formData.append('condition', form.condition === 'Nuevo' ? 'nuevo' : 'usado');
+      if (form.subcategory) formData.append('subcategory', form.subcategory);
       const attributesForSubmit = {
         ...form.attributes,
         ...(form.subcategory ? { subcategory: form.subcategory } : {}),
@@ -399,7 +413,7 @@ export default function EditAdScreen({ t, lang }) {
               aria-label={t.post_select_subcategory}
               value={form.subcategory}
               onChange={e => setForm(p => ({ ...p, subcategory: e.target.value }))}
-              required
+              required={subcategoryRequired}
               className={fieldClass}
             >
               <option value="">{t.post_select_subcategory}</option>
