@@ -74,6 +74,37 @@ class EmailIdentityIntegrityTest extends TestCase
         ])->assertOk()->assertJsonPath('user.email', 'Legacy.Login@example.com');
     }
 
+    public function test_forgot_password_uses_stored_email_for_unique_mixed_case_identity(): void
+    {
+        Mail::fake();
+        User::factory()->create(['email' => 'Recovery.Mixed@example.com']);
+
+        $this->postJson('/api/forgot-password', [
+            'email' => 'recovery.mixed@example.com',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('password_reset_tokens', ['email' => 'Recovery.Mixed@example.com']);
+        $this->assertDatabaseMissing('password_reset_tokens', ['email' => 'recovery.mixed@example.com']);
+    }
+
+    public function test_email_verification_resolves_unique_mixed_case_identity_case_insensitively(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'Verify.Mixed@example.com',
+            'email_verified_at' => null,
+            'email_verification_token' => 'verify-case-token',
+        ]);
+
+        $this->postJson('/api/email/verify', [
+            'email' => 'verify.mixed@example.com',
+            'token' => 'verify-case-token',
+        ])->assertOk();
+
+        $fresh = $user->fresh();
+        $this->assertNotNull($fresh->email_verified_at);
+        $this->assertNull($fresh->email_verification_token);
+    }
+
     public function test_profile_email_change_rejects_case_variant_of_another_account(): void
     {
         Mail::fake();
