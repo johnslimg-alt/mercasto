@@ -464,29 +464,32 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email|max:255']);
 
-        $user = \App\Models\User::where('email', $request->email)->first();
+        $user = EmailIdentity::resolveLogin((string) $request->email);
 
-        // Always return the same response regardless of whether email exists (prevent enumeration)
+        // Always return the same response regardless of whether email exists (prevent enumeration).
+        // Recovery uses the stored identity spelling so unique legacy mixed-case accounts work
+        // case-insensitively, while ambiguous legacy duplicates still require an exact spelling.
         if ($user) {
             $token = Str::random(60);
-            
+            $recipientEmail = (string) $user->email;
+
             DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $request->email],
+                ['email' => $recipientEmail],
                 ['token' => Hash::make($token), 'created_at' => now()]
             );
 
-        $resetUrl = config('app.frontend_url', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($request->email);
+            $resetUrl = config('app.frontend_url', 'https://mercasto.com') . "/?reset_token={$token}&email=" . urlencode($recipientEmail);
 
             // Защита от Time-Based Enumeration: асинхронная отправка письма
-            dispatch(function() use ($request, $resetUrl) {
+            dispatch(function() use ($recipientEmail, $resetUrl) {
                 Mail::send('emails.action', [
                     'title' => 'Restablecer tu contraseña',
                     'body' => 'Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en Mercasto. Haz clic en el botón de abajo para elegir una nueva contraseña.',
                     'actionText' => 'Restablecer Contraseña',
                     'actionUrl' => $resetUrl,
                     'footer' => 'Si no solicitaste este cambio, puedes ignorar o eliminar este correo de forma segura. Tu cuenta seguirá protegida.'
-                ], function($message) use ($request) {
-                    $message->to($request->email)->subject('Restablecer contraseña - Mercasto');
+                ], function($message) use ($recipientEmail) {
+                    $message->to($recipientEmail)->subject('Restablecer contraseña - Mercasto');
                 });
             });
         } else {
@@ -503,27 +506,26 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
             'token' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();
+        $user = EmailIdentity::resolveLogin((string) $request->email);
+        if (! $user) {
+            return response()->json(['message' => 'El token es inválido o ha expirado.'], 400);
+        }
+
+        $storedEmail = (string) $user->email;
+        $record = DB::table('password_reset_tokens')->where('email', $storedEmail)->first();
         if (!$record || !Hash::check($request->token, $record->token)) {
             return response()->json(['message' => 'El token es inválido o ha expirado.'], 400);
         }
 
         // Reject tokens older than 1 hour
         if (\Carbon\Carbon::parse($record->created_at)->addHour()->isPast()) {
-            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            DB::table('password_reset_tokens')->where('email', $storedEmail)->delete();
             return response()->json(['message' => 'El token ha expirado. Por favor solicita uno nuevo.'], 400);
-        }
-
-        $user = User::where('email', $request->email)->first();
-        
-        // Защита от Fatal Error 500, если пользователь удалил аккаунт до сброса пароля
-        if (!$user) {
-            return response()->json(['message' => 'Usuario no encontrado.'], 404);
         }
         
         $user->password = Hash::make($request->password);
@@ -532,7 +534,7 @@ class AuthController extends Controller
         // Revoke ALL existing tokens to force re-login everywhere
         $user->tokens()->delete();
 
-        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+        DB::table('password_reset_tokens')->where('email', $storedEmail)->delete();
 
         return response()->json(['message' => 'Contraseña restablecida exitosamente. Por favor inicia sesión.']);
     }

@@ -5,10 +5,11 @@ MIGRATION='backend/database/migrations/2026_09_09_150000_enforce_case_insensitiv
 HELPER='backend/app/Support/EmailIdentity.php'
 AUTH='backend/app/Http/Controllers/Api/AuthController.php'
 PROFILE='backend/app/Http/Controllers/Api/ProfileController.php'
+VERIFY='backend/app/Http/Controllers/Api/EmailVerificationController.php'
 BOOTSTRAP='backend/bootstrap/app.php'
 TEST='backend/tests/Feature/EmailIdentityIntegrityTest.php'
 
-for file in "$MIGRATION" "$HELPER" "$AUTH" "$PROFILE" "$BOOTSTRAP" "$TEST"; do
+for file in "$MIGRATION" "$HELPER" "$AUTH" "$PROFILE" "$VERIFY" "$BOOTSTRAP" "$TEST"; do
   test -f "$file"
 done
 
@@ -20,6 +21,11 @@ grep -qF 'EmailIdentity::exists' "$AUTH"
 grep -qF 'EmailIdentity::matches' "$AUTH"
 grep -qF 'EmailIdentity::resolveLogin' "$AUTH"
 grep -qF 'EmailIdentity::normalize' "$AUTH"
+grep -qF 'EmailIdentity::resolveLogin((string) $request->email)' "$AUTH"
+grep -qF '$storedEmail = (string) $user->email;' "$AUTH"
+grep -qF "password_reset_tokens')->where('email'" "$AUTH"
+grep -qF '$storedEmail' "$AUTH"
+grep -qF 'EmailIdentity::resolveLogin' "$VERIFY"
 grep -qF 'oauth_email_ambiguous' "$AUTH"
 grep -qF 'EmailIdentity::exists' "$PROFILE"
 grep -qF 'users_email_case_insensitive_unique' "$BOOTSTRAP"
