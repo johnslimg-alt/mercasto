@@ -151,3 +151,22 @@ test('recommendation carousel exposes honest previous and next states', async ({
   await previous.click();
   await expect.poll(() => scroller.evaluate(node => node.scrollLeft)).toBeLessThan(atEnd - 20);
 });
+
+test('home never reveals synthetic vertical listings when real feeds are empty', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookie_consent', 'essential');
+  });
+  await mockHomeApi(page);
+  await page.goto('/');
+  await page.waitForTimeout(4000);
+  for (const syntheticTitle of [
+    'Senior React Developer',
+    'Nissan Versa 2021 Advance',
+    'House Cleaning Pro',
+  ]) {
+    await expect(page.getByText(syntheticTitle, { exact: false })).toHaveCount(0);
+  }
+});

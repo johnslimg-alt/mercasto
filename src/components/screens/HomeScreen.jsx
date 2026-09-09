@@ -100,28 +100,6 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
         .finally(() => setFeaturedLoading(false));
     }, []);
 
-    // Lazy-load heavy mockData fallbacks only when needed (after mount, off critical path)
-    const [mockFallbacks, setMockFallbacks] = React.useState(null);
-    React.useEffect(() => {
-      const timer = setTimeout(() => {
-        import('../../constants/mockData').then(m => {
-          setMockFallbacks({
-            spotlightRealEstate: m.spotlightRealEstate,
-            jobsBoard: m.jobsBoard,
-            servicesMarketplace: m.servicesMarketplace,
-            automotiveDeals: m.automotiveDeals,
-            recentlyViewed: m.recentlyViewed,
-          });
-        });
-      }, 3500);
-      return () => clearTimeout(timer);
-    }, []);
-    const spotlightRealEstate = mockFallbacks?.spotlightRealEstate || [];
-    const jobsBoard = mockFallbacks?.jobsBoard || [];
-    const servicesMarketplace = mockFallbacks?.servicesMarketplace || [];
-    const automotiveDeals = mockFallbacks?.automotiveDeals || [];
-    const recentlyViewed = mockFallbacks?.recentlyViewed || [];
-
     const VERTICAL_SLUGS = {
       'coches-y-motor': '/motor',
       'motor': '/motor',
@@ -614,7 +592,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                 <div className="col-span-12 xl:col-span-8">
 
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(safeRealEstateAds.length > 0 ? safeRealEstateAds.slice(0, 3) : spotlightRealEstate).map((item, idx) => {
+                    {safeRealEstateAds.slice(0, 3).map((item, idx) => {
                       const isReal = Boolean(item.id);
                       if (isReal) {
                         return (
@@ -719,7 +697,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                     </thead>
 
                     <tbody className="">
-                      {(safeJobAds.length > 0 ? safeJobAds.slice(0, 3) : jobsBoard.slice(0, 3)).map((job, idx) => {
+                      {safeJobAds.slice(0, 3).map((job, idx) => {
                         const isReal = Boolean(job.id);
                         if (isReal) {
                           return (
@@ -810,7 +788,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
               </div>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(safeServiceAds.length > 0 ? safeServiceAds.slice(0, 3) : servicesMarketplace.slice(0, 3)).map((srv, idx) => {
+                {safeServiceAds.slice(0, 3).map((srv, idx) => {
                   const isReal = Boolean(srv.id);
                   if (isReal) {
                     const imgSrc = srv.image_url ? getImageUrl(srv.image_url) : '/placeholder-ad.svg';
@@ -920,7 +898,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                {(safeAutomotiveAds.length > 0 ? safeAutomotiveAds.slice(0, 3) : automotiveDeals.slice(0, 3)).map((car, idx) => {
+                {safeAutomotiveAds.slice(0, 3).map((car, idx) => {
                   const isReal = Boolean(car.id);
                   if (isReal) {
                     const imgSrc = car.image_url ? getImageUrl(car.image_url) : '/placeholder-ad.svg';
