@@ -110,6 +110,7 @@ class SitemapController extends Controller
 
         // Factual source pages and legal pages with canonical frontend routes.
         $legalPages = [
+            'vendedores' => ['weekly', '0.9'],
             'como-funciona' => ['monthly', '0.8'],
             'seguridad' => ['monthly', '0.8'],
             'ayuda/publicar-anuncio' => ['monthly', '0.8'],

@@ -17,8 +17,7 @@ export const staticClientRedirects = {
   '/account/billing': { expectedPath: '/profile', expectedSearch: '?tab=transactions' },
   '/account/promotions': { expectedPath: '/tarifas' },
   '/admin/login': { expectedPath: '/admin' },
-  '/vendedores': { expectedPath: '/post', preMount: true },
-  '/publicar-gratis': { expectedPath: '/post', preMount: true },
+  '/publicar-gratis': { expectedPath: '/vendedores', preMount: true },
 };
 
 export const clientDynamicPatterns = [

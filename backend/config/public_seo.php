@@ -2,6 +2,12 @@
 
 return [
     'pages' => [
+        'vendedores' => [
+            'type' => 'WebPage',
+            'name' => 'Vender en Mercasto',
+            'title' => 'Vende en Mercasto | Empieza gratis en México',
+            'description' => 'Empieza con el plan gratuito de Mercasto: hasta 3 anuncios al mes y primera activación elegible por 7 días sin costo. Renovación y promociones son opcionales y de pago.',
+        ],
         'tiendas' => [
             'type' => 'CollectionPage',
             'name' => 'Tiendas y negocios',

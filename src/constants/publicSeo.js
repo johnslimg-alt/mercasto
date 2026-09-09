@@ -3,6 +3,10 @@ import { getContactPageCopy } from '../utils/contactPageCopy.js';
 import { getHelpCenterCopy } from '../utils/helpCenterCopy.js';
 
 export const PUBLIC_SEO_ROUTES = Object.freeze({
+  '/vendedores': {
+    title: 'Vende en Mercasto | Empieza gratis en México',
+    description: 'Empieza con el plan gratuito de Mercasto: hasta 3 anuncios al mes y primera activación elegible por 7 días sin costo. Renovación y promociones son opcionales y de pago.',
+  },
   '/tiendas': {
     title: 'Tiendas y Negocios en México | Mercasto',
     description: 'Explora perfiles de tiendas y negocios que publican anuncios clasificados en Mercasto México.',
