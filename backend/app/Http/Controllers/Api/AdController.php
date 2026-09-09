@@ -27,6 +27,7 @@ use App\Models\User;
 use App\Services\AdModerationGuidanceService;
 use App\Services\ListingQualityPreflightService;
 use App\Support\PrivacyFingerprint;
+use App\Support\TrustedE2eAccount;
 use Illuminate\Support\Facades\Mail;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
@@ -64,10 +65,6 @@ class AdController extends Controller
     private function validateCategoryAttributes(Request $request): void
     {
         $attributes = $request->input('attributes', []);
-        \Log::info('VALIDATION ATTRS', [
-            'category' => $request->input('category'),
-            'attributes' => $attributes
-        ]);
         $errors = [];
         $aliases = [
             'brand' => 'marca',
@@ -543,7 +540,7 @@ class AdController extends Controller
         $user = $request->user();
         $monthlyAds = Ad::where('user_id', $user->id)->where('created_at', '>=', now()->startOfMonth())->count();
         $maxAds = $this->monthlyAdLimit($user);
-        if ($monthlyAds >= $maxAds && $user->role !== 'admin' && !(str_starts_with($user->email, 'e2e_') || str_contains($user->email, '_e2e@'))) {
+        if ($monthlyAds >= $maxAds && $user->role !== 'admin' && ! TrustedE2eAccount::matches($user)) {
             return response()->json(['message' => "Has alcanzado el límite de {$maxAds} anuncios mensuales de tu plan. Actualiza tu plan para publicar más."], 403);
         }
 

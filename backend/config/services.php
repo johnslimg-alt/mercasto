@@ -33,6 +33,17 @@ return [
         'admin_email' => env('ADMIN_EMAIL'),
     ],
 
+    'trusted_e2e_accounts' => [
+        'seller' => [
+            'email' => env('E2E_SELLER_EMAIL', 'seller_e2e@mercasto.com'),
+            'role' => 'individual',
+        ],
+        'admin' => [
+            'email' => env('E2E_ADMIN_EMAIL', 'admin_e2e@mercasto.com'),
+            'role' => 'admin',
+        ],
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
