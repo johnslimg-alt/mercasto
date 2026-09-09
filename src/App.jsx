@@ -9,6 +9,7 @@ import { appendDynamicFilters, parseDynamicFilters } from './utils/filterUrlStat
 import { createOAuthRegistrationUrl, createRegistrationConsentPayload } from './utils/registrationConsent';
 import { isOpenAIAdsMeasurementAllowed } from './utils/trackingConsent';
 import { clearPublishDraft } from './utils/publishDraft';
+import { isAdCreditPromotionEligible } from './utils/adBulkEligibility';
 import { ensurePushSubscription, fetchVapidPublicKey } from './utils/webPush';
 import { subcategoriesByLang } from './constants/subcategoryTranslations';
 import { getVerticalCanonicalAlias, getVerticalSeo } from './constants/verticalSeo';
@@ -1584,13 +1585,17 @@ function App() {
   useEffect(() => { if (userRole === 'business') setAccountType('pro'); }, [userRole]);
 
   const promotableAds = useMemo(
-    () => (Array.isArray(userAds) ? userAds : []).filter(ad => ad.status === 'active'),
+    () => (Array.isArray(userAds) ? userAds : []).filter(isAdCreditPromotionEligible),
     [userAds]
   );
 
   useEffect(() => {
-    if (!showPricingModal || promotionTargetAdId || promotableAds.length === 0) return;
-    setPromotionTargetAdId(String(promotableAds[0].id));
+    if (!showPricingModal) return;
+    const selectedStillEligible = promotableAds.some(
+      ad => String(ad.id) === String(promotionTargetAdId || '')
+    );
+    if (selectedStillEligible) return;
+    setPromotionTargetAdId(promotableAds.length > 0 ? String(promotableAds[0].id) : '');
   }, [showPricingModal, promotionTargetAdId, promotableAds]);
 
   useEffect(() => { setDashboardPage(1); }, [dashboardTab, adStatusFilter]);

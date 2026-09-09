@@ -28,24 +28,27 @@ class SendSellerReactivationReminders extends Command
         $limit = max(1, min(1000, (int) $this->option('limit')));
         $execute = (bool) $this->option('execute');
 
-        $candidates = Ad::query()
-            ->with('latestDecision')
-            ->where('is_catalog_filler', false)
-            ->where('status', 'archived')
-            ->where('ai_moderation_status', 'approved')
-            ->whereNull('expires_at')
+        $sellerIds = Ad::query()
+            ->sellerConfirmationPending()
+            ->select('user_id')
+            ->distinct()
             ->orderBy('user_id')
-            ->orderBy('id')
-            ->get()
-            ->filter(fn (Ad $ad): bool => $ad->isSellerConfirmationReactivationEligible())
-            ->groupBy('user_id')
-            ->map(fn ($ads, $userId) => (object) [
-                'user_id' => (int) $userId,
-                'ready_count' => $ads->count(),
-            ])
-            ->sortBy('user_id')
-            ->take($limit)
-            ->values();
+            ->limit($limit)
+            ->pluck('user_id');
+
+        $candidates = $sellerIds->isEmpty()
+            ? collect()
+            : Ad::query()
+                ->sellerConfirmationPending()
+                ->whereIn('user_id', $sellerIds)
+                ->selectRaw('user_id, COUNT(*) AS ready_count')
+                ->groupBy('user_id')
+                ->orderBy('user_id')
+                ->get()
+                ->map(fn ($row) => (object) [
+                    'user_id' => (int) $row->user_id,
+                    'ready_count' => (int) $row->ready_count,
+                ]);
 
         $summary = [
             'inspected' => $candidates->count(),

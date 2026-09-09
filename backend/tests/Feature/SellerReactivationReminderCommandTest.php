@@ -146,6 +146,51 @@ class SellerReactivationReminderCommandTest extends TestCase
         Mail::assertQueuedCount(1);
     }
 
+    public function test_limit_bounds_seller_set_and_preserves_ready_counts(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $third = User::factory()->create();
+        $this->readyAd($first, ['title' => 'Primero A']);
+        $this->readyAd($first, ['title' => 'Primero B']);
+        $this->readyAd($second, ['title' => 'Segundo']);
+        $this->readyAd($third, ['title' => 'Tercero']);
+
+        $this->artisan('ads:remind-reactivation', [
+            '--execute' => true,
+            '--limit' => 2,
+        ])->assertSuccessful();
+
+        $reminders = DB::table('user_notifications')
+            ->where('type', 'seller_reactivation_reminder')
+            ->orderBy('user_id')
+            ->get();
+
+        $this->assertCount(2, $reminders);
+        $this->assertSame([$first->id, $second->id], $reminders->pluck('user_id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame([2, 1], $reminders->map(fn ($row) => (int) json_decode($row->data, true)['ready_count'])->all());
+        $this->assertDatabaseMissing('user_notifications', [
+            'user_id' => $third->id,
+            'type' => 'seller_reactivation_reminder',
+        ]);
+    }
+
+    public function test_consumed_decision_is_excluded_when_republished_after_approval(): void
+    {
+        $seller = User::factory()->create();
+        $ad = $this->readyAd($seller);
+        $ad->forceFill([
+            'expires_at' => null,
+            'republished_at' => now()->addMinute(),
+        ])->saveQuietly();
+
+        $this->artisan('ads:remind-reactivation', ['--execute' => true])
+            ->assertSuccessful();
+
+        $this->assertDatabaseCount('user_notifications', 0);
+        Mail::assertNothingQueued();
+    }
+
     public function test_email_opt_out_still_receives_one_in_app_reminder(): void
     {
         $seller = User::factory()->create([

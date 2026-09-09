@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -246,6 +247,25 @@ class Ad extends Model
     public function latestDecision(): HasOne
     {
         return $this->hasOne(AdModerationDecision::class)->latestOfMany();
+    }
+
+    public function scopeSellerConfirmationPending(Builder $query): Builder
+    {
+        return $query
+            ->where('is_catalog_filler', false)
+            ->where('status', 'archived')
+            ->where('ai_moderation_status', 'approved')
+            ->whereNull('expires_at')
+            ->whereHas('latestDecision', function (Builder $decisionQuery): void {
+                $decisionQuery
+                    ->where('decision', 'approved')
+                    ->where('metadata->activation_mode', 'seller_confirmation_required')
+                    ->where(function (Builder $freshDecision): void {
+                        $freshDecision
+                            ->whereNull('ads.republished_at')
+                            ->orWhereColumn('ad_moderation_decisions.created_at', '>', 'ads.republished_at');
+                    });
+            });
     }
 
     public function isSellerConfirmationReactivationEligible(): bool

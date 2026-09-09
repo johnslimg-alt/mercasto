@@ -78,6 +78,15 @@ test('admin screen uses active locale for labels, money, numbers and dates', () 
   ]) assert.ok(source.includes(marker), marker);
   assert.equal(source.includes("toLocaleString('es-MX')"), false);
   assert.equal(source.includes("toLocaleDateString('es-MX')"), false);
+  assert.ok(source.includes("payment.status === 'paid_review'"));
+  assert.ok(source.includes("t.payment_status_review || 'En revisión'"));
+});
+
+test('paid review payment status is localized in every active language', async () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const t = await translationsFor(lang);
+    assert.ok(String(t.payment_status_review || '').trim(), `${lang}.payment_status_review`);
+  }
 });
 
 test('admin mutation methods and payloads stay unchanged', () => {

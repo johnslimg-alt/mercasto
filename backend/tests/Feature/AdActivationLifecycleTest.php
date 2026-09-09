@@ -265,6 +265,13 @@ class AdActivationLifecycleTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('confirm_available');
 
+        $decisionQueryCount = 0;
+        DB::listen(function ($query) use (&$decisionQueryCount): void {
+            if (str_contains(strtolower($query->sql), 'ad_moderation_decisions')) {
+                $decisionQueryCount++;
+            }
+        });
+
         $this->actingAs($owner, 'sanctum')
             ->postJson('/api/ads/bulk-action', [
                 'action' => 'confirm_reactivate',
@@ -273,6 +280,8 @@ class AdActivationLifecycleTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('affected', 2);
+
+        $this->assertSame(1, $decisionQueryCount, 'latest moderation decisions must be eager-loaded once for the locked bulk selection');
 
         foreach ([$first->fresh(), $second->fresh()] as $ad) {
             $this->assertSame('active', $ad->status);

@@ -573,6 +573,7 @@ export default {
   "payment_status_approved": "Одобрено",
   "payment_status_failed": "Не удалось",
   "payment_status_pending": "Ожидание оплаты",
+  "payment_status_review": "На проверке",
   "pending_ads": "Ожидающие объявления",
   "personal_info": "Личная информация",
   "phone": "Контактный телефон",

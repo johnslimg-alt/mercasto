@@ -2592,6 +2592,7 @@ class AdController extends Controller
             $result = DB::transaction(function () use ($adIds, $userId): array {
                 $ads = Ad::whereIn('id', $adIds)
                     ->where('user_id', $userId)
+                    ->with('latestDecision')
                     ->orderBy('id')
                     ->lockForUpdate()
                     ->get();
