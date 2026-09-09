@@ -151,6 +151,53 @@ class GamificationReviewMilestoneTest extends TestCase
         ]);
     }
 
+    public function test_unlocking_same_achievement_twice_awards_xp_only_once(): void
+    {
+        $user = User::factory()->create(['id' => 2000]);
+        $achievement = \App\Models\Achievement::query()->where('slug', 'first_review')->firstOrFail();
+        $service = app(GamificationService::class);
+
+        $first = $service->unlockAchievement($user, $achievement);
+        $second = $service->unlockAchievement($user, $achievement);
+
+        $this->assertTrue($first['unlocked_now']);
+        $this->assertFalse($second['unlocked_now']);
+        $this->assertSame(1, DB::table('xp_transactions')
+            ->where('user_id', $user->id)
+            ->where('reason', 'achievement:first_review')
+            ->count());
+        $this->assertSame((int) $achievement->xp_reward, (int) DB::table('user_xp')
+            ->where('user_id', $user->id)
+            ->value('total_xp'));
+    }
+
+    public function test_repeated_same_day_activity_awards_daily_login_xp_only_once(): void
+    {
+        $user = User::factory()->create(['id' => 2000]);
+        DB::table('user_xp')->insert([
+            'user_id' => $user->id,
+            'total_xp' => 0,
+            'level' => 1,
+            'current_streak' => 1,
+            'longest_streak' => 1,
+            'last_activity_date' => now()->subDay()->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $service = app(GamificationService::class);
+        $first = $service->recordActivity($user, 'login');
+        $second = $service->recordActivity($user, 'login');
+
+        $this->assertSame(2, $first['streak']);
+        $this->assertFalse($second['is_new_streak']);
+        $this->assertSame(1, DB::table('xp_transactions')
+            ->where('user_id', $user->id)
+            ->where('reason', 'daily_login')
+            ->count());
+        $this->assertSame(10, (int) DB::table('user_xp')->where('user_id', $user->id)->value('total_xp'));
+    }
+
     public function test_review_save_stays_successful_when_gamification_sync_fails(): void
     {
         $seller = User::factory()->create(['id' => 2000]);

@@ -14,52 +14,58 @@ class GamificationService
      */
     public function awardXp(User $user, int $amount, string $reason, ?string $refType = null, ?int $refId = null): array
     {
-        $userXp = DB::table('user_xp')->where('user_id', $user->id)->first();
+        return DB::transaction(function () use ($user, $amount, $reason, $refType, $refId): array {
+            $now = now();
 
-        if (!$userXp) {
-            DB::table('user_xp')->insert([
+            DB::table('user_xp')->insertOrIgnore([
                 'user_id' => $user->id,
-                'total_xp' => $amount,
+                'total_xp' => 0,
                 'level' => 1,
                 'current_streak' => 0,
                 'longest_streak' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
-        } else {
+
+            $userXp = DB::table('user_xp')
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $userXp) {
+                throw new \RuntimeException('Unable to initialize gamification XP state.');
+            }
+
+            $previousTotal = (int) $userXp->total_xp;
+            $newTotal = $previousTotal + $amount;
+            $previousLevel = Achievement::getLevelForXp($previousTotal);
+            $levelData = Achievement::getLevelForXp($newTotal);
+
             DB::table('user_xp')->where('user_id', $user->id)->update([
-                'total_xp' => $userXp->total_xp + $amount,
-                'last_xp_gain_at' => now(),
-                'updated_at' => now(),
+                'total_xp' => $newTotal,
+                'level' => $levelData['level'],
+                'last_xp_gain_at' => $now,
+                'updated_at' => $now,
             ]);
-        }
 
-        // Log transaction
-        DB::table('xp_transactions')->insert([
-            'user_id' => $user->id,
-            'amount' => $amount,
-            'reason' => $reason,
-            'reference_type' => $refType,
-            'reference_id' => $refId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            DB::table('xp_transactions')->insert([
+                'user_id' => $user->id,
+                'amount' => $amount,
+                'reason' => $reason,
+                'reference_type' => $refType,
+                'reference_id' => $refId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
 
-        // Recalculate level
-        $newTotal = ($userXp ? $userXp->total_xp : 0) + $amount;
-        $levelData = Achievement::getLevelForXp($newTotal);
-
-        DB::table('user_xp')->where('user_id', $user->id)->update([
-            'level' => $levelData['level'],
-        ]);
-
-        return [
-            'xp_gained' => $amount,
-            'total_xp' => $newTotal,
-            'level' => $levelData['level'],
-            'level_name' => $levelData['name'],
-            'level_up' => $userXp && Achievement::getLevelForXp($userXp->total_xp)['level'] < $levelData['level'],
-        ];
+            return [
+                'xp_gained' => $amount,
+                'total_xp' => $newTotal,
+                'level' => $levelData['level'],
+                'level_name' => $levelData['name'],
+                'level_up' => $previousLevel['level'] < $levelData['level'],
+            ];
+        });
     }
 
     /**
@@ -97,29 +103,33 @@ class GamificationService
                 $requirementMet
             );
 
-            // Update progress
-            if ($userAch) {
-                DB::table('user_achievements')
-                    ->where('id', $userAch->id)
-                    ->update([
-                        'progress' => $storedProgress,
-                        'updated_at' => now(),
-                    ]);
-            } else {
-                DB::table('user_achievements')->insert([
-                    'user_id' => $user->id,
-                    'achievement_id' => $achievement->id,
-                    'progress' => $storedProgress,
-                    'unlocked' => false,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+            // Ensure the progress row exists without racing another sync, then only
+            // update progress while the achievement is still locked.
+            $now = now();
+            DB::table('user_achievements')->insertOrIgnore([
+                'user_id' => $user->id,
+                'achievement_id' => $achievement->id,
+                'progress' => $storedProgress,
+                'unlocked' => false,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
 
-            // Check if should unlock
-            if ($requirementMet && (!$userAch || !$userAch->unlocked)) {
-                $this->unlockAchievement($user, $achievement);
-                $newlyUnlocked[] = $achievement;
+            DB::table('user_achievements')
+                ->where('user_id', $user->id)
+                ->where('achievement_id', $achievement->id)
+                ->where('unlocked', false)
+                ->update([
+                    'progress' => $storedProgress,
+                    'updated_at' => $now,
+                ]);
+
+            // Only the request that atomically flips locked -> unlocked may award XP.
+            if ($requirementMet) {
+                $unlockResult = $this->unlockAchievement($user, $achievement);
+                if ($unlockResult['unlocked_now']) {
+                    $newlyUnlocked[] = $achievement;
+                }
             }
         }
 
@@ -131,36 +141,58 @@ class GamificationService
      */
     public function unlockAchievement(User $user, Achievement $achievement): array
     {
-        DB::table('user_achievements')
-            ->updateOrInsert(
-                ['user_id' => $user->id, 'achievement_id' => $achievement->id],
-                [
-                    'progress' => $achievement->requirement_value,
+        return DB::transaction(function () use ($user, $achievement): array {
+            $now = now();
+
+            // Keep the method safe even if called directly before a progress row exists.
+            DB::table('user_achievements')->insertOrIgnore([
+                'user_id' => $user->id,
+                'achievement_id' => $achievement->id,
+                'progress' => 0,
+                'unlocked' => false,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $claimed = DB::table('user_achievements')
+                ->where('user_id', $user->id)
+                ->where('achievement_id', $achievement->id)
+                ->where('unlocked', false)
+                ->update([
+                    'progress' => (int) $achievement->requirement_value,
                     'unlocked' => true,
-                    'unlocked_at' => now(),
-                    'updated_at' => now(),
-                ]
+                    'unlocked_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+            if ($claimed !== 1) {
+                return [
+                    'achievement' => $achievement,
+                    'xp_result' => null,
+                    'unlocked_now' => false,
+                ];
+            }
+
+            $xpResult = $this->awardXp(
+                $user,
+                (int) $achievement->xp_reward,
+                'achievement:' . $achievement->slug,
+                'achievement',
+                $achievement->id
             );
 
-        // Award XP
-        $xpResult = $this->awardXp(
-            $user,
-            $achievement->xp_reward,
-            'achievement:' . $achievement->slug,
-            'achievement',
-            $achievement->id
-        );
+            Log::info('Achievement unlocked', [
+                'user_id' => $user->id,
+                'achievement' => $achievement->slug,
+                'xp_gained' => $achievement->xp_reward,
+            ]);
 
-        Log::info('Achievement unlocked', [
-            'user_id' => $user->id,
-            'achievement' => $achievement->slug,
-            'xp_gained' => $achievement->xp_reward,
-        ]);
-
-        return [
-            'achievement' => $achievement,
-            'xp_result' => $xpResult,
-        ];
+            return [
+                'achievement' => $achievement,
+                'xp_result' => $xpResult,
+                'unlocked_now' => true,
+            ];
+        });
     }
 
     /**
@@ -226,62 +258,77 @@ class GamificationService
      */
     public function recordActivity(User $user, string $type = 'login'): array
     {
-        $today = now()->toDateString();
-        $yesterday = now()->subDay()->toDateString();
+        return DB::transaction(function () use ($user, $type): array {
+            $now = now();
+            $today = $now->toDateString();
+            $yesterday = $now->copy()->subDay()->toDateString();
 
-        // Record today's activity
-        DB::table('activity_streaks')->updateOrInsert(
-            ['user_id' => $user->id, 'activity_date' => $today, 'activity_type' => $type],
-            ['created_at' => now(), 'updated_at' => now()]
-        );
+            // Serialize activity initialization per user. This avoids relying on
+            // driver-specific insertOrIgnore row counts and closes first-login races.
+            $lockedUserId = DB::table('users')
+                ->where('id', $user->id)
+                ->lockForUpdate()
+                ->value('id');
 
-        // Get or create user_xp
-        $userXp = DB::table('user_xp')->where('user_id', $user->id)->first();
+            if (! $lockedUserId) {
+                throw new \RuntimeException('Unable to lock gamification user state.');
+            }
 
-        if (!$userXp) {
-            DB::table('user_xp')->insert([
+            DB::table('activity_streaks')->insertOrIgnore([
                 'user_id' => $user->id,
-                'total_xp' => 0,
-                'level' => 1,
-                'current_streak' => 1,
-                'longest_streak' => 1,
-                'last_activity_date' => $today,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'activity_date' => $today,
+                'activity_type' => $type,
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
 
-            return ['streak' => 1, 'is_new_streak' => true];
-        }
+            $userXp = DB::table('user_xp')
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
 
-        // Check if already active today
-        if ($userXp->last_activity_date === $today) {
-            return ['streak' => $userXp->current_streak, 'is_new_streak' => false];
-        }
+            if (! $userXp) {
+                DB::table('user_xp')->insert([
+                    'user_id' => $user->id,
+                    'total_xp' => 0,
+                    'level' => 1,
+                    'current_streak' => 1,
+                    'longest_streak' => 1,
+                    'last_activity_date' => $today,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
 
-        // Check if yesterday was active (continue streak)
-        $newStreak = ($userXp->last_activity_date === $yesterday)
-            ? $userXp->current_streak + 1
-            : 1;
+                return ['streak' => 1, 'is_new_streak' => true];
+            }
 
-        $longestStreak = max($userXp->longest_streak, $newStreak);
+            if ($userXp->last_activity_date === $today) {
+                return ['streak' => (int) $userXp->current_streak, 'is_new_streak' => false];
+            }
 
-        DB::table('user_xp')->where('user_id', $user->id)->update([
-            'current_streak' => $newStreak,
-            'longest_streak' => $longestStreak,
-            'last_activity_date' => $today,
-            'updated_at' => now(),
-        ]);
+            $currentStreak = (int) $userXp->current_streak;
+            $newStreak = ($userXp->last_activity_date === $yesterday)
+                ? $currentStreak + 1
+                : 1;
+            $longestStreak = max((int) $userXp->longest_streak, $newStreak);
 
-        // Award XP for daily login
-        if ($userXp->last_activity_date !== $today) {
+            DB::table('user_xp')->where('user_id', $user->id)->update([
+                'current_streak' => $newStreak,
+                'longest_streak' => $longestStreak,
+                'last_activity_date' => $today,
+                'updated_at' => $now,
+            ]);
+
+            // The user_xp row is locked for this transaction, so concurrent logins
+            // cannot both award the same daily-login XP.
             $this->awardXp($user, 10, 'daily_login');
-        }
 
-        return [
-            'streak' => $newStreak,
-            'longest_streak' => $longestStreak,
-            'is_new_streak' => $newStreak > $userXp->current_streak,
-        ];
+            return [
+                'streak' => $newStreak,
+                'longest_streak' => $longestStreak,
+                'is_new_streak' => $newStreak > $currentStreak,
+            ];
+        });
     }
 
     /**
