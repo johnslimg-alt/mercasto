@@ -61,6 +61,8 @@ export default function EditAdScreen({ t, lang }) {
   const [error, setError] = useState(null);
   const [ad, setAd] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [initialCategory, setInitialCategory] = useState('');
+  const [initialSubcategory, setInitialSubcategory] = useState('');
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
@@ -119,6 +121,9 @@ export default function EditAdScreen({ t, lang }) {
         const conditionMap = { 'nuevo': 'Nuevo', 'used': 'Bueno', 'usado': 'Bueno' };
         const rawCond = adData.condition || '';
         const normalizedCondition = conditionMap[rawCond.toLowerCase()] || rawCond || 'Nuevo';
+        const loadedSubcategory = adData.subcategory || parsedAttrs.subcategory || '';
+        setInitialCategory(adData.category || '');
+        setInitialSubcategory(loadedSubcategory);
         setForm({
           title: localizedText(adData.title) || '',
           description: localizedText(adData.description) || '',
@@ -128,7 +133,7 @@ export default function EditAdScreen({ t, lang }) {
           state: adData.state || '',
           latitude: adData.latitude ?? '',
           longitude: adData.longitude ?? '',
-          subcategory: adData.subcategory || parsedAttrs.subcategory || '',
+          subcategory: loadedSubcategory,
           category: adData.category || '',
           condition: normalizedCondition,
           attributes: parsedAttrs
@@ -169,6 +174,16 @@ export default function EditAdScreen({ t, lang }) {
     return filterConfig[form.category] || [];
   }, [apiCategoryFields, form.category]);
 
+  const subcategoryOptions = useMemo(() => {
+    const current = autofillSubcategoryOptions(form.category, lang);
+    const legacyValue = form.subcategory;
+    if (!legacyValue || current.some((option) => String(option.value) === String(legacyValue))) return current;
+    // Keep a persisted legacy subcategory visible/selectable even when the
+    // current taxonomy no longer offers it. A manual category change clears
+    // it, while an unchanged legacy listing remains editable and saveable.
+    return [{ value: legacyValue, label: legacyValue }, ...current];
+  }, [form.category, form.subcategory, lang]);
+
   // Older listings may persist a display label (for example "Casa") while
   // the current runtime schema uses a canonical value (for example "casa").
   // Normalize loaded attributes as soon as the applicable schema is available
@@ -191,6 +206,9 @@ export default function EditAdScreen({ t, lang }) {
       return changed ? { ...current, attributes } : current;
     });
   }, [categoryFields, form.category]);
+
+  const subcategoryRequired = subcategoryOptions.length > 0
+    && (form.category !== initialCategory || Boolean(initialSubcategory));
 
   const resolveAutofillSubcategory = (category, hint) => {
     if (!category || !hint) return null;
@@ -241,11 +259,16 @@ export default function EditAdScreen({ t, lang }) {
     e.preventDefault(); setSaving(true); setError(null);
     try {
       const formData = new FormData();
-      ['title','description','price','location','city','state','latitude','longitude','subcategory','category'].forEach((key) => {
+      ['title','description','price','location','city','state','latitude','longitude','category'].forEach((key) => {
         formData.append(key, form[key] ?? '');
       });
       formData.append('condition', form.condition === 'Nuevo' ? 'nuevo' : 'usado');
-      Object.entries(form.attributes).forEach(([k, v]) => {
+      if (form.subcategory) formData.append('subcategory', form.subcategory);
+      const attributesForSubmit = {
+        ...form.attributes,
+        ...(form.subcategory ? { subcategory: form.subcategory } : {}),
+      };
+      Object.entries(attributesForSubmit).forEach(([k, v]) => {
         if (Array.isArray(v)) v.forEach(val => formData.append(`attributes[${k}][]`, val));
         else if (v !== '' && v !== null && v !== undefined) formData.append(`attributes[${k}]`, v);
       });
@@ -371,7 +394,9 @@ export default function EditAdScreen({ t, lang }) {
 
         <div>
           <label className={labelClass}>{t.category} *</label>
-          <select aria-label={t.category} value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value, attributes: {}}))}
+          <select aria-label={t.category} value={form.category} onChange={e => setForm(p => ({
+            ...p, category: e.target.value, subcategory: '', attributes: {},
+          }))}
             required className={fieldClass}>
             <option value="">{t.select_category}</option>
             {categories.map(cat => (
@@ -379,6 +404,25 @@ export default function EditAdScreen({ t, lang }) {
             ))}
           </select>
         </div>
+
+        {form.category && subcategoryOptions.length > 0 && (
+          <div>
+            <label className={labelClass}>{t.post_select_subcategory} *</label>
+            <select
+              data-testid="edit-ad-subcategory"
+              aria-label={t.post_select_subcategory}
+              value={form.subcategory}
+              onChange={e => setForm(p => ({ ...p, subcategory: e.target.value }))}
+              required={subcategoryRequired}
+              className={fieldClass}
+            >
+              <option value="">{t.post_select_subcategory}</option>
+              {subcategoryOptions.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {form.category && (loadingCategoryFields || categoryFields.length > 0) && (
           <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-slate-50/50 dark:bg-slate-900">

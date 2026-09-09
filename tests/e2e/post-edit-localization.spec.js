@@ -302,3 +302,40 @@ test('edit canonicalizes a legacy runtime option after loading the current schem
   await expect(field.locator('option[value="casa"]')).toHaveText('Casa');
   await expect(field).toHaveValue('casa');
 });
+
+test('edit preserves a legacy subcategory and mirrors it into the required attributes contract', async ({ page }) => {
+  await installSession(page, 'es');
+  let saveBody = '';
+  await page.route('**/api/**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path === '/api/user') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 91, name: 'QA User', email: 'qa@example.test', role: 'individual', is_verified: true, account_verified: true }) });
+    if (path === '/api/categories') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 1, slug: 'articulos_camping', name: { es: 'Artículos de camping' } }, { id: 2, slug: 'motor', name: { es: 'Motor' } }]) });
+    if (path === '/api/category-attributes') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    if (path === '/api/ads/9/edit') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      id: 9, title: 'Camping QA', description: 'QA', price: 1200, category: 'articulos_camping', subcategory: 'Camping', condition: 'usado',
+      state: 'Veracruz', city: 'Boca del Río', location: 'Boca del Río', latitude: 19.1, longitude: -96.1,
+      image_url: null, attributes: {}, status: 'active',
+    }) });
+    if (path === '/api/ads/9' && request.method() === 'POST') {
+      saveBody = request.postData() || '';
+      return route.fulfill({ status: 422, contentType: 'application/json', body: '{}' });
+    }
+    if (path === '/api/notifications') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], next_page_url: null }) });
+    if (path === '/api/auth/providers') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ google: false, apple: false, sms: false, twitter: false, telegram: false }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+
+  await page.goto('/anuncio/9/editar', { waitUntil: 'domcontentloaded' });
+  const subcategory = page.getByTestId('edit-ad-subcategory');
+  await expect(subcategory).toBeVisible({ timeout: 15000 });
+  await expect(subcategory).toHaveValue('Camping');
+  await expect(subcategory.locator('option[value="Camping"]')).toHaveText('Camping');
+
+  await page.getByTestId('edit-ad-save').click();
+  await expect.poll(() => /name="subcategory"\r?\n\r?\nCamping\r?\n/.test(saveBody)).toBe(true);
+  await expect.poll(() => /name="attributes\[subcategory\]"\r?\n\r?\nCamping\r?\n/.test(saveBody)).toBe(true);
+
+  await page.getByRole('combobox', { name: translations.es.category, exact: true }).selectOption('motor');
+  await expect(page.getByTestId('edit-ad-subcategory')).toHaveValue('');
+});
