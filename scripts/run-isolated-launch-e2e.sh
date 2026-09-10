@@ -61,6 +61,24 @@ wait_for_url() {
   return 1
 }
 
+wait_for_owned_frontend() {
+  local url="$1"
+  for _ in $(seq 1 60); do
+    if ! kill -0 "$FRONTEND_PID" >/dev/null 2>&1; then
+      echo "Vite frontend process exited before readiness: $url" >&2
+      return 1
+    fi
+    if sed -E $'s/\x1B\[[0-9;]*[[:alpha:]]//g' /tmp/mercasto-frontend-e2e.log | grep -Fq "Local:   $url/" \
+      && curl -fsS --connect-timeout 2 --max-time 5 "$url" >/dev/null 2>&1; then
+      echo "Vite frontend ready"
+      return 0
+    fi
+    sleep 1
+  done
+  echo "Vite frontend did not become ready: $url" >&2
+  return 1
+}
+
 for command in docker node npm npx curl; do
   command -v "$command" >/dev/null || { echo "Missing required command: $command" >&2; exit 1; }
 done
@@ -190,9 +208,9 @@ VITE_API_BASE_URL="http://127.0.0.1:$API_PORT/api" \
 VITE_API_URL="http://127.0.0.1:$API_PORT/api" \
 VITE_STORAGE_URL="http://127.0.0.1:$API_PORT/storage" \
 VITE_DISABLE_REALTIME=true \
-npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT" > /tmp/mercasto-frontend-e2e.log 2>&1 &
+npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT" --strictPort > /tmp/mercasto-frontend-e2e.log 2>&1 &
 FRONTEND_PID=$!
-if ! wait_for_url "http://127.0.0.1:$FRONTEND_PORT" "Vite frontend"; then
+if ! wait_for_owned_frontend "http://127.0.0.1:$FRONTEND_PORT"; then
   cat /tmp/mercasto-frontend-e2e.log >&2 || true
   exit 1
 fi
