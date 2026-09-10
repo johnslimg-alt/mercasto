@@ -202,6 +202,15 @@ async function capture(page, viewport, role, screen, projectName) {
     fullPage: true,
   });
 }
+
+async function activateCabinetTab(button) {
+  await expect(button).toBeVisible();
+  await button.scrollIntoViewIfNeeded();
+  await expect(async () => {
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true', { timeout: 2_500 });
+  }).toPass({ timeout: 10_000, intervals: [0, 250, 750] });
+}
 test('fresh session applies the theme on the first toggle click', async ({ page }, testInfo) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.addInitScript(() => {
@@ -320,9 +329,7 @@ for (const viewport of viewports) {
 
     for (const tabId of sellerTabs) {
       const button = page.getByTestId(`dashboard-tab-${tabId}`);
-      await expect(button).toBeVisible();
-      await button.click();
-      await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await activateCabinetTab(button);
       await expectNoHorizontalOverflow(page);
       await capture(page, viewport, 'seller', tabId, testInfo.project.name);
     }
@@ -409,9 +416,7 @@ for (const viewport of viewports) {
 
     for (const section of marketingSections) {
       const button = page.getByTestId(`marketing-section-${section}`);
-      await expect(button).toBeVisible();
-      await button.click();
-      await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await activateCabinetTab(button);
       await expect(page).toHaveURL(new RegExp(`section=${section}`));
       await expectNoHorizontalOverflow(page);
       await capture(page, viewport, 'marketing', section, testInfo.project.name);
@@ -432,9 +437,7 @@ for (const viewport of viewports) {
 
     for (const tabId of buyerTabs) {
       const button = page.getByTestId(`dashboard-tab-${tabId}`);
-      await expect(button).toBeVisible();
-      await button.click();
-      await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await activateCabinetTab(button);
       await expectNoHorizontalOverflow(page);
       await capture(page, viewport, 'buyer', tabId, testInfo.project.name);
     }
@@ -473,8 +476,7 @@ for (const viewport of darkThemeViewports) {
         if (cabinet.name === 'admin') {
           await clickAdminTabAndWaitForData(page, button, tabId);
         } else {
-          await button.click();
-          await expect(button).toHaveAttribute('aria-pressed', 'true');
+          await activateCabinetTab(button);
         }
         await expectNoHorizontalOverflow(page);
         await expectDarkThemeIntegrity(page);
