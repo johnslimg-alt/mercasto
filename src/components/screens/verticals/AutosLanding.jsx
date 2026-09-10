@@ -117,34 +117,34 @@ export default function AutosLanding({ lang = 'es' }) {
         onSubsectionSelect={(item) => navigate(`/?category=motor&search=${encodeURIComponent(item.query)}`)}
       />
 
-      <div className="bg-white border-b border-slate-100 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-2 items-center">
+      <div className="vertical-quick-filters bg-white border-b border-slate-100 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-nowrap gap-2 items-center overflow-x-auto no-scrollbar md:flex-wrap md:overflow-visible">
           {['nuevo', 'usado'].map(c => (
             <button key={c}
               onClick={() => setCondition(prev => prev === c ? '' : c)}
-              className={`px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${condition === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${condition === c ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
               {landingCopy.conditions[c]}
             </button>
           ))}
-          <div className="w-px h-5 bg-slate-200 mx-1" />
+          <div className="w-px h-5 shrink-0 bg-slate-200 mx-1" />
           {PRICE_RANGES.map((r) => (
             <button key={r.label}
               onClick={() => setPriceRange(prev => prev?.label === r.label ? null : r)}
-              className={`px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${priceRange?.label === r.label ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${priceRange?.label === r.label ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
               {r.label}
             </button>
           ))}
-          <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />
+          <div className="w-px h-5 shrink-0 bg-slate-200 mx-1 hidden sm:block" />
           {BRANDS.map(b => (
             <button key={b}
               onClick={() => setBrand(prev => prev === b ? '' : b)}
-              className={`px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all hidden sm:inline-flex ${brand === b ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all hidden sm:inline-flex ${brand === b ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
               {b}
             </button>
           ))}
           {(condition || priceRange || brand) && (
             <button onClick={applyFilters}
-              className="ml-auto px-4 py-1.5 bg-blue-600 text-white rounded-full text-[13px] font-bold hover:bg-blue-700 transition-colors">
+              className="ml-auto shrink-0 whitespace-nowrap px-4 py-1.5 bg-blue-600 text-white rounded-full text-[13px] font-bold hover:bg-blue-700 transition-colors">
               {landingCopy.applyFilters}
             </button>
           )}

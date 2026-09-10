@@ -73,26 +73,26 @@ export default function EmpleosLanding({ lang = 'es' }) {
       />
 
       {/* Quick filters */}
-      <div className="bg-white border-b border-slate-100 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-2 items-center">
+      <div className="vertical-quick-filters bg-white border-b border-slate-100 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-nowrap gap-2 items-center overflow-x-auto no-scrollbar md:flex-wrap md:overflow-visible">
           {localizedAreas.map(a => (
             <button key={a.value}
               onClick={() => setArea(prev => prev === a.value ? '' : a.value)}
-              className={`px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${area === a.value ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-purple-300'}`}>
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${area === a.value ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-purple-300'}`}>
               {a.name}
             </button>
           ))}
-          <div className="w-px h-5 bg-slate-200 mx-1" />
+          <div className="w-px h-5 shrink-0 bg-slate-200 mx-1" />
           {localizedModalities.map(m => (
             <button key={m.value}
               onClick={() => setModalidad(prev => prev === m.value ? '' : m.value)}
-              className={`px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${modalidad === m.value ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-purple-300'}`}>
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${modalidad === m.value ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-600 border-slate-200 hover:border-purple-300'}`}>
               {m.name}
             </button>
           ))}
           {(area || modalidad) && (
             <button onClick={applyFilters}
-              className="ml-auto px-4 py-1.5 bg-purple-600 text-white rounded-full text-[13px] font-bold hover:bg-purple-700 transition-colors">
+              className="ml-auto shrink-0 whitespace-nowrap px-4 py-1.5 bg-purple-600 text-white rounded-full text-[13px] font-bold hover:bg-purple-700 transition-colors">
               {landingCopy.applyJobs}
             </button>
           )}

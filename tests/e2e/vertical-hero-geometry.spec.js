@@ -59,3 +59,104 @@ test('vertical hero fullscreen search-area can invoke the search handler without
   await expect(page).toHaveURL(/\?category=motor/);
   expect(pageErrors).toEqual([]);
 });
+
+test('mobile vertical quick filters stay reachable above the tabbar', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+  await page.addInitScript(() => {
+    localStorage.setItem('cookie_consent', 'essential');
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+  });
+
+  for (const viewport of [{ width: 390, height: 667 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
+    await page.setViewportSize(viewport);
+    for (const route of ['/motor', '/inmuebles', '/empleos']) {
+      await page.goto(route);
+      const form = page.getByTestId('vertical-hero-search-form');
+      const bar = page.locator('.vertical-quick-filters');
+      const rail = bar.locator(':scope > div');
+      const tabbar = page.locator('.mobile-tabbar');
+      await expect(form).toBeVisible();
+      await expect(bar).toBeVisible();
+
+      const controlHeights = await form.locator(':scope > *').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+      expect(controlHeights.every(height => height >= 48)).toBeTruthy();
+      const subsectionHeights = await page.getByTestId('vertical-hero-subsection').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+      expect(subsectionHeights.length).toBeGreaterThan(0);
+      expect(subsectionHeights.every(height => height >= 48)).toBeTruthy();
+
+      const [barBox, tabBox] = await Promise.all([bar.boundingBox(), tabbar.boundingBox()]);
+      expect(barBox.y + barBox.height).toBeLessThanOrEqual(tabBox.y + 1);
+
+      await page.evaluate(() => window.scrollTo(0, 900));
+      await page.waitForTimeout(50);
+      const geometry = await page.evaluate(() => {
+        const header = document.querySelector('.site-header').getBoundingClientRect();
+        const filters = document.querySelector('.vertical-quick-filters').getBoundingClientRect();
+        const tabs = document.querySelector('.mobile-tabbar').getBoundingClientRect();
+        const railElement = document.querySelector('.vertical-quick-filters > div');
+        return {
+          headerBottom: header.bottom,
+          filterTop: filters.top,
+          filterBottom: filters.bottom,
+          tabTop: tabs.top,
+          scrollbarWidth: getComputedStyle(railElement).scrollbarWidth,
+        };
+      });
+      expect(geometry.filterTop).toBeGreaterThanOrEqual(geometry.headerBottom - 1);
+      expect(geometry.filterBottom).toBeLessThanOrEqual(geometry.tabTop + 1);
+      expect(geometry.scrollbarWidth).toBe('none');
+
+      const buttons = rail.locator('button:visible');
+      await expect(buttons.first()).toBeVisible();
+      await buttons.first().click();
+      await rail.evaluate(element => { element.scrollLeft = element.scrollWidth; });
+      const last = buttons.last();
+      await expect(last).toBeVisible();
+      await last.click();
+    }
+  }
+});
+
+test('mobile vertical hero utility pills stay on one line', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+  await page.addInitScript(() => {
+    localStorage.setItem('cookie_consent', 'essential');
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+  });
+  await page.setViewportSize({ width: 390, height: 667 });
+
+  for (const route of ['/motor', '/inmuebles', '/empleos']) {
+    await page.goto(route);
+    const form = page.getByTestId('vertical-hero-search-form');
+    await expect(form).toBeVisible();
+    const utility = form.locator('xpath=following-sibling::div[1]');
+    const directItems = utility.locator(':scope > button, :scope > span');
+    await expect(directItems.first()).toBeVisible();
+    const styles = await directItems.evaluateAll(nodes => nodes.map(node => ({
+      whiteSpace: getComputedStyle(node).whiteSpace,
+      flexShrink: getComputedStyle(node).flexShrink,
+    })));
+    expect(styles.every(style => style.whiteSpace === 'nowrap' && style.flexShrink === '0')).toBeTruthy();
+  }
+});
+
+test('mobile overlapping landing cards do not cover vertical hero controls', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+  await page.addInitScript(() => localStorage.setItem('cookie_consent', 'essential'));
+  await page.setViewportSize({ width: 390, height: 667 });
+
+  for (const route of ['/productos', '/turismo']) {
+    await page.goto(route);
+    const form = page.getByTestId('vertical-hero-search-form');
+    await expect(form).toBeVisible();
+    const geometry = await form.evaluate(element => {
+      const hero = element.closest('.relative');
+      const utility = element.nextElementSibling.getBoundingClientRect();
+      const next = hero.nextElementSibling.getBoundingClientRect();
+      return { utilityBottom: utility.bottom, nextTop: next.top };
+    });
+    expect(geometry.nextTop).toBeGreaterThanOrEqual(geometry.utilityBottom);
+  }
+});
