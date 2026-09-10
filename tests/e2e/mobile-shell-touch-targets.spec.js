@@ -87,3 +87,106 @@ test('cookie notice stays above the mobile tabbar', async ({ page }, testInfo) =
     await page.evaluate(() => localStorage.removeItem('cookie_consent'));
   }
 });
+
+
+test('auth modal fits short mobile viewports, locks the page, and keeps 48px targets', async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes('mobile'));
+
+  await page.addInitScript(() => {
+    localStorage.setItem('cookiesAccepted', 'true');
+    localStorage.setItem('cookie_consent', 'essential');
+    localStorage.setItem('lang', 'en');
+    localStorage.setItem('mercasto_language', 'en');
+  });
+
+  for (const viewport of [
+    { width: 390, height: 667 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/listings');
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const backgroundScrollY = await page.evaluate(() => window.scrollY);
+
+    await page.getByTestId('mobile-account-button').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    const loginRect = await box(dialog);
+    expect(loginRect.y).toBeGreaterThanOrEqual(0);
+    expect(loginRect.y + loginRect.height).toBeLessThanOrEqual(viewport.height + 1);
+
+    for (const target of [
+      page.getByTestId('auth-modal-close'),
+      dialog.locator('input[name="email"]'),
+      dialog.locator('input[name="password"]'),
+      page.getByTestId('auth-mode-switch'),
+      page.getByTestId('auth-forgot-password'),
+    ]) {
+      const rect = await box(target);
+      expect(rect.height).toBeGreaterThanOrEqual(MIN_TARGET);
+    }
+
+    const lockedOverflow = await page.evaluate(() => ({
+      body: document.body.style.overflowY,
+      root: document.documentElement.style.overflowY,
+    }));
+    expect(lockedOverflow).toEqual({ body: 'hidden', root: 'hidden' });
+    if (!testInfo.project.name.includes('webkit')) {
+      await page.mouse.wheel(0, 500);
+      await page.waitForTimeout(50);
+      expect(await page.evaluate(() => window.scrollY)).toBe(backgroundScrollY);
+    }
+
+    await page.getByTestId('auth-mode-switch').click();
+    await expect(dialog.locator('input[name="name"]')).toBeVisible();
+
+    const registerRect = await box(dialog);
+    expect(registerRect.y).toBeGreaterThanOrEqual(0);
+    expect(registerRect.y + registerRect.height).toBeLessThanOrEqual(viewport.height + 1);
+
+    const dialogMetrics = await dialog.evaluate((node) => ({
+      scrollbarWidth: getComputedStyle(node).scrollbarWidth,
+      scrollHeight: node.scrollHeight,
+      clientHeight: node.clientHeight,
+    }));
+    expect(dialogMetrics.scrollbarWidth).toBe('none');
+    if (viewport.height === 667) {
+      expect(dialogMetrics.scrollHeight).toBeGreaterThan(dialogMetrics.clientHeight);
+    }
+
+    for (const target of [
+      dialog.locator('input[name="name"]'),
+      dialog.locator('input[name="email"]'),
+      dialog.locator('input[name="password"]'),
+      dialog.locator('a[href="/terms"]'),
+      dialog.locator('a[href="/privacy"]'),
+      page.getByTestId('auth-mode-switch'),
+    ]) {
+      const rect = await box(target);
+      expect(rect.height).toBeGreaterThanOrEqual(MIN_TARGET);
+    }
+
+    const consentLabelRect = await box(dialog.locator('label:has(input[name="age_confirmed"])'));
+    expect(consentLabelRect.height).toBeGreaterThanOrEqual(MIN_TARGET);
+
+    await dialog.evaluate((node) => node.scrollTo(0, node.scrollHeight));
+    await expect(page.getByTestId('auth-mode-switch')).toBeVisible();
+    await dialog.evaluate((node) => node.scrollTo(0, 0));
+
+    await page.getByTestId('auth-modal-close').click();
+    await expect(dialog).toBeHidden();
+
+    const restoredOverflow = await page.evaluate(() => ({
+      body: document.body.style.overflowY,
+      root: document.documentElement.style.overflowY,
+    }));
+    expect(restoredOverflow.body).not.toBe('hidden');
+    expect(restoredOverflow.root).not.toBe('hidden');
+    if (!testInfo.project.name.includes('webkit')) {
+      await page.mouse.wheel(0, 300);
+      await page.waitForTimeout(50);
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(backgroundScrollY);
+    }
+  }
+});
