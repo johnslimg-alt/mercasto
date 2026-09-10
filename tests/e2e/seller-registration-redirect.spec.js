@@ -20,6 +20,12 @@ test.describe('seller campaign registration return', () => {
       const path = new URL(request.url()).pathname;
 
       if (path === '/api/register' && request.method() === 'POST') {
+        const payload = request.postDataJSON();
+        expect(payload.age_confirmed).toBe(true);
+        expect(payload.terms_version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(payload.privacy_version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(payload.consent_source).toBe('web');
+        expect(Number.isNaN(Date.parse(payload.consent_accepted_at))).toBe(false);
         return route.fulfill({
           status: 201,
           contentType: 'application/json',
@@ -56,8 +62,6 @@ test.describe('seller campaign registration return', () => {
     await registrationForm.locator('input[name="password"]').fill('SecurePass123!');
     const consentCheckbox = registrationForm.locator('input[type="checkbox"]');
     await consentCheckbox.check();
-    await expect(consentCheckbox).toBeChecked();
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve())));
 
     const registrationResponsePromise = page.waitForResponse((response) => {
       const request = response.request();
