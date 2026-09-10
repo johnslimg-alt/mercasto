@@ -35,7 +35,7 @@ for (const language of ['es', 'en', 'ar']) {
 }
 
 
-async function mockHomeApi(page, { ads = [], recommendations = [] } = {}) {
+async function mockHomeApi(page, { ads = [], recommendations = [], verticalAds = null } = {}) {
   await page.route('**/api/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/auth/providers')) {
@@ -45,7 +45,9 @@ async function mockHomeApi(page, { ads = [], recommendations = [] } = {}) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: recommendations }) });
     }
     if (url.pathname.endsWith('/ads')) {
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ads, total: ads.length, current_page: 1, last_page: 1 }) });
+      const category = url.searchParams.get('category');
+      const data = verticalAds !== null && ['inmobiliaria', 'empleo', 'servicios', 'motor'].includes(category) ? verticalAds : ads;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, total: data.length, current_page: 1, last_page: 1 }) });
     }
     if (url.pathname.endsWith('/categories') || url.pathname.endsWith('/category-attributes') || url.pathname.endsWith('/favorites')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -152,21 +154,23 @@ test('recommendation carousel exposes honest previous and next states', async ({
   await expect.poll(() => scroller.evaluate(node => node.scrollLeft)).toBeLessThan(atEnd - 20);
 });
 
-test('home never reveals synthetic vertical listings when real feeds are empty', async ({ page }, testInfo) => {
+test('home never reveals synthetic or malformed vertical listings', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await page.addInitScript(() => {
     localStorage.setItem('lang', 'es');
     localStorage.setItem('mercasto_language', 'es');
     localStorage.setItem('cookie_consent', 'essential');
   });
-  await mockHomeApi(page);
+  const malformedTitle = 'Malformed Listing Without Identity';
+  await mockHomeApi(page, { verticalAds: [{ title: malformedTitle, price: 999, img: '/fake.jpg', specs: 'synthetic' }] });
   await page.goto('/');
   await page.waitForTimeout(4000);
-  for (const syntheticTitle of [
+  for (const forbiddenTitle of [
     'Senior React Developer',
     'Nissan Versa 2021 Advance',
     'House Cleaning Pro',
+    malformedTitle,
   ]) {
-    await expect(page.getByText(syntheticTitle, { exact: false })).toHaveCount(0);
+    await expect(page.getByText(forbiddenTitle, { exact: false })).toHaveCount(0);
   }
 });

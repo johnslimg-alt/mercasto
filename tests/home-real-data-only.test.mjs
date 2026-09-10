@@ -18,6 +18,10 @@ test('home vertical discovery never falls back to synthetic marketplace listings
   for (const source of ['safeRealEstateAds', 'safeJobAds', 'safeServiceAds', 'safeAutomotiveAds']) {
     assert.match(home, new RegExp(`${source}\\.slice\\(0, 3\\)\\.map\\(`), source);
   }
+  for (const legacyMarker of ['job-logo-badge', 'job.role', 'job.salary', 'srv.stars', 'srv.img', 'srv.desc}', 'car.specs', 'car.badge', 'item.specs', 'item.img']) {
+    assert.equal(home.includes(legacyMarker), false, legacyMarker);
+  }
+  assert.equal((home.match(/\.filter\(item => item\?\.id\)/g) || []).length, 4);
 });
 
 test('production source cannot import the synthetic marketplace dataset', () => {
