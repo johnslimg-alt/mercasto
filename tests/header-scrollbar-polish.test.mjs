@@ -13,6 +13,7 @@ const moderation = fs.readFileSync('src/components/admin/AdminModerationCenter.j
 test('all app scrollbars are hidden without disabling scrolling', () => {
   assert.match(css, /html,[\s\S]{0,80}body \*[\s\S]{0,80}scrollbar-width:\s*none/);
   assert.ok(css.includes('body *::-webkit-scrollbar'));
+  assert.doesNotMatch(css, /scrollbar-width:\s*thin/);
   assert.equal(css.includes('overflow: hidden !important; /* global scrollbar'), false);
   assert.match(map, /map-filter-scroller[^"]*overflow-y-auto/);
   assert.match(css, /\.map-filter-scroller \{[\s\S]*?scrollbar-width:\s*none/);
