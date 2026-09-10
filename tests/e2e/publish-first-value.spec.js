@@ -43,6 +43,14 @@ async function mockApi(page, capture) {
     if (path.includes('/category-attributes')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     }
+    if (path.endsWith('/meta/events/post-ad') && method === 'POST') {
+      capture.metaEvents.push(request.postDataJSON());
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, meta_ok: true }),
+      });
+    }
     if (path.endsWith('/user/profile') && method === 'POST') {
       capture.profileUpdated = true;
       return route.fulfill({
@@ -86,8 +94,13 @@ async function expectMinHeight(locator, min = 48) {
 }
 
 test('new seller can publish with city and WhatsApp without placing a map pin', async ({ page }) => {
-  const capture = { profileUpdated: false, adBody: '' };
+  const capture = { profileUpdated: false, adBody: '', metaEvents: [] };
   await installSession(page);
+  await page.addInitScript(() => {
+    window.__testFbqEvents = [];
+    window.fbq = (...args) => window.__testFbqEvents.push(args);
+    localStorage.setItem('cookie_consent', 'all');
+  });
   await mockApi(page, capture);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/post', { waitUntil: 'domcontentloaded' });
@@ -115,11 +128,27 @@ test('new seller can publish with city and WhatsApp without placing a map pin', 
   expect(capture.adBody).toContain('name="city"');
   expect(capture.adBody).not.toContain('name="latitude"');
   expect(capture.adBody).not.toContain('name="longitude"');
+
+  await expect.poll(() => capture.metaEvents.length).toBe(1);
+  const serverEvent = capture.metaEvents[0];
+  expect(serverEvent.listing_id).toBe('7001');
+  expect(serverEvent.event_id).toMatch(/^post-ad_7001_[A-Za-z0-9._:-]+$/);
+
+  const browserEvent = await page.evaluate(() => (
+    (window.__testFbqEvents || []).find(entry => entry[0] === 'trackCustom' && entry[1] === 'PostAd') || null
+  ));
+  expect(browserEvent).toBeTruthy();
+  expect(browserEvent[3]?.eventID).toBe(serverEvent.event_id);
+
+  const dataLayerEventId = await page.evaluate(() => (
+    [...(window.dataLayer || [])].reverse().find(item => item?.event === 'listing_published')?.event_id || ''
+  ));
+  expect(dataLayerEventId).toBe(serverEvent.event_id);
 });
 
 test('mobile publish controls keep 48px tap targets without horizontal overflow', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile');
-  const capture = { profileUpdated: false, adBody: '' };
+  const capture = { profileUpdated: false, adBody: '', metaEvents: [] };
   await installSession(page);
   await mockApi(page, capture);
 
