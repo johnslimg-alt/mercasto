@@ -1,3 +1,4 @@
+import { EXTRA } from "./i18n-extra.js";
 import { createContext, useContext, useState } from "react";
 
 export const LANGS = [
@@ -73,6 +74,7 @@ const T = {
     post_dialog: "Publicar anuncio",
     f_title: "Título",
     f_category: "Categoría",
+    brand: "Marca",
     f_price: "Precio (MXN)",
     f_location: "Ubicación",
     f_description: "Descripción",
@@ -144,6 +146,7 @@ const T = {
     post_dialog: "Post an ad",
     f_title: "Title",
     f_category: "Category",
+    brand: "Brand",
     f_price: "Price (MXN)",
     f_location: "Location",
     f_description: "Description",
@@ -215,6 +218,7 @@ const T = {
     post_dialog: "Publicar anúncio",
     f_title: "Título",
     f_category: "Categoria",
+    brand: "Marca",
     f_price: "Preço (MXN)",
     f_location: "Localização",
     f_description: "Descrição",
@@ -286,6 +290,7 @@ const T = {
     post_dialog: "Publier une annonce",
     f_title: "Titre",
     f_category: "Catégorie",
+    brand: "Marque",
     f_price: "Prix (MXN)",
     f_location: "Lieu",
     f_description: "Description",
@@ -357,6 +362,7 @@ const T = {
     post_dialog: "Anzeige aufgeben",
     f_title: "Titel",
     f_category: "Kategorie",
+    brand: "Marke",
     f_price: "Preis (MXN)",
     f_location: "Ort",
     f_description: "Beschreibung",
@@ -428,6 +434,7 @@ const T = {
     post_dialog: "Pubblica annuncio",
     f_title: "Titolo",
     f_category: "Categoria",
+    brand: "Marca",
     f_price: "Prezzo (MXN)",
     f_location: "Località",
     f_description: "Descrizione",
@@ -499,6 +506,7 @@ const T = {
     post_dialog: "Advertentie plaatsen",
     f_title: "Titel",
     f_category: "Categorie",
+    brand: "Merk",
     f_price: "Prijs (MXN)",
     f_location: "Locatie",
     f_description: "Omschrijving",
@@ -570,6 +578,7 @@ const T = {
     post_dialog: "Новое объявление",
     f_title: "Заголовок",
     f_category: "Категория",
+    brand: "Марка",
     f_price: "Цена (MXN)",
     f_location: "Локация",
     f_description: "Описание",
@@ -641,6 +650,7 @@ const T = {
     post_dialog: "Dodaj ogłoszenie",
     f_title: "Tytuł",
     f_category: "Kategoria",
+    brand: "Marka",
     f_price: "Cena (MXN)",
     f_location: "Lokalizacja",
     f_description: "Opis",
@@ -712,6 +722,7 @@ const T = {
     post_dialog: "发布广告",
     f_title: "标题",
     f_category: "分类",
+    brand: "品牌",
     f_price: "价格 (MXN)",
     f_location: "地点",
     f_description: "描述",
@@ -783,6 +794,7 @@ const T = {
     post_dialog: "広告を投稿",
     f_title: "タイトル",
     f_category: "カテゴリ",
+    brand: "ブランド",
     f_price: "価格 (MXN)",
     f_location: "場所",
     f_description: "説明",
@@ -802,7 +814,7 @@ const LangContext = createContext(null);
 
 export function TranslationProvider({ children }) {
   const [lang, setLang] = useState("es");
-  const t = (key) => T[lang] && T[lang][key] || T.es[key] || key;
+  const t = (key) => EXTRA[lang]?.[key] || T[lang]?.[key] || EXTRA.es[key] || T.es[key] || key;
   return <LangContext.Provider data-source-location="src/lib/i18n.jsx:806:9" data-dynamic-content="true" value={{ lang, setLang, t }}>{children}</LangContext.Provider>;
 }
 

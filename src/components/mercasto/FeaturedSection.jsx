@@ -17,7 +17,7 @@ export default function FeaturedSection({ listings, loading, favs, onFav }) {
             {t("promote")}
           </button>
         </div>
-        <div data-source-location="src/components/mercasto/FeaturedSection.jsx:20:8" data-dynamic-content="true" className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-collection-id="listings">
+        <div data-source-location="src/components/mercasto/FeaturedSection.jsx:20:8" data-dynamic-content="true" className="featured-track" data-collection-id="listings">
           {loading && featured.length === 0 ?
           Array.from({ length: 4 }).map((_, i) => <div data-source-location="src/components/mercasto/FeaturedSection.jsx:22:54" data-dynamic-content="true" key={i} className="aspect-[3/4] rounded-lg bg-muted animate-pulse" />) :
           featured.map((l) =>

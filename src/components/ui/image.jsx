@@ -3,7 +3,7 @@ const FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' w
 const Image = React.forwardRef(({ src, onError, ...props }, ref) => {
   const [value, setValue] = React.useState(src || FALLBACK);
   React.useEffect(() => setValue(src || FALLBACK), [src]);
-  return <img ref={ref} src={value} {...props} onError={(e)=>{ if(value!==FALLBACK) setValue(FALLBACK); onError?.(e); }} />;
+  return <img ref={ref} src={value} loading="lazy" decoding="async" {...props} onError={(e)=>{ if(value!==FALLBACK) setValue(FALLBACK); onError?.(e); }} />;
 });
 Image.displayName = "Image";
 export { Image };

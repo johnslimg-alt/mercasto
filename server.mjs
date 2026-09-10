@@ -1,6 +1,7 @@
 import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
@@ -19,7 +20,17 @@ const CATEGORIES = new Set(["Productos","Motor","Inmuebles","Empleos","Servicios
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"], connectSrc: ["'self'"], fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"], baseUri: ["'self'"], frameAncestors: ["'none'"], formAction: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+app.use(compression());
 app.use(express.json({ limit: "32kb" }));
 app.use("/api/", rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false }));
 
@@ -64,15 +75,22 @@ app.post("/api/listings", rateLimit({ windowMs: 60_000, limit: 8 }), (req, res) 
   const item = normalize(req.body || {});
   if (!item.title || !CATEGORIES.has(item.category)) return res.status(400).json({ error: "invalid_listing" });
   if (!Number.isFinite(item.price) || item.price < 0 || item.price > 1_000_000_000) return res.status(400).json({ error: "invalid_price" });
-  item.featured = 0; item.verified = 0;
+  item.featured = 0; item.verified = 0; item.image_url = "";
   insert.run(item);
   res.status(201).json(toPublic(item));
 });
 
 const distDir = path.join(__dirname, "dist");
-app.use(express.static(distDir, { maxAge: "1h", index: false }));
-app.get("/", (_req, res) => res.sendFile(path.join(distDir, "index.html")));
-app.get("/*splat", (_req, res) => res.sendFile(path.join(distDir, "index.html")));
+app.use(express.static(distDir, {
+  maxAge: "1h", index: false,
+  setHeaders(res, filePath) {
+    if (filePath.includes(path.sep + "assets" + path.sep)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    else if (filePath.includes(path.sep + "images" + path.sep)) res.setHeader("Cache-Control", "public, max-age=604800");
+  }
+}));
+const sendApp = (_req, res) => { res.setHeader("Cache-Control", "no-cache"); res.sendFile(path.join(distDir, "index.html")); };
+app.get("/", sendApp);
+app.get("/*splat", sendApp);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

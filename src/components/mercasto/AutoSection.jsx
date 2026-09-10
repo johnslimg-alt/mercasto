@@ -25,18 +25,19 @@ export default function AutoSection({ listings, favs, onFav }) {
     <section data-source-location="src/components/mercasto/AutoSection.jsx:25:4" data-dynamic-content="true" id="automotriz" className="border-b border-border">
       <div data-source-location="src/components/mercasto/AutoSection.jsx:26:6" data-dynamic-content="true" className="mx-auto max-w-7xl px-4 py-8">
         <h2 data-source-location="src/components/mercasto/AutoSection.jsx:27:8" data-dynamic-content="true" className="text-2xl font-bold tracking-tight mb-4">{t("auto_title")}</h2>
-        <div data-source-location="src/components/mercasto/AutoSection.jsx:28:8" data-dynamic-content="true" className="flex flex-wrap gap-2 mb-5 text-xs">
-          {BRANDS.map((b, __arrIdx__) =>
-          <button data-source-location="src/components/mercasto/AutoSection.jsx:30:12" data-dynamic-content="true" key={b || "all"} onClick={() => setBrand(b)} className={`px-3 py-1.5 rounded-md border transition ${brand === b ? "border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`} data-arr-index={__arrIdx__} data-arr-variable-name="BRANDS">
-              {b || t("cat_all")}
-            </button>
-          )}
-          <span data-source-location="src/components/mercasto/AutoSection.jsx:34:10" data-dynamic-content="false" className="w-px bg-border mx-1" />
-          {PRICES.map(([v, label]) =>
-          <button data-source-location="src/components/mercasto/AutoSection.jsx:36:12" data-dynamic-content="true" key={label || "any"} onClick={() => setMaxPrice(v)} className={`px-3 py-1.5 rounded-md border transition ${maxPrice === v ? "border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-              {label || t("cat_all")}
-            </button>
-          )}
+        <div className="auto-filter-groups mb-5 text-xs">
+          <div className="auto-filter-row">
+            <span className="auto-filter-label">{t("brand")}</span>
+            <div className="auto-filter-scroll no-scrollbar">
+              {BRANDS.map((b) => <button key={b || "all"} onClick={() => setBrand(b)} className={`shrink-0 px-3 py-1.5 rounded-md border transition ${brand === b ? "border-primary text-primary bg-accent" : "border-border text-muted-foreground hover:text-foreground"}`}>{b || t("cat_all")}</button>)}
+            </div>
+          </div>
+          <div className="auto-filter-row">
+            <span className="auto-filter-label">{t("f_price")}</span>
+            <div className="auto-filter-scroll no-scrollbar">
+              {PRICES.map(([v, label]) => <button key={label || "any"} onClick={() => setMaxPrice(v)} className={`shrink-0 px-3 py-1.5 rounded-md border transition ${maxPrice === v ? "border-primary text-primary bg-accent" : "border-border text-muted-foreground hover:text-foreground"}`}>{label || t("cat_all")}</button>)}
+            </div>
+          </div>
         </div>
         <div data-source-location="src/components/mercasto/AutoSection.jsx:41:8" data-dynamic-content="true" className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-collection-id="listings">
           {cars.map((l) =>

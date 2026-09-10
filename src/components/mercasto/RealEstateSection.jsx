@@ -30,7 +30,7 @@ export default function RealEstateSection({ listings, favs, onFav }) {
             )}
           </div>
         </div>
-        <div data-source-location="src/components/mercasto/RealEstateSection.jsx:33:8" data-dynamic-content="true" className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-collection-id="listings">
+        <div data-source-location="src/components/mercasto/RealEstateSection.jsx:33:8" data-dynamic-content="true" className="realestate-track" data-collection-id="listings">
           {items.map((l) => <AdCard data-source-location="src/components/mercasto/RealEstateSection.jsx:34:28" data-dynamic-content="true" key={l.id} listing={l} isFav={favs.has(l.id)} onFav={onFav} data-collection-item-id={l?.id} />)}
         </div>
       </div>
