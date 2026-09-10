@@ -11,11 +11,15 @@ test('mobile header stays compact and scroll rails stay hidden', async ({ page }
   expect(headerBox.height).toBeLessThanOrEqual(130);
   await expect(page.getByTestId('header-category-bar')).toBeHidden();
 
-  const metrics = await page.evaluate(() => ({
-    documentScrollbar: getComputedStyle(document.documentElement).scrollbarWidth,
-    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  }));
-  expect(metrics.documentScrollbar).toBe('none');
+  const metrics = await page.evaluate(() => {
+    const webkitScrollbar = getComputedStyle(document.documentElement, '::-webkit-scrollbar');
+    return {
+      webkitScrollbarDisplay: webkitScrollbar.display,
+      webkitScrollbarWidth: webkitScrollbar.width,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  expect(metrics.webkitScrollbarDisplay === 'none' || metrics.webkitScrollbarWidth === '0px').toBe(true);
   expect(metrics.overflow).toBeLessThanOrEqual(1);
 
   const rail = page.getByTestId('home-category-rail');
@@ -40,6 +44,12 @@ test('mobile header stays compact and scroll rails stay hidden', async ({ page }
   expect(railMetrics.scrollable).toBe(true);
   expect(railMetrics.after).toBeGreaterThan(railMetrics.before);
   expect(railMetrics.scrollbar).toBe('none');
+
+  await rail.evaluate((node) => { node.scrollLeft = node.scrollWidth; });
+  const lastCategory = rail.locator('.category-pill').last();
+  const [endRailBox, lastBox] = await Promise.all([rail.boundingBox(), lastCategory.boundingBox()]);
+  expect(lastBox.x).toBeGreaterThanOrEqual(endRailBox.x - 1);
+  expect(lastBox.x + lastBox.width).toBeLessThanOrEqual(endRailBox.x + endRailBox.width - 20);
 });
 
 test('desktop header preserves search width at the 1024px breakpoint', async ({ page }) => {
@@ -54,11 +64,15 @@ test('desktop header preserves search width at the 1024px breakpoint', async ({ 
   expect(searchBox.width).toBeGreaterThanOrEqual(280);
   await expect(locationButton).toHaveAccessibleName(/.+/);
 
-  const metrics = await page.evaluate(() => ({
-    documentScrollbar: getComputedStyle(document.documentElement).scrollbarWidth,
-    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  }));
-  expect(metrics.documentScrollbar).toBe('none');
+  const metrics = await page.evaluate(() => {
+    const webkitScrollbar = getComputedStyle(document.documentElement, '::-webkit-scrollbar');
+    return {
+      webkitScrollbarDisplay: webkitScrollbar.display,
+      webkitScrollbarWidth: webkitScrollbar.width,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  expect(metrics.webkitScrollbarDisplay === 'none' || metrics.webkitScrollbarWidth === '0px').toBe(true);
   expect(metrics.overflow).toBeLessThanOrEqual(1);
 });
 

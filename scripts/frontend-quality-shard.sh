@@ -15,12 +15,16 @@ for _ in $(seq 1 30); do
     cat "${log_file}"
     exit 1
   fi
-  if curl -fsS "${base_url}/" >/dev/null; then
+  if grep -Eq "Local:[[:space:]]+${base_url}/?" "${log_file}"; then
     break
   fi
   sleep 1
 done
 
+if ! grep -Eq "Local:[[:space:]]+${base_url}/?" "${log_file}"; then
+  cat "${log_file}"
+  exit 1
+fi
 if ! curl -fsS "${base_url}/" >/dev/null; then
   cat "${log_file}"
   exit 1

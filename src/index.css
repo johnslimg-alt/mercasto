@@ -256,8 +256,8 @@ html.dark .btn-lg.bg-white:hover {
   }
   .category-rail {
     @apply flex w-full justify-start gap-2 overflow-x-auto snap-x snap-proximity pt-1 pb-3;
-    padding-inline: 0.125rem;
-    scroll-padding-inline: 0.125rem;
+    padding-inline: 0.125rem 1.625rem;
+    scroll-padding-inline: 0.125rem 1.625rem;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -1837,7 +1837,6 @@ html.dark .btn-lg.bg-white:hover {
 html,
 body,
 #root {
-  scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
