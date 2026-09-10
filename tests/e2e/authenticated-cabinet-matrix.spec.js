@@ -564,7 +564,11 @@ test('edit-ad toast stays above the mobile tabbar', async ({ page, request }, te
   await expect(page.getByTestId('edit-ad-title')).toBeVisible();
   const tabbar = page.locator('.mobile-tabbar');
   await expect(tabbar).toBeVisible();
-  await page.getByTestId('edit-ad-generate-ai').click();
+  const descriptionResponsePromise = page.waitForResponse((response) => (
+    new URL(response.url()).pathname === '/api/ads/generate-description'
+  ));
+  await page.getByTestId('edit-ad-generate-ai').evaluate((button) => button.click());
+  await descriptionResponsePromise;
 
   const toast = page.getByTestId('edit-ad-toast');
   await expect(toast).toBeVisible();
