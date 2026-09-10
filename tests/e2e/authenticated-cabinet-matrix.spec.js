@@ -484,3 +484,29 @@ for (const viewport of darkThemeViewports) {
     });
   }
 }
+
+test('dashboard toast stays above the mobile tabbar', async ({ page, request }, testInfo) => {
+  test.skip(!testInfo.project.name.includes('mobile'), 'mobile-only geometry regression');
+  const session = await authenticate(request, 'seller');
+  await installSession(page, session);
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto('/profile?tab=privacy');
+  await expect(page.getByTestId('dashboard-tab-privacy')).toBeVisible();
+  await page.getByRole('button', { name: 'Limpiar datos' }).click();
+
+  const dashToast = page.getByTestId('dashboard-toast');
+  const tabbar = page.locator('.mobile-tabbar');
+  await expect(dashToast).toBeVisible();
+  await expect(tabbar).toBeVisible();
+  const result = await page.evaluate(() => {
+    const toast = document.querySelector('[data-testid="dashboard-toast"]');
+    const tab = document.querySelector('.mobile-tabbar');
+    if (!toast || !tab) return null;
+    const a = toast.getBoundingClientRect();
+    const b = tab.getBoundingClientRect();
+    const overlap = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+    const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return { overlap, tabHit: Boolean(hit && tab.contains(hit)) };
+  });
+  expect(result).toEqual({ overlap: 0, tabHit: true });
+});
