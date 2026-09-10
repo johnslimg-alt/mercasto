@@ -218,8 +218,56 @@ test('standalone fullscreen map uses responsive filter geometry instead of a ful
     }
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `fullscreen overflow at ${viewport.width}px`).toBeLessThanOrEqual(1);
+
+    const scroller = panel.locator('.map-filter-scroller');
+    const scrollMetrics = await scroller.evaluate((node) => ({
+      top: node.scrollTop,
+      clientHeight: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+      scrollbarWidth: getComputedStyle(node).scrollbarWidth,
+    }));
+    expect(scrollMetrics.scrollbarWidth).toBe('none');
+    if (viewport.width === 390) {
+      expect(scrollMetrics.scrollHeight).toBeGreaterThan(scrollMetrics.clientHeight);
+      await scroller.hover();
+      await page.mouse.wheel(0, 420);
+      await expect.poll(() => scroller.evaluate((node) => node.scrollTop)).toBeGreaterThan(scrollMetrics.top);
+    }
+
     await dialog.getByTestId('map-close').click();
   }
+});
+
+test('desktop fullscreen map hides the scrollbar rail while filters remain scrollable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop');
+  await installStandaloneMapSession(page);
+  await mockStandaloneMapApi(page);
+  await page.setViewportSize({ width: 1440, height: 620 });
+  const dialog = await openStandaloneFullscreenMap(page);
+  await dialog.getByTestId('map-filter-toggle').click();
+  const panel = dialog.getByTestId('map-filter-panel');
+  const scroller = panel.locator('.map-filter-scroller');
+  await expect(scroller).toBeVisible();
+
+  for (const id of ['map-filter-section-listing-type', 'map-filter-section-condition', 'map-filter-section-dynamic']) {
+    const section = dialog.getByTestId(id);
+    const toggle = section.locator('button').first();
+    if (await toggle.count()) await toggle.click();
+  }
+
+  const metrics = await scroller.evaluate((node) => ({
+    clientHeight: node.clientHeight,
+    scrollHeight: node.scrollHeight,
+    scrollbarWidth: getComputedStyle(node).scrollbarWidth,
+  }));
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+  expect(metrics.scrollbarWidth).toBe('none');
+
+  const initialTop = await scroller.evaluate((node) => node.scrollTop);
+  await scroller.hover();
+  await page.mouse.wheel(0, 420);
+  await expect.poll(() => scroller.evaluate((node) => node.scrollTop)).toBeGreaterThan(initialTop);
+
 });
 
 test('standalone negocios map search-area keeps its category and sends filters to catalog results', async ({ page }, testInfo) => {

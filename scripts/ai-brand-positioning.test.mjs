@@ -40,9 +40,10 @@ test('shared application surfaces render the AI positioning', () => {
   const app = source('src/App.jsx');
   const header = source('src/components/shell/AppHeader.jsx');
   const footer = source('src/components/shell/AppFooter.jsx');
-  assert.match(header, /data-testid="global-ai-brand-strip"/);
-  assert.match(`${header}\n${footer}`, /tagline=\{t\.ai_brand_short/);
-  assert.match(header, /\{t\.ai_brand_tagline\}/);
+  assert.doesNotMatch(header, /data-testid="global-ai-brand-strip"/);
+  assert.match(header, /tagline=\{t\.ai_brand_short/);
+  assert.match(footer, /tagline=\{t\.ai_brand_short/);
+  assert.match(footer, /\{t\.footer_desc\}/);
   assert.match(app, /auth-modal-ai-brand-message/);
   assert.match(app, /Mercasto \| \$\{t\.ai_brand_tagline/);
 

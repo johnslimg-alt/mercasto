@@ -143,7 +143,7 @@ html.dark .btn-lg.bg-white:hover {
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
-    scrollbar-width: thin;
+    scrollbar-width: none;
     padding: 0.125rem 0 0.75rem;
   }
 
@@ -152,18 +152,6 @@ html.dark .btn-lg.bg-white:hover {
     scroll-snap-align: start;
   }
 
-  main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2::-webkit-scrollbar-thumb {
-    background: rgba(100, 116, 139, 0.35);
-    border-radius: 999px;
-  }
-
-  main > .grid.grid-cols-12 > section.col-span-12:first-child > div.grid.grid-cols-2::-webkit-scrollbar-track {
-    background: transparent;
-  }
 
   .market-surface { background: var(--surface); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
   .market-shell { @apply bg-white/90 shadow-sm shadow-slate-200/70; border: 1px solid var(--line); border-radius: 28px; }
@@ -256,8 +244,8 @@ html.dark .btn-lg.bg-white:hover {
   }
   .category-rail {
     @apply flex w-full justify-start gap-2 overflow-x-auto snap-x snap-proximity pt-1 pb-3;
-    padding-inline: 0.125rem;
-    scroll-padding-inline: 0.125rem;
+    padding-inline: 0.125rem 1.625rem;
+    scroll-padding-inline: 0.125rem 1.625rem;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -293,8 +281,20 @@ html.dark .btn-lg.bg-white:hover {
     @apply inline-flex items-center gap-1.5 rounded-full border border-[#84CC16]/30 bg-[#84CC16]/10 px-3 py-1 text-[12px] font-semibold text-[#365314];
   }
   .rail-fade {
-    mask-image: linear-gradient(90deg, transparent, black 1.5rem, black calc(100% - 1.5rem), transparent);
+    /* Keep the first category fully visible; fade only the trailing edge as an overflow cue. */
+    mask-image: linear-gradient(90deg, black 0, black calc(100% - 1.5rem), transparent);
   }
+
+  [dir='rtl'] .rail-fade {
+    mask-image: linear-gradient(270deg, black 0, black calc(100% - 1.5rem), transparent);
+  }
+
+  .map-filter-scroller {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .map-filter-scroller::-webkit-scrollbar { display: none; }
+
 }
 
 @layer base {
@@ -1823,4 +1823,101 @@ html.dark .btn-lg.bg-white:hover {
 .marker-cluster-large div {
   background-color: #EF4444 !important;
   color: #FFFFFF !important;
+}
+
+/* Mercasto UI polish: scrollable surfaces stay fully functional without browser-style rails. */
+html,
+body,
+body * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+body *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+/* Header geometry: one compact system across desktop, tablet and phone. */
+.site-header {
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.07);
+}
+
+.header-logo-link {
+  min-width: max-content;
+}
+
+.header-actions {
+  min-width: max-content;
+}
+
+.header-category-nav {
+  min-height: 39px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.header-category-link {
+  padding-block: 0.6rem;
+  line-height: 1.05;
+}
+
+@media (max-width: 1023px) {
+  .mobile-search-row {
+    padding-block: 0.625rem !important;
+  }
+
+  .mobile-search-combo {
+    min-height: 2.75rem !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.07) !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .mobile-top-controls {
+    gap: 0.24rem;
+  }
+
+  .mobile-theme-icon,
+  .mobile-account-button--top {
+    width: 2.25rem;
+    height: 2.25rem;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+  }
+
+  .mobile-language-select {
+    width: 3.45rem;
+    height: 2.25rem;
+    flex-basis: 3.45rem;
+  }
+
+  .mobile-location-select-top {
+    height: 2.25rem;
+    min-width: 3.65rem;
+    max-width: 4.85rem;
+  }
+}
+
+@media (max-width: 399px) {
+  .mobile-location-select-top {
+    min-width: 3rem;
+    max-width: 3rem;
+    padding-inline: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .desktop-header-row .desktop-header-search-control {
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .header-category-bar {
+    display: none;
+  }
 }

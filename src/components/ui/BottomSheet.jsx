@@ -182,7 +182,7 @@ export default function BottomSheet({
         )}
 
         {/* Content */}
-        <div className="overflow-y-auto" style={{ maxHeight: title ? `calc(${maxHeight} - 100px)` : `calc(${maxHeight} - 48px)` }}>
+        <div className="overflow-y-auto no-scrollbar" style={{ maxHeight: title ? `calc(${maxHeight} - 100px)` : `calc(${maxHeight} - 48px)` }}>
           {children}
         </div>
       </div>

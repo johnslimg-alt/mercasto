@@ -116,8 +116,8 @@ test('admin route hides marketplace catalog search and category navigation', () 
   const header = fs.readFileSync('src/components/shell/AppHeader.jsx', 'utf8');
   assert.ok(app.includes("const isAdminRoute = location.pathname.startsWith('/admin')"));
   assert.ok(app.includes('isAdminRoute={isAdminRoute}'));
-  assert.ok(header.includes('isAdminRoute ? "hidden" : "hidden lg:flex flex-1 items-center"'));
-  assert.ok(header.includes('isAdminRoute ? "hidden" : "mobile-search-row lg:hidden pt-7 pb-7"'));
+  assert.ok(header.includes('isAdminRoute ? "hidden" : "hidden min-w-0 flex-1 items-center lg:flex"'));
+  assert.ok(header.includes('isAdminRoute ? "hidden" : "mobile-search-row py-2.5 lg:hidden"'));
   assert.ok(header.includes('data-testid="header-category-bar" className={isAdminRoute ? "hidden"'));
 });
 

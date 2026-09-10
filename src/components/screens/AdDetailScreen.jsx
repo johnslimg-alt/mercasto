@@ -781,7 +781,7 @@ export default function AdDetailScreen({
 
                 {/* Desktop Dropdown */}
                 {showShareMenu && (
-                  <div className="hidden md:block absolute right-0 z-30 mt-2 max-h-64 w-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                  <div className="hidden md:block absolute right-0 z-30 mt-2 max-h-64 w-56 overflow-y-auto no-scrollbar rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
                     {navigator.share && (
                       <button
                         type="button"

@@ -6,18 +6,28 @@ port="${2:?preview port is required}"
 base_url="http://127.0.0.1:${port}"
 log_file="/tmp/mercasto-${shard}-preview.log"
 
-npm run preview -- --host 127.0.0.1 --port "${port}" >"${log_file}" 2>&1 &
+./node_modules/.bin/vite preview --host 127.0.0.1 --port "${port}" --strictPort >"${log_file}" 2>&1 &
 preview_pid=$!
 trap 'kill "${preview_pid}" >/dev/null 2>&1 || true' EXIT
 
+preview_ready=0
 for _ in $(seq 1 30); do
-  if curl -fsS "${base_url}/" >/dev/null; then
+  if ! kill -0 "${preview_pid}" >/dev/null 2>&1; then
+    cat "${log_file}"
+    exit 1
+  fi
+  if sed -E $'s/\x1B\[[0-9;]*[[:alpha:]]//g' "${log_file}" | grep -Fq "Local:   ${base_url}/"; then
+    preview_ready=1
     break
   fi
   sleep 1
 done
 
-if ! curl -fsS "${base_url}/" >/dev/null; then
+if [ "${preview_ready}" -ne 1 ] || ! kill -0 "${preview_pid}" >/dev/null 2>&1; then
+  cat "${log_file}"
+  exit 1
+fi
+if ! curl -fsS --max-time 2 "${base_url}/" >/dev/null; then
   cat "${log_file}"
   exit 1
 fi
@@ -65,6 +75,7 @@ case "${shard}" in
     BASE_URL="${base_url}" CI=1 npx playwright test \
       tests/e2e/catalog-localization.spec.js tests/e2e/ad-detail-critical-path.spec.js \
       tests/e2e/analytics-vendor-activation.spec.js tests/e2e/header-geometry.spec.js \
+      tests/e2e/header-geometry-scrollbar.spec.js tests/e2e/ai-brand-positioning.spec.js \
       --project=chromium-desktop --workers=1 --retries=0 --reporter=list
     ;;
   catalog)

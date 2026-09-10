@@ -27,6 +27,7 @@ test('every E2E spec is wired into an executable project surface', () => {
     .filter((name) => name.endsWith('.spec.js'))
     .sort();
   const frontendWorkflow = fs.readFileSync(path.join(WORKFLOW_DIR, 'frontend-quality.yml'), 'utf8');
+  const frontendShard = fs.readFileSync(path.join(SCRIPTS_DIR, 'frontend-quality-shard.sh'), 'utf8');
   const webkitConfig = fs.readFileSync(path.join(ROOT, 'playwright.config.webkit.js'), 'utf8');
   const wiringText = [
     readTree(WORKFLOW_DIR),
@@ -43,6 +44,10 @@ test('every E2E spec is wired into an executable project surface', () => {
   assert.match(frontendWorkflow, /name: WebKit public smoke/, 'Frontend Quality must keep the dedicated WebKit smoke job');
   assert.match(frontendWorkflow, /npx playwright install --with-deps webkit/, 'Frontend Quality must install WebKit for the dedicated smoke job');
   assert.match(frontendWorkflow, /frontend-quality-shard\.sh webkit-public 4178/, 'Frontend Quality must execute the WebKit public shard');
+  assert.match(frontendShard, /vite preview[^\n]+--strictPort/, 'Frontend Quality preview must fail instead of silently shifting to a stale port');
+  assert.match(frontendShard, /kill -0 "\$\{preview_pid\}"/, 'Frontend Quality preview readiness must verify the spawned process is still alive');
+  assert.match(frontendShard, /sed -E[^\n]+grep -Fq \"Local:\s+\$\{base_url\}\/\"/, 'Frontend Quality preview readiness must normalize ANSI output and wait for the spawned Vite ready signal');
+  assert.match(frontendShard, /curl -fsS --max-time 2 \"\$\{base_url\}\/\"/, 'Frontend Quality preview readiness must verify the ready Vite endpoint over HTTP');
   assert.match(frontendWorkflow, /WEBKIT_RESULT: \$\{\{ needs\.webkit\.result \}\}/, 'Frontend Quality aggregate must require the WebKit result');
   assert.match(webkitConfig, /name: 'webkit-desktop'/, 'WebKit config must keep desktop Safari coverage');
   assert.match(webkitConfig, /name: 'webkit-mobile'/, 'WebKit config must keep mobile Safari coverage');

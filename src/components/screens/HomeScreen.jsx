@@ -229,56 +229,21 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
           </div>
         )}
 
-        {/* 1. HERO STATS */}
+        {/* The global header already carries search, location and primary actions.
+            Keep the home canvas focused on discovery instead of repeating a second toolbar. */}
 
-        <div className="hidden md:block bg-white/75 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-
-          <div className="max-w-[1440px] mx-auto px-4 lg:px-6 py-3 flex flex-col md:flex-row md:items-center gap-3 justify-between">
-
-            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[13px] text-slate-700">
-
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span><strong className="text-[#0F172A] dark:text-white font-semibold">{formatNumber(adsTotal || safeServerAds.length || 0, lang)}</strong> {t.active_listings}</span>
-
-              <span className="text-slate-300 hidden sm:block">•</span>
-
-              <span>{t.verified_sellers_desc || t.verified_sellers}</span>
-
-              <span className="text-slate-300 hidden sm:block">•</span>
-
-              <span className="location-chip"><MapPin className="w-3.5 h-3.5" />{selectedState || t.all_mexico}</span>
-
-            </div>
-
-            <div className="flex items-center gap-2">
-
-              <button onClick={() => setCurrentTab('post')} className="btn-sm bg-slate-900 text-white hover:bg-black">{t.sell_fast}</button>
-
-              <button onClick={() => setActiveCat('empleo')} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50">{t.find_job}</button>
-
-              <button onClick={() => { runSearch('renta', 'inmobiliaria'); }} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.rent_apt}</button>
-
-              <button onClick={() => setActiveCat('servicios')} className="btn-sm bg-white border border-slate-300 hover:bg-slate-50 hidden sm:inline-flex">{t.hire_service}</button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-
-        <section className="max-w-[1440px] mx-auto px-4 lg:px-6 py-6 lg:py-8">
+        <section className="mx-auto max-w-[1480px] px-3 py-5 sm:px-4 lg:px-6 lg:py-6">
           <h1 className="sr-only">Mercasto: compra, vende y renta en todo México</h1>
 
-          <div className="grid grid-cols-12 gap-6">
+          <div className="grid grid-cols-12 gap-5 lg:gap-6">
 
 
 
             {/* 2. FEATURED CATEGORIES */}
 
-            <section className="col-span-12 -mt-2">
+            <section className="col-span-12">
 
-              <div data-testid="home-category-rail" className="category-rail rail-fade -mx-4 px-6 lg:-mx-6 lg:px-6">
+              <div data-testid="home-category-rail" className="category-rail rail-fade">
 
                 {homeCategories.map(cat => {
 

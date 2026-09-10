@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 const locales = [
-  ['es', 'La plataforma de clasificados más moderna e inteligente con AI'],
-  ['en', 'The most modern and intelligent AI-powered classifieds platform'],
-  ['ru', 'Самая современная и умная доска объявлений с AI'],
+  ['es', 'La plataforma de clasificados más moderna e inteligente con AI', 'Clasificados con IA'],
+  ['en', 'The most modern and intelligent AI-powered classifieds platform', 'AI-powered classifieds'],
+  ['ru', 'Самая современная и умная доска объявлений с AI', 'Объявления с AI'],
 ];
 
-for (const [language, tagline] of locales) {
+for (const [language, tagline, shortTagline] of locales) {
   test.describe(`${language} AI brand positioning`, () => {
     test.beforeEach(async ({ page }) => {
       await page.addInitScript((lang) => {
@@ -18,11 +18,15 @@ for (const [language, tagline] of locales) {
       }, language);
     });
 
-    test('is visible globally and present in metadata', async ({ page }) => {
+    test('uses the compact AI brand surface and preserves metadata', async ({ page }, testInfo) => {
       await page.goto('/', { waitUntil: 'domcontentloaded' });
-      const strip = page.getByTestId('global-ai-brand-strip');
-      await expect(strip).toBeVisible();
-      await expect(strip).toContainText(tagline);
+      const logo = page.locator('.header-logo-link');
+      await expect(logo).toBeVisible();
+      const mobile = testInfo.project.name.includes('mobile');
+      const visibleBrand = logo.getByTestId(mobile ? 'mercasto-ai-short-mobile' : 'mercasto-ai-short-desktop');
+      await expect(visibleBrand).toBeVisible();
+      await expect(visibleBrand).toHaveText(mobile ? 'AI' : shortTagline);
+      await expect(page.getByTestId('global-ai-brand-strip')).toHaveCount(0);
       await expect(page).toHaveTitle(new RegExp(tagline));
       const description = await page.locator('meta[name="description"]').getAttribute('content');
       expect(description).toBeTruthy();
