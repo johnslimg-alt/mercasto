@@ -55,3 +55,35 @@ test('mobile shell keeps primary controls at 48px without horizontal overflow', 
     expect(overflow).toBeLessThanOrEqual(1);
   }
 });
+
+test('cookie notice stays above the mobile tabbar', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile');
+
+  await page.addInitScript(() => {
+    localStorage.removeItem('cookie_consent');
+    localStorage.removeItem('cookiesAccepted');
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+  });
+
+  for (const viewport of [
+    { width: 390, height: 667 },
+    { width: 390, height: 900 },
+    { width: 430, height: 932 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+
+    const notice = page.getByRole('dialog', { name: 'Aviso de cookies' });
+    const tabbar = page.locator('.mobile-tabbar');
+    const noticeRect = await box(notice);
+    const tabbarRect = await box(tabbar);
+
+    expect(noticeRect.y + noticeRect.height).toBeLessThanOrEqual(tabbarRect.y + 1);
+    expect(Math.abs(tabbarRect.y + tabbarRect.height - viewport.height)).toBeLessThanOrEqual(1);
+
+    await notice.getByRole('button', { name: 'Solo esenciales' }).click();
+    await expect(notice).toBeHidden();
+    await page.evaluate(() => localStorage.removeItem('cookie_consent'));
+  }
+});
