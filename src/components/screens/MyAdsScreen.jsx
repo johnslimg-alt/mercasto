@@ -462,7 +462,7 @@ export default function MyAdsScreen({
       </div>
 
       {selectionMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800 shadow-2xl px-4 py-3 flex items-center justify-between gap-3">
+        <div data-testid="my-ads-bulk-toolbar" className="fixed bottom-[84px] left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800 shadow-2xl px-4 py-3 flex items-center justify-between gap-3 md:bottom-0">
           <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 shrink-0">{selectedIds.size} {t.selected || 'seleccionados'}</span>
           <div className="flex items-center gap-2 flex-wrap">
             {canBulkPromote && <button data-testid="bulk-promote-selected" onClick={doBulkPromoteWithCredits} disabled={bulkLoading} className="btn-sm bg-[#0F172A] text-white flex items-center gap-1.5 disabled:opacity-40">{bulkLoading ? <Loader2 className="animate-spin w-3.5 h-3.5" /> : <TrendingUp className="w-3.5 h-3.5" />} {t.promote_with_credits || 'Promocionar con créditos'} ({selectedIds.size} × 50)</button>}
