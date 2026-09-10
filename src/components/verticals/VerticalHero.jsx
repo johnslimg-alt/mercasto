@@ -95,7 +95,7 @@ export default function VerticalHero({
   };
 
   return (
-    <div className={`relative bg-gradient-to-br ${GRADIENT_MAP[color] || GRADIENT_MAP.blue} text-white px-4 py-7 md:py-10`}>
+    <div className={`relative bg-gradient-to-br ${GRADIENT_MAP[color] || GRADIENT_MAP.blue} text-white px-4 py-5 md:py-10`}>
       <div className="max-w-6xl mx-auto">
         {subsections.length > 0 && (
           <div className="mb-5 flex gap-2 overflow-x-auto no-scrollbar md:justify-center">
@@ -124,8 +124,8 @@ export default function VerticalHero({
         </div>
 
         <form data-testid="vertical-hero-search-form" onSubmit={handleSubmit}
-          className="mx-auto grid max-w-5xl grid-cols-1 gap-2 rounded-3xl bg-white p-2 shadow-2xl md:grid-cols-2 lg:grid-cols-[1.35fr_0.9fr_0.85fr_0.55fr_auto]">
-          <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
+          className="mx-auto grid max-w-5xl grid-cols-2 gap-2 rounded-3xl bg-white p-2 shadow-2xl md:grid-cols-2 lg:grid-cols-[1.35fr_0.9fr_0.85fr_0.55fr_auto]">
+          <label className="col-span-2 flex min-h-12 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900 md:col-span-1">
             <Search size={18} className="text-slate-400 shrink-0" />
             <input
               type="text"
@@ -136,33 +136,33 @@ export default function VerticalHero({
               className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder-slate-400"
             />
           </label>
-          <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
+          <label className="flex min-h-12 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <MapPin size={18} className="text-slate-400 shrink-0" />
             <select aria-label={copy.state} value={state} onChange={handleStateChange} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
               <option value="">{copy.allMexico}</option>
               {states.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
-          <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
+          <label className="flex min-h-12 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <LocateFixed size={18} className="text-slate-400 shrink-0" />
             <select ref={citySelectRef} aria-label={copy.city} value={city} onChange={e => setCity(e.target.value)} disabled={!state} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none disabled:text-slate-400">
               <option value="">{state ? copy.allCity : copy.city}</option>
               {cities.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
-          <label className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
+          <label className="flex min-h-12 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900">
             <SlidersHorizontal size={18} className="text-slate-400 shrink-0" />
             <select aria-label={copy.radius} value={radius} onChange={e => setRadius(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none">
               {['5', '10', '25', '50', '100'].map(item => <option key={item} value={item}>{item} km</option>)}
             </select>
           </label>
           <button type="submit"
-            className="rounded-2xl bg-slate-950 px-6 py-3 text-[14px] font-bold text-white transition-colors hover:bg-black">
+            className="min-h-12 rounded-2xl bg-slate-950 px-4 py-3 text-[14px] font-bold text-white transition-colors hover:bg-black md:px-6">
             {copy.search}
           </button>
         </form>
 
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-3 flex flex-nowrap items-center justify-start gap-2 overflow-x-auto no-scrollbar md:flex-wrap md:justify-center">
           <button
             type="button"
             onClick={() => setShowMap(prev => !prev)}
@@ -173,7 +173,7 @@ export default function VerticalHero({
           <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/85">
             {locationLabel} · {copy.radius} {radius} km
           </span>
-          {children && <div className="flex flex-wrap items-center justify-center gap-2">{children}</div>}
+          {children && <div className="flex shrink-0 flex-nowrap items-center justify-center gap-2">{children}</div>}
         </div>
 
         {showMap && (

@@ -81,18 +81,18 @@ export default function InmueblesLanding({ lang = 'es' }) {
       </VerticalHero>
 
       {/* Quick filter bar */}
-      <div className="bg-white border-b border-slate-100 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-2 items-center">
+      <div className="vertical-quick-filters bg-white border-b border-slate-100 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-nowrap gap-2 items-center overflow-x-auto no-scrollbar md:flex-wrap md:overflow-visible">
           {localizedTypes.map(t => (
             <button key={t.value}
               onClick={() => setTipo(prev => prev === t.value ? '' : t.value)}
-              className={`px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${tipo === t.value ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'}`}>
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-[13px] font-semibold border transition-all ${tipo === t.value ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'}`}>
               {t.name}
             </button>
           ))}
           {(operacion || tipo) && (
             <button onClick={applyFilters}
-              className="ml-auto px-4 py-1.5 bg-emerald-600 text-white rounded-full text-[13px] font-bold hover:bg-emerald-700 transition-colors">
+              className="ml-auto shrink-0 whitespace-nowrap px-4 py-1.5 bg-emerald-600 text-white rounded-full text-[13px] font-bold hover:bg-emerald-700 transition-colors">
               {landingCopy.applySearch}
             </button>
           )}
