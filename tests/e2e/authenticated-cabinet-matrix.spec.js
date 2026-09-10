@@ -274,6 +274,39 @@ test('consumed approval is sold/archive, not review-ready', async ({ page, reque
   await expect(page.getByTestId(`dashboard-ad-${consumed.id}`)).toHaveCount(0);
 });
 
+test('mobile my ads bulk toolbar stays above the global tabbar', async ({ page, request }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile-cabinet', 'Mobile cabinet geometry only.');
+  await page.setViewportSize({ width: 390, height: 844 });
+  const session = await authenticate(request, 'seller');
+  const ads = await sellerAds(request, session);
+  const readyAd = ads.find(ad => ad.title === 'Mercasto E2E Review Ready Listing');
+  expect(readyAd).toBeTruthy();
+
+  await installSession(page, session);
+  await page.goto('/profile?filter=review_ready');
+  const ad = page.getByTestId(`dashboard-ad-${readyAd.id}`);
+  await expect(ad).toBeVisible();
+  await page.getByRole('button', { name: /Seleccionar|Select/i }).first().click();
+  await ad.locator('button[aria-pressed]').click();
+
+  const toolbar = page.getByTestId('my-ads-bulk-toolbar');
+  const tabbar = page.locator('.mobile-tabbar');
+  await expect(toolbar).toBeVisible();
+  await expect(tabbar).toBeVisible();
+  const [toolbarBox, tabbarBox] = await Promise.all([toolbar.boundingBox(), tabbar.boundingBox()]);
+  expect(toolbarBox.y + toolbarBox.height).toBeLessThanOrEqual(tabbarBox.y + 1);
+
+  for (const action of [page.getByTestId('bulk-confirm-reactivation-selected'), page.getByTestId('bulk-delete-selected')]) {
+    await expect(action).toBeVisible();
+    const hit = await action.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      const top = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return top === element || element.contains(top);
+    });
+    expect(hit).toBeTruthy();
+  }
+});
+
 const sellerTabs = ['my_ads', 'favorites', 'saved_searches', 'stats', 'transactions', 'contact_history', 'reviews', 'privacy', 'settings'];
 
 for (const viewport of viewports) {
