@@ -50,6 +50,38 @@ test('theme toggle exposes and changes its pressed state on desktop and mobile',
   await expect(toggle).toHaveAttribute('aria-pressed', before === 'true' ? 'false' : 'true');
 });
 
+
+test('theme toggle persists the first click across reload on desktop and mobile', async ({ page }, testInfo) => {
+  test.skip(!['chromium-desktop', 'chromium-mobile'].includes(testInfo.project.name));
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('theme', 'light');
+    localStorage.setItem('lang', 'es');
+    localStorage.setItem('mercasto_language', 'es');
+    localStorage.setItem('cookiesAccepted', 'true');
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+
+  const testId = testInfo.project.name === 'chromium-mobile' ? 'mobile-theme-toggle' : 'desktop-theme-toggle';
+  let toggle = page.getByTestId(testId);
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => page.evaluate(() => ({
+    stored: localStorage.getItem('theme'),
+    dark: document.documentElement.classList.contains('dark'),
+  }))).toEqual({ stored: 'dark', dark: true });
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  toggle = page.getByTestId(testId);
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => page.evaluate(() => ({
+    stored: localStorage.getItem('theme'),
+    dark: document.documentElement.classList.contains('dark'),
+  }))).toEqual({ stored: 'dark', dark: true });
+});
+
 async function mockPublicShellApi(page) {
   await page.addInitScript(() => {
     localStorage.setItem('lang', 'es');
