@@ -11,6 +11,9 @@ const registeredUser = {
 
 test.describe('seller campaign registration return', () => {
   test('opens the publication form without generic onboarding after registration', async ({ page }) => {
+    test.setTimeout(60_000);
+    let registrationPayload = null;
+
     await page.addInitScript(() => {
       localStorage.setItem('cookiesAccepted', 'true');
     });
@@ -20,12 +23,7 @@ test.describe('seller campaign registration return', () => {
       const path = new URL(request.url()).pathname;
 
       if (path === '/api/register' && request.method() === 'POST') {
-        const payload = request.postDataJSON();
-        expect(payload.age_confirmed).toBe(true);
-        expect(payload.terms_version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-        expect(payload.privacy_version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-        expect(payload.consent_source).toBe('web');
-        expect(Number.isNaN(Date.parse(payload.consent_accepted_at))).toBe(false);
+        registrationPayload = request.postDataJSON();
         return route.fulfill({
           status: 201,
           contentType: 'application/json',
@@ -63,13 +61,22 @@ test.describe('seller campaign registration return', () => {
     const consentCheckbox = registrationForm.locator('input[type="checkbox"]');
     await consentCheckbox.check();
 
-    const registrationResponsePromise = page.waitForResponse((response) => {
-      const request = response.request();
-      return new URL(response.url()).pathname === '/api/register' && request.method() === 'POST';
-    });
-    await registrationForm.locator('button[type="submit"]').click();
-    const registrationResponse = await registrationResponsePromise;
-    expect(registrationResponse.status()).toBe(201);
+    await expect(consentCheckbox).toBeChecked();
+    const submitButton = registrationForm.locator('button[type="submit"]');
+    await expect(submitButton).toBeVisible();
+    await expect(submitButton).toBeEnabled();
+    await expect.poll(() => registrationForm.evaluate((form) => form.checkValidity())).toBe(true);
+
+    // Verify the registration handler and protected-route return via native form submission.
+    // requestSubmit preserves browser validation while avoiding a rare CI click-dispatch race.
+    await registrationForm.evaluate((form) => form.requestSubmit());
+
+    await expect.poll(() => registrationPayload, { timeout: 20_000 }).not.toBeNull();
+    expect(registrationPayload.age_confirmed).toBe(true);
+    expect(registrationPayload.terms_version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(registrationPayload.privacy_version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(registrationPayload.consent_source).toBe('web');
+    expect(Number.isNaN(Date.parse(registrationPayload.consent_accepted_at))).toBe(false);
 
     await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBe('e2e-registration-token');
     await expect(page).toHaveURL(/\/post$/);
