@@ -46,7 +46,7 @@ test('every E2E spec is wired into an executable project surface', () => {
   assert.match(frontendWorkflow, /frontend-quality-shard\.sh webkit-public 4178/, 'Frontend Quality must execute the WebKit public shard');
   assert.match(frontendShard, /vite preview[^\n]+--strictPort/, 'Frontend Quality preview must fail instead of silently shifting to a stale port');
   assert.match(frontendShard, /kill -0 "\$\{preview_pid\}"/, 'Frontend Quality preview readiness must verify the spawned process is still alive');
-  assert.match(frontendShard, /grep -Eq \"Local:/, 'Frontend Quality preview readiness must wait for the spawned Vite ready signal');
+  assert.match(frontendShard, /curl -fsS --max-time 1 \"\$\{base_url\}\/\"/, 'Frontend Quality preview readiness must use the actual HTTP endpoint instead of ANSI-formatted Vite logs');
   assert.match(frontendWorkflow, /WEBKIT_RESULT: \$\{\{ needs\.webkit\.result \}\}/, 'Frontend Quality aggregate must require the WebKit result');
   assert.match(webkitConfig, /name: 'webkit-desktop'/, 'WebKit config must keep desktop Safari coverage');
   assert.match(webkitConfig, /name: 'webkit-mobile'/, 'WebKit config must keep mobile Safari coverage');

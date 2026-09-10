@@ -10,22 +10,20 @@ log_file="/tmp/mercasto-${shard}-preview.log"
 preview_pid=$!
 trap 'kill "${preview_pid}" >/dev/null 2>&1 || true' EXIT
 
+preview_ready=0
 for _ in $(seq 1 30); do
   if ! kill -0 "${preview_pid}" >/dev/null 2>&1; then
     cat "${log_file}"
     exit 1
   fi
-  if grep -Eq "Local:[[:space:]]+${base_url}/?" "${log_file}"; then
+  if curl -fsS --max-time 1 "${base_url}/" >/dev/null 2>&1; then
+    preview_ready=1
     break
   fi
   sleep 1
 done
 
-if ! grep -Eq "Local:[[:space:]]+${base_url}/?" "${log_file}"; then
-  cat "${log_file}"
-  exit 1
-fi
-if ! curl -fsS "${base_url}/" >/dev/null; then
+if [ "${preview_ready}" -ne 1 ]; then
   cat "${log_file}"
   exit 1
 fi
