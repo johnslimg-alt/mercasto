@@ -1251,4 +1251,6 @@ export default {
   push_notification_enable_title: "Включить уведомления",
   push_notification_enable_desc: "Получайте уведомления о новых сообщениях, предложениях и важных обновлениях.",
   push_notification_enabling: "Включаем...",
+  "v2_min_price": 'Мин. цена',
+  "v2_max_price": 'Макс. цена',
 };

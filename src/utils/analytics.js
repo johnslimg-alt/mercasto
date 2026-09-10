@@ -25,7 +25,7 @@ const CLICK_SELECTOR = [
   '[data-ad-id]',
 ].join(',');
 
-const PII_KEY_PATTERN = /(email|e_mail|phone|telefono|teléfono|password|pass|token|secret|address|direccion|dirección|whatsapp|telegram|message|mensaje|comment|comentario|description|descripcion|descripción|code|codigo|código|otp|sms|latitude|longitude|lat|lng)/i;
+const PII_KEY_PATTERN = /(^|_)(email|e_mail|phone|telefono|teléfono|password|pass|token|secret|address|direccion|dirección|whatsapp|telegram|message|mensaje|comment|comentario|description|descripcion|descripción|code|codigo|código|otp|sms|latitude|longitude|lat|lng)(_|$)/i;
 
 const META_STANDARD_EVENT_MAP = {
   page_view: 'PageView',

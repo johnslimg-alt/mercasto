@@ -1251,4 +1251,6 @@ export default {
   push_notification_enable_title: "알림 활성화",
   push_notification_enable_desc: "새 메시지, 혜택 및 중요한 업데이트 알림을 받으세요.",
   push_notification_enabling: "활성화 중...",
+  "v2_min_price": '최저 가격',
+  "v2_max_price": '최고 가격',
 };

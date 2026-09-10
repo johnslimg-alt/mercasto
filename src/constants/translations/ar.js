@@ -1251,4 +1251,6 @@ export default {
   push_notification_enable_title: "تفعيل الإشعارات",
   push_notification_enable_desc: "تلقَّ تنبيهات بالرسائل الجديدة والعروض والتحديثات المهمة.",
   push_notification_enabling: "جارٍ التفعيل...",
+  "v2_min_price": 'الحد الأدنى للسعر',
+  "v2_max_price": 'الحد الأقصى للسعر',
 };

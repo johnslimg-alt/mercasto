@@ -26,7 +26,7 @@ import { useAuthSessionState } from './app/useAuthSessionState';
 import { useTransientModalState } from './app/useTransientModalState';
 import { useCatalogState } from './app/useCatalogState';
 import {
-  AdminScreen, HomeScreen, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
+  AdminScreen, HomeScreen, HomeScreenV2, CatalogScreen, PostScreen, SellerLandingScreen, UserDashboard,
   AdDetailScreen, StorefrontScreen, EditAdScreen, SellerProfileScreen, AutosLanding, InmueblesLanding,
   EmpleosLanding, ServiciosLanding, CategoryLanding, ProductosLanding, TurismoLanding, ProfileEditScreen,
   TerminosScreen, PrivacidadScreen, CookiesScreen, NotFoundScreen, VerificarEmailScreen, StoresScreen,
@@ -1672,9 +1672,11 @@ function App() {
       ? `https://mercasto.com/ads/${viewedAd.id}`
       : viewedCompany
         ? `https://mercasto.com/vendedor/${viewedCompany.id}`
-        : verticalCanonicalAlias
-          ? `${window.location.origin}${verticalCanonicalAlias}`
-          : `${window.location.origin}${window.location.pathname}`;
+        : location.pathname === '/design-v2'
+          ? `${window.location.origin}/`
+          : verticalCanonicalAlias
+            ? `${window.location.origin}${verticalCanonicalAlias}`
+            : `${window.location.origin}${window.location.pathname}`;
     document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalHref);
     document.querySelector('meta[property="og:type"]')?.setAttribute('content', ogType);
 
@@ -1687,6 +1689,7 @@ function App() {
       /^\/mensajes\/?$/,
       /^\/perfil\/editar\/?$/,
       /^\/anuncio\/\d+\/editar\/?$/,
+      /^\/design-v2\/?$/,
     ];
     const searchParams = new URLSearchParams(location.search);
     const contentFilterKeys = [
@@ -4023,6 +4026,33 @@ function App() {
     />
   );
 
+  const renderHomeV2Screen = () => (
+    <HomeScreenV2
+      activeCat={activeCat}
+      executeSearch={executeSearch}
+      lang={lang}
+      renderAdCard={renderAdCard}
+      serverAds={serverAds}
+      setActiveCat={setActiveCat}
+      setSearchLocationInput={setSearchLocationInput}
+      setSearchQuery={setSearchQuery}
+      setShowPricingModal={setShowPricingModal}
+      searchLocationInput={searchLocationInput}
+      searchQuery={searchQuery}
+      minPrice={minPrice}
+      maxPrice={maxPrice}
+      setMinPrice={setMinPrice}
+      setMaxPrice={setMaxPrice}
+      handleSaveSearchAlert={handleSaveSearchAlert}
+      savingSearchAlert={savingSearchAlert}
+      realEstateAds={realEstateAds}
+      jobAds={jobAds}
+      serviceAds={serviceAds}
+      automotiveAds={automotiveAds}
+      t={t}
+    />
+  );
+
   const renderCatalogScreen = () => (
     <CatalogScreen
       activeCat={activeCat}
@@ -4164,6 +4194,8 @@ function App() {
         headerCategories={headerCategories}
         highlightedIndex={highlightedIndex}
         isAdminRoute={isAdminRoute}
+        hideCategoryBar={location.pathname === '/design-v2'}
+        useCustomLanguageMenu={location.pathname === '/design-v2'}
         isDarkMode={isDarkMode}
         isHeaderCategoryActive={isHeaderCategoryActive}
         lang={lang}
@@ -4222,6 +4254,7 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={renderHomeRoute()} />
+              <Route path="/design-v2" element={renderHomeV2Screen()} />
               <Route path="/login" element={<AuthEntryRoute mode="login" user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} tagline={t.ai_brand_tagline} />} />
               <Route path="/register" element={<AuthEntryRoute mode="register" user={user} authReady={authReady} setAuthMode={setAuthMode} setShowAuthModal={setShowAuthModal} tagline={t.ai_brand_tagline} />} />
               <Route path="/publish" element={<Navigate to="/post" replace />} />

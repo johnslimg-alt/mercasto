@@ -1251,4 +1251,6 @@ export default {
   push_notification_enable_title: "通知を有効にする",
   push_notification_enable_desc: "新しいメッセージ、オファー、重要な更新のお知らせを受け取ります。",
   push_notification_enabling: "有効化中...",
+  "v2_min_price": '最低価格',
+  "v2_max_price": '最高価格',
 };

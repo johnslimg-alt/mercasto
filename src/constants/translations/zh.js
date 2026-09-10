@@ -1251,4 +1251,6 @@ export default {
   push_notification_enable_title: "开启通知",
   push_notification_enable_desc: "接收新消息、优惠和重要更新提醒。",
   push_notification_enabling: "正在开启...",
+  "v2_min_price": '最低价格',
+  "v2_max_price": '最高价格',
 };

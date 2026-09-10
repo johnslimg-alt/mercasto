@@ -8,6 +8,68 @@ import MercastoLogo from './MercastoLogo';
 
 const SearchSuggestions = React.lazy(() => import('../common/SearchSuggestions'));
 
+function HeaderLanguageMenu({ LANGUAGE_OPTIONS, lang, setLang, label, compact = false }) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const closeOutside = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeEscape = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      document.removeEventListener('keydown', closeEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative shrink-0">
+      <button
+        type="button"
+        data-testid={compact ? 'mobile-language-menu-button' : 'desktop-language-menu-button'}
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(value => !value)}
+        className={compact
+          ? 'mobile-language-select justify-center'
+          : 'desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border'}
+      >
+        <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+        <span className="text-[11px] font-black uppercase leading-none">{lang.toUpperCase()}</span>
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-label={label}
+          data-testid={compact ? 'mobile-language-menu' : 'desktop-language-menu'}
+          className="header-popover absolute right-0 top-full z-[90] mt-2 max-h-56 w-40 overflow-y-auto no-scrollbar rounded-2xl border p-1.5 shadow-xl"
+        >
+          {LANGUAGE_OPTIONS.map(code => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={lang === code}
+              key={code}
+              onClick={() => { setLang(code); setOpen(false); }}
+              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-[12px] font-bold uppercase transition-colors ${lang === code ? 'bg-[#84CC16]/15 text-[#4D7C0F] dark:text-[#BEF264]' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}
+            >
+              <span>{code.toUpperCase()}</span>
+              {lang === code ? <span aria-hidden="true">✓</span> : null}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AppHeader({
   LANGUAGE_OPTIONS,
   MEXICO_STATES_CITIES,
@@ -29,6 +91,7 @@ export default function AppHeader({
   headerCategories,
   highlightedIndex,
   isAdminRoute,
+  hideCategoryBar = false,
   isDarkMode,
   isHeaderCategoryActive,
   lang,
@@ -75,6 +138,7 @@ export default function AppHeader({
   t,
   unreadCount,
   user,
+  useCustomLanguageMenu = false,
 }) {
   return (
       <header className="site-header sticky top-0 z-40 border-b backdrop-blur-xl">
@@ -115,14 +179,18 @@ export default function AppHeader({
                 <button data-testid="mobile-theme-toggle" type="button" onClick={() => setIsDarkMode(v => !v)} className="mobile-theme-icon" aria-label={isDarkMode ? t.light_mode : t.dark_mode} aria-pressed={isDarkMode}>
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
-                <div className="mobile-language-select" aria-label={t.language_switcher}>
-                  <Globe className="w-3.5 h-3.5" />
-                  <select data-testid="mobile-language-select" aria-label={t.language} value={lang} onChange={(e) => setLang(e.target.value)}>
-                    {LANGUAGE_OPTIONS.map(l => (
-                      <option key={l} value={l}>{l.toUpperCase()}</option>
-                    ))}
-                  </select>
-                </div>
+                {useCustomLanguageMenu ? (
+                  <HeaderLanguageMenu LANGUAGE_OPTIONS={LANGUAGE_OPTIONS} lang={lang} setLang={setLang} label={t.language_switcher || t.language} compact />
+                ) : (
+                  <div className="mobile-language-select" aria-label={t.language_switcher}>
+                    <Globe className="w-3.5 h-3.5" />
+                    <select data-testid="mobile-language-select" aria-label={t.language} value={lang} onChange={(e) => setLang(e.target.value)}>
+                      {LANGUAGE_OPTIONS.map(l => (
+                        <option key={l} value={l}>{l.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="relative">
                   <button type="button" data-testid="mobile-location-button" aria-expanded={showMobileLocationPicker} onClick={() => setShowMobileLocationPicker(!showMobileLocationPicker)} className="mobile-location-select-top" aria-label={`${t.change_location}: ${searchLocationInput || t.all_mexico}`}>
                     <MapPin className="w-3 h-3 text-[#84CC16]" />
@@ -195,14 +263,18 @@ export default function AppHeader({
                   </div>
                 )}
               </div>
-              <div className="desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
-                <Globe className="w-3.5 h-3.5 text-slate-400" />
-                <select data-testid="desktop-language-select" aria-label={t.language} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
-                  {LANGUAGE_OPTIONS.map(l => (
-                    <option key={l} value={l}>{l.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
+              {useCustomLanguageMenu ? (
+                <HeaderLanguageMenu LANGUAGE_OPTIONS={LANGUAGE_OPTIONS} lang={lang} setLang={setLang} label={t.language_switcher || t.language} />
+              ) : (
+                <div className="desktop-header-control header-lang-select hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border">
+                  <Globe className="w-3.5 h-3.5 text-slate-400" />
+                  <select data-testid="desktop-language-select" aria-label={t.language} value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-[12px] font-bold outline-none cursor-pointer uppercase appearance-none pr-1">
+                    {LANGUAGE_OPTIONS.map(l => (
+                      <option key={l} value={l}>{l.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="relative hidden sm:block">
               <button type="button" onClick={() => { user ? navigate('/mensajes') : (setAuthMode('login'), setShowAuthModal(true)); }} className="desktop-header-control header-icon-button relative p-2.5 rounded-xl" aria-label={t.messages}>
                 <MessageCircle className="w-[22px] h-[22px]" />
@@ -359,7 +431,7 @@ export default function AppHeader({
             )}
           </div>
         </div>
-        <div data-testid="header-category-bar" className={isAdminRoute ? "hidden" : "header-category-bar border-t"}>
+        <div data-testid="header-category-bar" className={(isAdminRoute || hideCategoryBar) ? "hidden" : "header-category-bar border-t"}>
           <div className="mx-auto max-w-[1480px] px-3 sm:px-4 lg:px-6">
             <nav className="header-category-nav flex items-center gap-3 overflow-x-auto whitespace-nowrap font-medium text-slate-600">
               <button type="button" onClick={() => handleHeaderCategoryClick('')} className={`header-category-link cursor-pointer whitespace-nowrap border-b-2 bg-transparent py-2 transition-colors ${activeCat === '' ? 'is-active font-bold' : 'border-transparent'}`}>{t.all || 'All'}</button>

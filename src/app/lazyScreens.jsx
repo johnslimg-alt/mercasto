@@ -9,6 +9,7 @@ const loadHomeScreen = () => (homeScreenModulePromise ||= import('../components/
 const loadCatalogScreen = () => (catalogScreenModulePromise ||= import('../components/screens/CatalogScreen'));
 
 export const HomeScreen = React.lazy(loadHomeScreen);
+export const HomeScreenV2 = React.lazy(() => import('../components/screens/HomeScreenV2'));
 export const CatalogScreen = React.lazy(loadCatalogScreen);
 
 if (window.location.pathname === '/listings' || (window.location.pathname === '/' && window.location.search)) {

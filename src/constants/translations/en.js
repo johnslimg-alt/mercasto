@@ -1251,4 +1251,6 @@ export default {
   push_notification_enable_title: "Enable notifications",
   push_notification_enable_desc: "Receive alerts about new messages, offers, and important updates.",
   push_notification_enabling: "Enabling...",
+  "v2_min_price": 'Min price',
+  "v2_max_price": 'Max price',
 };
