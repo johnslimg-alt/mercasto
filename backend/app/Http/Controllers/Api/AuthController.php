@@ -451,6 +451,16 @@ class AuthController extends Controller
 
         Cache::forget($cacheKey);
 
+        // The SMS code is the first factor only. Existing accounts that enabled
+        // 2FA must complete the same short-lived challenge used by password/OAuth login.
+        if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
+            return response()->json([
+                'two_factor' => true,
+                'email' => $user->email,
+                'challenge_token' => $this->issueTwoFactorLoginChallenge($user),
+            ]);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
         $this->syncGamificationAfterAuthentication($user);
 

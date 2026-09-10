@@ -2866,6 +2866,7 @@ function App() {
       const result = await res.json();
       if (res.ok) {
         setUser(result.user);
+        setUserRole(result.user?.role || 'individual');
         localStorage.setItem('user', JSON.stringify(result.user));
         if (result.access_token) localStorage.setItem('auth_token', result.access_token);
         setShowAuthModal(false);
@@ -2916,6 +2917,13 @@ function App() {
       });
       const result = await res.json();
       if (res.ok) {
+        if (result.two_factor) {
+          setTwoFactorEmail(result.email || '');
+          setTwoFactorChallengeToken(result.challenge_token || '');
+          setRequiresTwoFactor(true);
+          setPendingPhoneRegistrationConsent(null);
+          return;
+        }
         setUser(result.user); setUserRole(result.user.role || 'individual');
         localStorage.setItem('user', JSON.stringify(result.user));
         if (result.access_token) localStorage.setItem('auth_token', result.access_token);

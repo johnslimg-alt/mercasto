@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Support\SecureOneTimeCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -58,6 +59,36 @@ class TwoFactorLoginChallengeTest extends TestCase
             'code' => 'recovery-challenge',
         ])->assertUnprocessable()
             ->assertJsonPath('message', 'El desafío de autenticación es inválido o ha expirado.');
+    }
+
+    public function test_phone_first_factor_requires_existing_two_factor_challenge_before_token(): void
+    {
+        $phone = '+525551112233';
+        $user = $this->createTwoFactorUser('phone-2fa@example.test', 'phone-recovery');
+        $user->forceFill(['phone_number' => $phone, 'phone_verified' => true])->save();
+
+        $cacheKey = SecureOneTimeCode::cacheKey('phone-auth', $phone);
+        Cache::put($cacheKey, SecureOneTimeCode::hash('654321', 'phone-auth'), now()->addMinutes(10));
+
+        $phoneResponse = $this->postJson('/api/auth/phone/verify', [
+            'phone_number' => $phone,
+            'code' => '654321',
+        ])->assertOk()
+            ->assertJsonPath('two_factor', true)
+            ->assertJsonMissingPath('access_token')
+            ->assertJsonMissingPath('user');
+
+        $this->assertNull(Cache::get($cacheKey));
+        $this->assertCount(0, $user->tokens()->get());
+
+        $challenge = $phoneResponse->json('challenge_token');
+        $this->assertIsString($challenge);
+        $this->assertSame(64, strlen($challenge));
+
+        $this->postJson('/api/login/two-factor', [
+            'challenge_token' => $challenge,
+            'code' => 'phone-recovery',
+        ])->assertOk()->assertJsonPath('user.id', $user->id)->assertJsonStructure(['access_token']);
     }
 
     public function test_challenge_is_bound_to_the_user_who_completed_the_first_factor(): void
