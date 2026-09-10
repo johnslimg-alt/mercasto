@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, BadgeCheck, Eye, Heart, MapPin, Star } from 'lucide-react';
 import { getImageUrls, sizedImage } from '../../utils/imageHelpers';
 import { localizedText } from '../../utils/localize';
-import { formatNumber, localeFor } from '../../utils/localeFormat';
+import { formatNumber } from '../../utils/localeFormat';
+import { localeFor } from '../../utils/localeFormat';
 import { getTranslations } from '../../utils/translations';
 import { canonicalAdCondition, getAdDetailCopy } from '../../utils/adDetailCopy';
 

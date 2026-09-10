@@ -1982,8 +1982,8 @@ body *::-webkit-scrollbar {
   /* ── Chips & badges ───────────────────────────────────────────────────── */
   .mc-chip {
     @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold;
-    border-color: var(--mc-line);
-    background: var(--mc-raised-surface);
+    border-color: var(--line);
+    background: var(--surface-soft);
     color: #475569;
   }
 
@@ -1997,14 +1997,14 @@ body *::-webkit-scrollbar {
   /* ── Surfaces ─────────────────────────────────────────────────────────── */
   .mc-panel {
     background: var(--surface);
-    border: 1px solid var(--mc-line);
+    border: 1px solid var(--line);
     border-radius: var(--mc-radius-2xl);
     box-shadow: var(--mc-elev-1);
   }
 
   .mc-panel-flat {
     background: var(--surface);
-    border: 1px solid var(--mc-line);
+    border: 1px solid var(--line);
     border-radius: var(--mc-radius-card);
   }
 
@@ -2057,7 +2057,7 @@ body *::-webkit-scrollbar {
   .mc-promo {
     @apply relative flex h-full flex-col overflow-hidden p-5;
     border-radius: var(--mc-radius-2xl);
-    border: 1px solid var(--mc-line);
+    border: 1px solid var(--line);
     background: var(--surface);
     box-shadow: var(--mc-elev-1);
     transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
@@ -2101,7 +2101,7 @@ body *::-webkit-scrollbar {
   /* ── Segmented control ────────────────────────────────────────────────── */
   .mc-segmented {
     @apply inline-flex items-center gap-1 rounded-xl p-1;
-    background: var(--mc-raised-surface);
+    background: var(--surface-soft);
   }
 
   html.dark .mc-segmented {
@@ -2133,7 +2133,7 @@ body *::-webkit-scrollbar {
 @layer components {
   .category-pill {
     background: var(--surface);
-    border-color: var(--mc-line);
+    border-color: var(--line);
     border-radius: var(--mc-radius-card);
     box-shadow: var(--mc-elev-1);
     transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
@@ -2171,5 +2171,34 @@ body *::-webkit-scrollbar {
 
   html.dark .category-pill h3 {
     color: #CBD5E1 !important;
+  }
+}
+
+/* Dark-mode companions for the refresh primitives. The locked dark palette
+   re-declares `--line`/`--surface-soft` on body, so most surfaces follow
+   automatically; chips and eyebrows need an explicit lift for contrast. */
+@layer components {
+  html.dark .mc-chip {
+    background: #0F172A;
+    border-color: #334155;
+    color: #CBD5E1;
+  }
+
+  html.dark .mc-eyebrow {
+    color: #94A3B8;
+  }
+
+  html.dark .mc-price-unit {
+    color: #94A3B8;
+  }
+
+  html.dark .mc-promo {
+    background: #16223A;
+  }
+
+  html.dark .mc-panel,
+  html.dark .mc-panel-flat {
+    background: #16223A;
+    border-color: #2C3A55;
   }
 }
