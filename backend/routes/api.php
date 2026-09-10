@@ -219,14 +219,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/business-verifications', [BusinessProfileController::class, 'adminPendingVerifications']);
     Route::get('/admin/business-verifications/{userId}/csf', [BusinessProfileController::class, 'adminDownloadCsf'])->whereNumber('userId');
     Route::post('/admin/business-verifications/{userId}/review', [BusinessProfileController::class, 'adminReviewVerification'])->whereNumber('userId');
-    Route::put('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля (PUT)
+    Route::middleware('throttle:sensitive-profile')->put('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля (PUT)
     Route::put('/user/notifications', [ProfileController::class, 'updateNotifications']); // Настройки уведомлений (PUT)
-    Route::post('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля
+    Route::middleware('throttle:sensitive-profile')->post('/user/password', [ProfileController::class, 'changePassword']); // Смена пароля
     
-    // Защита домена от блокировки спам-фильтрами (AWS SES/Mailgun): лимит на отправку писем
-    Route::middleware('throttle:3,1')->group(function () {
-        Route::post('/user/email/request', [ProfileController::class, 'requestEmailChange']); // Запрос на смену email
-    });
+    // Sensitive email change: shared re-auth budget plus an independent mail-send quota.
+    Route::middleware(['throttle:sensitive-profile', 'throttle:email-change'])
+        ->post('/user/email/request', [ProfileController::class, 'requestEmailChange']);
     Route::post('/user/email/confirm', [ProfileController::class, 'confirmEmailChange']); // Подтверждение нового email
     Route::get('/user/notifications/list', [ProfileController::class, 'getNotifications']); // Получить уведомления
     Route::post('/user/notifications/{id}/read', [ProfileController::class, 'markNotificationRead'])->whereNumber('id'); // Прочитать уведомление

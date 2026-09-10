@@ -4,6 +4,7 @@ const resources = {
     twofa_reauth_desc: 'Introduce tu contraseña o un código actual de autenticación / recuperación.',
     twofa_reauth_code: 'Código de autenticación o recuperación',
     twofa_reauth_invalid: 'Verifica tu identidad para continuar.',
+    sensitive_reauth_login_required: 'Vuelve a iniciar sesión para continuar.',
     twofa_disable_confirm_action: 'Confirmar desactivación',
   },
   en: {
@@ -11,6 +12,7 @@ const resources = {
     twofa_reauth_desc: 'Enter your password or a current authenticator / recovery code.',
     twofa_reauth_code: 'Authenticator or recovery code',
     twofa_reauth_invalid: 'Verify your identity to continue.',
+    sensitive_reauth_login_required: 'Sign in again to continue.',
     twofa_disable_confirm_action: 'Confirm disable',
   },
   pt: {
@@ -18,6 +20,7 @@ const resources = {
     twofa_reauth_desc: 'Digite sua senha ou um código atual do autenticador / recuperação.',
     twofa_reauth_code: 'Código do autenticador ou de recuperação',
     twofa_reauth_invalid: 'Verifique sua identidade para continuar.',
+    sensitive_reauth_login_required: 'Entre novamente para continuar.',
     twofa_disable_confirm_action: 'Confirmar desativação',
   },
   fr: {
@@ -25,6 +28,7 @@ const resources = {
     twofa_reauth_desc: 'Saisissez votre mot de passe ou un code actuel d’authentification / récupération.',
     twofa_reauth_code: 'Code d’authentification ou de récupération',
     twofa_reauth_invalid: 'Vérifiez votre identité pour continuer.',
+    sensitive_reauth_login_required: 'Reconnectez-vous pour continuer.',
     twofa_disable_confirm_action: 'Confirmer la désactivation',
   },
   de: {
@@ -32,6 +36,7 @@ const resources = {
     twofa_reauth_desc: 'Gib dein Passwort oder einen aktuellen Authenticator- / Wiederherstellungscode ein.',
     twofa_reauth_code: 'Authenticator- oder Wiederherstellungscode',
     twofa_reauth_invalid: 'Bestätige deine Identität, um fortzufahren.',
+    sensitive_reauth_login_required: 'Melde dich erneut an, um fortzufahren.',
     twofa_disable_confirm_action: 'Deaktivierung bestätigen',
   },
   it: {
@@ -39,6 +44,7 @@ const resources = {
     twofa_reauth_desc: 'Inserisci la password o un codice attuale dell’autenticatore / di recupero.',
     twofa_reauth_code: 'Codice autenticatore o di recupero',
     twofa_reauth_invalid: 'Verifica la tua identità per continuare.',
+    sensitive_reauth_login_required: 'Accedi di nuovo per continuare.',
     twofa_disable_confirm_action: 'Conferma disattivazione',
   },
   zh: {
@@ -46,6 +52,7 @@ const resources = {
     twofa_reauth_desc: '输入密码，或当前的验证器 / 恢复代码。',
     twofa_reauth_code: '验证器或恢复代码',
     twofa_reauth_invalid: '请验证身份后继续。',
+    sensitive_reauth_login_required: '请重新登录以继续。',
     twofa_disable_confirm_action: '确认停用',
   },
   ko: {
@@ -53,6 +60,7 @@ const resources = {
     twofa_reauth_desc: '비밀번호 또는 현재 인증 앱 / 복구 코드를 입력하세요.',
     twofa_reauth_code: '인증 앱 또는 복구 코드',
     twofa_reauth_invalid: '계속하려면 본인 확인이 필요합니다.',
+    sensitive_reauth_login_required: '계속하려면 다시 로그인하세요.',
     twofa_disable_confirm_action: '비활성화 확인',
   },
   ja: {
@@ -60,6 +68,7 @@ const resources = {
     twofa_reauth_desc: 'パスワード、または現在の認証コード / リカバリーコードを入力してください。',
     twofa_reauth_code: '認証コードまたはリカバリーコード',
     twofa_reauth_invalid: '続行するには本人確認が必要です。',
+    sensitive_reauth_login_required: '続行するには、もう一度ログインしてください。',
     twofa_disable_confirm_action: '無効化を確認',
   },
   ar: {
@@ -67,6 +76,7 @@ const resources = {
     twofa_reauth_desc: 'أدخل كلمة المرور أو رمز المصادقة / الاسترداد الحالي.',
     twofa_reauth_code: 'رمز المصادقة أو الاسترداد',
     twofa_reauth_invalid: 'تحقق من هويتك للمتابعة.',
+    sensitive_reauth_login_required: 'سجّل الدخول مرة أخرى للمتابعة.',
     twofa_disable_confirm_action: 'تأكيد التعطيل',
   },
   ru: {
@@ -74,6 +84,7 @@ const resources = {
     twofa_reauth_desc: 'Введите пароль или текущий код аутентификатора / восстановления.',
     twofa_reauth_code: 'Код аутентификатора или восстановления',
     twofa_reauth_invalid: 'Подтвердите личность, чтобы продолжить.',
+    sensitive_reauth_login_required: 'Войдите снова, чтобы продолжить.',
     twofa_disable_confirm_action: 'Подтвердить отключение',
   },
 };

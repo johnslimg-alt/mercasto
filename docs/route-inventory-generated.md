@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-09T23:28:50Z
-Commit: 700b0ae8-dirty
+Generated at: 2026-09-10T00:58:36Z
+Commit: c616e8d0-dirty
 Source: php artisan route:list --except-vendor -v
 
 ```text
@@ -501,7 +501,8 @@ Source: php artisan route:list --except-vendor -v
   POST      api/user/email/request generated::<auto> › Api\ProfileController@requestEmailChange
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
-            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:3,1
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:sensitive-profile
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:email-change
   GET|HEAD  api/user/favorite-ads generated::<auto> › Api\AdController@favoriteAds
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
@@ -536,9 +537,11 @@ Source: php artisan route:list --except-vendor -v
   PUT       api/user/password generated::<auto> › Api\ProfileController@changePassword
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:sensitive-profile
   POST      api/user/password generated::<auto> › Api\ProfileController@changePassword
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:sensitive-profile
   GET|HEAD  api/user/payments generated::<auto> › Api\PaymentController@getUserPayments
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
