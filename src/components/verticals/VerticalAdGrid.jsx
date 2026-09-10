@@ -32,13 +32,14 @@ function getImg(path) {
   }
   if (typeof path !== 'string') return '/placeholder-ad.svg';
   if (path.startsWith('http') || path.startsWith('data:')) return safeExternalImage(path);
+  if (path === '/placeholder-ad.svg' || path.startsWith('/storage/')) return path;
   if (path.startsWith('[')) {
     try {
       const a = JSON.parse(path);
       if (Array.isArray(a) && a.length) return getImg(a[0]);
     } catch (e) {}
   }
-  return `${STORAGE_URL}/${path}`;
+  return `${STORAGE_URL}/${path.replace(/^\/+/, '')}`;
 }
 
 function AdSkeleton() {
