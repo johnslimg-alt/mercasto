@@ -290,6 +290,7 @@ const AdCard = memo(({
           )}
         </div>
       </div>
+      {favoriteButton()}
     </article>
   );
 });

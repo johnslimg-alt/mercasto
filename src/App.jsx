@@ -316,9 +316,9 @@ const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio', priority = f
             src={media[currentIndex].url}
             alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-75 blur-2xl"
+            className="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover opacity-80 blur-3xl saturate-150"
           />
-          <div className="pointer-events-none absolute inset-0 bg-slate-950/25" aria-hidden="true" />
+          <div className="pointer-events-none absolute inset-0 bg-slate-950/35" aria-hidden="true" />
           <img
             src={media[currentIndex].url}
             alt={alt}
