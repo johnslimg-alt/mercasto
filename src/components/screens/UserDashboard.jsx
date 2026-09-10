@@ -1312,9 +1312,12 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
 
       {/* Toast Notification */}
       {dashToast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${
-          dashToast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
-        }`}>
+        <div
+          data-testid="dashboard-toast"
+          className={`fixed bottom-[96px] right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all md:bottom-6 ${
+            dashToast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
+          }`}
+        >
           {dashToast.msg}
         </div>
       )}
