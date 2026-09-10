@@ -484,3 +484,34 @@ for (const viewport of darkThemeViewports) {
     });
   }
 }
+
+
+test('mobile global toast stays clear of the tabbar', async ({ page, request }, testInfo) => {
+  test.skip(!testInfo.project.name.includes('mobile'), 'mobile-only geometry regression');
+  const session = await authenticate(request, 'seller');
+  await installSession(page, session);
+  await page.goto('/profile?tab=settings');
+
+  const form = page.locator('form').filter({ has: page.locator('input[type="password"]') }).first();
+  await form.locator('input[type="password"]').nth(0).fill('E2eTestPass99!');
+  await form.locator('input[type="password"]').nth(1).fill('DifferentPass88!');
+  await form.locator('input[type="password"]').nth(2).fill('MismatchPass77!');
+  await form.locator('button[type="submit"]').click();
+
+  const toast = page.getByTestId('app-toast');
+  const tabbar = page.locator('.mobile-tabbar');
+  await expect(toast).toBeVisible();
+  await expect(tabbar).toBeVisible();
+  const toastBox = await toast.boundingBox();
+  const tabbarBox = await tabbar.boundingBox();
+  expect(toastBox).not.toBeNull();
+  expect(tabbarBox).not.toBeNull();
+  expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(tabbarBox.y);
+
+  const tabbarCenterHit = await tabbar.evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return Boolean(hit && node.contains(hit));
+  });
+  expect(tabbarCenterHit).toBeTruthy();
+});
