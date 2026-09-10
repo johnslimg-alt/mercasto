@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { ADMIN_MODERATION_NAMESPACE } from './adminModerationI18n';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
+import { getImageUrl } from '../../utils/imageHelpers';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://mercasto.com/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'https://mercasto.com/storage';
 
 const readAdmin = () => {
   try {
@@ -29,12 +29,7 @@ const parseImages = (ad) => {
   }
 };
 
-const imageUrl = (path) => {
-  if (!path) return '/placeholder-ad.svg';
-  if (/^(https?:|data:|blob:)/i.test(path)) return path;
-  if (path.startsWith('/')) return path;
-  return `${STORAGE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
-};
+const imageUrl = (path) => getImageUrl(path);
 
 const plainText = (value, language = 'es') => {
   if (!value) return '';

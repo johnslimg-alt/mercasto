@@ -11,6 +11,7 @@ import { localeFor } from '../../utils/localeFormat';
 import useModalFocusTrap from '../../hooks/useModalFocusTrap';
 import { useNavigate } from 'react-router-dom';
 import { appendDynamicFilters } from '../../utils/filterUrlState';
+import { getImageUrl } from '../../utils/imageHelpers';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -47,35 +48,8 @@ const escapeHtml = (value = '') => String(value)
   .replace(/'/g, '&#039;');
 
 const getAdImageUrl = (ad) => {
-  const STORAGE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_STORAGE_URL) || '';
   const raw = ad?.image_url || ad?.image || null;
-  if (!raw) return null;
-  // Handle JSON array string like '["url1","url2"]' or '["url"]'
-  if (typeof raw === 'string' && raw.trim().startsWith('[')) {
-    try {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr) && arr.length > 0 && arr[0]) {
-        const u = String(arr[0]);
-        if (u.startsWith('http')) return u;
-        if (u.startsWith('/')) return (STORAGE_URL || '') + u;
-        return u;
-      }
-    } catch (e) { /* not JSON, fall through */ }
-  }
-  // Handle plain string URL
-  if (typeof raw === 'string') {
-    if (raw.startsWith('http')) return raw;
-    if (raw.startsWith('/')) return (STORAGE_URL || '') + raw;
-    return raw;
-  }
-  // Handle array directly
-  if (Array.isArray(raw) && raw.length > 0) {
-    const u = String(raw[0]);
-    if (u.startsWith('http')) return u;
-    if (u.startsWith('/')) return (STORAGE_URL || '') + u;
-    return u;
-  }
-  return null;
+  return raw ? getImageUrl(raw) : null;
 };
 
 
