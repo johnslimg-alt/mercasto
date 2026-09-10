@@ -437,7 +437,9 @@ class AuthController extends Controller
                 $user->phone_number = $phoneNumber;
                 $user->name = 'Usuario '.substr($phoneNumber, -4);
                 $user->email = $phoneNumber.'@mercasto.local';
-                $user->password = Hash::make(Str::random(16));
+                // Phone-auth accounts do not have a user-known password yet.
+                // Keep it null so sensitive profile actions require recent re-authentication.
+                $user->password = null;
                 $user->role = 'individual';
                 $user->ip_address = PrivacyFingerprint::ip($request->ip(), 'registration-account', 45);
                 $user->save();

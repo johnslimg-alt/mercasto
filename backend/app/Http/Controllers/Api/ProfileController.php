@@ -18,6 +18,7 @@ use App\Jobs\PreScreenKycDocumentWithAI;
 use App\Support\AnalyticsTrackingConsent;
 use App\Support\EmailIdentity;
 use App\Support\MailLocale;
+use App\Support\SensitiveActionReauth;
 use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 
@@ -231,19 +232,21 @@ class ProfileController extends Controller
             'new_password' => 'required|string|min:8',
         ];
 
-        // Умная проверка: если аккаунт создан по SMS или через соцсети (OAuth),
-        // пользователь не знает свой сгенерированный пароль. Мы разрешаем установить его без подтверждения старого.
-        $isPhoneAuthUser = str_ends_with($user->email, '@mercasto.local');
-        $isOAuthUser = $user->google_id || $user->apple_id || $user->telegram_id;
-
-        if ($user->password && !$isPhoneAuthUser && !$isOAuthUser) {
-            $rules['current_password'] = 'required|string';
+        if (SensitiveActionReauth::hasPassword($user)) {
+            $rules['current_password'] = 'required|string|max:255';
         }
 
         $request->validate($rules);
 
-        if ($user->password && !$isPhoneAuthUser && !$isOAuthUser && !Hash::check($request->current_password, $user->password)) {
-            return response()->json(['message' => 'La contraseña actual es incorrecta.'], 400);
+        if (! SensitiveActionReauth::passes($request, $user, $request->input('current_password'))) {
+            if (SensitiveActionReauth::hasPassword($user)) {
+                return response()->json(['message' => 'La contraseña actual es incorrecta.'], 400);
+            }
+
+            return response()->json([
+                'message' => 'Vuelve a iniciar sesión antes de establecer una contraseña.',
+                'code' => 'reauthentication_required',
+            ], 403);
         }
 
         $user->password = Hash::make($request->new_password);
@@ -262,22 +265,28 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         
-        $rules = ['new_email' => 'required|email|unique:users,email'];
-        // Если у пользователя есть пароль, требуем его для безопасности
-        if ($user->password) {
-            $rules['password'] = 'required|string';
+        $rules = ['new_email' => 'required|email|max:255'];
+        if (SensitiveActionReauth::hasPassword($user)) {
+            $rules['password'] = 'required|string|max:255';
         }
-        
+
         $request->validate($rules);
+
+        if (! SensitiveActionReauth::passes($request, $user, $request->input('password'))) {
+            if (SensitiveActionReauth::hasPassword($user)) {
+                return response()->json(['message' => 'La contraseña actual es incorrecta.'], 400);
+            }
+
+            return response()->json([
+                'message' => 'Vuelve a iniciar sesión antes de cambiar tu correo electrónico.',
+                'code' => 'reauthentication_required',
+            ], 403);
+        }
 
         if (EmailIdentity::exists((string) $request->new_email, (int) $user->id)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'new_email' => ['Este correo electrónico ya está registrado.'],
             ]);
-        }
-
-        if ($user->password && !Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'La contraseña actual es incorrecta.'], 400);
         }
 
         $token = Str::random(60);
