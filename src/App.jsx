@@ -3034,7 +3034,7 @@ function App() {
         showToast(localizeServerMessage(lang, data.message, t.password_updated));
         setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       } else {
-        showToast(localizeServerMessage(lang, data.message, t.password_update_error), 'error');
+        showToast(data.code === 'reauthentication_required' ? t.sensitive_reauth_login_required : localizeServerMessage(lang, data.message, t.password_update_error), 'error');
       }
     } catch (err) { console.error("Password update error", err); showToast(t.connection_error, 'error'); }
     finally { setPasswordLoading(false); }
@@ -3055,7 +3055,7 @@ function App() {
         showToast(localizeServerMessage(lang, data.message, t.email_verification_sent));
         setEmailForm({ new_email: '', password: '' });
       } else {
-        showToast(localizeServerMessage(lang, data.message, t.account_action_email_request_error), 'error');
+        showToast(data.code === 'reauthentication_required' ? t.sensitive_reauth_login_required : localizeServerMessage(lang, data.message, t.account_action_email_request_error), 'error');
       }
     } catch (err) { console.error("Email update error", err); showToast(t.connection_error, 'error'); }
     finally { setEmailLoading(false); }

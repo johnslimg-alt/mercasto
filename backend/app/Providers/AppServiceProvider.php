@@ -75,6 +75,31 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perHour(5)->by($request->ip());
         });
 
+        // Client gamification heartbeat gets its own quota so it cannot exhaust
+        // unrelated numeric 10/minute limits such as payments or bulk actions.
+        RateLimiter::for("gamification-activity", function ($request) {
+            $user = $request->user();
+            $key = $user ? "user:{$user->id}" : "ip:{$request->ip()}";
+
+            return Limit::perMinute(10)->by($key);
+        });
+
+        // Sensitive profile actions share a small per-user verification budget.
+        RateLimiter::for("sensitive-profile", function ($request) {
+            $user = $request->user();
+            $key = $user ? "user:{$user->id}" : "ip:{$request->ip()}";
+
+            return Limit::perMinute(5)->by($key);
+        });
+
+        // Email-change requests also get an independent mail-delivery quota.
+        RateLimiter::for("email-change", function ($request) {
+            $user = $request->user();
+            $key = $user ? "user:{$user->id}" : "ip:{$request->ip()}";
+
+            return Limit::perMinute(3)->by($key);
+        });
+
         // Ad creation: 20 new ads per day per user (unlimited only for trusted E2E accounts)
         RateLimiter::for("ads", function ($request) {
             $user = $request->user();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserConsent;
+use App\Services\GamificationService;
 use App\Support\AnalyticsTrackingConsent;
 use App\Support\EmailIdentity;
 use App\Support\PrivacyFingerprint;
@@ -125,6 +126,7 @@ class AuthController extends Controller
 
         // Создаем токен Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
+        $this->syncGamificationAfterAuthentication($user);
 
         return response()->json([
             'message' => 'Usuario registrado correctamente',
@@ -312,6 +314,7 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $this->syncGamificationAfterAuthentication($user);
 
         return response()->json([
             'message' => 'Inicio de sesión exitoso',
@@ -434,7 +437,9 @@ class AuthController extends Controller
                 $user->phone_number = $phoneNumber;
                 $user->name = 'Usuario '.substr($phoneNumber, -4);
                 $user->email = $phoneNumber.'@mercasto.local';
-                $user->password = Hash::make(Str::random(16));
+                // Phone-auth accounts do not have a user-known password yet.
+                // Keep it null so sensitive profile actions require recent re-authentication.
+                $user->password = null;
                 $user->role = 'individual';
                 $user->ip_address = PrivacyFingerprint::ip($request->ip(), 'registration-account', 45);
                 $user->save();
@@ -446,9 +451,12 @@ class AuthController extends Controller
 
         Cache::forget($cacheKey);
 
+        $token = $user->createToken('auth_token')->plainTextToken;
+        $this->syncGamificationAfterAuthentication($user);
+
         return response()->json([
             'message' => 'Inicio de sesión exitoso',
-            'access_token' => $user->createToken('auth_token')->plainTextToken,
+            'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user->makeHidden(['two_factor_secret', 'two_factor_recovery_codes', 'email_verification_token', 'password']),
             'is_new_user' => $isNewUser,
@@ -572,6 +580,7 @@ class AuthController extends Controller
     private function twoFactorLoginSuccessResponse(User $user)
     {
         $token = $user->createToken('auth_token')->plainTextToken;
+        $this->syncGamificationAfterAuthentication($user);
 
         return response()->json([
             'message' => 'Inicio de sesión exitoso',
@@ -584,6 +593,22 @@ class AuthController extends Controller
                 'password',
             ]),
         ]);
+    }
+
+    private function syncGamificationAfterAuthentication(User $user): void
+    {
+        try {
+            $gamification = app(GamificationService::class);
+            $gamification->recordActivity($user, 'login');
+            $gamification->checkAchievements($user);
+        } catch (\Throwable $e) {
+            // Authentication must never fail because the optional gamification
+            // subsystem is unavailable. Keep the log free of user data/details.
+            Log::warning('Gamification authentication sync failed', [
+                'user_id' => $user->id,
+                'error_class' => $e::class,
+            ]);
+        }
     }
 
     private function isValidConfig($clientId, $clientSecret)
@@ -646,6 +671,7 @@ class AuthController extends Controller
 
         $this->ensureReferralCode($user);
         $token = $user->createToken('auth_token')->plainTextToken;
+        $this->syncGamificationAfterAuthentication($user);
 
         return response()->json([
             'access_token' => $token,
@@ -984,6 +1010,7 @@ class AuthController extends Controller
             }
 
             $token = $user->createToken('auth-token')->plainTextToken;
+            $this->syncGamificationAfterAuthentication($user);
 
             return response()->json([
                 'token' => $token,

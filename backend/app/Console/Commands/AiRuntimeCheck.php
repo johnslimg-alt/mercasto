@@ -30,12 +30,12 @@ class AiRuntimeCheck extends Command
                     ],
                     [
                         'role' => 'user',
-                        'content' => 'Return a short acknowledgement that the local model is available.',
+                        'content' => 'Reply OK.',
                     ],
                 ], [
                     'timeout' => $timeout,
                     'temperature' => 0.0,
-                    'max_tokens' => 8,
+                    'max_tokens' => 1,
                     'num_ctx' => 512,
                 ]);
             } catch (ConnectionException $error) {

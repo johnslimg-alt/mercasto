@@ -105,6 +105,9 @@ bash scripts/referral-localization-contract-gate.sh
 bash scripts/gamification-referral-contract-gate.sh
 bash scripts/gamification-photo-contract-gate.sh
 bash scripts/gamification-schema-contract-gate.sh
+bash scripts/gamification-active-progress-contract-gate.sh
+bash scripts/gamification-activity-endpoint-gate.sh
+bash scripts/sensitive-profile-reauth-gate.sh
 bash scripts/profile-edit-localization-contract-gate.sh
 bash scripts/chat-localization-contract-gate.sh
 bash scripts/saved-searches-localization-contract-gate.sh
