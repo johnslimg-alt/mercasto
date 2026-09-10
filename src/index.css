@@ -3954,3 +3954,14 @@ video {
 [data-side=right] .\[\[data-side\=right\]_\&\]\:cursor-e-resize{
   cursor: e-resize;
 }
+
+/* Mercasto standalone polish */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+.jobs-mobile-grid { display: grid; gap: 12px; }
+.jobs-desktop-table { display: none; }
+.job-mobile-card { border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); padding: 14px; box-shadow: 0 1px 2px rgb(0 0 0 / .03); }
+.job-remote-badge { flex: 0 0 auto; border: 1px solid hsl(var(--primary)); color: hsl(var(--primary)); background: hsl(var(--accent)); border-radius: 9999px; padding: 3px 8px; font-size: 10px; font-weight: 600; }
+.job-view-button { width: 100%; margin-top: 12px; height: 36px; border-radius: 8px; border: 1px solid hsl(var(--border)); color: hsl(var(--foreground)); font-size: 12px; font-weight: 600; }
+.job-view-button:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+@media (min-width: 768px) { .jobs-mobile-grid { display: none; } .jobs-desktop-table { display: block; } }

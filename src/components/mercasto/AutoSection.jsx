@@ -45,6 +45,8 @@ export default function AutoSection({ listings, favs, onFav }) {
                 {l.image_url && <Image data-source-location="src/components/mercasto/AutoSection.jsx:45:32" data-dynamic-content="true" src={l.image_url} alt={l.title} fittingType="fill" className="w-full h-full" />}
                 <button data-source-location="src/components/mercasto/AutoSection.jsx:46:16" data-dynamic-content="true"
               onClick={() => onFav(l.id)}
+              aria-label={favs.has(l.id) ? "Quitar de favoritos" : "Agregar a favoritos"}
+              aria-pressed={favs.has(l.id)}
               className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/90 flex items-center justify-center text-muted-foreground hover:text-foreground transition">
                 
                   <Heart data-source-location="src/components/mercasto/AutoSection.jsx:50:18" data-dynamic-content="true" className={`w-4 h-4 ${favs.has(l.id) ? "text-red-500 fill-current" : ""}`} />
