@@ -17,6 +17,7 @@ const db = new Database(path.join(dataDir, "mercasto.db"));
 const PORT = Number(process.env.PORT || 4180);
 const HOST = process.env.HOST || "127.0.0.1";
 const CATEGORIES = new Set(["Productos","Motor","Inmuebles","Empleos","Servicios","Negocios","Turismo","Boletos"]);
+const PREVIEW_TOKEN = process.env.PREVIEW_TOKEN || "";
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -31,6 +32,24 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(compression());
+
+if (PREVIEW_TOKEN) {
+  app.use((req, res, next) => {
+    const cookie = (req.headers.cookie || "").split(";").map(v => v.trim()).find(v => v.startsWith("mercasto_preview="));
+    const cookieToken = cookie ? decodeURIComponent(cookie.split("=", 2)[1] || "") : "";
+    const queryToken = typeof req.query.preview === "string" ? req.query.preview : "";
+    if (cookieToken === PREVIEW_TOKEN) return next();
+    if (queryToken === PREVIEW_TOKEN) {
+      res.setHeader("Set-Cookie", "mercasto_preview=" + encodeURIComponent(PREVIEW_TOKEN) + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400");
+      const u = new URL(req.originalUrl, "http://preview.local");
+      u.searchParams.delete("preview");
+      return res.redirect(302, u.pathname + (u.search ? u.search : ""));
+    }
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(401).type("text/plain").send("Mercasto preview: access token required");
+  });
+}
+
 app.use(express.json({ limit: "32kb" }));
 app.use("/api/", rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false }));
 
