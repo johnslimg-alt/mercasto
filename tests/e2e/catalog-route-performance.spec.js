@@ -7,7 +7,15 @@ const catalogAds = Array.from({ length: 24 }, (_, index) => ({
   category: 'productos',
   location: 'Ciudad de México, México',
   state: 'Ciudad de México',
-  image_url: '/placeholder-ad.svg',
+  image_url: index === 0
+    ? '/placeholder-ad.svg'
+    : index === 1
+      ? '/ads/legacy.jpg'
+      : index === 2
+        ? 'ads/relative.jpg'
+        : index === 3
+          ? '/storage/already.jpg'
+          : '/placeholder-ad.svg',
   user: { id: 500 + index, role: 'individual' },
 }));
 
@@ -15,6 +23,12 @@ async function mockPublicApi(page) {
   await page.addInitScript(() => {
     localStorage.setItem('cookiesAccepted', 'true');
   });
+
+  await page.route('**/storage/**', route => route.fulfill({
+    status: 200,
+    contentType: 'image/svg+xml',
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"/>',
+  }));
 
   await page.route('**/api/**', async (route) => {
     const request = route.request();
@@ -46,8 +60,10 @@ test('catalog route loads its own chunk without the marketing homepage', async (
   await mockPublicApi(page);
   const requestedScripts = [];
   const requestedApiUrls = [];
+  const requestedImageUrls = [];
   page.on('request', request => {
     if (request.resourceType() === 'script') requestedScripts.push(request.url());
+    if (request.resourceType() === 'image') requestedImageUrls.push(request.url());
     if (request.url().includes('/api/')) requestedApiUrls.push(request.url());
   });
 
@@ -57,6 +73,15 @@ test('catalog route loads its own chunk without the marketing homepage', async (
 
   expect(requestedScripts.some(url => /CatalogScreen-/.test(url))).toBeTruthy();
   expect(requestedScripts.some(url => /HomeScreen-/.test(url))).toBeFalsy();
+  const requestedImagePaths = () => requestedImageUrls.map(rawUrl => new URL(rawUrl).pathname);
+  await expect.poll(() => requestedImagePaths()).toEqual(expect.arrayContaining([
+    '/placeholder-ad.svg',
+    '/storage/ads/legacy.jpg',
+    '/storage/ads/relative.jpg',
+    '/storage/already.jpg',
+  ]));
+  expect(requestedImagePaths()).not.toContain('/storage//placeholder-ad.svg');
+  expect(requestedImagePaths()).not.toContain('/ads/legacy.jpg');
   expect(requestedApiUrls.filter(url => /[?&]category=(inmobiliaria|empleo|servicios|motor)/.test(url))).toEqual([]);
   const initialCatalogRequests = requestedApiUrls.filter(rawUrl => {
     const url = new URL(rawUrl);
