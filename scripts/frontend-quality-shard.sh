@@ -16,14 +16,18 @@ for _ in $(seq 1 30); do
     cat "${log_file}"
     exit 1
   fi
-  if curl -fsS --max-time 1 "${base_url}/" >/dev/null 2>&1; then
+  if sed -E $'s/\x1B\[[0-9;]*[[:alpha:]]//g' "${log_file}" | grep -Fq "Local:   ${base_url}/"; then
     preview_ready=1
     break
   fi
   sleep 1
 done
 
-if [ "${preview_ready}" -ne 1 ]; then
+if [ "${preview_ready}" -ne 1 ] || ! kill -0 "${preview_pid}" >/dev/null 2>&1; then
+  cat "${log_file}"
+  exit 1
+fi
+if ! curl -fsS --max-time 2 "${base_url}/" >/dev/null; then
   cat "${log_file}"
   exit 1
 fi
