@@ -2730,8 +2730,8 @@ function App() {
     }
   };
 
-  const registrationConsentForAction = () => {
-    if (!registrationConsentAccepted) {
+  const registrationConsentForAction = (accepted = registrationConsentAccepted) => {
+    if (!accepted) {
       showToast(
         t.registration_legal_required ||
           'Confirma tu edad y aceptación para continuar.',
@@ -2776,7 +2776,7 @@ function App() {
       let endpoint = '';
       if (authMode === 'register') {
         endpoint = '/register';
-        const consent = registrationConsentForAction();
+        const consent = registrationConsentForAction(formData.has('age_confirmed'));
         if (!consent) return;
         Object.assign(data, consent);
         const pendingReferral = localStorage.getItem('pendingReferral');
@@ -3098,15 +3098,34 @@ function App() {
   const handleDeleteAccount = async () => {
     if (!window.confirm(t.account_action_delete_confirm)) return;
 
-    try {
+    const requestDeletion = async (password = '') => {
       const token = localStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/user`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(password ? { password } : {})
       });
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
+    };
+
+    try {
+      let { res, data } = await requestDeletion();
+      if (res.status === 422 && data.code === 'password_confirmation_required') {
+        const password = window.prompt(t.curr_password);
+        if (!password) return;
+        ({ res, data } = await requestDeletion(password));
+      }
       if (res.ok) {
         showToast(t.account_action_delete_success);
         handleLogout();
+      } else if (data.code === 'reauthentication_required') {
+        showToast(t.sensitive_reauth_login_required, 'error');
+      } else if (data.code === 'password_confirmation_required') {
+        showToast(t.twofa_reauth_invalid || t.delete_account_error, 'error');
       } else {
         showToast(t.delete_account_error, 'error');
       }

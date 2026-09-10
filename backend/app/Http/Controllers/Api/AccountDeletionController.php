@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Ad;
 use App\Models\User;
+use App\Support\SensitiveActionReauth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,23 @@ class AccountDeletionController extends Controller
     public function delete(Request $request)
     {
         $user = $request->user();
+        $validated = $request->validate([
+            'password' => 'nullable|string|max:255',
+        ]);
+
+        if (! SensitiveActionReauth::passes($request, $user, $validated['password'] ?? null)) {
+            if (SensitiveActionReauth::hasPassword($user)) {
+                return response()->json([
+                    'message' => 'Confirma tu contraseña actual antes de eliminar tu cuenta.',
+                    'code' => 'password_confirmation_required',
+                ], 422);
+            }
+
+            return response()->json([
+                'message' => 'Vuelve a iniciar sesión antes de eliminar tu cuenta.',
+                'code' => 'reauthentication_required',
+            ], 403);
+        }
 
         // Last-admin safety: self-delete must never remove the final platform admin.
         if ($user->role === 'admin' && User::where('role', 'admin')->count() <= 1) {

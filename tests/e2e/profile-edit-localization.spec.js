@@ -64,8 +64,12 @@ async function mockProfileApi(page) {
     if (url.pathname.includes('/notifications')) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], count: 0 }) });
     }
-    if (request.method() === 'DELETE') {
-      return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'SHOULD_NOT_BE_CALLED' }) });
+    if (url.pathname.endsWith('/user') && request.method() === 'DELETE') {
+      return route.fulfill({
+        status: 422,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'password_confirmation_required' }),
+      });
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
@@ -145,6 +149,13 @@ async function verifyProfileEdit(page, lang, viewport) {
   await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe(lang === 'es' ? 'es-MX' : lang);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+
+  await confirmButton.click();
+  const deletePassword = page.getByTestId('profile-delete-password');
+  await expect(deletePassword).toBeVisible();
+  await expect(deletePassword).toHaveAttribute('placeholder', t.curr_password);
+  await expect(confirmButton).toBeDisabled();
+  expect(deleteRequests).toBe(1);
 
   if (lang !== 'es') {
     expect(await confirmInput.getAttribute('placeholder')).not.toBe('ELIMINAR');

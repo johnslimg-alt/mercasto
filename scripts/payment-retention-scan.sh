@@ -22,6 +22,8 @@ import re
 route_text = Path('backend/bootstrap/app.php').read_text()
 if 'AccountDeletionController::class' not in route_text or "delete('/api/user'" not in route_text:
     raise SystemExit('active /api/user delete route must use AccountDeletionController')
+if "'throttle:sensitive-profile'" not in route_text:
+    raise SystemExit('active /api/user delete route must use the sensitive-profile limiter')
 
 text = Path('backend/app/Http/Controllers/Api/AccountDeletionController.php').read_text()
 match = re.search(r'public function delete\(Request \$request\)\s*\{(?P<body>.*)\n    \}', text, re.S)
