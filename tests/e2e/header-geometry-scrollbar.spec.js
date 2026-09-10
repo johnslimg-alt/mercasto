@@ -118,6 +118,20 @@ test('desktop header preserves search width at the 1024px breakpoint', async ({ 
   });
   expect(metrics.webkitScrollbarDisplay === 'none' || metrics.webkitScrollbarWidth === '0px').toBe(true);
   expect(metrics.overflow).toBeLessThanOrEqual(1);
+
+  const categoryNav = page.locator('.header-category-nav');
+  await expect(categoryNav).toBeVisible();
+  const categoryNavScrollbar = await categoryNav.evaluate((node) => {
+    const style = getComputedStyle(node);
+    const webkit = getComputedStyle(node, '::-webkit-scrollbar');
+    return {
+      scrollbarWidth: style.scrollbarWidth,
+      webkitDisplay: webkit.display,
+      webkitWidth: webkit.width,
+    };
+  });
+  expect(categoryNavScrollbar.scrollbarWidth).toBe('none');
+  expect(categoryNavScrollbar.webkitDisplay === 'none' || categoryNavScrollbar.webkitWidth === '0px').toBe(true);
 });
 
 
