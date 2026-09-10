@@ -230,7 +230,14 @@ export default function SplitViewContainer({
       {/* MAP SECTION — Наверху, полная ширина                           */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <div className="mb-5">
-        <div data-testid="catalog-map-shell" className={`relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-md transition-all duration-300 ${mapCollapsed ? 'h-[60px]' : 'h-[220px] md:h-[320px] lg:h-[360px]'}`}>
+        <div
+          data-testid="catalog-map-shell"
+          className={`relative overflow-hidden rounded-2xl border shadow-sm transition-all duration-300 ${
+            mapCollapsed
+              ? 'h-[60px] border-slate-200 bg-[linear-gradient(135deg,#F1F5F9,#E2E8F0)] dark:border-slate-700 dark:bg-[linear-gradient(135deg,#16223A,#0F172A)]'
+              : 'h-[220px] border-slate-200 md:h-[320px] lg:h-[360px] dark:border-slate-700'
+          }`}
+        >
           {!mapCollapsed && (
             <React.Suspense fallback={<div className="h-full bg-slate-800 animate-pulse rounded-xl" />}>
               <MapV3
@@ -275,7 +282,9 @@ export default function SplitViewContainer({
           <button
             data-testid="catalog-map-toggle"
             onClick={toggleMapCollapsed}
-            className="absolute top-3 right-3 z-[10] flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-lg hover:bg-white dark:hover:bg-slate-800 transition-all"
+            className={`absolute right-3 z-[10] flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/95 px-3.5 py-2 text-[11.5px] font-bold text-slate-700 shadow-sm backdrop-blur-sm transition-all hover:bg-white dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 ${
+              mapCollapsed ? 'top-1/2 -translate-y-1/2' : 'top-3'
+            }`}
           >
             <MapPin size={13} className="text-[#84CC16]" />
             {mapCollapsed ? t.open_map : t.hide_map}
@@ -287,18 +296,18 @@ export default function SplitViewContainer({
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* TOOLBAR — Результаты + переключатель Grid / List              */}
       {/* ═══════════════════════════════════════════════════════════════ */}
-      <div data-testid="catalog-results-toolbar" className="sticky top-[calc(var(--mc-site-header-offset)+0.5rem)] z-30 mb-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:px-4 sm:py-3">
+      <div data-testid="catalog-results-toolbar" className="sticky top-[calc(var(--mc-site-header-offset)+0.5rem)] z-30 mb-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white/95 px-2 py-2 shadow-[0_2px_10px_-4px_rgba(15,23,42,0.12)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 sm:px-4 sm:py-3">
         <div className="hidden min-w-0 items-center gap-3 sm:flex">
-          <h2 data-testid="catalog-results-title" className="shrink-0 text-[16px] font-bold text-slate-900 dark:text-white md:text-[18px]">
+          <h2 data-testid="catalog-results-title" className="mc-section-title shrink-0 text-[17px] md:text-[19px]">
             {t.search_results}
           </h2>
-          <span className="min-w-0 truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-[12px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+          <span className="min-w-0 truncate rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11.5px] font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
             {genuineAds.length} {t.real_listings}{catalogReferenceCount > 0 ? ` · ${catalogReferenceCount} ${t.catalog_references}` : ''}
           </span>
         </div>
 
         {/* Grid / List Toggle */}
-        <div className="flex w-full items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800 sm:ml-auto sm:w-auto">
+        <div className="mc-segmented flex w-full items-center gap-1 sm:ml-auto sm:w-auto">
           <button
             data-testid="catalog-grid-view"
             onClick={() => setViewLayout('grid')}
@@ -352,7 +361,7 @@ export default function SplitViewContainer({
           </div>
         ) : viewLayout === 'grid' ? (
           /* ═══ GRID VIEW ═══ */
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {visibleAds.map((ad, index) => renderAdItem(ad, index))}
             {visibleCount < ads.length && <div ref={revealSentinelRef} data-catalog-batch-sentinel className="col-span-full h-px" />}
             

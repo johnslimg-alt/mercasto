@@ -235,6 +235,72 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
         <section className="mx-auto max-w-[1480px] px-3 py-5 sm:px-4 lg:px-6 lg:py-6">
           <h1 className="sr-only">Mercasto: compra, vende y renta en todo México</h1>
 
+          {/* HERO — brand promise, primary actions and trust signals.
+              The real <h1> stays the screen-reader title above for SEO; this
+              band carries the visual hierarchy. */}
+          <section className="col-span-12" data-testid="home-hero">
+            <div className="mc-hero px-5 py-7 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
+              <div className="mc-hero-grid" aria-hidden="true" />
+              <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
+                <div className="max-w-2xl">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.13em] text-[#BEF264] backdrop-blur">
+                    <Sparkles size={12} aria-hidden="true" />
+                    {t.heroTag}
+                  </span>
+                  <p className="mt-4 text-[26px] font-extrabold leading-[1.12] tracking-[-0.025em] text-white sm:text-[32px] lg:text-[38px]">
+                    {t.heroTitle}
+                  </p>
+                  <p className="mt-3 max-w-xl text-[13.5px] leading-relaxed text-slate-300 sm:text-[15px]">
+                    {t.heroDesc}
+                  </p>
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      data-testid="home-hero-publish"
+                      onClick={() => navigate(user ? '/post' : '/vendedores')}
+                      className="btn-lg bg-[#84CC16] text-[#0F172A] hover:bg-[#65A30D]"
+                    >
+                      <PlusCircle size={17} className="mr-1.5" aria-hidden="true" />
+                      {t.heroAction}
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="home-hero-browse"
+                      onClick={() => { setActiveCat(''); navigate('/listings'); }}
+                      className="btn-lg border border-white/25 bg-white/5 text-white hover:bg-white/15"
+                    >
+                      {t.browse_category}
+                      <ArrowRight size={16} className="ml-1.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid w-full shrink-0 grid-cols-2 gap-3 sm:max-w-sm lg:w-[320px]">
+                  <div className="mc-stat">
+                    <span className="text-[21px] font-extrabold leading-none tracking-tight text-white">
+                      {adsTotal > 0 ? formatNumber(adsTotal, lang) : '0'}
+                    </span>
+                    <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-slate-400">{t.real_listings}</span>
+                  </div>
+                  <div className="mc-stat">
+                    <span className="text-[21px] font-extrabold leading-none tracking-tight text-white">
+                      {formatNumber(homeCategories.length, lang)}
+                    </span>
+                    <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-slate-400">{t.categories}</span>
+                  </div>
+                  <div className="mc-stat col-span-2 flex-row items-center gap-2">
+                    <ShieldCheck size={17} className="shrink-0 text-[#BEF264]" aria-hidden="true" />
+                    <span className="text-[12.5px] font-bold text-[#BEF264]">{t.verified_seller}</span>
+                    <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400">
+                      <MapPin size={12} aria-hidden="true" />
+                      {t.all_mexico}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <div className="grid grid-cols-12 gap-5 lg:gap-6">
 
 
@@ -289,7 +355,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-[22px] font-bold tracking-tight">
+                    <h2 className="mc-section-title">
                       {t.featured_ads}
                     </h2>
                     <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 shadow-sm">
@@ -410,7 +476,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
                 <div className="flex items-center gap-3">
 
-                  <h2 className="text-[22px] font-bold tracking-tight">{t.trending_now}</h2>
+                  <h2 className="mc-section-title">{t.trending_now}</h2>
 
                   <span className="badge bg-red-500 text-white hidden sm:block">LIVE</span>
 
@@ -461,76 +527,44 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
 
 
-            {/* 4. DEALS OF THE DAY */}
+            {/* 4. PROMO TILES — one consistent surface system, one type scale */}
+            <section className="col-span-12 min-h-[200px] cls-safe">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 
-            <section className="col-span-12 min-h-[220px] cls-safe">
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-                <div className="relative overflow-hidden rounded-3xl p-[1px] group">
-
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#84CC16] to-[#65A30D] opacity-90 group-hover:opacity-100 transition"></div>
-
-                  <div className="relative bg-gradient-to-br from-[#84CC16] to-[#65A30D] rounded-[23px] p-6 text-white h-[190px] flex flex-col">
-
-                    <span className="text-[11px] uppercase tracking-wider bg-white/20 w-fit px-2.5 py-1 rounded-full font-semibold">{t.deal_of_day}</span>
-
-                    <h3 className="text-[26px] font-bold mt-3 leading-tight">{t.up_to_40}</h3>
-
-                    <p className="text-white/90 text-[14px]">{t.elec_phones}</p>
-
-                    <div className="mt-auto flex items-center justify-between">
-
-                      <button onClick={() => setActiveCat('electronica')} className="btn-md bg-white text-[#0F172A] hover:bg-slate-100">{t.shop_now}</button>
-
-                      <span className="text-[12px] font-medium bg-black/20 px-2 py-1 rounded-lg">{t.ends_in_8h}</span>
-
-                    </div>
-
+                <div className="mc-promo mc-promo-brand min-h-[200px]">
+                  <span className="inline-flex w-fit items-center rounded-full bg-black/15 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#0F172A]">
+                    {t.deal_of_day}
+                  </span>
+                  <h3 className="mt-3 text-[24px] font-extrabold leading-tight tracking-[-0.02em] text-[#0F172A]">{t.up_to_40}</h3>
+                  <p className="mt-1 text-[13.5px] font-medium text-[#0F172A]/75">{t.elec_phones}</p>
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+                    <button onClick={() => setActiveCat('electronica')} className="btn-md bg-white text-[#0F172A] hover:bg-slate-100">{t.shop_now}</button>
+                    <span className="rounded-lg bg-black/15 px-2 py-1 text-[11px] font-bold text-[#0F172A]/80">{t.ends_in_8h}</span>
                   </div>
-
                 </div>
 
-                <div className="market-card rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
-
-                  <div className="absolute -right-6 -top-6 w-32 h-32 bg-[#84CC16]/10 rounded-full blur-2xl"></div>
-
-                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.furniture}</span>
-
-                  <h3 className="text-[22px] font-bold mt-2">{t.living_room_sets}</h3>
-
-                  <p className="text-slate-600 text-[14px]">{t.from_price}</p>
-
-                  <button className="btn-md border border-slate-300 mt-auto w-fit hover:bg-slate-50" onClick={() => setActiveCat('hogar')}>{t.see_deals}</button>
-
+                <div className="mc-promo min-h-[200px]">
+                  <span className="mc-eyebrow">{t.furniture}</span>
+                  <h3 className="mt-2 text-[21px] font-extrabold leading-tight tracking-[-0.02em] text-slate-900 dark:text-white">{t.living_room_sets}</h3>
+                  <p className="mt-1 text-[13.5px] text-slate-500 dark:text-slate-400">{t.from_price}</p>
+                  <button className="btn-md mt-auto w-fit border border-slate-200 text-slate-700 hover:border-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" onClick={() => setActiveCat('hogar')}>{t.see_deals}</button>
                 </div>
 
-                <div className="card bg-slate-900 text-white rounded-3xl p-6 h-[190px] flex flex-col relative overflow-hidden">
-
-                  <span className="text-[11px] uppercase tracking-wider text-[#84CC16] font-semibold">{t.automotive}</span>
-
-                  <h3 className="text-[22px] font-bold mt-2">{t.certified_cars}</h3>
-
-                  <p className="text-white/70 text-[14px]">{t.zero_comm}</p>
-
-                  <button className="btn-md bg-[#84CC16] hover:bg-[#65A30D] text-slate-950 mt-auto w-fit" onClick={() => setActiveCat('motor')}>{t.browse_cars}</button>
-
+                <div className="mc-promo mc-promo-dark min-h-[200px]">
+                  <span className="mc-eyebrow text-[#BEF264]">{t.automotive}</span>
+                  <h3 className="mt-2 text-[21px] font-extrabold leading-tight tracking-[-0.02em] text-white">{t.certified_cars}</h3>
+                  <p className="mt-1 text-[13.5px] text-slate-300">{t.zero_comm}</p>
+                  <button className="btn-md mt-auto w-fit bg-[#84CC16] text-slate-950 hover:bg-[#65A30D]" onClick={() => setActiveCat('motor')}>{t.browse_cars}</button>
                 </div>
 
-                <div className="market-card border-2 border-[#84CC16]/30 rounded-3xl p-6 h-[190px] flex flex-col">
-
-                  <span className="text-[11px] uppercase tracking-wider text-lime-800 dark:text-lime-400 font-semibold">{t.for_sellers}</span>
-
-                  <h3 className="text-[22px] font-bold mt-2">{t.boost_ad}</h3>
-
-                  <p className="text-slate-600 text-[14px]">{t.boost_desc}</p>
-
-                  <button className="btn-md bg-[#0F172A] text-white hover:bg-black mt-auto w-fit" onClick={() => setCurrentTab('post')}>{t.promote_now}</button>
-
+                <div className="mc-promo min-h-[200px] ring-1 ring-inset ring-[#84CC16]/25">
+                  <span className="mc-eyebrow">{t.for_sellers}</span>
+                  <h3 className="mt-2 text-[21px] font-extrabold leading-tight tracking-[-0.02em] text-slate-900 dark:text-white">{t.boost_ad}</h3>
+                  <p className="mt-1 text-[13.5px] text-slate-500 dark:text-slate-400">{t.boost_desc}</p>
+                  <button className="btn-md mt-auto w-fit bg-[#0F172A] text-white hover:bg-black" onClick={() => setCurrentTab('post')}>{t.promote_now}</button>
                 </div>
 
               </div>
-
             </section>
 
 
@@ -554,7 +588,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
               <div className="flex items-end justify-between mb-4">
 
-                <h2 className="text-[22px] font-bold tracking-tight">{t.re_spotlight || 'Inmuebles Destacados'}</h2>
+                <h2 className="mc-section-title">{t.re_spotlight || 'Inmuebles Destacados'}</h2>
 
                 <div className="flex items-center gap-3">
 
@@ -657,7 +691,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
               <div className="flex items-end justify-between mb-4 mt-2">
 
-                <h2 className="text-[22px] font-bold tracking-tight">{t.jobs_board || 'Bolsa de trabajo'}</h2>
+                <h2 className="mc-section-title">{t.jobs_board || 'Bolsa de trabajo'}</h2>
 
                 <div className="flex items-center gap-2">
 
@@ -768,7 +802,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
               <div className="flex items-end justify-between mb-4 mt-2">
 
-                <h2 className="text-[22px] font-bold tracking-tight">{t.services_marketplace || 'Directorio de servicios'}</h2>
+                <h2 className="mc-section-title">{t.services_marketplace || 'Directorio de servicios'}</h2>
 
                 <a href="/listings?category=servicios" onClick={(e) => { e.preventDefault(); setActiveCat('servicios'); }} className="text-[13px] font-semibold text-lime-800 dark:text-lime-400 hover:underline cursor-pointer">{t.browse_services || 'Ver todos →'}</a>
 
@@ -829,7 +863,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
               <div className="mb-4 mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 
-                <h2 className="text-[22px] font-bold tracking-tight">{t.automotive}</h2>
+                <h2 className="mc-section-title">{t.automotive}</h2>
 
                 <div data-testid="home-auto-filter-row" className="flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 no-scrollbar sm:w-auto sm:overflow-visible sm:pb-0">
 
@@ -1057,7 +1091,7 @@ export default function HomeScreen({ activeCat, adsTotal = 0, executeSearch, for
 
               <div className="bg-white border border-slate-200 rounded-3xl p-6 lg:p-8">
 
-                <h2 className="text-[22px] font-bold tracking-tight text-center">{t.how_it_works || 'Cómo funciona Mercasto'}</h2>
+                <h2 className="mc-section-title text-center">{t.how_it_works || 'Cómo funciona Mercasto'}</h2>
 
                 <div className="grid md:grid-cols-4 gap-6 mt-8 relative">
 
