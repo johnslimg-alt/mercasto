@@ -104,8 +104,9 @@ export default function VerticalHero({
               return (
                 <button key={item.name}
                   type="button"
+                  data-testid="vertical-hero-subsection"
                   onClick={() => onSubsectionSelect?.(item)}
-                  className={`inline-flex min-w-max items-center gap-1.5 rounded-full border ${accent.border} bg-gradient-to-b ${accent.soft} px-2.5 py-1.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md md:block md:min-w-[86px] md:rounded-2xl md:py-2 md:text-center`}>
+                  className={`inline-flex min-h-12 min-w-max items-center gap-1.5 rounded-full border ${accent.border} bg-gradient-to-b ${accent.soft} px-2.5 py-1.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md md:block md:min-h-0 md:min-w-[86px] md:rounded-2xl md:py-2 md:text-center`}>
                   <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${accent.bg} text-white shadow-sm md:mx-auto md:mb-1.5 md:h-8 md:w-8 md:rounded-xl`}>
                     <Icon size={17} strokeWidth={2.2} />
                   </span>

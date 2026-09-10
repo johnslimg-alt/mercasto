@@ -81,6 +81,9 @@ test('mobile vertical quick filters stay reachable above the tabbar', async ({ p
 
       const controlHeights = await form.locator(':scope > *').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
       expect(controlHeights.every(height => height >= 48)).toBeTruthy();
+      const subsectionHeights = await page.getByTestId('vertical-hero-subsection').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+      expect(subsectionHeights.length).toBeGreaterThan(0);
+      expect(subsectionHeights.every(height => height >= 48)).toBeTruthy();
 
       const [barBox, tabBox] = await Promise.all([bar.boundingBox(), tabbar.boundingBox()]);
       expect(barBox.y + barBox.height).toBeLessThanOrEqual(tabBox.y + 1);
