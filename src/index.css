@@ -4038,3 +4038,16 @@ section[id] { scroll-margin-top: 96px; }
 .dark .job-remote-badge{color:hsl(85 74% 72%);border-color:hsl(85 60% 48%);background:hsl(85 30% 16%)}
 .dark .trend-reset{color:hsl(85 74% 68%)}
 
+
+/* Mobile compact trend reset */
+@media(max-width:639px){.trend-reset{width:34px;height:34px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--card));display:flex;align-items:center;justify-content:center;font-size:14px}.trend-reset-label{display:none}}
+@media(min-width:640px){.trend-reset-label{display:inline;margin-right:4px}}
+
+/* Ultra-narrow layout */
+@media(max-width:359px){.trend-heading{flex-wrap:wrap}.trend-tools{margin-left:auto}.trend-title-row h2{font-size:1.25rem;line-height:1.75rem}.trend-count{display:none}.trend-tool,.trend-reset{width:32px;height:32px}}
+
+/* Long-language narrow-screen safety */
+section h2{overflow-wrap:anywhere}.category-label{max-width:100%;overflow-wrap:anywhere;hyphens:auto;line-height:1.15}.category-button{overflow:hidden}@media(max-width:379px){.publish-label{display:none}.publish-button{width:38px;padding:0}.header-actions{flex-shrink:1}.brand-link{min-width:0}}
+
+/* Functional pricing CTA */
+.pricing-button{display:flex;align-items:center;justify-content:center;text-decoration:none}

@@ -6,7 +6,7 @@ export default function Footer() {
   const cols = [
     { title:t("footer_categories"), links:[[t("cat_motor"),"#automotriz"],[t("cat_realestate"),"#inmuebles"],[t("cat_jobs"),"#empleos"],[t("cat_services"),"#servicios"],[t("cat_products"),"#tendencias"]] },
     { title:t("footer_help"), links:[[t("how_title"),"#como"],[t("popular_title"),"#busquedas"],[t("cat_rates"),"#planes"]] },
-    { title:t("footer_legal"), links:[[t("privacy"),"#top"],[t("terms"),"#top"],[t("cookies"),"#top"]] }
+    { title:t("footer_legal"), links:[[t("privacy"),"https://mercasto.com/privacidad"],[t("terms"),"https://mercasto.com/terminos"],[t("cookies"),"https://mercasto.com/cookies"]] }
   ];
   return (
     <footer id="contact" className="pt-12 pb-8">
@@ -18,7 +18,7 @@ export default function Footer() {
         </div>
         {cols.map((col) => <div key={col.title} className="footer-col">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">{col.title}</p>
-          <ul className="space-y-2 text-sm">{col.links.map(([label,href]) => <li key={label}><a href={href} className="hover:text-primary transition">{label}</a></li>)}</ul>
+          <ul className="space-y-2 text-sm">{col.links.map(([label,href]) => <li key={label}><a href={href} className="hover:text-primary transition" {...(href.startsWith("http") ? { target:"_blank", rel:"noreferrer" } : {})}>{label}</a></li>)}</ul>
         </div>)}
         <div className="footer-bottom">
           <p>© 2026 Mercasto · {t("made_in_mexico")}</p><p>{t("updated_ago")}</p>

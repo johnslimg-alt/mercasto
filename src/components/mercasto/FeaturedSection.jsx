@@ -13,9 +13,9 @@ export default function FeaturedSection({ listings, loading, favs, onFav }) {
             {t("featured")}
             <span data-source-location="src/components/mercasto/FeaturedSection.jsx:14:12" data-dynamic-content="false" className="text-[10px] font-bold bg-orange-500 text-white px-1.5 py-0.5 rounded">PRO</span>
           </h2>
-          <button data-source-location="src/components/mercasto/FeaturedSection.jsx:16:10" data-dynamic-content="true" className="text-sm border border-yellow-500 text-yellow-600 dark:text-yellow-400 px-3 py-1.5 rounded-md hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition press">
+          <a href="#planes" data-source-location="src/components/mercasto/FeaturedSection.jsx:16:10" data-dynamic-content="true" className="text-sm border border-yellow-500 text-yellow-600 dark:text-yellow-400 px-3 py-1.5 rounded-md hover:bg-yellow-50 dark:hover:bg-yellow-500/10 transition press">
             {t("promote")}
-          </button>
+          </a>
         </div>
         <div data-source-location="src/components/mercasto/FeaturedSection.jsx:20:8" data-dynamic-content="true" className="featured-track" data-collection-id="listings">
           {loading && featured.length === 0 ?

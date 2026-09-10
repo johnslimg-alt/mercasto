@@ -1,5 +1,5 @@
 import { EXTRA } from "./i18n-extra.js";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export const LANGS = [
 { code: "es", label: "Español", short: "ES" },
@@ -814,6 +814,7 @@ const LangContext = createContext(null);
 
 export function TranslationProvider({ children }) {
   const [lang, setLang] = useState("es");
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
   const t = (key) => EXTRA[lang]?.[key] || T[lang]?.[key] || EXTRA.es[key] || T.es[key] || key;
   return <LangContext.Provider data-source-location="src/lib/i18n.jsx:806:9" data-dynamic-content="true" value={{ lang, setLang, t }}>{children}</LangContext.Provider>;
 }

@@ -38,6 +38,7 @@ function Board() {
   });
   const [dark, setDark] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
+  const [postSeed, setPostSeed] = useState(null);
 
   const load = useCallback(() => {
     listingStore.list().
@@ -67,13 +68,16 @@ function Board() {
     scrollTo("tendencias");
   };
 
+  const openPost = (seed = null) => { setPostSeed(seed); setPostOpen(true); };
+  const changePostOpen = (value) => { setPostOpen(value); if (!value) setPostSeed(null); };
+
   return (
     <div data-source-location="src/pages/Mercasto.jsx:70:4" data-dynamic-content="true" id="top" className="min-h-screen bg-background text-foreground">
       <TopBar data-source-location="src/pages/Mercasto.jsx:71:6" data-dynamic-content="true"
       favCount={favs.size}
       dark={dark}
       onToggleDark={() => setDark((d) => !d)}
-      onPost={() => setPostOpen(true)}
+      onPost={() => openPost(null)}
       favoritesOnly={filters.favorites}
       onFavorites={() => setFilters((f) => ({ ...f, favorites: !f.favorites }))}
       onCategory={goToGrid} />
@@ -105,14 +109,15 @@ function Board() {
         setFilters={setFilters}
         onToggleFilters={() => setFilterOpen((o) => !o)}
         favs={favs}
-        onFav={onFav} />
+        onFav={onFav}
+        onSimilar={openPost} />
         
         <PromoBanners data-source-location="src/pages/Mercasto.jsx:107:8" data-dynamic-content="false" />
         <RealEstateSection data-source-location="src/pages/Mercasto.jsx:108:8" data-dynamic-content="true" listings={listings} favs={favs} onFav={onFav} />
         <JobsSection data-source-location="src/pages/Mercasto.jsx:109:8" data-dynamic-content="true" listings={listings} />
         <ServicesSection data-source-location="src/pages/Mercasto.jsx:110:8" data-dynamic-content="true" listings={listings} />
         <AutoSection data-source-location="src/pages/Mercasto.jsx:111:8" data-dynamic-content="true" listings={listings} favs={favs} onFav={onFav} />
-        <PricingSection data-source-location="src/pages/Mercasto.jsx:112:8" data-dynamic-content="false" />
+        <PricingSection data-source-location="src/pages/Mercasto.jsx:112:8" data-dynamic-content="false" onPost={() => openPost(null)} />
         <HowItWorks data-source-location="src/pages/Mercasto.jsx:113:8" data-dynamic-content="false" />
         <PopularSearches data-source-location="src/pages/Mercasto.jsx:114:8" data-dynamic-content="true"
         onPick={(q) => {
@@ -123,7 +128,7 @@ function Board() {
         
       </main>
       <Footer data-source-location="src/pages/Mercasto.jsx:122:6" data-dynamic-content="false" />
-      <PostAdDialog data-source-location="src/pages/Mercasto.jsx:123:6" data-dynamic-content="true" open={postOpen} onOpenChange={setPostOpen} onCreated={load} />
+      <PostAdDialog data-source-location="src/pages/Mercasto.jsx:123:6" data-dynamic-content="true" open={postOpen} onOpenChange={changePostOpen} onCreated={load} initialListing={postSeed} />
     </div>);
 
 }

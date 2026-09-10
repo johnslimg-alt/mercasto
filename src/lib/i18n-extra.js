@@ -1,5 +1,6 @@
 export const EXTRA = {
   "es": {
+    "post_error": "No se pudo publicar. Inténtalo de nuevo.",
     "brand_sub": "Clasificados con IA",
     "theme_light": "Modo claro",
     "theme_dark": "Modo oscuro",
@@ -62,6 +63,7 @@ export const EXTRA = {
     "promo_seller_cta": "Promocionar ahora →"
   },
   "en": {
+    "post_error": "Could not publish. Please try again.",
     "brand_sub": "AI classifieds",
     "theme_light": "Light mode",
     "theme_dark": "Dark mode",
@@ -124,6 +126,7 @@ export const EXTRA = {
     "promo_seller_cta": "Promote now →"
   },
   "pt": {
+    "post_error": "Não foi possível publicar. Tente novamente.",
     "brand_sub": "Classificados com IA",
     "theme_light": "Modo claro",
     "theme_dark": "Modo escuro",
@@ -186,6 +189,7 @@ export const EXTRA = {
     "promo_seller_cta": "Promover agora →"
   },
   "fr": {
+    "post_error": "Publication impossible. Réessayez.",
     "brand_sub": "Petites annonces IA",
     "theme_light": "Mode clair",
     "theme_dark": "Mode sombre",
@@ -248,6 +252,7 @@ export const EXTRA = {
     "promo_seller_cta": "Promouvoir →"
   },
   "de": {
+    "post_error": "Veröffentlichung fehlgeschlagen. Bitte erneut versuchen.",
     "brand_sub": "KI-Kleinanzeigen",
     "theme_light": "Heller Modus",
     "theme_dark": "Dunkler Modus",
@@ -310,6 +315,7 @@ export const EXTRA = {
     "promo_seller_cta": "Jetzt bewerben →"
   },
   "it": {
+    "post_error": "Pubblicazione non riuscita. Riprova.",
     "brand_sub": "Annunci con IA",
     "theme_light": "Modalità chiara",
     "theme_dark": "Modalità scura",
@@ -372,6 +378,7 @@ export const EXTRA = {
     "promo_seller_cta": "Promuovi ora →"
   },
   "nl": {
+    "post_error": "Publiceren mislukt. Probeer het opnieuw.",
     "brand_sub": "AI-advertenties",
     "theme_light": "Lichte modus",
     "theme_dark": "Donkere modus",
@@ -434,6 +441,7 @@ export const EXTRA = {
     "promo_seller_cta": "Nu promoten →"
   },
   "ru": {
+    "post_error": "Не удалось опубликовать. Попробуйте ещё раз.",
     "brand_sub": "Объявления с ИИ",
     "theme_light": "Светлая тема",
     "theme_dark": "Тёмная тема",
@@ -496,6 +504,7 @@ export const EXTRA = {
     "promo_seller_cta": "Продвигать →"
   },
   "pl": {
+    "post_error": "Nie udało się opublikować. Spróbuj ponownie.",
     "brand_sub": "Ogłoszenia z AI",
     "theme_light": "Tryb jasny",
     "theme_dark": "Tryb ciemny",
@@ -558,6 +567,7 @@ export const EXTRA = {
     "promo_seller_cta": "Promuj teraz →"
   },
   "zh": {
+    "post_error": "发布失败，请重试。",
     "brand_sub": "AI 分类信息",
     "theme_light": "浅色模式",
     "theme_dark": "深色模式",
@@ -620,6 +630,7 @@ export const EXTRA = {
     "promo_seller_cta": "立即推广 →"
   },
   "ja": {
+    "post_error": "投稿できませんでした。もう一度お試しください。",
     "brand_sub": "AI クラシファイド",
     "theme_light": "ライトモード",
     "theme_dark": "ダークモード",

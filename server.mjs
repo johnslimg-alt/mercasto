@@ -13,11 +13,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, "data");
 mkdirSync(dataDir, { recursive: true });
 const app = express();
-const db = new Database(path.join(dataDir, "mercasto.db"));
+const DB_PATH = process.env.DB_PATH || path.join(dataDir, "mercasto.db");
+const db = new Database(DB_PATH);
 const PORT = Number(process.env.PORT || 4180);
 const HOST = process.env.HOST || "127.0.0.1";
 const CATEGORIES = new Set(["Productos","Motor","Inmuebles","Empleos","Servicios","Negocios","Turismo","Boletos"]);
 const PREVIEW_TOKEN = process.env.PREVIEW_TOKEN || "";
+const PREVIEW_MODE = process.env.PREVIEW_MODE === "1";
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -32,6 +34,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(compression());
+if (PREVIEW_MODE) app.use((_req, res, next) => { res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive"); next(); });
 
 if (PREVIEW_TOKEN) {
   app.use((req, res, next) => {
@@ -84,7 +87,7 @@ if (count === 0) {
 const toPublic = (row) => ({ ...row, remote: row.remote == null ? null : Boolean(row.remote),
   featured: Boolean(row.featured), verified: Boolean(row.verified) });
 
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/health", (_req, res) => res.json({ ok: true, service: "mercasto-standalone" }));
 app.get("/api/listings", (_req, res) => {
   const rows = db.prepare("SELECT * FROM listings ORDER BY created_date DESC LIMIT 500").all();
   res.json(rows.map(toPublic));

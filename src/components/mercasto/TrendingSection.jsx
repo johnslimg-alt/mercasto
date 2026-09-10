@@ -4,7 +4,7 @@ import AdCard from "./AdCard";
 import { useLang } from "@/lib/i18n";
 import { useToast } from "@/components/ui/use-toast";
 
-export default function TrendingSection({ listings, loading, query, setQuery, filters, setFilters, onToggleFilters, favs, onFav }) {
+export default function TrendingSection({ listings, loading, query, setQuery, filters, setFilters, onToggleFilters, favs, onFav, onSimilar }) {
   const { t } = useLang();
   const { toast } = useToast();
   const [mobileExpanded, setMobileExpanded] = useState(false);
@@ -36,14 +36,14 @@ export default function TrendingSection({ listings, loading, query, setQuery, fi
           <div className="trend-tools">
             <button aria-label={t("save_search")} onClick={() => { localStorage.setItem("mercasto:saved-search", JSON.stringify({ query, filters })); toast({ description: t("search_saved") }); }} className="trend-tool"><Bookmark className="w-4 h-4" /><span>{t("save_search")}</span></button>
             <button aria-label={t("filters")} onClick={onToggleFilters} className={`trend-tool ${filterHighlight(filters) ? "is-active" : ""}`}><SlidersHorizontal className="w-4 h-4" /><span>{t("filters")}</span></button>
-            <button onClick={reset} className="trend-reset">{t("see_all")} →</button>
+            <button onClick={reset} className="trend-reset" aria-label={t("see_all")}><span className="trend-reset-label">{t("see_all")}</span><span aria-hidden="true">→</span></button>
           </div>
         </div>
         {loading && listings.length === 0 ? <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="aspect-[3/4] rounded-lg bg-muted animate-pulse" />)}</div>
         : items.length === 0 ? <p className="text-sm text-muted-foreground py-12 text-center">{t("no_results")}</p>
         : <>
           <div className={`trend-grid grid grid-cols-2 lg:grid-cols-4 gap-4 ${expanded ? "expanded" : ""}`} data-collection-id="listings">
-            {items.map((l) => <AdCard key={l.id} listing={l} isFav={favs.has(l.id)} onFav={onFav} onSimilar={() => {}} data-collection-item-id={l.id} />)}
+            {items.map((l) => <AdCard key={l.id} listing={l} isFav={favs.has(l.id)} onFav={onFav} onSimilar={onSimilar} data-collection-item-id={l.id} />)}
           </div>
           {!active && !mobileExpanded && items.length > 8 && <button className="trend-more" onClick={() => setMobileExpanded(true)}>{t("see_all")} ({items.length})</button>}
         </>}

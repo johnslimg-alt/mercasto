@@ -20,7 +20,6 @@ export default function HowItWorks() {
           {SAFETY.map((n) => <div key={n} className="bg-muted/50 rounded-lg p-5">
             <h3 className="font-semibold text-sm">{t("safety_"+n+"_title")}</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{t("safety_"+n+"_desc")}</p>
-            <a href="#top" className="text-xs text-primary hover:underline mt-2 inline-block">{t("learn_more")}</a>
           </div>)}
         </div>
       </div>

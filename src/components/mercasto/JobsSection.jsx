@@ -9,6 +9,14 @@ export default function JobsSection({ listings }) {
   const [remoteOnly, setRemoteOnly] = useState(false);
   const jobs = listings.filter((l) => l.category === "Empleos" && (!remoteOnly || l.remote));
   const view = (l) => toast({ title: l.title, description: l.description });
+  const createAlert = () => {
+    const key = "mercasto:job-alerts";
+    let alerts = [];
+    try { alerts = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+    const next = { id: crypto.randomUUID(), remoteOnly, createdAt: new Date().toISOString() };
+    localStorage.setItem(key, JSON.stringify([next, ...alerts].slice(0, 20)));
+    toast({ description: t("alert_created") });
+  };
 
   return (
     <section id="empleos" className="border-b border-border">
@@ -17,8 +25,7 @@ export default function JobsSection({ listings }) {
           <h2 className="text-2xl font-bold tracking-tight">{t("jobs_title")}</h2>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <button onClick={() => setRemoteOnly((r) => !r)} className={`px-3 py-1.5 rounded-md border transition ${remoteOnly ? "border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{t("remote_only")}</button>
-            <button onClick={() => toast({ description: t("cv_sent") })} className="px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground transition press">{t("upload_cv")}</button>
-            <button onClick={() => toast({ description: t("alert_created") })} className="px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground transition press">{t("create_alert")}</button>
+            <button onClick={createAlert} className="px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground transition press">{t("create_alert")}</button>
           </div>
         </div>
 

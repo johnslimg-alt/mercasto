@@ -7,7 +7,8 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "qa": "npm run build && sh scripts/qa.sh"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
