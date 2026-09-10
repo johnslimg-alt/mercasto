@@ -10,20 +10,15 @@ const catalog = fs.readFileSync('src/components/screens/CatalogScreen.jsx', 'utf
 const chat = fs.readFileSync('src/components/screens/ChatScreen.jsx', 'utf8');
 const moderation = fs.readFileSync('src/components/admin/AdminModerationCenter.jsx', 'utf8');
 
-test('decorative scrollbars are hidden without disabling essential vertical scroll controls', () => {
-  assert.doesNotMatch(css, /html,[\s\S]{0,80}#root \{[\s\S]{0,80}scrollbar-width:\s*none/);
-  assert.equal(css.includes('*::-webkit-scrollbar'), false);
-  assert.equal(css.includes('* {\n  scrollbar-width: none'), false);
+test('all app scrollbars are hidden without disabling scrolling', () => {
+  assert.match(css, /html,[\s\S]{0,80}body \*[\s\S]{0,80}scrollbar-width:\s*none/);
+  assert.ok(css.includes('body *::-webkit-scrollbar'));
   assert.equal(css.includes('overflow: hidden !important; /* global scrollbar'), false);
   assert.match(map, /map-filter-scroller[^"]*overflow-y-auto/);
-  assert.doesNotMatch(map, /map-filter-scroller[^"]*no-scrollbar/);
   assert.match(css, /\.map-filter-scroller \{[\s\S]*?scrollbar-width:\s*none/);
-  assert.doesNotMatch(css, /@media \(min-width: 1024px\)[\s\S]*?\.map-filter-scroller[\s\S]*?scrollbar-width:\s*thin/);
   assert.match(catalog, /overflow-y-auto no-scrollbar/);
   assert.match(chat, /overflow-y-auto/);
-  assert.doesNotMatch(chat, /overflow-y-auto[^"]*no-scrollbar/);
   assert.match(moderation, /overflow-y-auto/);
-  assert.doesNotMatch(moderation, /overflow-y-auto[^"]*no-scrollbar/);
 });
 
 test('header uses compact geometry and removes the redundant AI strip', () => {
@@ -46,5 +41,6 @@ test('home discovery no longer repeats the old stats action toolbar', () => {
   assert.ok(home.includes('max-w-[1480px]'));
   assert.ok(home.includes('data-testid="home-category-rail" className="category-rail rail-fade"'));
   assert.match(css, /\.rail-fade \{[\s\S]*?mask-image:\s*linear-gradient\(90deg, black 0,/);
+  assert.match(css, /\[dir='rtl'\] \.rail-fade \{[\s\S]*?mask-image:\s*linear-gradient\(270deg, black 0,/);
   assert.match(css, /\.category-rail \{[\s\S]*?padding-inline:\s*0\.125rem 1\.625rem/);
 });

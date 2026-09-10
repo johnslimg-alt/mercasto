@@ -297,6 +297,10 @@ html.dark .btn-lg.bg-white:hover {
     mask-image: linear-gradient(90deg, black 0, black calc(100% - 1.5rem), transparent);
   }
 
+  [dir='rtl'] .rail-fade {
+    mask-image: linear-gradient(270deg, black 0, black calc(100% - 1.5rem), transparent);
+  }
+
   .map-filter-scroller {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -1836,13 +1840,14 @@ html.dark .btn-lg.bg-white:hover {
 /* Mercasto UI polish: scrollable surfaces stay fully functional without browser-style rails. */
 html,
 body,
-#root {
+body * {
+  scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
-#root::-webkit-scrollbar {
+body *::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
   display: none !important;

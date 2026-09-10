@@ -22,6 +22,29 @@ test('mobile header stays compact and scroll rails stay hidden', async ({ page }
   expect(metrics.webkitScrollbarDisplay === 'none' || metrics.webkitScrollbarWidth === '0px').toBe(true);
   expect(metrics.overflow).toBeLessThanOrEqual(1);
 
+  const universalScroller = await page.evaluate(() => {
+    const node = document.createElement('div');
+    node.style.cssText = 'width:40px;height:20px;overflow:auto;position:absolute;left:-9999px;top:0';
+    node.innerHTML = '<div style="height:100px;width:100px"></div>';
+    document.querySelector('#root').appendChild(node);
+    const before = node.scrollTop;
+    node.scrollTop = 24;
+    const style = getComputedStyle(node);
+    const webkit = getComputedStyle(node, '::-webkit-scrollbar');
+    const result = {
+      before,
+      after: node.scrollTop,
+      scrollbarWidth: style.scrollbarWidth,
+      webkitDisplay: webkit.display,
+      webkitWidth: webkit.width,
+    };
+    node.remove();
+    return result;
+  });
+  expect(universalScroller.after).toBeGreaterThan(universalScroller.before);
+  expect(universalScroller.scrollbarWidth).toBe('none');
+  expect(universalScroller.webkitDisplay === 'none' || universalScroller.webkitWidth === '0px').toBe(true);
+
   const rail = page.getByTestId('home-category-rail');
   await expect(rail).toBeVisible();
   const firstCategory = rail.locator('.category-pill').first();
@@ -50,6 +73,27 @@ test('mobile header stays compact and scroll rails stay hidden', async ({ page }
   const [endRailBox, lastBox] = await Promise.all([rail.boundingBox(), lastCategory.boundingBox()]);
   expect(lastBox.x).toBeGreaterThanOrEqual(endRailBox.x - 1);
   expect(lastBox.x + lastBox.width).toBeLessThanOrEqual(endRailBox.x + endRailBox.width - 20);
+});
+
+
+test('RTL home category rail mirrors the trailing fade without obscuring the first item', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'ar');
+    localStorage.setItem('mercasto_language', 'ar');
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await expect.poll(() => page.evaluate(() => document.documentElement.dir)).toBe('rtl');
+
+  const rail = page.getByTestId('home-category-rail');
+  await expect(rail).toBeVisible();
+  const firstCategory = rail.locator('.category-pill').first();
+  const [railBox, firstBox] = await Promise.all([rail.boundingBox(), firstCategory.boundingBox()]);
+  expect(firstBox.x).toBeGreaterThanOrEqual(railBox.x - 1);
+  expect(firstBox.x + firstBox.width).toBeLessThanOrEqual(railBox.x + railBox.width + 1);
+
+  const mask = await rail.evaluate((node) => getComputedStyle(node).maskImage || getComputedStyle(node).webkitMaskImage);
+  expect(mask).toMatch(/270deg/);
 });
 
 test('desktop header preserves search width at the 1024px breakpoint', async ({ page }) => {
