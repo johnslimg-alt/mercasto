@@ -6,6 +6,9 @@ echo "== Isolated launch E2E gate =="
 grep -qF 'E2E test users cannot be seeded in production.' backend/database/seeders/E2eTestSeeder.php
 grep -qF 'E2E_ISOLATED_STACK=1' scripts/run-isolated-launch-e2e.sh
 grep -qF 'PLAYWRIGHT_BASE_URL="http://127.0.0.1:$FRONTEND_PORT"' scripts/run-isolated-launch-e2e.sh
+grep -qF -- '--strictPort' scripts/run-isolated-launch-e2e.sh
+grep -qF 'kill -0 "$FRONTEND_PID"' scripts/run-isolated-launch-e2e.sh
+grep -qF 'Local:   $url/' scripts/run-isolated-launch-e2e.sh
 grep -qF -- '-p "127.0.0.1:$CLIP_PORT:$CLIP_PORT"' scripts/run-isolated-launch-e2e.sh
 grep -qF -- '-p "127.0.0.1:$OLLAMA_HOST_PORT:11434"' scripts/run-isolated-launch-e2e.sh
 grep -qF -- '-p "127.0.0.1:$API_PORT:8000"' scripts/run-isolated-launch-e2e.sh
