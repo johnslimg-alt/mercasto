@@ -305,26 +305,37 @@ const MediaSlider = ({ media, autoplay, alt = 'Imagen del anuncio', priority = f
 
   if (!media || media.length === 0) return <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400"><Camera size={48}/></div>;
   return (
-    <div className="relative w-full h-full group bg-black/5 flex items-center justify-center">
+    <div className="relative w-full h-full group overflow-hidden bg-slate-900/5 dark:bg-slate-950 flex items-center justify-center">
       {media[currentIndex].type === 'video' ? (
-        <video src={media[currentIndex].url} controls className="max-w-full max-h-full object-contain" />
+        <video src={media[currentIndex].url} controls className="relative z-10 max-w-full max-h-full object-contain" />
       ) : (
-        <img
-          src={media[currentIndex].url}
-          alt={alt}
-          width="800"
-          height="600"
-          loading={priority && currentIndex === 0 ? 'eager' : 'lazy'}
-          fetchPriority={priority && currentIndex === 0 ? 'high' : 'auto'}
-          decoding="async"
-          data-ad-detail-hero={priority && currentIndex === 0 ? 'true' : undefined}
-          className="max-w-full max-h-full object-contain shadow-sm"
-        />
+        <>
+          {/* Ambient backdrop: the same frame, blurred and scaled to fill.
+              Keeps portrait/square media from sitting inside flat grey bands. */}
+          <img
+            src={media[currentIndex].url}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-75 blur-2xl"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-slate-950/25" aria-hidden="true" />
+          <img
+            src={media[currentIndex].url}
+            alt={alt}
+            width="800"
+            height="600"
+            loading={priority && currentIndex === 0 ? 'eager' : 'lazy'}
+            fetchPriority={priority && currentIndex === 0 ? 'high' : 'auto'}
+            decoding="async"
+            data-ad-detail-hero={priority && currentIndex === 0 ? 'true' : undefined}
+            className="relative z-10 max-w-full max-h-full object-contain shadow-sm"
+          />
+        </>
       )}
       {media.length > 1 && (
         <>
-          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === 0 ? media.length - 1 : prev - 1); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"><ChevronLeft/></button>
-          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === media.length - 1 ? 0 : prev + 1); }} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 hover:bg-white text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"><ChevronRight/></button>
+          <button aria-label="Anterior" onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === 0 ? media.length - 1 : prev - 1); }} className="absolute left-3 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-slate-900 shadow-md backdrop-blur transition hover:bg-white"><ChevronLeft/></button>
+          <button aria-label="Siguiente" onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === media.length - 1 ? 0 : prev + 1); }} className="absolute right-3 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-slate-900 shadow-md backdrop-blur transition hover:bg-white"><ChevronRight/></button>
         </>
       )}
     </div>
