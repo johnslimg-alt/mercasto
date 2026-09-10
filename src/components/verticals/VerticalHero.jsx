@@ -95,18 +95,18 @@ export default function VerticalHero({
   };
 
   return (
-    <div className={`relative bg-gradient-to-br ${GRADIENT_MAP[color] || GRADIENT_MAP.blue} text-white px-4 py-5 md:py-10`}>
+    <div className={`relative bg-gradient-to-br ${GRADIENT_MAP[color] || GRADIENT_MAP.blue} text-white px-4 py-3 md:py-10`}>
       <div className="max-w-6xl mx-auto">
         {subsections.length > 0 && (
-          <div className="mb-5 flex gap-2 overflow-x-auto no-scrollbar md:justify-center">
+          <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar md:mb-5 md:justify-center">
             {subsections.map(item => {
               const Icon = item.Icon;
               return (
                 <button key={item.name}
                   type="button"
                   onClick={() => onSubsectionSelect?.(item)}
-                  className={`min-w-[86px] rounded-2xl border ${accent.border} bg-gradient-to-b ${accent.soft} px-2.5 py-2 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md`}>
-                  <span className={`mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-xl ${accent.bg} text-white shadow-sm`}>
+                  className={`inline-flex min-w-max items-center gap-1.5 rounded-full border ${accent.border} bg-gradient-to-b ${accent.soft} px-2.5 py-1.5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md md:block md:min-w-[86px] md:rounded-2xl md:py-2 md:text-center`}>
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${accent.bg} text-white shadow-sm md:mx-auto md:mb-1.5 md:h-8 md:w-8 md:rounded-xl`}>
                     <Icon size={17} strokeWidth={2.2} />
                   </span>
                   <span className="block whitespace-nowrap text-[11px] font-extrabold text-slate-950">{item.name}</span>
@@ -117,14 +117,14 @@ export default function VerticalHero({
         )}
 
         <div className="text-center">
-        <h1 className="text-2xl md:text-4xl font-black tracking-tight mb-2 drop-shadow-sm">{title}</h1>
+        <h1 className="mb-1 text-xl font-black leading-tight tracking-tight drop-shadow-sm md:mb-2 md:text-4xl">{title}</h1>
         {subtitle && (
-          <p className="text-sm md:text-base text-white/80 mb-5 max-w-2xl mx-auto">{subtitle}</p>
+          <p className="mx-auto mb-3 max-w-2xl text-xs leading-snug text-white/80 md:mb-5 md:text-base">{subtitle}</p>
         )}
         </div>
 
         <form data-testid="vertical-hero-search-form" onSubmit={handleSubmit}
-          className="mx-auto grid max-w-5xl grid-cols-2 gap-2 rounded-3xl bg-white p-2 shadow-2xl md:grid-cols-2 lg:grid-cols-[1.35fr_0.9fr_0.85fr_0.55fr_auto]">
+          className="mx-auto grid max-w-5xl grid-cols-2 gap-1.5 rounded-2xl bg-white p-1.5 shadow-2xl md:grid-cols-2 md:gap-2 md:rounded-3xl md:p-2 lg:grid-cols-[1.35fr_0.9fr_0.85fr_0.55fr_auto]">
           <label className="col-span-2 flex min-h-12 items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-slate-900 md:col-span-1">
             <Search size={18} className="text-slate-400 shrink-0" />
             <input
@@ -162,15 +162,15 @@ export default function VerticalHero({
           </button>
         </form>
 
-        <div className="mt-3 flex flex-nowrap items-center justify-start gap-2 overflow-x-auto no-scrollbar md:flex-wrap md:justify-center">
+        <div className="mt-2 flex flex-nowrap items-center justify-start gap-2 overflow-x-auto no-scrollbar md:mt-3 md:flex-wrap md:justify-center">
           <button
             type="button"
             onClick={() => setShowMap(prev => !prev)}
-            className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-2 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:bg-white/25"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/30 bg-white/15 px-4 py-2 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:bg-white/25"
           >
             <MapPin size={16} /> {copy.mapAds} <ChevronDown size={14} className={`transition-transform ${showMap ? 'rotate-180' : ''}`} />
           </button>
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/85">
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/85">
             {locationLabel} · {copy.radius} {radius} km
           </span>
           {children && <div className="flex shrink-0 flex-nowrap items-center justify-center gap-2">{children}</div>}

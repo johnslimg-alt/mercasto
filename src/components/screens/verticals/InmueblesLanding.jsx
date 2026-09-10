@@ -69,11 +69,11 @@ export default function InmueblesLanding({ lang = 'es' }) {
         onSearch={handleSearch}
         subsections={localizedSubsections}
         onSubsectionSelect={(item) => navigate(`/?category=inmobiliaria&search=${encodeURIComponent(item.query)}`)}>
-        <div className="flex justify-center gap-2 mt-2">
+        <div className="flex shrink-0 justify-center gap-2">
           {localizedOperations.map(op => (
             <button key={op.value}
               onClick={() => setOperacion(prev => prev === op.value ? '' : op.value)}
-              className={`px-6 py-2 rounded-full text-[14px] font-bold border-2 transition-all ${operacion === op.value ? 'bg-white text-emerald-700 border-white' : 'border-white/50 text-white hover:border-white'}`}>
+              className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-[14px] font-bold border-2 transition-all md:px-6 ${operacion === op.value ? 'bg-white text-emerald-700 border-white' : 'border-white/50 text-white hover:border-white'}`}>
               {op.name}
             </button>
           ))}

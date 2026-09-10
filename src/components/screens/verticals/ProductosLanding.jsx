@@ -49,7 +49,7 @@ export default function ProductosLanding({ lang = 'es' }) {
         color="purple"
       />
 
-      <div className="max-w-[1440px] mx-auto px-4 lg:px-6 -mt-8 relative z-10">
+      <div className="max-w-[1440px] mx-auto px-4 lg:px-6 mt-0 md:-mt-8 relative z-10">
         <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-xl">
           <h2 className="text-[18px] font-bold text-slate-800 dark:text-slate-100 mb-6 text-center lg:text-left">
             {landingCopy.exploreTitle}
