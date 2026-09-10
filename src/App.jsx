@@ -2730,8 +2730,8 @@ function App() {
     }
   };
 
-  const registrationConsentForAction = () => {
-    if (!registrationConsentAccepted) {
+  const registrationConsentForAction = (accepted = registrationConsentAccepted) => {
+    if (!accepted) {
       showToast(
         t.registration_legal_required ||
           'Confirma tu edad y aceptación para continuar.',
@@ -2776,7 +2776,7 @@ function App() {
       let endpoint = '';
       if (authMode === 'register') {
         endpoint = '/register';
-        const consent = registrationConsentForAction();
+        const consent = registrationConsentForAction(formData.has('age_confirmed'));
         if (!consent) return;
         Object.assign(data, consent);
         const pendingReferral = localStorage.getItem('pendingReferral');
