@@ -319,7 +319,7 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-[var(--mc-site-header-offset)] z-30">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
           <button type="button" aria-label={t.back} onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300"><ChevronLeft size={20} /></button>
           <h1 className="font-semibold text-slate-900 dark:text-white">{t.edit_profile}</h1>

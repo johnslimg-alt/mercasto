@@ -700,7 +700,7 @@ export default function AdDetailScreen({
 
         {/* SIDEBAR: SELLER CONTACT */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[90px]">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[calc(var(--mc-site-header-offset)+0.75rem)]">
 {isCatalogFiller ? (
   <div className="rounded-2xl border border-lime-300 bg-lime-50 p-4 text-center dark:border-lime-500/30 dark:bg-lime-500/10">
     <h3 className="text-[16px] font-black text-slate-900 dark:text-white">{detailCopy.sellTitle}</h3>

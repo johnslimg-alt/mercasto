@@ -287,7 +287,7 @@ export default function SplitViewContainer({
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* TOOLBAR — Результаты + переключатель Grid / List              */}
       {/* ═══════════════════════════════════════════════════════════════ */}
-      <div data-testid="catalog-results-toolbar" className="sticky top-[64px] z-30 mb-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:px-4 sm:py-3">
+      <div data-testid="catalog-results-toolbar" className="sticky top-[calc(var(--mc-site-header-offset)+0.5rem)] z-30 mb-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:px-4 sm:py-3">
         <div className="hidden min-w-0 items-center gap-3 sm:flex">
           <h2 data-testid="catalog-results-title" className="shrink-0 text-[16px] font-bold text-slate-900 dark:text-white md:text-[18px]">
             {t.search_results}

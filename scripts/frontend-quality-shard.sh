@@ -75,7 +75,7 @@ case "${shard}" in
     BASE_URL="${base_url}" CI=1 npx playwright test \
       tests/e2e/catalog-localization.spec.js tests/e2e/ad-detail-critical-path.spec.js \
       tests/e2e/analytics-vendor-activation.spec.js tests/e2e/header-geometry.spec.js \
-      tests/e2e/header-geometry-scrollbar.spec.js tests/e2e/ai-brand-positioning.spec.js \
+      tests/e2e/header-geometry-scrollbar.spec.js tests/e2e/sticky-header-offsets.spec.js tests/e2e/ai-brand-positioning.spec.js \
       --project=chromium-desktop --workers=1 --retries=0 --reporter=list
     ;;
   catalog)

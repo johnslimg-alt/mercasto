@@ -54,8 +54,18 @@ test.describe('seller campaign registration return', () => {
     await registrationForm.locator('input[name="name"]').fill(registeredUser.name);
     await registrationForm.locator('input[name="email"]').fill(registeredUser.email);
     await registrationForm.locator('input[name="password"]').fill('SecurePass123!');
-    await registrationForm.locator('input[type="checkbox"]').check();
+    const consentCheckbox = registrationForm.locator('input[type="checkbox"]');
+    await consentCheckbox.check();
+    await expect(consentCheckbox).toBeChecked();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve())));
+
+    const registrationResponsePromise = page.waitForResponse((response) => {
+      const request = response.request();
+      return new URL(response.url()).pathname === '/api/register' && request.method() === 'POST';
+    });
     await registrationForm.locator('button[type="submit"]').click();
+    const registrationResponse = await registrationResponsePromise;
+    expect(registrationResponse.status()).toBe(201);
 
     await expect.poll(() => page.evaluate(() => localStorage.getItem('auth_token'))).toBe('e2e-registration-token');
     await expect(page).toHaveURL(/\/post$/);

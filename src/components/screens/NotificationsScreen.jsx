@@ -82,7 +82,7 @@ export default function NotificationsScreen({ user, t = {}, lang = 'es' }) {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-[var(--mc-site-header-offset)] z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="text-[13px] font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">{t.notifications_back}</button>
           <h1 className="text-[17px] font-bold text-slate-900 dark:text-white">{t.notifications_title}</h1>

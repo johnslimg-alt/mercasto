@@ -230,17 +230,24 @@ export default function CatalogScreen({
         </div>
 
         <aside className="hidden shrink-0 xl:block xl:w-[280px]">
-          <SidebarFilters {...filterProps} />
-          {user && (
-            <React.Suspense fallback={null}>
-              <SavedSearchesPanel
-                user={user}
-                token={token}
-                currentFilters={currentFilters}
-                onSearchSelect={filters => applySavedSearch(filters)}
-              />
-            </React.Suspense>
-          )}
+          <div
+            data-testid="catalog-desktop-sidebar"
+            className="no-scrollbar xl:sticky xl:top-[calc(var(--mc-site-header-offset)+0.75rem)] xl:max-h-[calc(100vh-var(--mc-site-header-offset)-1.5rem)] xl:overflow-y-auto"
+          >
+            <SidebarFilters {...filterProps} />
+            {user && (
+              <div className="mt-4">
+                <React.Suspense fallback={null}>
+                  <SavedSearchesPanel
+                    user={user}
+                    token={token}
+                    currentFilters={currentFilters}
+                    onSearchSelect={filters => applySavedSearch(filters)}
+                  />
+                </React.Suspense>
+              </div>
+            )}
+          </div>
         </aside>
 
         <BottomSheet

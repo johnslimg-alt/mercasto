@@ -81,7 +81,7 @@ export default function InmueblesLanding({ lang = 'es' }) {
       </VerticalHero>
 
       {/* Quick filter bar */}
-      <div className="bg-white border-b border-slate-100 sticky top-[148px] sm:top-[104px] z-10 shadow-sm">
+      <div className="bg-white border-b border-slate-100 sticky top-[var(--mc-site-header-offset)] z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-2 items-center">
           {localizedTypes.map(t => (
             <button key={t.value}

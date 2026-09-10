@@ -282,7 +282,7 @@ export default function ChatScreen({ user, lang = 'es', t = {} }) {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 dark:bg-slate-950 md:pb-8">
-      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+      <div className="sticky top-[var(--mc-site-header-offset)] z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
         <div className="mx-auto flex min-h-16 max-w-6xl items-center gap-3 px-4 py-3">
           <button
             type="button"
