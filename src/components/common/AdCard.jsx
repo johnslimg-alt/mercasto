@@ -199,7 +199,7 @@ const AdCard = memo(({
             {localizedText(ad.title, lang)}
           </h3>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="mc-price text-[17px] sm:text-[19px]">${formatNumber(ad.price, lang)}</span>
+            <span className="mc-price text-[17px] sm:text-[19px]">${formatNumber(ad.price, lang)}</span>{' '}
             <span className="mc-price-unit">MXN</span>
             {hasPriceDrop && (
               <span className="text-[11px] font-medium text-slate-400 line-through">${formatNumber(oldPrice, lang)}</span>
