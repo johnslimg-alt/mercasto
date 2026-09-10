@@ -20,7 +20,7 @@ class AiRuntimeCheckTest extends TestCase
 
                 return str_contains((string) $serialized, 'runtime health check')
                     && ! str_contains((string) $serialized, 'image')
-                    && ($options['max_tokens'] ?? null) === 8
+                    && ($options['max_tokens'] ?? null) === 1
                     && ($options['num_ctx'] ?? null) === 512;
             })
             ->andReturn([
