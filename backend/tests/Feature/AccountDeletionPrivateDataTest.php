@@ -21,7 +21,7 @@ class AccountDeletionPrivateDataTest extends TestCase
         Storage::fake('public');
         config(['filesystems.default' => 's3']);
 
-        $user = User::factory()->create();
+        $user = User::factory()->create(['password' => 'Correct-password-2026']);
         $other = User::factory()->create();
         $kyc = 'kyc_documents/id.pdf';
         $csf = "business-csf/{$user->id}/csf.pdf";
@@ -45,7 +45,7 @@ class AccountDeletionPrivateDataTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $this->actingAs($user, 'sanctum')->deleteJson('/api/user')->assertOk();
+        $this->actingAs($user, 'sanctum')->deleteJson('/api/user', ['password' => 'Correct-password-2026'])->assertOk();
 
         Storage::disk('local')->assertMissing($kyc);
         Storage::disk('s3')->assertMissing($kyc);

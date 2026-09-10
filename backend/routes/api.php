@@ -254,7 +254,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/push-unsubscribe', [ProfileController::class, 'pushUnsubscribe']);
     Route::post('/user/mobile-push/register', [MobilePushController::class, 'register']);
     Route::post('/user/mobile-push/unregister', [MobilePushController::class, 'unregister']); // Отписка от Web Push
-    Route::delete('/user', [AccountDeletionController::class, 'delete']); // User self-deletion with financial/audit retention
+    Route::middleware('throttle:sensitive-profile')->delete('/user', [AccountDeletionController::class, 'delete']); // User self-deletion with financial/audit retention
     Route::post('/users/{id}/verify', [ProfileController::class, 'verifyUser'])->whereNumber('id');
     Route::middleware('throttle:identity-uploads')->post('/user/kyc', [ProfileController::class, 'submitKyc']); // Загрузка документов KYC
 

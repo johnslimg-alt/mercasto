@@ -19,7 +19,7 @@ $application = Application::configure(basePath: dirname(__DIR__))
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
         then: function () {
-            Route::middleware(['api', 'auth:sanctum'])->delete('/api/user', [AccountDeletionController::class, 'delete']);
+            Route::middleware(['api', 'auth:sanctum', 'throttle:sensitive-profile'])->delete('/api/user', [AccountDeletionController::class, 'delete']);
             Route::middleware(['api', 'auth:sanctum'])
                 ->prefix('/api/admin')
                 ->group(base_path('routes/admin-reports.php'));
