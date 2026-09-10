@@ -1,7 +1,7 @@
 # Mercasto Generated Route Inventory
 
-Generated at: 2026-09-10T00:58:36Z
-Commit: c616e8d0-dirty
+Generated at: 2026-09-10T04:25:02Z
+Commit: 06bf731e-dirty
 Source: php artisan route:list --except-vendor -v
 
 ```text
@@ -463,6 +463,7 @@ Source: php artisan route:list --except-vendor -v
   DELETE    api/user generated::<auto> › Api\AccountDeletionController@delete
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum
+            ⇂ Illuminate\Routing\Middleware\ThrottleRequests:sensitive-profile
   GET|HEAD  api/user/ads generated::<auto> › Api\AdController@myAds
             ⇂ api
             ⇂ Illuminate\Auth\Middleware\Authenticate:sanctum

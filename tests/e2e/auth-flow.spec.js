@@ -208,12 +208,20 @@ test.describe('Authentication E2E Flow', () => {
     const deleteButton = page.getByRole('button', { name: /Eliminar Cuenta|Delete Account/i }).first();
     await expect(deleteButton).toBeVisible({ timeout: 8000 });
 
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toMatch(/eliminar tu cuenta|delete your account/i);
-      await dialog.accept();
+    page.on('dialog', async (dialog) => {
+      if (dialog.type() === 'confirm') {
+        expect(dialog.message()).toMatch(/eliminar tu cuenta|delete your account/i);
+        await dialog.accept();
+        return;
+      }
+      if (dialog.type() === 'prompt') {
+        await dialog.accept(password);
+      }
     });
     const deletionResponse = page.waitForResponse((response) => (
-      response.url().endsWith('/api/user') && response.request().method() === 'DELETE'
+      response.url().endsWith('/api/user')
+      && response.request().method() === 'DELETE'
+      && response.status() === 200
     ));
     await deleteButton.click();
     expect((await deletionResponse).status()).toBe(200);

@@ -28,9 +28,13 @@ grep -qF 'throttle:email-change' "$ROUTES"
 ! grep -qF '$isOAuthUser' "$PROFILE"
 ! grep -qF '$isPhoneAuthUser' "$PROFILE"
 test "$(grep -c 'sensitive_reauth_login_required:' "$TRANSLATIONS")" -eq 11
-test "$(grep -c "data.code === 'reauthentication_required'" "$APP")" -eq 2
+test "$(grep -c "data.code === 'reauthentication_required'" "$APP")" -eq 3
 grep -qF "data.code === 'reauthentication_required'" "$PROFILE_SCREEN"
 grep -qF 'reauthentication_required' "$BOUNDARY_TEST"
 grep -qF 'test_passwordless_recent_token_window' "$UNIT_TEST"
 
 echo 'sensitive profile reauth gate OK'
+
+delete_account_block="$(sed -n '/const handleDeleteAccount = async/,/const handleImageChange =/p' "$APP")"
+grep -qF "data.code === 'reauthentication_required'" <<<"$delete_account_block"
+grep -qF "window.prompt(t.curr_password" <<<"$delete_account_block"

@@ -53,6 +53,9 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
   const [toast, setToast] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteNeedsPassword, setDeleteNeedsPassword] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [form, setForm] = useState({ name: '', bio: '', city: '', phone_number: '', whatsapp: '', website: '', social_instagram: '' });
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [notifForm, setNotifForm] = useState({ email_ad_reply: true, push_enabled: false });
@@ -258,6 +261,9 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
     setDeleteConfirmText('');
+    setDeletePassword('');
+    setDeleteNeedsPassword(false);
+    setDeleteLoading(false);
     const opener = deleteOpenerRef.current;
     deleteOpenerRef.current = null;
     window.requestAnimationFrame(() => {
@@ -267,7 +273,47 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
 
   const openDeleteModal = () => {
     deleteOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setDeleteConfirmText('');
+    setDeletePassword('');
+    setDeleteNeedsPassword(false);
     setShowDeleteModal(true);
+  };
+
+  const submitDeleteAccount = async () => {
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/user`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(deletePassword ? { password: deletePassword } : {}),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('token');
+        window.location.href = '/';
+        return;
+      }
+      if (data.code === 'password_confirmation_required') {
+        setDeleteNeedsPassword(true);
+        setDeletePassword('');
+        showToast(t.twofa_reauth_title, 'error');
+        return;
+      }
+      if (data.code === 'reauthentication_required') {
+        showToast(t.sensitive_reauth_login_required, 'error');
+        closeDeleteModal();
+        return;
+      }
+      showToast(t.delete_account_error, 'error');
+    } catch {
+      showToast(t.network_error, 'error');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -406,19 +452,21 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
             <h3 id="delete-account-title" className="font-bold text-slate-900 dark:text-white text-lg mb-2">{t.delete_account_confirm}</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{t.delete_account_warn}</p>
             <input data-testid="profile-delete-confirm-input" aria-label={t.delete_account_confirm} value={deleteConfirmText} onChange={event => setDeleteConfirmText(event.target.value)} placeholder={t.delete_confirmation_word} className={`${inputClass} mb-4`} />
+            {deleteNeedsPassword && (
+              <input
+                type="password"
+                autoComplete="current-password"
+                data-testid="profile-delete-password"
+                aria-label={t.curr_password}
+                value={deletePassword}
+                onChange={event => setDeletePassword(event.target.value)}
+                placeholder={t.curr_password}
+                className={`${inputClass} mb-4`}
+              />
+            )}
             <div className="flex gap-3">
-              <button type="button" data-testid="profile-delete-cancel" onClick={closeDeleteModal} className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">{t.cancel}</button>
-              <button type="button" data-testid="profile-delete-confirm" disabled={deleteConfirmText !== t.delete_confirmation_word} onClick={async () => {
-                const response = await fetch(`${API_URL}/user`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
-                if (response.ok) {
-                  localStorage.removeItem('auth_token');
-                  localStorage.removeItem('token');
-                  window.location.href = '/';
-                } else {
-                  showToast(t.delete_account_error, 'error');
-                  closeDeleteModal();
-                }
-              }} className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium">{t.delete}</button>
+              <button type="button" data-testid="profile-delete-cancel" onClick={closeDeleteModal} disabled={deleteLoading} className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50">{t.cancel}</button>
+              <button type="button" data-testid="profile-delete-confirm" disabled={deleteLoading || (deleteNeedsPassword && !deletePassword) || deleteConfirmText !== t.delete_confirmation_word} onClick={submitDeleteAccount} className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-medium">{t.delete}</button>
             </div>
           </div>
         </div>
