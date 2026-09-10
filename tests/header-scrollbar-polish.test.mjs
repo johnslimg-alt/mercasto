@@ -15,7 +15,9 @@ test('decorative scrollbars are hidden without disabling essential vertical scro
   assert.equal(css.includes('*::-webkit-scrollbar'), false);
   assert.equal(css.includes('* {\n  scrollbar-width: none'), false);
   assert.equal(css.includes('overflow: hidden !important; /* global scrollbar'), false);
-  assert.match(map, /overflow-y-auto[^"]*no-scrollbar/);
+  assert.match(map, /map-filter-scroller[^"]*overflow-y-auto/);
+  assert.doesNotMatch(map, /map-filter-scroller[^"]*no-scrollbar/);
+  assert.match(css, /@media \(min-width: 1024px\)[\s\S]*?\.map-filter-scroller[\s\S]*?scrollbar-width:\s*thin/);
   assert.match(catalog, /overflow-y-auto no-scrollbar/);
   assert.match(chat, /overflow-y-auto/);
   assert.doesNotMatch(chat, /overflow-y-auto[^"]*no-scrollbar/);
@@ -42,4 +44,5 @@ test('home discovery no longer repeats the old stats action toolbar', () => {
   assert.equal(home.includes('HERO STATS'), false);
   assert.ok(home.includes('max-w-[1480px]'));
   assert.ok(home.includes('data-testid="home-category-rail" className="category-rail rail-fade"'));
+  assert.match(css, /\.rail-fade \{[\s\S]*?mask-image:\s*linear-gradient\(90deg, black 0,/);
 });

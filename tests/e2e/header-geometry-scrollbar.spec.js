@@ -20,6 +20,13 @@ test('mobile header stays compact and scroll rails stay hidden', async ({ page }
 
   const rail = page.getByTestId('home-category-rail');
   await expect(rail).toBeVisible();
+  const firstCategory = rail.locator('.category-pill').first();
+  const [railBox, firstBox] = await Promise.all([rail.boundingBox(), firstCategory.boundingBox()]);
+  expect(firstBox.x).toBeGreaterThanOrEqual(railBox.x - 1);
+  expect(firstBox.x + firstBox.width).toBeLessThanOrEqual(railBox.x + railBox.width + 1);
+  const mask = await rail.evaluate((node) => getComputedStyle(node).maskImage || getComputedStyle(node).webkitMaskImage);
+  expect(mask).not.toMatch(/transparent[^,]*,\s*(?:rgb\(0, 0, 0\)|black)/i);
+
   const railMetrics = await rail.evaluate((node) => {
     const before = node.scrollLeft;
     node.scrollLeft = Math.min(120, node.scrollWidth - node.clientWidth);
