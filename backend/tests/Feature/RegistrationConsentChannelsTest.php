@@ -57,6 +57,7 @@ class RegistrationConsentChannelsTest extends TestCase
             ->assertJsonPath('registration_method', 'phone');
 
         $userId = $created->json('user.id');
+        $this->assertNull(User::findOrFail($userId)->password);
         $this->assertDatabaseCount('user_consents', 3);
         $this->assertDatabaseHas('user_consents', [
             'user_id' => $userId,

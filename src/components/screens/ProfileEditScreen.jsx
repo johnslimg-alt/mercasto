@@ -179,7 +179,7 @@ export default function ProfileEditScreen({ smsEnabled = false }) {
         showToast(t.password_updated);
         setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
       } else {
-        showToast(t.password_update_error, 'error');
+        showToast(data.code === 'reauthentication_required' ? t.sensitive_reauth_login_required : t.password_update_error, 'error');
       }
     } catch {
       showToast(t.network_error, 'error');
