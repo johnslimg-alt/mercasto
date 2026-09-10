@@ -561,7 +561,7 @@ export default function UserDashboard({ onRefreshAds, accountType, adStatusFilte
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 space-y-2 sticky top-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-3 space-y-2 sticky top-[calc(var(--mc-site-header-offset)+1rem)]">
               <TabButton
                 icon={Package}
                 label={t.my_ads}

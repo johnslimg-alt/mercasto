@@ -97,7 +97,7 @@ export default function TurismoLanding({ lang = 'es' }) {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[90px] h-[480px] flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm sticky top-[calc(var(--mc-site-header-offset)+0.75rem)] h-[480px] flex flex-col">
             <div className="mb-4">
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 {landingCopy.mapTitle}

@@ -62,9 +62,10 @@ html.dark .btn-lg.bg-white:hover {
 @layer base {
   
   html {
+    --mc-site-header-offset: 123px;
     scroll-behavior: smooth;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
     min-height: 100%;
     background: var(--paper, var(--mc-paper));
   }
@@ -72,7 +73,7 @@ html.dark .btn-lg.bg-white:hover {
     @apply bg-[var(--color-paper)] text-[var(--color-ink)] antialiased font-sans; 
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
     --paper: var(--mc-paper);
     --ink: var(--mc-ink);
     --surface: var(--mc-surface);
@@ -102,7 +103,7 @@ html.dark .btn-lg.bg-white:hover {
     width: 100%;
     max-width: 100%;
     min-height: 100dvh;
-    overflow-x: hidden;
+    overflow-x: clip;
     background: var(--paper);
   }
   html.dark,
@@ -1911,6 +1912,10 @@ body *::-webkit-scrollbar {
 }
 
 @media (min-width: 1024px) {
+  html {
+    --mc-site-header-offset: 101px;
+  }
+
   .desktop-header-row .desktop-header-search-control {
     min-width: 280px;
   }

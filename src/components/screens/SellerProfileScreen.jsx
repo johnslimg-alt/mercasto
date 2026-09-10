@@ -153,7 +153,7 @@ export default function SellerProfileScreen({ currentUser }) {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Back nav */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
+      <div className="bg-white border-b border-slate-200 sticky top-[var(--mc-site-header-offset)] z-30">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
             <ChevronLeft size={20} />
