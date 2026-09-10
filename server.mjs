@@ -14,6 +14,7 @@ mkdirSync(dataDir, { recursive: true });
 const app = express();
 const db = new Database(path.join(dataDir, "mercasto.db"));
 const PORT = Number(process.env.PORT || 4180);
+const HOST = process.env.HOST || "127.0.0.1";
 const CATEGORIES = new Set(["Productos","Motor","Inmuebles","Empleos","Servicios","Negocios","Turismo","Boletos"]);
 
 app.disable("x-powered-by");
@@ -78,4 +79,4 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "server_error" });
 });
 
-app.listen(PORT, "0.0.0.0", () => console.log(`Mercasto standalone on http://0.0.0.0:${PORT}`));
+app.listen(PORT, HOST, () => console.log(`Mercasto standalone on http://${HOST}:${PORT}`));
