@@ -33,3 +33,10 @@ test('extracted shell preserves final visual and interaction anchors', () => {
   assert.ok(footer.includes('footer-logo'));
   assert.ok(logo.includes('rounded') === false || logo.includes('Mercasto'));
 });
+
+test('global toast follows the same mobile-tabbar visibility predicate', () => {
+  const predicate = "!viewedAd && currentTab !== 'post'";
+  assert.ok(app.includes(`${predicate} ? 'bottom-[96px]' : 'bottom-6'`));
+  assert.ok(app.includes(`${predicate} && renderTabBar()`));
+  assert.ok(app.includes('data-testid="app-toast"'));
+});
