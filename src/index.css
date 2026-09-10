@@ -303,21 +303,6 @@ html.dark .btn-lg.bg-white:hover {
   }
   .map-filter-scroller::-webkit-scrollbar { display: none; }
 
-  @media (min-width: 1024px) {
-    .map-filter-scroller {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
-    }
-    .map-filter-scroller::-webkit-scrollbar {
-      display: block;
-      width: 6px;
-    }
-    .map-filter-scroller::-webkit-scrollbar-track { background: transparent; }
-    .map-filter-scroller::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.5);
-      border-radius: 999px;
-    }
-  }
 }
 
 @layer base {

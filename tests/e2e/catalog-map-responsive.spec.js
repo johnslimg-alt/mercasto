@@ -226,11 +226,7 @@ test('standalone fullscreen map uses responsive filter geometry instead of a ful
       scrollHeight: node.scrollHeight,
       scrollbarWidth: getComputedStyle(node).scrollbarWidth,
     }));
-    if (viewport.width >= 1024) {
-      expect(scrollMetrics.scrollbarWidth).not.toBe('none');
-    } else {
-      expect(scrollMetrics.scrollbarWidth).toBe('none');
-    }
+    expect(scrollMetrics.scrollbarWidth).toBe('none');
     if (viewport.width === 390) {
       expect(scrollMetrics.scrollHeight).toBeGreaterThan(scrollMetrics.clientHeight);
       await scroller.hover();
@@ -242,7 +238,7 @@ test('standalone fullscreen map uses responsive filter geometry instead of a ful
   }
 });
 
-test('desktop fullscreen map exposes a draggable scrollbar when filters overflow vertically', async ({ page }, testInfo) => {
+test('desktop fullscreen map hides the scrollbar rail while filters remain scrollable', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop');
   await installStandaloneMapSession(page);
   await mockStandaloneMapApi(page);
@@ -265,10 +261,13 @@ test('desktop fullscreen map exposes a draggable scrollbar when filters overflow
     scrollbarWidth: getComputedStyle(node).scrollbarWidth,
   }));
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
-  expect(metrics.scrollbarWidth).toBe('thin');
+  expect(metrics.scrollbarWidth).toBe('none');
 
-  await scroller.evaluate((node) => { node.scrollTop = 120; });
-  await expect.poll(() => scroller.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  const initialTop = await scroller.evaluate((node) => node.scrollTop);
+  await scroller.hover();
+  await page.mouse.wheel(0, 420);
+  await expect.poll(() => scroller.evaluate((node) => node.scrollTop)).toBeGreaterThan(initialTop);
+
 });
 
 test('standalone negocios map search-area keeps its category and sends filters to catalog results', async ({ page }, testInfo) => {
