@@ -54,6 +54,100 @@ class ModerationVisibilityReconciliationTest extends TestCase
     // Approval mapping: the structural guarantee
     // ---------------------------------------------------------------------
 
+    /**
+     * Assert the shared "indexable listing" contract.
+     *
+     * The authoritative predicate is App\Support\ListingIndexability, which the ads
+     * sitemap generator and the SEO shell both use. It is not on this branch yet
+     * (it arrives with the sitemap fix), so while it is absent we assert the
+     * identical contract conditions here rather than defining a second predicate
+     * in application code. Once the shared class lands, this helper delegates to it
+     * automatically, so activation can never drift away from indexability.
+     */
+    private function assertIndexable(Ad $ad): void
+    {
+        $ad = $ad->fresh();
+
+        if (class_exists(\App\Support\ListingIndexability::class)) {
+            $this->assertTrue(
+                \App\Support\ListingIndexability::isIndexable($ad),
+                'Activated ad must satisfy the shared ListingIndexability predicate.'
+            );
+
+            return;
+        }
+
+        $this->assertFalse((bool) $ad->is_catalog_filler, 'Indexable listings must not be catalog fillers.');
+        $this->assertSame('active', $ad->status, 'Indexable listings must be publicly visible.');
+        $this->assertNotNull($ad->expires_at, 'Indexable listings must have a real expires_at.');
+        $this->assertTrue($ad->expires_at->isFuture(), 'Indexable listings must have a future expires_at.');
+    }
+
+    public function test_approval_outcome_publishes_with_a_future_lifetime(): void
+    {
+        $published = Ad::approvalOutcome(true);
+
+        $this->assertSame('active', $published['status']);
+        $this->assertSame(Ad::MODERATION_APPROVED, $published['ai_moderation_status']);
+        $this->assertNotNull($published['expires_at'], 'Publishing must set a real lifetime.');
+        $this->assertTrue($published['expires_at']->isFuture(), 'Publishing must set a future lifetime.');
+        $this->assertTrue(
+            $published['expires_at']->lessThanOrEqualTo(now()->addDays(Ad::lifetimeDays())),
+            'Publishing must use the canonical Ad::freshExpiry() lifetime.'
+        );
+
+        $deferred = Ad::approvalOutcome(false);
+        $this->assertNull($deferred['expires_at'], 'A deferred approval must not hold a lifetime.');
+    }
+
+    public function test_every_publish_path_produces_an_indexable_listing(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create();
+
+        // 1. Admin approval of a fresh submission.
+        $pending = $this->createAd($seller, ['status' => 'pending']);
+        $this->actingAs($admin)
+            ->postJson("/api/admin/moderation/ads/{$pending->id}/decision", ['decision' => 'approved'])
+            ->assertOk();
+        $this->assertIndexable($pending);
+
+        // 2. Reconciliation of an approved-but-hidden ad.
+        $hidden = $this->hiddenApprovedAd($seller);
+        $this->assertSame(0, Artisan::call('ads:reconcile-moderation-visibility', ['--apply' => true]));
+        $this->assertIndexable($hidden);
+
+        // 3. The published attribute set the AI job writes on approval.
+        $aiPublished = $this->createAd($seller, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'queued',
+            'expires_at' => null,
+        ]);
+        $aiPublished->forceFill(Ad::approvalOutcome(true))->saveQuietly();
+        $this->assertIndexable($aiPublished);
+    }
+
+    public function test_deferred_approval_is_not_indexable(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $seller = User::factory()->create();
+        $ad = $this->createAd($seller, [
+            'status' => 'archived',
+            'ai_moderation_status' => 'manual_review',
+            'expires_at' => null,
+            'moderation_submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson("/api/admin/moderation/ads/{$ad->id}/decision", ['decision' => 'approved'])
+            ->assertOk();
+
+        $ad->refresh();
+        $this->assertSame('archived', $ad->status, 'A deferred approval must stay hidden.');
+        $this->assertNull($ad->expires_at, 'A deferred approval must not hold a lifetime.');
+        $this->assertNotSame(Ad::MODERATION_APPROVED, $ad->ai_moderation_status);
+    }
+
     public function test_approval_outcome_never_pairs_approved_with_a_hidden_status(): void
     {
         $published = Ad::approvalOutcome(true);
@@ -378,6 +472,34 @@ class ModerationVisibilityReconciliationTest extends TestCase
             ['--apply' => true, '--include-owner-archived' => true]
         ));
         $this->assertSame('active', $sellerArchived->fresh()->status);
+
+        // Reactivating a seller-archived ad must also republish it properly, i.e.
+        // with a fresh future lifetime rather than the stale remaining time.
+        $this->assertTrue($sellerArchived->fresh()->expires_at->isFuture());
+        $this->assertIndexable($sellerArchived);
+    }
+
+    public function test_ads_with_a_past_expiry_are_never_activated_into_an_expired_state(): void
+    {
+        $seller = User::factory()->create();
+        $stale = $this->hiddenApprovedAd($seller, ['expires_at' => now()->subDay()]);
+
+        // A stale expiry is not a pipeline-archived ad, so the default run skips it.
+        $this->assertSame(0, Artisan::call('ads:reconcile-moderation-visibility', ['--apply' => true]));
+        $this->assertSame('archived', $stale->fresh()->status);
+
+        // Even when explicitly included, activation grants a fresh future lifetime,
+        // so an ad can never be activated straight into an expired, non-indexable state.
+        $this->assertSame(0, Artisan::call(
+            'ads:reconcile-moderation-visibility',
+            ['--apply' => true, '--include-owner-archived' => true]
+        ));
+
+        $stale->refresh();
+        $this->assertSame('active', $stale->status);
+        $this->assertNotNull($stale->expires_at);
+        $this->assertTrue($stale->expires_at->isFuture());
+        $this->assertIndexable($stale);
     }
 
     public function test_apply_and_dry_run_together_are_rejected(): void

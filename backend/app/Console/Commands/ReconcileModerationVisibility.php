@@ -112,19 +112,26 @@ class ReconcileModerationVisibility extends Command
                 $processed++;
 
                 if ($apply) {
+                    // Activation must mean publishing: the published attribute set
+                    // (including a real, future expires_at) comes from the same
+                    // single source of truth the other publish paths use, so a
+                    // reconciled ad is genuinely indexable and not merely "active".
+                    $publishAttributes = Ad::approvalOutcome(true);
+
                     // Conditional update: only a row still matching the exact
                     // predicate can change, which makes repeated runs a no-op and
                     // makes it impossible to activate any other moderation state.
-                    $affected = DB::transaction(function () use ($ad): int {
+                    $affected = DB::transaction(function () use ($ad, $publishAttributes): int {
                         $affected = Ad::query()
                             ->whereKey($ad->id)
                             ->where('is_catalog_filler', false)
                             ->where('status', 'archived')
                             ->where('ai_moderation_status', Ad::MODERATION_APPROVED)
                             ->update([
-                                'status' => 'active',
-                                'expires_at' => Ad::freshExpiry(),
-                                'reminder_sent_at' => null,
+                                'status' => $publishAttributes['status'],
+                                'ai_moderation_status' => $publishAttributes['ai_moderation_status'],
+                                'expires_at' => $publishAttributes['expires_at'],
+                                'reminder_sent_at' => $publishAttributes['reminder_sent_at'],
                                 'updated_at' => now(),
                             ]);
 

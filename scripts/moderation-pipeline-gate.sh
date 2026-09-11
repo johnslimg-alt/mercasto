@@ -87,8 +87,16 @@ grep -qF "public const MODERATION_REACTIVATION_PENDING = 'reactivation_pending';
 grep -qF 'public static function approvalOutcome(bool $publishNow): array' "$MODEL"
 grep -qF 'public function scopeApprovedButHidden(Builder $query): Builder' "$MODEL"
 grep -qF "'seller_confirmation_required'" "$MODEL"
-grep -qF "? ['status' => 'active', 'ai_moderation_status' => self::MODERATION_APPROVED]" "$MODEL"
-grep -qF ": ['status' => 'archived', 'ai_moderation_status' => self::MODERATION_REACTIVATION_PENDING];" "$MODEL"
+# Assert the mapper's behaviour inside its own body rather than exact formatting, so
+# it stays checkable as the array is laid out or extended.
+APPROVAL_MAPPER=$(grep -A 14 'public static function approvalOutcome' "$MODEL")
+grep -qF "'ai_moderation_status' => self::MODERATION_APPROVED," <<<"$APPROVAL_MAPPER"
+grep -qF "'ai_moderation_status' => self::MODERATION_REACTIVATION_PENDING," <<<"$APPROVAL_MAPPER"
+# Publishing must carry a real lifetime: the shared ListingIndexability contract used
+# by the sitemap and the SEO shell requires a future expires_at, so an approval that
+# only flips `status` would be active yet still invisible to search engines.
+grep -qF "'expires_at' => self::freshExpiry()," <<<"$APPROVAL_MAPPER"
+grep -qF "'expires_at' => null," <<<"$APPROVAL_MAPPER"
 grep -qF '[self::MODERATION_REACTIVATION_PENDING, self::MODERATION_APPROVED],' "$MODEL"
 # Both approval writers must resolve the outcome through the model mapper.
 grep -qF 'Ad::approvalOutcome(' "$JOB"

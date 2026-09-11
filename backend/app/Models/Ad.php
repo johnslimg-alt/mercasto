@@ -268,19 +268,36 @@ class Ad extends Model
     }
 
     /**
-     * Resolve the persisted (status, ai_moderation_status) pair for an approval.
+     * Resolve the complete persisted attribute set for an approval outcome.
      *
-     * This is the single source of truth for approval outcomes. It structurally
+     * This is the single source of truth for what approval means. It structurally
      * cannot return MODERATION_APPROVED together with a hidden status, which is
      * what previously left approved ads stranded in `archived` forever.
      *
-     * @return array{status: string, ai_moderation_status: string}
+     * It deliberately includes the publication lifetime, because activation must
+     * never be a status-only change: the shared indexability contract used by the
+     * sitemap generator and the SEO shell requires a real, future `expires_at`,
+     * so an "active" ad without one would be published yet still invisible to
+     * search engines. Every publishing path uses the same `Ad::freshExpiry()`
+     * helper as the legitimate seller/admin publish flow.
+     *
+     * @return array{status: string, ai_moderation_status: string, expires_at: Carbon|null, reminder_sent_at: null}
      */
     public static function approvalOutcome(bool $publishNow): array
     {
         return $publishNow
-            ? ['status' => 'active', 'ai_moderation_status' => self::MODERATION_APPROVED]
-            : ['status' => 'archived', 'ai_moderation_status' => self::MODERATION_REACTIVATION_PENDING];
+            ? [
+                'status' => 'active',
+                'ai_moderation_status' => self::MODERATION_APPROVED,
+                'expires_at' => self::freshExpiry(),
+                'reminder_sent_at' => null,
+            ]
+            : [
+                'status' => 'archived',
+                'ai_moderation_status' => self::MODERATION_REACTIVATION_PENDING,
+                'expires_at' => null,
+                'reminder_sent_at' => null,
+            ];
     }
 
     /**

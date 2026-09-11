@@ -261,7 +261,10 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
             }
 
             $previousStatus = $ad->status;
-            $ad->forceFill([
+            // The approval outcome (when present) also carries the publication
+            // lifetime, so publishing here can never be a status-only change that
+            // leaves the ad active but non-indexable.
+            $ad->forceFill(array_merge([
                 'status' => $newStatus,
                 'expires_at' => $newStatus === 'active' ? Ad::freshExpiry() : null,
                 'reminder_sent_at' => null,
@@ -269,7 +272,7 @@ class ModerateAdWithAI implements ShouldBeUnique, ShouldQueue
                 'ai_moderation_reason' => $reason,
                 'ai_moderation_confidence' => $confidence,
                 'ai_moderated_at' => now(),
-            ])->saveQuietly();
+            ], $approvalOutcome ?? []))->saveQuietly();
 
             AdModerationDecision::create([
                 'ad_id' => $ad->id,

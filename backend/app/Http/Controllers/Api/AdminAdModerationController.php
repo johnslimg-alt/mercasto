@@ -196,8 +196,10 @@ class AdminAdModerationController extends Controller
             default => 'admin_'.$decision,
         };
 
-        DB::transaction(function () use ($ad, $request, $decision, $reason, $newStatus, $previousStatus, $publishImmediately, $moderationStatus) {
-            $ad->forceFill([
+        DB::transaction(function () use ($ad, $request, $decision, $reason, $newStatus, $previousStatus, $publishImmediately, $moderationStatus, $approvalOutcome) {
+            // The approval outcome (when present) also carries the publication
+            // lifetime, so approving can never leave the ad active but non-indexable.
+            $ad->forceFill(array_merge([
                 'status' => $newStatus,
                 'expires_at' => $publishImmediately ? Ad::freshExpiry() : null,
                 'reminder_sent_at' => null,
@@ -205,7 +207,7 @@ class AdminAdModerationController extends Controller
                 'ai_moderation_reason' => $reason !== '' ? $reason : 'Revisión manual del administrador.',
                 'ai_moderation_confidence' => null,
                 'ai_moderated_at' => now(),
-            ])->saveQuietly();
+            ], $approvalOutcome ?? []))->saveQuietly();
 
             AdModerationDecision::create([
                 'ad_id' => $ad->id,
