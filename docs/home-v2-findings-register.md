@@ -61,6 +61,32 @@ Nothing here has been fixed. Production was not touched and no cutover was perfo
 - **§18 backup / rollback execution** — prepared in `docs/home-v2-cutover-plan.md` §2, not run.
 - **Owner visual approval** — the explicit cutover gate.
 
+## Blocker 3 verified: merging main into the V2 branch is safe
+
+Verified on a throwaway branch created at the V2 tip (`5560c539`) so the other session's
+worktree was never touched:
+
+| Step | Result |
+| --- | --- |
+| V2 branch distance from `origin/main` | **6 commits behind** |
+| `git merge-tree` dry run | **no conflicts** |
+| actual merge | clean, 18 files changed |
+| `npx vite build` | exit 0 |
+| `node --test tests/*.test.mjs` | **341 pass, 0 fail** |
+| `node scripts/home-v2-parity-audit.mjs` | exit 0 |
+| Playwright (catalog, touch targets, cards, home, ad detail) | **58 passed, 0 failed** |
+
+So the fix for blocker 3 is a single command in the V2 worktree:
+
+```
+cd /root/mercasto-worktrees/home-v2
+git merge origin/main
+```
+
+No conflict is expected: `SidebarFilters.jsx` is the only file where main's #1106 collides with
+a restyle, and the V2 branch never modified it. The throwaway verification branch was removed
+after the run; the numbers above are the record.
+
 ## Branch state at handoff
 
 - Branch: `design/hybrid-card-catalog`, worktree `/root/mercasto-worktrees/card-hybrid`
