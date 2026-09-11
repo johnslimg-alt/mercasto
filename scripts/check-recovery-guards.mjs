@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 
 const checks = [];
 
@@ -30,6 +30,73 @@ function assertOrder(path, firstNeedle, secondNeedle, reason) {
     throw new Error(`${path} must place ${JSON.stringify(firstNeedle)} before ${JSON.stringify(secondNeedle)}: ${reason}`);
   }
   checks.push(`${path}: ${reason}`);
+}
+
+/**
+ * Assert that the ranking call is the query's FIRST ordering key: every other
+ * ordering clause (promotions, price, date, distance, id tie-breaker) must come
+ * after it, otherwise it would outrank real inventory again.
+ */
+function assertFirstOrderingKey(path, methodSignature, needle, reason) {
+  const content = read(path);
+  const start = content.indexOf(methodSignature);
+  if (start < 0) {
+    throw new Error(`${path} must define ${methodSignature}: ${reason}`);
+  }
+
+  const nextMethod = content.indexOf('\n    public function ', start + 1);
+  const body = content.slice(start, nextMethod === -1 ? content.length : nextMethod);
+  const rankedAt = body.indexOf(needle);
+  if (rankedAt < 0) {
+    throw new Error(`${path} ${methodSignature} must rank through ${JSON.stringify(needle)}: ${reason}`);
+  }
+
+  const competing = [...body.matchAll(/->(?:orderByRaw|orderByDesc|orderBy|latest)\(/g)]
+    .map((match) => match.index)
+    .filter((index) => index < rankedAt);
+
+  if (competing.length > 0) {
+    throw new Error(
+      `${path} ${methodSignature} must rank on the catalog-reference flag before any other ordering clause, found ${competing.length} earlier ordering clause(s): ${reason}`
+    );
+  }
+
+  checks.push(`${path}: ${reason}`);
+}
+
+/**
+ * The catalog ranking rule must have exactly one implementation. Re-inlining it in
+ * another query — especially in an unrouted controller that looks authoritative —
+ * is how the public catalog ended up ranking editorial references first.
+ */
+function assertNoInlineCatalogRanking(root) {
+  const offenders = [];
+  const prune = new Set(['node_modules', 'vendor', 'storage']);
+
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir)) {
+      if (prune.has(entry)) continue;
+      const path = `${dir}/${entry}`;
+      if (statSync(path).isDirectory()) {
+        walk(path);
+        continue;
+      }
+      if (!entry.endsWith('.php')) continue;
+      if (/->orderBy\(\s*['"]ads\.is_catalog_filler['"]/.test(read(path))) {
+        offenders.push(path);
+      }
+    }
+  };
+
+  walk(root);
+
+  if (offenders.length > 0) {
+    throw new Error(
+      `${offenders.join(', ')} must not order catalog listings inline: catalog ranking belongs to App\\Support\\CatalogInventoryRanking`
+    );
+  }
+
+  checks.push(`${root}: catalog ranking keeps a single query-layer implementation`);
 }
 
 assertContains(
@@ -272,10 +339,64 @@ assertContains(
   'catalog references convert owners into genuine sellers through localized CTA copy instead of exposing a placeholder contact'
 );
 
+// Public catalog ranking invariant.
+//
+// This used to assert the literal `orderBy('ads.is_catalog_filler', 'asc')` inside
+// AdController::index. That method has no route — GET /ads is served by
+// AdIndexController@index — so the guard passed for months while every public
+// catalog page ranked editorial references first. The invariant is now asserted
+// against the code that actually runs: the routed endpoint, its routing target, and
+// the single shared ranking policy, plus the "flag is the first ordering key"
+// property (it must outrank promotions and every sort mode) and the runtime
+// behavioural pin in the backend suite.
+const CATALOG_ROUTE = 'backend/routes/api.php';
+const CATALOG_CONTROLLER = 'backend/app/Http/Controllers/Api/AdIndexController.php';
+const CATALOG_RANKING = 'backend/app/Support/CatalogInventoryRanking.php';
+const LEGACY_CATALOG_CONTROLLER = 'backend/app/Http/Controllers/Api/AdController.php';
+
 assertContains(
-  'backend/app/Http/Controllers/Api/AdController.php',
-  "orderBy('ads.is_catalog_filler', 'asc')",
-  'real user listings rank ahead of catalog references'
+  CATALOG_ROUTE,
+  "Route::middleware('throttle:search')->get('/ads', [AdIndexController::class, 'index']);",
+  'the public catalog endpoint keeps resolving to AdIndexController@index'
+);
+
+assertContains(
+  CATALOG_RANKING,
+  "public const FILLER_COLUMN = 'ads.is_catalog_filler';",
+  'the shared catalog ranking policy keys on the catalog-reference flag'
+);
+
+assertContains(
+  CATALOG_RANKING,
+  "return $query->orderBy(self::FILLER_COLUMN, 'asc');",
+  'the shared catalog ranking policy sorts real listings ahead of catalog references'
+);
+
+assertContains(
+  CATALOG_CONTROLLER,
+  'CatalogInventoryRanking::realInventoryFirst($query);',
+  'the routed public catalog applies the shared real-inventory-first policy'
+);
+
+assertFirstOrderingKey(
+  CATALOG_CONTROLLER,
+  'public function index(Request $request)',
+  'CatalogInventoryRanking::realInventoryFirst($query);',
+  'real user listings rank ahead of catalog references before promotions and sort modes'
+);
+
+assertContains(
+  LEGACY_CATALOG_CONTROLLER,
+  'CatalogInventoryRanking::realInventoryFirst($query);',
+  'the unrouted legacy listing path ranks through the same shared policy instead of diverging silently'
+);
+
+assertNoInlineCatalogRanking('backend/app');
+
+assertContains(
+  'backend/tests/Feature/CatalogRealInventoryRankingTest.php',
+  'public function test_real_inventory_ranks_before_catalog_references_on_the_default_catalog(): void',
+  'the ranking invariant keeps a runtime behavioural pin, not just a static one'
 );
 
 assertNotContains(

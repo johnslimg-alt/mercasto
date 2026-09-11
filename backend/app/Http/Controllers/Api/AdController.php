@@ -261,6 +261,13 @@ class AdController extends Controller
 
     /**
      * Получение списка всех активных объявлений
+     *
+     * UNROUTED LEGACY PATH — do not treat this method as the public catalog.
+     * `routes/api.php` serves GET /ads through AdIndexController@index. This method
+     * is kept only because the controller is a shared, contract-checked file; it
+     * ranks through App\Support\CatalogInventoryRanking so it cannot silently
+     * diverge from the live path the way it did before the catalog-ranking fix
+     * (see scripts/check-recovery-guards.mjs and PR #1131).
      */
     public function index(Request $request)
     {

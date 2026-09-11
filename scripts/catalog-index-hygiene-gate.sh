@@ -27,7 +27,15 @@ grep -qF -- "'robots' => 'noindex,follow,max-image-preview:large'" "$SERVER"
 grep -qF -- "'@type' => 'WebPage'" "$SERVER"
 grep -qF -- "'availability' => 'https://schema.org/InStock'" "$SERVER"
 
-grep -qF -- 'const isViewedCatalogFiller = Boolean(viewedAd?.is_catalog_filler);' "$APP"
+grep -qF -- 'const isViewedCatalogFiller = isCatalogReference(viewedAd);' "$APP"
+# A listing is a catalog reference only on an explicit marker, so an unexpected
+# payload shape can never de-index a real listing (see utils/catalogInventory.js).
+grep -qF -- "import { isCatalogReference } from './utils/catalogInventory';" "$APP"
+grep -qF -- "const CATALOG_REFERENCE_MARKERS = new Set([true, 1, '1', 'true']);" src/utils/catalogInventory.js
+if grep -qF -- 'Boolean(viewedAd?.is_catalog_filler)' "$APP"; then
+  echo "catalog indexability must use the explicit reference marker instead of truthiness" >&2
+  exit 1
+fi
 grep -qF -- 'const isViewedListingIndexable = Boolean(' "$APP"
 grep -qF -- '(viewedAd && !isViewedListingIndexable)' "$APP"
 grep -qF -- 'if (viewedAd && isViewedListingIndexable)' "$APP"
