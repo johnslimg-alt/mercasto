@@ -1,30 +1,26 @@
-name: DSH Sudo Probe PR
+name: DSH OpenRouter Finalize PR
 
 on:
   pull_request:
     branches: [main]
     paths:
       - '.github/workflows/dsh-sudo-probe-pr.yml'
+      - 'scripts/dsh_openrouter_finalize.py'
 
 permissions:
   contents: read
 
 jobs:
-  probe:
+  finalize:
     if: github.head_ref == 'ops/dsh-openrouter-finalize'
     runs-on: [self-hosted]
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - name: Probe non-interactive root access
+      - name: Checkout branch
+        uses: actions/checkout@v7
+      - name: Finalize DSH rotation as root
         shell: bash
         run: |
           set -euo pipefail
-          echo "runner=$(id -un)"
-          if sudo -n true; then
-            echo "sudo_noninteractive=yes"
-          else
-            echo "sudo_noninteractive=no"
-            exit 1
-          fi
-          sudo -n test -r /root/.dsh/settings.yaml
-          echo "dsh_settings_root_read=yes"
+          python3 -m py_compile scripts/dsh_openrouter_finalize.py
+          sudo -n python3 scripts/dsh_openrouter_finalize.py
