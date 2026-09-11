@@ -38,47 +38,58 @@ jobs:
           chmod 600 ~/.ssh/dsh_probe_key
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
-      - name: Probe DSH OpenRouter state
+      - name: Probe DSH credential schema and prepare one-time public key
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -euo pipefail
-          if [ -n "${OPENROUTER_API_KEY:-}" ]; then
-            echo "github_openrouter_secret=yes"
-          else
-            echo "github_openrouter_secret=no"
-          fi
           ssh -i ~/.ssh/dsh_probe_key "root@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           C=/root/.dsh/.credentials.yaml
           S=/root/.dsh/settings.yaml
-          echo "harness_active=$(systemctl is-active deepseek-harness.service || true)"
+          echo "=== HARNESS ==="
+          systemctl is-active deepseek-harness.service
+          systemctl show deepseek-harness.service --no-pager -p ExecStart -p EnvironmentFiles -p Environment | sed -E 's/(sk-[A-Za-z0-9_-]+|sk-or-v1-[A-Za-z0-9_-]+)/<redacted>/g'
+          echo "=== CREDENTIAL STRUCTURE ==="
           python3 - "$C" <<'PY'
-          import sys
+          import sys, yaml
           from pathlib import Path
           p=Path(sys.argv[1])
-          t=p.read_text(encoding="utf-8",errors="ignore") if p.exists() else ""
-          print("openrouter_credential_ref=" + ("yes" if "OPENROUTER_API_KEY" in t else "no"))
+          d=yaml.safe_load(p.read_text()) if p.exists() else {}
+          def shape(x, depth=0):
+              if isinstance(x, dict):
+                  return {str(k): shape(v, depth+1) for k,v in x.items()}
+              if isinstance(x, list):
+                  return [shape(v, depth+1) for v in x[:4]]
+              if isinstance(x, str):
+                  if len(x) > 20:
+                      return f"<string:{len(x)}>"
+                  return x if x in ("DEEPSEEK_API_KEY","OPENROUTER_API_KEY") else "<string>"
+              if x is None: return None
+              return f"<{type(x).__name__}>"
+          print(yaml.safe_dump(shape(d), sort_keys=False))
           PY
+          echo "=== DSH CREDENTIAL HELP ==="
+          (npx --yes @deepseek-ai/dsh@0.1.5-rc.1 credentials --help || true) 2>&1 | head -120
+          echo "=== PI-AI CONFIG (SANITIZED) ==="
           python3 - "$S" <<'PY'
-          import sys
+          import sys, yaml
           from pathlib import Path
-          p=Path(sys.argv[1])
-          t=p.read_text(encoding="utf-8",errors="ignore") if p.exists() else ""
-          print("openrouter_settings_ref=" + ("yes" if "openrouter" in t.lower() else "no"))
-          print("pi_ai_settings_ref=" + ("yes" if "llm-pi-ai:" in t else "no"))
+          p=Path(sys.argv[1]); d=yaml.safe_load(p.read_text()) or {}
+          x=d.get("llm-pi-ai")
+          print(yaml.safe_dump(x, sort_keys=False) if x is not None else "llm-pi-ai: <unset>")
           PY
-          for f in /root/.dsh/.env /root/.env; do
-            if [ -r "$f" ]; then
-              if grep -q '^OPENROUTER_API_KEY=' "$f"; then
-                echo "openrouter_env_ref=yes"
-                exit 0
-              fi
-            fi
-          done
-          echo "openrouter_env_ref=no"
+          echo "=== ONE-TIME RSA PUBLIC KEY ==="
+          PRIV=/root/.dsh/.openrouter-install-private.pem
+          PUB=/root/.dsh/.openrouter-install-public.pem
+          rm -f "$PRIV" "$PUB"
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$PRIV" >/dev/null 2>&1
+          chmod 0600 "$PRIV"
+          openssl pkey -in "$PRIV" -pubout -out "$PUB" >/dev/null 2>&1
+          chmod 0644 "$PUB"
+          cat "$PUB"
+          echo "DSH_OPENROUTER_SCHEMA_PROBE_OK"
           REMOTE
 
       - name: Cleanup SSH key
