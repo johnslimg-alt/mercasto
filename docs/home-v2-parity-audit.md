@@ -1,19 +1,19 @@
 # Home V2 parity audit — Legacy vs V2
 
-Generated: 2026-09-11T00:45:11.421Z
+Generated: 2026-09-11T00:46:36.419Z
 
 - Legacy: `src/components/screens/HomeScreen.jsx` (1202 lines)
-- V2:     `src/components/screens/HomeScreenV2.jsx` (285 lines)
+- V2:     `src/components/screens/HomeScreenV2.jsx` (292 lines)
 
 ## Verdict
 
 - Features audited: **41**
-- V2 implemented: **20**
+- V2 implemented: **21**
 - V2 only: **1**
 - Intentionally removed: **0**
-- **MUST MIGRATE: 13**
-- Legacy props not accepted by V2: **9**
-- App.jsx props not forwarded to V2: **11**
+- **MUST MIGRATE: 12**
+- Legacy props not accepted by V2: **8**
+- App.jsx props not forwarded to V2: **10**
 - Home testids asserted by tests but absent in V2: **10**
 - V2 i18n keys missing from one or more of the 11 runtime modules: **0**
 
@@ -46,7 +46,7 @@ Generated: 2026-09-11T00:45:11.421Z
 | Real-estate quick filters (rent/buy/commercial) | Verticals | `home-real-estate-rent` | — | MUST MIGRATE |
 | Map usage on home | Verticals | `<MapV3` | — | MUST MIGRATE |
 | AI recommendations widget | Listings | `<RecommendationsWidget` | — | MUST MIGRATE |
-| Accurate total counter (adsTotal) | Listings | `adsTotal` | — | MUST MIGRATE |
+| Accurate total counter (adsTotal) | Listings | `adsTotal` | `adsTotal` | V2 implemented |
 | Pricing modal opens | Monetisation | `setShowPricingModal` | `setShowPricingModal` | V2 implemented |
 | Promotion CTA | Monetisation | `promote_ad` | `promote_ad` | V2 implemented |
 | Ad placements | Monetisation | — | — | n/a |
@@ -107,12 +107,6 @@ Generated: 2026-09-11T00:45:11.421Z
 - Legacy evidence: `<RecommendationsWidget`
 - V2 evidence: none
 
-### Accurate total counter (adsTotal)  `ads_total`
-
-- Group: Listings
-- Legacy evidence: `adsTotal`
-- V2 evidence: none
-
 ### Publish CTA / tab switch  `publish_cta`
 
 - Group: Publishing
@@ -146,7 +140,6 @@ Generated: 2026-09-11T00:45:11.421Z
 
 ## Legacy props not accepted by V2
 
-- `adsTotal`
 - `form`
 - `getImageUrl`
 - `handleViewAd`
@@ -158,7 +151,6 @@ Generated: 2026-09-11T00:45:11.421Z
 
 ## App.jsx props not forwarded to V2
 
-- `adsTotal`
 - `form`
 - `getImageUrl`
 - `handleViewAd`
