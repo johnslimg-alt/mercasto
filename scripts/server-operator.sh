@@ -356,6 +356,27 @@ PY
     docker logs --tail="$TAIL_LINES" mercasto_backend_container 2>&1 | sed -E 's/(APP_KEY|DB_PASSWORD|REDIS_PASSWORD|CLIP_[A-Z_]+|SENTRY_[A-Z_]+)=([^[:space:]]+)/\1=***REDACTED***/g'
     ;;
 
+  hermes_install)
+    require_confirm
+    print_header "Install Hermes Agent CLI"
+    HERMES_INSTALLER="$(mktemp "$SERVER_OPERATOR_TMPDIR/hermes-install.XXXXXX")"
+    curl -fsSL --retry 4 --retry-delay 3 \
+      https://hermes-agent.nousresearch.com/install.sh \
+      -o "$HERMES_INSTALLER"
+    chmod 0700 "$HERMES_INSTALLER"
+    sudo -n env HOME=/root bash "$HERMES_INSTALLER" \
+      --skip-setup \
+      --skip-browser \
+      --skip-computer-use \
+      --non-interactive \
+      --hermes-home /root/.hermes
+    sudo -n test -x /usr/local/bin/hermes
+    sudo -n /usr/local/bin/hermes --version
+    echo "hermes_home=/root/.hermes"
+    echo "harness_service=$(systemctl is-active deepseek-harness.service 2>/dev/null || true)"
+    echo "harness_proxy=$(systemctl is-active deepseek-harness-proxy.service 2>/dev/null || true)"
+    ;;
+
   cleanup_build_cache)
     require_confirm
     print_header "Bounded Docker build-cache cleanup"
