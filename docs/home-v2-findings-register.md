@@ -12,7 +12,7 @@ Nothing here has been fixed. Production was not touched and no cutover was perfo
 | --- | --- | --- | --- | --- |
 | 1 | ~~**CLS 0.4444 desktop / up to 0.7935 mobile** against the ТЗ target of < 0.1.~~ **FIXED on this branch** (`bb91d4a5`): sections now reserve their geometry with skeletons while the feed is pending. Measured desktop **0.4444 → 0.0030**, mobile → **0.0239**, matching the ideal stable-payload baseline. | ~~High~~ resolved | **Fixed** | `docs/home-v2-performance-audit.md` |
 | 2 | ~~**The paid *Destacados* rail can silently show unpromoted ads.**~~ **FIXED on this branch** (`b4a699ec`): `featuredRows` is now `featured`, and the rail consumes the shell's `window.__FEATURED_ADS_PROMISE__` instead of refetching. Verified: one request total (the shell's, zero duplicates), 0 items on a 500 instead of a copy of the trending list, CLS 0.0023/0.0239 on the success path. | ~~High~~ resolved | **Fixed** | `docs/home-v2-real-data-audit.md` |
-| 3 | **V2 branch is behind `origin/main` on #1100** (public/storage image URL normalisation), and V2 resolves listing thumbnails through that helper. Fixed on the hybrid branch via a conflict-free merge; the V2 branch itself still needs it. | **High** | Open on the V2 branch | merge commit `1d513be3` |
+| 3 | **V2 branch is behind `origin/main`** (it was 3 commits back, including #1100 public/storage image URL normalisation, which V2 depends on for thumbnails). Fixed on the hybrid branch by merging main; the V2 branch itself still needs the same merge. Note the hybrid is now also current with #1102, #1103, #1104, #1105 and #1106. | **High** | Open on the V2 branch | merge commits `1d513be3`, `da80e636` |
 
 ## Functional gaps
 
@@ -60,3 +60,17 @@ Nothing here has been fixed. Production was not touched and no cutover was perfo
   left to the cutover window.
 - **§18 backup / rollback execution** — prepared in `docs/home-v2-cutover-plan.md` §2, not run.
 - **Owner visual approval** — the explicit cutover gate.
+
+## Branch state at handoff
+
+- Branch: `design/hybrid-card-catalog`, worktree `/root/mercasto-worktrees/card-hybrid`
+- Tip: `da80e636` (merge of main including #1106), **0 commits behind `origin/main`**
+- Working tree clean; 341/341 contract tests, build exit 0, parity gate exit 0
+
+### Merging main into the V2 branch
+
+`#1106` raised catalog filter touch targets to 48px and also touched `SidebarFilters.jsx`.
+The hybrid hit a conflict there because it had restyled the same file; the resolution kept
+main's accessibility behaviour and re-applied the visuals on top. The V2 branch did not modify
+`SidebarFilters.jsx`, so it should merge cleanly — but if that ever changes, the rule is the
+same: **never take a control below 48px below the `xl` breakpoint.**
